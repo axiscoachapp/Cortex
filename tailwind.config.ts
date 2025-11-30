@@ -13,6 +13,9 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -57,6 +60,22 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Custom medical colors
+        "medical-blue": "hsl(var(--medical-blue))",
+        "medical-blue-light": "hsl(var(--medical-blue-light))",
+        "medical-blue-dark": "hsl(var(--medical-blue-dark))",
+        "alert-amber": "hsl(var(--alert-amber))",
+        "alert-amber-light": "hsl(var(--alert-amber-light))",
+        "alert-amber-border": "hsl(var(--alert-amber-border))",
+        "success": "hsl(var(--success))",
+        "success-light": "hsl(var(--success-light))",
+        "patient-active": "hsl(var(--patient-active))",
+        "patient-active-border": "hsl(var(--patient-active-border))",
+        "soap-card": "hsl(var(--soap-card))",
+        "whatsapp-green": "hsl(var(--whatsapp-green))",
+        "whatsapp-light": "hsl(var(--whatsapp-light))",
+        "record-red": "hsl(var(--record-red))",
+        "record-red-hover": "hsl(var(--record-red-hover))",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -65,25 +84,36 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "pulse-record": {
+          "0%, 100%": { transform: "scale(1)", opacity: "1" },
+          "50%": { transform: "scale(1.05)", opacity: "0.9" },
+        },
+        "slide-in-right": {
+          from: { transform: "translateX(20px)", opacity: "0" },
+          to: { transform: "translateX(0)", opacity: "1" },
+        },
+        "fade-in-up": {
+          from: { transform: "translateY(10px)", opacity: "0" },
+          to: { transform: "translateY(0)", opacity: "1" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-record": "pulse-record 2s ease-in-out infinite",
+        "slide-in-right": "slide-in-right 0.3s ease-out",
+        "fade-in-up": "fade-in-up 0.4s ease-out",
+      },
+      boxShadow: {
+        "medical": "0 4px 20px -4px hsl(var(--medical-blue) / 0.15)",
+        "card-hover": "0 8px 30px -8px hsl(var(--foreground) / 0.1)",
       },
     },
   },
