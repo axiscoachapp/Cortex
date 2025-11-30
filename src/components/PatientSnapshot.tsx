@@ -1,12 +1,17 @@
-import { User, Stethoscope, Pill, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { User, Stethoscope, Pill, AlertCircle, FolderOpen } from 'lucide-react';
 import { Patient } from '@/types/patient';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { PatientProfileDrawer } from './PatientProfileDrawer';
 
 interface PatientSnapshotProps {
   patient: Patient | null;
 }
 
 export function PatientSnapshot({ patient }: PatientSnapshotProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   if (!patient) {
     return (
       <aside className="w-full h-full bg-card border-l border-border flex items-center justify-center">
@@ -123,6 +128,25 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
           )}
         </section>
       </div>
+
+      {/* Bottom Action */}
+      <div className="p-4 border-t border-border">
+        <Button
+          variant="ghost"
+          className="w-full justify-center gap-2 text-muted-foreground hover:text-medical-blue hover:bg-medical-blue-light"
+          onClick={() => setDrawerOpen(true)}
+        >
+          <FolderOpen className="w-4 h-4" />
+          Ver Perfil Completo & Arquivos
+        </Button>
+      </div>
+
+      {/* Profile Drawer */}
+      <PatientProfileDrawer
+        patient={patient}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+      />
     </aside>
   );
 }
