@@ -1,0 +1,106 @@
+import { useState } from 'react';
+import { Search, Plus, Activity } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Patient } from '@/types/patient';
+import { cn } from '@/lib/utils';
+
+interface PatientSidebarProps {
+  patients: Patient[];
+  selectedPatient: Patient | null;
+  onSelectPatient: (patient: Patient) => void;
+}
+
+const statusLabels: Record<Patient['status'], string> = {
+  retorno: 'Retorno',
+  seguimento: 'Seguimento',
+  novo: 'Novo',
+  atendimento: 'Em atendimento',
+};
+
+export function PatientSidebar({ patients, selectedPatient, onSelectPatient }: PatientSidebarProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredPatients = patients.filter((patient) =>
+    patient.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    });
+  };
+
+  return (
+    <aside className="w-full h-full bg-card border-r border-border flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-border">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-medical-blue flex items-center justify-center">
+              <Activity className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="font-semibold text-foreground">Prontuário Vivo</span>
+          </div>
+        </div>
+        <Button variant="medical" className="w-full" size="default">
+          <Plus className="w-4 h-4" />
+          Nova Consulta
+        </Button>
+      </div>
+
+      {/* Search */}
+      <div className="p-4 border-b border-border">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar paciente..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-secondary/50 border-border"
+          />
+        </div>
+      </div>
+
+      {/* Patient List */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin p-2">
+        <div className="space-y-1">
+          {filteredPatients.map((patient) => (
+            <button
+              key={patient.id}
+              onClick={() => onSelectPatient(patient)}
+              className={cn(
+                'w-full p-3 rounded-lg text-left transition-all duration-200',
+                'hover:bg-accent/50',
+                selectedPatient?.id === patient.id
+                  ? 'bg-patient-active border border-patient-active-border shadow-sm'
+                  : 'bg-transparent'
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className={cn(
+                    'font-medium text-sm truncate',
+                    selectedPatient?.id === patient.id ? 'text-medical-blue' : 'text-foreground'
+                  )}>
+                    {patient.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Última visita: {formatDate(patient.lastVisit)}
+                  </p>
+                </div>
+                <Badge variant={patient.status} className="shrink-0 text-[10px]">
+                  {statusLabels[patient.status]}
+                </Badge>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </aside>
+  );
+}
