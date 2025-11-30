@@ -29,9 +29,9 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
 
   if (!patient) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background">
+      <div className="flex-1 flex items-center justify-center bg-card">
         <div className="text-center text-muted-foreground">
-          <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <FileText className="w-12 h-12 mx-auto mb-4 text-slate-400 opacity-50" />
           <p>Selecione um paciente para iniciar</p>
         </div>
       </div>
@@ -39,9 +39,9 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-background h-full">
+    <div className="flex-1 flex flex-col bg-card h-full">
       {/* Header */}
-      <header className="px-6 py-4 border-b border-border bg-card">
+      <header className="px-6 py-4 border-b border-border/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-medical-blue-light flex items-center justify-center">
@@ -61,35 +61,35 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
 
       {/* Chat Content */}
       <div className="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-4">
-        {/* Pre-consultation Briefing */}
+        {/* Pre-consultation Briefing - Compact */}
         {showBriefing && (
-          <div className="alert-briefing rounded-xl p-4 border animate-fade-in-up">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-alert-amber/20 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-4 h-4 text-alert-amber" />
-                </div>
+          <div className="alert-briefing rounded-lg py-3 px-4 animate-fade-in-up">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-alert-amber shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-foreground text-sm mb-2">
+                  <h3 className="font-semibold text-foreground text-xs mb-1.5">
                     {preBriefing.title}
                   </h3>
-                  <ul className="space-y-1 text-sm text-foreground/80">
-                    <li>• {preBriefing.content.returnInfo}</li>
-                    <li>• {preBriefing.content.previousComplaint}</li>
-                    <li>• {preBriefing.content.pending}</li>
-                    <li className="text-destructive font-medium">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-foreground/80">
+                    <span>{preBriefing.content.returnInfo}</span>
+                    <span>•</span>
+                    <span>{preBriefing.content.previousComplaint}</span>
+                    <span>•</span>
+                    <span>{preBriefing.content.pending}</span>
+                    <span className="text-destructive font-medium">
                       ⚠️ {preBriefing.content.alert}
-                    </li>
-                  </ul>
+                    </span>
+                  </div>
                 </div>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowBriefing(false)}
-                className="shrink-0 h-8 w-8"
+                className="shrink-0 h-6 w-6 text-slate-400 hover:text-foreground"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </Button>
             </div>
           </div>
@@ -100,9 +100,9 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
           <div
             key={message.id}
             className={cn(
-              'rounded-xl p-5 animate-fade-in-up',
-              message.type === 'soap' && 'soap-note bg-card shadow-sm',
-              message.type === 'whatsapp' && 'whatsapp-card bg-card shadow-sm'
+              'animate-fade-in-up',
+              message.type === 'soap' && 'soap-note rounded-lg p-5',
+              message.type === 'whatsapp' && 'whatsapp-card p-5'
             )}
             style={{ animationDelay: `${index * 100}ms` }}
           >
@@ -110,37 +110,43 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
               <div className={cn(
                 'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
                 message.type === 'soap' && 'bg-medical-blue-light',
-                message.type === 'whatsapp' && 'bg-whatsapp-light'
+                message.type === 'whatsapp' && 'bg-whatsapp-green/20'
               )}>
                 {message.type === 'soap' && <FileText className="w-4 h-4 text-medical-blue" />}
                 {message.type === 'whatsapp' && <MessageCircle className="w-4 h-4 text-whatsapp-green" />}
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold text-foreground text-sm">{message.title}</h4>
+                <h4 className={cn(
+                  'font-semibold text-sm',
+                  message.type === 'soap' ? 'text-medical-blue' : 'text-foreground'
+                )}>{message.title}</h4>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Gerado agora
                 </p>
               </div>
             </div>
-            <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap text-sm leading-relaxed">
+            <div className={cn(
+              'text-sm leading-relaxed whitespace-pre-wrap',
+              message.type === 'soap' ? 'text-foreground/90 font-[\'Inter\']' : 'text-foreground/80'
+            )}>
               {message.content}
             </div>
             {message.type === 'whatsapp' && (
-              <div className="mt-4 pt-3 border-t border-border/50">
+              <div className="mt-4 pt-3 border-t border-whatsapp-green/20">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleCopy(message.content, message.id)}
-                  className="gap-2"
+                  className="gap-2 text-xs"
                 >
                   {copiedId === message.id ? (
                     <>
-                      <Check className="w-4 h-4 text-success" />
+                      <Check className="w-3.5 h-3.5 text-success" />
                       Copiado!
                     </>
                   ) : (
                     <>
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-3.5 h-3.5" />
                       Copiar Texto
                     </>
                   )}
@@ -151,27 +157,29 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
         ))}
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 border-t border-border bg-card">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-            <Paperclip className="w-5 h-5" />
-          </Button>
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              placeholder="Digite uma mensagem ou comando..."
-              className="w-full h-12 px-4 rounded-xl bg-secondary/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30 focus:border-medical-blue transition-all"
-            />
+      {/* Input Area - Command Center Style */}
+      <div className="p-4">
+        <div className="input-command-center p-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-foreground h-9 w-9">
+              <Paperclip className="w-4 h-4" />
+            </Button>
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="Digite uma mensagem ou comando..."
+                className="w-full h-10 px-4 rounded-xl bg-muted/50 border-0 text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30 transition-all placeholder:text-slate-400"
+              />
+            </div>
+            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-foreground h-9 w-9">
+              <Send className="w-4 h-4" />
+            </Button>
+            <Button variant="record" size="icon-lg" className="rounded-full animate-pulse-record">
+              <Mic className="w-5 h-5" />
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-            <Send className="w-5 h-5" />
-          </Button>
-          <Button variant="record" size="icon-lg" className="rounded-full animate-pulse-record">
-            <Mic className="w-6 h-6" />
-          </Button>
         </div>
-        <p className="text-xs text-muted-foreground text-center mt-2">
+        <p className="text-[10px] text-muted-foreground text-center mt-2">
           Pressione o botão vermelho para gravar a consulta
         </p>
       </div>

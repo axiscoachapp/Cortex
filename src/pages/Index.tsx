@@ -13,7 +13,7 @@ const Index = () => {
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       {/* Left Sidebar - Patient List (20%) */}
-      <div className="w-[20%] min-w-[260px] max-w-[320px] h-full">
+      <div className="w-[20%] min-w-[260px] max-w-[320px] h-full bg-muted/30">
         <PatientSidebar
           patients={mockPatients}
           selectedPatient={selectedPatient}
@@ -22,7 +22,7 @@ const Index = () => {
       </div>
 
       {/* Center Panel - Chat/Brain (55%) */}
-      <div className="flex-1 h-full border-x border-border">
+      <div className="flex-1 h-full bg-card">
         <ChatPanel
           patient={selectedPatient}
           messages={selectedPatient?.id === '1' ? mockChatMessages : []}
@@ -30,7 +30,7 @@ const Index = () => {
       </div>
 
       {/* Right Sidebar - Patient Snapshot (25%) */}
-      <div className="w-[25%] min-w-[280px] max-w-[380px] h-full">
+      <div className="w-[25%] min-w-[280px] max-w-[380px] h-full bg-muted/30">
         <PatientSnapshot patient={selectedPatient} />
       </div>
     </div>

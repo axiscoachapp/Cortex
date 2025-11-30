@@ -129,19 +129,27 @@
   }
   
   .alert-briefing {
-    @apply bg-alert-amber-light border-alert-amber-border;
+    @apply bg-alert-amber-light border border-alert-amber-border/60;
   }
   
   .soap-note {
-    @apply bg-soap-card border-l-4 border-l-medical-blue;
+    @apply bg-card border-l-4 border-l-medical-blue shadow-sm;
   }
   
   .whatsapp-card {
-    @apply bg-whatsapp-light border-l-4 border-l-whatsapp-green;
+    @apply bg-whatsapp-light rounded-2xl;
   }
   
   .record-button {
     @apply bg-record-red hover:bg-record-red-hover text-white shadow-lg shadow-record-red/30;
+  }
+  
+  .sidebar-subtle {
+    @apply bg-muted/30;
+  }
+  
+  .input-command-center {
+    @apply bg-card shadow-lg rounded-2xl border border-border/50;
   }
 }
 

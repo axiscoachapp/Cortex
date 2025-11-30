@@ -36,9 +36,9 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient }: P
   };
 
   return (
-    <aside className="w-full h-full bg-card border-r border-border flex flex-col">
+    <aside className="w-full h-full bg-transparent flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-border/50">
         <div className="flex items-center gap-2 mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-medical-blue flex items-center justify-center">
@@ -54,14 +54,14 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient }: P
       </div>
 
       {/* Search */}
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-border/50">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input
             placeholder="Buscar paciente..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-secondary/50 border-border"
+            className="pl-9 bg-card border-border/50"
           />
         </div>
       </div>
