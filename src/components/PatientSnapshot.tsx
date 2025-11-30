@@ -14,9 +14,9 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
 
   if (!patient) {
     return (
-      <aside className="w-full h-full bg-card border-l border-border flex items-center justify-center">
+      <aside className="w-full h-full bg-transparent flex items-center justify-center">
         <div className="text-center text-muted-foreground p-6">
-          <User className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <User className="w-12 h-12 mx-auto mb-4 text-slate-400 opacity-50" />
           <p className="text-sm">Nenhum paciente selecionado</p>
         </div>
       </aside>
@@ -24,105 +24,94 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
   }
 
   return (
-    <aside className="w-full h-full bg-card border-l border-border flex flex-col overflow-hidden">
+    <aside className="w-full h-full bg-transparent flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-5 border-b border-border bg-gradient-to-br from-medical-blue-light to-card">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+      <div className="p-5 border-b border-border/50">
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
           Perfil Vivo
         </h2>
         
         {/* Demographics */}
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-medical-blue-light border-2 border-medical-blue/30 flex items-center justify-center">
-            <span className="text-medical-blue font-bold text-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 rounded-full bg-card border border-border/50 shadow-sm flex items-center justify-center">
+            <span className="text-medical-blue font-bold text-base">
               {patient.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </span>
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">{patient.name}</h3>
-            <p className="text-sm text-muted-foreground">{patient.age} anos</p>
-            <p className="text-sm text-muted-foreground">{patient.profession}</p>
+            <h3 className="font-semibold text-foreground text-sm">{patient.name}</h3>
+            <p className="text-xs text-muted-foreground">{patient.age} anos • {patient.profession}</p>
           </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        {/* Diagnoses */}
-        <section className="p-5 border-b border-border">
+        {/* Diagnoses - Compact */}
+        <section className="p-4 border-b border-border/50">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-medical-blue-light flex items-center justify-center">
-              <Stethoscope className="w-4 h-4 text-medical-blue" />
-            </div>
-            <h4 className="font-semibold text-foreground text-sm">Hipóteses Diagnósticas</h4>
+            <Stethoscope className="w-4 h-4 text-slate-400" />
+            <h4 className="font-medium text-foreground text-xs uppercase tracking-wide">Hipóteses Diagnósticas</h4>
           </div>
-          <ul className="space-y-2">
+          <div className="space-y-1.5">
             {patient.diagnoses.map((diagnosis, index) => (
-              <li
+              <div
                 key={index}
-                className="text-sm p-2.5 rounded-lg bg-secondary/50 border border-border/50"
+                className="flex items-baseline gap-2 text-sm py-1.5 px-2.5 rounded-lg bg-card shadow-sm"
               >
-                <span className="font-mono text-medical-blue text-xs">{diagnosis.code}</span>
-                <span className="mx-2 text-muted-foreground">—</span>
-                <span className="text-foreground/90">{diagnosis.description}</span>
-              </li>
+                <span className="font-mono text-medical-blue text-xs shrink-0">{diagnosis.code}</span>
+                <span className="text-foreground/80 text-xs">{diagnosis.description}</span>
+              </div>
             ))}
-          </ul>
-        </section>
-
-        {/* Medications */}
-        <section className="p-5 border-b border-border">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-success-light flex items-center justify-center">
-              <Pill className="w-4 h-4 text-success" />
-            </div>
-            <h4 className="font-semibold text-foreground text-sm">Medicações em Uso</h4>
           </div>
-          <ul className="space-y-2">
-            {patient.medications.map((medication, index) => (
-              <li
-                key={index}
-                className="text-sm p-2.5 rounded-lg bg-success-light/50 border border-success/20"
-              >
-                <span className="font-medium text-foreground">{medication.name}</span>
-                <span className="text-muted-foreground"> {medication.dosage}</span>
-                <p className="text-xs text-muted-foreground mt-1">
-                  ({medication.instructions})
-                </p>
-              </li>
-            ))}
-          </ul>
         </section>
 
-        {/* Allergies */}
-        <section className="p-5">
+        {/* Medications - Compact */}
+        <section className="p-4 border-b border-border/50">
           <div className="flex items-center gap-2 mb-3">
-            <div className={cn(
-              'w-7 h-7 rounded-lg flex items-center justify-center',
-              patient.allergies.length > 0 ? 'bg-destructive/10' : 'bg-secondary'
-            )}>
-              <AlertCircle className={cn(
-                'w-4 h-4',
-                patient.allergies.length > 0 ? 'text-destructive' : 'text-muted-foreground'
-              )} />
-            </div>
-            <h4 className="font-semibold text-foreground text-sm">Alertas / Alergias</h4>
+            <Pill className="w-4 h-4 text-slate-400" />
+            <h4 className="font-medium text-foreground text-xs uppercase tracking-wide">Medicações em Uso</h4>
+          </div>
+          <div className="space-y-1">
+            {patient.medications.map((medication, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 py-2 px-2.5 rounded-lg bg-card shadow-sm"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-medium text-foreground">{medication.name}</span>
+                  <span className="text-xs text-muted-foreground ml-1">{medication.dosage}</span>
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {medication.instructions}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Allergies - Compact & Highlighted */}
+        <section className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertCircle className={cn(
+              'w-4 h-4',
+              patient.allergies.length > 0 ? 'text-destructive' : 'text-slate-400'
+            )} />
+            <h4 className="font-medium text-foreground text-xs uppercase tracking-wide">Alertas / Alergias</h4>
           </div>
           {patient.allergies.length > 0 ? (
-            <ul className="space-y-2">
+            <div className="p-2.5 rounded-lg bg-destructive/10 border border-destructive/20">
               {patient.allergies.map((allergy, index) => (
-                <li
-                  key={index}
-                  className="text-sm p-2.5 rounded-lg bg-destructive/10 border border-destructive/20"
-                >
-                  <span className="font-medium text-destructive">
+                <div key={index} className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-destructive">
                     ⚠️ Alergia a {allergy}
                   </span>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           ) : (
-            <p className="text-sm text-muted-foreground p-2.5 rounded-lg bg-secondary/50">
+            <p className="text-xs text-muted-foreground py-2 px-2.5 rounded-lg bg-card shadow-sm">
               Nenhuma alergia registrada
             </p>
           )}
@@ -130,10 +119,10 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
       </div>
 
       {/* Bottom Action */}
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-border/50">
         <Button
           variant="ghost"
-          className="w-full justify-center gap-2 text-muted-foreground hover:text-medical-blue hover:bg-medical-blue-light"
+          className="w-full justify-center gap-2 text-muted-foreground hover:text-medical-blue hover:bg-card text-xs"
           onClick={() => setDrawerOpen(true)}
         >
           <FolderOpen className="w-4 h-4" />
