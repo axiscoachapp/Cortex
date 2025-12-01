@@ -15,6 +15,8 @@ interface ChatPanelProps {
 export function ChatPanel({ patient, messages }: ChatPanelProps) {
   const [showBriefing, setShowBriefing] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [comment, setComment] = useState('');
   const { toast } = useToast();
 
   const handleCopy = async (text: string, messageId: string) => {
@@ -25,6 +27,25 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
       description: 'A mensagem foi copiada para a área de transferência.',
     });
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleRecordingToggle = () => {
+    setIsRecording(!isRecording);
+    setComment('');
+    toast({
+      title: isRecording ? 'Gravação finalizada' : 'Gravação iniciada',
+      description: isRecording ? 'A consulta foi gravada com sucesso.' : 'A consulta está sendo gravada.',
+    });
+  };
+
+  const handleAddComment = () => {
+    if (comment.trim()) {
+      toast({
+        title: 'Comentário adicionado',
+        description: 'O comentário foi adicionado à transcrição.',
+      });
+      setComment('');
+    }
   };
 
   if (!patient) {
@@ -158,7 +179,39 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
       </div>
 
       {/* Input Area - Command Center Style */}
-      <div className="p-4">
+      <div className="p-4 space-y-3">
+        {/* Recording Status Banner */}
+        {isRecording && (
+          <div className="bg-record-red/10 border border-record-red/30 rounded-lg p-3 animate-fade-in">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full bg-record-red animate-pulse" />
+              <span className="text-sm font-semibold text-record-red">Gravando consulta...</span>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Adicionar comentário à transcrição..."
+                className="flex-1 h-9 px-3 rounded-lg bg-background border border-input text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30 transition-all placeholder:text-muted-foreground"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddComment();
+                  }
+                }}
+              />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAddComment}
+                disabled={!comment.trim()}
+              >
+                Adicionar
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="input-command-center p-3">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="text-slate-400 hover:text-foreground h-9 w-9">
@@ -174,13 +227,18 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
             <Button variant="ghost" size="icon" className="text-slate-400 hover:text-foreground h-9 w-9">
               <Send className="w-4 h-4" />
             </Button>
-            <Button variant="record" size="icon-lg" className="rounded-full animate-pulse-record">
+            <Button 
+              variant={isRecording ? "destructive" : "record"} 
+              size="icon-lg" 
+              className="rounded-full"
+              onClick={handleRecordingToggle}
+            >
               <Mic className="w-5 h-5" />
             </Button>
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground text-center mt-2">
-          Pressione o botão vermelho para gravar a consulta
+        <p className="text-[10px] text-muted-foreground text-center">
+          {isRecording ? 'Clique no botão para finalizar a gravação' : 'Pressione o botão vermelho para gravar a consulta'}
         </p>
       </div>
     </div>
