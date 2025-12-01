@@ -42,11 +42,19 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
         
         {/* Demographics */}
         <div className="flex items-center gap-3">
-          <div className="w-14 h-14 rounded-full bg-card border border-border/50 shadow-sm flex items-center justify-center">
-            <span className="text-medical-blue font-bold text-base">
-              {patient.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-            </span>
-          </div>
+          {patient.photoUrl ? (
+            <img
+              src={patient.photoUrl}
+              alt={patient.name}
+              className="w-14 h-14 rounded-full object-cover border border-border/50 shadow-sm"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-full bg-card border border-border/50 shadow-sm flex items-center justify-center">
+              <span className="text-medical-blue font-bold text-base">
+                {patient.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+              </span>
+            </div>
+          )}
           <div>
             <h3 className="font-semibold text-foreground text-sm">{patient.name}</h3>
             <p className="text-xs text-muted-foreground">{patient.age} anos • {patient.profession}</p>

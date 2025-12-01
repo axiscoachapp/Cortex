@@ -66,11 +66,19 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
       <header className="px-6 py-4 border-b border-border/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-medical-blue-light flex items-center justify-center">
-              <span className="text-medical-blue font-semibold text-sm">
-                {patient.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-              </span>
-            </div>
+            {patient.photoUrl ? (
+              <img
+                src={patient.photoUrl}
+                alt={patient.name}
+                className="w-10 h-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-medical-blue-light flex items-center justify-center">
+                <span className="text-medical-blue font-semibold text-sm">
+                  {patient.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                </span>
+              </div>
+            )}
             <div>
               <h1 className="font-semibold text-foreground">{patient.name}</h1>
               <Badge variant="atendimento" className="mt-1">
