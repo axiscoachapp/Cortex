@@ -1,4 +1,9 @@
 import { Patient, ChatMessage } from '@/types/patient';
+import patientJoao from '@/assets/patient-joao.jpg';
+import patientMaria from '@/assets/patient-maria.jpg';
+import patientCarlos from '@/assets/patient-carlos.jpg';
+import patientAna from '@/assets/patient-ana.jpg';
+import patientRoberto from '@/assets/patient-roberto.jpg';
 
 export const mockPatients: Patient[] = [
   {
@@ -6,6 +11,7 @@ export const mockPatients: Patient[] = [
     name: 'João da Silva',
     age: 34,
     profession: 'Professor',
+    photoUrl: patientJoao,
     lastVisit: '2024-10-30',
     status: 'atendimento',
     diagnoses: [
@@ -23,6 +29,7 @@ export const mockPatients: Patient[] = [
     name: 'Maria Oliveira',
     age: 45,
     profession: 'Advogada',
+    photoUrl: patientMaria,
     lastVisit: '2024-11-15',
     status: 'retorno',
     diagnoses: [
@@ -38,6 +45,7 @@ export const mockPatients: Patient[] = [
     name: 'Carlos Santos',
     age: 52,
     profession: 'Engenheiro',
+    photoUrl: patientCarlos,
     lastVisit: '2024-11-20',
     status: 'seguimento',
     diagnoses: [
@@ -54,6 +62,7 @@ export const mockPatients: Patient[] = [
     name: 'Ana Beatriz Costa',
     age: 28,
     profession: 'Designer',
+    photoUrl: patientAna,
     lastVisit: '2024-11-25',
     status: 'retorno',
     diagnoses: [
@@ -69,6 +78,7 @@ export const mockPatients: Patient[] = [
     name: 'Roberto Almeida',
     age: 61,
     profession: 'Aposentado',
+    photoUrl: patientRoberto,
     lastVisit: '2024-11-28',
     status: 'seguimento',
     diagnoses: [
