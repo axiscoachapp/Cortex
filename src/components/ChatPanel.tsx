@@ -14,6 +14,7 @@ interface ChatPanelProps {
 
 export function ChatPanel({ patient, messages }: ChatPanelProps) {
   const [showBriefing, setShowBriefing] = useState(true);
+  const [briefingExpanded, setBriefingExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [comment, setComment] = useState('');
@@ -86,9 +87,9 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
         {showBriefing && (
           <div className="alert-briefing rounded-lg py-3 px-4 animate-fade-in-up">
             <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2.5">
+              <div className="flex items-start gap-2.5 flex-1">
                 <AlertTriangle className="w-4 h-4 text-alert-amber shrink-0 mt-0.5" />
-                <div>
+                <div className="flex-1">
                   <h3 className="font-semibold text-foreground text-xs mb-1.5">
                     {preBriefing.title}
                   </h3>
@@ -102,6 +103,32 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
                       ⚠️ {preBriefing.content.alert}
                     </span>
                   </div>
+                  
+                  {briefingExpanded && (
+                    <div className="mt-3 pt-3 border-t border-border/30 space-y-2 text-xs text-foreground/80">
+                      <div>
+                        <span className="font-semibold text-foreground">Última Consulta:</span> 15/10/2024 (45 dias atrás)
+                      </div>
+                      <div>
+                        <span className="font-semibold text-foreground">Queixa Principal:</span> Insônia persistente há 3 meses, ansiedade generalizada, dificuldade de concentração no trabalho
+                      </div>
+                      <div>
+                        <span className="font-semibold text-foreground">Conduta Anterior:</span> Iniciado Sertralina 50mg 1x/dia. Solicitado hemograma completo e TSH
+                      </div>
+                      <div>
+                        <span className="font-semibold text-foreground">Evolução:</span> Paciente relatou melhora parcial da ansiedade mas insônia persiste. Sem efeitos colaterais significativos
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setBriefingExpanded(!briefingExpanded)}
+                    className="mt-2 h-7 px-2 text-xs text-medical-blue hover:text-medical-blue-dark"
+                  >
+                    {briefingExpanded ? 'Ver menos' : 'Ver mais detalhes'}
+                  </Button>
                 </div>
               </div>
               <Button
