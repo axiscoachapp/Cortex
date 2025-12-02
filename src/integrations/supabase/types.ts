@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      patients: {
+        Row: {
+          age: number
+          allergies: string[] | null
+          created_at: string
+          diagnoses: Json | null
+          id: string
+          last_visit: string
+          medications: Json | null
+          name: string
+          photo_url: string | null
+          profession: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          age: number
+          allergies?: string[] | null
+          created_at?: string
+          diagnoses?: Json | null
+          id?: string
+          last_visit: string
+          medications?: Json | null
+          name: string
+          photo_url?: string | null
+          profession?: string | null
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          age?: number
+          allergies?: string[] | null
+          created_at?: string
+          diagnoses?: Json | null
+          id?: string
+          last_visit?: string
+          medications?: Json | null
+          name?: string
+          photo_url?: string | null
+          profession?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
