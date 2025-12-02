@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, Plus, Brain } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Plus, Brain, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,7 @@ const statusLabels: Record<Patient['status'], string> = {
 };
 
 export function PatientSidebar({ patients, selectedPatient, onSelectPatient }: PatientSidebarProps) {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredPatients = patients.filter((patient) =>
@@ -113,6 +115,18 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient }: P
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Bottom Management Link */}
+      <div className="p-4 border-t border-border/50">
+        <Button 
+          variant="outline" 
+          className="w-full" 
+          onClick={() => navigate('/gerenciar-pacientes')}
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          Gerenciar Pacientes
+        </Button>
       </div>
     </aside>
   );
