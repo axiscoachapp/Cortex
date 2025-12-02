@@ -17,7 +17,9 @@ export type Database = {
       patients: {
         Row: {
           age: number
+          ai_insights: Json | null
           allergies: string[] | null
+          clinical_notes: string | null
           created_at: string
           diagnoses: Json | null
           id: string
@@ -32,7 +34,9 @@ export type Database = {
         }
         Insert: {
           age: number
+          ai_insights?: Json | null
           allergies?: string[] | null
+          clinical_notes?: string | null
           created_at?: string
           diagnoses?: Json | null
           id?: string
@@ -47,7 +51,9 @@ export type Database = {
         }
         Update: {
           age?: number
+          ai_insights?: Json | null
           allergies?: string[] | null
+          clinical_notes?: string | null
           created_at?: string
           diagnoses?: Json | null
           id?: string
