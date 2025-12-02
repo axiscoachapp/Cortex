@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { User, Stethoscope, Pill, AlertCircle, FolderOpen, Printer } from 'lucide-react';
+import { User, Stethoscope, Pill, AlertCircle, FolderOpen, Printer, FileText, Sparkles } from 'lucide-react';
 import { Patient } from '@/types/patient';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { PatientProfileDrawer } from './PatientProfileDrawer';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PatientSnapshotProps {
   patient: Patient | null;
@@ -12,6 +14,8 @@ interface PatientSnapshotProps {
 
 export function PatientSnapshot({ patient }: PatientSnapshotProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
   const handleGeneratePrescription = () => {
@@ -19,6 +23,47 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
       title: 'Gerando receita...',
       description: 'A receita médica está sendo preparada.',
     });
+  };
+
+  const handleProcessNotes = async () => {
+    if (!notes.trim()) {
+      toast({
+        title: 'Erro',
+        description: 'Por favor, adicione notas antes de processar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!patient?.id) return;
+
+    setIsProcessing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('process-clinical-notes', {
+        body: {
+          patientId: patient.id,
+          notes: notes.trim(),
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Notas processadas!',
+        description: data.message || 'Perfil do paciente atualizado com insights da IA.',
+      });
+
+      setNotes('');
+    } catch (error: any) {
+      console.error('Error processing notes:', error);
+      toast({
+        title: 'Erro ao processar notas',
+        description: error.message || 'Tente novamente mais tarde.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (!patient) {
@@ -120,7 +165,7 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
         </section>
 
         {/* Allergies - Compact & Highlighted */}
-        <section className="p-4">
+        <section className="p-4 border-b border-border/50">
           <div className="flex items-center gap-2 mb-3">
             <AlertCircle className={cn(
               'w-4 h-4',
@@ -143,6 +188,36 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
               Nenhuma alergia registrada
             </p>
           )}
+        </section>
+
+        {/* Clinical Notes Section */}
+        <section className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="w-4 h-4 text-slate-400" />
+            <h4 className="font-medium text-foreground text-xs uppercase tracking-wide">Notas Clínicas</h4>
+          </div>
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Adicione observações, sintomas, histórico familiar ou qualquer informação relevante sobre o paciente..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="min-h-[120px] text-xs resize-none bg-card"
+              disabled={isProcessing}
+            />
+            <Button
+              onClick={handleProcessNotes}
+              disabled={isProcessing || !notes.trim()}
+              size="sm"
+              className="w-full gap-2"
+              variant="medical"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {isProcessing ? 'Processando com IA...' : 'Processar e Adicionar ao Perfil'}
+            </Button>
+            <p className="text-[10px] text-muted-foreground">
+              A IA irá extrair informações estruturadas e adicionar ao perfil do paciente
+            </p>
+          </div>
         </section>
       </div>
 

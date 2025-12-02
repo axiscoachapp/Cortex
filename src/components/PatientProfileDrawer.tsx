@@ -1,15 +1,27 @@
-import { X, FileText, Image, Upload, Clock, Calendar, User, Heart, Brain } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, FileText, Image, Upload, Clock, Calendar, User, Heart, Brain, Sparkles } from 'lucide-react';
 import { Patient } from '@/types/patient';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PatientProfileDrawerProps {
   patient: Patient | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+interface AIInsights {
+  symptoms?: string[];
+  behavioral_observations?: string[];
+  risk_factors?: string[];
+  family_history?: string[];
+  social_factors?: string[];
+  clinical_changes?: string[];
+  summary?: string;
 }
 
 const mockSocialAnamnesis = `Paciente casado, 2 filhos. Trabalha como Professor (alto estresse). Não tabagista. Etilista social. Pratica caminhada 2x por semana. Alimentação irregular devido à rotina de trabalho.`;
@@ -34,6 +46,40 @@ const mockTimeline = [
 ];
 
 export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientProfileDrawerProps) {
+  const [aiInsights, setAiInsights] = useState<AIInsights | null>(null);
+  const [clinicalNotes, setClinicalNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (patient?.id && open) {
+      loadPatientData();
+    }
+  }, [patient?.id, open]);
+
+  const loadPatientData = async () => {
+    if (!patient?.id) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('clinical_notes, ai_insights')
+        .eq('id', patient.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setClinicalNotes(data.clinical_notes || '');
+        setAiInsights((data.ai_insights as AIInsights) || null);
+      }
+    } catch (error) {
+      console.error('Error loading patient data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!patient) return null;
 
   return (
@@ -91,13 +137,117 @@ export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientPro
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Brain className="w-4 h-4 text-primary" />
                 </div>
-                <h3 className="font-semibold text-foreground">Resumo da IA</h3>
+                <h3 className="font-semibold text-foreground">Insights da IA</h3>
               </div>
-              <div className="pl-10 p-4 rounded-lg bg-secondary/50 border border-border">
-                <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">
-                  {mockAISummary}
-                </p>
-              </div>
+              {loading ? (
+                <div className="pl-10 p-4 rounded-lg bg-secondary/50 border border-border">
+                  <p className="text-sm text-muted-foreground">Carregando...</p>
+                </div>
+              ) : aiInsights && Object.keys(aiInsights).length > 0 ? (
+                <div className="pl-10 space-y-4">
+                  {aiInsights.summary && (
+                    <div className="p-4 rounded-lg bg-medical-blue-light/30 border border-medical-blue/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="w-4 h-4 text-medical-blue" />
+                        <span className="text-xs font-semibold text-medical-blue uppercase">Resumo</span>
+                      </div>
+                      <p className="text-sm text-foreground/90 leading-relaxed">
+                        {aiInsights.summary}
+                      </p>
+                    </div>
+                  )}
+
+                  {aiInsights.symptoms && aiInsights.symptoms.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Sintomas</h4>
+                      <ul className="space-y-1">
+                        {aiInsights.symptoms.map((symptom, idx) => (
+                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
+                            <span className="text-medical-blue">•</span>
+                            {symptom}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {aiInsights.behavioral_observations && aiInsights.behavioral_observations.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Observações Comportamentais</h4>
+                      <ul className="space-y-1">
+                        {aiInsights.behavioral_observations.map((obs, idx) => (
+                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
+                            <span className="text-medical-blue">•</span>
+                            {obs}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {aiInsights.risk_factors && aiInsights.risk_factors.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Fatores de Risco</h4>
+                      <ul className="space-y-1">
+                        {aiInsights.risk_factors.map((risk, idx) => (
+                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
+                            <span className="text-destructive">⚠️</span>
+                            {risk}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {aiInsights.family_history && aiInsights.family_history.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Histórico Familiar</h4>
+                      <ul className="space-y-1">
+                        {aiInsights.family_history.map((history, idx) => (
+                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
+                            <span className="text-medical-blue">•</span>
+                            {history}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {aiInsights.social_factors && aiInsights.social_factors.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Fatores Sociais</h4>
+                      <ul className="space-y-1">
+                        {aiInsights.social_factors.map((factor, idx) => (
+                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
+                            <span className="text-medical-blue">•</span>
+                            {factor}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {aiInsights.clinical_changes && aiInsights.clinical_changes.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Mudanças Clínicas</h4>
+                      <ul className="space-y-1">
+                        {aiInsights.clinical_changes.map((change, idx) => (
+                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
+                            <span className="text-success">✓</span>
+                            {change}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="pl-10 p-4 rounded-lg bg-secondary/50 border border-border">
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum insight gerado ainda. Adicione notas clínicas no painel lateral direito para gerar insights automáticos com IA.
+                  </p>
+                </div>
+              )}
             </section>
           </TabsContent>
 
