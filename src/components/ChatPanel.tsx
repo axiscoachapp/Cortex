@@ -212,13 +212,13 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
               <textarea
                 value={editedContent}
                 onChange={(e) => setEditedContent(e.target.value)}
-                className="w-full min-h-[200px] text-sm leading-relaxed bg-muted/30 border border-border rounded-lg p-3 text-foreground/90 font-['Inter'] focus:outline-none focus:ring-2 focus:ring-medical-blue/30 resize-y"
+                className="w-full min-h-[200px] text-sm leading-relaxed bg-muted/30 border border-border rounded-lg p-3 text-foreground/90 focus:outline-none focus:ring-2 focus:ring-medical-blue/30 resize-y"
                 autoFocus
               />
             ) : (
               <div className={cn(
                 'text-sm leading-relaxed whitespace-pre-wrap',
-                message.type === 'soap' ? 'text-foreground/90 font-[\'Inter\']' : 'text-foreground/80'
+                message.type === 'soap' ? 'text-foreground/90' : 'text-foreground/80'
               )}>
                 {(editingId === message.id ? editedContent : message.content).split(/(\*\*[^*]+\*\*)/).map((part, i) => {
                   if (part.startsWith('**') && part.endsWith('**')) {
