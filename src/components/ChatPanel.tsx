@@ -18,6 +18,8 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [comment, setComment] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editedContent, setEditedContent] = useState<string>('');
   const { toast } = useToast();
 
   const handleCopy = async (text: string, messageId: string) => {
@@ -167,8 +169,24 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
                 variant="ghost"
                 size="icon"
                 className="absolute top-3 right-3 h-7 w-7 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  if (editingId === message.id) {
+                    setEditingId(null);
+                    toast({
+                      title: 'Alterações salvas',
+                      description: 'A evolução clínica foi atualizada.',
+                    });
+                  } else {
+                    setEditingId(message.id);
+                    setEditedContent(message.content);
+                  }
+                }}
               >
-                <Pencil className="w-3.5 h-3.5" />
+                {editingId === message.id ? (
+                  <Check className="w-3.5 h-3.5 text-success" />
+                ) : (
+                  <Pencil className="w-3.5 h-3.5" />
+                )}
               </Button>
             )}
             <div className="flex items-start gap-3 mb-3">
@@ -190,17 +208,26 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
                 </p>
               </div>
             </div>
-            <div className={cn(
-              'text-sm leading-relaxed whitespace-pre-wrap',
-              message.type === 'soap' ? 'text-foreground/90 font-[\'Inter\']' : 'text-foreground/80'
-            )}>
-              {message.content.split(/(\*\*[^*]+\*\*)/).map((part, i) => {
-                if (part.startsWith('**') && part.endsWith('**')) {
-                  return <strong key={i}>{part.slice(2, -2)}</strong>;
-                }
-                return part;
-              })}
-            </div>
+            {message.type === 'soap' && editingId === message.id ? (
+              <textarea
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                className="w-full min-h-[200px] text-sm leading-relaxed bg-muted/30 border border-border rounded-lg p-3 text-foreground/90 font-['Inter'] focus:outline-none focus:ring-2 focus:ring-medical-blue/30 resize-y"
+                autoFocus
+              />
+            ) : (
+              <div className={cn(
+                'text-sm leading-relaxed whitespace-pre-wrap',
+                message.type === 'soap' ? 'text-foreground/90 font-[\'Inter\']' : 'text-foreground/80'
+              )}>
+                {(editingId === message.id ? editedContent : message.content).split(/(\*\*[^*]+\*\*)/).map((part, i) => {
+                  if (part.startsWith('**') && part.endsWith('**')) {
+                    return <strong key={i}>{part.slice(2, -2)}</strong>;
+                  }
+                  return part;
+                })}
+              </div>
+            )}
             {message.type === 'whatsapp' && (
               <div className="mt-4 pt-3 border-t border-whatsapp-green/20">
                 <Button
