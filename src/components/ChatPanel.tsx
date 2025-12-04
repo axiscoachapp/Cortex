@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send, Copy, Check } from 'lucide-react';
+import { X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send, Copy, Check, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Patient, ChatMessage } from '@/types/patient';
@@ -156,12 +156,21 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
           <div
             key={message.id}
             className={cn(
-              'animate-fade-in-up',
+              'animate-fade-in-up relative',
               message.type === 'soap' && 'soap-note rounded-lg p-5',
               message.type === 'whatsapp' && 'whatsapp-card p-5'
             )}
             style={{ animationDelay: `${index * 100}ms` }}
           >
+            {message.type === 'soap' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-3 right-3 h-7 w-7 text-muted-foreground hover:text-foreground"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </Button>
+            )}
             <div className="flex items-start gap-3 mb-3">
               <div className={cn(
                 'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
@@ -185,7 +194,12 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
               'text-sm leading-relaxed whitespace-pre-wrap',
               message.type === 'soap' ? 'text-foreground/90 font-[\'Inter\']' : 'text-foreground/80'
             )}>
-              {message.content}
+              {message.content.split(/(\*\*[^*]+\*\*)/).map((part, i) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                  return <strong key={i}>{part.slice(2, -2)}</strong>;
+                }
+                return part;
+              })}
             </div>
             {message.type === 'whatsapp' && (
               <div className="mt-4 pt-3 border-t border-whatsapp-green/20">
