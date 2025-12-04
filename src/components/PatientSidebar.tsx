@@ -11,6 +11,7 @@ interface PatientSidebarProps {
   patients: Patient[];
   selectedPatient: Patient | null;
   onSelectPatient: (patient: Patient) => void;
+  onNewConsultation?: () => void;
 }
 
 const statusLabels: Record<Patient['status'], string> = {
@@ -20,7 +21,7 @@ const statusLabels: Record<Patient['status'], string> = {
   atendimento: 'Em atendimento',
 };
 
-export function PatientSidebar({ patients, selectedPatient, onSelectPatient }: PatientSidebarProps) {
+export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation }: PatientSidebarProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -49,7 +50,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient }: P
             <span className="font-semibold text-foreground">Cortex</span>
           </div>
         </div>
-        <Button variant="medical" className="w-full" size="default">
+        <Button variant="medical" className="w-full" size="default" onClick={onNewConsultation}>
           <Plus className="w-4 h-4" />
           Nova Consulta
         </Button>
