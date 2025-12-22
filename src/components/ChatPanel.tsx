@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send, Copy, Check, Pencil } from 'lucide-react';
+import { X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send, Copy, Check, Pencil, Pause, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Patient, ChatMessage } from '@/types/patient';
@@ -17,6 +17,7 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
   const [briefingExpanded, setBriefingExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [comment, setComment] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState<string>('');
@@ -34,10 +35,19 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
 
   const handleRecordingToggle = () => {
     setIsRecording(!isRecording);
+    setIsPaused(false);
     setComment('');
     toast({
       title: isRecording ? 'Gravação finalizada' : 'Gravação iniciada',
       description: isRecording ? 'A consulta foi gravada com sucesso.' : 'A consulta está sendo gravada.',
+    });
+  };
+
+  const handlePauseToggle = () => {
+    setIsPaused(!isPaused);
+    toast({
+      title: isPaused ? 'Gravação retomada' : 'Gravação pausada',
+      description: isPaused ? 'A gravação foi retomada.' : 'A gravação está pausada.',
     });
   };
 
@@ -258,10 +268,44 @@ export function ChatPanel({ patient, messages }: ChatPanelProps) {
       <div className="p-4 space-y-3">
         {/* Recording Status Banner */}
         {isRecording && (
-          <div className="bg-record-red/10 border border-record-red/30 rounded-lg p-3 animate-fade-in">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 rounded-full bg-record-red animate-pulse" />
-              <span className="text-sm font-semibold text-record-red">Gravando consulta...</span>
+          <div className={cn(
+            "border rounded-lg p-3 animate-fade-in",
+            isPaused ? "bg-amber-500/10 border-amber-500/30" : "bg-record-red/10 border-record-red/30"
+          )}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "w-2 h-2 rounded-full",
+                  isPaused ? "bg-amber-500" : "bg-record-red animate-pulse"
+                )} />
+                <span className={cn(
+                  "text-sm font-semibold",
+                  isPaused ? "text-amber-500" : "text-record-red"
+                )}>
+                  {isPaused ? 'Gravação pausada' : 'Gravando consulta...'}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePauseToggle}
+                className={cn(
+                  "h-8 gap-1.5",
+                  isPaused ? "text-amber-500 hover:text-amber-600" : "text-record-red hover:text-record-red/80"
+                )}
+              >
+                {isPaused ? (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Retomar
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-4 h-4" />
+                    Pausar
+                  </>
+                )}
+              </Button>
             </div>
             <div className="flex gap-2">
               <input
