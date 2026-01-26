@@ -6,12 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Brain } from 'lucide-react';
+import { Brain, SkipForward } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, enableAdminBypass, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,6 +39,12 @@ const Auth = () => {
       toast.success('Login realizado com sucesso!');
       navigate('/');
     }
+  };
+
+  const handleAdminSkip = () => {
+    enableAdminBypass();
+    toast.success('Acesso admin (sem login)');
+    navigate('/');
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -149,6 +155,18 @@ const Auth = () => {
               </form>
             </TabsContent>
           </Tabs>
+          <div className="mt-4 pt-4 border-t">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full text-muted-foreground hover:text-foreground"
+              onClick={handleAdminSkip}
+            >
+              <SkipForward className="h-4 w-4 mr-2" />
+              Admin — pular login
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

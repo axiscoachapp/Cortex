@@ -12,6 +12,28 @@ interface PatientSnapshotProps {
   patient: Patient | null;
 }
 
+function formatMedicationDuration(startedAt: string): string {
+  const start = new Date(startedAt);
+  const now = new Date();
+  const diffMs = now.getTime() - start.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 1) return 'hoje';
+  if (diffDays === 1) return 'há 1 dia';
+  if (diffDays < 30) return `há ${diffDays} dias`;
+
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths === 1) return 'há 1 mês';
+  if (diffMonths < 12) return `há ${diffMonths} meses`;
+
+  const years = Math.floor(diffMonths / 12);
+  const months = diffMonths % 12;
+  if (months === 0) return years === 1 ? 'há 1 ano' : `há ${years} anos`;
+  return years === 1
+    ? `há 1 ano e ${months} ${months === 1 ? 'mês' : 'meses'}`
+    : `há ${years} anos e ${months} ${months === 1 ? 'mês' : 'meses'}`;
+}
+
 export function PatientSnapshot({ patient }: PatientSnapshotProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notes, setNotes] = useState('');
@@ -153,9 +175,16 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-medium text-foreground">{medication.name}</span>
-                  <span className="text-xs text-muted-foreground ml-1">{medication.dosage}</span>
-                  <p className="text-[10px] text-muted-foreground truncate">
+                  <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                    <span className="text-xs font-medium text-foreground">{medication.name}</span>
+                    <span className="text-xs text-muted-foreground">{medication.dosage}</span>
+                    {medication.startedAt && (
+                      <span className="text-[10px] text-muted-foreground/80">
+                        · {formatMedicationDuration(medication.startedAt)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground truncate mt-0.5">
                     {medication.instructions}
                   </p>
                 </div>

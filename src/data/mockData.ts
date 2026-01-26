@@ -19,8 +19,8 @@ export const mockPatients: Patient[] = [
       { code: 'G47.0', description: 'Insônia não orgânica' },
     ],
     medications: [
-      { name: 'Sertralina', dosage: '50mg', instructions: '1cp manhã' },
-      { name: 'Zolpidem', dosage: '10mg', instructions: 'Se necessário' },
+      { name: 'Sertralina', dosage: '50mg', instructions: '1cp manhã', startedAt: '2024-09-15' },
+      { name: 'Zolpidem', dosage: '10mg', instructions: 'Se necessário', startedAt: '2024-10-01' },
     ],
     allergies: ['Dipirona'],
   },
@@ -36,7 +36,7 @@ export const mockPatients: Patient[] = [
       { code: 'F41.1', description: 'Transtorno de ansiedade generalizada' },
     ],
     medications: [
-      { name: 'Escitalopram', dosage: '10mg', instructions: '1cp manhã' },
+      { name: 'Escitalopram', dosage: '10mg', instructions: '1cp manhã', startedAt: '2024-06-20' },
     ],
     allergies: [],
   },
@@ -52,8 +52,8 @@ export const mockPatients: Patient[] = [
       { code: 'F33.0', description: 'Transtorno depressivo recorrente' },
     ],
     medications: [
-      { name: 'Venlafaxina', dosage: '75mg', instructions: '1cp manhã' },
-      { name: 'Quetiapina', dosage: '25mg', instructions: '1cp noite' },
+      { name: 'Venlafaxina', dosage: '75mg', instructions: '1cp manhã', startedAt: '2024-02-10' },
+      { name: 'Quetiapina', dosage: '25mg', instructions: '1cp noite', startedAt: '2024-08-05' },
     ],
     allergies: ['Sulfa', 'Penicilina'],
   },
@@ -69,7 +69,7 @@ export const mockPatients: Patient[] = [
       { code: 'F40.1', description: 'Fobia social' },
     ],
     medications: [
-      { name: 'Paroxetina', dosage: '20mg', instructions: '1cp manhã' },
+      { name: 'Paroxetina', dosage: '20mg', instructions: '1cp manhã', startedAt: '2024-10-12' },
     ],
     allergies: [],
   },
@@ -86,7 +86,7 @@ export const mockPatients: Patient[] = [
       { code: 'F51.0', description: 'Insônia primária' },
     ],
     medications: [
-      { name: 'Mirtazapina', dosage: '30mg', instructions: '1cp noite' },
+      { name: 'Mirtazapina', dosage: '30mg', instructions: '1cp noite', startedAt: '2024-11-01' },
     ],
     allergies: ['AAS'],
   },

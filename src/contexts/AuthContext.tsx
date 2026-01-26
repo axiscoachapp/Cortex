@@ -2,12 +2,25 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+const ADMIN_BYPASS_KEY = 'cortex_admin_bypass';
+
+const ADMIN_BYPASS_USER: User = {
+  id: 'admin-bypass-local',
+  email: 'admin@localhost',
+  aud: 'authenticated',
+  role: 'authenticated',
+  app_metadata: {},
+  user_metadata: {},
+  created_at: new Date().toISOString(),
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  enableAdminBypass: () => void;
   signOut: () => Promise<void>;
 }
 
@@ -17,6 +30,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [adminBypass, setAdminBypass] = useState(() =>
+    typeof window !== 'undefined' && localStorage.getItem(ADMIN_BYPASS_KEY) === '1'
+  );
 
   useEffect(() => {
     // Set up auth state listener
@@ -59,12 +75,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error };
   };
 
+  const enableAdminBypass = () => {
+    localStorage.setItem(ADMIN_BYPASS_KEY, '1');
+    setAdminBypass(true);
+  };
+
   const signOut = async () => {
+    localStorage.removeItem(ADMIN_BYPASS_KEY);
+    setAdminBypass(false);
     await supabase.auth.signOut();
   };
 
+  const effectiveUser = adminBypass ? ADMIN_BYPASS_USER : user;
+  const effectiveSession = adminBypass ? null : session;
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user: effectiveUser,
+        session: effectiveSession,
+        loading,
+        signUp,
+        signIn,
+        enableAdminBypass,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

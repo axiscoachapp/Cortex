@@ -20,6 +20,8 @@ export interface Medication {
   name: string;
   dosage: string;
   instructions: string;
+  /** Data de início do uso (ISO). Usado para exibir "há X tempo em uso". */
+  startedAt?: string;
 }
 
 export interface ChatMessage {
