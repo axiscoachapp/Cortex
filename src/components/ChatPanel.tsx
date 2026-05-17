@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ConsultationReviewModal } from '@/components/ConsultationReviewModal';
+import { printSoap } from '@/lib/printDoc';
 
 export interface PreBriefing {
   returnInfo: string;
@@ -497,44 +498,8 @@ export function ChatPanel({
   };
 
   const handlePrintSOAP = (soapNote: string) => {
-    const sections: Array<{ letter: string; title: string; content: string }> = [];
-    const re = /\*\*([A-Z])\s*(?:\([^)]+\))?\*\*[:\s]*([\s\S]*?)(?=\n\s*\n?\*\*[A-Z]|$)/g;
-    let m;
-    while ((m = re.exec(soapNote)) !== null) {
-      sections.push({
-        letter: m[1],
-        title: m[0].match(/\*\*([^*]+)\*\*/)?.[1]?.trim() ?? m[1],
-        content: m[2].trim(),
-      });
-    }
-
-    const bg: Record<string, string> = { S: '#eff6ff', O: '#f8fafc', A: '#fffbeb', P: '#f0fdf4' };
-    const border: Record<string, string> = { S: '#3b82f6', O: '#94a3b8', A: '#f59e0b', P: '#22c55e' };
-
-    const sectionsHtml = sections.length > 0
-      ? sections.map(({ letter, title, content }) =>
-          `<div style="margin-bottom:14px;background:${bg[letter] ?? '#f9fafb'};border-left:3px solid ${border[letter] ?? '#e5e7eb'};padding:10px 14px;border-radius:0 6px 6px 0">
-            <div style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.55;margin-bottom:5px">${title}</div>
-            <div style="font-size:10.5pt;line-height:1.65;white-space:pre-wrap">${content || 'Não relatado na consulta.'}</div>
-          </div>`).join('')
-      : `<div style="white-space:pre-wrap;font-size:10.5pt;line-height:1.65">${soapNote}</div>`;
-
-    const date = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Evolução — ${patient?.name ?? ''}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11pt;color:#111827;padding:48px 56px;max-width:800px}h1{font-size:17pt;font-weight:700;color:#1d4ed8}.sub{color:#6b7280;font-size:9.5pt;margin-top:2px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #e5e7eb}.footer{margin-top:32px;padding-top:12px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:8pt}@media print{body{padding:24px 32px}}</style>
-</head><body>
-<h1>${patient?.name ?? ''}</h1>
-<div class="sub">${patient?.age ?? ''} anos${patient?.profession ? ` · ${patient.profession}` : ''} &nbsp;·&nbsp; ${date}${chiefComplaint ? ` &nbsp;·&nbsp; Queixa: ${chiefComplaint}` : ''}</div>
-${sectionsHtml}
-<div class="footer">Gerado pelo Cortex</div>
-<script>window.onload=()=>window.print();</script>
-</body></html>`;
-
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    if (!patient) return;
+    printSoap(soapNote, patient, chiefComplaint);
   };
 
   if (!patient) {
