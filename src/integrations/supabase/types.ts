@@ -14,12 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          id: string
+          user_id: string
+          patient_id: string | null
+          title: string
+          start_time: string
+          end_time: string
+          type: string
+          notes: string | null
+          status: string
+          google_event_id: string | null
+          reminder_sent: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          patient_id?: string | null
+          title: string
+          start_time: string
+          end_time: string
+          type?: string
+          notes?: string | null
+          status?: string
+          google_event_id?: string | null
+          reminder_sent?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          patient_id?: string | null
+          title?: string
+          start_time?: string
+          end_time?: string
+          type?: string
+          notes?: string | null
+          status?: string
+          google_event_id?: string | null
+          reminder_sent?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      consultations: {
+        Row: {
+          id: string
+          patient_id: string | null
+          user_id: string
+          chief_complaint: string | null
+          transcription: string | null
+          soap_note: string | null
+          whatsapp_message: string | null
+          pre_briefing: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id?: string | null
+          user_id: string
+          chief_complaint?: string | null
+          transcription?: string | null
+          soap_note?: string | null
+          whatsapp_message?: string | null
+          pre_briefing?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string | null
+          user_id?: string
+          chief_complaint?: string | null
+          transcription?: string | null
+          soap_note?: string | null
+          whatsapp_message?: string | null
+          pre_briefing?: Json | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultations_patient_id_fkey"
+            columns: ["patient_id"]
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       patients: {
         Row: {
           age: number
           ai_insights: Json | null
           allergies: string[] | null
           clinical_notes: string | null
+          social_anamnesis: string | null
+          medical_history: string | null
           created_at: string
           diagnoses: Json | null
           id: string
@@ -37,6 +127,8 @@ export type Database = {
           ai_insights?: Json | null
           allergies?: string[] | null
           clinical_notes?: string | null
+          social_anamnesis?: string | null
+          medical_history?: string | null
           created_at?: string
           diagnoses?: Json | null
           id?: string
@@ -54,6 +146,8 @@ export type Database = {
           ai_insights?: Json | null
           allergies?: string[] | null
           clinical_notes?: string | null
+          social_anamnesis?: string | null
+          medical_history?: string | null
           created_at?: string
           diagnoses?: Json | null
           id?: string
@@ -65,6 +159,39 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_integrations: {
+        Row: {
+          id: string
+          user_id: string
+          google_refresh_token: string | null
+          google_access_token: string | null
+          google_token_expiry: string | null
+          google_calendar_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          google_refresh_token?: string | null
+          google_access_token?: string | null
+          google_token_expiry?: string | null
+          google_calendar_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          google_refresh_token?: string | null
+          google_access_token?: string | null
+          google_token_expiry?: string | null
+          google_calendar_id?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }

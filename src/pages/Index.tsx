@@ -1,26 +1,63 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { PatientSidebar } from '@/components/PatientSidebar';
 import { ChatPanel } from '@/components/ChatPanel';
 import { PatientSnapshot } from '@/components/PatientSnapshot';
 import { NewConsultationModal } from '@/components/NewConsultationModal';
 import { Button } from '@/components/ui/button';
 import { LogOut, LogIn } from 'lucide-react';
-import { mockPatients, mockChatMessages } from '@/data/mockData';
 import { Patient, ChatMessage } from '@/types/patient';
 import { useToast } from '@/hooks/use-toast';
+import { useSeedPatients } from '@/hooks/useSeedPatients';
+
+function mapRow(row: any): Patient {
+  return {
+    id: row.id,
+    name: row.name,
+    age: row.age,
+    profession: row.profession ?? '',
+    photoUrl: row.photo_url ?? undefined,
+    lastVisit: row.last_visit,
+    status: row.status as Patient['status'],
+    diagnoses: Array.isArray(row.diagnoses) ? row.diagnoses : [],
+    medications: Array.isArray(row.medications) ? row.medications : [],
+    allergies: row.allergies ?? [],
+    socialAnamnesis: row.social_anamnesis ?? undefined,
+    medicalHistory: row.medical_history ?? undefined,
+  };
+}
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, signOut, loading } = useAuth();
   const { toast } = useToast();
-  const [patients, setPatients] = useState<Patient[]>(mockPatients);
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(
-    mockPatients.find(p => p.id === '1') || null
-  );
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(mockChatMessages);
+  const queryClient = useQueryClient();
+
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chiefComplaint, setChiefComplaint] = useState('');
   const [showNewConsultationModal, setShowNewConsultationModal] = useState(false);
+  const [preBriefing, setPreBriefing] = useState<any>(null);
+  const [briefingLoading, setBriefingLoading] = useState(false);
+
+  useSeedPatients(user?.id);
+
+  const { data: patients = [] } = useQuery<Patient[]>({
+    queryKey: ['patients', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      return (data ?? []).map(mapRow);
+    },
+    enabled: !!user?.id,
+  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -33,48 +70,86 @@ const Index = () => {
     navigate('/auth');
   };
 
+  const handleSelectPatient = async (patient: Patient) => {
+    setSelectedPatient(patient);
+    setChatMessages([]);
+    setChiefComplaint('');
+    setPreBriefing(null);
+
+    setBriefingLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-prebriefing', {
+        body: {
+          patientId: patient.id,
+          patientContext: {
+            name: patient.name,
+            age: patient.age,
+            diagnoses: patient.diagnoses,
+            medications: patient.medications,
+            allergies: patient.allergies,
+          },
+        },
+      });
+      if (!error && data) {
+        setPreBriefing(data);
+      }
+    } catch {
+      // pre-briefing is non-critical, fail silently
+    } finally {
+      setBriefingLoading(false);
+    }
+  };
+
   const handleNewConsultation = () => {
     setShowNewConsultationModal(true);
   };
 
-  const handleStartConsultation = (
+  const handleStartConsultation = async (
     patientId: string | null,
     newPatientData: { name: string; age: number; profession: string } | undefined,
-    chiefComplaint: string
+    complaint: string
   ) => {
     let patient: Patient;
 
     if (newPatientData) {
-      // Create new patient
-      const newPatient: Patient = {
-        id: `new-${Date.now()}`,
-        name: newPatientData.name,
-        age: newPatientData.age,
-        profession: newPatientData.profession,
-        lastVisit: new Date().toISOString(),
-        status: 'atendimento',
-        diagnoses: [],
-        medications: [],
-        allergies: [],
-      };
-      setPatients(prev => [newPatient, ...prev]);
-      patient = newPatient;
+      const { data, error } = await supabase
+        .from('patients')
+        .insert([{
+          name: newPatientData.name,
+          age: newPatientData.age,
+          profession: newPatientData.profession,
+          last_visit: new Date().toISOString().split('T')[0],
+          status: 'atendimento',
+          user_id: user!.id,
+          diagnoses: [],
+          medications: [],
+          allergies: [],
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        toast({ title: 'Erro ao criar paciente', variant: 'destructive' });
+        return;
+      }
+      patient = mapRow(data);
+      queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
     } else {
-      // Find existing patient
       patient = patients.find(p => p.id === patientId) || patients[0];
-      // Update status to "atendimento"
-      setPatients(prev => prev.map(p => 
-        p.id === patientId ? { ...p, status: 'atendimento' as const } : p
-      ));
+      await supabase
+        .from('patients')
+        .update({ status: 'atendimento' })
+        .eq('id', patient.id);
+      queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
     }
 
-    // Set selected patient and clear chat for new consultation
     setSelectedPatient({ ...patient, status: 'atendimento' });
+    setChiefComplaint(complaint);
     setChatMessages([]);
 
     toast({
       title: 'Consulta iniciada',
-      description: `Consulta com ${patient.name} iniciada. Queixa: ${chiefComplaint}`,
+      description: `Consulta com ${patient.name} iniciada.`,
     });
   };
 
@@ -101,25 +176,28 @@ const Index = () => {
           </Button>
         )}
       </div>
-      {/* Left Sidebar - Patient List (20%) */}
+
       <div className="w-[20%] min-w-[260px] max-w-[320px] h-full bg-muted/30">
         <PatientSidebar
           patients={patients}
           selectedPatient={selectedPatient}
-          onSelectPatient={setSelectedPatient}
+          onSelectPatient={handleSelectPatient}
           onNewConsultation={handleNewConsultation}
         />
       </div>
 
-      {/* Center Panel - Chat/Brain (55%) */}
       <div className="flex-1 h-full bg-card">
         <ChatPanel
           patient={selectedPatient}
           messages={chatMessages}
+          onMessagesChange={setChatMessages}
+          chiefComplaint={chiefComplaint}
+          preBriefing={preBriefing}
+          briefingLoading={briefingLoading}
+          userId={user?.id ?? ''}
         />
       </div>
 
-      {/* Right Sidebar - Patient Snapshot (25%) */}
       <div className="w-[25%] min-w-[280px] max-w-[380px] h-full bg-muted/30">
         <PatientSnapshot patient={selectedPatient} />
       </div>

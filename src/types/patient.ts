@@ -9,6 +9,10 @@ export interface Patient {
   diagnoses: Diagnosis[];
   medications: Medication[];
   allergies: string[];
+  socialAnamnesis?: string;
+  medicalHistory?: string;
+  phone?: string;
+  email?: string;
 }
 
 export interface Diagnosis {
@@ -22,6 +26,21 @@ export interface Medication {
   instructions: string;
   /** Data de início do uso (ISO). Usado para exibir "há X tempo em uso". */
   startedAt?: string;
+}
+
+export interface Appointment {
+  id: string;
+  userId: string;
+  patientId: string | null;
+  patientName?: string;
+  title: string;
+  startTime: Date;
+  endTime: Date;
+  type: 'novo' | 'retorno' | 'seguimento' | 'urgencia';
+  notes?: string;
+  status: 'agendado' | 'confirmado' | 'cancelado' | 'realizado';
+  googleEventId?: string;
+  reminderSent: boolean;
 }
 
 export interface ChatMessage {

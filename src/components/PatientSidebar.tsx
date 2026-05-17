@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Brain, Settings } from 'lucide-react';
+import { Search, Plus, Brain, Settings, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -118,11 +118,19 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
         </div>
       </div>
 
-      {/* Bottom Management Link */}
-      <div className="p-4 border-t border-border/50">
-        <Button 
-          variant="outline" 
-          className="w-full" 
+      {/* Bottom Navigation */}
+      <div className="p-4 border-t border-border/50 space-y-2">
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => navigate('/agenda')}
+        >
+          <CalendarDays className="w-4 h-4 mr-2" />
+          Agenda
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full"
           onClick={() => navigate('/gerenciar-pacientes')}
         >
           <Settings className="w-4 h-4 mr-2" />

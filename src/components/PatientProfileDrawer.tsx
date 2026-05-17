@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { X, FileText, Image, Upload, Clock, Calendar, User, Heart, Brain, Sparkles } from 'lucide-react';
+import { FileText, Image, Upload, Calendar, User, Heart, Brain, Sparkles, Pencil, Check, X } from 'lucide-react';
 import { Patient } from '@/types/patient';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PatientProfileDrawerProps {
   patient: Patient | null;
@@ -24,15 +26,12 @@ interface AIInsights {
   summary?: string;
 }
 
-const mockSocialAnamnesis = `Paciente casado, 2 filhos. Trabalha como Professor (alto estresse). Não tabagista. Etilista social. Pratica caminhada 2x por semana. Alimentação irregular devido à rotina de trabalho.`;
-
-const mockMedicalHistory = `Cirurgia de apêndice em 2015. Histórico familiar de diabetes (Mãe). Pai com hipertensão controlada. Nega doenças cardíacas na família. Vacinação em dia.`;
-
-const mockAISummary = `João iniciou acompanhamento em outubro/2024 com queixa principal de insônia persistente e sintomas ansiosos associados ao estresse laboral. Após avaliação inicial, foi diagnosticado com Episódio Depressivo Moderado (F32.1) e Insônia não-orgânica (G47.0). 
-
-Iniciou tratamento com Sertralina 50mg com boa tolerância. Apresentou melhora progressiva do humor nas primeiras 4 semanas. Zolpidem 10mg foi prescrito para uso eventual nos episódios de insônia mais intensa.
-
-Pontos de atenção: monitorar ganho de peso (efeito colateral potencial da Sertralina) e avaliar necessidade de ajuste de dose na próxima consulta. Paciente demonstra boa adesão ao tratamento e insight preservado sobre sua condição.`;
+interface Consultation {
+  id: string;
+  created_at: string;
+  chief_complaint: string | null;
+  soap_note: string | null;
+}
 
 const mockFiles = [
   { id: '1', name: 'Hemograma Completo.pdf', date: '15/10/2024', type: 'pdf', tag: 'Laboratório' },
@@ -40,44 +39,96 @@ const mockFiles = [
   { id: '3', name: 'Receita Anterior.pdf', date: '01/08/2024', type: 'pdf', tag: 'Receita' },
 ];
 
-const mockTimeline = [
-  { id: '1', date: '30/11/2024', title: 'Retorno (Atual)', status: 'atual', reason: 'Acompanhamento mensal' },
-  { id: '2', date: '15/10/2024', title: 'Primeira Consulta', status: 'concluida', reason: 'Insônia e Ansiedade' },
-];
-
 export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientProfileDrawerProps) {
   const [aiInsights, setAiInsights] = useState<AIInsights | null>(null);
-  const [clinicalNotes, setClinicalNotes] = useState('');
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const [socialAnamnesis, setSocialAnamnesis] = useState('');
+  const [medicalHistory, setMedicalHistory] = useState('');
+  const [editingField, setEditingField] = useState<'social' | 'medical' | null>(null);
+  const [draftValue, setDraftValue] = useState('');
+
+  const { toast } = useToast();
 
   useEffect(() => {
     if (patient?.id && open) {
       loadPatientData();
+      loadConsultations();
     }
   }, [patient?.id, open]);
 
+  useEffect(() => {
+    if (patient) {
+      setSocialAnamnesis(patient.socialAnamnesis ?? '');
+      setMedicalHistory(patient.medicalHistory ?? '');
+    }
+  }, [patient?.id]);
+
   const loadPatientData = async () => {
     if (!patient?.id) return;
-    
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('patients')
-        .select('clinical_notes, ai_insights')
+        .select('ai_insights, social_anamnesis, medical_history')
         .eq('id', patient.id)
         .single();
 
-      if (error) throw error;
-
       if (data) {
-        setClinicalNotes(data.clinical_notes || '');
         setAiInsights((data.ai_insights as AIInsights) || null);
+        setSocialAnamnesis(data.social_anamnesis ?? '');
+        setMedicalHistory(data.medical_history ?? '');
       }
-    } catch (error) {
-      console.error('Error loading patient data:', error);
+    } catch {
+      // non-critical
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadConsultations = async () => {
+    if (!patient?.id) return;
+    const { data } = await supabase
+      .from('consultations')
+      .select('id, created_at, chief_complaint, soap_note')
+      .eq('patient_id', patient.id)
+      .order('created_at', { ascending: false });
+
+    setConsultations(data ?? []);
+  };
+
+  const startEdit = (field: 'social' | 'medical') => {
+    setEditingField(field);
+    setDraftValue(field === 'social' ? socialAnamnesis : medicalHistory);
+  };
+
+  const cancelEdit = () => {
+    setEditingField(null);
+    setDraftValue('');
+  };
+
+  const saveEdit = async (field: 'social' | 'medical') => {
+    if (!patient?.id) return;
+    const updateData = field === 'social'
+      ? { social_anamnesis: draftValue }
+      : { medical_history: draftValue };
+
+    const { error } = await supabase
+      .from('patients')
+      .update(updateData)
+      .eq('id', patient.id);
+
+    if (error) {
+      toast({ title: 'Erro ao salvar', variant: 'destructive' });
+      return;
+    }
+
+    if (field === 'social') setSocialAnamnesis(draftValue);
+    else setMedicalHistory(draftValue);
+    setEditingField(null);
+    toast({ title: 'Salvo com sucesso' });
   };
 
   if (!patient) return null;
@@ -93,7 +144,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientPro
               </span>
             </div>
             <div>
-              <span className="text-foreground">Dossiê do Paciente: {patient.name}</span>
+              <span className="text-foreground">Dossiê: {patient.name}</span>
               <p className="text-sm font-normal text-muted-foreground">{patient.age} anos • {patient.profession}</p>
             </div>
           </SheetTitle>
@@ -103,35 +154,44 @@ export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientPro
           <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
             <TabsTrigger value="files" className="text-xs sm:text-sm">Arquivos & Exames</TabsTrigger>
-            <TabsTrigger value="history" className="text-xs sm:text-sm">Histórico</TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm">
+              Histórico {consultations.length > 0 && `(${consultations.length})`}
+            </TabsTrigger>
           </TabsList>
 
           {/* Tab 1: Visão Geral */}
           <TabsContent value="overview" className="space-y-6">
-            <section className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-medical-blue-light flex items-center justify-center">
-                  <User className="w-4 h-4 text-medical-blue" />
-                </div>
-                <h3 className="font-semibold text-foreground">Anamnese Social</h3>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed pl-10">
-                {mockSocialAnamnesis}
-              </p>
-            </section>
+            {/* Social Anamnesis */}
+            <EditableSection
+              icon={<User className="w-4 h-4 text-medical-blue" />}
+              iconBg="bg-medical-blue-light"
+              title="Anamnese Social"
+              value={socialAnamnesis}
+              isEditing={editingField === 'social'}
+              draftValue={draftValue}
+              onEdit={() => startEdit('social')}
+              onCancel={cancelEdit}
+              onSave={() => saveEdit('social')}
+              onDraftChange={setDraftValue}
+              placeholder="Adicione informações sociais do paciente (estado civil, trabalho, hábitos...)"
+            />
 
-            <section className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-success-light flex items-center justify-center">
-                  <Heart className="w-4 h-4 text-success" />
-                </div>
-                <h3 className="font-semibold text-foreground">Histórico Médico</h3>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed pl-10">
-                {mockMedicalHistory}
-              </p>
-            </section>
+            {/* Medical History */}
+            <EditableSection
+              icon={<Heart className="w-4 h-4 text-success" />}
+              iconBg="bg-success/10"
+              title="Histórico Médico"
+              value={medicalHistory}
+              isEditing={editingField === 'medical'}
+              draftValue={draftValue}
+              onEdit={() => startEdit('medical')}
+              onCancel={cancelEdit}
+              onSave={() => saveEdit('medical')}
+              onDraftChange={setDraftValue}
+              placeholder="Adicione o histórico médico do paciente (cirurgias, doenças preexistentes, histórico familiar...)"
+            />
 
+            {/* AI Insights */}
             <section className="space-y-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -151,100 +211,32 @@ export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientPro
                         <Sparkles className="w-4 h-4 text-medical-blue" />
                         <span className="text-xs font-semibold text-medical-blue uppercase">Resumo</span>
                       </div>
-                      <p className="text-sm text-foreground/90 leading-relaxed">
-                        {aiInsights.summary}
-                      </p>
+                      <p className="text-sm text-foreground/90 leading-relaxed">{aiInsights.summary}</p>
                     </div>
                   )}
-
                   {aiInsights.symptoms && aiInsights.symptoms.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Sintomas</h4>
-                      <ul className="space-y-1">
-                        {aiInsights.symptoms.map((symptom, idx) => (
-                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
-                            <span className="text-medical-blue">•</span>
-                            {symptom}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    <InsightList title="Sintomas" items={aiInsights.symptoms} bullet="•" bulletColor="text-medical-blue" />
                   )}
-
                   {aiInsights.behavioral_observations && aiInsights.behavioral_observations.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Observações Comportamentais</h4>
-                      <ul className="space-y-1">
-                        {aiInsights.behavioral_observations.map((obs, idx) => (
-                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
-                            <span className="text-medical-blue">•</span>
-                            {obs}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    <InsightList title="Observações Comportamentais" items={aiInsights.behavioral_observations} bullet="•" bulletColor="text-medical-blue" />
                   )}
-
                   {aiInsights.risk_factors && aiInsights.risk_factors.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Fatores de Risco</h4>
-                      <ul className="space-y-1">
-                        {aiInsights.risk_factors.map((risk, idx) => (
-                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
-                            <span className="text-destructive">⚠️</span>
-                            {risk}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    <InsightList title="Fatores de Risco" items={aiInsights.risk_factors} bullet="⚠️" bulletColor="text-destructive" />
                   )}
-
                   {aiInsights.family_history && aiInsights.family_history.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Histórico Familiar</h4>
-                      <ul className="space-y-1">
-                        {aiInsights.family_history.map((history, idx) => (
-                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
-                            <span className="text-medical-blue">•</span>
-                            {history}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    <InsightList title="Histórico Familiar" items={aiInsights.family_history} bullet="•" bulletColor="text-medical-blue" />
                   )}
-
                   {aiInsights.social_factors && aiInsights.social_factors.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Fatores Sociais</h4>
-                      <ul className="space-y-1">
-                        {aiInsights.social_factors.map((factor, idx) => (
-                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
-                            <span className="text-medical-blue">•</span>
-                            {factor}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    <InsightList title="Fatores Sociais" items={aiInsights.social_factors} bullet="•" bulletColor="text-medical-blue" />
                   )}
-
                   {aiInsights.clinical_changes && aiInsights.clinical_changes.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Mudanças Clínicas</h4>
-                      <ul className="space-y-1">
-                        {aiInsights.clinical_changes.map((change, idx) => (
-                          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
-                            <span className="text-success">✓</span>
-                            {change}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    <InsightList title="Mudanças Clínicas" items={aiInsights.clinical_changes} bullet="✓" bulletColor="text-success" />
                   )}
                 </div>
               ) : (
                 <div className="pl-10 p-4 rounded-lg bg-secondary/50 border border-border">
                   <p className="text-sm text-muted-foreground">
-                    Nenhum insight gerado ainda. Adicione notas clínicas no painel lateral direito para gerar insights automáticos com IA.
+                    Nenhum insight gerado ainda. Adicione notas clínicas no painel lateral direito para gerar insights automáticos.
                   </p>
                 </div>
               )}
@@ -260,7 +252,6 @@ export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientPro
                 Upload Arquivo
               </Button>
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {mockFiles.map((file) => (
                 <div
@@ -270,22 +261,18 @@ export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientPro
                   <div className="flex items-start gap-3">
                     <div className={cn(
                       'w-10 h-10 rounded-lg flex items-center justify-center',
-                      file.type === 'pdf' ? 'bg-destructive/10' : 'bg-medical-blue-light'
+                      file.type === 'pdf' ? 'bg-destructive/10' : 'bg-medical-blue-light',
                     )}>
-                      {file.type === 'pdf' ? (
-                        <FileText className="w-5 h-5 text-destructive" />
-                      ) : (
-                        <Image className="w-5 h-5 text-medical-blue" />
-                      )}
+                      {file.type === 'pdf'
+                        ? <FileText className="w-5 h-5 text-destructive" />
+                        : <Image className="w-5 h-5 text-medical-blue" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate group-hover:text-medical-blue transition-colors">
                         {file.name}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">{file.date}</p>
-                      <Badge variant="outline" className="mt-2 text-xs">
-                        {file.tag}
-                      </Badge>
+                      <Badge variant="outline" className="mt-2 text-xs">{file.tag}</Badge>
                     </div>
                   </div>
                 </div>
@@ -296,53 +283,159 @@ export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientPro
           {/* Tab 3: Histórico de Consultas */}
           <TabsContent value="history" className="space-y-4">
             <h3 className="font-semibold text-foreground">Histórico de Consultas</h3>
-
-            <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-border" />
-
-              <div className="space-y-4">
-                {mockTimeline.map((item, index) => (
-                  <div key={item.id} className="relative pl-10">
-                    {/* Timeline dot */}
-                    <div className={cn(
-                      'absolute left-2 top-1 w-4 h-4 rounded-full border-2 bg-background',
-                      item.status === 'atual' 
-                        ? 'border-medical-blue bg-medical-blue' 
-                        : 'border-muted-foreground/30'
-                    )}>
-                      {item.status === 'atual' && (
-                        <span className="absolute inset-0 animate-ping rounded-full bg-medical-blue opacity-50" />
-                      )}
-                    </div>
-
-                    <div className={cn(
-                      'p-4 rounded-lg border',
-                      item.status === 'atual' 
-                        ? 'border-medical-blue/30 bg-medical-blue-light/50' 
-                        : 'border-border bg-card'
-                    )}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium text-foreground">{item.date}</span>
-                        {item.status === 'atual' && (
-                          <Badge className="bg-medical-blue text-primary-foreground text-xs">
-                            Em andamento
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="font-semibold text-foreground">{item.title}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        <span className="font-medium">Motivo:</span> {item.reason}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+            {consultations.length === 0 ? (
+              <div className="p-6 text-center rounded-lg border border-border bg-card">
+                <p className="text-sm text-muted-foreground">Nenhuma consulta registrada ainda.</p>
               </div>
-            </div>
+            ) : (
+              <div className="relative">
+                <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-border" />
+                <div className="space-y-4">
+                  {consultations.map((consultation, index) => {
+                    const isFirst = index === 0;
+                    const isExpanded = expandedId === consultation.id;
+                    const date = new Date(consultation.created_at).toLocaleDateString('pt-BR', {
+                      day: '2-digit', month: '2-digit', year: 'numeric',
+                    });
+                    return (
+                      <div key={consultation.id} className="relative pl-10">
+                        <div className={cn(
+                          'absolute left-2 top-1 w-4 h-4 rounded-full border-2 bg-background',
+                          isFirst ? 'border-medical-blue bg-medical-blue' : 'border-muted-foreground/30',
+                        )}>
+                          {isFirst && <span className="absolute inset-0 animate-ping rounded-full bg-medical-blue opacity-50" />}
+                        </div>
+                        <div className={cn(
+                          'p-4 rounded-lg border',
+                          isFirst ? 'border-medical-blue/30 bg-medical-blue-light/50' : 'border-border bg-card',
+                        )}>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm font-medium text-foreground">{date}</span>
+                              {isFirst && (
+                                <Badge className="bg-medical-blue text-primary-foreground text-xs">Última</Badge>
+                              )}
+                            </div>
+                            {consultation.soap_note && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => setExpandedId(isExpanded ? null : consultation.id)}
+                              >
+                                {isExpanded ? 'Ocultar' : 'Ver SOAP'}
+                              </Button>
+                            )}
+                          </div>
+                          {consultation.chief_complaint && (
+                            <p className="text-sm text-muted-foreground">
+                              <span className="font-medium text-foreground">Queixa:</span> {consultation.chief_complaint}
+                            </p>
+                          )}
+                          {isExpanded && consultation.soap_note && (
+                            <div className="mt-3 pt-3 border-t border-border/50 text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                              {consultation.soap_note.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+                                part.startsWith('**') && part.endsWith('**')
+                                  ? <strong key={i}>{part.slice(2, -2)}</strong>
+                                  : part
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </SheetContent>
     </Sheet>
+  );
+}
+
+interface EditableSectionProps {
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  value: string;
+  isEditing: boolean;
+  draftValue: string;
+  onEdit: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+  onDraftChange: (v: string) => void;
+  placeholder: string;
+}
+
+function EditableSection({
+  icon, iconBg, title, value, isEditing, draftValue,
+  onEdit, onCancel, onSave, onDraftChange, placeholder,
+}: EditableSectionProps) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', iconBg)}>
+            {icon}
+          </div>
+          <h3 className="font-semibold text-foreground">{title}</h3>
+        </div>
+        {!isEditing && (
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
+            <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+          </Button>
+        )}
+      </div>
+
+      {isEditing ? (
+        <div className="pl-10 space-y-2">
+          <Textarea
+            value={draftValue}
+            onChange={(e) => onDraftChange(e.target.value)}
+            placeholder={placeholder}
+            className="min-h-[100px] text-sm resize-none"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <Button size="sm" variant="medical" onClick={onSave} className="gap-1.5">
+              <Check className="w-3.5 h-3.5" />
+              Salvar
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onCancel} className="gap-1.5">
+              <X className="w-3.5 h-3.5" />
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className={cn(
+          'text-sm leading-relaxed pl-10',
+          value ? 'text-muted-foreground' : 'text-muted-foreground/50 italic',
+        )}>
+          {value || placeholder}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function InsightList({ title, items, bullet, bulletColor }: {
+  title: string; items: string[]; bullet: string; bulletColor: string;
+}) {
+  return (
+    <div>
+      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">{title}</h4>
+      <ul className="space-y-1">
+        {items.map((item, idx) => (
+          <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
+            <span className={bulletColor}>{bullet}</span>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
