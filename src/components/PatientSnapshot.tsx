@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Stethoscope, Pill, AlertCircle, FolderOpen, Printer, FileText, Sparkles } from 'lucide-react';
+import { User, Stethoscope, Pill, AlertTriangle, FolderOpen, Printer, FileText, Sparkles } from 'lucide-react';
 import { Patient } from '@/types/patient';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -13,25 +13,33 @@ interface PatientSnapshotProps {
 }
 
 function formatMedicationDuration(startedAt: string): string {
-  const start = new Date(startedAt);
-  const now = new Date();
-  const diffMs = now.getTime() - start.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const days = Math.floor((Date.now() - new Date(startedAt).getTime()) / 86400000);
+  if (days < 1) return 'hoje';
+  if (days === 1) return '1 dia';
+  if (days < 30) return `${days} dias`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} ${months === 1 ? 'mês' : 'meses'}`;
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+  return rem === 0 ? `${years} ${years === 1 ? 'ano' : 'anos'}` : `${years}a ${rem}m`;
+}
 
-  if (diffDays < 1) return 'hoje';
-  if (diffDays === 1) return 'há 1 dia';
-  if (diffDays < 30) return `há ${diffDays} dias`;
-
-  const diffMonths = Math.floor(diffDays / 30);
-  if (diffMonths === 1) return 'há 1 mês';
-  if (diffMonths < 12) return `há ${diffMonths} meses`;
-
-  const years = Math.floor(diffMonths / 12);
-  const months = diffMonths % 12;
-  if (months === 0) return years === 1 ? 'há 1 ano' : `há ${years} anos`;
-  return years === 1
-    ? `há 1 ano e ${months} ${months === 1 ? 'mês' : 'meses'}`
-    : `há ${years} anos e ${months} ${months === 1 ? 'mês' : 'meses'}`;
+function SectionHeader({ icon: Icon, label, action }: {
+  icon: React.ElementType;
+  label: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2">
+        <Icon className="w-3.5 h-3.5 text-muted-foreground/70" />
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
+          {label}
+        </span>
+      </div>
+      {action}
+    </div>
+  );
 }
 
 export function PatientSnapshot({ patient }: PatientSnapshotProps) {
@@ -41,48 +49,22 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
   const { toast } = useToast();
 
   const handleGeneratePrescription = () => {
-    toast({
-      title: 'Gerando receita...',
-      description: 'A receita médica está sendo preparada.',
-    });
+    toast({ title: 'Gerando receita...', description: 'A receita médica está sendo preparada.' });
   };
 
   const handleProcessNotes = async () => {
-    if (!notes.trim()) {
-      toast({
-        title: 'Erro',
-        description: 'Por favor, adicione notas antes de processar.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+    if (!notes.trim()) { toast({ title: 'Adicione notas antes de processar.', variant: 'destructive' }); return; }
     if (!patient?.id) return;
-
     setIsProcessing(true);
     try {
       const { data, error } = await supabase.functions.invoke('process-clinical-notes', {
-        body: {
-          patientId: patient.id,
-          notes: notes.trim(),
-        },
+        body: { patientId: patient.id, notes: notes.trim() },
       });
-
       if (error) throw error;
-
-      toast({
-        title: 'Notas processadas!',
-        description: data.message || 'Perfil do paciente atualizado com insights da IA.',
-      });
-
+      toast({ title: 'Notas processadas!', description: data.message || 'Perfil atualizado com insights da IA.' });
       setNotes('');
-    } catch (error: any) {
-      console.error('Error processing notes:', error);
-      toast({
-        title: 'Erro ao processar notas',
-        description: error.message || 'Tente novamente mais tarde.',
-        variant: 'destructive',
-      });
+    } catch (err: any) {
+      toast({ title: 'Erro ao processar', description: err.message, variant: 'destructive' });
     } finally {
       setIsProcessing(false);
     }
@@ -90,184 +72,166 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
 
   if (!patient) {
     return (
-      <aside className="w-full h-full bg-transparent flex items-center justify-center">
-        <div className="text-center text-muted-foreground p-6">
-          <User className="w-12 h-12 mx-auto mb-4 text-slate-400 opacity-50" />
-          <p className="text-sm">Nenhum paciente selecionado</p>
+      <aside className="w-full h-full flex items-center justify-center bg-[hsl(215_40%_98%)]">
+        <div className="text-center p-8 space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto">
+            <User className="w-6 h-6 text-muted-foreground/40" />
+          </div>
+          <p className="text-sm text-muted-foreground/60">Selecione um paciente</p>
         </div>
       </aside>
     );
   }
 
+  const initials = patient.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
   return (
-    <aside className="w-full h-full bg-transparent flex flex-col overflow-hidden">
+    <aside className="w-full h-full flex flex-col overflow-hidden bg-[hsl(215_40%_98%)]">
       {/* Header */}
-      <div className="p-5 border-b border-border/50">
-        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-          Perfil Vivo
-        </h2>
-        
-        {/* Demographics */}
+      <div className="px-5 pt-5 pb-4 border-b border-border/50 bg-white/60">
+        <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest mb-3">
+          Perfil Ativo
+        </p>
         <div className="flex items-center gap-3">
           {patient.photoUrl ? (
-            <img
-              src={patient.photoUrl}
-              alt={patient.name}
-              className="w-14 h-14 rounded-full object-cover border border-border/50 shadow-sm"
-            />
+            <img src={patient.photoUrl} alt={patient.name}
+              className="w-12 h-12 rounded-xl object-cover ring-1 ring-border/50 shrink-0" />
           ) : (
-            <div className="w-14 h-14 rounded-full bg-card border border-border/50 shadow-sm flex items-center justify-center">
-              <span className="text-medical-blue font-bold text-base">
-                {patient.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-              </span>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-white text-sm font-bold shadow-sm"
+              style={{ background: 'linear-gradient(135deg, hsl(210 70% 50%), hsl(220 70% 40%))' }}>
+              {initials}
             </div>
           )}
-          <div>
-            <h3 className="font-semibold text-foreground text-sm">{patient.name}</h3>
-            <p className="text-xs text-muted-foreground">{patient.age} anos • {patient.profession}</p>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-foreground text-sm leading-tight truncate">{patient.name}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {patient.age} anos{patient.profession ? ` · ${patient.profession}` : ''}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        {/* Diagnoses - Compact */}
-        <section className="p-4 border-b border-border/50">
-          <div className="flex items-center gap-2 mb-3">
-            <Stethoscope className="w-4 h-4 text-slate-400" />
-            <h4 className="font-medium text-foreground text-xs uppercase tracking-wide">Hipóteses Diagnósticas</h4>
-          </div>
-          <div className="space-y-1.5">
-            {patient.diagnoses.map((diagnosis, index) => (
-              <div
-                key={index}
-                className="flex items-baseline gap-2 text-sm py-1.5 px-2.5 rounded-lg bg-card shadow-sm"
-              >
-                <span className="font-mono text-medical-blue text-xs shrink-0">{diagnosis.code}</span>
-                <span className="text-foreground/80 text-xs">{diagnosis.description}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin divide-y divide-border/40">
 
-        {/* Medications - Compact */}
-        <section className="p-4 border-b border-border/50">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Pill className="w-4 h-4 text-slate-400" />
-              <h4 className="font-medium text-foreground text-xs uppercase tracking-wide">Medicações em Uso</h4>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleGeneratePrescription}
-              className="h-7 px-2 text-xs gap-1.5 text-medical-blue hover:text-medical-blue-dark hover:bg-card"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              Gerar Receita
-            </Button>
-          </div>
-          <div className="space-y-1">
-            {patient.medications.map((medication, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-2 py-2 px-2.5 rounded-lg bg-card shadow-sm"
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                    <span className="text-xs font-medium text-foreground">{medication.name}</span>
-                    <span className="text-xs text-muted-foreground">{medication.dosage}</span>
-                    {medication.startedAt && (
-                      <span className="text-[10px] text-muted-foreground/80">
-                        · {formatMedicationDuration(medication.startedAt)}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                    {medication.instructions}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Allergies - Compact & Highlighted */}
-        <section className="p-4 border-b border-border/50">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertCircle className={cn(
-              'w-4 h-4',
-              patient.allergies.length > 0 ? 'text-destructive' : 'text-slate-400'
-            )} />
-            <h4 className="font-medium text-foreground text-xs uppercase tracking-wide">Alertas / Alergias</h4>
-          </div>
-          {patient.allergies.length > 0 ? (
-            <div className="p-2.5 rounded-lg bg-destructive/10 border border-destructive/20">
-              {patient.allergies.map((allergy, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-destructive">
-                    ⚠️ Alergia a {allergy}
-                  </span>
+        {/* Diagnoses */}
+        <section className="p-4">
+          <SectionHeader icon={Stethoscope} label="Diagnósticos" />
+          {patient.diagnoses.length === 0 ? (
+            <p className="text-xs text-muted-foreground/60 italic">Nenhum diagnóstico registrado</p>
+          ) : (
+            <div className="space-y-1.5">
+              {patient.diagnoses.map((d, i) => (
+                <div key={i} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-white/80 border border-border/40 shadow-[0_1px_3px_hsl(0_0%_0%/0.04)]">
+                  <span className="font-mono text-[11px] text-medical-blue font-semibold shrink-0 mt-px">{d.code}</span>
+                  <span className="text-xs text-foreground/75 leading-snug">{d.description}</span>
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-xs text-muted-foreground py-2 px-2.5 rounded-lg bg-card shadow-sm">
-              Nenhuma alergia registrada
-            </p>
           )}
         </section>
 
-        {/* Clinical Notes Section */}
+        {/* Medications */}
         <section className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-4 h-4 text-slate-400" />
-            <h4 className="font-medium text-foreground text-xs uppercase tracking-wide">Notas Clínicas</h4>
-          </div>
-          <div className="space-y-2">
-            <Textarea
-              placeholder="Adicione observações, sintomas, histórico familiar ou qualquer informação relevante sobre o paciente..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="min-h-[120px] text-xs resize-none bg-card"
-              disabled={isProcessing}
-            />
-            <Button
-              onClick={handleProcessNotes}
-              disabled={isProcessing || !notes.trim()}
-              size="sm"
-              className="w-full gap-2"
-              variant="medical"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              {isProcessing ? 'Processando com IA...' : 'Processar e Adicionar ao Perfil'}
-            </Button>
-            <p className="text-[10px] text-muted-foreground">
-              A IA irá extrair informações estruturadas e adicionar ao perfil do paciente
-            </p>
-          </div>
+          <SectionHeader
+            icon={Pill}
+            label="Medicações"
+            action={
+              <button
+                onClick={handleGeneratePrescription}
+                className="flex items-center gap-1 text-[10px] text-medical-blue hover:text-medical-blue-dark transition-colors font-medium"
+              >
+                <Printer className="w-3 h-3" />
+                Receita
+              </button>
+            }
+          />
+          {patient.medications.length === 0 ? (
+            <p className="text-xs text-muted-foreground/60 italic">Nenhuma medicação registrada</p>
+          ) : (
+            <div className="space-y-1.5">
+              {patient.medications.map((m, i) => (
+                <div key={i} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-white/80 border border-border/40 shadow-[0_1px_3px_hsl(0_0%_0%/0.04)]">
+                  <div className="w-1.5 h-1.5 rounded-full bg-success mt-1.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-1">
+                      <span className="text-xs font-medium text-foreground truncate">{m.name}</span>
+                      {m.startedAt && (
+                        <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                          {formatMedicationDuration(m.startedAt)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{m.dosage}
+                      {m.instructions ? ` · ${m.instructions}` : ''}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Allergies */}
+        <section className="p-4">
+          <SectionHeader
+            icon={AlertTriangle}
+            label="Alertas / Alergias"
+          />
+          {patient.allergies.length === 0 ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/80 border border-border/40">
+              <span className="text-xs text-muted-foreground/60">Nenhuma alergia registrada</span>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {patient.allergies.map((a, i) => (
+                <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/8 border border-destructive/20">
+                  <span className="text-[10px]">⚠️</span>
+                  <span className="text-xs font-medium text-destructive">Alergia a {a}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Clinical Notes */}
+        <section className="p-4">
+          <SectionHeader icon={FileText} label="Notas Clínicas" />
+          <Textarea
+            placeholder="Observações, sintomas, histórico familiar..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="min-h-[100px] text-xs resize-none bg-white/80 border-border/40 focus:ring-medical-blue/20"
+            disabled={isProcessing}
+          />
+          <Button
+            onClick={handleProcessNotes}
+            disabled={isProcessing || !notes.trim()}
+            size="sm"
+            className="w-full mt-2 gap-2 h-8 text-xs"
+            variant="medical"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {isProcessing ? 'Processando...' : 'Processar com IA'}
+          </Button>
         </section>
       </div>
 
-      {/* Bottom Action */}
-      <div className="p-4 border-t border-border/50">
-        <Button
-          variant="ghost"
-          className="w-full justify-center gap-2 text-muted-foreground hover:text-medical-blue hover:bg-card text-xs"
+      {/* Footer */}
+      <div className="p-3 border-t border-border/50 bg-white/60">
+        <button
           onClick={() => setDrawerOpen(true)}
+          className={cn(
+            'w-full flex items-center justify-center gap-2 h-9 rounded-lg text-xs font-medium',
+            'text-muted-foreground hover:text-foreground hover:bg-white',
+            'border border-transparent hover:border-border/60 transition-all',
+          )}
         >
-          <FolderOpen className="w-4 h-4" />
-          Ver Perfil Completo & Arquivos
-        </Button>
+          <FolderOpen className="w-3.5 h-3.5" />
+          Perfil Completo & Arquivos
+        </button>
       </div>
 
-      {/* Profile Drawer */}
-      <PatientProfileDrawer
-        patient={patient}
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-      />
+      <PatientProfileDrawer patient={patient} open={drawerOpen} onOpenChange={setDrawerOpen} />
     </aside>
   );
 }

@@ -58,7 +58,7 @@
     --record-red: 0 75% 55%;
     --record-red-hover: 0 75% 48%;
 
-    --sidebar-background: 0 0% 100%;
+    --sidebar-background: 215 40% 98%;
     --sidebar-foreground: 215 25% 25%;
     --sidebar-primary: 210 65% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
@@ -158,18 +158,23 @@
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted));
+    background-color: hsl(var(--border));
     border-radius: 3px;
+  }
+
+  /* Opacity variants for destructive that Tailwind doesn't generate by default */
+  .bg-destructive\/8 {
+    background-color: hsl(var(--destructive) / 0.08);
   }
 }
 

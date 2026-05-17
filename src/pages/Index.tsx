@@ -8,7 +8,7 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { PatientSnapshot } from '@/components/PatientSnapshot';
 import { NewConsultationModal } from '@/components/NewConsultationModal';
 import { Button } from '@/components/ui/button';
-import { LogOut, LogIn } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { Patient, ChatMessage } from '@/types/patient';
 import { useToast } from '@/hooks/use-toast';
 import { useSeedPatients } from '@/hooks/useSeedPatients';
@@ -60,9 +60,7 @@ const Index = () => {
   });
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
+    if (!loading && !user) navigate('/auth');
   }, [user, loading, navigate]);
 
   const handleSignOut = async () => {
@@ -75,7 +73,6 @@ const Index = () => {
     setChatMessages([]);
     setChiefComplaint('');
     setPreBriefing(null);
-
     setBriefingLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-prebriefing', {
@@ -90,18 +87,12 @@ const Index = () => {
           },
         },
       });
-      if (!error && data) {
-        setPreBriefing(data);
-      }
+      if (!error && data) setPreBriefing(data);
     } catch {
-      // pre-briefing is non-critical, fail silently
+      // non-critical
     } finally {
       setBriefingLoading(false);
     }
-  };
-
-  const handleNewConsultation = () => {
-    setShowNewConsultationModal(true);
   };
 
   const handleStartConsultation = async (
@@ -127,66 +118,49 @@ const Index = () => {
         }])
         .select()
         .single();
-
-      if (error) {
-        toast({ title: 'Erro ao criar paciente', variant: 'destructive' });
-        return;
-      }
+      if (error) { toast({ title: 'Erro ao criar paciente', variant: 'destructive' }); return; }
       patient = mapRow(data);
       queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
     } else {
       patient = patients.find(p => p.id === patientId) || patients[0];
-      await supabase
-        .from('patients')
-        .update({ status: 'atendimento' })
-        .eq('id', patient.id);
+      await supabase.from('patients').update({ status: 'atendimento' }).eq('id', patient.id);
       queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
     }
 
     setSelectedPatient({ ...patient, status: 'atendimento' });
     setChiefComplaint(complaint);
     setChatMessages([]);
-
-    toast({
-      title: 'Consulta iniciada',
-      description: `Consulta com ${patient.name} iniciada.`,
-    });
+    toast({ title: 'Consulta iniciada', description: `Consulta com ${patient.name} iniciada.` });
   };
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center animate-pulse"
+            style={{ background: 'linear-gradient(135deg, hsl(210 70% 50%), hsl(220 70% 40%))' }}>
+            <span className="text-white text-sm font-bold">C</span>
+          </div>
+          <p className="text-sm text-muted-foreground">Carregando...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background relative">
-      <div className="absolute top-4 right-4 z-50">
-        {user ? (
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
-        ) : (
-          <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
-            <LogIn className="h-4 w-4 mr-2" />
-            Entrar
-          </Button>
-        )}
-      </div>
-
-      <div className="w-[20%] min-w-[260px] max-w-[320px] h-full bg-muted/30">
+    <div className="flex h-screen w-full overflow-hidden bg-background">
+      {/* Sidebar */}
+      <div className="w-[20%] min-w-[260px] max-w-[300px] h-full flex flex-col">
         <PatientSidebar
           patients={patients}
           selectedPatient={selectedPatient}
           onSelectPatient={handleSelectPatient}
-          onNewConsultation={handleNewConsultation}
+          onNewConsultation={() => setShowNewConsultationModal(true)}
         />
       </div>
 
-      <div className="flex-1 h-full bg-card">
+      {/* Chat panel */}
+      <div className="flex-1 h-full min-w-0 bg-card border-x border-border/50">
         <ChatPanel
           patient={selectedPatient}
           messages={chatMessages}
@@ -198,8 +172,24 @@ const Index = () => {
         />
       </div>
 
-      <div className="w-[25%] min-w-[280px] max-w-[380px] h-full bg-muted/30">
+      {/* Patient snapshot */}
+      <div className="w-[25%] min-w-[270px] max-w-[360px] h-full flex flex-col relative">
         <PatientSnapshot patient={selectedPatient} />
+
+        {/* Logout — tucked in top-right corner of the snapshot panel */}
+        {user && (
+          <div className="absolute top-3 right-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSignOut}
+              className="h-7 w-7 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50"
+              title="Sair"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <NewConsultationModal
