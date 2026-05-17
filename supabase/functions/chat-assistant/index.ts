@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,17 +48,29 @@ async function callGemini(apiKey: string, parts: object[], cfg: GeminiConfig = {
   return responsePart?.text ?? '';
 }
 
-const CHAT_SYSTEM = `Você é um assistente clínico de IA auxiliando um médico durante a consulta. Você tem acesso ao contexto do paciente fornecido abaixo.
+const CHAT_SYSTEM = `Você é um assistente clínico de IA auxiliando um médico durante a consulta. Você tem acesso ao contexto do paciente e ao histórico de consultas anteriores fornecidos abaixo.
 
-Responda sempre em português brasileiro. Suas respostas devem ser diretas, objetivas e com no máximo 150 palavras.
+Responda sempre em português brasileiro. Suas respostas devem ser diretas, objetivas e com no máximo 200 palavras.
 
-Você pode ajudar com:
+Quando o médico perguntar sobre o histórico do paciente ("o que conversamos na última consulta?", "qual foi a conduta?", "como ele evoluiu?"), use o bloco de "Histórico de Consultas Anteriores" abaixo como fonte primária de verdade. Cite datas quando relevante.
+
+Você também pode ajudar com:
 - Diagnóstico diferencial
 - Interações medicamentosas
 - Diretrizes clínicas e protocolos
 - Interpretação de sintomas e achados
 
-Se não souber a resposta com segurança, diga claramente que não sabe. Nunca invente informações clínicas.`;
+Se não souber a resposta com segurança, diga claramente que não sabe. Nunca invente informações clínicas nem invente registros de consultas anteriores — se não estiverem no histórico abaixo, diga "não consta no histórico".`;
+
+// Strip SOAP markdown bold to keep tokens lean
+function condense(text: string, max = 600): string {
+  const t = (text ?? '').replace(/\*\*/g, '').replace(/\n{3,}/g, '\n\n').trim();
+  return t.length > max ? t.slice(0, max) + '…' : t;
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -66,7 +79,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { patientContext, chatHistory, userMessage } = body;
+    const { patientId, patientContext, chatHistory, userMessage } = body;
 
     if (!userMessage) {
       return new Response(
@@ -78,29 +91,80 @@ serve(async (req) => {
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
 
-    // Build patient context summary
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
+    // ── Pull full patient row + recent consultations when patientId provided ──
+    let patientRow: any = null;
+    let consultations: any[] = [];
+    if (patientId) {
+      const [{ data: p }, { data: c }] = await Promise.all([
+        supabase
+          .from('patients')
+          .select('name, age, diagnoses, medications, allergies, social_anamnesis, medical_history, clinical_notes')
+          .eq('id', patientId)
+          .maybeSingle(),
+        supabase
+          .from('consultations')
+          .select('created_at, chief_complaint, soap_note')
+          .eq('patient_id', patientId)
+          .order('created_at', { ascending: false })
+          .limit(5),
+      ]);
+      patientRow = p;
+      consultations = c ?? [];
+    }
+
+    // Merge: DB row wins; fall back to client-provided context.
+    const ctx = patientRow ?? patientContext ?? null;
+
+    // ── Build patient context summary ────────────────────────────────────────
     let patientSummary = '';
-    if (patientContext) {
-      const diagnoses = Array.isArray(patientContext.diagnoses)
-        ? patientContext.diagnoses.map((d: any) => (typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim())).join('; ') || 'Nenhum'
+    if (ctx) {
+      const diagnoses = Array.isArray(ctx.diagnoses)
+        ? ctx.diagnoses.map((d: any) => (typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim())).join('; ') || 'Nenhum'
         : 'Nenhum';
-      const medications = Array.isArray(patientContext.medications)
-        ? patientContext.medications.map((m: any) => (typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim())).join(', ') || 'Nenhuma'
+      const medications = Array.isArray(ctx.medications)
+        ? ctx.medications.map((m: any) => (typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim())).join(', ') || 'Nenhuma'
         : 'Nenhuma';
-      const allergies = Array.isArray(patientContext.allergies)
-        ? patientContext.allergies.join(', ') || 'Nenhuma'
+      const allergies = Array.isArray(ctx.allergies)
+        ? ctx.allergies.join(', ') || 'Nenhuma'
         : 'Nenhuma';
 
       patientSummary = `--- Contexto do Paciente ---
-Nome: ${patientContext.name ?? 'Não informado'}
-Idade: ${patientContext.age ?? 'Não informada'} anos
+Nome: ${ctx.name ?? 'Não informado'}
+Idade: ${ctx.age ?? 'Não informada'} anos
 Diagnósticos: ${diagnoses}
 Medicações em uso: ${medications}
-Alergias: ${allergies}
-----------------------------\n\n`;
+Alergias: ${allergies}`;
+
+      const social = (ctx.social_anamnesis ?? ctx.socialAnamnesis ?? '').trim?.() || '';
+      const history = (ctx.medical_history ?? ctx.medicalHistory ?? '').trim?.() || '';
+      const notes = (ctx.clinical_notes ?? '').trim?.() || '';
+      if (social)  patientSummary += `\nAnamnese social: ${condense(social, 400)}`;
+      if (history) patientSummary += `\nHistória médica: ${condense(history, 400)}`;
+      if (notes)   patientSummary += `\nAnotações do médico: ${condense(notes, 600)}`;
+      patientSummary += `\n----------------------------\n\n`;
     }
 
-    // Build conversation history
+    // ── Build consultation history block ─────────────────────────────────────
+    let historySummary = '';
+    if (consultations.length > 0) {
+      historySummary = '--- Histórico de Consultas Anteriores (mais recente primeiro) ---\n';
+      for (const c of consultations) {
+        const date = formatDate(c.created_at);
+        const complaint = (c.chief_complaint ?? '').trim() || 'sem queixa registrada';
+        const soap = condense(c.soap_note ?? '', 700);
+        historySummary += `\n[${date}] Queixa: ${complaint}\n${soap}\n`;
+      }
+      historySummary += '----------------------------\n\n';
+    } else if (patientId) {
+      historySummary = '--- Histórico de Consultas Anteriores ---\nNenhuma consulta anterior registrada.\n----------------------------\n\n';
+    }
+
+    // ── Build conversation history ───────────────────────────────────────────
     const historyLines: string[] = [];
     if (Array.isArray(chatHistory)) {
       for (const msg of chatHistory) {
@@ -116,7 +180,7 @@ Alergias: ${allergies}
       ? historyLines.join('\n') + '\n'
       : '';
 
-    const promptText = `${patientSummary}${conversationBlock}Médico: ${userMessage}`;
+    const promptText = `${patientSummary}${historySummary}${conversationBlock}Médico: ${userMessage}`;
 
     const reply = await callGemini(
       GEMINI_API_KEY,
@@ -124,7 +188,7 @@ Alergias: ${allergies}
       {
         systemInstruction: CHAT_SYSTEM,
         temperature: 0.3,
-        maxOutputTokens: 400,
+        maxOutputTokens: 600,
         thinkingBudget: 0,
       },
     );

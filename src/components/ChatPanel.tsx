@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send,
   Copy, Check, Pencil, Pause, Play, Loader2, Download, StopCircle, Brain,
+  HelpCircle, StickyNote,
 } from 'lucide-react';
 import { SoapNoteView } from '@/components/SoapNoteView';
 import { Button } from '@/components/ui/button';
@@ -50,7 +51,6 @@ export function ChatPanel({
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [comment, setComment] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState('');
@@ -68,6 +68,8 @@ export function ChatPanel({
   const [stopConfirming, setStopConfirming] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [inputMode, setInputMode] = useState<'question' | 'comment'>('question');
+  const [savingNote, setSavingNote] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -223,12 +225,52 @@ export function ChatPanel({
     setIsPaused(prev => !prev);
   };
 
-  const handleAddComment = () => {
-    if (!comment.trim()) return;
-    consultationCommentsRef.current = [...consultationCommentsRef.current, comment.trim()];
+  const addTranscriptionComment = (text: string) => {
+    consultationCommentsRef.current = [...consultationCommentsRef.current, text];
     setConsultationComments([...consultationCommentsRef.current]);
     toast({ title: 'Comentário adicionado', description: 'Será incluído no contexto da consulta.' });
-    setComment('');
+  };
+
+  const appendPatientNote = async (text: string) => {
+    if (!patient) return;
+    setSavingNote(true);
+    try {
+      const stamp = new Date().toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      });
+      const entry = `[${stamp}] ${text}`;
+
+      const { data: row, error: readErr } = await supabase
+        .from('patients')
+        .select('clinical_notes')
+        .eq('id', patient.id)
+        .single();
+      if (readErr) throw readErr;
+
+      const merged = row?.clinical_notes ? `${row.clinical_notes}\n${entry}` : entry;
+      const { error: writeErr } = await supabase
+        .from('patients')
+        .update({ clinical_notes: merged })
+        .eq('id', patient.id);
+      if (writeErr) throw writeErr;
+
+      onMessagesChange([...messages, {
+        id: `note-${Date.now()}`,
+        type: 'assistant',
+        title: 'Anotação salva no prontuário',
+        content: `📝 ${text}`,
+        timestamp: new Date(),
+      }]);
+      toast({ title: 'Anotação salva', description: 'Adicionada às anotações do paciente.' });
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao salvar anotação',
+        description: err.message ?? 'Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingNote(false);
+    }
   };
 
   const patientContext = patient ? {
@@ -338,12 +380,15 @@ export function ChatPanel({
     try {
       const { data, error } = await supabase.functions.invoke('chat-assistant', {
         body: {
+          patientId: patient?.id ?? null,
           patientContext: patient ? {
             name: patient.name,
             age: patient.age,
             diagnoses: patient.diagnoses,
             medications: patient.medications,
             allergies: patient.allergies,
+            socialAnamnesis: patient.socialAnamnesis,
+            medicalHistory: patient.medicalHistory,
           } : null,
           chatHistory: messages
             .filter(m => m.type === 'user' || m.type === 'assistant')
@@ -364,6 +409,24 @@ export function ChatPanel({
       toast({ title: 'Erro ao consultar IA', description: 'Tente novamente.', variant: 'destructive' });
     } finally {
       setIsChatLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    const text = inputValue.trim();
+    if (!text) return;
+
+    if (inputMode === 'question') {
+      await handleSendMessage();
+      return;
+    }
+
+    // comment mode
+    setInputValue('');
+    if (isRecording) {
+      addTranscriptionComment(text);
+    } else {
+      await appendPatientNote(text);
     }
   };
 
@@ -835,19 +898,9 @@ ${sectionsHtml}
                       : <><Pause className="w-4 h-4" />Pausar</>}
                   </Button>
                 </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Adicionar comentário à transcrição..."
-                    className="flex-1 h-10 px-3 rounded-lg bg-background border border-input text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30 placeholder:text-muted-foreground"
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(); }}
-                  />
-                  <Button variant="outline" size="sm" onClick={handleAddComment} disabled={!comment.trim()} className="h-10 shrink-0">
-                    Adicionar
-                  </Button>
-                </div>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Use o modo <span className="font-semibold text-foreground/80">Comentário</span> abaixo para adicionar notas que ajudarão a IA a transcrever melhor.
+                </p>
                 {consultationComments.length > 0 && (
                   <div className="mt-2 space-y-1">
                     {consultationComments.map((c, i) => (
@@ -863,6 +916,45 @@ ${sectionsHtml}
         )}
 
         <div className="input-command-center p-3">
+          {/* Mode toggle */}
+          <div className="flex items-center gap-1 mb-2.5">
+            <div className="inline-flex p-0.5 rounded-lg bg-muted/60 border border-border/40">
+              <button
+                type="button"
+                onClick={() => setInputMode('question')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                  inputMode === 'question'
+                    ? 'bg-medical-blue text-white shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                Pergunta
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputMode('comment')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                  inputMode === 'comment'
+                    ? 'bg-amber-500 text-white shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <StickyNote className="w-3.5 h-3.5" />
+                Comentário
+              </button>
+            </div>
+            <span className="text-[10px] text-muted-foreground/70 ml-2 hidden sm:inline">
+              {inputMode === 'question'
+                ? 'pergunte sobre o histórico, conduta, interações…'
+                : isRecording
+                ? 'será incluído no contexto da transcrição'
+                : 'salvo nas anotações do paciente'}
+            </span>
+          </div>
+
           <div className="flex items-center gap-3">
             <Button
               variant="ghost" size="icon"
@@ -877,19 +969,36 @@ ${sectionsHtml}
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(); }}
-                placeholder="Digite uma mensagem ou comentário..."
-                className="w-full h-10 px-4 rounded-xl bg-muted/50 border-0 text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30 transition-all placeholder:text-slate-400"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
+                placeholder={
+                  inputMode === 'question'
+                    ? 'Pergunte ao assistente — o que conversamos na última consulta?'
+                    : isRecording
+                    ? 'Comentário para a transcrição — ex: "paciente referiu dor irradiando"'
+                    : 'Anotação para o prontuário do paciente…'
+                }
+                className={cn(
+                  'w-full h-10 px-4 rounded-xl border-0 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-slate-400',
+                  inputMode === 'question'
+                    ? 'bg-muted/50 focus:ring-medical-blue/30'
+                    : 'bg-amber-50 dark:bg-amber-950/20 focus:ring-amber-500/30',
+                )}
               />
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="text-slate-400 hover:text-foreground h-9 w-9"
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isChatLoading}
+              className={cn(
+                'h-9 w-9',
+                inputMode === 'question'
+                  ? 'text-slate-400 hover:text-medical-blue'
+                  : 'text-slate-400 hover:text-amber-600',
+              )}
+              onClick={handleSubmit}
+              disabled={!inputValue.trim() || isChatLoading || savingNote}
+              title={inputMode === 'question' ? 'Enviar pergunta' : 'Adicionar comentário'}
             >
-              <Send className="w-4 h-4" />
+              {savingNote ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
             <Button
               variant={isRecording ? 'destructive' : 'record'}
@@ -910,8 +1019,8 @@ ${sectionsHtml}
             : isChatLoading
             ? 'Assistente clínico pensando...'
             : isRecording
-            ? 'Clique no botão para finalizar e processar a gravação'
-            : 'Grave a consulta com o botão vermelho · Digite para consultar a IA'}
+            ? 'Clique no botão vermelho para finalizar · use Comentário para guiar a IA'
+            : 'Grave com o botão vermelho · Pergunta consulta a IA · Comentário vira anotação'}
         </p>
       </div>
 

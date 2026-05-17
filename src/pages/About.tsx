@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Brain, Mic, FileText, Sparkles, CalendarDays, MessageCircle,
   ShieldCheck, Clock, Zap, ArrowRight, Check, Play, ChevronDown,
-  Stethoscope, Users, Lock, Cpu, Activity, Heart,
+  Stethoscope, Users, Lock, Cpu, Activity, Heart, MessagesSquare, Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -97,7 +97,7 @@ const features = [
   {
     icon: Sparkles,
     title: 'Resumo pré-consulta',
-    desc: 'Em segundos, você recebe um briefing inteligente do histórico, pendências e alertas clínicos do paciente.',
+    desc: 'Antes do paciente entrar, você já tem o briefing pronto: queixa anterior, conduta, pendências e alertas clínicos.',
     gradient: 'from-violet-500 to-purple-600',
   },
   {
@@ -467,6 +467,152 @@ const About = () => {
               </Reveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ─── PRE-CONSULTATION SHOWCASE ───────────────────────────────── */}
+      <section className="py-24 lg:py-32 relative overflow-hidden">
+        <div className="absolute inset-0 -z-10 pointer-events-none">
+          <div className="absolute top-1/4 left-[-10%] w-[420px] h-[420px] rounded-full opacity-30 blur-3xl animate-blob"
+            style={{ background: 'radial-gradient(circle, hsl(265 90% 70% / 0.55), transparent 60%)' }}/>
+          <div className="absolute bottom-0 right-[-5%] w-[380px] h-[380px] rounded-full opacity-25 blur-3xl animate-blob-slow"
+            style={{ background: 'radial-gradient(circle, hsl(210 90% 65% / 0.5), transparent 60%)', animationDelay: '4s' }}/>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
+          {/* Left: copy */}
+          <Reveal>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-50 dark:bg-fuchsia-950/30 border border-fuchsia-200 dark:border-fuchsia-900/50 text-xs font-semibold text-fuchsia-700 dark:text-fuchsia-400 mb-4">
+              <MessagesSquare className="w-3.5 h-3.5" />
+              Pré-consulta inteligente
+            </div>
+            <h2 className="text-4xl lg:text-5xl font-bold tracking-tight leading-[1.05]">
+              Converse com o{' '}
+              <span
+                className="bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift"
+                style={{
+                  backgroundImage:
+                    'linear-gradient(90deg, hsl(290 75% 55%), hsl(210 80% 55%), hsl(265 80% 65%), hsl(290 75% 55%))',
+                }}
+              >
+                histórico do paciente.
+              </span>
+            </h2>
+            <p className="mt-5 text-lg text-muted-foreground leading-relaxed max-w-xl">
+              Antes do paciente sentar, o Cortex já organizou tudo: queixa da última consulta, conduta, exames pendentes, alertas. E você pode <strong className="text-foreground">perguntar qualquer coisa</strong>, em linguagem natural, ao prontuário inteiro.
+            </p>
+
+            <div className="mt-7 space-y-3">
+              {[
+                { icon: Search, text: '"Qual a evolução da pressão arterial nos últimos 6 meses?"' },
+                { icon: Search, text: '"Tem alguma interação com o medicamento que vou prescrever?"' },
+                { icon: Search, text: '"O que ficou pendente da consulta anterior?"' },
+              ].map((q, i) => (
+                <Reveal key={i} delay={120 + i * 80}>
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/60 hover:border-fuchsia-300 dark:hover:border-fuchsia-800 transition-colors">
+                    <div className="w-7 h-7 rounded-lg bg-fuchsia-100 dark:bg-fuchsia-950/50 flex items-center justify-center shrink-0">
+                      <q.icon className="w-3.5 h-3.5 text-fuchsia-600 dark:text-fuchsia-400" />
+                    </div>
+                    <span className="text-sm text-foreground/85 italic">{q.text}</span>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+
+            <Reveal delay={400}>
+              <div className="mt-7 inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <Check className="w-4 h-4 text-success" />
+                Acesso ao prontuário completo · sem reler nada
+              </div>
+            </Reveal>
+          </Reveal>
+
+          {/* Right: mock chat */}
+          <Reveal delay={150}>
+            <div className="relative">
+              <div className="absolute -inset-px rounded-3xl opacity-60 blur-xl"
+                style={{ background: 'linear-gradient(135deg, hsl(290 80% 60%), hsl(210 80% 55%))' }} />
+              <div className="relative bg-card/95 backdrop-blur-xl border border-border/60 rounded-3xl shadow-2xl overflow-hidden">
+
+                {/* header */}
+                <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border/40 bg-muted/30">
+                  <div className="w-8 h-8 rounded-lg bg-medical-blue-light flex items-center justify-center">
+                    <span className="text-medical-blue font-semibold text-xs">MS</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold">Maria S., 42 anos</div>
+                    <div className="text-[10px] text-muted-foreground">12 consultas · última há 45 dias</div>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-medical-blue-light text-medical-blue-dark font-semibold">Histórico ativo</span>
+                </div>
+
+                {/* messages */}
+                <div className="p-5 space-y-4 min-h-[340px]">
+                  {/* doctor question */}
+                  <div className="flex justify-end animate-fade-in-up">
+                    <div className="max-w-[80%] bg-medical-blue text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm shadow-sm">
+                      O que conversamos na última consulta?
+                    </div>
+                  </div>
+
+                  {/* AI response */}
+                  <div className="flex items-start gap-2.5 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-fuchsia-500 to-violet-600 flex items-center justify-center shrink-0">
+                      <Brain className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <div className="flex-1 bg-muted/60 rounded-2xl rounded-tl-sm px-4 py-3">
+                      <p className="text-[11px] font-semibold text-muted-foreground mb-1">Assistente Clínico</p>
+                      <p className="text-sm leading-relaxed text-foreground/85">
+                        Em <strong>02 abr</strong>, queixa de cefaleia frontal há 5 dias. Você prescreveu sumatriptano 50mg s/n e solicitou MRI cerebral. Conduta: retorno em 45 dias com o exame.
+                      </p>
+                      <div className="mt-2 text-[10px] text-muted-foreground flex items-center gap-1">
+                        <FileText className="w-3 h-3" /> 3 consultas analisadas
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* second doctor question */}
+                  <div className="flex justify-end animate-fade-in-up" style={{ animationDelay: '500ms' }}>
+                    <div className="max-w-[80%] bg-medical-blue text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm shadow-sm">
+                      Ela trouxe o MRI?
+                    </div>
+                  </div>
+
+                  {/* AI typing */}
+                  <div className="flex items-start gap-2.5 animate-fade-in-up" style={{ animationDelay: '700ms' }}>
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-fuchsia-500 to-violet-600 flex items-center justify-center shrink-0">
+                      <Brain className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <div className="bg-muted/60 rounded-2xl rounded-tl-sm px-4 py-3">
+                      <div className="flex gap-1 items-center h-4">
+                        {[0, 150, 300].map(d => (
+                          <div key={d} className="w-1.5 h-1.5 rounded-full bg-fuchsia-500/60"
+                            style={{ animation: `pulse-record 1.2s ease-in-out ${d}ms infinite` }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* input dock */}
+                <div className="border-t border-border/40 p-3 bg-background/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="inline-flex p-0.5 rounded-lg bg-muted/60 border border-border/40 text-[10px]">
+                      <span className="flex items-center gap-1 px-2 py-1 rounded bg-medical-blue text-white font-semibold">
+                        <MessagesSquare className="w-3 h-3" /> Pergunta
+                      </span>
+                      <span className="flex items-center gap-1 px-2 py-1 text-muted-foreground">
+                        <FileText className="w-3 h-3" /> Comentário
+                      </span>
+                    </div>
+                  </div>
+                  <div className="h-9 rounded-xl bg-muted/40 flex items-center px-3 text-xs text-muted-foreground/70">
+                    Pergunte ao assistente…
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
