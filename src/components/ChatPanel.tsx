@@ -9,6 +9,7 @@ import { Patient, ChatMessage } from '@/types/patient';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ConsultationReviewModal } from '@/components/ConsultationReviewModal';
 
 interface PreBriefing {
   returnInfo: string;
@@ -54,6 +55,13 @@ export function ChatPanel({
   const [editedContent, setEditedContent] = useState('');
   const [currentConsultationId, setCurrentConsultationId] = useState<string | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [reviewData, setReviewData] = useState<{
+    transcription: string;
+    soapNote: string;
+    whatsappMessage: string;
+    consultationId: string;
+  } | null>(null);
+  const [isSavingReview, setIsSavingReview] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -191,28 +199,13 @@ export function ChatPanel({
 
       if (error) throw error;
 
-      const now = new Date();
-      const newMessages: ChatMessage[] = [
-        {
-          id: `soap-${now.getTime()}`,
-          type: 'soap',
-          title: 'Evolução Clínica',
-          content: data.soapNote,
-          timestamp: now,
-        },
-        {
-          id: `wa-${now.getTime()}`,
-          type: 'whatsapp',
-          title: 'Sugestão de Mensagem (WhatsApp)',
-          content: data.whatsappMessage,
-          timestamp: now,
-        },
-      ];
-
-      onMessagesChange([...messages, ...newMessages]);
       setCurrentConsultationId(data.consultationId ?? null);
-
-      toast({ title: 'Consulta processada!', description: 'Evolução e mensagem geradas com sucesso.' });
+      setReviewData({
+        transcription: data.transcription ?? '',
+        soapNote: data.soapNote ?? '',
+        whatsappMessage: data.whatsappMessage ?? '',
+        consultationId: data.consultationId ?? '',
+      });
     } catch (err: any) {
       toast({
         title: 'Erro ao processar consulta',
@@ -249,6 +242,56 @@ export function ChatPanel({
     ));
     setEditingId(null);
     toast({ title: 'Alterações salvas', description: 'A evolução clínica foi atualizada.' });
+  };
+
+  const pushReviewToChat = (soapNote: string, whatsappMessage: string) => {
+    const now = new Date();
+    const newMessages: ChatMessage[] = [
+      {
+        id: `soap-${now.getTime()}`,
+        type: 'soap',
+        title: 'Evolução Clínica',
+        content: soapNote,
+        timestamp: now,
+      },
+      {
+        id: `wa-${now.getTime()}`,
+        type: 'whatsapp',
+        title: 'Sugestão de Mensagem (WhatsApp)',
+        content: whatsappMessage,
+        timestamp: now,
+      },
+    ];
+    onMessagesChange([...messages, ...newMessages]);
+  };
+
+  const handleReviewConfirm = async (editedSoap: string, comments: string) => {
+    if (!reviewData) return;
+    setIsSavingReview(true);
+    try {
+      const finalSoap = comments.trim()
+        ? `${editedSoap}\n\n**Observações do Médico:**\n${comments.trim()}`
+        : editedSoap;
+
+      await supabase
+        .from('consultations')
+        .update({ soap_note: finalSoap, pre_briefing: null })
+        .eq('id', reviewData.consultationId);
+
+      pushReviewToChat(finalSoap, reviewData.whatsappMessage);
+      setReviewData(null);
+      toast({ title: 'Consulta salva!', description: 'Evolução clínica confirmada com sucesso.' });
+    } catch {
+      toast({ title: 'Erro ao salvar', description: 'Tente novamente.', variant: 'destructive' });
+    } finally {
+      setIsSavingReview(false);
+    }
+  };
+
+  const handleReviewClose = () => {
+    if (!reviewData) return;
+    pushReviewToChat(reviewData.soapNote, reviewData.whatsappMessage);
+    setReviewData(null);
   };
 
   if (!patient) {
@@ -587,6 +630,17 @@ export function ChatPanel({
             : 'Pressione o botão vermelho para gravar a consulta'}
         </p>
       </div>
+
+      <ConsultationReviewModal
+        open={!!reviewData}
+        patientName={patient?.name ?? ''}
+        transcription={reviewData?.transcription ?? ''}
+        soapNote={reviewData?.soapNote ?? ''}
+        whatsappMessage={reviewData?.whatsappMessage ?? ''}
+        onConfirm={handleReviewConfirm}
+        onClose={handleReviewClose}
+        isSaving={isSavingReview}
+      />
     </div>
   );
 }
