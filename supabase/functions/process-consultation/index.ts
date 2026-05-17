@@ -8,11 +8,41 @@ const corsHeaders = {
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
-async function callGemini(apiKey: string, parts: object[]): Promise<string> {
+interface GeminiConfig {
+  systemInstruction?: string;
+  temperature?: number;
+  maxOutputTokens?: number;
+  thinkingBudget?: number;
+  responseMimeType?: string;
+  responseSchema?: object;
+}
+
+async function callGemini(apiKey: string, parts: object[], cfg: GeminiConfig = {}): Promise<string> {
+  const body: any = {
+    contents: [{ parts }],
+    generationConfig: {
+      temperature: cfg.temperature ?? 0.2,
+      maxOutputTokens: cfg.maxOutputTokens ?? 1024,
+    },
+  };
+
+  if (cfg.systemInstruction) {
+    body.systemInstruction = { parts: [{ text: cfg.systemInstruction }] };
+  }
+  if (cfg.responseMimeType) {
+    body.generationConfig.responseMimeType = cfg.responseMimeType;
+  }
+  if (cfg.responseSchema) {
+    body.generationConfig.responseSchema = cfg.responseSchema;
+  }
+  if (cfg.thinkingBudget !== undefined) {
+    body.generationConfig.thinkingConfig = { thinkingBudget: cfg.thinkingBudget };
+  }
+
   const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts }] }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -21,7 +51,10 @@ async function callGemini(apiKey: string, parts: object[]): Promise<string> {
   }
 
   const json = await res.json();
-  return json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  // When thinkingBudget > 0, thinking tokens appear first (thought: true); find the actual response part
+  const parts: any[] = json.candidates?.[0]?.content?.parts ?? [];
+  const responsePart = parts.find((p: any) => !p.thought) ?? parts[parts.length - 1];
+  return responsePart?.text ?? '';
 }
 
 serve(async (req) => {
@@ -30,14 +63,7 @@ serve(async (req) => {
   }
 
   try {
-    const {
-      patientId,
-      userId,
-      chiefComplaint,
-      audioBase64,
-      audioMimeType,
-      patientContext,
-    } = await req.json();
+    const { patientId, userId, chiefComplaint, audioBase64, audioMimeType, patientContext } = await req.json();
 
     if (!patientId || !userId || !audioBase64) {
       return new Response(
@@ -49,72 +75,87 @@ serve(async (req) => {
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
 
-    const supabaseClient = createClient(
+    const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // ── Step 1: Transcribe audio ────────────────────────────────────────────
-    const transcription = await callGemini(GEMINI_API_KEY, [
+    // ── Step 1: Transcription ────────────────────────────────────────────────
+    // Low temperature = maximum accuracy; no thinking needed for transcription
+    const transcription = await callGemini(
+      GEMINI_API_KEY,
+      [
+        { inline_data: { mime_type: audioMimeType ?? 'audio/webm', data: audioBase64 } },
+        { text: 'Transcreva fielmente esta consulta médica em português brasileiro. Identifique os interlocutores como "Médico:" e "Paciente:" quando distinguível. Retorne apenas a transcrição.' },
+      ],
       {
-        inline_data: {
-          mime_type: audioMimeType ?? 'audio/webm',
-          data: audioBase64,
-        },
+        systemInstruction: 'Você é um especialista em transcrição de consultas médicas. Sua única função é transcrever com máxima fidelidade, preservando termos técnicos e nomes de medicamentos.',
+        temperature: 0.1,
+        maxOutputTokens: 2000,
+        thinkingBudget: 0,
       },
-      {
-        text: `Você é um assistente de transcrição médica. Transcreva fielmente a consulta médica do áudio em português brasileiro.
-Mantenha a fala do médico e do paciente separadas quando identificável (ex: "Médico:", "Paciente:").
-Retorne apenas a transcrição, sem comentários adicionais.`,
-      },
-    ]);
+    );
 
-    // ── Step 2: Generate SOAP note ──────────────────────────────────────────
+    // ── Step 2: SOAP note + WhatsApp message (single call, parallel output) ──
+    // thinkingBudget improves clinical reasoning for SOAP; responseSchema guarantees structure
     const patientSummary = buildPatientSummary(patientContext, chiefComplaint);
 
-    const soapNote = await callGemini(GEMINI_API_KEY, [
-      {
-        text: `Você é um médico especialista gerando uma evolução clínica no formato SOAP em português brasileiro.
-
-${patientSummary}
+    const combinedRaw = await callGemini(
+      GEMINI_API_KEY,
+      [
+        {
+          text: `${patientSummary}
 
 Transcrição da consulta:
 ${transcription}
 
-Gere uma evolução SOAP completa e profissional com as seguintes seções obrigatórias:
-**S (Subjetivo):** O que o paciente relatou (queixas, sintomas, evolução desde a última consulta)
-**O (Objetivo):** Dados objetivos observados ou mencionados (peso, PA, exame físico, resultados de exames)
-**A (Avaliação):** Análise clínica, diagnósticos ativos, resposta ao tratamento
-**P (Plano):** Condutas, ajustes de medicação, solicitações, orientações, próximo retorno
-
-Seja conciso, clínico e use terminologia médica adequada. Retorne apenas o texto SOAP formatado.`,
-      },
-    ]);
-
-    // ── Step 3: Generate WhatsApp message ───────────────────────────────────
-    const whatsappMessage = await callGemini(GEMINI_API_KEY, [
+Queixa principal desta consulta: ${chiefComplaint || 'acompanhamento de rotina'}`,
+        },
+      ],
       {
-        text: `Você é um médico escrevendo uma mensagem informal e acolhedora para o paciente via WhatsApp após a consulta.
+        systemInstruction: `Você é um médico especialista gerando documentação clínica em português brasileiro.
+Gere dois documentos a partir dos dados fornecidos:
 
-Paciente: ${patientContext?.name ?? 'paciente'}, ${patientContext?.age ?? '?'} anos
-Queixa principal: ${chiefComplaint || 'acompanhamento'}
+1. soap_note: Evolução SOAP completa e profissional com as seções:
+**S (Subjetivo):** Queixas e relato do paciente nesta consulta
+**O (Objetivo):** Dados objetivos (sinais vitais, exame físico, exames)
+**A (Avaliação):** Diagnósticos ativos, CID, resposta ao tratamento
+**P (Plano):** Condutas, ajustes de medicação, solicitações, próximo retorno
+Use terminologia médica precisa. Seja conciso mas completo.
 
-Resumo clínico da consulta (SOAP):
-${soapNote}
-
-Escreva uma mensagem WhatsApp curta (máximo 5 linhas) que:
-1. Cumprimente o paciente pelo nome
-2. Resuma os pontos principais da consulta de forma simples (sem jargão médico)
-3. Liste as orientações mais importantes com emojis
-4. Mencione a próxima consulta se houver
-5. Se despeça de forma acolhedora
-
-Use emojis com moderação. Tom amigável mas profissional. Retorne apenas o texto da mensagem.`,
+2. whatsapp_message: Mensagem curta e acolhedora para o paciente (máx. 180 palavras):
+- Cumprimente pelo nome
+- Resuma os pontos principais em linguagem simples
+- Liste orientações com emojis (💊🩺📅)
+- Tom amigável e profissional`,
+        temperature: 0.3,
+        maxOutputTokens: 1200,
+        thinkingBudget: 1024,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'object',
+          properties: {
+            soap_note: { type: 'string', description: 'Evolução SOAP formatada com seções **S**, **O**, **A**, **P**' },
+            whatsapp_message: { type: 'string', description: 'Mensagem WhatsApp para o paciente, max 180 palavras' },
+          },
+          required: ['soap_note', 'whatsapp_message'],
+        },
       },
-    ]);
+    );
 
-    // ── Step 4: Save consultation to DB ─────────────────────────────────────
-    const { data: consultation, error: insertError } = await supabaseClient
+    let soapNote = '';
+    let whatsappMessage = '';
+    try {
+      const parsed = JSON.parse(combinedRaw);
+      soapNote = parsed.soap_note ?? '';
+      whatsappMessage = parsed.whatsapp_message ?? '';
+    } catch {
+      // Fallback if JSON parsing fails — use raw text as SOAP
+      soapNote = combinedRaw;
+    }
+
+    // ── Step 3: Persist ──────────────────────────────────────────────────────
+    const { data: consultation, error: insertError } = await supabase
       .from('consultations')
       .insert([{
         patient_id: patientId,
@@ -129,19 +170,13 @@ Use emojis com moderação. Tom amigável mas profissional. Retorne apenas o tex
 
     if (insertError) throw insertError;
 
-    // Update patient last_visit
-    await supabaseClient
+    await supabase
       .from('patients')
-      .update({ last_visit: new Date().toISOString().split('T')[0] })
+      .update({ last_visit: new Date().toISOString().split('T')[0], status: 'retorno' })
       .eq('id', patientId);
 
     return new Response(
-      JSON.stringify({
-        consultationId: consultation.id,
-        transcription,
-        soapNote,
-        whatsappMessage,
-      }),
+      JSON.stringify({ consultationId: consultation.id, transcription, soapNote, whatsappMessage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 
@@ -156,13 +191,11 @@ Use emojis com moderação. Tom amigável mas profissional. Retorne apenas o tex
 
 function buildPatientSummary(ctx: any, chiefComplaint: string): string {
   if (!ctx) return '';
-  const diagnoses = ctx.diagnoses?.map((d: any) => `${d.code} - ${d.description}`).join(', ') || 'Nenhum';
-  const meds = ctx.medications?.map((m: any) => `${m.name} ${m.dosage} (${m.instructions})`).join(', ') || 'Nenhum';
+  const diagnoses = ctx.diagnoses?.map((d: any) => `${d.code} ${d.description}`).join('; ') || 'Nenhum';
+  const meds = ctx.medications?.map((m: any) => `${m.name} ${m.dosage}`).join(', ') || 'Nenhum';
   const allergies = ctx.allergies?.join(', ') || 'Nenhuma';
-  return `Dados do paciente:
-- Nome: ${ctx.name}, ${ctx.age} anos
-- Queixa principal desta consulta: ${chiefComplaint || 'não informada'}
-- Diagnósticos ativos: ${diagnoses}
-- Medicações em uso: ${meds}
-- Alergias: ${allergies}`;
+  return `Paciente: ${ctx.name}, ${ctx.age} anos
+Diagnósticos: ${diagnoses}
+Medicações: ${meds}
+Alergias: ${allergies}`;
 }
