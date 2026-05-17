@@ -101,7 +101,7 @@ ${apSection}`;
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 500,
+          maxOutputTokens: 1024,
           thinkingConfig: { thinkingBudget: 512 },
           responseMimeType: 'application/json',
           responseSchema: BRIEFING_SCHEMA,
@@ -115,19 +115,33 @@ ${apSection}`;
     }
 
     const geminiData = await res.json();
+    const finishReason = geminiData.candidates?.[0]?.finishReason;
+    console.log('Gemini finishReason:', finishReason);
+
     // When thinkingBudget > 0, thinking tokens appear first (thought: true); find the actual response part
     const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
+    console.log('Gemini parts count:', parts.length, 'rawParts:', JSON.stringify(parts).slice(0, 200));
     const responsePart = parts.find((p: any) => !p.thought) ?? parts[parts.length - 1];
-    const rawText = responsePart?.text ?? '{}';
+    const rawText = responsePart?.text ?? '';
+    console.log('rawText preview:', rawText.slice(0, 200));
 
-    let briefing: object;
+    let briefing: Record<string, unknown> | null = null;
     try {
-      briefing = JSON.parse(rawText);
+      const parsed = JSON.parse(rawText);
+      // Only treat as valid if it has at least returnInfo
+      if (parsed && typeof parsed === 'object' && parsed.returnInfo) {
+        briefing = parsed;
+      }
     } catch {
-      briefing = {};
+      // invalid JSON — don't cache
     }
 
-    // ── Cache result: next click on this patient returns instantly ────────────
+    if (!briefing) {
+      console.error('Gemini returned unusable briefing. rawText:', rawText);
+      return new Response(JSON.stringify(null), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ── Cache only valid results ──────────────────────────────────────────────
     await supabase
       .from('consultations')
       .update({ pre_briefing: briefing })
@@ -152,6 +166,6 @@ function extractAssessmentAndPlan(soap: string): string {
   if (!soap) return '';
   // Match **A section header only (not any letter 'a') — handles **A (Avaliação):** and **A — Avaliação**
   const match = soap.match(/\*\*A[\s—(]/);
-  if (!match?.index) return soap.slice(-800);
+  if (!match || match.index === undefined) return soap.slice(-800);
   return soap.slice(match.index).slice(0, 800);
 }

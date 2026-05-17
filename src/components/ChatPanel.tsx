@@ -349,7 +349,7 @@ export function ChatPanel({
                       <Loader2 className="w-3 h-3 animate-spin" />
                       Gerando resumo com IA...
                     </div>
-                  ) : activeBriefing ? (
+                  ) : activeBriefing?.returnInfo ? (
                     <>
                       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-foreground/80">
                         <span>{activeBriefing.returnInfo}</span>
