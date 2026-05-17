@@ -49,7 +49,38 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
   const { toast } = useToast();
 
   const handleGeneratePrescription = () => {
-    toast({ title: 'Gerando receita...', description: 'A receita médica está sendo preparada.' });
+    if (!patient) return;
+    if (patient.medications.length === 0) {
+      toast({ title: 'Nenhuma medicação registrada', description: 'Adicione medicações ao perfil antes de gerar a receita.', variant: 'destructive' });
+      return;
+    }
+
+    const date = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const medsHtml = patient.medications.map((m, i) => `
+      <div style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid #e5e7eb">
+        <div style="font-size:11pt;font-weight:700;color:#111827">${i + 1}. ${m.name} <span style="font-weight:400;color:#6b7280">${m.dosage}</span></div>
+        ${m.instructions ? `<div style="margin-top:4px;font-size:10pt;color:#374151">${m.instructions}</div>` : ''}
+      </div>`).join('');
+
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Receita — ${patient.name}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:11pt;color:#111827;padding:60px;max-width:680px;margin:0 auto}.hdr{text-align:center;border-bottom:2px solid #1d4ed8;padding-bottom:16px;margin-bottom:24px}.hdr h1{font-size:18pt;font-weight:700;color:#1d4ed8}.hdr p{font-size:10pt;color:#6b7280;margin-top:4px}.pbox{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px 16px;margin-bottom:24px;font-size:10pt;color:#374151}.allergy{color:#dc2626;margin-top:4px}.rx{font-size:26pt;font-style:italic;font-weight:700;color:#1d4ed8;margin-bottom:20px}.ftr{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:flex-end;font-size:10pt;color:#6b7280}.sig{text-align:center}.sig-line{width:200px;border-top:1px solid #374151;margin:50px auto 4px;font-size:9pt;color:#6b7280}@media print{body{padding:40px}}</style>
+</head><body>
+<div class="hdr"><h1>RECEITA MÉDICA</h1><p>Gerado pelo Cortex</p></div>
+<div class="pbox">
+  <div><strong>Paciente:</strong> ${patient.name} &nbsp;·&nbsp; <strong>Idade:</strong> ${patient.age} anos${patient.profession ? ` &nbsp;·&nbsp; ${patient.profession}` : ''}</div>
+  ${patient.allergies.length > 0 ? `<div class="allergy">⚠ Alergias: ${patient.allergies.join(', ')}</div>` : ''}
+</div>
+<div class="rx">℞</div>
+${medsHtml}
+<div class="ftr"><span>${date}</span><div class="sig"><div class="sig-line">Assinatura do Médico</div></div></div>
+<script>window.onload=()=>window.print();</script>
+</body></html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 
   const handleProcessNotes = async () => {

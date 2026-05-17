@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { mapPatientRow } from '@/lib/patientMapper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,21 +13,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Brain, Plus, Pencil, Trash2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface Patient {
-  id: string;
-  name: string;
-  age: number;
-  profession: string;
-  last_visit: string;
-  status: string;
-}
+import { Patient } from '@/types/patient';
 
 const PatientManagement = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [formData, setFormData] = useState({
@@ -36,29 +29,17 @@ const PatientManagement = () => {
     status: 'novo' as const,
   });
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-    loadPatients();
-  }, [user, navigate]);
+  if (!user) { navigate('/auth'); return null; }
 
-  const loadPatients = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('id, name, age, profession, last_visit, status')
-        .order('name');
-
+  const { data: patients = [], isLoading: loading } = useQuery<Patient[]>({
+    queryKey: ['patients', user.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('patients').select('*').order('name');
       if (error) throw error;
-      setPatients(data || []);
-    } catch (error: any) {
-      toast.error('Erro ao carregar pacientes');
-    } finally {
-      setLoading(false);
-    }
-  };
+      return (data ?? []).map(mapPatientRow);
+    },
+    enabled: !!user,
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +78,7 @@ const PatientManagement = () => {
 
       setDialogOpen(false);
       resetForm();
-      loadPatients();
+      queryClient.invalidateQueries({ queryKey: ['patients', user.id] });
     } catch (error: any) {
       toast.error('Erro ao salvar paciente');
     }
@@ -114,7 +95,7 @@ const PatientManagement = () => {
 
       if (error) throw error;
       toast.success('Paciente excluído com sucesso!');
-      loadPatients();
+      queryClient.invalidateQueries({ queryKey: ['patients', user.id] });
     } catch (error: any) {
       toast.error('Erro ao excluir paciente');
     }
@@ -126,8 +107,8 @@ const PatientManagement = () => {
       name: patient.name,
       age: patient.age.toString(),
       profession: patient.profession,
-      last_visit: patient.last_visit,
-      status: patient.status as any,
+      last_visit: patient.lastVisit,
+      status: patient.status,
     });
     setDialogOpen(true);
   };
@@ -146,29 +127,29 @@ const PatientManagement = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-background border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <Brain className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-semibold">Cortex - Gerenciar Pacientes</h1>
+            <Brain className="h-6 w-6 md:h-8 md:w-8 text-primary shrink-0" />
+            <h1 className="text-lg md:text-2xl font-semibold truncate">Gerenciar Pacientes</h1>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-4 md:py-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Pacientes</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-base md:text-xl">Pacientes</CardTitle>
             <Dialog open={dialogOpen} onOpenChange={(open) => {
               setDialogOpen(open);
               if (!open) resetForm();
             }}>
               <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Paciente
+                <Button size="sm">
+                  <Plus className="h-4 w-4 md:mr-2" />
+                  <span className="hidden sm:inline">Novo Paciente</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -243,53 +224,77 @@ const PatientManagement = () => {
             {loading ? (
               <p className="text-center py-8 text-muted-foreground">Carregando...</p>
             ) : patients.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">
-                Nenhum paciente cadastrado
-              </p>
+              <p className="text-center py-8 text-muted-foreground">Nenhum paciente cadastrado</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Idade</TableHead>
-                    <TableHead>Profissão</TableHead>
-                    <TableHead>Última Visita</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* Mobile cards */}
+                <div className="md:hidden space-y-2">
                   {patients.map((patient) => (
-                    <TableRow key={patient.id}>
-                      <TableCell className="font-medium">{patient.name}</TableCell>
-                      <TableCell>{patient.age}</TableCell>
-                      <TableCell>{patient.profession}</TableCell>
-                      <TableCell>
-                        {new Date(patient.last_visit).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell>
-                        <span className="capitalize">{patient.status}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(patient)}
-                        >
-                          <Pencil className="h-4 w-4" />
+                    <div key={patient.id} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-background">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold bg-medical-blue/10 text-medical-blue">
+                        {patient.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-foreground truncate">{patient.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {patient.age} anos{patient.profession ? ` · ${patient.profession}` : ''}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] capitalize font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                            {patient.status}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(patient.lastVisit).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-0.5 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(patient)}>
+                          <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(patient.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(patient.id)}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Idade</TableHead>
+                        <TableHead>Profissão</TableHead>
+                        <TableHead>Última Visita</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {patients.map((patient) => (
+                        <TableRow key={patient.id}>
+                          <TableCell className="font-medium">{patient.name}</TableCell>
+                          <TableCell>{patient.age}</TableCell>
+                          <TableCell>{patient.profession}</TableCell>
+                          <TableCell>{new Date(patient.lastVisit).toLocaleDateString('pt-BR')}</TableCell>
+                          <TableCell><span className="capitalize">{patient.status}</span></TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(patient)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(patient.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

@@ -164,7 +164,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
                           {statusLabels[patient.status]}
                         </Badge>
                         {patient.profession && (
-                          <span className="text-[10px] text-muted-foreground/60 truncate">
+                          <span className="text-[10px] text-muted-foreground/60 truncate max-w-[110px]">
                             {patient.profession}
                           </span>
                         )}
@@ -184,7 +184,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
           <button
             onClick={() => navigate('/agenda')}
             className={cn(
-              'flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-medium',
+              'flex items-center justify-center gap-1.5 h-10 rounded-lg text-xs font-medium',
               'text-muted-foreground hover:text-foreground hover:bg-white',
               'transition-all border border-transparent hover:border-border/60',
             )}
@@ -195,7 +195,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
           <button
             onClick={() => navigate('/gerenciar-pacientes')}
             className={cn(
-              'flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-medium',
+              'flex items-center justify-center gap-1.5 h-10 rounded-lg text-xs font-medium',
               'text-muted-foreground hover:text-foreground hover:bg-white',
               'transition-all border border-transparent hover:border-border/60',
             )}

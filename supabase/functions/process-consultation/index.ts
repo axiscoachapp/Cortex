@@ -57,7 +57,28 @@ async function callGemini(apiKey: string, parts: object[], cfg: GeminiConfig = {
   return responsePart?.text ?? '';
 }
 
-const SOAP_SCHEMA = {
+// Phase 1 schema — includes clarifications and transcription quality
+const SOAP_SCHEMA_DRAFT = {
+  type: 'object',
+  properties: {
+    soap_note: { type: 'string', description: 'Evolução SOAP formatada com seções **S**, **O**, **A**, **P**' },
+    whatsapp_message: { type: 'string', description: 'Mensagem WhatsApp para o paciente, max 180 palavras' },
+    clarifications: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Perguntas ao médico sobre lacunas clinicamente relevantes na transcrição. Array vazio se a transcrição for clara.',
+    },
+    transcription_quality: {
+      type: 'string',
+      enum: ['good', 'partial', 'poor'],
+      description: 'Qualidade da transcrição: good = clara; partial = partes inaudíveis; poor = incompreensível',
+    },
+  },
+  required: ['soap_note', 'whatsapp_message', 'clarifications', 'transcription_quality'],
+};
+
+// Phase 2 schema — no clarifications needed, doctor already answered them
+const SOAP_SCHEMA_FINAL = {
   type: 'object',
   properties: {
     soap_note: { type: 'string', description: 'Evolução SOAP formatada com seções **S**, **O**, **A**, **P**' },
@@ -67,20 +88,39 @@ const SOAP_SCHEMA = {
 };
 
 const SOAP_SYSTEM = `Você é um médico especialista gerando documentação clínica em português brasileiro.
-Gere dois documentos a partir dos dados fornecidos:
 
-1. soap_note: Evolução SOAP completa e profissional com as seções:
-**S (Subjetivo):** Queixas e relato do paciente nesta consulta
-**O (Objetivo):** Dados objetivos (sinais vitais, exame físico, exames)
-**A (Avaliação):** Diagnósticos ativos, CID, resposta ao tratamento
-**P (Plano):** Condutas, ajustes de medicação, solicitações, próximo retorno
-Use terminologia médica precisa. Seja conciso mas completo.
+REGRA FUNDAMENTAL — FONTE DOS DADOS:
+O SOAP deve ser gerado EXCLUSIVAMENTE a partir do que foi dito na transcrição desta consulta.
+O histórico do paciente (diagnósticos, medicações, alergias) é fornecido apenas como contexto clínico de fundo para você entender a terminologia — NUNCA use-o para preencher seções do SOAP com informações que não foram discutidas nesta consulta.
+
+Exemplos do que NÃO fazer:
+- Se PA não foi mencionada na consulta → não coloque PA no Objetivo
+- Se um diagnóstico não foi discutido → não o inclua na Avaliação
+- Se a transcrição for incoerente → documente "Transcrição inaudível/incompleta" na seção relevante
+
+Gere os seguintes campos:
+
+1. soap_note: Evolução SOAP profissional com as seções:
+**S (Subjetivo):** Queixas e relato do paciente NESTA consulta (apenas o que foi dito na transcrição)
+**O (Objetivo):** Dados objetivos mencionados NA consulta (sinais vitais, exame físico relatado)
+**A (Avaliação):** Avaliação clínica baseada no que foi discutido nesta consulta
+**P (Plano):** Condutas e decisões tomadas nesta consulta
+Use terminologia médica precisa. Se uma seção não tiver dados da transcrição, escreva "Não relatado na consulta."
 
 2. whatsapp_message: Mensagem curta e acolhedora para o paciente (máx. 180 palavras):
 - Cumprimente pelo nome
-- Resuma os pontos principais em linguagem simples
-- Liste orientações com emojis (💊🩺📅)
-- Tom amigável e profissional`;
+- Resuma orientações em linguagem simples com emojis (💊🩺📅)
+- Tom amigável e profissional
+
+3. clarifications: Lista de perguntas para o médico preencher lacunas CLINICAMENTE RELEVANTES da transcrição.
+Retorne array vazio [] se a transcrição capturou bem a consulta.
+Só pergunte sobre informações que fariam diferença clínica real (ex: dose ajustada, resultado de exame discutido, conduta decidida que ficou cortada).
+Máximo 4 perguntas objetivas e específicas.
+
+4. transcription_quality: Avalie a qualidade geral da transcrição:
+- "good": transcrição clara, consulta bem representada
+- "partial": algumas partes inaudíveis ou cortadas, mas conteúdo principal capturado
+- "poor": transcrição muito incompleta, incoerente ou inaudível`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -120,31 +160,82 @@ serve(async (req) => {
       );
 
       const patientSummary = buildPatientSummary(patientContext, chiefComplaint);
+      const commentsText = Array.isArray(body.consultationComments) && body.consultationComments.length > 0
+        ? `\n\nObservações do médico durante a consulta:\n${body.consultationComments.join('\n')}`
+        : '';
       const draftRaw = await callGemini(
         GEMINI_API_KEY,
-        [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}` }],
+        [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsText}` }],
         {
           systemInstruction: SOAP_SYSTEM,
           temperature: 0.3,
-          maxOutputTokens: 1200,
+          maxOutputTokens: 1500,
           thinkingBudget: 512,
           responseMimeType: 'application/json',
-          responseSchema: SOAP_SCHEMA,
+          responseSchema: SOAP_SCHEMA_DRAFT,
         },
       );
 
       let soapDraft = '';
       let whatsappDraft = '';
+      let clarifications: string[] = [];
+      let transcriptionQuality: 'good' | 'partial' | 'poor' = 'good';
       try {
         const parsed = JSON.parse(draftRaw);
         soapDraft = parsed.soap_note ?? '';
         whatsappDraft = parsed.whatsapp_message ?? '';
+        clarifications = Array.isArray(parsed.clarifications) ? parsed.clarifications : [];
+        transcriptionQuality = parsed.transcription_quality ?? 'good';
       } catch {
         soapDraft = draftRaw;
       }
 
       return new Response(
-        JSON.stringify({ transcription, soapNote: soapDraft, whatsappMessage: whatsappDraft }),
+        JSON.stringify({ transcription, soapNote: soapDraft, whatsappMessage: whatsappDraft, clarifications, transcriptionQuality }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // ── Phase 1.5: Save pre-generated SOAP directly (no extra Gemini call) ──────
+    if (body.saveDirect) {
+      const { saveSoapNote, saveWhatsappMessage, transcription } = body;
+
+      if (!patientId || !userId) {
+        return new Response(
+          JSON.stringify({ error: 'patientId e userId são obrigatórios' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      );
+
+      const { data: consultation, error: insertError } = await supabase
+        .from('consultations')
+        .insert([{
+          patient_id: patientId,
+          user_id: userId,
+          chief_complaint: chiefComplaint,
+          transcription,
+          soap_note: saveSoapNote ?? '',
+          whatsapp_message: saveWhatsappMessage ?? '',
+        }])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      await supabase
+        .from('patients')
+        .update({ last_visit: new Date().toISOString().split('T')[0], status: 'retorno' })
+        .eq('id', patientId);
+
+      await markAppointmentDone(supabase, patientId, userId);
+
+      return new Response(
+        JSON.stringify({ consultationId: consultation.id, soapNote: saveSoapNote, whatsappMessage: saveWhatsappMessage }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -176,10 +267,10 @@ serve(async (req) => {
         {
           systemInstruction: SOAP_SYSTEM,
           temperature: 0.3,
-          maxOutputTokens: 1200,
+          maxOutputTokens: 1500,
           thinkingBudget: 1024,
           responseMimeType: 'application/json',
-          responseSchema: SOAP_SCHEMA,
+          responseSchema: SOAP_SCHEMA_FINAL,
         },
       );
 
@@ -213,6 +304,8 @@ serve(async (req) => {
         .update({ last_visit: new Date().toISOString().split('T')[0], status: 'retorno' })
         .eq('id', patientId);
 
+      await markAppointmentDone(supabase, patientId, userId);
+
       return new Response(
         JSON.stringify({ consultationId: consultation.id, soapNote, whatsappMessage }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -232,6 +325,20 @@ serve(async (req) => {
     );
   }
 });
+
+async function markAppointmentDone(supabase: any, patientId: string, userId: string): Promise<void> {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    await supabase
+      .from('appointments')
+      .update({ status: 'realizado' })
+      .eq('patient_id', patientId)
+      .eq('user_id', userId)
+      .in('status', ['agendado', 'confirmado'])
+      .gte('start_time', `${today}T00:00:00`)
+      .lte('start_time', `${today}T23:59:59`);
+  } catch { /* non-critical */ }
+}
 
 function buildPatientSummary(ctx: any, chiefComplaint: string): string {
   if (!ctx) return '';

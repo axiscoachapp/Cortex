@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send,
-  Copy, Check, Pencil, Pause, Play, Loader2,
+  Copy, Check, Pencil, Pause, Play, Loader2, Download, StopCircle, Brain,
 } from 'lucide-react';
+import { SoapNoteView } from '@/components/SoapNoteView';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Patient, ChatMessage } from '@/types/patient';
@@ -11,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ConsultationReviewModal } from '@/components/ConsultationReviewModal';
 
-interface PreBriefing {
+export interface PreBriefing {
   returnInfo: string;
   previousComplaint: string;
   pending: string;
@@ -59,20 +60,34 @@ export function ChatPanel({
     transcription: string;
     soapDraft: string;
     whatsappDraft: string;
+    clarifications: string[];
+    transcriptionQuality: 'good' | 'partial' | 'poor';
   } | null>(null);
   const [isGeneratingFinal, setIsGeneratingFinal] = useState(false);
+
+  const [stopConfirming, setStopConfirming] = useState(false);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const consultationCommentsRef = useRef<string[]>([]);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animFrameRef = useRef<number>(0);
+  const [consultationComments, setConsultationComments] = useState<string[]>([]);
 
   const { toast } = useToast();
 
   useEffect(() => {
     setShowBriefing(true);
     setBriefingExpanded(false);
+    consultationCommentsRef.current = [];
+    setConsultationComments([]);
+    setStopConfirming(false);
   }, [patient?.id]);
 
   useEffect(() => {
@@ -98,6 +113,34 @@ export function ChatPanel({
     }
   };
 
+  const startAudioLevel = (stream: MediaStream) => {
+    try {
+      const ctx = new AudioContext();
+      audioCtxRef.current = ctx;
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 128;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        analyser.getByteTimeDomainData(data);
+        const rms = Math.sqrt(data.reduce((s, v) => s + ((v - 128) / 128) ** 2, 0) / data.length);
+        setAudioLevel(Math.min(rms * 6, 1));
+        animFrameRef.current = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch { /* AudioContext not available */ }
+  };
+
+  const stopAudioLevel = () => {
+    cancelAnimationFrame(animFrameRef.current);
+    analyserRef.current = null;
+    audioCtxRef.current?.close();
+    audioCtxRef.current = null;
+    setAudioLevel(0);
+  };
+
   const handleCopy = async (text: string, messageId: string) => {
     await navigator.clipboard.writeText(text);
     setCopiedId(messageId);
@@ -110,6 +153,7 @@ export function ChatPanel({
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       audioChunksRef.current = [];
+      startAudioLevel(stream);
 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
@@ -126,7 +170,10 @@ export function ChatPanel({
         stopTimer();
         streamRef.current?.getTracks().forEach(t => t.stop());
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        await processConsultation(audioBlob, mimeType);
+        const comments = consultationCommentsRef.current;
+        consultationCommentsRef.current = [];
+        setConsultationComments([]);
+        await processConsultation(audioBlob, mimeType, comments);
       };
 
       recorder.start(500);
@@ -146,10 +193,20 @@ export function ChatPanel({
   };
 
   const handleStopRecording = () => {
+    setStopConfirming(true);
+  };
+
+  const handleConfirmStop = () => {
+    setStopConfirming(false);
+    stopAudioLevel();
     mediaRecorderRef.current?.stop();
     setIsRecording(false);
     setIsPaused(false);
     stopTimer();
+  };
+
+  const handleCancelStop = () => {
+    setStopConfirming(false);
   };
 
   const handlePauseToggle = () => {
@@ -168,17 +225,56 @@ export function ChatPanel({
 
   const handleAddComment = () => {
     if (!comment.trim()) return;
+    consultationCommentsRef.current = [...consultationCommentsRef.current, comment.trim()];
+    setConsultationComments([...consultationCommentsRef.current]);
     toast({ title: 'Comentário adicionado', description: 'Será incluído no contexto da consulta.' });
     setComment('');
   };
 
-  const processConsultation = async (audioBlob: Blob, mimeType: string) => {
+  const patientContext = patient ? {
+    name: patient.name,
+    age: patient.age,
+    diagnoses: patient.diagnoses,
+    medications: patient.medications,
+    allergies: patient.allergies,
+  } : {};
+
+  // Shared Phase 2 logic — called either from review modal or auto-confirm path
+  const submitFinalSoap = async (
+    transcription: string,
+    doctorComments: string,
+    directSoapNote?: string,
+    directWhatsappMessage?: string,
+  ) => {
+    if (!patient) return;
+    const isDirect = directSoapNote != null;
+    const body = isDirect ? {
+      patientId: patient.id, userId, chiefComplaint,
+      saveDirect: true,
+      transcription,
+      saveSoapNote: directSoapNote,
+      saveWhatsappMessage: directWhatsappMessage ?? '',
+      patientContext,
+    } : {
+      patientId: patient.id, userId, chiefComplaint,
+      transcription,
+      doctorComments,
+      patientContext,
+    };
+    const { data, error } = await supabase.functions.invoke('process-consultation', { body });
+    if (error) throw error;
+    setCurrentConsultationId(data.consultationId ?? null);
+    pushToChat(data.soapNote, data.whatsappMessage);
+    setReviewData(null);
+    toast({ title: 'Consulta salva!', description: 'Evolução clínica gerada com sucesso.' });
+  };
+
+  const processConsultation = async (audioBlob: Blob, mimeType: string, comments: string[]) => {
     if (!patient) return;
     setIsProcessing(true);
 
     try {
       const base64 = await blobToBase64(audioBlob);
-
       const { data, error } = await supabase.functions.invoke('process-consultation', {
         body: {
           patientId: patient.id,
@@ -186,23 +282,27 @@ export function ChatPanel({
           chiefComplaint,
           audioBase64: base64,
           audioMimeType: mimeType,
-          patientContext: {
-            name: patient.name,
-            age: patient.age,
-            diagnoses: patient.diagnoses,
-            medications: patient.medications,
-            allergies: patient.allergies,
-          },
+          consultationComments: comments,
+          patientContext,
         },
       });
-
       if (error) throw error;
 
-      setReviewData({
-        transcription: data.transcription ?? '',
-        soapDraft: data.soapNote ?? '',
-        whatsappDraft: data.whatsappMessage ?? '',
-      });
+      const quality = data.transcriptionQuality ?? 'good';
+      const clarifications: string[] = Array.isArray(data.clarifications) ? data.clarifications : [];
+
+      if (quality === 'good' && clarifications.length === 0) {
+        // Transcription is clean — skip review modal and save directly
+        await submitFinalSoap(data.transcription ?? '', '', data.soapNote ?? '', data.whatsappMessage ?? '');
+      } else {
+        setReviewData({
+          transcription: data.transcription ?? '',
+          soapDraft: data.soapNote ?? '',
+          whatsappDraft: data.whatsappMessage ?? '',
+          clarifications,
+          transcriptionQuality: quality,
+        });
+      }
     } catch (err: any) {
       toast({
         title: 'Erro ao processar consulta',
@@ -214,17 +314,52 @@ export function ChatPanel({
     }
   };
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-    const msg: ChatMessage = {
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isChatLoading) return;
+    const text = inputValue.trim();
+    setInputValue('');
+
+    const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       type: 'user',
       title: 'Você',
-      content: inputValue.trim(),
+      content: text,
       timestamp: new Date(),
     };
-    onMessagesChange([...messages, msg]);
-    setInputValue('');
+    const withUser = [...messages, userMsg];
+    onMessagesChange(withUser);
+    setIsChatLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('chat-assistant', {
+        body: {
+          patientContext: patient ? {
+            name: patient.name,
+            age: patient.age,
+            diagnoses: patient.diagnoses,
+            medications: patient.medications,
+            allergies: patient.allergies,
+          } : null,
+          chatHistory: messages
+            .filter(m => m.type === 'user' || m.type === 'assistant')
+            .slice(-10)
+            .map(m => ({ type: m.type, content: m.content })),
+          userMessage: text,
+        },
+      });
+      if (error) throw error;
+      onMessagesChange([...withUser, {
+        id: `assistant-${Date.now()}`,
+        type: 'assistant',
+        title: 'Assistente Clínico',
+        content: data.message,
+        timestamp: new Date(),
+      }]);
+    } catch {
+      toast({ title: 'Erro ao consultar IA', description: 'Tente novamente.', variant: 'destructive' });
+    } finally {
+      setIsChatLoading(false);
+    }
   };
 
   const handleSaveEdit = async (messageId: string) => {
@@ -266,29 +401,7 @@ export function ChatPanel({
     if (!reviewData || !patient) return;
     setIsGeneratingFinal(true);
     try {
-      const { data, error } = await supabase.functions.invoke('process-consultation', {
-        body: {
-          patientId: patient.id,
-          userId,
-          chiefComplaint,
-          transcription: reviewData.transcription,
-          doctorComments: comments,
-          patientContext: {
-            name: patient.name,
-            age: patient.age,
-            diagnoses: patient.diagnoses,
-            medications: patient.medications,
-            allergies: patient.allergies,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      setCurrentConsultationId(data.consultationId ?? null);
-      pushToChat(data.soapNote, data.whatsappMessage);
-      setReviewData(null);
-      toast({ title: 'Consulta salva!', description: 'Evolução clínica gerada com sucesso.' });
+      await submitFinalSoap(reviewData.transcription, comments);
     } catch {
       toast({ title: 'Erro ao gerar evolução', description: 'Tente novamente.', variant: 'destructive' });
     } finally {
@@ -298,12 +411,70 @@ export function ChatPanel({
 
   const handleReviewCancel = () => setReviewData(null);
 
+  const handleSendWhatsapp = (message: string) => {
+    const raw = patient?.phone?.replace(/\D/g, '') ?? '';
+    if (!raw) {
+      toast({
+        title: 'Telefone não cadastrado',
+        description: 'Adicione o telefone do paciente no perfil para enviar via WhatsApp.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const number = raw.startsWith('55') ? raw : `55${raw}`;
+    window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const handlePrintSOAP = (soapNote: string) => {
+    const sections: Array<{ letter: string; title: string; content: string }> = [];
+    const re = /\*\*([A-Z])\s*(?:\([^)]+\))?\*\*[:\s]*([\s\S]*?)(?=\n\s*\n?\*\*[A-Z]|$)/g;
+    let m;
+    while ((m = re.exec(soapNote)) !== null) {
+      sections.push({
+        letter: m[1],
+        title: m[0].match(/\*\*([^*]+)\*\*/)?.[1]?.trim() ?? m[1],
+        content: m[2].trim(),
+      });
+    }
+
+    const bg: Record<string, string> = { S: '#eff6ff', O: '#f8fafc', A: '#fffbeb', P: '#f0fdf4' };
+    const border: Record<string, string> = { S: '#3b82f6', O: '#94a3b8', A: '#f59e0b', P: '#22c55e' };
+
+    const sectionsHtml = sections.length > 0
+      ? sections.map(({ letter, title, content }) =>
+          `<div style="margin-bottom:14px;background:${bg[letter] ?? '#f9fafb'};border-left:3px solid ${border[letter] ?? '#e5e7eb'};padding:10px 14px;border-radius:0 6px 6px 0">
+            <div style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.55;margin-bottom:5px">${title}</div>
+            <div style="font-size:10.5pt;line-height:1.65;white-space:pre-wrap">${content || 'Não relatado na consulta.'}</div>
+          </div>`).join('')
+      : `<div style="white-space:pre-wrap;font-size:10.5pt;line-height:1.65">${soapNote}</div>`;
+
+    const date = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Evolução — ${patient?.name ?? ''}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11pt;color:#111827;padding:48px 56px;max-width:800px}h1{font-size:17pt;font-weight:700;color:#1d4ed8}.sub{color:#6b7280;font-size:9.5pt;margin-top:2px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #e5e7eb}.footer{margin-top:32px;padding-top:12px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:8pt}@media print{body{padding:24px 32px}}</style>
+</head><body>
+<h1>${patient?.name ?? ''}</h1>
+<div class="sub">${patient?.age ?? ''} anos${patient?.profession ? ` · ${patient.profession}` : ''} &nbsp;·&nbsp; ${date}${chiefComplaint ? ` &nbsp;·&nbsp; Queixa: ${chiefComplaint}` : ''}</div>
+${sectionsHtml}
+<div class="footer">Gerado pelo Cortex</div>
+<script>window.onload=()=>window.print();</script>
+</body></html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  };
+
   if (!patient) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-card">
-        <div className="text-center text-muted-foreground">
-          <FileText className="w-12 h-12 mx-auto mb-4 text-slate-400 opacity-50" />
-          <p>Selecione um paciente para iniciar</p>
+        <div className="text-center space-y-3 px-8">
+          <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto">
+            <Mic className="w-6 h-6 text-muted-foreground/40" />
+          </div>
+          <p className="text-sm font-medium text-foreground/70">Nenhuma consulta ativa</p>
+          <p className="text-xs text-muted-foreground/60">Selecione um paciente ou inicie uma nova consulta</p>
         </div>
       </div>
     );
@@ -314,7 +485,7 @@ export function ChatPanel({
   return (
     <div className="flex-1 flex flex-col bg-card h-full">
       {/* Header */}
-      <header className="px-6 py-4 border-b border-border/50">
+      <header className="sticky top-0 z-10 px-4 md:px-6 py-3 md:py-4 border-b border-border/50 bg-card/95 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           {patient.photoUrl ? (
             <img src={patient.photoUrl} alt={patient.name} className="w-10 h-10 rounded-full object-cover" />
@@ -333,7 +504,7 @@ export function ChatPanel({
       </header>
 
       {/* Chat Content */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 md:px-6 py-4 md:py-6 space-y-4">
 
         {/* Pre-consultation Briefing */}
         {showBriefing && (
@@ -415,7 +586,7 @@ export function ChatPanel({
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowBriefing(false)}
-                className="shrink-0 h-6 w-6 text-slate-400 hover:text-foreground"
+                className="shrink-0 h-8 w-8 text-slate-400 hover:text-foreground"
               >
                 <X className="w-3.5 h-3.5" />
               </Button>
@@ -436,29 +607,50 @@ export function ChatPanel({
             style={{ animationDelay: `${index * 50}ms` }}
           >
             {message.type === 'user' ? (
-              <div className="max-w-[75%] bg-medical-blue text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2 text-sm">
+              <div className="max-w-[88%] md:max-w-[75%] bg-medical-blue text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2 text-sm">
                 {message.content}
+              </div>
+            ) : message.type === 'assistant' ? (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Brain className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1 max-w-[88%] md:max-w-[85%] rounded-2xl rounded-tl-sm bg-muted/60 px-4 py-3">
+                  <p className="text-[11px] font-semibold text-muted-foreground mb-1">{message.title}</p>
+                  <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{message.content}</p>
+                </div>
               </div>
             ) : (
               <>
                 {message.type === 'soap' && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-3 right-3 h-7 w-7 text-muted-foreground hover:text-foreground"
-                    onClick={() => {
-                      if (editingId === message.id) {
-                        handleSaveEdit(message.id);
-                      } else {
-                        setEditingId(message.id);
-                        setEditedContent(message.content);
-                      }
-                    }}
-                  >
-                    {editingId === message.id
-                      ? <Check className="w-3.5 h-3.5 text-success" />
-                      : <Pencil className="w-3.5 h-3.5" />}
-                  </Button>
+                  <div className="absolute top-3 right-3 flex items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground/50 hover:text-muted-foreground"
+                      onClick={() => handlePrintSOAP(message.content)}
+                      title="Exportar PDF"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        if (editingId === message.id) {
+                          handleSaveEdit(message.id);
+                        } else {
+                          setEditingId(message.id);
+                          setEditedContent(message.content);
+                        }
+                      }}
+                    >
+                      {editingId === message.id
+                        ? <Check className="w-3.5 h-3.5 text-success" />
+                        : <Pencil className="w-3.5 h-3.5" />}
+                    </Button>
+                  </div>
                 )}
 
                 <div className="flex items-start gap-3 mb-3">
@@ -485,24 +677,19 @@ export function ChatPanel({
                   <textarea
                     value={editedContent}
                     onChange={(e) => setEditedContent(e.target.value)}
-                    className="w-full min-h-[200px] text-sm leading-relaxed bg-muted/30 border border-border rounded-lg p-3 text-foreground/90 focus:outline-none focus:ring-2 focus:ring-medical-blue/30 resize-y"
+                    className="w-full min-h-[120px] md:min-h-[200px] text-sm leading-relaxed bg-muted/30 border border-border rounded-lg p-3 text-foreground/90 focus:outline-none focus:ring-2 focus:ring-medical-blue/30 resize-y"
                     autoFocus
                   />
+                ) : message.type === 'soap' ? (
+                  <SoapNoteView text={message.content} />
                 ) : (
-                  <div className={cn(
-                    'text-sm leading-relaxed whitespace-pre-wrap',
-                    message.type === 'soap' ? 'text-foreground/90' : 'text-foreground/80',
-                  )}>
-                    {message.content.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
-                      part.startsWith('**') && part.endsWith('**')
-                        ? <strong key={i}>{part.slice(2, -2)}</strong>
-                        : part
-                    )}
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/80">
+                    {message.content}
                   </div>
                 )}
 
                 {message.type === 'whatsapp' && (
-                  <div className="mt-4 pt-3 border-t border-whatsapp-green/20">
+                  <div className="mt-4 pt-3 border-t border-whatsapp-green/20 flex gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
@@ -511,7 +698,22 @@ export function ChatPanel({
                     >
                       {copiedId === message.id
                         ? <><Check className="w-3.5 h-3.5 text-success" />Copiado!</>
-                        : <><Copy className="w-3.5 h-3.5" />Copiar Texto</>}
+                        : <><Copy className="w-3.5 h-3.5" />Copiar</>}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSendWhatsapp(message.content)}
+                      title={patient?.phone ? `Enviar para ${patient.phone}` : 'Telefone não cadastrado no perfil'}
+                      className={cn(
+                        'gap-2 text-xs',
+                        patient?.phone
+                          ? 'text-whatsapp-green border-whatsapp-green/30 hover:bg-whatsapp-green/10 hover:text-whatsapp-green'
+                          : 'text-muted-foreground/60',
+                      )}
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      Enviar via WhatsApp
                     </Button>
                   </div>
                 )}
@@ -535,63 +737,128 @@ export function ChatPanel({
           </div>
         )}
 
+        {/* Chat AI typing indicator */}
+        {isChatLoading && (
+          <div className="flex items-start gap-3 animate-fade-in">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Brain className="w-4 h-4 text-primary" />
+            </div>
+            <div className="rounded-2xl rounded-tl-sm bg-muted/60 px-4 py-3">
+              <div className="flex gap-1 items-center h-4">
+                {[0, 150, 300].map(delay => (
+                  <div key={delay} className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce"
+                    style={{ animationDelay: `${delay}ms` }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
-      <div className="p-4 space-y-3">
+      <div className="px-3 md:px-4 py-3 space-y-2 md:space-y-3 border-t border-border/30">
         {/* Recording Status Banner */}
         {isRecording && (
           <div className={cn(
             'border rounded-lg p-3 animate-fade-in',
+            stopConfirming ? 'bg-amber-500/10 border-amber-500/40' :
             isPaused ? 'bg-amber-500/10 border-amber-500/30' : 'bg-record-red/10 border-record-red/30',
           )}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className={cn(
-                  'w-2 h-2 rounded-full',
-                  isPaused ? 'bg-amber-500' : 'bg-record-red animate-pulse',
-                )} />
-                <span className={cn(
-                  'text-sm font-semibold',
-                  isPaused ? 'text-amber-500' : 'text-record-red',
-                )}>
-                  {isPaused ? 'Gravação pausada' : `Gravando... ${formatTimer(recordingSeconds)}`}
-                </span>
+            {stopConfirming ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-amber-700 flex items-center gap-1.5">
+                    <StopCircle className="w-4 h-4" />
+                    Finalizar consulta?
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{formatTimer(recordingSeconds)} gravados</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCancelStop} className="h-9 flex-1 sm:flex-none">
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleConfirmStop}
+                    className="h-9 gap-1.5 bg-amber-600 hover:bg-amber-700 text-white border-0 flex-1 sm:flex-none"
+                  >
+                    <StopCircle className="w-3.5 h-3.5" />
+                    Finalizar
+                  </Button>
+                </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handlePauseToggle}
-                className={cn(
-                  'h-8 gap-1.5',
-                  isPaused ? 'text-amber-500 hover:text-amber-600' : 'text-record-red hover:text-record-red/80',
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {isPaused ? (
+                      <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    ) : (
+                      <div className="flex gap-[2px] items-end h-4">
+                        {[0.5, 0.8, 1.0, 0.7, 0.9, 0.6].map((mult, i) => (
+                          <div key={i} className="w-1 rounded-full bg-record-red transition-all duration-100"
+                            style={{ height: `${Math.max(20, audioLevel * mult * 100)}%` }} />
+                        ))}
+                      </div>
+                    )}
+                    <span className={cn(
+                      'text-sm font-semibold',
+                      isPaused ? 'text-amber-500' : 'text-record-red',
+                    )}>
+                      {isPaused ? 'Gravação pausada' : `Gravando... ${formatTimer(recordingSeconds)}`}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handlePauseToggle}
+                    className={cn(
+                      'h-8 gap-1.5',
+                      isPaused ? 'text-amber-500 hover:text-amber-600' : 'text-record-red hover:text-record-red/80',
+                    )}
+                  >
+                    {isPaused
+                      ? <><Play className="w-4 h-4" />Retomar</>
+                      : <><Pause className="w-4 h-4" />Pausar</>}
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Adicionar comentário à transcrição..."
+                    className="flex-1 h-10 px-3 rounded-lg bg-background border border-input text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30 placeholder:text-muted-foreground"
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(); }}
+                  />
+                  <Button variant="outline" size="sm" onClick={handleAddComment} disabled={!comment.trim()} className="h-10 shrink-0">
+                    Adicionar
+                  </Button>
+                </div>
+                {consultationComments.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {consultationComments.map((c, i) => (
+                      <div key={i} className="text-xs text-muted-foreground bg-background/60 rounded px-2 py-1">
+                        💬 {c}
+                      </div>
+                    ))}
+                  </div>
                 )}
-              >
-                {isPaused
-                  ? <><Play className="w-4 h-4" />Retomar</>
-                  : <><Pause className="w-4 h-4" />Pausar</>}
-              </Button>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Adicionar comentário à transcrição..."
-                className="flex-1 h-9 px-3 rounded-lg bg-background border border-input text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30 placeholder:text-muted-foreground"
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(); }}
-              />
-              <Button variant="outline" size="sm" onClick={handleAddComment} disabled={!comment.trim()}>
-                Adicionar
-              </Button>
-            </div>
+              </>
+            )}
           </div>
         )}
 
         <div className="input-command-center p-3">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-foreground h-9 w-9">
+            <Button
+              variant="ghost" size="icon"
+              className="text-slate-400 hover:text-foreground h-9 w-9"
+              title="Arquivos do paciente"
+              onClick={() => toast({ title: 'Arquivos', description: 'Use "Perfil Completo & Arquivos" no painel direito para gerenciar anexos.' })}
+            >
               <Paperclip className="w-4 h-4" />
             </Button>
             <div className="flex-1 relative">
@@ -609,7 +876,7 @@ export function ChatPanel({
               size="icon"
               className="text-slate-400 hover:text-foreground h-9 w-9"
               onClick={handleSendMessage}
-              disabled={!inputValue.trim()}
+              disabled={!inputValue.trim() || isChatLoading}
             >
               <Send className="w-4 h-4" />
             </Button>
@@ -626,12 +893,14 @@ export function ChatPanel({
             </Button>
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground text-center">
+        <p className="text-xs text-muted-foreground text-center">
           {isProcessing
             ? 'Processando consulta, aguarde...'
+            : isChatLoading
+            ? 'Assistente clínico pensando...'
             : isRecording
             ? 'Clique no botão para finalizar e processar a gravação'
-            : 'Pressione o botão vermelho para gravar a consulta'}
+            : 'Grave a consulta com o botão vermelho · Digite para consultar a IA'}
         </p>
       </div>
 
@@ -640,6 +909,8 @@ export function ChatPanel({
         patientName={patient?.name ?? ''}
         transcription={reviewData?.transcription ?? ''}
         soapDraft={reviewData?.soapDraft ?? ''}
+        clarifications={reviewData?.clarifications ?? []}
+        transcriptionQuality={reviewData?.transcriptionQuality ?? 'good'}
         onConfirm={handleReviewConfirm}
         onCancel={handleReviewCancel}
         isGenerating={isGeneratingFinal}

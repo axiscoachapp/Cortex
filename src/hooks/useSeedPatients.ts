@@ -551,7 +551,9 @@ export function useSeedPatients(userId: string | undefined) {
 }
 
 async function seedIfEmpty(userId: string): Promise<boolean> {
-  // Check patient count
+  const SESSION_KEY = `cortex_seeded_${userId}`;
+  if (sessionStorage.getItem(SESSION_KEY)) return false;
+
   const { count: patientCount } = await supabase
     .from('patients')
     .select('*', { count: 'exact', head: true })
@@ -600,10 +602,14 @@ async function seedIfEmpty(userId: string): Promise<boolean> {
     .select('*', { count: 'exact', head: true })
     .in('patient_id', patientIds);
 
-  if (consultCount !== 0) return false;
+  if (consultCount !== 0) {
+    sessionStorage.setItem(SESSION_KEY, '1');
+    return false;
+  }
 
   // Insert all consultations
   const consultations = buildConsultations(patientIds, userId);
   await supabase.from('consultations').insert(consultations);
+  sessionStorage.setItem(SESSION_KEY, '1');
   return true;
 }

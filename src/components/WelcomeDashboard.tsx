@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   CalendarDays, Plus, ChevronRight, Clock, Users, UserPlus,
   RefreshCw, Stethoscope, CalendarX,
@@ -62,21 +62,23 @@ function formatTime(iso: string): string {
 
 export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation, userId }: WelcomeDashboardProps) {
   const navigate = useNavigate();
-  const [todayApts, setTodayApts] = useState<Appointment[]>([]);
-  const [aptsLoading, setAptsLoading] = useState(true);
+  const today = new Date().toISOString().split('T')[0];
 
-  useEffect(() => {
-    if (!userId) return;
-    const today = new Date().toISOString().split('T')[0];
-    supabase
-      .from('appointments')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('start_time', `${today}T00:00:00`)
-      .lte('start_time', `${today}T23:59:59`)
-      .order('start_time')
-      .then(({ data }) => { setTodayApts(data ?? []); setAptsLoading(false); });
-  }, [userId]);
+  const { data: todayApts = [], isLoading: aptsLoading } = useQuery<Appointment[]>({
+    queryKey: ['appointments-today', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('start_time', `${today}T00:00:00`)
+        .lte('start_time', `${today}T23:59:59`)
+        .order('start_time');
+      return data ?? [];
+    },
+    enabled: !!userId,
+  });
 
   // Stats
   const totalPatients = patients.length;
@@ -96,7 +98,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
 
   return (
     <div className="h-full w-full bg-card overflow-y-auto scrollbar-thin">
-      <div className="max-w-2xl mx-auto px-8 py-10 space-y-8">
+      <div className="max-w-2xl mx-auto px-4 md:px-8 py-6 md:py-10 space-y-6 md:space-y-8">
 
         {/* Greeting */}
         <div>
@@ -111,12 +113,12 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
             { icon: UserPlus,  value: newPatients,     label: 'Novos',          color: 'text-green-600',     bg: 'bg-green-50' },
             { icon: RefreshCw, value: pendingReturns,  label: 'Retornos',       color: 'text-amber-600',     bg: 'bg-amber-50' },
           ].map(({ icon: Icon, value, label, color, bg }) => (
-            <div key={label} className="rounded-xl border border-border/50 bg-white p-4 shadow-[0_1px_4px_hsl(0_0%_0%/0.06)]">
-              <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center mb-3', bg)}>
-                <Icon className={cn('w-4 h-4', color)} />
+            <div key={label} className="rounded-xl border border-border/50 bg-white p-3 md:p-4 shadow-[0_1px_4px_hsl(0_0%_0%/0.06)]">
+              <div className={cn('w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center mb-2 md:mb-3', bg)}>
+                <Icon className={cn('w-3.5 h-3.5 md:w-4 md:h-4', color)} />
               </div>
-              <p className="text-2xl font-bold text-foreground leading-none">{value}</p>
-              <p className="text-xs text-muted-foreground mt-1">{label}</p>
+              <p className="text-xl md:text-2xl font-bold text-foreground leading-none">{value}</p>
+              <p className="text-[11px] md:text-xs text-muted-foreground mt-1">{label}</p>
             </div>
           ))}
         </div>
@@ -262,7 +264,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
                 {pendingReturns}
               </span>
             </h2>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {returnPatients.map(patient => {
                 const initials = patient.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
                 const daysSince = Math.floor((Date.now() - new Date(patient.lastVisit).getTime()) / 86400000);

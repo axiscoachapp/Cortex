@@ -1,35 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { PatientSidebar } from '@/components/PatientSidebar';
-import { ChatPanel } from '@/components/ChatPanel';
+import { ChatPanel, PreBriefing } from '@/components/ChatPanel';
 import { PatientSnapshot } from '@/components/PatientSnapshot';
 import { NewConsultationModal } from '@/components/NewConsultationModal';
 import { WelcomeDashboard } from '@/components/WelcomeDashboard';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, Home, Users, Mic, User } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Patient, ChatMessage } from '@/types/patient';
 import { useToast } from '@/hooks/use-toast';
 import { useSeedPatients } from '@/hooks/useSeedPatients';
-
-function mapRow(row: any): Patient {
-  return {
-    id: row.id,
-    name: row.name,
-    age: row.age,
-    profession: row.profession ?? '',
-    photoUrl: row.photo_url ?? undefined,
-    lastVisit: row.last_visit,
-    status: row.status as Patient['status'],
-    diagnoses: Array.isArray(row.diagnoses) ? row.diagnoses : [],
-    medications: Array.isArray(row.medications) ? row.medications : [],
-    allergies: row.allergies ?? [],
-    socialAnamnesis: row.social_anamnesis ?? undefined,
-    medicalHistory: row.medical_history ?? undefined,
-  };
-}
+import { mapPatientRow } from '@/lib/patientMapper';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -41,8 +26,17 @@ const Index = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chiefComplaint, setChiefComplaint] = useState('');
   const [showNewConsultationModal, setShowNewConsultationModal] = useState(false);
-  const [preBriefing, setPreBriefing] = useState<any>(null);
+  const [preBriefing, setPreBriefing] = useState<PreBriefing | null>(null);
   const [briefingLoading, setBriefingLoading] = useState(false);
+  const [mobileView, setMobileView] = useState<'home' | 'list' | 'chat' | 'info'>('home');
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   useSeedPatients(user?.id);
 
@@ -55,7 +49,7 @@ const Index = () => {
         .select('*')
         .order('name');
       if (error) throw error;
-      return (data ?? []).map(mapRow);
+      return (data ?? []).map(mapPatientRow);
     },
     enabled: !!user?.id,
   });
@@ -73,6 +67,16 @@ const Index = () => {
     setSelectedPatient(patient);
     setChatMessages([]);
     setChiefComplaint('');
+
+    setMobileView('chat');
+
+    const cached = preBriefingCache.current.get(patient.id);
+    if (cached) {
+      setPreBriefing(cached);
+      setBriefingLoading(false);
+      return;
+    }
+
     setPreBriefing(null);
     setBriefingLoading(true);
     try {
@@ -88,7 +92,10 @@ const Index = () => {
           },
         },
       });
-      if (!error && data) setPreBriefing(data);
+      if (!error && data) {
+        preBriefingCache.current.set(patient.id, data);
+        setPreBriefing(data);
+      }
     } catch {
       // non-critical
     } finally {
@@ -96,9 +103,11 @@ const Index = () => {
     }
   };
 
+  const preBriefingCache = useRef<Map<string, PreBriefing>>(new Map());
+
   const handleStartConsultation = async (
     patientId: string | null,
-    newPatientData: { name: string; age: number; profession: string } | undefined,
+    newPatientData: { name: string; age: number; profession: string; phone?: string } | undefined,
     complaint: string
   ) => {
     let patient: Patient;
@@ -116,11 +125,12 @@ const Index = () => {
           diagnoses: [],
           medications: [],
           allergies: [],
+          phone: newPatientData.phone ?? null,
         }])
         .select()
         .single();
       if (error) { toast({ title: 'Erro ao criar paciente', variant: 'destructive' }); return; }
-      patient = mapRow(data);
+      patient = mapPatientRow(data);
       queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
     } else {
       patient = patients.find(p => p.id === patientId) || patients[0];
@@ -131,6 +141,7 @@ const Index = () => {
     setSelectedPatient({ ...patient, status: 'atendimento' });
     setChiefComplaint(complaint);
     setChatMessages([]);
+    setMobileView('chat');
     toast({ title: 'Consulta iniciada', description: `Consulta com ${patient.name} iniciada.` });
   };
 
@@ -148,59 +159,113 @@ const Index = () => {
     );
   }
 
-  return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      {/* Sidebar */}
-      <div className="w-[20%] min-w-[260px] max-w-[300px] h-full flex flex-col">
-        <PatientSidebar
-          patients={patients}
-          selectedPatient={selectedPatient}
-          onSelectPatient={handleSelectPatient}
-          onNewConsultation={() => setShowNewConsultationModal(true)}
-        />
-      </div>
+  const navItems = [
+    { id: 'home' as const, icon: Home, label: 'Início', disabled: false },
+    { id: 'list' as const, icon: Users, label: 'Pacientes', disabled: false },
+    { id: 'chat' as const, icon: Mic, label: 'Consulta', disabled: !selectedPatient },
+    { id: 'info' as const, icon: User, label: 'Perfil', disabled: !selectedPatient },
+  ];
 
-      {/* Center panel — dashboard or active consultation */}
-      <div className="flex-1 h-full min-w-0 border-x border-border/50">
-        {selectedPatient ? (
-          <ChatPanel
-            patient={selectedPatient}
-            messages={chatMessages}
-            onMessagesChange={setChatMessages}
-            chiefComplaint={chiefComplaint}
-            preBriefing={preBriefing}
-            briefingLoading={briefingLoading}
-            userId={user?.id ?? ''}
-          />
-        ) : (
-          <WelcomeDashboard
+  return (
+    <div className="flex flex-col h-[100dvh] bg-background">
+      {/* Three-panel row — takes all space above the bottom nav */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+
+        {/* Sidebar */}
+        <div className={cn(
+          'h-full flex flex-col',
+          'md:w-[20%] md:min-w-[260px] md:max-w-[300px] md:flex',
+          mobileView === 'list' ? 'flex-1' : 'hidden md:flex',
+        )}>
+          <PatientSidebar
             patients={patients}
+            selectedPatient={selectedPatient}
             onSelectPatient={handleSelectPatient}
             onNewConsultation={() => setShowNewConsultationModal(true)}
-            userId={user?.id ?? ''}
           />
-        )}
+        </div>
+
+        {/* Center panel — dashboard or active consultation */}
+        <div className={cn(
+          'h-full min-w-0 flex flex-col',
+          'md:flex-1 md:border-x md:border-border/50',
+          (mobileView === 'home' || mobileView === 'chat') ? 'flex-1' : 'hidden md:flex',
+        )}>
+          {selectedPatient && (!isMobile || mobileView === 'chat') ? (
+            <ChatPanel
+              patient={selectedPatient}
+              messages={chatMessages}
+              onMessagesChange={setChatMessages}
+              chiefComplaint={chiefComplaint}
+              preBriefing={preBriefing}
+              briefingLoading={briefingLoading}
+              userId={user?.id ?? ''}
+            />
+          ) : (
+            <WelcomeDashboard
+              patients={patients}
+              onSelectPatient={handleSelectPatient}
+              onNewConsultation={() => setShowNewConsultationModal(true)}
+              userId={user?.id ?? ''}
+            />
+          )}
+        </div>
+
+        {/* Patient snapshot */}
+        <div className={cn(
+          'h-full flex flex-col relative',
+          'md:w-[25%] md:min-w-[270px] md:max-w-[360px] md:flex',
+          mobileView === 'info' ? 'flex-1' : 'hidden md:flex',
+        )}>
+          <PatientSnapshot patient={selectedPatient} />
+          {user && (
+            <div className="absolute top-3 right-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                className="h-7 w-7 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50"
+                title="Sair"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+
       </div>
 
-      {/* Patient snapshot */}
-      <div className="w-[25%] min-w-[270px] max-w-[360px] h-full flex flex-col relative">
-        <PatientSnapshot patient={selectedPatient} />
-
-        {/* Logout — tucked in top-right corner of the snapshot panel */}
-        {user && (
-          <div className="absolute top-3 right-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSignOut}
-              className="h-7 w-7 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50"
-              title="Sair"
+      {/* Mobile bottom navigation */}
+      <nav className="md:hidden shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-sm">
+        <div className="flex items-stretch h-16 px-1">
+          {navItems.map(({ id, icon: Icon, label, disabled }) => (
+            <button
+              key={id}
+              onClick={() => !disabled && setMobileView(id)}
+              disabled={disabled}
+              className={cn(
+                'flex-1 flex flex-col items-center justify-center gap-1 rounded-xl mx-0.5 transition-all min-h-[44px]',
+                mobileView === id
+                  ? 'text-medical-blue bg-medical-blue-light/60'
+                  : disabled
+                  ? 'text-muted-foreground/30 cursor-not-allowed'
+                  : 'text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/40',
+              )}
             >
-              <LogOut className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        )}
-      </div>
+              <Icon className="w-5 h-5" />
+              <span className="text-xs font-medium">{label}</span>
+            </button>
+          ))}
+          <button
+            onClick={handleSignOut}
+            className="flex-1 flex flex-col items-center justify-center gap-1 rounded-xl mx-0.5 transition-all min-h-[44px] text-muted-foreground/40 hover:text-muted-foreground/70 hover:bg-muted/30"
+            title="Sair"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="text-xs font-medium">Sair</span>
+          </button>
+        </div>
+      </nav>
 
       <NewConsultationModal
         open={showNewConsultationModal}

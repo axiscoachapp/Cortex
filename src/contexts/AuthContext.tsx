@@ -14,13 +14,16 @@ const ADMIN_BYPASS_USER: User = {
   created_at: new Date().toISOString(),
 };
 
+const BYPASS_EMAIL = 'test.bypass@cortex-dev.local';
+const BYPASS_PASSWORD = 'CortexBypass2026!Dev';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  enableAdminBypass: () => void;
+  enableAdminBypass: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -75,9 +78,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error };
   };
 
-  const enableAdminBypass = () => {
+  const enableAdminBypass = async () => {
     localStorage.setItem(ADMIN_BYPASS_KEY, '1');
     setAdminBypass(true);
+
+    // Sign in to Supabase with a test account so RLS-protected queries work
+    // on any device/browser without needing a real user session.
+    const { error } = await supabase.auth.signInWithPassword({
+      email: BYPASS_EMAIL,
+      password: BYPASS_PASSWORD,
+    });
+    if (error) {
+      // Account doesn't exist yet — create it, then sign in
+      await supabase.auth.signUp({ email: BYPASS_EMAIL, password: BYPASS_PASSWORD });
+      await supabase.auth.signInWithPassword({ email: BYPASS_EMAIL, password: BYPASS_PASSWORD });
+    }
   };
 
   const signOut = async () => {
@@ -86,7 +101,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
   };
 
-  const effectiveUser = adminBypass ? ADMIN_BYPASS_USER : user;
+  // In bypass mode: prefer the real Supabase user (so auth.uid() works in RLS);
+  // fall back to the fake user only if no session exists yet.
+  const effectiveUser = adminBypass ? (user ?? ADMIN_BYPASS_USER) : user;
   const effectiveSession = adminBypass ? null : session;
 
   return (

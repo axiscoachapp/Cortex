@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment, Patient } from '@/types/patient';
+import { mapPatientRow } from '@/lib/patientMapper';
 import { AppointmentModal } from '@/components/AppointmentModal';
 import { useToast } from '@/hooks/use-toast';
 
@@ -89,13 +90,24 @@ export default function CalendarPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [view, setView] = useState<View>('week');
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const [view, setView] = useState<View>(() => typeof window !== 'undefined' && window.innerWidth < 768 ? 'day' : 'week');
   const [date, setDate] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [defaultSlot, setDefaultSlot] = useState<{ start: Date; end: Date } | null>(null);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [checkingGoogle, setCheckingGoogle] = useState(true);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handler = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches);
+      setView(e.matches ? 'day' : 'week');
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   // Check Google Calendar connection
   useEffect(() => {
@@ -127,20 +139,7 @@ export default function CalendarPage() {
     queryFn: async () => {
       if (!user?.id) return [];
       const { data } = await supabase.from('patients').select('*').order('name');
-      return (data ?? []).map((row: any) => ({
-        id: row.id,
-        name: row.name,
-        age: row.age,
-        profession: row.profession ?? '',
-        photoUrl: row.photo_url ?? undefined,
-        lastVisit: row.last_visit,
-        status: row.status,
-        diagnoses: Array.isArray(row.diagnoses) ? row.diagnoses : [],
-        medications: Array.isArray(row.medications) ? row.medications : [],
-        allergies: row.allergies ?? [],
-        phone: row.phone ?? undefined,
-        email: row.email ?? undefined,
-      }));
+      return (data ?? []).map(mapPatientRow);
     },
     enabled: !!user?.id,
   });
@@ -229,27 +228,24 @@ export default function CalendarPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
       <header className="bg-background border-b sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
+        <div className="container mx-auto px-3 md:px-4 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
             <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <CalendarDays className="h-6 w-6 text-medical-blue" />
-            <div>
-              <h1 className="text-lg font-semibold text-foreground leading-tight">Agenda</h1>
-              <p className="text-xs text-muted-foreground">{todayLabel}</p>
+            <CalendarDays className="h-5 w-5 md:h-6 md:w-6 text-medical-blue shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-base md:text-lg font-semibold text-foreground leading-tight">Agenda</h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">{todayLabel}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Status legend */}
+          <div className="flex items-center gap-1.5 md:gap-2">
+            {/* Status legend — desktop only */}
             <div className="hidden md:flex items-center gap-2 mr-2">
               {Object.entries(STATUS_LABELS).map(([status, label]) => (
                 <div key={status} className="flex items-center gap-1">
-                  <div
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: STATUS_COLORS[status] }}
-                  />
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: STATUS_COLORS[status] }} />
                   <span className="text-xs text-muted-foreground">{label}</span>
                 </div>
               ))}
@@ -257,11 +253,11 @@ export default function CalendarPage() {
 
             {/* View switcher */}
             <div className="flex rounded-lg border border-border overflow-hidden">
-              {(['month', 'week', 'day'] as View[]).map(v => (
+              {(isMobile ? ['day', 'week'] as View[] : ['month', 'week', 'day'] as View[]).map(v => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`px-2.5 md:px-3 py-1.5 text-xs font-medium transition-colors ${
                     view === v
                       ? 'bg-medical-blue text-white'
                       : 'bg-background text-muted-foreground hover:bg-muted'
@@ -272,36 +268,36 @@ export default function CalendarPage() {
               ))}
             </div>
 
-            {/* Google Calendar */}
+            {/* Google Calendar — icon-only on mobile */}
             {checkingGoogle ? (
-              <Button variant="outline" size="sm" disabled>
+              <Button variant="outline" size="sm" disabled className="hidden sm:flex">
                 <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
                 Google
               </Button>
             ) : googleConnected ? (
-              <Badge variant="outline" className="gap-1.5 py-1.5 px-3 text-success border-success/30">
+              <Badge variant="outline" className="hidden sm:flex gap-1.5 py-1.5 px-3 text-success border-success/30">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Google Calendar
+                <span className="hidden md:inline">Google Calendar</span>
               </Badge>
             ) : (
-              <Button variant="outline" size="sm" onClick={handleGoogleConnect} className="gap-1.5">
+              <Button variant="outline" size="sm" onClick={handleGoogleConnect} className="gap-1.5 hidden sm:flex">
                 <CalendarDays className="w-3.5 h-3.5" />
-                Conectar Google
+                <span className="hidden md:inline">Conectar Google</span>
               </Button>
             )}
 
             {/* New appointment */}
             <Button variant="medical" size="sm" onClick={handleNewAppointment} className="gap-1.5">
               <Plus className="w-4 h-4" />
-              Nova Consulta
+              <span className="hidden sm:inline">Nova Consulta</span>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Calendar */}
-      <main className="flex-1 container mx-auto px-4 py-6">
-        <div className="bg-background rounded-xl border border-border shadow-sm overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
+      <main className="flex-1 container mx-auto px-2 md:px-4 py-3 md:py-6">
+        <div className="bg-background rounded-xl border border-border shadow-sm overflow-hidden" style={{ height: isMobile ? 'calc(100dvh - 110px)' : 'calc(100vh - 140px)' }}>
           {isLoading ? (
             <div className="h-full flex items-center justify-center">
               <Loader2 className="w-6 h-6 animate-spin text-medical-blue" />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FileText, Image, Upload, Calendar, User, Heart, Brain, Sparkles, Pencil, Check, X } from 'lucide-react';
+import { SoapNoteView } from '@/components/SoapNoteView';
 import { Patient } from '@/types/patient';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -144,17 +145,17 @@ export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientPro
               </span>
             </div>
             <div>
-              <span className="text-foreground">Dossiê: {patient.name}</span>
-              <p className="text-sm font-normal text-muted-foreground">{patient.age} anos • {patient.profession}</p>
+              <span className="text-foreground truncate max-w-[200px] md:max-w-none">Dossiê: {patient.name}</span>
+              <p className="text-sm font-normal text-muted-foreground">{patient.age} anos{patient.profession ? ` · ${patient.profession}` : ''}</p>
             </div>
           </SheetTitle>
         </SheetHeader>
 
         <Tabs defaultValue="overview" className="mt-6">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
-            <TabsTrigger value="files" className="text-xs sm:text-sm">Arquivos & Exames</TabsTrigger>
-            <TabsTrigger value="history" className="text-xs sm:text-sm">
+          <TabsList className="grid w-full grid-cols-3 mb-6 h-10">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm h-full">Geral</TabsTrigger>
+            <TabsTrigger value="files" className="text-xs sm:text-sm h-full">Arquivos</TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm h-full">
               Histórico {consultations.length > 0 && `(${consultations.length})`}
             </TabsTrigger>
           </TabsList>
@@ -334,12 +335,8 @@ export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientPro
                             </p>
                           )}
                           {isExpanded && consultation.soap_note && (
-                            <div className="mt-3 pt-3 border-t border-border/50 text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                              {consultation.soap_note.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
-                                part.startsWith('**') && part.endsWith('**')
-                                  ? <strong key={i}>{part.slice(2, -2)}</strong>
-                                  : part
-                              )}
+                            <div className="mt-3 pt-3 border-t border-border/50">
+                              <SoapNoteView text={consultation.soap_note} />
                             </div>
                           )}
                         </div>

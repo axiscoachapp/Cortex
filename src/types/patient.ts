@@ -32,7 +32,6 @@ export interface Appointment {
   id: string;
   userId: string;
   patientId: string | null;
-  patientName?: string;
   title: string;
   startTime: Date;
   endTime: Date;
@@ -45,7 +44,7 @@ export interface Appointment {
 
 export interface ChatMessage {
   id: string;
-  type: 'soap' | 'whatsapp' | 'system' | 'user';
+  type: 'soap' | 'whatsapp' | 'system' | 'user' | 'assistant';
   title: string;
   content: string;
   timestamp: Date;

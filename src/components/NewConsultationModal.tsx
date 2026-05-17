@@ -11,6 +11,7 @@ interface NewPatientData {
   name: string;
   age: number;
   profession: string;
+  phone?: string;
 }
 
 interface NewConsultationModalProps {
@@ -26,6 +27,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
   const [newPatientName, setNewPatientName] = useState('');
   const [newPatientAge, setNewPatientAge] = useState('');
   const [newPatientProfession, setNewPatientProfession] = useState('');
+  const [newPatientPhone, setNewPatientPhone] = useState('');
   const [chiefComplaint, setChiefComplaint] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,6 +38,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
         name: newPatientName,
         age: parseInt(newPatientAge) || 0,
         profession: newPatientProfession,
+        phone: newPatientPhone.trim() || undefined,
       }, chiefComplaint);
     } else {
       onStartConsultation(selectedPatientId, undefined, chiefComplaint);
@@ -47,6 +50,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
     setNewPatientName('');
     setNewPatientAge('');
     setNewPatientProfession('');
+    setNewPatientPhone('');
     setChiefComplaint('');
     onOpenChange(false);
   };
@@ -130,6 +134,16 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
                     placeholder="Ex: Engenheiro"
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-patient-phone">Telefone / WhatsApp <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                <Input
+                  id="new-patient-phone"
+                  type="tel"
+                  value={newPatientPhone}
+                  onChange={(e) => setNewPatientPhone(e.target.value)}
+                  placeholder="Ex: (11) 99999-9999"
+                />
               </div>
             </div>
           )}

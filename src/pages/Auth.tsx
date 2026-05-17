@@ -201,7 +201,7 @@ const Auth = () => {
           <div className="pt-2 border-t border-border/50">
             <button
               type="button"
-              onClick={() => { enableAdminBypass(); navigate('/'); }}
+              onClick={async () => { await enableAdminBypass(); navigate('/'); }}
               className="w-full text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors py-2"
             >
               Admin — pular login
