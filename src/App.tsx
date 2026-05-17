@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import About from "./pages/About";
 import PatientManagement from "./pages/PatientManagement";
 import CalendarPage from "./pages/Calendar";
 import GoogleOAuthCallback from "./pages/GoogleOAuthCallback";
@@ -23,6 +24,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/sobre" element={<About />} />
             <Route path="/gerenciar-pacientes" element={<PatientManagement />} />
             <Route path="/agenda" element={<CalendarPage />} />
             <Route path="/google-oauth-callback" element={<GoogleOAuthCallback />} />

@@ -103,6 +103,30 @@ export default {
           from: { transform: "translateY(10px)", opacity: "0" },
           to: { transform: "translateY(0)", opacity: "1" },
         },
+        "blob": {
+          "0%, 100%": { transform: "translate(0px, 0px) scale(1)" },
+          "33%": { transform: "translate(40px, -60px) scale(1.12)" },
+          "66%": { transform: "translate(-30px, 30px) scale(0.92)" },
+        },
+        "float": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-12px)" },
+        },
+        "gradient-shift": {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
+        "shimmer": {
+          "100%": { transform: "translateX(100%)" },
+        },
+        "type-cursor": {
+          "0%, 50%": { opacity: "1" },
+          "51%, 100%": { opacity: "0" },
+        },
+        "marquee": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -110,6 +134,13 @@ export default {
         "pulse-record": "pulse-record 2s ease-in-out infinite",
         "slide-in-right": "slide-in-right 0.3s ease-out",
         "fade-in-up": "fade-in-up 0.4s ease-out",
+        "blob": "blob 14s ease-in-out infinite",
+        "blob-slow": "blob 20s ease-in-out infinite",
+        "float": "float 6s ease-in-out infinite",
+        "gradient-shift": "gradient-shift 8s ease infinite",
+        "shimmer": "shimmer 2.4s ease-in-out infinite",
+        "type-cursor": "type-cursor 1s step-end infinite",
+        "marquee": "marquee 40s linear infinite",
       },
       boxShadow: {
         "medical": "0 4px 20px -4px hsl(var(--medical-blue) / 0.15)",

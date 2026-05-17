@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -198,7 +198,13 @@ const Auth = () => {
             </TabsContent>
           </Tabs>
 
-          <div className="pt-2 border-t border-border/50">
+          <div className="pt-4 border-t border-border/50 space-y-2 text-center">
+            <Link
+              to="/sobre"
+              className="block text-sm text-medical-blue-dark hover:text-medical-blue font-medium transition-colors py-1.5"
+            >
+              Sobre Nós →
+            </Link>
             <button
               type="button"
               onClick={async () => { await enableAdminBypass(); navigate('/'); }}
