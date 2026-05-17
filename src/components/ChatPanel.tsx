@@ -522,47 +522,53 @@ ${sectionsHtml}
                     </div>
                   ) : activeBriefing?.returnInfo ? (
                     <>
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-foreground/80">
-                        <span>{activeBriefing.returnInfo}</span>
-                        <span>•</span>
-                        <span>{activeBriefing.previousComplaint}</span>
+                      <div className="space-y-1.5 text-xs text-foreground/80">
+                        <div className="flex items-start gap-1.5">
+                          <span className="shrink-0 font-medium text-foreground/50 w-1.5 h-1.5 mt-1.5 rounded-full bg-amber-400 inline-block" />
+                          <span>{activeBriefing.returnInfo}</span>
+                        </div>
+                        <div className="flex items-start gap-1.5">
+                          <span className="shrink-0 font-medium text-foreground/50 w-1.5 h-1.5 mt-1.5 rounded-full bg-amber-400 inline-block" />
+                          <span>{activeBriefing.previousComplaint}</span>
+                        </div>
                         {activeBriefing.pending && (
-                          <>
-                            <span>•</span>
+                          <div className="flex items-start gap-1.5">
+                            <span className="shrink-0 w-1.5 h-1.5 mt-1.5 rounded-full bg-amber-400 inline-block" />
                             <span>{activeBriefing.pending}</span>
-                          </>
+                          </div>
                         )}
                         {activeBriefing.alert && (
-                          <span className="text-destructive font-medium">
-                            ⚠️ {activeBriefing.alert}
-                          </span>
+                          <div className="flex items-start gap-1.5 mt-1 pt-1.5 border-t border-destructive/20">
+                            <span className="shrink-0 text-destructive mt-0.5">⚠️</span>
+                            <span className="text-destructive font-medium leading-snug">{activeBriefing.alert}</span>
+                          </div>
                         )}
                       </div>
 
                       {briefingExpanded && activeBriefing.details && (
                         <div className="mt-3 pt-3 border-t border-border/30 space-y-2 text-xs text-foreground/80">
                           {activeBriefing.details.lastConsultationDate && (
-                            <div>
-                              <span className="font-semibold text-foreground">Última Consulta:</span>{' '}
-                              {activeBriefing.details.lastConsultationDate}
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">Última Consulta</span>
+                              <span>{activeBriefing.details.lastConsultationDate}</span>
                             </div>
                           )}
                           {activeBriefing.details.mainComplaint && (
-                            <div>
-                              <span className="font-semibold text-foreground">Queixa Principal:</span>{' '}
-                              {activeBriefing.details.mainComplaint}
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">Queixa Principal</span>
+                              <span>{activeBriefing.details.mainComplaint}</span>
                             </div>
                           )}
                           {activeBriefing.details.previousConduct && (
-                            <div>
-                              <span className="font-semibold text-foreground">Conduta Anterior:</span>{' '}
-                              {activeBriefing.details.previousConduct}
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">Conduta Anterior</span>
+                              <span>{activeBriefing.details.previousConduct}</span>
                             </div>
                           )}
                           {activeBriefing.details.evolution && (
-                            <div>
-                              <span className="font-semibold text-foreground">Evolução:</span>{' '}
-                              {activeBriefing.details.evolution}
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">Evolução</span>
+                              <span>{activeBriefing.details.evolution}</span>
                             </div>
                           )}
                         </div>
