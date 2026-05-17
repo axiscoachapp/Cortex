@@ -12,6 +12,8 @@ import { printPrescription } from '@/lib/printDoc';
 
 interface PatientSnapshotProps {
   patient: Patient | null;
+  /** Optional callback — passed to the dossier drawer's "Perguntar à IA" button. */
+  onAskAI?: () => void;
 }
 
 function formatMedicationDuration(startedAt: string): string {
@@ -44,7 +46,7 @@ function SectionHeader({ icon: Icon, label, action }: {
   );
 }
 
-export function PatientSnapshot({ patient }: PatientSnapshotProps) {
+export function PatientSnapshot({ patient, onAskAI }: PatientSnapshotProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notes, setNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -293,7 +295,12 @@ export function PatientSnapshot({ patient }: PatientSnapshotProps) {
         </button>
       </div>
 
-      <PatientProfileDrawer patient={patient} open={drawerOpen} onOpenChange={setDrawerOpen} />
+      <PatientProfileDrawer
+        patient={patient}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onAskAI={onAskAI}
+      />
     </aside>
   );
 }

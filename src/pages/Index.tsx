@@ -217,7 +217,13 @@ const Index = () => {
           'md:w-[25%] md:min-w-[270px] md:max-w-[360px] md:flex',
           mobileView === 'info' ? 'flex-1' : 'hidden md:flex',
         )}>
-          <PatientSnapshot patient={selectedPatient} />
+          <PatientSnapshot
+            patient={selectedPatient}
+            onAskAI={() => {
+              // On mobile, jump to the chat tab; on desktop, chat is already visible.
+              if (selectedPatient) setMobileView('chat');
+            }}
+          />
           {user && (
             <div className="absolute top-3 right-3">
               <Button

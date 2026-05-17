@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   FileText, Calendar, User, Heart, Brain, Sparkles, Pencil, Check, X,
   MessageCircle, Printer, Stethoscope, Clock, StickyNote, Activity,
+  Phone, Mail, MessagesSquare,
 } from 'lucide-react';
 import { SoapNoteView } from '@/components/SoapNoteView';
 import { Patient } from '@/types/patient';
@@ -14,12 +15,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { printSoap, printDossier } from '@/lib/printDoc';
+import { PatientFiles } from '@/components/PatientFiles';
 
 interface PatientProfileDrawerProps {
   patient: Patient | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Optional deep-link to the chat (e.g. switches mobile view on small screens). */
+  onAskAI?: () => void;
 }
 
 interface AIInsights {
@@ -67,12 +72,13 @@ function relativeDays(iso: string): string {
 
 /* ──────────────────────────────────────────────────────────────────────── */
 
-export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientProfileDrawerProps) {
+export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: PatientProfileDrawerProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<'social' | 'medical' | null>(null);
   const [draftValue, setDraftValue] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Reset transient UI state on patient switch.
   useEffect(() => {
@@ -206,17 +212,55 @@ export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientPro
                 </p>
               </div>
             </SheetTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 h-8 shrink-0"
-              onClick={handlePrintDossier}
-              title="Imprimir dossiê completo"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Dossiê</span>
-            </Button>
+            <div className="flex items-center gap-1 shrink-0">
+              {onAskAI && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8"
+                  onClick={() => { onOpenChange(false); onAskAI(); }}
+                  title="Abrir o chat para perguntar à IA sobre este paciente"
+                >
+                  <MessagesSquare className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Perguntar à IA</span>
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8"
+                onClick={handlePrintDossier}
+                title="Imprimir dossiê completo"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Dossiê</span>
+              </Button>
+            </div>
           </div>
+
+          {/* Contact chips */}
+          {(patient.phone || patient.email) && (
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              {patient.phone && (
+                <a
+                  href={`tel:${patient.phone}`}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-medical-blue-light text-medical-blue-dark hover:bg-medical-blue/15 transition-colors"
+                >
+                  <Phone className="w-3 h-3" />
+                  {patient.phone}
+                </a>
+              )}
+              {patient.email && (
+                <a
+                  href={`mailto:${patient.email}`}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-secondary/60 hover:bg-secondary transition-colors text-foreground/80"
+                >
+                  <Mail className="w-3 h-3" />
+                  {patient.email}
+                </a>
+              )}
+            </div>
+          )}
 
           {/* Quick stats strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
@@ -449,73 +493,92 @@ export function PatientProfileDrawer({ patient, open, onOpenChange }: PatientPro
           </TabsContent>
 
           {/* ─── Documentos ──────────────────────────────────────────── */}
-          <TabsContent value="documents" className="space-y-4">
-            <div>
-              <h3 className="font-semibold text-foreground">Documentos por consulta</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Imprima a evolução SOAP de cada consulta para o prontuário físico ou envio.
-              </p>
-            </div>
+          <TabsContent value="documents" className="space-y-6">
 
-            {consultationsLoading ? (
-              <div className="space-y-2">
-                {[0, 1, 2].map(i => (
-                  <div key={i} className="h-16 rounded-lg bg-secondary/40 animate-pulse" />
-                ))}
+            {/* Arquivos anexados */}
+            <section className="space-y-3">
+              <div>
+                <h3 className="font-semibold text-foreground">Arquivos anexados</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Exames, fotos, receitas externas — anexados manualmente ao paciente.
+                </p>
               </div>
-            ) : consultations.length === 0 ? (
-              <div className="p-6 text-center rounded-lg border border-border bg-card">
-                <p className="text-sm text-muted-foreground">Nenhuma consulta registrada ainda.</p>
+              {user?.id ? (
+                <PatientFiles patientId={patient.id} userId={user.id} />
+              ) : (
+                <p className="text-xs text-muted-foreground">Faça login para anexar arquivos.</p>
+              )}
+            </section>
+
+            {/* Documentos gerados por consulta */}
+            <section className="space-y-3">
+              <div>
+                <h3 className="font-semibold text-foreground">Gerados pela consulta</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Evoluções SOAP e mensagens WhatsApp produzidas pela IA, prontas para imprimir.
+                </p>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {consultations.map(c => (
-                  <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-secondary/30 transition-colors">
-                    <div className="w-10 h-10 rounded-lg bg-medical-blue-light flex items-center justify-center shrink-0">
-                      <FileText className="w-5 h-5 text-medical-blue" />
+
+              {consultationsLoading ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="h-16 rounded-lg bg-secondary/40 animate-pulse" />
+                  ))}
+                </div>
+              ) : consultations.length === 0 ? (
+                <div className="p-6 text-center rounded-lg border border-border bg-card">
+                  <p className="text-sm text-muted-foreground">Nenhuma consulta registrada ainda.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {consultations.map(c => (
+                    <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-secondary/30 transition-colors">
+                      <div className="w-10 h-10 rounded-lg bg-medical-blue-light flex items-center justify-center shrink-0">
+                        <FileText className="w-5 h-5 text-medical-blue" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          Consulta de {formatDate(c.created_at)}
+                        </p>
+                        {c.chief_complaint && (
+                          <p className="text-xs text-muted-foreground truncate">{c.chief_complaint}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {c.soap_note && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 gap-1 text-xs"
+                            onClick={() => printSoap(c.soap_note!, patient, c.chief_complaint ?? undefined)}
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            SOAP
+                          </Button>
+                        )}
+                        {c.whatsapp_message && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 gap-1 text-xs text-whatsapp-green hover:text-whatsapp-green hover:bg-whatsapp-light/50"
+                            onClick={() => {
+                              const w = window.open('', '_blank');
+                              if (!w) return;
+                              w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Mensagem — ${patient.name}</title><style>body{font-family:system-ui,sans-serif;max-width:560px;margin:32px auto;padding:0 16px;line-height:1.6;color:#111827}.msg{white-space:pre-wrap;padding:16px 18px;background:#dcfce7;border-radius:12px}h1{font-size:14pt;color:#15803d;margin-bottom:8px}</style></head><body><h1>Mensagem para ${patient.name}</h1><div class="msg">${c.whatsapp_message!.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div></body></html>`);
+                              w.document.close();
+                            }}
+                            title="Abrir mensagem em nova aba"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            WhatsApp
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        Consulta de {formatDate(c.created_at)}
-                      </p>
-                      {c.chief_complaint && (
-                        <p className="text-xs text-muted-foreground truncate">{c.chief_complaint}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {c.soap_note && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 gap-1 text-xs"
-                          onClick={() => printSoap(c.soap_note!, patient, c.chief_complaint ?? undefined)}
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                          SOAP
-                        </Button>
-                      )}
-                      {c.whatsapp_message && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 gap-1 text-xs text-whatsapp-green hover:text-whatsapp-green hover:bg-whatsapp-light/50"
-                          onClick={() => {
-                            const w = window.open('', '_blank');
-                            if (!w) return;
-                            w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Mensagem — ${patient.name}</title><style>body{font-family:system-ui,sans-serif;max-width:560px;margin:32px auto;padding:0 16px;line-height:1.6;color:#111827}.msg{white-space:pre-wrap;padding:16px 18px;background:#dcfce7;border-radius:12px}h1{font-size:14pt;color:#15803d;margin-bottom:8px}</style></head><body><h1>Mensagem para ${patient.name}</h1><div class="msg">${c.whatsapp_message!.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div></body></html>`);
-                            w.document.close();
-                          }}
-                          title="Abrir mensagem em nova aba"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          WhatsApp
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </section>
           </TabsContent>
         </Tabs>
       </SheetContent>
