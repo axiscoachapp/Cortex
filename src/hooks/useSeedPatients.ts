@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -539,13 +540,17 @@ Retorno em 3 meses. Conte com a gente! 💙`,
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function useSeedPatients(userId: string | undefined) {
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     if (!userId) return;
-    seedIfEmpty(userId);
-  }, [userId]);
+    seedIfEmpty(userId).then((seeded) => {
+      if (seeded) queryClient.invalidateQueries({ queryKey: ['patients', userId] });
+    });
+  }, [userId, queryClient]);
 }
 
-async function seedIfEmpty(userId: string) {
+async function seedIfEmpty(userId: string): Promise<boolean> {
   // Check patient count
   const { count: patientCount } = await supabase
     .from('patients')
@@ -568,7 +573,7 @@ async function seedIfEmpty(userId: string) {
       .insert(rows)
       .select('id, name');
 
-    if (!inserted) return;
+    if (!inserted) return false;
 
     // Match IDs to the persona order
     patientIds = SEED_PATIENTS.map(sp =>
@@ -581,13 +586,13 @@ async function seedIfEmpty(userId: string) {
       .select('id, name')
       .eq('user_id', userId);
 
-    if (!existing) return;
+    if (!existing) return false;
     patientIds = SEED_PATIENTS.map(sp =>
       existing.find(r => r.name === sp.name)?.id ?? ''
     ).filter(Boolean);
   }
 
-  if (patientIds.length < 5) return;
+  if (patientIds.length < 5) return false;
 
   // Check if consultations already exist for these patients
   const { count: consultCount } = await supabase
@@ -595,9 +600,10 @@ async function seedIfEmpty(userId: string) {
     .select('*', { count: 'exact', head: true })
     .in('patient_id', patientIds);
 
-  if (consultCount !== 0) return;
+  if (consultCount !== 0) return false;
 
   // Insert all consultations
   const consultations = buildConsultations(patientIds, userId);
   await supabase.from('consultations').insert(consultations);
+  return true;
 }
