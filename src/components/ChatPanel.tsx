@@ -57,11 +57,10 @@ export function ChatPanel({
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [reviewData, setReviewData] = useState<{
     transcription: string;
-    soapNote: string;
-    whatsappMessage: string;
-    consultationId: string;
+    soapDraft: string;
+    whatsappDraft: string;
   } | null>(null);
-  const [isSavingReview, setIsSavingReview] = useState(false);
+  const [isGeneratingFinal, setIsGeneratingFinal] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -199,12 +198,10 @@ export function ChatPanel({
 
       if (error) throw error;
 
-      setCurrentConsultationId(data.consultationId ?? null);
       setReviewData({
         transcription: data.transcription ?? '',
-        soapNote: data.soapNote ?? '',
-        whatsappMessage: data.whatsappMessage ?? '',
-        consultationId: data.consultationId ?? '',
+        soapDraft: data.soapNote ?? '',
+        whatsappDraft: data.whatsappMessage ?? '',
       });
     } catch (err: any) {
       toast({
@@ -244,9 +241,9 @@ export function ChatPanel({
     toast({ title: 'Alterações salvas', description: 'A evolução clínica foi atualizada.' });
   };
 
-  const pushReviewToChat = (soapNote: string, whatsappMessage: string) => {
+  const pushToChat = (soapNote: string, whatsappMessage: string) => {
     const now = new Date();
-    const newMessages: ChatMessage[] = [
+    onMessagesChange([...messages,
       {
         id: `soap-${now.getTime()}`,
         type: 'soap',
@@ -261,38 +258,45 @@ export function ChatPanel({
         content: whatsappMessage,
         timestamp: now,
       },
-    ];
-    onMessagesChange([...messages, ...newMessages]);
+    ]);
   };
 
-  const handleReviewConfirm = async (editedSoap: string, comments: string) => {
-    if (!reviewData) return;
-    setIsSavingReview(true);
+  // Phase 2: generate final SOAP (with doctor comments) → save to DB → show in chat
+  const handleReviewConfirm = async (comments: string) => {
+    if (!reviewData || !patient) return;
+    setIsGeneratingFinal(true);
     try {
-      const finalSoap = comments.trim()
-        ? `${editedSoap}\n\n**Observações do Médico:**\n${comments.trim()}`
-        : editedSoap;
+      const { data, error } = await supabase.functions.invoke('process-consultation', {
+        body: {
+          patientId: patient.id,
+          userId,
+          chiefComplaint,
+          transcription: reviewData.transcription,
+          doctorComments: comments,
+          patientContext: {
+            name: patient.name,
+            age: patient.age,
+            diagnoses: patient.diagnoses,
+            medications: patient.medications,
+            allergies: patient.allergies,
+          },
+        },
+      });
 
-      await supabase
-        .from('consultations')
-        .update({ soap_note: finalSoap, pre_briefing: null })
-        .eq('id', reviewData.consultationId);
+      if (error) throw error;
 
-      pushReviewToChat(finalSoap, reviewData.whatsappMessage);
+      setCurrentConsultationId(data.consultationId ?? null);
+      pushToChat(data.soapNote, data.whatsappMessage);
       setReviewData(null);
-      toast({ title: 'Consulta salva!', description: 'Evolução clínica confirmada com sucesso.' });
+      toast({ title: 'Consulta salva!', description: 'Evolução clínica gerada com sucesso.' });
     } catch {
-      toast({ title: 'Erro ao salvar', description: 'Tente novamente.', variant: 'destructive' });
+      toast({ title: 'Erro ao gerar evolução', description: 'Tente novamente.', variant: 'destructive' });
     } finally {
-      setIsSavingReview(false);
+      setIsGeneratingFinal(false);
     }
   };
 
-  const handleReviewClose = () => {
-    if (!reviewData) return;
-    pushReviewToChat(reviewData.soapNote, reviewData.whatsappMessage);
-    setReviewData(null);
-  };
+  const handleReviewCancel = () => setReviewData(null);
 
   if (!patient) {
     return (
@@ -635,11 +639,10 @@ export function ChatPanel({
         open={!!reviewData}
         patientName={patient?.name ?? ''}
         transcription={reviewData?.transcription ?? ''}
-        soapNote={reviewData?.soapNote ?? ''}
-        whatsappMessage={reviewData?.whatsappMessage ?? ''}
+        soapDraft={reviewData?.soapDraft ?? ''}
         onConfirm={handleReviewConfirm}
-        onClose={handleReviewClose}
-        isSaving={isSavingReview}
+        onCancel={handleReviewCancel}
+        isGenerating={isGeneratingFinal}
       />
     </div>
   );
