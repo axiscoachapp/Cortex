@@ -7,6 +7,7 @@ import { PatientSidebar } from '@/components/PatientSidebar';
 import { ChatPanel } from '@/components/ChatPanel';
 import { PatientSnapshot } from '@/components/PatientSnapshot';
 import { NewConsultationModal } from '@/components/NewConsultationModal';
+import { WelcomeDashboard } from '@/components/WelcomeDashboard';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { Patient, ChatMessage } from '@/types/patient';
@@ -159,17 +160,26 @@ const Index = () => {
         />
       </div>
 
-      {/* Chat panel */}
-      <div className="flex-1 h-full min-w-0 bg-card border-x border-border/50">
-        <ChatPanel
-          patient={selectedPatient}
-          messages={chatMessages}
-          onMessagesChange={setChatMessages}
-          chiefComplaint={chiefComplaint}
-          preBriefing={preBriefing}
-          briefingLoading={briefingLoading}
-          userId={user?.id ?? ''}
-        />
+      {/* Center panel — dashboard or active consultation */}
+      <div className="flex-1 h-full min-w-0 border-x border-border/50">
+        {selectedPatient ? (
+          <ChatPanel
+            patient={selectedPatient}
+            messages={chatMessages}
+            onMessagesChange={setChatMessages}
+            chiefComplaint={chiefComplaint}
+            preBriefing={preBriefing}
+            briefingLoading={briefingLoading}
+            userId={user?.id ?? ''}
+          />
+        ) : (
+          <WelcomeDashboard
+            patients={patients}
+            onSelectPatient={handleSelectPatient}
+            onNewConsultation={() => setShowNewConsultationModal(true)}
+            userId={user?.id ?? ''}
+          />
+        )}
       </div>
 
       {/* Patient snapshot */}
