@@ -300,7 +300,7 @@ export function ChatPanel({
 
   if (!patient) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-card">
+      <div className="h-full w-full flex items-center justify-center bg-card">
         <div className="text-center text-muted-foreground">
           <FileText className="w-12 h-12 mx-auto mb-4 text-slate-400 opacity-50" />
           <p>Selecione um paciente para iniciar</p>
