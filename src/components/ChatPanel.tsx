@@ -274,13 +274,18 @@ export function ChatPanel({
     setIsProcessing(true);
 
     try {
-      const base64 = await blobToBase64(audioBlob);
+      const storagePath = `consultations/${userId}/${Date.now()}.webm`;
+      const { error: uploadError } = await supabase.storage
+        .from('audio-recordings')
+        .upload(storagePath, audioBlob, { contentType: mimeType });
+      if (uploadError) throw uploadError;
+
       const { data, error } = await supabase.functions.invoke('process-consultation', {
         body: {
           patientId: patient.id,
           userId,
           chiefComplaint,
-          audioBase64: base64,
+          audioStoragePath: storagePath,
           audioMimeType: mimeType,
           consultationComments: comments,
           patientContext,
@@ -923,16 +928,4 @@ ${sectionsHtml}
       />
     </div>
   );
-}
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      resolve(result.split(',')[1]);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
 }

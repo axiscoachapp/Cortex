@@ -57,6 +57,55 @@ async function callGemini(apiKey: string, parts: object[], cfg: GeminiConfig = {
   return responsePart?.text ?? '';
 }
 
+// Upload audio to Gemini Files API via resumable upload — handles files of any size
+async function uploadToGeminiFiles(apiKey: string, audioBuffer: ArrayBuffer, mimeType: string): Promise<string> {
+  // Step 1: Initiate resumable upload session
+  const initRes = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=resumable&key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Type': mimeType,
+        'X-Goog-Upload-Header-Content-Length': String(audioBuffer.byteLength),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ file: { display_name: 'consultation-audio' } }),
+    },
+  );
+
+  if (!initRes.ok) {
+    const err = await initRes.text();
+    throw new Error(`Gemini Files init error ${initRes.status}: ${err}`);
+  }
+
+  const uploadUrl = initRes.headers.get('X-Goog-Upload-URL');
+  if (!uploadUrl) throw new Error('Gemini Files API did not return an upload URL');
+
+  // Step 2: Upload the audio data
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Length': String(audioBuffer.byteLength),
+      'X-Goog-Upload-Offset': '0',
+      'X-Goog-Upload-Command': 'upload, finalize',
+    },
+    body: new Blob([audioBuffer], { type: mimeType }),
+  });
+
+  if (!uploadRes.ok) {
+    const err = await uploadRes.text();
+    throw new Error(`Gemini Files upload error ${uploadRes.status}: ${err}`);
+  }
+
+  const fileInfo = await uploadRes.json();
+  const fileUri = fileInfo.file?.uri;
+  if (!fileUri) throw new Error('Gemini Files API did not return a file URI');
+
+  return fileUri;
+}
+
 // Phase 1 schema — includes clarifications and transcription quality
 const SOAP_SCHEMA_DRAFT = {
   type: 'object',
@@ -87,11 +136,33 @@ const SOAP_SCHEMA_FINAL = {
   required: ['soap_note', 'whatsapp_message'],
 };
 
+const TRANSCRIPTION_PROMPT = `Transcreva esta consulta médica com identificação obrigatória de falantes.
+
+Use exatamente o formato:
+[MÉDICO] <fala>
+[PACIENTE] <fala>
+
+Regras:
+- Inicie uma nova linha a cada mudança de falante
+- Preserve terminologia médica e nomes de medicamentos exatamente como pronunciados
+- Se não conseguir distinguir o falante, use [MÉDICO] como padrão
+- Não resuma, não omita e não parafraseie — transcreva tudo na íntegra
+- Ignore ruídos de fundo, tosses e sons não-verbais
+
+Retorne apenas a transcrição formatada, sem comentários ou cabeçalhos.`;
+
 const SOAP_SYSTEM = `Você é um médico especialista gerando documentação clínica em português brasileiro.
+
+A transcrição usa os rótulos [MÉDICO] e [PACIENTE] para identificar os falantes.
+Use esses rótulos para preencher corretamente cada seção do SOAP:
+- Seção S (Subjetivo): o que o [PACIENTE] relatou
+- Seção O (Objetivo): dados objetivos mencionados pelo [MÉDICO] (exame físico, sinais vitais)
+- Seção A (Avaliação): hipóteses e conclusões do [MÉDICO]
+- Seção P (Plano): condutas decididas pelo [MÉDICO]
 
 REGRA FUNDAMENTAL — FONTE DOS DADOS:
 O SOAP deve ser gerado EXCLUSIVAMENTE a partir do que foi dito na transcrição desta consulta.
-O histórico do paciente (diagnósticos, medicações, alergias) é fornecido apenas como contexto clínico de fundo para você entender a terminologia — NUNCA use-o para preencher seções do SOAP com informações que não foram discutidas nesta consulta.
+O histórico do paciente (diagnósticos, medicações, alergias) é fornecido apenas como contexto clínico de fundo — NUNCA use-o para preencher seções do SOAP com informações que não foram discutidas nesta consulta.
 
 Exemplos do que NÃO fazer:
 - Se PA não foi mencionada na consulta → não coloque PA no Objetivo
@@ -101,7 +172,7 @@ Exemplos do que NÃO fazer:
 Gere os seguintes campos:
 
 1. soap_note: Evolução SOAP profissional com as seções:
-**S (Subjetivo):** Queixas e relato do paciente NESTA consulta (apenas o que foi dito na transcrição)
+**S (Subjetivo):** Queixas e relato do paciente NESTA consulta
 **O (Objetivo):** Dados objetivos mencionados NA consulta (sinais vitais, exame físico relatado)
 **A (Avaliação):** Avaliação clínica baseada no que foi discutido nesta consulta
 **P (Plano):** Condutas e decisões tomadas nesta consulta
@@ -134,9 +205,9 @@ serve(async (req) => {
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
 
-    // ── Phase 1: Transcribe audio → return draft (no DB save) ────────────────
-    if (body.audioBase64) {
-      const { audioBase64, audioMimeType } = body;
+    // ── Phase 1: Download audio from Storage → Gemini Files API → transcribe → draft SOAP ──
+    if (body.audioStoragePath) {
+      const { audioStoragePath, audioMimeType } = body;
 
       if (!patientId || !userId) {
         return new Response(
@@ -145,16 +216,43 @@ serve(async (req) => {
         );
       }
 
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      );
+
+      // Download audio blob from Supabase Storage
+      const { data: audioBlob, error: downloadError } = await supabase.storage
+        .from('audio-recordings')
+        .download(audioStoragePath);
+
+      if (downloadError || !audioBlob) {
+        throw new Error(`Erro ao baixar áudio do storage: ${downloadError?.message}`);
+      }
+
+      const audioBuffer = await audioBlob.arrayBuffer();
+
+      // Upload to Gemini Files API (handles any size, no base64 overhead)
+      const geminiFileUri = await uploadToGeminiFiles(
+        GEMINI_API_KEY,
+        audioBuffer,
+        audioMimeType ?? 'audio/webm',
+      );
+
+      // Clean up storage immediately — audio is now in Gemini Files (48h TTL)
+      supabase.storage.from('audio-recordings').remove([audioStoragePath]).catch(() => {});
+
+      // Transcribe with speaker diarization
       const transcription = await callGemini(
         GEMINI_API_KEY,
         [
-          { inline_data: { mime_type: audioMimeType ?? 'audio/webm', data: audioBase64 } },
-          { text: 'Transcreva fielmente esta consulta médica em português brasileiro. Identifique os interlocutores como "Médico:" e "Paciente:" quando distinguível. Retorne apenas a transcrição.' },
+          { fileData: { mimeType: audioMimeType ?? 'audio/webm', fileUri: geminiFileUri } },
+          { text: TRANSCRIPTION_PROMPT },
         ],
         {
           systemInstruction: 'Você é um especialista em transcrição de consultas médicas. Sua única função é transcrever com máxima fidelidade, preservando termos técnicos e nomes de medicamentos.',
           temperature: 0.1,
-          maxOutputTokens: 2000,
+          maxOutputTokens: 8000,
           thinkingBudget: 0,
         },
       );
@@ -163,13 +261,14 @@ serve(async (req) => {
       const commentsText = Array.isArray(body.consultationComments) && body.consultationComments.length > 0
         ? `\n\nObservações do médico durante a consulta:\n${body.consultationComments.join('\n')}`
         : '';
+
       const draftRaw = await callGemini(
         GEMINI_API_KEY,
         [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsText}` }],
         {
           systemInstruction: SOAP_SYSTEM,
           temperature: 0.3,
-          maxOutputTokens: 1500,
+          maxOutputTokens: 2000,
           thinkingBudget: 512,
           responseMimeType: 'application/json',
           responseSchema: SOAP_SCHEMA_DRAFT,
@@ -267,7 +366,7 @@ serve(async (req) => {
         {
           systemInstruction: SOAP_SYSTEM,
           temperature: 0.3,
-          maxOutputTokens: 1500,
+          maxOutputTokens: 2000,
           thinkingBudget: 1024,
           responseMimeType: 'application/json',
           responseSchema: SOAP_SCHEMA_FINAL,
@@ -313,7 +412,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: 'audioBase64 ou transcription é obrigatório' }),
+      JSON.stringify({ error: 'audioStoragePath ou transcription é obrigatório' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 
