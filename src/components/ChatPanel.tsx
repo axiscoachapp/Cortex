@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send,
   Copy, Check, Pencil, Pause, Play, Loader2, Download, StopCircle, Brain,
@@ -83,6 +84,7 @@ export function ChatPanel({
   const [consultationComments, setConsultationComments] = useState<string[]>([]);
 
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setShowBriefing(true);
@@ -261,6 +263,7 @@ export function ChatPanel({
         content: `📝 ${text}`,
         timestamp: new Date(),
       }]);
+      queryClient.invalidateQueries({ queryKey: ['patient-clinical-notes', patient.id] });
       toast({ title: 'Anotação salva', description: 'Adicionada às anotações do paciente.' });
     } catch (err: any) {
       toast({

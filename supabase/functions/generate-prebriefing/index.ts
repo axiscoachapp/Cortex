@@ -52,13 +52,22 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    const { data: last } = await supabase
-      .from('consultations')
-      .select('id, chief_complaint, soap_note, created_at, pre_briefing')
-      .eq('patient_id', patientId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    // Pull the last consultation + a slim patient row in parallel so we can
+    // surface any clinical_notes the doctor saved between consultations.
+    const [{ data: last }, { data: patientRow }] = await Promise.all([
+      supabase
+        .from('consultations')
+        .select('id, chief_complaint, soap_note, created_at, pre_briefing')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('patients')
+        .select('clinical_notes')
+        .eq('id', patientId)
+        .maybeSingle(),
+    ]);
 
     if (!last) {
       return new Response(JSON.stringify(null), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -80,6 +89,13 @@ serve(async (req) => {
     const diagnoses = patientContext?.diagnoses?.map((d: any) => `${d.code} ${d.description}`).join('; ') || 'Não informado';
     const meds = patientContext?.medications?.map((m: any) => `${m.name} ${m.dosage}`).join(', ') || 'Nenhum';
 
+    // Only the last ~6 note entries to keep tokens lean.
+    const recentNotes = (patientRow?.clinical_notes ?? '')
+      .split(/\n(?=\[)/)
+      .slice(-6)
+      .join('\n')
+      .trim();
+
     const prompt = `Paciente: ${patientContext?.name ?? 'paciente'}, ${patientContext?.age ?? '?'} anos
 Diagnósticos: ${diagnoses}
 Medicações: ${meds}
@@ -89,7 +105,7 @@ Alergias: ${patientContext?.allergies?.join(', ') || 'Nenhuma'}
 Queixa: ${last.chief_complaint || 'não registrada'}
 
 Avaliação e Plano da última consulta:
-${apSection}`;
+${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consultas):\n${recentNotes}` : ''}`;
 
     const res = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',

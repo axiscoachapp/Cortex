@@ -79,6 +79,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const enableAdminBypass = async () => {
+    // Dev-only escape hatch. In prod the shared seed account would expose
+    // every "bypass" user's data to every other one — refuse to run.
+    if (!import.meta.env.DEV) {
+      console.warn('Admin bypass is disabled in production builds.');
+      return;
+    }
     localStorage.setItem(ADMIN_BYPASS_KEY, '1');
     setAdminBypass(true);
 

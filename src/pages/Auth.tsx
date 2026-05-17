@@ -205,13 +205,15 @@ const Auth = () => {
             >
               Sobre Nós →
             </Link>
-            <button
-              type="button"
-              onClick={async () => { await enableAdminBypass(); navigate('/'); }}
-              className="w-full text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors py-2"
-            >
-              Admin — pular login
-            </button>
+            {import.meta.env.DEV && (
+              <button
+                type="button"
+                onClick={async () => { await enableAdminBypass(); navigate('/'); }}
+                className="w-full text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors py-2"
+              >
+                Admin — pular login (dev)
+              </button>
+            )}
           </div>
         </div>
       </div>
