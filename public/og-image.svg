@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1a3a"/>
+      <stop offset="50%" stop-color="#102a5a"/>
+      <stop offset="100%" stop-color="#0a1228"/>
+    </linearGradient>
+    <radialGradient id="blob1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="blob2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="blob3" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7dd3fc"/>
+      <stop offset="50%" stop-color="#c4b5fd"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </linearGradient>
+    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#1e40af"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- subtle grid -->
+  <g opacity="0.04" stroke="#ffffff" stroke-width="1">
+    <path d="M0 105h1200M0 210h1200M0 315h1200M0 420h1200M0 525h1200"/>
+    <path d="M150 0v630M300 0v630M450 0v630M600 0v630M750 0v630M900 0v630M1050 0v630"/>
+  </g>
+
+  <!-- ambient blobs -->
+  <circle cx="160" cy="120" r="320" fill="url(#blob1)"/>
+  <circle cx="1080" cy="180" r="300" fill="url(#blob2)"/>
+  <circle cx="900" cy="560" r="260" fill="url(#blob3)"/>
+
+  <!-- top-left logo lockup -->
+  <g transform="translate(80, 72)">
+    <rect width="60" height="60" rx="14" fill="url(#logoGrad)"/>
+    <g fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M24 14a5.6 5.6 0 0 0-5.6 5.6 4.7 4.7 0 0 0-2.8 8.4 4.7 4.7 0 0 0 2.8 7.5 4.7 4.7 0 0 0 5.6 5.6 4.7 4.7 0 0 0 5.6 0V14a5.6 5.6 0 0 0-5.6 0z"/>
+      <path d="M36 14a5.6 5.6 0 0 1 5.6 5.6 4.7 4.7 0 0 1 2.8 8.4 4.7 4.7 0 0 1-2.8 7.5 4.7 4.7 0 0 1-5.6 5.6 4.7 4.7 0 0 1-5.6 0V14a5.6 5.6 0 0 1 5.6 0z"/>
+    </g>
+    <text x="78" y="40" font-family="Inter, -apple-system, system-ui, sans-serif" font-weight="700" font-size="32" fill="#ffffff" letter-spacing="-0.8">Cortex</text>
+  </g>
+
+  <!-- badge -->
+  <g transform="translate(80, 200)">
+    <rect width="296" height="38" rx="19" fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1"/>
+    <circle cx="24" cy="19" r="4.5" fill="#60a5fa"/>
+    <text x="42" y="25" font-family="Inter, -apple-system, system-ui, sans-serif" font-weight="600" font-size="13" fill="#bfdbfe" letter-spacing="1">ASSISTENTE MÉDICO COM IA</text>
+  </g>
+
+  <!-- headline -->
+  <g transform="translate(80, 286)" font-family="Inter, -apple-system, system-ui, sans-serif">
+    <text font-weight="800" font-size="68" fill="#ffffff" letter-spacing="-2.2">
+      <tspan x="0" dy="0">A consulta termina.</tspan>
+    </text>
+    <text y="82" font-weight="800" font-size="68" fill="url(#textGrad)" letter-spacing="-2.2">
+      <tspan x="0">O prontuário já está pronto.</tspan>
+    </text>
+  </g>
+
+  <!-- subhead -->
+  <text x="80" y="498" font-family="Inter, -apple-system, system-ui, sans-serif" font-weight="400" font-size="22" fill="#cbd5e1" letter-spacing="-0.2">
+    Gravação, transcrição e SOAP em segundos. Converse com o histórico do paciente.
+  </text>
+
+  <!-- footer chips -->
+  <g transform="translate(80, 540)" font-family="Inter, -apple-system, system-ui, sans-serif" font-weight="500" font-size="15">
+    <g>
+      <rect width="200" height="42" rx="21" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
+      <text x="22" y="27" fill="#e2e8f0">⚡  Pronto em 2 minutos</text>
+    </g>
+    <g transform="translate(216, 0)">
+      <rect width="180" height="42" rx="21" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
+      <text x="22" y="27" fill="#e2e8f0">🔒  LGPD compliant</text>
+    </g>
+    <g transform="translate(412, 0)">
+      <rect width="180" height="42" rx="21" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
+      <text x="22" y="27" fill="#e2e8f0">🇧🇷  Em português</text>
+    </g>
+  </g>
+</svg>

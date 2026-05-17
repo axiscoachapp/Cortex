@@ -1,73 +1,96 @@
-# Welcome to your Lovable project
+# Cortex
 
-## Project info
+> Assistente médico com IA — grave a consulta, a IA escreve o prontuário.
 
-**URL**: https://lovable.dev/projects/e1fd944c-e33c-4980-9cf0-60db98c70b22
+Cortex é um copiloto clínico em português brasileiro para profissionais de saúde. Grava a consulta, transcreve com identificação de falantes, gera a evolução SOAP e a mensagem de WhatsApp, organiza o briefing pré-consulta e responde perguntas sobre o histórico completo do paciente.
 
-## How can I edit this code?
+## Stack
 
-There are several ways of editing your application.
+- **Frontend**: Vite + React 18 + TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, React Router
+- **Backend**: Supabase (Postgres + Auth + Storage + Edge Functions em Deno)
+- **IA**: Gemini 2.5 Flash via Files API para áudios longos, JSON-schema responses
 
-**Use Lovable**
+## Estrutura
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e1fd944c-e33c-4980-9cf0-60db98c70b22) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+  pages/        # Index, Auth, About, Calendar, PatientManagement
+  components/   # ChatPanel, PatientSnapshot, PatientSidebar, modais…
+  contexts/     # AuthContext (Supabase auth + dev bypass)
+  hooks/        # useSeedPatients, useIsMobile, useToast
+  integrations/supabase/   # client + typed schema
+  lib/          # patientMapper, cn helper
+supabase/
+  functions/    # edge functions (Deno)
+    chat-assistant/         # Pergunta com histórico de consultas
+    generate-prebriefing/   # Briefing pré-consulta com cache
+    process-consultation/   # Áudio → transcrição → SOAP → WhatsApp
+    process-clinical-notes/ # Extrai sintomas/fatores estruturados
+    sync-google-calendar/   # Sincronização bidirecional Google
+    google-oauth-callback/  # OAuth do Google Calendar
+    send-appointment-reminder/
+  migrations/   # schema, RLS, índices
 ```
 
-**Edit a file directly in GitHub**
+## Desenvolvimento
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+# Pré-requisitos: Node 20+, Supabase CLI
+npm install
+npm run dev          # http://localhost:8080
+```
 
-**Use GitHub Codespaces**
+### Variáveis de ambiente
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Crie `.env.local` na raiz (já presente como `.env.example`):
 
-## What technologies are used for this project?
+```sh
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_PUBLISHABLE_KEY=...
+```
 
-This project is built with:
+### Edge functions
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Segredos exigidos no projeto Supabase:
 
-## How can I deploy this project?
+| Segredo                      | Origem                       |
+|------------------------------|------------------------------|
+| `GEMINI_API_KEY`             | Google AI Studio             |
+| `GOOGLE_CLIENT_ID/SECRET`    | OAuth para Google Calendar   |
 
-Simply open [Lovable](https://lovable.dev/projects/e1fd944c-e33c-4980-9cf0-60db98c70b22) and click on Share -> Publish.
+Deploy:
 
-## Can I connect a custom domain to my Lovable project?
+```sh
+supabase functions deploy chat-assistant
+supabase functions deploy generate-prebriefing
+supabase functions deploy process-consultation
+supabase functions deploy process-clinical-notes
+supabase functions deploy sync-google-calendar
+supabase functions deploy google-oauth-callback
+supabase functions deploy send-appointment-reminder
+```
 
-Yes, you can!
+## Assets de marca
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Favicon e imagem de compartilhamento são gerados a partir de SVGs em `public/`:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```sh
+node scripts/generate-icons.mjs
+```
+
+Gera `favicon.ico` (multi-size), `favicon-{16,32,48}.png`, `apple-touch-icon.png` e `og-image.png`.
+
+## Build
+
+```sh
+npm run build       # produção
+npm run preview     # serve dist/
+```
+
+## Deploy
+
+Frontend hospedado na Vercel (config em `vercel.json`). Edge functions são deployadas via Supabase CLI.
+
+## Modo admin (dev only)
+
+A página `/auth` mostra um botão "Admin — pular login (dev)" apenas em builds de desenvolvimento (`import.meta.env.DEV`). Em produção o atalho é ignorado e o botão não é renderizado.
