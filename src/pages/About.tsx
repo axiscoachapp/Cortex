@@ -4,6 +4,7 @@ import {
   Brain, Mic, FileText, Sparkles, CalendarDays, MessageCircle,
   ShieldCheck, Clock, Zap, ArrowRight, Check, Play, ChevronDown,
   Stethoscope, Users, Lock, Cpu, Activity, Heart, MessagesSquare, Search,
+  Paperclip, StickyNote,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -85,37 +86,49 @@ const features = [
   {
     icon: Mic,
     title: 'Transcrição em tempo real',
-    desc: 'Grave consultas de até 30 minutos com identificação automática de quem está falando — médico ou paciente.',
+    desc: 'Grave consultas de até 30 min com identificação automática de quem está falando.',
     gradient: 'from-blue-500 to-indigo-600',
   },
   {
     icon: FileText,
     title: 'Evolução SOAP automática',
-    desc: 'A IA estrutura subjetivo, objetivo, avaliação e plano enquanto você revisa apenas o que importa.',
+    desc: 'A IA estrutura subjetivo, objetivo, avaliação e plano. Você só revisa o que importa.',
     gradient: 'from-cyan-500 to-blue-600',
   },
   {
     icon: Sparkles,
     title: 'Resumo pré-consulta',
-    desc: 'Antes do paciente entrar, você já tem o briefing pronto: queixa anterior, conduta, pendências e alertas clínicos.',
+    desc: 'Briefing pronto antes do paciente entrar: queixa anterior, conduta, pendências, alertas.',
     gradient: 'from-violet-500 to-purple-600',
+  },
+  {
+    icon: MessagesSquare,
+    title: 'Pergunte ao histórico',
+    desc: '“O que conversamos na última?” A IA responde com base no prontuário inteiro.',
+    gradient: 'from-fuchsia-500 to-pink-600',
   },
   {
     icon: MessageCircle,
     title: 'Mensagem ao paciente',
-    desc: 'WhatsApp gerado automaticamente com orientações, próximos passos e prescrição — em linguagem clara.',
+    desc: 'WhatsApp gerado com orientações, próximos passos e prescrição em linguagem clara.',
     gradient: 'from-emerald-500 to-teal-600',
   },
   {
-    icon: CalendarDays,
-    title: 'Agenda integrada',
-    desc: 'Sincronização bidirecional com Google Calendar. Toda consulta vira contexto disponível em um clique.',
+    icon: StickyNote,
+    title: 'Anotações em segundos',
+    desc: 'Comentários no chat viram notas no prontuário — e contexto para a próxima consulta.',
     gradient: 'from-amber-500 to-orange-600',
+  },
+  {
+    icon: Paperclip,
+    title: 'Arquivos & exames',
+    desc: 'Anexe PDFs, fotos e resultados. Tudo organizado no dossiê de cada paciente.',
+    gradient: 'from-sky-500 to-cyan-600',
   },
   {
     icon: ShieldCheck,
     title: 'Privacidade por padrão',
-    desc: 'Dados criptografados, isolamento por usuário e auditoria. Seu paciente não vira material de treino.',
+    desc: 'Criptografia, isolamento por usuário e LGPD. Seu paciente não vira material de treino.',
     gradient: 'from-rose-500 to-red-600',
   },
 ];
@@ -442,10 +455,10 @@ const About = () => {
             </div>
           </Reveal>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
             {features.map((f, i) => (
-              <Reveal key={f.title} delay={i * 70}>
-                <div className="group relative h-full p-6 rounded-2xl border border-border/60 bg-card hover:shadow-card-hover hover:border-foreground/15 hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+              <Reveal key={f.title} delay={i * 60}>
+                <div className="group relative h-full p-5 lg:p-6 rounded-2xl border border-border/60 bg-card hover:shadow-card-hover hover:border-foreground/15 hover:-translate-y-1 transition-all duration-300 overflow-hidden">
                   {/* subtle gradient corner */}
                   <div
                     className={cn(
