@@ -24,6 +24,7 @@ CREATE INDEX IF NOT EXISTS idx_patient_files_user      ON public.patient_files (
 
 ALTER TABLE public.patient_files ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users see own patient files" ON public.patient_files;
 CREATE POLICY "Users see own patient files"
   ON public.patient_files FOR ALL
   USING (auth.uid() = user_id)
@@ -35,6 +36,7 @@ VALUES ('patient-files', 'patient-files', false, 26214400)
 ON CONFLICT (id) DO NOTHING;
 
 -- Path convention enforced by RLS: patients/{user_id}/{patient_id}/{...}
+DROP POLICY IF EXISTS "Users can upload files for their patients" ON storage.objects;
 CREATE POLICY "Users can upload files for their patients"
   ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (
@@ -43,6 +45,7 @@ CREATE POLICY "Users can upload files for their patients"
     AND (storage.foldername(name))[2] = auth.uid()::text
   );
 
+DROP POLICY IF EXISTS "Users can read their own patient files" ON storage.objects;
 CREATE POLICY "Users can read their own patient files"
   ON storage.objects FOR SELECT TO authenticated
   USING (
@@ -51,6 +54,7 @@ CREATE POLICY "Users can read their own patient files"
     AND (storage.foldername(name))[2] = auth.uid()::text
   );
 
+DROP POLICY IF EXISTS "Users can delete their own patient files" ON storage.objects;
 CREATE POLICY "Users can delete their own patient files"
   ON storage.objects FOR DELETE TO authenticated
   USING (

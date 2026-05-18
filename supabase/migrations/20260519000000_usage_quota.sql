@@ -22,11 +22,13 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
 
 ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users read own settings" ON public.user_settings;
 CREATE POLICY "Users read own settings"
   ON public.user_settings FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Only edge functions (service role) may write — users can't lift their own cap.
+DROP POLICY IF EXISTS "Service role writes settings" ON public.user_settings;
 CREATE POLICY "Service role writes settings"
   ON public.user_settings FOR ALL
   TO service_role
@@ -47,10 +49,12 @@ CREATE INDEX IF NOT EXISTS idx_usage_daily_user_day
 
 ALTER TABLE public.usage_daily ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users read own usage" ON public.usage_daily;
 CREATE POLICY "Users read own usage"
   ON public.usage_daily FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Service role writes usage" ON public.usage_daily;
 CREATE POLICY "Service role writes usage"
   ON public.usage_daily FOR ALL
   TO service_role
