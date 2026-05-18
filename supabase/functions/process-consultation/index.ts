@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
+} from "../_shared/quota.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,7 +20,7 @@ interface GeminiConfig {
   responseSchema?: object;
 }
 
-async function callGemini(apiKey: string, parts: object[], cfg: GeminiConfig = {}): Promise<string> {
+async function callGemini(apiKey: string, parts: object[], cfg: GeminiConfig = {}): Promise<{ text: string; usage: any }> {
   const body: any = {
     contents: [{ parts }],
     generationConfig: {
@@ -54,7 +57,7 @@ async function callGemini(apiKey: string, parts: object[], cfg: GeminiConfig = {
   // When thinkingBudget > 0, thinking tokens appear first (thought: true); find the actual response part
   const parts2: any[] = json.candidates?.[0]?.content?.parts ?? [];
   const responsePart = parts2.find((p: any) => !p.thought) ?? parts2[parts2.length - 1];
-  return responsePart?.text ?? '';
+  return { text: responsePart?.text ?? '', usage: json.usageMetadata };
 }
 
 // Upload audio to Gemini Files API via resumable upload — handles files of any size
@@ -221,6 +224,17 @@ serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       );
 
+      // ── Quota check ─────────────────────────────────────────────────────
+      // Audio is the most expensive call. Reserve ~30 credits up front so a
+      // user near the cap can't kick off a long transcription that pushes
+      // them way over.
+      try {
+        await checkQuota(supabase, userId, 30);
+      } catch (err) {
+        if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+        throw err;
+      }
+
       // Download audio blob from Supabase Storage
       const { data: audioBlob, error: downloadError } = await supabase.storage
         .from('audio-recordings')
@@ -243,7 +257,7 @@ serve(async (req) => {
       supabase.storage.from('audio-recordings').remove([audioStoragePath]).catch(() => {});
 
       // Transcribe with speaker diarization
-      const transcription = await callGemini(
+      const { text: transcription, usage: transUsage } = await callGemini(
         GEMINI_API_KEY,
         [
           { fileData: { mimeType: audioMimeType ?? 'audio/webm', fileUri: geminiFileUri } },
@@ -256,13 +270,14 @@ serve(async (req) => {
           thinkingBudget: 0,
         },
       );
+      await recordUsage(supabase, userId, creditsFromUsage(transUsage));
 
       const patientSummary = buildPatientSummary(patientContext, chiefComplaint);
       const commentsText = Array.isArray(body.consultationComments) && body.consultationComments.length > 0
         ? `\n\nObservações do médico durante a consulta:\n${body.consultationComments.join('\n')}`
         : '';
 
-      const draftRaw = await callGemini(
+      const { text: draftRaw, usage: draftUsage } = await callGemini(
         GEMINI_API_KEY,
         [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsText}` }],
         {
@@ -274,6 +289,7 @@ serve(async (req) => {
           responseSchema: SOAP_SCHEMA_DRAFT,
         },
       );
+      await recordUsage(supabase, userId, creditsFromUsage(draftUsage));
 
       let soapDraft = '';
       let whatsappDraft = '';
@@ -355,12 +371,19 @@ serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       );
 
+      try {
+        await checkQuota(supabase, userId, 5);
+      } catch (err) {
+        if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+        throw err;
+      }
+
       const patientSummary = buildPatientSummary(patientContext, chiefComplaint);
       const commentsSection = doctorComments?.trim()
         ? `\n\nObservações do médico (incorpore obrigatoriamente no SOAP):\n${doctorComments.trim()}`
         : '';
 
-      const finalRaw = await callGemini(
+      const { text: finalRaw, usage: finalUsage } = await callGemini(
         GEMINI_API_KEY,
         [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsSection}` }],
         {
@@ -372,6 +395,7 @@ serve(async (req) => {
           responseSchema: SOAP_SCHEMA_FINAL,
         },
       );
+      await recordUsage(supabase, userId, creditsFromUsage(finalUsage));
 
       let soapNote = '';
       let whatsappMessage = '';

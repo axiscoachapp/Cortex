@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
+} from "../_shared/quota.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +18,7 @@ interface GeminiConfig {
   thinkingBudget?: number;
 }
 
-async function callGemini(apiKey: string, parts: object[], cfg: GeminiConfig = {}): Promise<string> {
+async function callGemini(apiKey: string, parts: object[], cfg: GeminiConfig = {}): Promise<{ text: string; usage: any }> {
   const body: any = {
     contents: [{ parts }],
     generationConfig: {
@@ -45,7 +48,7 @@ async function callGemini(apiKey: string, parts: object[], cfg: GeminiConfig = {
   const json = await res.json();
   const parts2: any[] = json.candidates?.[0]?.content?.parts ?? [];
   const responsePart = parts2.find((p: any) => !p.thought) ?? parts2[parts2.length - 1];
-  return responsePart?.text ?? '';
+  return { text: responsePart?.text ?? '', usage: json.usageMetadata };
 }
 
 const CHAT_SYSTEM = `Você é um assistente clínico de IA auxiliando um médico durante a consulta. Você tem acesso ao contexto do paciente e ao histórico de consultas anteriores fornecidos abaixo.
@@ -79,7 +82,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { patientId, patientContext, chatHistory, userMessage } = body;
+    const { patientId, patientContext, chatHistory, userMessage, userId } = body;
 
     if (!userMessage) {
       return new Response(
@@ -95,6 +98,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
+
+    // ── Quota check: chat is cheap (~1 credit) but block obvious abuse. ──────
+    try {
+      await checkQuota(supabase, userId, 1);
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
+    }
 
     // ── Pull full patient row + recent consultations when patientId provided ──
     let patientRow: any = null;
@@ -182,7 +193,7 @@ Alergias: ${allergies}`;
 
     const promptText = `${patientSummary}${historySummary}${conversationBlock}Médico: ${userMessage}`;
 
-    const reply = await callGemini(
+    const { text: reply, usage } = await callGemini(
       GEMINI_API_KEY,
       [{ text: promptText }],
       {
@@ -193,8 +204,11 @@ Alergias: ${allergies}`;
       },
     );
 
+    const credits = creditsFromUsage(usage);
+    await recordUsage(supabase, userId, credits);
+
     return new Response(
-      JSON.stringify({ message: reply }),
+      JSON.stringify({ message: reply, credits }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 

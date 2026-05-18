@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { PatientProfileDrawer } from './PatientProfileDrawer';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { printPrescription } from '@/lib/printDoc';
 
@@ -52,6 +53,8 @@ export function PatientSnapshot({ patient, onAskAI }: PatientSnapshotProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const { data: clinicalNotes = '' } = useQuery<string>({
     queryKey: ['patient-clinical-notes', patient?.id],
@@ -94,12 +97,23 @@ export function PatientSnapshot({ patient, onAskAI }: PatientSnapshotProps) {
     setIsProcessing(true);
     try {
       const { data, error } = await supabase.functions.invoke('process-clinical-notes', {
-        body: { patientId: patient.id, notes: notes.trim() },
+        body: { patientId: patient.id, notes: notes.trim(), userId },
       });
-      if (error) throw error;
+      if (error) {
+        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
+          ? await (error as any).context.json().catch(() => null)
+          : null;
+        if (body?.quotaExceeded) {
+          toast({ title: 'Limite diário atingido', description: body.error ?? '', variant: 'destructive' });
+          queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
+          return;
+        }
+        throw error;
+      }
       toast({ title: 'Notas processadas!', description: data.message || 'Perfil atualizado com insights da IA.' });
       setNotes('');
       queryClient.invalidateQueries({ queryKey: ['patient-clinical-notes', patient.id] });
+      queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
     } catch (err: any) {
       toast({ title: 'Erro ao processar', description: err.message, variant: 'destructive' });
     } finally {

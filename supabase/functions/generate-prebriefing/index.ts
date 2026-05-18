@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
+} from "../_shared/quota.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,7 +38,7 @@ serve(async (req) => {
   }
 
   try {
-    const { patientId, patientContext } = await req.json();
+    const { patientId, patientContext, userId } = await req.json();
 
     if (!patientId) {
       return new Response(
@@ -79,6 +82,14 @@ serve(async (req) => {
         JSON.stringify(last.pre_briefing),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
+    }
+
+    // Cache miss → we're about to call Gemini. Pre-briefing is cheap (~2 credits).
+    try {
+      await checkQuota(supabase, userId, 2);
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
     }
 
     // ── Build lean prompt: only send A+P sections (~60% fewer input tokens) ──
@@ -133,6 +144,8 @@ ${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consulta
     const geminiData = await res.json();
     const finishReason = geminiData.candidates?.[0]?.finishReason;
     console.log('Gemini finishReason:', finishReason);
+
+    await recordUsage(supabase, userId, creditsFromUsage(geminiData.usageMetadata));
 
     // When thinkingBudget > 0, thinking tokens appear first (thought: true); find the actual response part
     const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];

@@ -83,6 +83,7 @@ const Index = () => {
       const { data, error } = await supabase.functions.invoke('generate-prebriefing', {
         body: {
           patientId: patient.id,
+          userId: user?.id,
           patientContext: {
             name: patient.name,
             age: patient.age,
@@ -92,6 +93,8 @@ const Index = () => {
           },
         },
       });
+      // Refresh usage meter regardless of whether briefing was cached or generated.
+      queryClient.invalidateQueries({ queryKey: ['usage-daily', user?.id] });
       if (!error && data) {
         preBriefingCache.current.set(patient.id, data);
         setPreBriefing(data);

@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { printSoap, printDossier } from '@/lib/printDoc';
 import { PatientFiles } from '@/components/PatientFiles';
+import { UsageMeter } from '@/components/UsageMeter';
 
 interface PatientProfileDrawerProps {
   patient: Patient | null;
@@ -268,6 +269,11 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
             <Stat icon={Clock} label="Última visita" value={stats.lastVisit} loading={consultationsLoading} />
             <Stat icon={Calendar} label="Primeira" value={stats.firstVisit} loading={consultationsLoading} />
             <Stat icon={Activity} label="Med. ativas" value={String(stats.activeMeds)} />
+          </div>
+
+          {/* Usage meter */}
+          <div className="mt-3">
+            <UsageMeter variant="pill" />
           </div>
         </SheetHeader>
 

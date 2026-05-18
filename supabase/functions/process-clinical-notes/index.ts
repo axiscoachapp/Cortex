@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
+} from "../_shared/quota.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,7 +33,7 @@ serve(async (req) => {
   }
 
   try {
-    const { patientId, notes } = await req.json();
+    const { patientId, notes, userId } = await req.json();
 
     if (!patientId || !notes) {
       return new Response(
@@ -46,6 +49,13 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
+
+    try {
+      await checkQuota(supabaseClient, userId, 3);
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
+    }
 
     const { data: patient } = await supabaseClient
       .from('patients')
@@ -90,6 +100,8 @@ ${patient?.clinical_notes || 'Nenhuma nota anterior'}`;
     const parts: any[] = json.candidates?.[0]?.content?.parts ?? [];
     const responsePart = parts.find((p: any) => !p.thought) ?? parts[parts.length - 1];
     const rawText = responsePart?.text ?? '{}';
+
+    await recordUsage(supabaseClient, userId, creditsFromUsage(json.usageMetadata));
 
     let insights: Record<string, unknown> = {};
     try {

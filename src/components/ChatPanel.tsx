@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ConsultationReviewModal } from '@/components/ConsultationReviewModal';
 import { printSoap } from '@/lib/printDoc';
+import { UsageMeter, UsageOverBanner } from '@/components/UsageMeter';
 
 export interface PreBriefing {
   returnInfo: string;
@@ -337,8 +338,23 @@ export function ChatPanel({
           patientContext,
         },
       });
-      if (error) throw error;
+      if (error) {
+        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
+          ? await (error as any).context.json().catch(() => null)
+          : null;
+        if (body?.quotaExceeded) {
+          toast({
+            title: 'Limite diário atingido',
+            description: body.error ?? 'Aguarde o reset diário ou solicite aumento do limite.',
+            variant: 'destructive',
+          });
+          queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
+          return;
+        }
+        throw error;
+      }
 
+      queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
       const quality = data.transcriptionQuality ?? 'good';
       const clarifications: string[] = Array.isArray(data.clarifications) ? data.clarifications : [];
 
@@ -385,6 +401,7 @@ export function ChatPanel({
       const { data, error } = await supabase.functions.invoke('chat-assistant', {
         body: {
           patientId: patient?.id ?? null,
+          userId,
           patientContext: patient ? {
             name: patient.name,
             age: patient.age,
@@ -401,7 +418,22 @@ export function ChatPanel({
           userMessage: text,
         },
       });
-      if (error) throw error;
+      if (error) {
+        // supabase-js wraps non-2xx as FunctionsHttpError; the JSON body lives on err.context
+        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
+          ? await (error as any).context.json().catch(() => null)
+          : null;
+        if (body?.quotaExceeded) {
+          toast({
+            title: 'Limite diário atingido',
+            description: body.error ?? 'Aguarde o reset diário ou solicite aumento.',
+            variant: 'destructive',
+          });
+          queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
+          return;
+        }
+        throw error;
+      }
       onMessagesChange([...withUser, {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
@@ -409,6 +441,7 @@ export function ChatPanel({
         content: data.message,
         timestamp: new Date(),
       }]);
+      queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
     } catch {
       toast({ title: 'Erro ao consultar IA', description: 'Tente novamente.', variant: 'destructive' });
     } finally {
@@ -801,6 +834,7 @@ export function ChatPanel({
 
       {/* Input Area */}
       <div className="px-3 md:px-4 py-3 space-y-2 md:space-y-3 border-t border-border/30">
+        <UsageOverBanner />
         {/* Recording Status Banner */}
         {isRecording && (
           <div className={cn(
@@ -914,13 +948,14 @@ export function ChatPanel({
                 Comentário
               </button>
             </div>
-            <span className="text-[10px] text-muted-foreground/70 ml-2 hidden sm:inline">
+            <span className="text-[10px] text-muted-foreground/70 ml-2 hidden md:inline flex-1 min-w-0 truncate">
               {inputMode === 'question'
                 ? 'pergunte sobre o histórico, conduta, interações…'
                 : isRecording
                 ? 'será incluído no contexto da transcrição'
                 : 'salvo nas anotações do paciente'}
             </span>
+            <UsageMeter variant="inline" className="ml-auto shrink-0" />
           </div>
 
           <div className="flex items-center gap-3">
