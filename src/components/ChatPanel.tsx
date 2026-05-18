@@ -239,37 +239,47 @@ export function ChatPanel({
     if (!patient) return;
     setSavingNote(true);
     try {
-      const stamp = new Date().toLocaleString('pt-BR', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      const { data, error } = await supabase.functions.invoke('process-comment', {
+        body: { patientId: patient.id, userId, comment: text },
       });
-      const entry = `[${stamp}] ${text}`;
+      if (error) {
+        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
+          ? await (error as any).context.json().catch(() => null)
+          : null;
+        if (body?.quotaExceeded) {
+          toast({
+            title: 'Limite diário atingido',
+            description: body.error ?? 'Aguarde o reset diário ou solicite aumento.',
+            variant: 'destructive',
+          });
+          queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
+          return;
+        }
+        throw error;
+      }
 
-      const { data: row, error: readErr } = await supabase
-        .from('patients')
-        .select('clinical_notes')
-        .eq('id', patient.id)
-        .single();
-      if (readErr) throw readErr;
-
-      const merged = row?.clinical_notes ? `${row.clinical_notes}\n${entry}` : entry;
-      const { error: writeErr } = await supabase
-        .from('patients')
-        .update({ clinical_notes: merged })
-        .eq('id', patient.id);
-      if (writeErr) throw writeErr;
+      const summary: string = data?.summary ?? 'Comentário processado.';
+      const appliedAddendum: boolean = !!data?.appliedAddendum;
 
       onMessagesChange([...messages, {
         id: `note-${Date.now()}`,
         type: 'assistant',
-        title: 'Anotação salva no prontuário',
-        content: `📝 ${text}`,
+        title: appliedAddendum ? 'Adendo na consulta de hoje' : 'Comentário processado',
+        content: `📝 ${text}\n\n→ ${summary}`,
         timestamp: new Date(),
       }]);
+
+      // Refresh everything the comment could have touched
+      queryClient.invalidateQueries({ queryKey: ['patients', userId] });
+      queryClient.invalidateQueries({ queryKey: ['patient-detail', patient.id] });
       queryClient.invalidateQueries({ queryKey: ['patient-clinical-notes', patient.id] });
-      toast({ title: 'Anotação salva', description: 'Adicionada às anotações do paciente.' });
+      queryClient.invalidateQueries({ queryKey: ['patient-consultations', patient.id] });
+      queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
+
+      toast({ title: 'Comentário processado', description: summary });
     } catch (err: any) {
       toast({
-        title: 'Erro ao salvar anotação',
+        title: 'Erro ao processar comentário',
         description: err.message ?? 'Tente novamente.',
         variant: 'destructive',
       });
@@ -359,7 +369,6 @@ export function ChatPanel({
       const clarifications: string[] = Array.isArray(data.clarifications) ? data.clarifications : [];
 
       if (quality === 'good' && clarifications.length === 0) {
-        // Transcription is clean — skip review modal and save directly
         await submitFinalSoap(data.transcription ?? '', '', data.soapNote ?? '', data.whatsappMessage ?? '');
       } else {
         setReviewData({
@@ -953,7 +962,7 @@ export function ChatPanel({
                 ? 'pergunte sobre o histórico, conduta, interações…'
                 : isRecording
                 ? 'será incluído no contexto da transcrição'
-                : 'salvo nas anotações do paciente'}
+                : 'atualiza perfil, adendo da consulta de hoje ou anotação'}
             </span>
             <UsageMeter variant="inline" className="ml-auto shrink-0" />
           </div>
@@ -978,7 +987,7 @@ export function ChatPanel({
                     ? 'Pergunte ao assistente — o que conversamos na última consulta?'
                     : isRecording
                     ? 'Comentário para a transcrição — ex: "paciente referiu dor irradiando"'
-                    : 'Anotação para o prontuário do paciente…'
+                    : 'Comentário — ex: "alérgico a penicilina", "iniciar Losartana 50mg", "solicitar hemograma"'
                 }
                 className={cn(
                   'w-full h-10 px-4 rounded-xl border-0 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-slate-400',

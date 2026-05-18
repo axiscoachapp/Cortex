@@ -172,6 +172,17 @@ Exemplos do que NÃO fazer:
 - Se um diagnóstico não foi discutido → não o inclua na Avaliação
 - Se a transcrição for incoerente → documente "Transcrição inaudível/incompleta" na seção relevante
 
+REGRA — DETECÇÃO DE GRAVAÇÃO QUE NÃO É CONSULTA:
+Se a transcrição claramente NÃO representa uma consulta médica — por exemplo:
+- Apenas uma pergunta solitária do médico (ex.: "o que conversamos na última consulta?")
+- Gravação muito curta sem troca entre médico e paciente
+- Áudio acidental, teste de microfone, ou conteúdo sem qualquer dado clínico
+- Apenas o médico falando sozinho, sem interação com paciente
+→ Defina transcription_quality = "poor"
+→ Preencha TODAS as seções do soap_note com "Gravação não corresponde a uma consulta médica — revise ou descarte."
+→ Em clarifications, inclua EXATAMENTE como primeira pergunta: "Esta gravação não parece ser uma consulta médica (parece uma pergunta ao assistente, teste, ou gravação acidental). Deseja descartar e usar o chat de Pergunta, ou houve mesmo uma consulta? Descreva os detalhes da consulta abaixo se quiser prosseguir."
+→ Não invente conteúdo clínico para preencher lacunas.
+
 Gere os seguintes campos:
 
 1. soap_note: Evolução SOAP profissional com as seções:
@@ -191,10 +202,20 @@ Retorne array vazio [] se a transcrição capturou bem a consulta.
 Só pergunte sobre informações que fariam diferença clínica real (ex: dose ajustada, resultado de exame discutido, conduta decidida que ficou cortada).
 Máximo 4 perguntas objetivas e específicas.
 
-4. transcription_quality: Avalie a qualidade geral da transcrição:
-- "good": transcrição clara, consulta bem representada
-- "partial": algumas partes inaudíveis ou cortadas, mas conteúdo principal capturado
-- "poor": transcrição muito incompleta, incoerente ou inaudível`;
+4. transcription_quality: NÃO é uma avaliação só do áudio. É uma avaliação de se a gravação representa uma consulta médica completa.
+   Avalie a transcrição em TODOS os 4 critérios abaixo, na ordem:
+
+   a) INTELIGIBILIDADE — a transcrição não tem partes marcadas como inaudíveis, cortadas no meio, ou frases sem sentido por falha de áudio.
+   b) TROCA ENTRE FALANTES — aparecem ambos [MÉDICO] e [PACIENTE] com pelo menos 2 turnos cada (não apenas um cumprimento isolado).
+   c) SUBSTÂNCIA CLÍNICA — a transcrição contém pelo menos UM de: queixa/sintoma relatado pelo paciente, achado de exame ou sinal vital, hipótese diagnóstica, decisão de conduta, prescrição.
+   d) DURAÇÃO PLAUSÍVEL — pelo menos ~30 palavras de conteúdo clínico real. Uma única frase, pergunta solta ou cumprimento isolado NÃO conta.
+
+   Mapeamento (use exatamente assim):
+   - "good": os 4 critérios satisfeitos
+   - "partial": critério (a) ou (b) falha de forma leve, mas (c) e (d) estão OK
+   - "poor": critério (c) ou (d) falha, OU 2 ou mais critérios falham, OU a gravação não é uma consulta (ver regra abaixo)
+
+   Importante: áudio limpo NÃO é suficiente para "good". Uma gravação de 5 segundos com uma pergunta clara falha em (b), (c) e (d) — é "poor", não "good".`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
