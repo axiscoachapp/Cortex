@@ -260,7 +260,7 @@ const About = () => {
               <h1 className="text-5xl lg:text-7xl font-bold tracking-tight leading-[1.05]">
                 A consulta termina.{' '}
                 <span
-                  className="bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift"
+                  className="block bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift"
                   style={{
                     backgroundImage:
                       'linear-gradient(90deg, hsl(210 80% 55%), hsl(265 80% 65%), hsl(180 75% 50%), hsl(210 80% 55%))',
