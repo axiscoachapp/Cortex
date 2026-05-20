@@ -246,16 +246,6 @@ const About = () => {
 
         <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
           <div>
-            <Reveal>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-medical-blue-light border border-medical-blue/20 text-xs font-semibold text-medical-blue-dark mb-6">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-medical-blue opacity-75 animate-ping" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-medical-blue" />
-                </span>
-                Novo · Powered by Gemini 2.0 Flash
-              </div>
-            </Reveal>
-
             <Reveal delay={80}>
               <h1 className="text-5xl lg:text-7xl font-bold tracking-tight leading-[1.05]">
                 A consulta termina.{' '}
