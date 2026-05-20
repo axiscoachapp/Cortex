@@ -139,20 +139,28 @@ const SOAP_SCHEMA_FINAL = {
   required: ['soap_note', 'whatsapp_message'],
 };
 
-const TRANSCRIPTION_PROMPT = `Transcreva esta consulta médica com identificação obrigatória de falantes.
+const TRANSCRIPTION_PROMPT = `Transcreva LITERALMENTE o áudio em português, identificando os falantes.
 
-Use exatamente o formato:
+REGRA ABSOLUTA — FIDELIDADE:
+- Transcreva APENAS o que foi realmente dito no áudio. Palavra por palavra.
+- NUNCA invente, complete, deduza ou imagine falas. Se o áudio tem 10 segundos, a transcrição tem ~10 segundos de conteúdo.
+- É TERMINANTEMENTE PROIBIDO produzir um diálogo de consulta que não está no áudio. Não preencha o formato com perguntas/respostas típicas de consulta se elas não foram ditas.
+- Trechos inaudíveis ou incompreensíveis: marque como [inaudível]. Não adivinhe o conteúdo.
+
+FORMATO (quando for uma consulta médica):
 [MÉDICO] <fala>
 [PACIENTE] <fala>
+- Nova linha a cada mudança de falante.
+- Preserve terminologia médica e nomes de medicamentos exatamente como pronunciados.
+- Se não distinguir o falante, use [MÉDICO].
 
-Regras:
-- Inicie uma nova linha a cada mudança de falante
-- Preserve terminologia médica e nomes de medicamentos exatamente como pronunciados
-- Se não conseguir distinguir o falante, use [MÉDICO] como padrão
-- Não resuma, não omita e não parafraseie — transcreva tudo na íntegra
-- Ignore ruídos de fundo, tosses e sons não-verbais
+QUANDO O ÁUDIO NÃO É UMA CONSULTA MÉDICA:
+Se o áudio for conversa aleatória, teste de microfone, ruído, alguém falando sozinho, ou qualquer coisa sem troca clínica entre médico e paciente:
+- Transcreva mesmo assim o que foi realmente dito, usando [FALANTE] como rótulo.
+- Se quase nada for inteligível ou não houver fala relevante, retorne EXATAMENTE: [SEM_CONSULTA]
+- NÃO transforme isso em uma consulta fictícia.
 
-Retorne apenas a transcrição formatada, sem comentários ou cabeçalhos.`;
+Ignore ruídos de fundo, tosses e sons não-verbais. Retorne apenas a transcrição, sem comentários ou cabeçalhos.`;
 
 const SOAP_SYSTEM = `Você é um médico especialista gerando documentação clínica em português brasileiro.
 
@@ -285,13 +293,31 @@ serve(async (req) => {
           { text: TRANSCRIPTION_PROMPT },
         ],
         {
-          systemInstruction: 'Você é um especialista em transcrição de consultas médicas. Sua única função é transcrever com máxima fidelidade, preservando termos técnicos e nomes de medicamentos.',
+          systemInstruction: 'Você é um transcritor de áudio de máxima fidelidade. Você transcreve EXCLUSIVAMENTE o que foi realmente dito, palavra por palavra, preservando termos técnicos e nomes de medicamentos. Você NUNCA inventa, completa ou imagina falas, e NUNCA fabrica um diálogo de consulta que não está no áudio. Quando o áudio não é uma consulta médica, você transcreve o conteúdo real como ele é.',
           temperature: 0.1,
           maxOutputTokens: 8000,
           thinkingBudget: 0,
         },
       );
       await recordUsage(supabase, userId, creditsFromUsage(transUsage));
+
+      // Short-circuit: transcriber signalled the audio is not a consultation.
+      // Skip the SOAP call entirely — there's nothing clinical to document, and
+      // generating a SOAP here would only invite the model to invent content.
+      if (transcription.trim().toUpperCase().includes('[SEM_CONSULTA]')) {
+        return new Response(
+          JSON.stringify({
+            transcription: '',
+            soapNote: 'Gravação não corresponde a uma consulta médica — revise ou descarte.',
+            whatsappMessage: '',
+            clarifications: [
+              'Esta gravação não parece ser uma consulta médica (parece uma conversa aleatória, teste, ou gravação acidental). Deseja descartar e usar o chat de Pergunta, ou houve mesmo uma consulta? Descreva os detalhes da consulta abaixo se quiser prosseguir.',
+            ],
+            transcriptionQuality: 'poor',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
 
       const patientSummary = buildPatientSummary(patientContext, chiefComplaint);
       const commentsText = Array.isArray(body.consultationComments) && body.consultationComments.length > 0
