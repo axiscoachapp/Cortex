@@ -13,6 +13,42 @@ const corsHeaders = {
 
 // SOAP_SYSTEM resolved per request via getSpecialtyPrompt().
 
+const EXTRACT_SYSTEM = `Você é um extrator de dados clínicos estruturados.
+Analise a evolução SOAP fornecida e extraia APENAS informações explicitamente presentes no texto.
+Não infira, não invente, não complete com conhecimento externo.
+- diagnoses: diagnósticos ou hipóteses da seção A, como descrições simples sem código CID
+- medications: medicamentos prescritos/mantidos na seção P, com nome, dosagem e instruções de uso
+- allergies: alergias mencionadas em qualquer seção
+Retorne arrays vazios para campos sem informação no texto.`;
+
+const EXTRACT_SCHEMA = {
+  type: 'object',
+  properties: {
+    diagnoses: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { description: { type: 'string' } },
+        required: ['description'],
+      },
+    },
+    medications: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name:         { type: 'string' },
+          dosage:       { type: 'string' },
+          instructions: { type: 'string' },
+        },
+        required: ['name', 'dosage', 'instructions'],
+      },
+    },
+    allergies: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['diagnoses', 'medications', 'allergies'],
+};
+
 const FINAL_SCHEMA = {
   type: 'object',
   properties: {
@@ -126,8 +162,38 @@ serve(async (req) => {
         .lte('start_time', `${today}T23:59:59`);
     } catch { /* non-critical */ }
 
+    // ── Best-effort profile extraction ───────────────────────────────────────
+    let profileUpdates: {
+      diagnoses:   { description: string }[];
+      medications: { name: string; dosage: string; instructions: string }[];
+      allergies:   string[];
+    } = { diagnoses: [], medications: [], allergies: [] };
+
+    try {
+      const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+      if (GEMINI_API_KEY && soapNote.trim()) {
+        const { text: extractRaw } = await callGemini(
+          GEMINI_API_KEY,
+          [{ text: soapNote }],
+          {
+            systemInstruction: EXTRACT_SYSTEM,
+            temperature: 0,
+            maxOutputTokens: 512,
+            thinkingBudget: 0,
+            responseMimeType: 'application/json',
+            responseSchema: EXTRACT_SCHEMA,
+          },
+        );
+        const parsed = JSON.parse(extractRaw);
+        const d = Array.isArray(parsed.diagnoses)   ? parsed.diagnoses.filter((x: any) => x?.description?.trim())   : [];
+        const m = Array.isArray(parsed.medications)  ? parsed.medications.filter((x: any) => x?.name?.trim())         : [];
+        const a = Array.isArray(parsed.allergies)    ? parsed.allergies.filter((x: any) => typeof x === 'string' && x.trim()) : [];
+        if (d.length || m.length || a.length) profileUpdates = { diagnoses: d, medications: m, allergies: a };
+      }
+    } catch { /* non-critical — proceed without profile updates */ }
+
     return new Response(
-      JSON.stringify({ consultationId: consultation.id, soapNote, whatsappMessage }),
+      JSON.stringify({ consultationId: consultation.id, soapNote, whatsappMessage, profileUpdates }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 

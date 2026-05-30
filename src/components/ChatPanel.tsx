@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ConsultationReviewModal } from '@/components/ConsultationReviewModal';
 import { DocumentPreviewModal } from '@/components/DocumentPreviewModal';
+import { ProfileUpdateCard } from '@/components/ProfileUpdateCard';
+import { ProfileUpdates } from '@/types/patient';
 import { printSoap } from '@/lib/printDoc';
 import { UsageMeter, UsageOverBanner } from '@/components/UsageMeter';
 
@@ -223,7 +225,7 @@ export function ChatPanel({
     const { data, error } = await supabase.functions.invoke('finalize-consultation', { body });
     if (error) throw error;
     setCurrentConsultationId(data.consultationId ?? null);
-    pushToChat(data.soapNote, data.whatsappMessage);
+    pushToChat(data.soapNote, data.whatsappMessage, data.profileUpdates);
     setReviewData(null);
     // Clear the stale pre-briefing cache for this patient now that a new
     // consultation has been saved — the parent will regenerate on next select.
@@ -439,9 +441,10 @@ export function ChatPanel({
     toast({ title: 'Alterações salvas', description: 'A evolução clínica foi atualizada.' });
   };
 
-  const pushToChat = (soapNote: string, whatsappMessage: string) => {
+  const pushToChat = (soapNote: string, whatsappMessage: string, profileUpdates?: ProfileUpdates) => {
     const now = new Date();
-    onMessagesChange([...messages,
+    const next: typeof messages = [
+      ...messages,
       {
         id: `soap-${now.getTime()}`,
         type: 'soap',
@@ -456,7 +459,22 @@ export function ChatPanel({
         content: whatsappMessage,
         timestamp: now,
       },
-    ]);
+    ];
+    if (profileUpdates && (
+      profileUpdates.diagnoses.length > 0 ||
+      profileUpdates.medications.length > 0 ||
+      profileUpdates.allergies.length > 0
+    )) {
+      next.push({
+        id: `profile-${now.getTime()}`,
+        type: 'profile-update',
+        title: 'Atualização do Perfil Clínico',
+        content: '',
+        timestamp: now,
+        profileUpdates,
+      });
+    }
+    onMessagesChange(next);
   };
 
   // Phase 2: generate final SOAP (with doctor comments) → save to DB → show in chat
@@ -491,6 +509,29 @@ export function ChatPanel({
   const handlePrintSOAP = (soapNote: string) => {
     if (!patient) return;
     printSoap(soapNote, patient, chiefComplaint);
+  };
+
+  const handleProfileAccept = async (merged: ProfileUpdates) => {
+    if (!patient) return;
+    await supabase
+      .from('patients')
+      .update({
+        diagnoses:   merged.diagnoses.map(d => ({ code: '', description: d.description })),
+        medications: merged.medications.map(m => ({ name: m.name, dosage: m.dosage, instructions: m.instructions })),
+        allergies:   merged.allergies,
+      })
+      .eq('id', patient.id);
+    queryClient.invalidateQueries({ queryKey: ['patients', userId] });
+    queryClient.invalidateQueries({ queryKey: ['patient-detail', patient.id] });
+    toast({ title: 'Perfil atualizado!', description: 'Diagnósticos, medicamentos e alergias sincronizados.' });
+  };
+
+  const getMissingFields = (): string[] => {
+    if (!patient) return [];
+    const missing: string[] = [];
+    if (!patient.phone) missing.push('Telefone');
+    if (!patient.email) missing.push('Email');
+    return missing;
   };
 
   const handleGenerateDocument = async (type: 'patient_summary' | 'referral', soapNote: string) => {
@@ -667,7 +708,19 @@ export function ChatPanel({
             )}
             style={{ animationDelay: `${index * 50}ms` }}
           >
-            {message.type === 'user' ? (
+            {message.type === 'profile-update' ? (
+              <ProfileUpdateCard
+                initial={message.profileUpdates!}
+                existing={{
+                  diagnoses:   patient?.diagnoses   ?? [],
+                  medications: patient?.medications ?? [],
+                  allergies:   patient?.allergies   ?? [],
+                }}
+                missingFields={getMissingFields()}
+                onAccept={handleProfileAccept}
+                onDismiss={() => {}}
+              />
+            ) : message.type === 'user' ? (
               <div className="max-w-[88%] md:max-w-[75%] bg-medical-blue text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2 text-sm">
                 {message.content}
               </div>

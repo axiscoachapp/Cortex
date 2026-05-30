@@ -42,10 +42,17 @@ export interface Appointment {
   reminderSent: boolean;
 }
 
+export interface ProfileUpdates {
+  diagnoses:   Array<{ description: string }>;
+  medications: Array<{ name: string; dosage: string; instructions: string }>;
+  allergies:   string[];
+}
+
 export interface ChatMessage {
   id: string;
-  type: 'soap' | 'whatsapp' | 'system' | 'user' | 'assistant';
+  type: 'soap' | 'whatsapp' | 'system' | 'user' | 'assistant' | 'profile-update';
   title: string;
   content: string;
   timestamp: Date;
+  profileUpdates?: ProfileUpdates;
 }
