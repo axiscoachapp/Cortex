@@ -797,6 +797,7 @@ const About = () => {
             <Link to="/auth" className="hover:text-foreground transition-colors">Entrar</Link>
             <a href="#features" className="hover:text-foreground transition-colors">Recursos</a>
             <a href="#how" className="hover:text-foreground transition-colors">Como funciona</a>
+            <Link to="/privacidade" className="hover:text-foreground transition-colors">Privacidade & Dados</Link>
             <span className="inline-flex items-center gap-1.5">
               <Lock className="w-3 h-3" /> LGPD compliant
             </span>

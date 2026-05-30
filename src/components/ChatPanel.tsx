@@ -3,8 +3,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send,
   Copy, Check, Pencil, Pause, Play, Loader2, Download, StopCircle, Brain,
-  HelpCircle, StickyNote,
+  HelpCircle, StickyNote, ClipboardList, Share2,
 } from 'lucide-react';
+import { useRecording } from '@/hooks/useRecording';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { SoapNoteView } from '@/components/SoapNoteView';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ConsultationReviewModal } from '@/components/ConsultationReviewModal';
+import { DocumentPreviewModal } from '@/components/DocumentPreviewModal';
 import { printSoap } from '@/lib/printDoc';
 import { UsageMeter, UsageOverBanner } from '@/components/UsageMeter';
 
@@ -37,6 +40,9 @@ interface ChatPanelProps {
   preBriefing: PreBriefing | null;
   briefingLoading: boolean;
   userId: string;
+  /** Called after a consultation is successfully saved so the parent can
+   *  invalidate any stale pre-briefing cache entries for this patient. */
+  onConsultationSaved?: (patientId: string) => void;
 }
 
 export function ChatPanel({
@@ -47,53 +53,60 @@ export function ChatPanel({
   preBriefing,
   briefingLoading,
   userId,
+  onConsultationSaved,
 }: ChatPanelProps) {
   const [showBriefing, setShowBriefing] = useState(true);
   const [briefingExpanded, setBriefingExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState('');
   const [currentConsultationId, setCurrentConsultationId] = useState<string | null>(null);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [reviewData, setReviewData] = useState<{
     transcription: string;
     soapDraft: string;
     whatsappDraft: string;
     clarifications: string[];
     transcriptionQuality: 'good' | 'partial' | 'poor';
+    differentialDiagnoses: string[];
+    drugInteractionAlerts: string[];
   } | null>(null);
   const [isGeneratingFinal, setIsGeneratingFinal] = useState(false);
-
-  const [stopConfirming, setStopConfirming] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
   const [inputMode, setInputMode] = useState<'question' | 'comment'>('question');
   const [savingNote, setSavingNote] = useState(false);
+  const [consultationComments, setConsultationComments] = useState<string[]>([]);
+  const [documentModal, setDocumentModal] = useState<{
+    type: 'patient_summary' | 'referral';
+    content: string;
+    isLoading: boolean;
+  } | null>(null);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const consultationCommentsRef = useRef<string[]>([]);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animFrameRef = useRef<number>(0);
-  const [consultationComments, setConsultationComments] = useState<string[]>([]);
+
+  const recording = useRecording({
+    onStop: processConsultation,
+    consultationCommentsRef,
+    onCommentsReset: () => {
+      consultationCommentsRef.current = [];
+      setConsultationComments([]);
+    },
+  });
+
+  const { isRecording, isPaused, stopConfirming, recordingSeconds, audioLevel } = recording;
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { specialty } = useUserSettings();
 
   useEffect(() => {
     setShowBriefing(true);
     setBriefingExpanded(false);
     consultationCommentsRef.current = [];
     setConsultationComments([]);
-    setStopConfirming(false);
+    recording.cancelStop();
   }, [patient?.id]);
 
   useEffect(() => {
@@ -106,46 +119,11 @@ export function ChatPanel({
     return `${m}:${s}`;
   };
 
-  const startTimer = () => {
-    timerRef.current = setInterval(() => {
-      setRecordingSeconds(prev => prev + 1);
-    }, 1000);
-  };
-
-  const stopTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  };
-
-  const startAudioLevel = (stream: MediaStream) => {
-    try {
-      const ctx = new AudioContext();
-      audioCtxRef.current = ctx;
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 128;
-      source.connect(analyser);
-      analyserRef.current = analyser;
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      const tick = () => {
-        analyser.getByteTimeDomainData(data);
-        const rms = Math.sqrt(data.reduce((s, v) => s + ((v - 128) / 128) ** 2, 0) / data.length);
-        setAudioLevel(Math.min(rms * 6, 1));
-        animFrameRef.current = requestAnimationFrame(tick);
-      };
-      tick();
-    } catch { /* AudioContext not available */ }
-  };
-
-  const stopAudioLevel = () => {
-    cancelAnimationFrame(animFrameRef.current);
-    analyserRef.current = null;
-    audioCtxRef.current?.close();
-    audioCtxRef.current = null;
-    setAudioLevel(0);
-  };
+  const handleStartRecording  = () => recording.start();
+  const handleStopRecording   = () => recording.stop();
+  const handleConfirmStop     = () => recording.confirmStop();
+  const handleCancelStop      = () => recording.cancelStop();
+  const handlePauseToggle     = () => recording.pauseToggle();
 
   const handleCopy = async (text: string, messageId: string) => {
     await navigator.clipboard.writeText(text);
@@ -154,80 +132,6 @@ export function ChatPanel({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleStartRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      audioChunksRef.current = [];
-      startAudioLevel(stream);
-
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
-
-      const recorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = async () => {
-        stopTimer();
-        streamRef.current?.getTracks().forEach(t => t.stop());
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        const comments = consultationCommentsRef.current;
-        consultationCommentsRef.current = [];
-        setConsultationComments([]);
-        await processConsultation(audioBlob, mimeType, comments);
-      };
-
-      recorder.start(500);
-      setIsRecording(true);
-      setIsPaused(false);
-      setRecordingSeconds(0);
-      startTimer();
-
-      toast({ title: 'Gravação iniciada', description: 'A consulta está sendo gravada.' });
-    } catch {
-      toast({
-        title: 'Erro ao iniciar gravação',
-        description: 'Verifique se o microfone está disponível e permitido.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleStopRecording = () => {
-    setStopConfirming(true);
-  };
-
-  const handleConfirmStop = () => {
-    setStopConfirming(false);
-    stopAudioLevel();
-    mediaRecorderRef.current?.stop();
-    setIsRecording(false);
-    setIsPaused(false);
-    stopTimer();
-  };
-
-  const handleCancelStop = () => {
-    setStopConfirming(false);
-  };
-
-  const handlePauseToggle = () => {
-    if (!mediaRecorderRef.current) return;
-    if (isPaused) {
-      mediaRecorderRef.current.resume();
-      startTimer();
-      toast({ title: 'Gravação retomada' });
-    } else {
-      mediaRecorderRef.current.pause();
-      stopTimer();
-      toast({ title: 'Gravação pausada' });
-    }
-    setIsPaused(prev => !prev);
-  };
 
   const addTranscriptionComment = (text: string) => {
     consultationCommentsRef.current = [...consultationCommentsRef.current, text];
@@ -296,7 +200,7 @@ export function ChatPanel({
     allergies: patient.allergies,
   } : {};
 
-  // Shared Phase 2 logic — called either from review modal or auto-confirm path
+  // Shared save logic — called from auto-confirm path (saveDirect) or review modal (with comments)
   const submitFinalSoap = async (
     transcription: string,
     doctorComments: string,
@@ -304,26 +208,55 @@ export function ChatPanel({
     directWhatsappMessage?: string,
   ) => {
     if (!patient) return;
-    const isDirect = directSoapNote != null;
-    const body = isDirect ? {
-      patientId: patient.id, userId, chiefComplaint,
-      saveDirect: true,
-      transcription,
-      saveSoapNote: directSoapNote,
-      saveWhatsappMessage: directWhatsappMessage ?? '',
-      patientContext,
-    } : {
-      patientId: patient.id, userId, chiefComplaint,
-      transcription,
-      doctorComments,
-      patientContext,
-    };
-    const { data, error } = await supabase.functions.invoke('process-consultation', { body });
+    const body = directSoapNote != null
+      ? {
+          patientId: patient.id, userId, chiefComplaint, transcription, patientContext,
+          saveDirect: true,
+          soapNote: directSoapNote,
+          whatsappMessage: directWhatsappMessage ?? '',
+          userSpecialty: specialty,
+        }
+      : {
+          patientId: patient.id, userId, chiefComplaint, transcription, doctorComments, patientContext,
+          userSpecialty: specialty,
+        };
+    const { data, error } = await supabase.functions.invoke('finalize-consultation', { body });
     if (error) throw error;
     setCurrentConsultationId(data.consultationId ?? null);
     pushToChat(data.soapNote, data.whatsappMessage);
     setReviewData(null);
+    // Clear the stale pre-briefing cache for this patient now that a new
+    // consultation has been saved — the parent will regenerate on next select.
+    if (patient?.id) onConsultationSaved?.(patient.id);
     toast({ title: 'Consulta salva!', description: 'Evolução clínica gerada com sucesso.' });
+  };
+
+  /** Upload with up to 3 attempts and exponential backoff. */
+  const uploadAudioWithRetry = async (
+    blob: Blob,
+    path: string,
+    mimeType: string,
+    maxAttempts = 3,
+  ): Promise<void> => {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const { error } = await supabase.storage
+        .from('audio-recordings')
+        .upload(path, blob, { contentType: mimeType });
+      if (!error) return;
+      if (attempt === maxAttempts) throw error;
+      // Exponential backoff: 1 s, 2 s
+      await new Promise(r => setTimeout(r, 1000 * attempt));
+    }
+  };
+
+  /** Offer the physician a local download so the recording isn't lost. */
+  const offerLocalDownload = (blob: Blob, mimeType: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `consulta-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const processConsultation = async (audioBlob: Blob, mimeType: string, comments: string[]) => {
@@ -332,12 +265,21 @@ export function ChatPanel({
 
     try {
       const storagePath = `consultations/${userId}/${Date.now()}.webm`;
-      const { error: uploadError } = await supabase.storage
-        .from('audio-recordings')
-        .upload(storagePath, audioBlob, { contentType: mimeType });
-      if (uploadError) throw uploadError;
+      try {
+        await uploadAudioWithRetry(audioBlob, storagePath, mimeType);
+      } catch (uploadError) {
+        // Upload failed after retries — offer the recording as a local download
+        // so it isn't permanently lost, then surface a clear error.
+        offerLocalDownload(audioBlob, mimeType);
+        toast({
+          title: 'Erro ao enviar gravação',
+          description: 'Não foi possível enviar o áudio. O arquivo foi salvo localmente no seu dispositivo.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-      const { data, error } = await supabase.functions.invoke('process-consultation', {
+      const { data, error } = await supabase.functions.invoke('transcribe-consultation', {
         body: {
           patientId: patient.id,
           userId,
@@ -346,6 +288,7 @@ export function ChatPanel({
           audioMimeType: mimeType,
           consultationComments: comments,
           patientContext,
+          userSpecialty: specialty,
         },
       });
       if (error) {
@@ -366,9 +309,11 @@ export function ChatPanel({
 
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
       const quality = data.transcriptionQuality ?? 'good';
-      const clarifications: string[] = Array.isArray(data.clarifications) ? data.clarifications : [];
+      const clarifications: string[]        = Array.isArray(data.clarifications)         ? data.clarifications         : [];
+      const differentialDiagnoses: string[] = Array.isArray(data.differentialDiagnoses)  ? data.differentialDiagnoses  : [];
+      const drugInteractionAlerts: string[] = Array.isArray(data.drugInteractionAlerts)  ? data.drugInteractionAlerts  : [];
 
-      if (quality === 'good' && clarifications.length === 0) {
+      if (quality === 'good' && clarifications.length === 0 && differentialDiagnoses.length === 0 && drugInteractionAlerts.length === 0) {
         await submitFinalSoap(data.transcription ?? '', '', data.soapNote ?? '', data.whatsappMessage ?? '');
       } else {
         setReviewData({
@@ -377,6 +322,8 @@ export function ChatPanel({
           whatsappDraft: data.whatsappMessage ?? '',
           clarifications,
           transcriptionQuality: quality,
+          differentialDiagnoses,
+          drugInteractionAlerts,
         });
       }
     } catch (err: any) {
@@ -389,6 +336,8 @@ export function ChatPanel({
       setIsProcessing(false);
     }
   };
+
+
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isChatLoading) return;
@@ -544,6 +493,32 @@ export function ChatPanel({
     printSoap(soapNote, patient, chiefComplaint);
   };
 
+  const handleGenerateDocument = async (type: 'patient_summary' | 'referral', soapNote: string) => {
+    if (!patient) return;
+    setDocumentModal({ type, content: '', isLoading: true });
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-document', {
+        body: {
+          type,
+          userId,
+          soapNote,
+          chiefComplaint,
+          patientContext,
+          ...(type === 'referral' ? {} : {}),
+        },
+      });
+      if (error) throw error;
+      setDocumentModal({ type, content: data.document ?? '', isLoading: false });
+    } catch (err: any) {
+      setDocumentModal(null);
+      toast({
+        title: 'Erro ao gerar documento',
+        description: err.message ?? 'Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (!patient) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-card">
@@ -679,7 +654,9 @@ export function ChatPanel({
         )}
 
         {/* Messages */}
-        {messages.map((message, index) => (
+        {(() => {
+          const lastSoapIdx = messages.reduce((acc, m, i) => m.type === 'soap' ? i : acc, -1);
+          return messages.map((message, index) => (
           <div
             key={message.id}
             className={cn(
@@ -765,7 +742,31 @@ export function ChatPanel({
                     autoFocus
                   />
                 ) : message.type === 'soap' ? (
-                  <SoapNoteView text={message.content} />
+                  <>
+                    <SoapNoteView text={message.content} />
+                    {currentConsultationId && index === lastSoapIdx && (
+                      <div className="mt-3 pt-3 border-t border-border/30 flex gap-2 flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-xs"
+                          onClick={() => handleGenerateDocument('patient_summary', message.content)}
+                        >
+                          <ClipboardList className="w-3.5 h-3.5" />
+                          Resumo para Paciente
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-xs"
+                          onClick={() => handleGenerateDocument('referral', message.content)}
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                          Gerar Encaminhamento
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/80">
                     {message.content}
@@ -804,7 +805,8 @@ export function ChatPanel({
               </>
             )}
           </div>
-        ))}
+        ));
+        })()}
 
         {/* Processing spinner */}
         {isProcessing && (
@@ -1043,9 +1045,20 @@ export function ChatPanel({
         soapDraft={reviewData?.soapDraft ?? ''}
         clarifications={reviewData?.clarifications ?? []}
         transcriptionQuality={reviewData?.transcriptionQuality ?? 'good'}
+        differentialDiagnoses={reviewData?.differentialDiagnoses ?? []}
+        drugInteractionAlerts={reviewData?.drugInteractionAlerts ?? []}
         onConfirm={handleReviewConfirm}
         onCancel={handleReviewCancel}
         isGenerating={isGeneratingFinal}
+      />
+
+      <DocumentPreviewModal
+        open={!!documentModal}
+        onClose={() => setDocumentModal(null)}
+        type={documentModal?.type ?? 'patient_summary'}
+        content={documentModal?.content ?? ''}
+        isLoading={documentModal?.isLoading ?? false}
+        patientName={patient?.name ?? ''}
       />
     </div>
   );

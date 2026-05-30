@@ -4,18 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_BYPASS_KEY = 'cortex_admin_bypass';
 
-const ADMIN_BYPASS_USER: User = {
-  id: 'admin-bypass-local',
-  email: 'admin@localhost',
-  aud: 'authenticated',
-  role: 'authenticated',
-  app_metadata: {},
-  user_metadata: {},
-  created_at: new Date().toISOString(),
-};
-
-const BYPASS_EMAIL = 'test.bypass@cortex-dev.local';
-const BYPASS_PASSWORD = 'CortexBypass2026!Dev';
+// Credentials come from env so they're never hardcoded in source.
+// In production builds (import.meta.env.DEV === false) the entire bypass
+// code path is eliminated by Vite/Rollup dead-code removal.
+const BYPASS_EMAIL    = import.meta.env.VITE_BYPASS_EMAIL    ?? '';
+const BYPASS_PASSWORD = import.meta.env.VITE_BYPASS_PASSWORD ?? '';
 
 interface AuthContextType {
   user: User | null;
@@ -78,28 +71,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error };
   };
 
-  const enableAdminBypass = async () => {
-    // Dev-only escape hatch. In prod the shared seed account would expose
-    // every "bypass" user's data to every other one — refuse to run.
-    if (!import.meta.env.DEV) {
-      console.warn('Admin bypass is disabled in production builds.');
-      return;
-    }
-    localStorage.setItem(ADMIN_BYPASS_KEY, '1');
-    setAdminBypass(true);
-
-    // Sign in to Supabase with a test account so RLS-protected queries work
-    // on any device/browser without needing a real user session.
-    const { error } = await supabase.auth.signInWithPassword({
-      email: BYPASS_EMAIL,
-      password: BYPASS_PASSWORD,
-    });
-    if (error) {
-      // Account doesn't exist yet — create it, then sign in
-      await supabase.auth.signUp({ email: BYPASS_EMAIL, password: BYPASS_PASSWORD });
-      await supabase.auth.signInWithPassword({ email: BYPASS_EMAIL, password: BYPASS_PASSWORD });
-    }
-  };
+  const enableAdminBypass = import.meta.env.DEV
+    ? async () => {
+        if (!BYPASS_EMAIL || !BYPASS_PASSWORD) {
+          console.warn('Admin bypass: set VITE_BYPASS_EMAIL and VITE_BYPASS_PASSWORD in .env.local');
+          return;
+        }
+        localStorage.setItem(ADMIN_BYPASS_KEY, '1');
+        setAdminBypass(true);
+        const { error } = await supabase.auth.signInWithPassword({
+          email: BYPASS_EMAIL,
+          password: BYPASS_PASSWORD,
+        });
+        if (error) {
+          await supabase.auth.signUp({ email: BYPASS_EMAIL, password: BYPASS_PASSWORD });
+          await supabase.auth.signInWithPassword({ email: BYPASS_EMAIL, password: BYPASS_PASSWORD });
+        }
+      }
+    : async () => {
+        // Completely inert in production — Vite dead-code-eliminates this entire branch.
+        console.warn('Admin bypass is not available in production builds.');
+      };
 
   const signOut = async () => {
     localStorage.removeItem(ADMIN_BYPASS_KEY);
@@ -107,15 +99,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
   };
 
-  // In bypass mode: prefer the real Supabase user (so auth.uid() works in RLS);
-  // fall back to the fake user only if no session exists yet.
-  const effectiveUser = adminBypass ? (user ?? ADMIN_BYPASS_USER) : user;
   const effectiveSession = adminBypass ? null : session;
 
   return (
     <AuthContext.Provider
       value={{
-        user: effectiveUser,
+        user,
         session: effectiveSession,
         loading,
         signUp,

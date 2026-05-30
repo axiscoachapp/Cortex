@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, FileText, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, AlertCircle, CheckCircle, AlertTriangle, Stethoscope, Pill } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,6 +18,8 @@ interface ConsultationReviewModalProps {
   soapDraft: string;
   clarifications: string[];
   transcriptionQuality: 'good' | 'partial' | 'poor';
+  differentialDiagnoses: string[];
+  drugInteractionAlerts: string[];
   onConfirm: (comments: string) => void;
   onCancel: () => void;
   isGenerating: boolean;
@@ -49,6 +51,8 @@ export function ConsultationReviewModal({
   soapDraft,
   clarifications,
   transcriptionQuality,
+  differentialDiagnoses,
+  drugInteractionAlerts,
   onConfirm,
   onCancel,
   isGenerating,
@@ -116,6 +120,48 @@ export function ConsultationReviewModal({
               <SoapNoteView text={soapDraft} />
             </div>
           </div>
+
+          {/* Drug interaction alerts — highest priority, show first */}
+          {drugInteractionAlerts.length > 0 && (
+            <div className="rounded-lg border border-red-200/70 bg-red-50/60 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Pill className="w-4 h-4 text-red-600 shrink-0" />
+                <span className="text-sm font-semibold text-red-700">
+                  Alertas de Interação Medicamentosa
+                </span>
+                <span className="ml-auto text-[10px] text-red-500/70 font-medium">Sugestão da IA — verificar</span>
+              </div>
+              <ul className="space-y-1.5">
+                {drugInteractionAlerts.map((alert, i) => (
+                  <li key={i} className="text-xs text-red-800/90 flex items-start gap-1.5">
+                    <span className="mt-1 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                    {alert}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Differential diagnoses */}
+          {differentialDiagnoses.length > 0 && (
+            <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Stethoscope className="w-4 h-4 text-amber-600 shrink-0" />
+                <span className="text-sm font-semibold text-amber-700">
+                  Hipóteses Diagnósticas
+                </span>
+                <span className="ml-auto text-[10px] text-amber-500/70 font-medium">Sugestão da IA — contexto clínico</span>
+              </div>
+              <ul className="space-y-1.5">
+                {differentialDiagnoses.map((dx, i) => (
+                  <li key={i} className="text-xs text-amber-900/80 flex items-start gap-1.5">
+                    <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                    {dx}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Transcription — collapsible, auto-open if quality is poor */}
           {transcription && (

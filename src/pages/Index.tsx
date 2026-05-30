@@ -203,6 +203,7 @@ const Index = () => {
               preBriefing={preBriefing}
               briefingLoading={briefingLoading}
               userId={user?.id ?? ''}
+              onConsultationSaved={(patientId) => preBriefingCache.current.delete(patientId)}
             />
           ) : (
             <WelcomeDashboard

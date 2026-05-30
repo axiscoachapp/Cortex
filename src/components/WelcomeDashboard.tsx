@@ -1,13 +1,16 @@
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   CalendarDays, Plus, ChevronRight, Clock, Users, UserPlus,
-  RefreshCw, Stethoscope, CalendarX,
+  RefreshCw, Stethoscope, CalendarX, Shield, Bell, MessageCircle, Mail, Loader2,
 } from 'lucide-react';
+import { SpecialtySettingsSheet } from '@/components/SpecialtySettingsSheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Patient } from '@/types/patient';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 interface Appointment {
@@ -19,6 +22,7 @@ interface Appointment {
   type: string;
   status: string;
   notes: string | null;
+  reminder_sent: boolean;
 }
 
 interface WelcomeDashboardProps {
@@ -62,7 +66,10 @@ function formatTime(iso: string): string {
 
 export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation, userId }: WelcomeDashboardProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const today = new Date().toISOString().split('T')[0];
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [sentReminderIds, setSentReminderIds] = useState<Set<string>>(new Set());
 
   const { data: todayApts = [], isLoading: aptsLoading } = useQuery<Appointment[]>({
     queryKey: ['appointments-today', userId],
@@ -96,14 +103,45 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
     .sort((a, b) => new Date(a.lastVisit).getTime() - new Date(b.lastVisit).getTime())
     .slice(0, 4);
 
+  // Today's appointments needing reminders
+  const pendingReminderApts = todayApts.filter(apt => {
+    if (apt.reminder_sent || sentReminderIds.has(apt.id) || apt.status === 'cancelado') return false;
+    const patient = patients.find(p => p.id === apt.patient_id);
+    return !!(patient?.phone || patient?.email);
+  });
+
+  const handleSendReminder = async (apt: Appointment) => {
+    const patient = patients.find(p => p.id === apt.patient_id);
+    if (!patient) return;
+    const hasPhone = !!patient.phone;
+    const type = hasPhone ? 'whatsapp' : 'email';
+    setSendingReminder(apt.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-appointment-reminder', {
+        body: { appointmentId: apt.id, type, userId },
+      });
+      if (error) throw error;
+      if (type === 'whatsapp' && data?.waLink) window.open(data.waLink, '_blank');
+      setSentReminderIds(prev => new Set([...prev, apt.id]));
+      toast({ title: 'Lembrete enviado!', description: type === 'whatsapp' ? 'Link WhatsApp aberto.' : 'Email enviado.' });
+    } catch {
+      toast({ title: 'Erro ao enviar lembrete', variant: 'destructive' });
+    } finally {
+      setSendingReminder(null);
+    }
+  };
+
   return (
     <div className="h-full w-full bg-card overflow-y-auto scrollbar-thin">
       <div className="max-w-2xl mx-auto px-4 md:px-8 py-6 md:py-10 space-y-6 md:space-y-8">
 
         {/* Greeting */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{greeting()}</h1>
-          <p className="text-muted-foreground mt-0.5 capitalize">{todayLabel()}</p>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{greeting()}</h1>
+            <p className="text-muted-foreground mt-0.5 capitalize">{todayLabel()}</p>
+          </div>
+          <SpecialtySettingsSheet />
         </div>
 
         {/* Stats */}
@@ -122,6 +160,58 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
             </div>
           ))}
         </div>
+
+        {/* Pending reminders */}
+        {pendingReminderApts.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+              <Bell className="w-4 h-4 text-medical-blue" />
+              Lembretes Pendentes
+              <span className="ml-1 text-[10px] font-medium bg-blue-100 text-blue-700 rounded-full px-2 py-0.5">
+                {pendingReminderApts.length}
+              </span>
+            </h2>
+            <div className="space-y-2">
+              {pendingReminderApts.map(apt => {
+                const patient = patients.find(p => p.id === apt.patient_id);
+                const hasPhone = !!patient?.phone;
+                const isSending = sendingReminder === apt.id;
+                return (
+                  <div
+                    key={apt.id}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border/50 bg-white shadow-[0_1px_4px_hsl(0_0%_0%/0.05)]"
+                  >
+                    <div className="text-center shrink-0 w-10">
+                      <p className="text-xs font-bold text-medical-blue">{formatTime(apt.start_time)}</p>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {patient?.name ?? apt.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {typeLabels[apt.type] ?? apt.type}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 shrink-0 text-xs"
+                      disabled={isSending}
+                      onClick={() => handleSendReminder(apt)}
+                    >
+                      {isSending
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : hasPhone
+                        ? <MessageCircle className="w-3.5 h-3.5 text-whatsapp-green" />
+                        : <Mail className="w-3.5 h-3.5" />}
+                      Lembrar
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Today's agenda */}
         <section>
@@ -295,7 +385,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
         )}
 
         {/* Quick actions */}
-        <div className="flex gap-3 pt-2 pb-4">
+        <div className="flex gap-3 pt-2">
           <Button onClick={onNewConsultation} className="gap-2 shadow-sm" style={{
             background: 'linear-gradient(135deg, hsl(210 70% 50%), hsl(220 70% 40%))',
           }}>
@@ -306,6 +396,16 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
             <CalendarDays className="w-4 h-4" />
             Ver Agenda
           </Button>
+        </div>
+
+        <div className="pb-4">
+          <Link
+            to="/privacidade"
+            className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          >
+            <Shield className="w-3 h-3" />
+            Privacidade & Dados (LGPD)
+          </Link>
         </div>
 
       </div>

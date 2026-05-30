@@ -109,16 +109,15 @@ export default function CalendarPage() {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  // Check Google Calendar connection
+  // Check Google Calendar connection — uses a SECURITY DEFINER RPC so the
+  // raw OAuth token columns are never exposed to the client.
   useEffect(() => {
     if (!user?.id) return;
     supabase
-      .from('user_integrations')
-      .select('id')
-      .eq('user_id', user.id)
+      .rpc('get_integration_status', { p_user_id: user.id })
       .maybeSingle()
       .then(({ data }) => {
-        setGoogleConnected(!!data);
+        setGoogleConnected(data?.google_connected ?? false);
         setCheckingGoogle(false);
       });
   }, [user?.id]);
