@@ -261,7 +261,10 @@ export function ChatPanel({
     URL.revokeObjectURL(url);
   };
 
-  const processConsultation = async (audioBlob: Blob, mimeType: string, comments: string[]) => {
+  // NOTE: declared as a hoisted `function` (not a `const` arrow) so it can be
+  // referenced by the useRecording() call above before this line executes.
+  // A const arrow here causes a temporal-dead-zone ReferenceError at render.
+  async function processConsultation(audioBlob: Blob, mimeType: string, comments: string[]) {
     if (!patient) return;
     setIsProcessing(true);
 
