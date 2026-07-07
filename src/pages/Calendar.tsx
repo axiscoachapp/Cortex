@@ -330,7 +330,11 @@ export default function CalendarPage() {
         patients={patients}
         userId={user?.id ?? ''}
         googleConnected={googleConnected}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ['appointments', user?.id] })}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['appointments', user?.id] });
+          // Dashboard "Agenda de Hoje" uses its own key — refresh it too.
+          queryClient.invalidateQueries({ queryKey: ['appointments-today'] });
+        }}
       />
     </div>
   );

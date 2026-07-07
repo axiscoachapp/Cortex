@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays, Plus, ChevronRight, Clock, Users, UserPlus,
   RefreshCw, Stethoscope, CalendarX, Shield, Bell, MessageCircle, Mail, Loader2,
@@ -67,20 +67,25 @@ function formatTime(iso: string): string {
 export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation, userId }: WelcomeDashboardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const today = new Date().toISOString().split('T')[0];
+  const queryClient = useQueryClient();
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [sentReminderIds, setSentReminderIds] = useState<Set<string>>(new Set());
 
+  // Local-time day bounds. toISOString() is UTC — in Brazil (UTC-3) it rolls
+  // to "tomorrow" at 21:00 local and the agenda showed the wrong day.
+  const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(); dayEnd.setHours(23, 59, 59, 999);
+
   const { data: todayApts = [], isLoading: aptsLoading } = useQuery<Appointment[]>({
-    queryKey: ['appointments-today', userId],
+    queryKey: ['appointments-today', userId, dayStart.toDateString()],
     queryFn: async () => {
       if (!userId) return [];
       const { data } = await supabase
         .from('appointments')
         .select('*')
         .eq('user_id', userId)
-        .gte('start_time', `${today}T00:00:00`)
-        .lte('start_time', `${today}T23:59:59`)
+        .gte('start_time', dayStart.toISOString())
+        .lte('start_time', dayEnd.toISOString())
         .order('start_time');
       return data ?? [];
     },
@@ -123,6 +128,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
       if (error) throw error;
       if (type === 'whatsapp' && data?.waLink) window.open(data.waLink, '_blank');
       setSentReminderIds(prev => new Set([...prev, apt.id]));
+      queryClient.invalidateQueries({ queryKey: ['appointments-today'] });
       toast({ title: 'Lembrete enviado!', description: type === 'whatsapp' ? 'Link WhatsApp aberto.' : 'Email enviado.' });
     } catch {
       toast({ title: 'Erro ao enviar lembrete', variant: 'destructive' });

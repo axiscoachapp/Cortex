@@ -147,10 +147,19 @@ export function AppointmentModal({
       }
     }
 
+    const startDt = buildDateTime(date, startTime);
+    const endDt = buildDateTime(date, endTime);
+    if (endDt.getTime() <= startDt.getTime()) {
+      toast({
+        title: 'Horário inválido',
+        description: 'O horário de fim deve ser depois do início.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      const startDt = buildDateTime(date, startTime);
-      const endDt = buildDateTime(date, endTime);
 
       // Create new patient inline if needed
       let resolvedPatientId: string | null = patientId || null;
@@ -201,22 +210,24 @@ export function AppointmentModal({
         savedId = data.id;
       }
 
-      // Sync to Google Calendar if connected
+      // Sync to Google Calendar if connected — non-blocking, but surface failures
       if (googleConnected && savedId) {
         supabase.functions.invoke('sync-google-calendar', {
           body: {
             action: isEdit ? 'update' : 'create',
-            userId,
             appointment: {
               id: savedId,
-              title: payload.title,
-              start_time: payload.start_time,
-              end_time: payload.end_time,
-              notes: payload.notes,
               google_event_id: appointment?.googleEventId,
             },
           },
-        }).catch(() => {}); // non-blocking
+        }).then(({ error: syncError }) => {
+          if (syncError) {
+            toast({
+              title: 'Google Calendar não sincronizado',
+              description: 'A consulta foi salva, mas não foi enviada ao Google Calendar.',
+            });
+          }
+        }).catch(() => {});
       }
 
       toast({
@@ -238,7 +249,7 @@ export function AppointmentModal({
     try {
       if (googleConnected && appointment.googleEventId) {
         supabase.functions.invoke('sync-google-calendar', {
-          body: { action: 'delete', userId, appointment: { id: appointment.id, google_event_id: appointment.googleEventId } },
+          body: { action: 'delete', appointment: { id: appointment.id, google_event_id: appointment.googleEventId } },
         }).catch(() => {});
       }
       const { error } = await supabase.from('appointments').delete().eq('id', appointment.id);
