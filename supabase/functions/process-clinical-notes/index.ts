@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
+import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +34,8 @@ serve(async (req) => {
   }
 
   try {
-    const { patientId, notes, userId } = await req.json();
+    const { userId } = await requireUser(req);
+    const { patientId, notes } = await req.json();
 
     if (!patientId || !notes) {
       return new Response(
@@ -61,7 +63,15 @@ serve(async (req) => {
       .from('patients')
       .select('clinical_notes, ai_insights')
       .eq('id', patientId)
-      .single();
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!patient) {
+      return new Response(
+        JSON.stringify({ error: 'Paciente não encontrado' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
     const prompt = `Notas clínicas novas:
 ${notes}
@@ -119,7 +129,8 @@ ${patient?.clinical_notes || 'Nenhuma nota anterior'}`;
     const { error: updateError } = await supabaseClient
       .from('patients')
       .update({ clinical_notes: updatedNotes, ai_insights: insights })
-      .eq('id', patientId);
+      .eq('id', patientId)
+      .eq('user_id', userId);
 
     if (updateError) throw updateError;
 
@@ -133,6 +144,7 @@ ${patient?.clinical_notes || 'Nenhuma nota anterior'}`;
     );
 
   } catch (error) {
+    if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('process-clinical-notes error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro ao processar notas' }),

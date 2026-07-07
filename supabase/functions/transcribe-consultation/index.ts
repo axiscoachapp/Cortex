@@ -5,6 +5,7 @@ import {
 } from "../_shared/quota.ts";
 import { callGemini, uploadToGeminiFiles, buildPatientSummary } from "../_shared/gemini.ts";
 import { getSpecialtyPrompt } from "../_shared/specialty_prompts.ts";
+import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,15 +62,25 @@ serve(async (req) => {
   }
 
   try {
+    const { userId } = await requireUser(req);
     const {
-      patientId, userId, chiefComplaint, patientContext,
+      patientId, chiefComplaint, patientContext,
       audioStoragePath, audioMimeType, consultationComments, userSpecialty,
     } = await req.json();
 
-    if (!patientId || !userId || !audioStoragePath) {
+    if (!patientId || !audioStoragePath) {
       return new Response(
-        JSON.stringify({ error: 'patientId, userId e audioStoragePath são obrigatórios' }),
+        JSON.stringify({ error: 'patientId e audioStoragePath são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // The service-role download bypasses storage RLS — enforce the per-user
+    // path prefix here so no one can read (and then delete) another user's audio.
+    if (typeof audioStoragePath !== 'string' || !audioStoragePath.startsWith(`consultations/${userId}/`)) {
+      return new Response(
+        JSON.stringify({ error: 'audioStoragePath inválido' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
@@ -80,6 +91,20 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
+
+    // Verify the patient belongs to the authenticated user.
+    const { data: ownedPatient } = await supabase
+      .from('patients')
+      .select('id')
+      .eq('id', patientId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (!ownedPatient) {
+      return new Response(
+        JSON.stringify({ error: 'Paciente não encontrado' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
     // Reserve ~30 credits before starting the expensive audio call.
     try {
@@ -186,6 +211,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('transcribe-consultation error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),

@@ -4,6 +4,7 @@ import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
 import { callGemini, buildPatientSummary } from "../_shared/gemini.ts";
+import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -76,13 +77,14 @@ serve(async (req) => {
   }
 
   try {
+    const { userId } = await requireUser(req);
     const {
-      type, userId, soapNote, chiefComplaint, patientContext, targetSpecialty,
+      type, soapNote, chiefComplaint, patientContext, targetSpecialty,
     } = await req.json();
 
-    if (!type || !userId || !soapNote) {
+    if (!type || !soapNote) {
       return new Response(
-        JSON.stringify({ error: 'type, userId e soapNote são obrigatórios' }),
+        JSON.stringify({ error: 'type e soapNote são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -135,6 +137,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('generate-document error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),

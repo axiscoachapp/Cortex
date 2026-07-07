@@ -5,6 +5,7 @@ import {
 } from "../_shared/quota.ts";
 import { callGemini, buildPatientSummary } from "../_shared/gemini.ts";
 import { getSpecialtyPrompt } from "../_shared/specialty_prompts.ts";
+import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,12 +65,13 @@ serve(async (req) => {
   }
 
   try {
+    const { userId } = await requireUser(req);
     const body = await req.json();
-    const { patientId, userId, chiefComplaint, transcription, patientContext, userSpecialty } = body;
+    const { patientId, chiefComplaint, transcription, patientContext, userSpecialty } = body;
 
-    if (!patientId || !userId || transcription === undefined) {
+    if (!patientId || transcription === undefined) {
       return new Response(
-        JSON.stringify({ error: 'patientId, userId e transcription são obrigatórios' }),
+        JSON.stringify({ error: 'patientId e transcription são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -78,6 +80,21 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
+
+    // Ownership gate: the service-role client bypasses RLS, so verify the
+    // patient belongs to the authenticated user before any write.
+    const { data: ownedPatient } = await supabase
+      .from('patients')
+      .select('id')
+      .eq('id', patientId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (!ownedPatient) {
+      return new Response(
+        JSON.stringify({ error: 'Paciente não encontrado' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
     let soapNote: string;
     let whatsappMessage: string;
@@ -147,7 +164,8 @@ serve(async (req) => {
     await supabase
       .from('patients')
       .update({ last_visit: new Date().toISOString().split('T')[0], status: 'retorno' })
-      .eq('id', patientId);
+      .eq('id', patientId)
+      .eq('user_id', userId);
 
     // Best-effort: mark today's appointment as done
     try {
@@ -172,7 +190,7 @@ serve(async (req) => {
     try {
       const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
       if (GEMINI_API_KEY && soapNote.trim()) {
-        const { text: extractRaw } = await callGemini(
+        const { text: extractRaw, usage: extractUsage } = await callGemini(
           GEMINI_API_KEY,
           [{ text: soapNote }],
           {
@@ -184,6 +202,7 @@ serve(async (req) => {
             responseSchema: EXTRACT_SCHEMA,
           },
         );
+        await recordUsage(supabase, userId, creditsFromUsage(extractUsage));
         const parsed = JSON.parse(extractRaw);
         const d = Array.isArray(parsed.diagnoses)   ? parsed.diagnoses.filter((x: any) => x?.description?.trim())   : [];
         const m = Array.isArray(parsed.medications)  ? parsed.medications.filter((x: any) => x?.name?.trim())         : [];
@@ -198,6 +217,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('finalize-consultation error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),

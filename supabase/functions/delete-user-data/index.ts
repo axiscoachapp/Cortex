@@ -68,15 +68,33 @@ serve(async (req) => {
       await adminClient.storage.from('patient-files').remove(paths);
     }
 
-    // 2. Delete any residual audio recordings
-    const { data: audioObjects } = await adminClient.storage
-      .from('audio-recordings')
-      .list(`consultations/${userId}`);
-
-    if (audioObjects && audioObjects.length > 0) {
+    // 2. Delete any residual audio recordings — list() pages at 100 objects,
+    //    so loop until the folder is empty.
+    for (;;) {
+      const { data: audioObjects } = await adminClient.storage
+        .from('audio-recordings')
+        .list(`consultations/${userId}`, { limit: 100 });
+      if (!audioObjects || audioObjects.length === 0) break;
       const audioPaths = audioObjects.map((o: any) => `consultations/${userId}/${o.name}`);
       await adminClient.storage.from('audio-recordings').remove(audioPaths);
+      if (audioObjects.length < 100) break;
     }
+
+    // 2b. Revoke the Google OAuth grant so the stored refresh token becomes
+    //     useless even outside our DB. Best-effort — deletion proceeds regardless.
+    try {
+      const { data: integration } = await adminClient
+        .from('user_integrations')
+        .select('google_refresh_token')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (integration?.google_refresh_token) {
+        await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(integration.google_refresh_token)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        });
+      }
+    } catch { /* best-effort */ }
 
     // 3. Delete DB rows — most cascade automatically from patients/user_id FK,
     //    but we delete explicitly for clarity and to cover non-cascaded tables.

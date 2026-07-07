@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,11 +27,12 @@ serve(async (req) => {
   }
 
   try {
-    const { appointmentId, type, userId } = await req.json();
+    const { userId } = await requireUser(req);
+    const { appointmentId, type } = await req.json();
 
-    if (!appointmentId || !type || !userId) {
+    if (!appointmentId || !type) {
       return new Response(
-        JSON.stringify({ error: 'appointmentId, type e userId são obrigatórios' }),
+        JSON.stringify({ error: 'appointmentId e type são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -82,6 +84,13 @@ Em caso de necessidade, entre em contato para reagendamento.
 Até breve! 💙`;
 
       const waLink = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+
+      // Persist so the pending-reminders list stays correct across reloads.
+      await supabase
+        .from('appointments')
+        .update({ reminder_sent: true })
+        .eq('id', appointmentId)
+        .eq('user_id', userId);
 
       return new Response(
         JSON.stringify({ message, waLink }),
@@ -151,7 +160,8 @@ Até breve! 💙`;
       await supabase
         .from('appointments')
         .update({ reminder_sent: true })
-        .eq('id', appointmentId);
+        .eq('id', appointmentId)
+        .eq('user_id', userId);
 
       return new Response(
         JSON.stringify({ success: true }),
@@ -165,6 +175,7 @@ Até breve! 💙`;
     );
 
   } catch (error) {
+    if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('send-appointment-reminder error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),

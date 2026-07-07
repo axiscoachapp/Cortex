@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
+import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -103,11 +104,12 @@ serve(async (req) => {
   }
 
   try {
-    const { patientId, userId, comment } = await req.json();
+    const { userId } = await requireUser(req);
+    const { patientId, comment } = await req.json();
 
-    if (!patientId || !userId || !comment?.trim()) {
+    if (!patientId || !comment?.trim()) {
       return new Response(
-        JSON.stringify({ error: 'patientId, userId e comment são obrigatórios' }),
+        JSON.stringify({ error: 'patientId e comment são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -137,17 +139,26 @@ serve(async (req) => {
         .from('patients')
         .select('name, allergies, medications, diagnoses, clinical_notes')
         .eq('id', patientId)
+        .eq('user_id', userId)
         .maybeSingle(),
       supabase
         .from('consultations')
         .select('id, soap_note')
         .eq('patient_id', patientId)
+        .eq('user_id', userId)
         .gte('created_at', todayStart.toISOString())
         .lte('created_at', todayEnd.toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
     ]);
+
+    if (!patient) {
+      return new Response(
+        JSON.stringify({ error: 'Paciente não encontrado' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
     const hasConsultToday = !!todayConsult?.id;
     const existingAllergies: string[] = Array.isArray(patient?.allergies) ? patient!.allergies : [];
@@ -278,7 +289,8 @@ Comentário do médico:
       const { error: patientErr } = await supabase
         .from('patients')
         .update(patientUpdates)
-        .eq('id', patientId);
+        .eq('id', patientId)
+        .eq('user_id', userId);
       if (patientErr) throw patientErr;
     }
 
@@ -293,7 +305,8 @@ Comentário do médico:
       const { error: consultErr } = await supabase
         .from('consultations')
         .update({ soap_note: mergedSoap })
-        .eq('id', todayConsult!.id);
+        .eq('id', todayConsult!.id)
+        .eq('user_id', userId);
       if (consultErr) throw consultErr;
       appliedAddendum = true;
     }
@@ -309,7 +322,7 @@ Comentário do médico:
       });
       const entry = `[${stamp}] ${comment.trim()}`;
       const merged = patient?.clinical_notes ? `${patient.clinical_notes}\n${entry}` : entry;
-      await supabase.from('patients').update({ clinical_notes: merged }).eq('id', patientId);
+      await supabase.from('patients').update({ clinical_notes: merged }).eq('id', patientId).eq('user_id', userId);
       appliedLongTermNote = true;
     }
 
@@ -339,6 +352,7 @@ Comentário do médico:
     );
 
   } catch (error) {
+    if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('process-comment error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro ao processar comentário' }),

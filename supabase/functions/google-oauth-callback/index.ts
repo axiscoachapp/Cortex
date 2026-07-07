@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,11 +13,26 @@ serve(async (req) => {
   }
 
   try {
-    const { code, userId, redirectUri } = await req.json();
+    // The tokens are stored under the JWT-derived identity — a body-supplied
+    // userId would let an attacker bind their Google account to a victim's row.
+    const { userId } = await requireUser(req);
+    const { code, redirectUri } = await req.json();
 
-    if (!code || !userId || !redirectUri) {
+    if (!code || !redirectUri) {
       return new Response(
-        JSON.stringify({ error: 'code, userId e redirectUri são obrigatórios' }),
+        JSON.stringify({ error: 'code e redirectUri são obrigatórios' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // Google also validates redirect_uri against the registered list, but
+    // reject obviously foreign values before the token exchange.
+    try {
+      const parsed = new URL(redirectUri);
+      if (parsed.pathname !== '/google-oauth-callback') throw new Error();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'redirectUri inválido' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -78,6 +94,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
+    if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('google-oauth-callback error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),

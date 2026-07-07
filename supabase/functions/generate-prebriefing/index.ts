@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
+import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,7 +39,8 @@ serve(async (req) => {
   }
 
   try {
-    const { patientId, patientContext, userId } = await req.json();
+    const { userId } = await requireUser(req);
+    const { patientId, patientContext } = await req.json();
 
     if (!patientId) {
       return new Response(
@@ -62,6 +64,7 @@ serve(async (req) => {
         .from('consultations')
         .select('id, chief_complaint, soap_note, created_at, pre_briefing')
         .eq('patient_id', patientId)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -69,6 +72,7 @@ serve(async (req) => {
         .from('patients')
         .select('clinical_notes')
         .eq('id', patientId)
+        .eq('user_id', userId)
         .maybeSingle(),
     ]);
 
@@ -142,17 +146,14 @@ ${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consulta
     }
 
     const geminiData = await res.json();
-    const finishReason = geminiData.candidates?.[0]?.finishReason;
-    console.log('Gemini finishReason:', finishReason);
 
     await recordUsage(supabase, userId, creditsFromUsage(geminiData.usageMetadata));
 
-    // When thinkingBudget > 0, thinking tokens appear first (thought: true); find the actual response part
+    // When thinkingBudget > 0, thinking tokens appear first (thought: true); find the actual response part.
+    // Never log part contents — they contain patient clinical data.
     const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
-    console.log('Gemini parts count:', parts.length, 'rawParts:', JSON.stringify(parts).slice(0, 200));
     const responsePart = parts.find((p: any) => !p.thought) ?? parts[parts.length - 1];
     const rawText = responsePart?.text ?? '';
-    console.log('rawText preview:', rawText.slice(0, 200));
 
     let briefing: Record<string, unknown> | null = null;
     try {
@@ -166,7 +167,7 @@ ${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consulta
     }
 
     if (!briefing) {
-      console.error('Gemini returned unusable briefing. rawText:', rawText);
+      console.error('Gemini returned unusable briefing (invalid JSON or missing returnInfo)');
       return new Response(JSON.stringify(null), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -174,7 +175,8 @@ ${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consulta
     await supabase
       .from('consultations')
       .update({ pre_briefing: briefing })
-      .eq('id', last.id);
+      .eq('id', last.id)
+      .eq('user_id', userId);
 
     return new Response(
       JSON.stringify(briefing),
@@ -182,6 +184,7 @@ ${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consulta
     );
 
   } catch (error) {
+    if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('generate-prebriefing error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),

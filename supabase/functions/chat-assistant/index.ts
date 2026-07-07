@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
+import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -81,12 +82,20 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { patientId, patientContext, chatHistory, userMessage, userId } = body;
+    const { userId } = await requireUser(req);
 
-    if (!userMessage) {
+    const body = await req.json();
+    const { patientId, patientContext, chatHistory, userMessage } = body;
+
+    if (!userMessage || typeof userMessage !== 'string') {
       return new Response(
         JSON.stringify({ error: 'userMessage é obrigatório' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+    if (userMessage.length > 4000) {
+      return new Response(
+        JSON.stringify({ error: 'Mensagem muito longa (máx. 4000 caracteres)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -111,16 +120,20 @@ serve(async (req) => {
     let patientRow: any = null;
     let consultations: any[] = [];
     if (patientId) {
+      // Ownership enforced: the service-role client bypasses RLS, so every
+      // query MUST be scoped to the JWT-derived userId.
       const [{ data: p }, { data: c }] = await Promise.all([
         supabase
           .from('patients')
           .select('name, age, diagnoses, medications, allergies, social_anamnesis, medical_history, clinical_notes')
           .eq('id', patientId)
+          .eq('user_id', userId)
           .maybeSingle(),
         supabase
           .from('consultations')
           .select('created_at, chief_complaint, soap_note')
           .eq('patient_id', patientId)
+          .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(5),
       ]);
@@ -178,11 +191,14 @@ Alergias: ${allergies}`;
     // ── Build conversation history ───────────────────────────────────────────
     const historyLines: string[] = [];
     if (Array.isArray(chatHistory)) {
-      for (const msg of chatHistory) {
+      // Cap turns and per-message length — client input flows into the prompt.
+      for (const msg of chatHistory.slice(-10)) {
+        const content = typeof msg?.content === 'string' ? msg.content.slice(0, 2000) : '';
+        if (!content) continue;
         if (msg.type === 'user') {
-          historyLines.push(`Médico: ${msg.content}`);
+          historyLines.push(`Médico: ${content}`);
         } else if (msg.type === 'assistant') {
-          historyLines.push(`Assistente: ${msg.content}`);
+          historyLines.push(`Assistente: ${content}`);
         }
       }
     }
@@ -213,6 +229,7 @@ Alergias: ${allergies}`;
     );
 
   } catch (error) {
+    if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('chat-assistant error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),

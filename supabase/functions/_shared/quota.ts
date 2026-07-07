@@ -92,8 +92,10 @@ export async function checkQuota(
   estimatedCredits: number = 0,
 ): Promise<{ used: number; limit: number }> {
   if (!userId) {
-    // No user → no quota enforcement; let the call through.
-    return { used: 0, limit: DEFAULT_DAILY_LIMIT };
+    // No identity → refuse. A silent pass-through here let callers bypass
+    // quota entirely by omitting userId. All callers now derive userId from
+    // the JWT (see _shared/auth.ts), so this only fires on programming errors.
+    throw new Error("checkQuota chamado sem userId autenticado");
   }
   const [limit, used] = await Promise.all([getLimit(supabase, userId), getUsed(supabase, userId)]);
   if (used >= limit) throw new QuotaExceededError(used, limit);
