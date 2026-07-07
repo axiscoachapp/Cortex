@@ -64,13 +64,15 @@ const Index = () => {
   };
 
   const handleSelectPatient = async (patient: Patient) => {
+    const requestedId = patient.id;
+    selectedPatientIdRef.current = requestedId;
     setSelectedPatient(patient);
     setChatMessages([]);
     setChiefComplaint('');
 
     setMobileView('chat');
 
-    const cached = preBriefingCache.current.get(patient.id);
+    const cached = preBriefingCache.current.get(requestedId);
     if (cached) {
       setPreBriefing(cached);
       setBriefingLoading(false);
@@ -82,8 +84,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase.functions.invoke('generate-prebriefing', {
         body: {
-          patientId: patient.id,
-          userId: user?.id,
+          patientId: requestedId,
           patientContext: {
             name: patient.name,
             age: patient.age,
@@ -95,18 +96,45 @@ const Index = () => {
       });
       // Refresh usage meter regardless of whether briefing was cached or generated.
       queryClient.invalidateQueries({ queryKey: ['usage-daily', user?.id] });
-      if (!error && data) {
-        preBriefingCache.current.set(patient.id, data);
-        setPreBriefing(data);
+      if (error) {
+        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
+          ? await (error as any).context.json().catch(() => null)
+          : null;
+        if (body?.quotaExceeded) {
+          toast({
+            title: 'Limite diário atingido',
+            description: 'O resumo pré-consulta não pôde ser gerado hoje.',
+            variant: 'destructive',
+          });
+        }
+      } else if (data) {
+        preBriefingCache.current.set(requestedId, data);
+        // A slow response for a previously selected patient must never
+        // overwrite the briefing of the patient displayed now.
+        if (selectedPatientIdRef.current === requestedId) setPreBriefing(data);
       }
     } catch {
       // non-critical
     } finally {
-      setBriefingLoading(false);
+      if (selectedPatientIdRef.current === requestedId) setBriefingLoading(false);
     }
   };
 
   const preBriefingCache = useRef<Map<string, PreBriefing>>(new Map());
+  const selectedPatientIdRef = useRef<string | null>(null);
+
+  // Keep the selectedPatient snapshot in sync with the patients query so
+  // profile updates (diagnoses, medications) show up without re-selecting.
+  useEffect(() => {
+    setSelectedPatient(prev => {
+      if (!prev) return prev;
+      const fresh = patients.find(p => p.id === prev.id);
+      if (!fresh) return prev;
+      // Preserve the transient local 'atendimento' status set on consult start.
+      const next = prev.status === 'atendimento' ? { ...fresh, status: prev.status } : fresh;
+      return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+    });
+  }, [patients]);
 
   const handleStartConsultation = async (
     patientId: string | null,
@@ -136,11 +164,17 @@ const Index = () => {
       patient = mapPatientRow(data);
       queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
     } else {
-      patient = patients.find(p => p.id === patientId) || patients[0];
+      const found = patients.find(p => p.id === patientId);
+      if (!found) {
+        toast({ title: 'Paciente não encontrado', description: 'Selecione o paciente novamente.', variant: 'destructive' });
+        return;
+      }
+      patient = found;
       await supabase.from('patients').update({ status: 'atendimento' }).eq('id', patient.id);
       queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
     }
 
+    selectedPatientIdRef.current = patient.id;
     setSelectedPatient({ ...patient, status: 'atendimento' });
     setChiefComplaint(complaint);
     setChatMessages([]);
@@ -194,18 +228,26 @@ const Index = () => {
           'md:flex-1 md:border-x md:border-border/50',
           (mobileView === 'home' || mobileView === 'chat') ? 'flex-1' : 'hidden md:flex',
         )}>
-          {selectedPatient && (!isMobile || mobileView === 'chat') ? (
-            <ChatPanel
-              patient={selectedPatient}
-              messages={chatMessages}
-              onMessagesChange={setChatMessages}
-              chiefComplaint={chiefComplaint}
-              preBriefing={preBriefing}
-              briefingLoading={briefingLoading}
-              userId={user?.id ?? ''}
-              onConsultationSaved={(patientId) => preBriefingCache.current.delete(patientId)}
-            />
-          ) : (
+          {/* ChatPanel stays MOUNTED on mobile tab switches (CSS-hidden) so an
+              active recording keeps running instead of being silently killed. */}
+          {selectedPatient && (
+            <div className={cn(
+              'h-full min-h-0 flex-col',
+              (!isMobile || mobileView === 'chat') ? 'flex' : 'hidden',
+            )}>
+              <ChatPanel
+                patient={selectedPatient}
+                messages={chatMessages}
+                onMessagesChange={setChatMessages}
+                chiefComplaint={chiefComplaint}
+                preBriefing={preBriefing}
+                briefingLoading={briefingLoading}
+                userId={user?.id ?? ''}
+                onConsultationSaved={(patientId) => preBriefingCache.current.delete(patientId)}
+              />
+            </div>
+          )}
+          {(!selectedPatient || (isMobile && mobileView !== 'chat')) && (
             <WelcomeDashboard
               patients={patients}
               onSelectPatient={handleSelectPatient}

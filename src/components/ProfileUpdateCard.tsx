@@ -4,6 +4,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ProfileUpdates, Diagnosis, Medication } from '@/types/patient';
 
+/** Union of existing profile entries (untouched) plus the accepted new ones. */
+export interface MergedProfile {
+  diagnoses: Diagnosis[];
+  medications: Medication[];
+  allergies: string[];
+}
+
 interface ProfileUpdateCardProps {
   initial: ProfileUpdates;
   existing: {
@@ -12,17 +19,21 @@ interface ProfileUpdateCardProps {
     allergies: string[];
   };
   missingFields: string[];
-  onAccept: (merged: ProfileUpdates) => Promise<void>;
+  onAccept: (merged: MergedProfile) => Promise<void>;
   onDismiss: () => void;
 }
 
 type Status = 'pending' | 'editing' | 'saving' | 'accepted' | 'dismissed';
 
-function mergeDiagnoses(existing: Diagnosis[], incoming: { description: string }[]): { description: string }[] {
+// Merges keep the EXISTING objects intact — mapping them to new shapes here
+// would silently erase ICD codes and medication start dates on write-back.
+function mergeDiagnoses(existing: Diagnosis[], incoming: { description: string }[]): Diagnosis[] {
   const existingDescs = new Set(existing.map(d => d.description.toLowerCase().trim()));
-  const base = existing.map(d => ({ description: d.description }));
+  const base: Diagnosis[] = [...existing];
   for (const inc of incoming) {
-    if (!existingDescs.has(inc.description.toLowerCase().trim())) base.push(inc);
+    if (!existingDescs.has(inc.description.toLowerCase().trim())) {
+      base.push({ code: '', description: inc.description });
+    }
   }
   return base;
 }
@@ -30,11 +41,14 @@ function mergeDiagnoses(existing: Diagnosis[], incoming: { description: string }
 function mergeMedications(
   existing: Medication[],
   incoming: { name: string; dosage: string; instructions: string }[],
-): { name: string; dosage: string; instructions: string }[] {
+): Medication[] {
   const existingNames = new Set(existing.map(m => m.name.toLowerCase().trim()));
-  const base = existing.map(m => ({ name: m.name, dosage: m.dosage, instructions: m.instructions }));
+  const base: Medication[] = [...existing];
+  const today = new Date().toISOString().split('T')[0];
   for (const inc of incoming) {
-    if (!existingNames.has(inc.name.toLowerCase().trim())) base.push(inc);
+    if (!existingNames.has(inc.name.toLowerCase().trim())) {
+      base.push({ ...inc, startedAt: today });
+    }
   }
   return base;
 }
@@ -88,8 +102,9 @@ export function ProfileUpdateCard({
   if (!hasSomething && missingFields.length === 0) return null;
 
   const handleAccept = async () => {
+    const wasEditing = status === 'editing';
     const data: ProfileUpdates =
-      status === 'editing'
+      wasEditing
         ? {
             diagnoses:   editDx.filter(Boolean).map(d => ({ description: d })),
             medications: editMeds.filter(m => m.name.trim()),
@@ -98,12 +113,18 @@ export function ProfileUpdateCard({
         : initial;
 
     setStatus('saving');
-    await onAccept({
-      diagnoses:   mergeDiagnoses(existing.diagnoses, data.diagnoses),
-      medications: mergeMedications(existing.medications, data.medications),
-      allergies:   mergeAllergies(existing.allergies, data.allergies),
-    });
-    setStatus('accepted');
+    try {
+      await onAccept({
+        diagnoses:   mergeDiagnoses(existing.diagnoses, data.diagnoses),
+        medications: mergeMedications(existing.medications, data.medications),
+        allergies:   mergeAllergies(existing.allergies, data.allergies),
+      });
+      setStatus('accepted');
+    } catch {
+      // Save failed (parent already toasted) — return to the previous state
+      // so the doctor can retry instead of the card lying about success.
+      setStatus(wasEditing ? 'editing' : 'pending');
+    }
   };
 
   return (

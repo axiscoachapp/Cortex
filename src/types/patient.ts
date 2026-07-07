@@ -55,4 +55,6 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   profileUpdates?: ProfileUpdates;
+  /** For 'soap' messages: the consultation row this note was saved to. */
+  consultationId?: string;
 }

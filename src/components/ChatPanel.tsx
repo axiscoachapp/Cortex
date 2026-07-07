@@ -16,10 +16,14 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ConsultationReviewModal } from '@/components/ConsultationReviewModal';
 import { DocumentPreviewModal } from '@/components/DocumentPreviewModal';
-import { ProfileUpdateCard } from '@/components/ProfileUpdateCard';
+import { ProfileUpdateCard, MergedProfile } from '@/components/ProfileUpdateCard';
 import { ProfileUpdates } from '@/types/patient';
 import { printSoap } from '@/lib/printDoc';
 import { UsageMeter, UsageOverBanner } from '@/components/UsageMeter';
+
+/** Thrown after an error was already surfaced to the user (e.g. quota toast)
+ *  so upstream catch blocks skip their generic error toast. */
+class HandledError extends Error {}
 
 export interface PreBriefing {
   returnInfo: string;
@@ -37,7 +41,9 @@ export interface PreBriefing {
 interface ChatPanelProps {
   patient: Patient | null;
   messages: ChatMessage[];
-  onMessagesChange: (msgs: ChatMessage[]) => void;
+  /** Accepts a functional updater so concurrent async writers (transcription
+   *  finishing while the doctor chats) never clobber each other's messages. */
+  onMessagesChange: (msgs: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => void;
   chiefComplaint: string;
   preBriefing: PreBriefing | null;
   briefingLoading: boolean;
@@ -87,6 +93,9 @@ export function ChatPanel({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const consultationCommentsRef = useRef<string[]>([]);
+  // Tracks the currently displayed patient so async work started for a
+  // previous patient (transcription takes 30s+) never writes into this chat.
+  const activePatientIdRef = useRef<string | null>(patient?.id ?? null);
 
   const recording = useRecording({
     onStop: processConsultation,
@@ -104,11 +113,25 @@ export function ChatPanel({
   const { specialty } = useUserSettings();
 
   useEffect(() => {
+    activePatientIdRef.current = patient?.id ?? null;
     setShowBriefing(true);
     setBriefingExpanded(false);
     consultationCommentsRef.current = [];
     setConsultationComments([]);
-    recording.cancelStop();
+    setCurrentConsultationId(null);
+    setReviewData(null);
+    if (recording.isRecording) {
+      // Never let a recording started for patient A be processed under
+      // patient B — that would write a consultation into the wrong chart.
+      recording.discard();
+      toast({
+        title: 'Gravação descartada',
+        description: 'A gravação em andamento foi descartada ao trocar de paciente.',
+        variant: 'destructive',
+      });
+    } else {
+      recording.cancelStop();
+    }
   }, [patient?.id]);
 
   useEffect(() => {
@@ -149,25 +172,14 @@ export function ChatPanel({
         body: { patientId: patient.id, userId, comment: text },
       });
       if (error) {
-        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
-          ? await (error as any).context.json().catch(() => null)
-          : null;
-        if (body?.quotaExceeded) {
-          toast({
-            title: 'Limite diário atingido',
-            description: body.error ?? 'Aguarde o reset diário ou solicite aumento.',
-            variant: 'destructive',
-          });
-          queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
-          return;
-        }
+        if (await handleQuotaError(error)) return;
         throw error;
       }
 
       const summary: string = data?.summary ?? 'Comentário processado.';
       const appliedAddendum: boolean = !!data?.appliedAddendum;
 
-      onMessagesChange([...messages, {
+      onMessagesChange(prev => [...prev, {
         id: `note-${Date.now()}`,
         type: 'assistant',
         title: appliedAddendum ? 'Adendo na consulta de hoje' : 'Comentário processado',
@@ -202,6 +214,24 @@ export function ChatPanel({
     allergies: patient.allergies,
   } : {};
 
+  /** supabase-js wraps non-2xx as FunctionsHttpError with the JSON body on
+   *  err.context. Returns true when the error was a quota 429 (and toasts). */
+  const handleQuotaError = async (error: unknown): Promise<boolean> => {
+    const body = (error as any)?.context && typeof (error as any).context.json === 'function'
+      ? await (error as any).context.json().catch(() => null)
+      : null;
+    if (body?.quotaExceeded) {
+      toast({
+        title: 'Limite diário atingido',
+        description: body.error ?? 'Aguarde o reset diário ou solicite aumento.',
+        variant: 'destructive',
+      });
+      queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
+      return true;
+    }
+    return false;
+  };
+
   // Shared save logic — called from auto-confirm path (saveDirect) or review modal (with comments)
   const submitFinalSoap = async (
     transcription: string,
@@ -223,13 +253,20 @@ export function ChatPanel({
           userSpecialty: specialty,
         };
     const { data, error } = await supabase.functions.invoke('finalize-consultation', { body });
-    if (error) throw error;
-    setCurrentConsultationId(data.consultationId ?? null);
-    pushToChat(data.soapNote, data.whatsappMessage, data.profileUpdates);
-    setReviewData(null);
+    if (error) {
+      if (await handleQuotaError(error)) throw new HandledError();
+      throw error;
+    }
     // Clear the stale pre-briefing cache for this patient now that a new
     // consultation has been saved — the parent will regenerate on next select.
-    if (patient?.id) onConsultationSaved?.(patient.id);
+    onConsultationSaved?.(patient.id);
+    // The doctor may have switched patients during the 30s+ processing window.
+    // The note was saved to the correct chart (closure `patient`); just don't
+    // inject it into the chat of whoever is displayed now.
+    if (activePatientIdRef.current !== patient.id) return;
+    setCurrentConsultationId(data.consultationId ?? null);
+    pushToChat(data.soapNote, data.whatsappMessage, data.profileUpdates, data.consultationId ?? undefined);
+    setReviewData(null);
     toast({ title: 'Consulta salva!', description: 'Evolução clínica gerada com sucesso.' });
   };
 
@@ -297,18 +334,7 @@ export function ChatPanel({
         },
       });
       if (error) {
-        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
-          ? await (error as any).context.json().catch(() => null)
-          : null;
-        if (body?.quotaExceeded) {
-          toast({
-            title: 'Limite diário atingido',
-            description: body.error ?? 'Aguarde o reset diário ou solicite aumento do limite.',
-            variant: 'destructive',
-          });
-          queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
-          return;
-        }
+        if (await handleQuotaError(error)) return;
         throw error;
       }
 
@@ -320,7 +346,8 @@ export function ChatPanel({
 
       if (quality === 'good' && clarifications.length === 0 && differentialDiagnoses.length === 0 && drugInteractionAlerts.length === 0) {
         await submitFinalSoap(data.transcription ?? '', '', data.soapNote ?? '', data.whatsappMessage ?? '');
-      } else {
+      } else if (activePatientIdRef.current === patient.id) {
+        // Only open the review modal if the doctor is still on this patient.
         setReviewData({
           transcription: data.transcription ?? '',
           soapDraft: data.soapNote ?? '',
@@ -332,11 +359,13 @@ export function ChatPanel({
         });
       }
     } catch (err: any) {
-      toast({
-        title: 'Erro ao processar consulta',
-        description: err.message || 'Tente novamente.',
-        variant: 'destructive',
-      });
+      if (!(err instanceof HandledError)) {
+        toast({
+          title: 'Erro ao processar consulta',
+          description: err.message || 'Tente novamente.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -356,8 +385,7 @@ export function ChatPanel({
       content: text,
       timestamp: new Date(),
     };
-    const withUser = [...messages, userMsg];
-    onMessagesChange(withUser);
+    onMessagesChange(prev => [...prev, userMsg]);
     setIsChatLoading(true);
 
     try {
@@ -382,22 +410,10 @@ export function ChatPanel({
         },
       });
       if (error) {
-        // supabase-js wraps non-2xx as FunctionsHttpError; the JSON body lives on err.context
-        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
-          ? await (error as any).context.json().catch(() => null)
-          : null;
-        if (body?.quotaExceeded) {
-          toast({
-            title: 'Limite diário atingido',
-            description: body.error ?? 'Aguarde o reset diário ou solicite aumento.',
-            variant: 'destructive',
-          });
-          queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
-          return;
-        }
+        if (await handleQuotaError(error)) return;
         throw error;
       }
-      onMessagesChange([...withUser, {
+      onMessagesChange(prev => [...prev, {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
         title: 'Assistente Clínico',
@@ -421,7 +437,8 @@ export function ChatPanel({
       return;
     }
 
-    // comment mode
+    // comment mode — guard against Enter re-submitting while a note is saving
+    if (savingNote) return;
     setInputValue('');
     if (isRecording) {
       addTranscriptionComment(text);
@@ -431,29 +448,42 @@ export function ChatPanel({
   };
 
   const handleSaveEdit = async (messageId: string) => {
-    if (currentConsultationId) {
-      await supabase
+    // Update the consultation this specific message belongs to — using the
+    // panel-level currentConsultationId here would overwrite the LATEST
+    // consultation even when the doctor edited an older SOAP card.
+    const target = messages.find(m => m.id === messageId);
+    const targetConsultationId = target?.consultationId ?? null;
+    if (targetConsultationId) {
+      const { error } = await supabase
         .from('consultations')
         .update({ soap_note: editedContent })
-        .eq('id', currentConsultationId);
+        .eq('id', targetConsultationId);
+      if (error) {
+        toast({
+          title: 'Erro ao salvar alterações',
+          description: 'A evolução não foi atualizada no prontuário. Tente novamente.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
-    onMessagesChange(messages.map(m =>
+    onMessagesChange(prev => prev.map(m =>
       m.id === messageId ? { ...m, content: editedContent } : m
     ));
     setEditingId(null);
     toast({ title: 'Alterações salvas', description: 'A evolução clínica foi atualizada.' });
   };
 
-  const pushToChat = (soapNote: string, whatsappMessage: string, profileUpdates?: ProfileUpdates) => {
+  const pushToChat = (soapNote: string, whatsappMessage: string, profileUpdates?: ProfileUpdates, consultationId?: string) => {
     const now = new Date();
-    const next: typeof messages = [
-      ...messages,
+    const cards: ChatMessage[] = [
       {
         id: `soap-${now.getTime()}`,
         type: 'soap',
         title: 'Evolução Clínica',
         content: soapNote,
         timestamp: now,
+        consultationId,
       },
       {
         id: `wa-${now.getTime()}`,
@@ -468,7 +498,7 @@ export function ChatPanel({
       profileUpdates.medications.length > 0 ||
       profileUpdates.allergies.length > 0
     )) {
-      next.push({
+      cards.push({
         id: `profile-${now.getTime()}`,
         type: 'profile-update',
         title: 'Atualização do Perfil Clínico',
@@ -477,7 +507,7 @@ export function ChatPanel({
         profileUpdates,
       });
     }
-    onMessagesChange(next);
+    onMessagesChange(prev => [...prev, ...cards]);
   };
 
   // Phase 2: generate final SOAP (with doctor comments) → save to DB → show in chat
@@ -486,8 +516,10 @@ export function ChatPanel({
     setIsGeneratingFinal(true);
     try {
       await submitFinalSoap(reviewData.transcription, comments);
-    } catch {
-      toast({ title: 'Erro ao gerar evolução', description: 'Tente novamente.', variant: 'destructive' });
+    } catch (err) {
+      if (!(err instanceof HandledError)) {
+        toast({ title: 'Erro ao gerar evolução', description: 'Tente novamente.', variant: 'destructive' });
+      }
     } finally {
       setIsGeneratingFinal(false);
     }
@@ -514,16 +546,26 @@ export function ChatPanel({
     printSoap(soapNote, patient, chiefComplaint);
   };
 
-  const handleProfileAccept = async (merged: ProfileUpdates) => {
+  // Receives fully merged arrays from ProfileUpdateCard — existing entries
+  // keep their ICD codes / startedAt; writing mapped copies here would erase them.
+  const handleProfileAccept = async (merged: MergedProfile) => {
     if (!patient) return;
-    await supabase
+    const { error } = await supabase
       .from('patients')
       .update({
-        diagnoses:   merged.diagnoses.map(d => ({ code: '', description: d.description })),
-        medications: merged.medications.map(m => ({ name: m.name, dosage: m.dosage, instructions: m.instructions })),
+        diagnoses:   merged.diagnoses,
+        medications: merged.medications,
         allergies:   merged.allergies,
       })
       .eq('id', patient.id);
+    if (error) {
+      toast({
+        title: 'Erro ao atualizar perfil',
+        description: 'As alterações não foram salvas. Tente novamente.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
     queryClient.invalidateQueries({ queryKey: ['patients', userId] });
     queryClient.invalidateQueries({ queryKey: ['patient-detail', patient.id] });
     toast({ title: 'Perfil atualizado!', description: 'Diagnósticos, medicamentos e alergias sincronizados.' });
@@ -542,17 +584,17 @@ export function ChatPanel({
     setDocumentModal({ type, content: '', isLoading: true });
     try {
       const { data, error } = await supabase.functions.invoke('generate-document', {
-        body: {
-          type,
-          userId,
-          soapNote,
-          chiefComplaint,
-          patientContext,
-          ...(type === 'referral' ? {} : {}),
-        },
+        body: { type, soapNote, chiefComplaint, patientContext },
       });
-      if (error) throw error;
+      if (error) {
+        if (await handleQuotaError(error)) {
+          setDocumentModal(null);
+          return;
+        }
+        throw error;
+      }
       setDocumentModal({ type, content: data.document ?? '', isLoading: false });
+      queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
     } catch (err: any) {
       setDocumentModal(null);
       toast({

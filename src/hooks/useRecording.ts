@@ -16,6 +16,8 @@ export interface RecordingActions {
   confirmStop: () => void;
   cancelStop: () => void;
   pauseToggle: () => void;
+  /** Abort the recording WITHOUT processing: releases the mic, drops the audio. */
+  discard: () => void;
 }
 
 interface UseRecordingOptions {
@@ -76,12 +78,19 @@ export function useRecording({
       source.connect(analyser);
       analyserRef.current = analyser;
       const data = new Uint8Array(analyser.frequencyBinCount);
+      // Throttle state updates to ~10fps — a 60fps setState re-renders the
+      // whole consuming component (messages list included) for every frame.
+      let lastUpdate = 0;
       const tick = () => {
         analyser.getByteTimeDomainData(data);
         const rms = Math.sqrt(
           data.reduce((s, v) => s + ((v - 128) / 128) ** 2, 0) / data.length,
         );
-        setAudioLevel(Math.min(rms * 6, 1));
+        const now = performance.now();
+        if (now - lastUpdate >= 100) {
+          lastUpdate = now;
+          setAudioLevel(Math.min(rms * 6, 1));
+        }
         animFrameRef.current = requestAnimationFrame(tick);
       };
       tick();
@@ -157,6 +166,40 @@ export function useRecording({
     setStopConfirming(false);
   }, []);
 
+  const discard = useCallback(() => {
+    const rec = mediaRecorderRef.current;
+    if (rec && rec.state !== 'inactive') {
+      // Detach the handler first so the audio is dropped, not processed.
+      rec.onstop = null;
+      try { rec.stop(); } catch { /* already stopped */ }
+    }
+    mediaRecorderRef.current = null;
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    audioChunksRef.current = [];
+    stopAudioLevel();
+    stopTimer();
+    setIsRecording(false);
+    setIsPaused(false);
+    setStopConfirming(false);
+    setRecordingSeconds(0);
+  }, []);
+
+  // Unmount safety net: release the microphone and timers if the consuming
+  // component unmounts mid-recording (e.g. sign-out or route change). Without
+  // this the mic indicator stays lit and the browser keeps capturing audio.
+  useEffect(() => () => {
+    const rec = mediaRecorderRef.current;
+    if (rec && rec.state !== 'inactive') {
+      rec.onstop = null;
+      try { rec.stop(); } catch { /* already stopped */ }
+    }
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    cancelAnimationFrame(animFrameRef.current);
+    audioCtxRef.current?.close().catch(() => {});
+    if (timerRef.current) clearInterval(timerRef.current);
+  }, []);
+
   const pauseToggle = useCallback(() => {
     if (!mediaRecorderRef.current) return;
     if (isPaused) {
@@ -184,5 +227,6 @@ export function useRecording({
     confirmStop,
     cancelStop,
     pauseToggle,
+    discard,
   };
 }
