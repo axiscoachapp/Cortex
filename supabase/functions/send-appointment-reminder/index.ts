@@ -1,10 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import {
+  checkQuota, recordUsage, quotaResponse, QuotaExceededError,
+} from "../_shared/quota.ts";
 
+// Reminders aren't a Gemini call, but metering them against the same daily
+// budget caps abuse (unbounded email/link generation) without new infra.
+const REMINDER_COST = 2;
+
+// Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
+// secret to your app's origin to lock cross-origin access down to it.
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Vary': 'Origin',
 };
 
 function formatDate(iso: string): string {
@@ -41,6 +51,13 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
+
+    try {
+      await checkQuota(supabase, userId, REMINDER_COST);
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
+    }
 
     // Fetch appointment + patient
     const { data: appt, error: apptError } = await supabase
@@ -91,6 +108,8 @@ Até breve! 💙`;
         .update({ reminder_sent: true })
         .eq('id', appointmentId)
         .eq('user_id', userId);
+
+      await recordUsage(supabase, userId, REMINDER_COST);
 
       return new Response(
         JSON.stringify({ message, waLink }),
@@ -162,6 +181,8 @@ Até breve! 💙`;
         .update({ reminder_sent: true })
         .eq('id', appointmentId)
         .eq('user_id', userId);
+
+      await recordUsage(supabase, userId, REMINDER_COST);
 
       return new Response(
         JSON.stringify({ success: true }),

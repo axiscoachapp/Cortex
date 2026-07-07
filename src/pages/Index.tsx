@@ -106,6 +106,13 @@ const Index = () => {
             description: 'O resumo pré-consulta não pôde ser gerado hoje.',
             variant: 'destructive',
           });
+        } else {
+          // Non-quota failure — surface a subtle notice instead of silently
+          // degrading to the "primeira consulta" empty state.
+          toast({
+            title: 'Resumo pré-consulta indisponível',
+            description: 'Não foi possível gerar o resumo agora. Você pode seguir com a consulta normalmente.',
+          });
         }
       } else if (data) {
         preBriefingCache.current.set(requestedId, data);

@@ -7,9 +7,12 @@ import { callGemini, buildPatientSummary } from "../_shared/gemini.ts";
 import { getSpecialtyPrompt } from "../_shared/specialty_prompts.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
+// Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
+// secret to your app's origin to lock cross-origin access down to it.
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Vary': 'Origin',
 };
 
 // SOAP_SYSTEM resolved per request via getSpecialtyPrompt().
@@ -190,6 +193,11 @@ serve(async (req) => {
     try {
       const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
       if (GEMINI_API_KEY && soapNote.trim()) {
+        // Gate the extraction on remaining budget too — a QuotaExceededError
+        // here is caught below and simply skips extraction (the consultation
+        // itself is already saved). Closes the saveDirect path where the main
+        // quota check is skipped.
+        await checkQuota(supabase, userId, 1);
         const { text: extractRaw, usage: extractUsage } = await callGemini(
           GEMINI_API_KEY,
           [{ text: soapNote }],

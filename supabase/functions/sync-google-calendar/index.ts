@@ -2,9 +2,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
+// Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
+// secret to your app's origin to lock cross-origin access down to it.
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Vary': 'Origin',
 };
 
 async function getAccessToken(supabase: any, userId: string): Promise<string> {

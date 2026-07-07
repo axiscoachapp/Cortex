@@ -5,9 +5,12 @@ import {
 } from "../_shared/quota.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
+// Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
+// secret to your app's origin to lock cross-origin access down to it.
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Vary': 'Origin',
 };
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
