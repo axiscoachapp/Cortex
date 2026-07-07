@@ -17,6 +17,8 @@ export default function DataPrivacy() {
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const deleteConfirmed = confirmText.trim().toUpperCase() === 'EXCLUIR';
 
   const handleExport = async () => {
     if (!user?.id) return;
@@ -173,11 +175,26 @@ export default function DataPrivacy() {
                   </p>
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              <div className="space-y-1.5">
+                <label htmlFor="delete-confirm" className="text-sm text-foreground/80">
+                  Digite <strong>EXCLUIR</strong> para confirmar:
+                </label>
+                <input
+                  id="delete-confirm"
+                  type="text"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="EXCLUIR"
+                  autoComplete="off"
+                  className="w-full h-10 px-3 rounded-lg text-sm border border-border bg-background focus:outline-none focus:ring-2 focus:ring-destructive/30"
+                />
+              </div>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogCancel onClick={() => setConfirmText('')}>Cancelar</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDeleteAccount}
-                  className="bg-destructive hover:bg-destructive/90"
+                  disabled={!deleteConfirmed}
+                  className="bg-destructive hover:bg-destructive/90 disabled:opacity-50"
                 >
                   Sim, excluir tudo
                 </AlertDialogAction>

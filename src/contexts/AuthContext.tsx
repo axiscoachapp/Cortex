@@ -4,12 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_BYPASS_KEY = 'cortex_admin_bypass';
 
-// Credentials come from env so they're never hardcoded in source.
-// In production builds (import.meta.env.DEV === false) the entire bypass
-// code path is eliminated by Vite/Rollup dead-code removal.
-const BYPASS_EMAIL    = import.meta.env.VITE_BYPASS_EMAIL    ?? '';
-const BYPASS_PASSWORD = import.meta.env.VITE_BYPASS_PASSWORD ?? '';
-
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -73,19 +67,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const enableAdminBypass = import.meta.env.DEV
     ? async () => {
-        if (!BYPASS_EMAIL || !BYPASS_PASSWORD) {
+        // Env reads live INSIDE the DEV branch so the inlined credential
+        // strings are guaranteed dead-code-eliminated from production bundles.
+        const bypassEmail    = import.meta.env.VITE_BYPASS_EMAIL    ?? '';
+        const bypassPassword = import.meta.env.VITE_BYPASS_PASSWORD ?? '';
+        if (!bypassEmail || !bypassPassword) {
           console.warn('Admin bypass: set VITE_BYPASS_EMAIL and VITE_BYPASS_PASSWORD in .env.local');
           return;
         }
         localStorage.setItem(ADMIN_BYPASS_KEY, '1');
         setAdminBypass(true);
         const { error } = await supabase.auth.signInWithPassword({
-          email: BYPASS_EMAIL,
-          password: BYPASS_PASSWORD,
+          email: bypassEmail,
+          password: bypassPassword,
         });
         if (error) {
-          await supabase.auth.signUp({ email: BYPASS_EMAIL, password: BYPASS_PASSWORD });
-          await supabase.auth.signInWithPassword({ email: BYPASS_EMAIL, password: BYPASS_PASSWORD });
+          await supabase.auth.signUp({ email: bypassEmail, password: bypassPassword });
+          await supabase.auth.signInWithPassword({ email: bypassEmail, password: bypassPassword });
         }
       }
     : async () => {

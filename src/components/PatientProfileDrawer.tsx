@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { printSoap, printDossier } from '@/lib/printDoc';
+import { printSoap, printDossier, escapeHtml } from '@/lib/printDoc';
 import { PatientFiles } from '@/components/PatientFiles';
 import { UsageMeter } from '@/components/UsageMeter';
 
@@ -570,7 +570,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                             onClick={() => {
                               const w = window.open('', '_blank');
                               if (!w) return;
-                              w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Mensagem — ${patient.name}</title><style>body{font-family:system-ui,sans-serif;max-width:560px;margin:32px auto;padding:0 16px;line-height:1.6;color:#111827}.msg{white-space:pre-wrap;padding:16px 18px;background:#dcfce7;border-radius:12px}h1{font-size:14pt;color:#15803d;margin-bottom:8px}</style></head><body><h1>Mensagem para ${patient.name}</h1><div class="msg">${c.whatsapp_message!.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div></body></html>`);
+                              w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Mensagem — ${escapeHtml(patient.name)}</title><style>body{font-family:system-ui,sans-serif;max-width:560px;margin:32px auto;padding:0 16px;line-height:1.6;color:#111827}.msg{white-space:pre-wrap;padding:16px 18px;background:#dcfce7;border-radius:12px}h1{font-size:14pt;color:#15803d;margin-bottom:8px}</style></head><body><h1>Mensagem para ${escapeHtml(patient.name)}</h1><div class="msg">${escapeHtml(c.whatsapp_message!)}</div></body></html>`);
                               w.document.close();
                             }}
                             title="Abrir mensagem em nova aba"

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Printer, Copy, Check, Loader2, X } from 'lucide-react';
+import { escapeHtml } from '@/lib/printDoc';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -76,7 +77,7 @@ export function DocumentPreviewModal({
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>${title} — ${patientName}</title>
+  <title>${escapeHtml(title)} — ${escapeHtml(patientName)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Georgia, serif; font-size: 12pt; line-height: 1.6; color: #111; padding: 2cm; }
@@ -88,15 +89,17 @@ export function DocumentPreviewModal({
   </style>
 </head>
 <body>
-  <h1>${title}</h1>
-  <p class="meta">Paciente: ${patientName} · ${new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+  <h1>${escapeHtml(title)}</h1>
+  <p class="meta">Paciente: ${escapeHtml(patientName)} · ${new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
   <div>${content
     .split('\n')
     .map(line => {
-      if (line.startsWith('**') && line.endsWith('**')) return `<h3>${line.slice(2, -2)}</h3>`;
-      if (line.startsWith('• ') || line.startsWith('- ')) return `<li>${line.slice(2)}</li>`;
+      // Escape BEFORE re-introducing the intended markup — the content is
+      // AI-generated from patient audio and must never execute as HTML.
+      if (line.startsWith('**') && line.endsWith('**')) return `<h3>${escapeHtml(line.slice(2, -2))}</h3>`;
+      if (line.startsWith('• ') || line.startsWith('- ')) return `<li>${escapeHtml(line.slice(2))}</li>`;
       if (!line.trim()) return '<br/>';
-      return `<p>${line.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</p>`;
+      return `<p>${escapeHtml(line).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</p>`;
     })
     .join('\n')
   }</div>
