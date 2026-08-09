@@ -3,9 +3,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send,
   Copy, Check, Pencil, Pause, Play, Loader2, Download, StopCircle, Brain,
-  HelpCircle, StickyNote, ClipboardList, Share2,
+  HelpCircle, StickyNote, ClipboardList, Share2, MonitorSpeaker,
 } from 'lucide-react';
-import { useRecording } from '@/hooks/useRecording';
+import { useRecording, ConsultationMode } from '@/hooks/useRecording';
+import { RecordingModeDialog } from '@/components/RecordingModeDialog';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { SoapNoteView } from '@/components/SoapNoteView';
 import { Button } from '@/components/ui/button';
@@ -107,6 +108,7 @@ export function ChatPanel({
   });
 
   const { isRecording, isPaused, stopConfirming, recordingSeconds, audioLevel } = recording;
+  const [modeDialogOpen, setModeDialogOpen] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -144,7 +146,10 @@ export function ChatPanel({
     return `${m}:${s}`;
   };
 
-  const handleStartRecording  = () => recording.start();
+  // Clicking record asks presencial vs. online first — online additionally
+  // captures the computer/tab audio so the patient's side is recorded too.
+  const handleStartRecording  = () => setModeDialogOpen(true);
+  const handleModeSelected    = (mode: ConsultationMode) => recording.start(mode);
   const handleStopRecording   = () => recording.stop();
   const handleConfirmStop     = () => recording.confirmStop();
   const handleCancelStop      = () => recording.cancelStop();
@@ -994,6 +999,12 @@ export function ChatPanel({
                     )}>
                       {isPaused ? 'Gravação pausada' : `Gravando... ${formatTimer(recordingSeconds)}`}
                     </span>
+                    {recording.mode === 'online' && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 shrink-0">
+                        <MonitorSpeaker className="w-3 h-3" />
+                        Teleconsulta
+                      </span>
+                    )}
                   </div>
                   <Button
                     variant="ghost"
@@ -1148,6 +1159,12 @@ export function ChatPanel({
         onConfirm={handleReviewConfirm}
         onCancel={handleReviewCancel}
         isGenerating={isGeneratingFinal}
+      />
+
+      <RecordingModeDialog
+        open={modeDialogOpen}
+        onOpenChange={setModeDialogOpen}
+        onSelect={handleModeSelected}
       />
 
       <DocumentPreviewModal
