@@ -81,7 +81,9 @@ serve(async (req) => {
         .createSignedUrl(rx.storage_path, 300);
       return new Response(
         JSON.stringify({
-          tipoDocumento: rx.doc_type === 'atestado' ? 'atestado' : 'prescricao',
+          tipoDocumento: rx.doc_type === 'atestado' ? 'atestado'
+            : rx.doc_type === 'solicitacao_exames' ? 'solicitacao'
+            : 'prescricao',
           subtipo: rx.doc_type,
           status: expired ? 'expirada' : (rx.status === 'signed' ? 'assinada' : 'gerada_sem_assinatura'),
           emissor: prescriber ? {

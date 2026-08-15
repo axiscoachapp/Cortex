@@ -523,8 +523,11 @@ export function ChatPanel({
       }
       setComposerOpen(false);
       if (data?.previewUrl) window.open(data.previewUrl, '_blank');
+      const docLabel = payload.docType === 'atestado' ? 'Atestado gerado'
+        : payload.docType === 'solicitacao_exames' ? 'Solicitação de exames gerada'
+        : 'Receita digital gerada';
       toast({
-        title: payload.docType === 'atestado' ? 'Atestado gerado' : 'Receita digital gerada',
+        title: docLabel,
         description: `Código de acesso do paciente: ${data?.accessCode}. Assinatura ICP-Brasil será habilitada com o provedor de assinatura.`,
       });
       queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patient.id] });

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 interface PrescriptionRow {
   id: string;
-  doc_type: 'receita_simples' | 'receita_antimicrobiano' | 'atestado';
+  doc_type: 'receita_simples' | 'receita_antimicrobiano' | 'atestado' | 'solicitacao_exames';
   status: 'generated' | 'signed' | 'revoked';
   secret_code: string;
   created_at: string;
@@ -19,6 +19,7 @@ const TYPE_LABELS: Record<PrescriptionRow['doc_type'], string> = {
   receita_simples: 'Receita simples',
   receita_antimicrobiano: 'Receita — antimicrobiano',
   atestado: 'Atestado médico',
+  solicitacao_exames: 'Solicitação de exames',
 };
 
 const STATUS_META: Record<PrescriptionRow['status'], { label: string; cls: string }> = {

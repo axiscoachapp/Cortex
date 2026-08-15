@@ -26,20 +26,22 @@ const corsHeaders = {
   'Vary': 'Origin',
 };
 
-type DocType = 'receita_simples' | 'receita_antimicrobiano' | 'atestado';
+type DocType = 'receita_simples' | 'receita_antimicrobiano' | 'atestado' | 'solicitacao_exames';
 
-/** Legal validity per document type (days). Atestado has no dispensing window —
- *  90 days is the retention of the validation link, not a legal validity. */
+/** Legal validity per document type (days). Atestado/solicitação have no
+ *  dispensing window — theirs is the retention of the validation link. */
 const VALIDITY: Record<DocType, number> = {
   receita_simples: 30,
   receita_antimicrobiano: 10,   // RDC 471/2021
   atestado: 90,
+  solicitacao_exames: 90,
 };
 
 const DOC_TITLES: Record<DocType, string> = {
   receita_simples: 'RECEITUÁRIO',
   receita_antimicrobiano: 'RECEITUÁRIO — ANTIMICROBIANO',
   atestado: 'ATESTADO MÉDICO',
+  solicitacao_exames: 'SOLICITAÇÃO DE EXAMES',
 };
 
 interface Medication { name: string; dosage?: string; instructions?: string }
@@ -60,7 +62,7 @@ serve(async (req) => {
     const { userId } = await requireUser(req);
     const body = await req.json();
     const { patientId, consultationId } = body;
-    const docType: DocType = ['receita_simples', 'receita_antimicrobiano', 'atestado'].includes(body.docType)
+    const docType: DocType = ['receita_simples', 'receita_antimicrobiano', 'atestado', 'solicitacao_exames'].includes(body.docType)
       ? body.docType
       : 'receita_simples';
 
@@ -109,16 +111,18 @@ serve(async (req) => {
     }
 
     // Medication list (receita types): explicit list from the caller wins;
-    // else current profile meds. Atestado carries content instead.
+    // else current profile meds. Atestado/solicitação carry content instead.
     const isAtestado = docType === 'atestado';
+    const isExames = docType === 'solicitacao_exames';
+    const isReceita = !isAtestado && !isExames;
     const rawMeds: Medication[] = Array.isArray(body.medications) && body.medications.length > 0
       ? body.medications
       : (Array.isArray(patient.medications) ? patient.medications : []);
-    const meds = isAtestado ? [] : rawMeds
+    const meds = !isReceita ? [] : rawMeds
       .filter((m: any) => m && typeof m.name === 'string' && m.name.trim())
       .slice(0, 15);
 
-    if (!isAtestado && meds.length === 0) {
+    if (isReceita && meds.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Nenhum medicamento para prescrever' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -131,6 +135,22 @@ serve(async (req) => {
       cid: (body.content?.cid ?? '').toString().trim().slice(0, 20),
       note: (body.content?.note ?? '').toString().trim().slice(0, 400),
     } : null;
+
+    // Exam request content: 1–20 exams + optional clinical indication.
+    const exames = isExames ? {
+      exams: (Array.isArray(body.content?.exams) ? body.content.exams : [])
+        .filter((e: any): e is string => typeof e === 'string' && e.trim().length > 0)
+        .map((e: string) => e.trim().slice(0, 120))
+        .slice(0, 20),
+      indication: (body.content?.indication ?? '').toString().trim().slice(0, 300),
+    } : null;
+
+    if (isExames && exames!.exams.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Nenhum exame na solicitação' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
     const prescriptionId = crypto.randomUUID();
     const code = accessCode();
@@ -194,9 +214,10 @@ serve(async (req) => {
     // Title + patient + date
     text(DOC_TITLES[docType], { size: 13, bold: true }); down(22);
     text(`Paciente: ${patient.name}${patient.age ? `, ${patient.age} anos` : ''}`, { size: 11 }); down(15);
-    const dateLine = isAtestado
-      ? `Emitido em: ${now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}`
-      : `Emitido em: ${now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })} · Válida até ${expiresAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`;
+    const emitted = now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+    const dateLine = isReceita
+      ? `Emitido em: ${emitted} · Válida até ${expiresAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`
+      : `Emitido em: ${emitted}`;
     text(dateLine, { size: 9, color: mut });
     down(20);
 
@@ -222,6 +243,15 @@ serve(async (req) => {
       if (atestado.note) {
         wrapText(atestado.note, { size: 10, color: mut, max: 90 });
       }
+    } else if (isExames && exames) {
+      // Exam request body
+      if (exames.indication) {
+        wrapText(`Indicação clínica: ${exames.indication}`, { size: 10, color: mut, max: 90 });
+        down(8);
+      }
+      exames.exams.forEach((e, i) => {
+        text(`${i + 1}. ${e}`, { size: 11.5, bold: true }); down(17);
+      });
     } else {
       // Medications
       meds.forEach((m, i) => {
@@ -252,7 +282,8 @@ serve(async (req) => {
     } catch { /* fall back to text-only validation info */ }
 
     const infoX = qrDrawn ? margin + 108 : margin;
-    text(isAtestado ? 'Validação do atestado' : 'Validação da receita', { x: infoX, size: 9.5, bold: true }); down(13);
+    const valLabel = isAtestado ? 'Validação do atestado' : isExames ? 'Validação da solicitação' : 'Validação da receita';
+    text(valLabel, { x: infoX, size: 9.5, bold: true }); down(13);
     text(`Código de acesso do paciente: ${code}`, { x: infoX, size: 10.5, bold: true, color: blue }); down(13);
     text('Valide em validar.iti.gov.br ou aponte a câmera para o QR code.', { x: infoX, size: 8.5, color: mut }); down(11);
     text(validationUrl.replace('https://', ''), { x: infoX, size: 7, color: mut }); down(20);
@@ -277,7 +308,7 @@ serve(async (req) => {
       consultation_id: consultationId ?? null,
       medications: meds,
       doc_type: docType,
-      content: atestado,
+      content: atestado ?? exames,
       storage_path: storagePath,
       secret_code: code,
       status: 'generated',

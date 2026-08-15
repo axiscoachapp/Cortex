@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Pill, FileSignature, ClipboardPlus, Search, X, Loader2, AlertTriangle,
+  Pill, FileSignature, ClipboardPlus, Search, X, Loader2, AlertTriangle, FlaskConical,
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -11,9 +12,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { Patient, Medication } from '@/types/patient';
 
-export type RxDocType = 'receita_simples' | 'receita_antimicrobiano' | 'atestado';
+export type RxDocType = 'receita_simples' | 'receita_antimicrobiano' | 'atestado' | 'solicitacao_exames';
 
-interface ComposerMed extends Medication { checked: boolean; fromCatalog?: boolean; antimicrobial?: boolean }
+interface ComposerMed extends Medication {
+  checked: boolean;
+  fromCatalog?: boolean;
+  antimicrobial?: boolean;
+  /** Active ingredient(s) from the Anvisa catalog — grounds duplication alerts. */
+  ingredient?: string | null;
+}
 
 interface CatalogHit {
   id: number;
@@ -30,16 +37,26 @@ interface DocumentComposerModalProps {
   onGenerate: (payload: {
     docType: RxDocType;
     medications: Medication[];
-    content?: { days: number; cid?: string; note?: string };
+    content?: { days?: number; cid?: string; note?: string; exams?: string[]; indication?: string };
   }) => Promise<void>;
   isGenerating: boolean;
 }
 
 const TYPE_META: Array<{ value: RxDocType; label: string; hint: string; icon: React.ComponentType<{ className?: string }> }> = [
-  { value: 'receita_simples',        label: 'Receita simples', hint: 'Validade 30 dias',                    icon: Pill },
-  { value: 'receita_antimicrobiano', label: 'Antimicrobiano',  hint: 'Retenção · validade 10 dias',        icon: AlertTriangle },
-  { value: 'atestado',               label: 'Atestado médico', hint: 'Afastamento com validação por QR',   icon: ClipboardPlus },
+  { value: 'receita_simples',        label: 'Receita simples',  hint: 'Validade 30 dias',                  icon: Pill },
+  { value: 'receita_antimicrobiano', label: 'Antimicrobiano',   hint: 'Retenção · validade 10 dias',      icon: AlertTriangle },
+  { value: 'atestado',               label: 'Atestado médico',  hint: 'Afastamento com validação por QR', icon: ClipboardPlus },
+  { value: 'solicitacao_exames',     label: 'Solicitação de exames', hint: 'Lista de exames com QR',      icon: FlaskConical },
 ];
+
+/** Tokens of an Anvisa ingredient string ("losartana potássica, hidroclorotiazida"). */
+function ingredientTokens(s: string | null | undefined): string[] {
+  return (s ?? '')
+    .toLowerCase()
+    .split(',')
+    .map(t => t.trim())
+    .filter(t => t.length >= 4);
+}
 
 export function DocumentComposerModal({
   open, onOpenChange, patient, onGenerate, isGenerating,
@@ -52,6 +69,8 @@ export function DocumentComposerModal({
   const [days, setDays] = useState('1');
   const [cid, setCid] = useState('');
   const [note, setNote] = useState('');
+  const [examsText, setExamsText] = useState('');
+  const [indication, setIndication] = useState('');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset to the patient's current medications whenever the modal opens.
@@ -61,6 +80,37 @@ export function DocumentComposerModal({
     setMeds((patient.medications ?? []).map(m => ({ ...m, checked: true })));
     setQuery(''); setHits([]);
     setDays('1'); setCid(''); setNote('');
+    setExamsText(''); setIndication('');
+  }, [open, patient.id]);
+
+  // Ground profile meds in the catalog (best-effort name match) so the
+  // duplication alert can compare active ingredients.
+  useEffect(() => {
+    if (!open) return;
+    const unresolved = (patient.medications ?? [])
+      .map((m, i) => ({ name: m.name, i }))
+      .filter(x => x.name && x.name.trim().length >= 4);
+    if (unresolved.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      for (const { name, i } of unresolved.slice(0, 10)) {
+        const term = name.trim().split(/\s+/)[0];
+        if (term.length < 4) continue;
+        const { data } = await supabase
+          .from('medication_catalog')
+          .select('active_ingredient, is_antimicrobial')
+          .or(`product_name.ilike.${term}%,active_ingredient.ilike.${term}%`)
+          .limit(1);
+        if (cancelled) return;
+        const hit = data?.[0];
+        if (hit) {
+          setMeds(prev => prev.map((m, j) => j === i && m.ingredient === undefined
+            ? { ...m, ingredient: hit.active_ingredient, antimicrobial: hit.is_antimicrobial || m.antimicrobial }
+            : m));
+        }
+      }
+    })();
+    return () => { cancelled = true; };
   }, [open, patient.id]);
 
   // Debounced catalog autocomplete (Anvisa registered medications).
@@ -92,6 +142,7 @@ export function DocumentComposerModal({
       checked: true,
       fromCatalog: true,
       antimicrobial: hit.is_antimicrobial,
+      ingredient: hit.active_ingredient,
     }]);
     setQuery(''); setHits([]);
     // Suggest the right document type when an antimicrobial enters the list.
@@ -103,17 +154,42 @@ export function DocumentComposerModal({
   const selectedMeds = useMemo(() => meds.filter(m => m.checked), [meds]);
   const hasAntimicrobial = selectedMeds.some(m => m.antimicrobial);
   const isAtestado = docType === 'atestado';
+  const isExames = docType === 'solicitacao_exames';
+  const isReceita = !isAtestado && !isExames;
+
+  // Grounded duplication alert: the same active ingredient (per the Anvisa
+  // catalog) appearing in two or more selected medications.
+  const duplicatedIngredients = useMemo(() => {
+    const byToken = new Map<string, number>();
+    for (const m of selectedMeds) {
+      for (const t of new Set(ingredientTokens(m.ingredient))) {
+        byToken.set(t, (byToken.get(t) ?? 0) + 1);
+      }
+    }
+    return [...byToken.entries()].filter(([, n]) => n >= 2).map(([t]) => t);
+  }, [selectedMeds]);
+
+  const examList = useMemo(
+    () => examsText.split(/\r?\n/).map(e => e.trim()).filter(Boolean),
+    [examsText],
+  );
 
   const canGenerate = isAtestado
     ? Number(days) > 0
+    : isExames
+    ? examList.length > 0
     : selectedMeds.length > 0;
 
   const handleGenerate = async () => {
     await onGenerate({
       docType,
-      medications: selectedMeds.map(({ name, dosage, instructions }) => ({ name, dosage, instructions })),
+      medications: isReceita
+        ? selectedMeds.map(({ name, dosage, instructions }) => ({ name, dosage, instructions }))
+        : [],
       content: isAtestado
         ? { days: Number(days) || 1, cid: cid.trim() || undefined, note: note.trim() || undefined }
+        : isExames
+        ? { exams: examList, indication: indication.trim() || undefined }
         : undefined,
     });
   };
@@ -130,7 +206,7 @@ export function DocumentComposerModal({
 
         <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-4 space-y-4">
           {/* Type selector */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {TYPE_META.map(({ value, label, hint, icon: Icon }) => (
               <button
                 key={value}
@@ -150,14 +226,43 @@ export function DocumentComposerModal({
             ))}
           </div>
 
-          {hasAntimicrobial && docType === 'receita_simples' && (
+          {isReceita && hasAntimicrobial && docType === 'receita_simples' && (
             <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               Há antimicrobiano selecionado — considere o tipo "Antimicrobiano" (retenção, 10 dias).
             </p>
           )}
 
-          {isAtestado ? (
+          {isReceita && duplicatedIngredients.length > 0 && (
+            <p className="text-[11px] text-red-700 bg-red-50 border border-red-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>
+                <b>Princípio ativo duplicado</b> em mais de um medicamento selecionado:{' '}
+                {duplicatedIngredients.join(', ')} (base Anvisa). Verifique antes de gerar.
+              </span>
+            </p>
+          )}
+
+          {isExames ? (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground/80">Exames solicitados <span className="text-muted-foreground font-normal">(um por linha)</span></label>
+                <Textarea
+                  value={examsText}
+                  onChange={e => setExamsText(e.target.value)}
+                  placeholder={'Hemograma completo\nGlicemia de jejum\nTSH'}
+                  className="min-h-[120px] text-sm"
+                />
+                {examList.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground">{examList.length} exame{examList.length > 1 ? 's' : ''}</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground/80">Indicação clínica <span className="text-muted-foreground font-normal">(opcional)</span></label>
+                <Input value={indication} onChange={e => setIndication(e.target.value)} placeholder="Ex: investigação de fadiga" maxLength={300} />
+              </div>
+            </div>
+          ) : isAtestado ? (
             <div className="space-y-3">
               <div className="grid grid-cols-[110px_1fr] gap-3">
                 <div className="space-y-1">
