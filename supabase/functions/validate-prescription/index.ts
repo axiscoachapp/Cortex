@@ -47,7 +47,7 @@ serve(async (req) => {
 
     const { data: rx } = await supabase
       .from('prescriptions')
-      .select('id, storage_path, secret_code, status, created_at, expires_at, signed_at, user_id')
+      .select('id, storage_path, secret_code, status, created_at, expires_at, signed_at, user_id, doc_type')
       .eq('id', id)
       .maybeSingle();
 
@@ -81,7 +81,8 @@ serve(async (req) => {
         .createSignedUrl(rx.storage_path, 300);
       return new Response(
         JSON.stringify({
-          tipoDocumento: 'prescricao',
+          tipoDocumento: rx.doc_type === 'atestado' ? 'atestado' : 'prescricao',
+          subtipo: rx.doc_type,
           status: expired ? 'expirada' : (rx.status === 'signed' ? 'assinada' : 'gerada_sem_assinatura'),
           emissor: prescriber ? {
             nome: prescriber.doctor_name,

@@ -9,6 +9,8 @@ import { useRecording, ConsultationMode } from '@/hooks/useRecording';
 import { RecordingModeDialog } from '@/components/RecordingModeDialog';
 import { LiveCopilotCard, CopilotState } from '@/components/LiveCopilotCard';
 import { QuestionChecklistCard } from '@/components/QuestionChecklistCard';
+import { DocumentComposerModal, RxDocType } from '@/components/DocumentComposerModal';
+import { Medication } from '@/types/patient';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { SoapNoteView } from '@/components/SoapNoteView';
 import { Button } from '@/components/ui/button';
@@ -120,8 +122,10 @@ export function ChatPanel({
   const [attachingFile, setAttachingFile] = useState(false);
   const attachInputRef = useRef<HTMLInputElement>(null);
 
-  // Digital prescription (Phase 1 — unsigned PDF with validation QR).
+  // Digital documents (receita/atestado — unsigned PDF with validation QR).
   const [generatingRx, setGeneratingRx] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const composerConsultationIdRef = useRef<string | undefined>(undefined);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const consultationCommentsRef = useRef<string[]>([]);
@@ -480,21 +484,28 @@ export function ChatPanel({
     }
   };
 
-  // ── Digital prescription ────────────────────────────────────────────────────
-  const handleGeneratePrescription = async (consultationId?: string) => {
+  // ── Digital documents (receita/atestado) ────────────────────────────────────
+  const handleOpenComposer = (consultationId?: string) => {
+    composerConsultationIdRef.current = consultationId ?? currentConsultationId ?? undefined;
+    setComposerOpen(true);
+  };
+
+  const handleComposerGenerate = async (payload: {
+    docType: RxDocType;
+    medications: Medication[];
+    content?: { days: number; cid?: string; note?: string };
+  }) => {
     if (!patient || generatingRx) return;
-    if (!patient.medications || patient.medications.length === 0) {
-      toast({
-        title: 'Sem medicamentos no perfil',
-        description: 'Adicione medicamentos ao paciente (ou aceite a atualização do perfil) antes de gerar a receita.',
-        variant: 'destructive',
-      });
-      return;
-    }
     setGeneratingRx(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-prescription', {
-        body: { patientId: patient.id, consultationId: consultationId ?? currentConsultationId ?? undefined },
+        body: {
+          patientId: patient.id,
+          consultationId: composerConsultationIdRef.current,
+          docType: payload.docType,
+          medications: payload.medications,
+          content: payload.content,
+        },
       });
       if (error) {
         const body = (error as any)?.context && typeof (error as any).context.json === 'function'
@@ -503,21 +514,23 @@ export function ChatPanel({
         if (body?.missingPrescriber) {
           toast({
             title: 'Complete os dados do prescritor',
-            description: 'Preencha nome, CRM e endereço em Configurações (ícone de engrenagem) — são obrigatórios na receita.',
+            description: 'Preencha nome, CRM e endereço em Configurações (ícone de engrenagem) — são obrigatórios no documento.',
             variant: 'destructive',
           });
           return;
         }
         throw error;
       }
+      setComposerOpen(false);
       if (data?.previewUrl) window.open(data.previewUrl, '_blank');
       toast({
-        title: 'Receita digital gerada',
+        title: payload.docType === 'atestado' ? 'Atestado gerado' : 'Receita digital gerada',
         description: `Código de acesso do paciente: ${data?.accessCode}. Assinatura ICP-Brasil será habilitada com o provedor de assinatura.`,
       });
+      queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patient.id] });
     } catch (err: any) {
       toast({
-        title: 'Erro ao gerar receita',
+        title: 'Erro ao gerar documento',
         description: err?.message ?? 'Tente novamente.',
         variant: 'destructive',
       });
@@ -1197,12 +1210,10 @@ export function ChatPanel({
                           size="sm"
                           className="gap-1.5 text-xs"
                           disabled={generatingRx}
-                          onClick={() => handleGeneratePrescription(message.consultationId)}
+                          onClick={() => handleOpenComposer(message.consultationId)}
                         >
-                          {generatingRx
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <FileSignature className="w-3.5 h-3.5" />}
-                          Receita Digital
+                          <FileSignature className="w-3.5 h-3.5" />
+                          Receita / Atestado
                         </Button>
                       </div>
                     )}
@@ -1524,6 +1535,16 @@ export function ChatPanel({
         onOpenChange={setModeDialogOpen}
         onSelect={handleModeSelected}
       />
+
+      {patient && (
+        <DocumentComposerModal
+          open={composerOpen}
+          onOpenChange={setComposerOpen}
+          patient={patient}
+          onGenerate={handleComposerGenerate}
+          isGenerating={generatingRx}
+        />
+      )}
 
       <DocumentPreviewModal
         open={!!documentModal}

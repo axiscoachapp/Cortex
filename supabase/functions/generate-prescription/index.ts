@@ -26,7 +26,21 @@ const corsHeaders = {
   'Vary': 'Origin',
 };
 
-const VALIDITY_DAYS = 30;   // receita simples — antimicrobials (10 days) come with the SNCR phase
+type DocType = 'receita_simples' | 'receita_antimicrobiano' | 'atestado';
+
+/** Legal validity per document type (days). Atestado has no dispensing window —
+ *  90 days is the retention of the validation link, not a legal validity. */
+const VALIDITY: Record<DocType, number> = {
+  receita_simples: 30,
+  receita_antimicrobiano: 10,   // RDC 471/2021
+  atestado: 90,
+};
+
+const DOC_TITLES: Record<DocType, string> = {
+  receita_simples: 'RECEITUÁRIO',
+  receita_antimicrobiano: 'RECEITUÁRIO — ANTIMICROBIANO',
+  atestado: 'ATESTADO MÉDICO',
+};
 
 interface Medication { name: string; dosage?: string; instructions?: string }
 
@@ -46,6 +60,9 @@ serve(async (req) => {
     const { userId } = await requireUser(req);
     const body = await req.json();
     const { patientId, consultationId } = body;
+    const docType: DocType = ['receita_simples', 'receita_antimicrobiano', 'atestado'].includes(body.docType)
+      ? body.docType
+      : 'receita_simples';
 
     if (!patientId) {
       return new Response(
@@ -91,25 +108,34 @@ serve(async (req) => {
       );
     }
 
-    // Medication list: explicit list from the caller wins; else current profile meds.
+    // Medication list (receita types): explicit list from the caller wins;
+    // else current profile meds. Atestado carries content instead.
+    const isAtestado = docType === 'atestado';
     const rawMeds: Medication[] = Array.isArray(body.medications) && body.medications.length > 0
       ? body.medications
       : (Array.isArray(patient.medications) ? patient.medications : []);
-    const meds = rawMeds
+    const meds = isAtestado ? [] : rawMeds
       .filter((m: any) => m && typeof m.name === 'string' && m.name.trim())
       .slice(0, 15);
 
-    if (meds.length === 0) {
+    if (!isAtestado && meds.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Nenhum medicamento para prescrever' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
+    // Atestado content: afastamento days (0.5–365), optional CID + note.
+    const atestado = isAtestado ? {
+      days: Math.min(365, Math.max(0.5, Number(body.content?.days) || 1)),
+      cid: (body.content?.cid ?? '').toString().trim().slice(0, 20),
+      note: (body.content?.note ?? '').toString().trim().slice(0, 400),
+    } : null;
+
     const prescriptionId = crypto.randomUUID();
     const code = accessCode();
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + VALIDITY_DAYS * 86_400_000);
+    const expiresAt = new Date(now.getTime() + VALIDITY[docType] * 86_400_000);
     const validationUrl =
       `${Deno.env.get('SUPABASE_URL')}/functions/v1/validate-prescription?id=${prescriptionId}`;
 
@@ -149,35 +175,64 @@ serve(async (req) => {
     });
     down(28);
 
-    // Title + patient + date
-    text('RECEITUÁRIO', { size: 13, bold: true }); down(22);
-    text(`Paciente: ${patient.name}${patient.age ? `, ${patient.age} anos` : ''}`, { size: 11 }); down(15);
-    text(
-      `Emitido em: ${now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })} · Válida até ${expiresAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`,
-      { size: 9, color: mut },
-    );
-    down(28);
-
-    // Medications
-    meds.forEach((m, i) => {
-      const nameLine = `${i + 1}. ${m.name.trim()}${m.dosage?.trim() ? ` — ${m.dosage.trim()}` : ''}`;
-      text(nameLine, { size: 11.5, bold: true }); down(15);
-      if (m.instructions?.trim()) {
-        // Naive wrap at ~90 chars — instructions are short in practice.
-        const words = m.instructions.trim().split(/\s+/);
-        let line = '';
-        for (const w of words) {
-          if ((line + ' ' + w).length > 90) {
-            text(line, { x: margin + 14, size: 10, color: mut }); down(13);
-            line = w;
-          } else {
-            line = line ? `${line} ${w}` : w;
-          }
+    // Simple word-wrap helper — content lines are short in practice.
+    const wrapText = (s: string, opts: { x?: number; size?: number; color?: any; max?: number } = {}) => {
+      const max = opts.max ?? 90;
+      const words = s.trim().split(/\s+/);
+      let line = '';
+      for (const w of words) {
+        if ((line + ' ' + w).length > max) {
+          text(line, { x: opts.x, size: opts.size, color: opts.color }); down((opts.size ?? 10) + 4);
+          line = w;
+        } else {
+          line = line ? `${line} ${w}` : w;
         }
-        if (line) { text(line, { x: margin + 14, size: 10, color: mut }); down(13); }
       }
-      down(9);
-    });
+      if (line) { text(line, { x: opts.x, size: opts.size, color: opts.color }); down((opts.size ?? 10) + 4); }
+    };
+
+    // Title + patient + date
+    text(DOC_TITLES[docType], { size: 13, bold: true }); down(22);
+    text(`Paciente: ${patient.name}${patient.age ? `, ${patient.age} anos` : ''}`, { size: 11 }); down(15);
+    const dateLine = isAtestado
+      ? `Emitido em: ${now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}`
+      : `Emitido em: ${now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })} · Válida até ${expiresAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`;
+    text(dateLine, { size: 9, color: mut });
+    down(20);
+
+    if (docType === 'receita_antimicrobiano') {
+      text('Receita de antimicrobiano — sujeita a retenção. Validade: 10 dias (RDC 471/2021).', { size: 9, bold: true, color: rgb(0.66, 0.36, 0.06) });
+      down(20);
+    } else {
+      down(8);
+    }
+
+    if (isAtestado && atestado) {
+      // Atestado body
+      const daysLabel = atestado.days === 1 ? '1 (um) dia' : `${atestado.days} dias`;
+      wrapText(
+        `Atesto, para os devidos fins, que o(a) paciente ${patient.name} foi atendido(a) nesta data, ` +
+        `necessitando de afastamento de suas atividades por ${daysLabel} a partir desta data.`,
+        { size: 11.5, max: 78 },
+      );
+      down(6);
+      if (atestado.cid) {
+        text(`CID: ${atestado.cid} (incluído a pedido do paciente)`, { size: 10, color: mut }); down(15);
+      }
+      if (atestado.note) {
+        wrapText(atestado.note, { size: 10, color: mut, max: 90 });
+      }
+    } else {
+      // Medications
+      meds.forEach((m, i) => {
+        const nameLine = `${i + 1}. ${m.name.trim()}${m.dosage?.trim() ? ` — ${m.dosage.trim()}` : ''}`;
+        text(nameLine, { size: 11.5, bold: true }); down(15);
+        if (m.instructions?.trim()) {
+          wrapText(m.instructions, { x: margin + 14, size: 10, color: mut, max: 90 });
+        }
+        down(9);
+      });
+    }
 
     // Footer block — pinned to the bottom area
     y = 168;
@@ -197,7 +252,7 @@ serve(async (req) => {
     } catch { /* fall back to text-only validation info */ }
 
     const infoX = qrDrawn ? margin + 108 : margin;
-    text('Validação da receita', { x: infoX, size: 9.5, bold: true }); down(13);
+    text(isAtestado ? 'Validação do atestado' : 'Validação da receita', { x: infoX, size: 9.5, bold: true }); down(13);
     text(`Código de acesso do paciente: ${code}`, { x: infoX, size: 10.5, bold: true, color: blue }); down(13);
     text('Valide em validar.iti.gov.br ou aponte a câmera para o QR code.', { x: infoX, size: 8.5, color: mut }); down(11);
     text(validationUrl.replace('https://', ''), { x: infoX, size: 7, color: mut }); down(20);
@@ -221,6 +276,8 @@ serve(async (req) => {
       patient_id: patientId,
       consultation_id: consultationId ?? null,
       medications: meds,
+      doc_type: docType,
+      content: atestado,
       storage_path: storagePath,
       secret_code: code,
       status: 'generated',
@@ -239,6 +296,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         prescriptionId,
+        docType,
         accessCode: code,
         previewUrl: signed?.signedUrl ?? null,
         validationUrl,

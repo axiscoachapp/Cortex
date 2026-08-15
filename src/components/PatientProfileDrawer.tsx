@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { printSoap, printDossier, escapeHtml } from '@/lib/printDoc';
 import { PatientFiles } from '@/components/PatientFiles';
+import { PrescriptionList } from '@/components/PrescriptionList';
 import { UsageMeter } from '@/components/UsageMeter';
 
 interface PatientProfileDrawerProps {
@@ -500,6 +501,9 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
 
           {/* ─── Documentos ──────────────────────────────────────────── */}
           <TabsContent value="documents" className="space-y-6">
+
+            {/* Receitas e atestados gerados */}
+            <PrescriptionList patientId={patient.id} />
 
             {/* Arquivos anexados */}
             <section className="space-y-3">
