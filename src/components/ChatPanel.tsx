@@ -125,6 +125,10 @@ export function ChatPanel({
   // Fire a refresh once this many ~30s chunks are queued → ~60s suggestion cadence.
   const COPILOT_CHUNKS_PER_REFRESH = 2;
 
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { specialty, liveCopilotEnabled } = useUserSettings();
+
   const recording = useRecording({
     onStop: processConsultation,
     consultationCommentsRef,
@@ -132,15 +136,13 @@ export function ChatPanel({
       consultationCommentsRef.current = [];
       setConsultationComments([]);
     },
-    onLiveChunk: handleLiveChunk,
+    // Only feed the live copilot when the doctor has it enabled — this also
+    // stops the second (chunk) MediaRecorder from running for nothing.
+    onLiveChunk: liveCopilotEnabled ? handleLiveChunk : undefined,
   });
 
   const { isRecording, isPaused, stopConfirming, recordingSeconds, audioLevel } = recording;
   const [modeDialogOpen, setModeDialogOpen] = useState(false);
-
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { specialty } = useUserSettings();
 
   useEffect(() => {
     activePatientIdRef.current = patient?.id ?? null;
@@ -1080,7 +1082,7 @@ export function ChatPanel({
         <UsageOverBanner />
 
         {/* Live copilot — glanceable summary + suggestions while recording */}
-        {isRecording && !stopConfirming && (
+        {isRecording && !stopConfirming && liveCopilotEnabled && (
           <LiveCopilotCard
             state={copilotState}
             isRefreshing={copilotRefreshing}

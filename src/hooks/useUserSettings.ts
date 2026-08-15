@@ -21,25 +21,34 @@ export const SPECIALTY_LABELS: Record<Specialty, string> = {
 interface UserSettings {
   specialty: Specialty;
   daily_credit_limit: number;
+  live_copilot_enabled: boolean;
 }
+
+const DEFAULTS: UserSettings = {
+  specialty: 'geral',
+  daily_credit_limit: 1500,
+  live_copilot_enabled: true,
+};
 
 export function useUserSettings() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const key = ['user-settings', user?.id];
 
   const { data, isLoading } = useQuery<UserSettings>({
-    queryKey: ['user-settings', user?.id],
+    queryKey: key,
     queryFn: async () => {
-      if (!user?.id) return { specialty: 'geral', daily_credit_limit: 1500 };
+      if (!user?.id) return DEFAULTS;
       const { data, error } = await supabase
         .from('user_settings')
-        .select('specialty, daily_credit_limit')
+        .select('specialty, daily_credit_limit, live_copilot_enabled')
         .eq('user_id', user.id)
         .maybeSingle();
       if (error) throw error;
       return {
-        specialty:          (data?.specialty           as Specialty) ?? 'geral',
-        daily_credit_limit: data?.daily_credit_limit                 ?? 1500,
+        specialty:            (data?.specialty as Specialty) ?? DEFAULTS.specialty,
+        daily_credit_limit:   data?.daily_credit_limit       ?? DEFAULTS.daily_credit_limit,
+        live_copilot_enabled: data?.live_copilot_enabled     ?? DEFAULTS.live_copilot_enabled,
       };
     },
     enabled: !!user?.id,
@@ -47,25 +56,34 @@ export function useUserSettings() {
   });
 
   const mutation = useMutation({
-    mutationFn: async (specialty: Specialty) => {
+    mutationFn: async (patch: Partial<UserSettings>) => {
       if (!user?.id) return;
       const { error } = await supabase
         .from('user_settings')
-        .upsert({ user_id: user.id, specialty }, { onConflict: 'user_id' });
+        .upsert({ user_id: user.id, ...patch }, { onConflict: 'user_id' });
       if (error) throw error;
     },
-    onSuccess: (_, specialty) => {
-      queryClient.setQueryData(['user-settings', user?.id], (old: UserSettings | undefined) => ({
-        ...(old ?? { daily_credit_limit: 1500 }),
-        specialty,
-      }));
+    // Optimistic: a toggle should flip instantly; roll back if the write fails.
+    onMutate: async (patch) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<UserSettings>(key);
+      queryClient.setQueryData<UserSettings>(key, { ...(previous ?? DEFAULTS), ...patch });
+      return { previous };
+    },
+    onError: (_err, _patch, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(key, ctx.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: key });
     },
   });
 
   return {
-    specialty:    data?.specialty ?? 'geral' as Specialty,
+    specialty:            data?.specialty            ?? DEFAULTS.specialty,
+    liveCopilotEnabled:   data?.live_copilot_enabled ?? DEFAULTS.live_copilot_enabled,
     isLoading,
-    setSpecialty: mutation.mutate,
-    isSaving:     mutation.isPending,
+    setSpecialty:         (specialty: Specialty) => mutation.mutate({ specialty }),
+    setLiveCopilotEnabled: (live_copilot_enabled: boolean) => mutation.mutate({ live_copilot_enabled }),
+    isSaving:             mutation.isPending,
   };
 }

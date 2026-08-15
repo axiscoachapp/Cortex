@@ -1,4 +1,4 @@
-import { Settings2 } from 'lucide-react';
+import { Settings2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
@@ -6,10 +6,15 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useUserSettings, SPECIALTY_LABELS, Specialty } from '@/hooks/useUserSettings';
 
 export function SpecialtySettingsSheet() {
-  const { specialty, setSpecialty, isSaving } = useUserSettings();
+  const {
+    specialty, setSpecialty,
+    liveCopilotEnabled, setLiveCopilotEnabled,
+    isSaving,
+  } = useUserSettings();
 
   return (
     <Sheet>
@@ -56,6 +61,32 @@ export function SpecialtySettingsSheet() {
             {isSaving && (
               <p className="text-xs text-muted-foreground">Salvando...</p>
             )}
+          </div>
+
+          {/* Live copilot toggle */}
+          <div className="space-y-2 pt-5 border-t border-border/50">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-0.5">
+                <label
+                  htmlFor="live-copilot-toggle"
+                  className="text-sm font-medium text-foreground flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                  Copiloto ao vivo
+                </label>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Durante a gravação, mostra um resumo da consulta e sugestões de perguntas,
+                  atualizados a cada ~30&nbsp;segundos. Consome créditos adicionais por consulta.
+                </p>
+              </div>
+              <Switch
+                id="live-copilot-toggle"
+                checked={liveCopilotEnabled}
+                onCheckedChange={setLiveCopilotEnabled}
+                disabled={isSaving}
+                className="mt-0.5 shrink-0"
+              />
+            </div>
           </div>
         </div>
       </SheetContent>
