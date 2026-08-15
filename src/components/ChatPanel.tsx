@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useRecording, ConsultationMode } from '@/hooks/useRecording';
 import { RecordingModeDialog } from '@/components/RecordingModeDialog';
+import { LiveCopilotCard, CopilotState } from '@/components/LiveCopilotCard';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { SoapNoteView } from '@/components/SoapNoteView';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,17 @@ import { UsageMeter, UsageOverBanner } from '@/components/UsageMeter';
 /** Thrown after an error was already surfaced to the user (e.g. quota toast)
  *  so upstream catch blocks skip their generic error toast. */
 class HandledError extends Error {}
+
+/** Encode an audio Blob as base64 for inline transport to the copilot function. */
+async function blobToBase64(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
 
 export interface PreBriefing {
   returnInfo: string;
@@ -92,11 +104,26 @@ export function ChatPanel({
     isLoading: boolean;
   } | null>(null);
 
+  const [copilotState, setCopilotState] = useState<CopilotState | null>(null);
+  const [copilotRefreshing, setCopilotRefreshing] = useState(false);
+  const [copilotLastUpdateAt, setCopilotLastUpdateAt] = useState<number | null>(null);
+  const [copilotNow, setCopilotNow] = useState<number>(() => Date.now());
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<string[]>([]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const consultationCommentsRef = useRef<string[]>([]);
   // Tracks the currently displayed patient so async work started for a
   // previous patient (transcription takes 30s+) never writes into this chat.
   const activePatientIdRef = useRef<string | null>(patient?.id ?? null);
+
+  // ── Live-copilot plumbing (refs avoid stale closures inside recorder cbs) ────
+  const copilotPendingRef  = useRef<Array<{ mimeType: string; data: string }>>([]);
+  const copilotBusyRef     = useRef(false);
+  const copilotStateRef    = useRef<CopilotState | null>(null);
+  const copilotDismissRef  = useRef<string[]>([]);
+  const copilotDisabledRef = useRef(false);   // set on quota/repeated failure
+  // Fire a refresh once this many ~30s chunks are queued → ~60s suggestion cadence.
+  const COPILOT_CHUNKS_PER_REFRESH = 2;
 
   const recording = useRecording({
     onStop: processConsultation,
@@ -105,6 +132,7 @@ export function ChatPanel({
       consultationCommentsRef.current = [];
       setConsultationComments([]);
     },
+    onLiveChunk: handleLiveChunk,
   });
 
   const { isRecording, isPaused, stopConfirming, recordingSeconds, audioLevel } = recording;
@@ -122,6 +150,7 @@ export function ChatPanel({
     setConsultationComments([]);
     setCurrentConsultationId(null);
     setReviewData(null);
+    resetCopilot();
     if (recording.isRecording) {
       // Never let a recording started for patient A be processed under
       // patient B — that would write a consultation into the wrong chart.
@@ -149,7 +178,7 @@ export function ChatPanel({
   // Clicking record asks presencial vs. online first — online additionally
   // captures the computer/tab audio so the patient's side is recorded too.
   const handleStartRecording  = () => setModeDialogOpen(true);
-  const handleModeSelected    = (mode: ConsultationMode) => recording.start(mode);
+  const handleModeSelected    = (mode: ConsultationMode) => { resetCopilot(); recording.start(mode); };
   const handleStopRecording   = () => recording.stop();
   const handleConfirmStop     = () => recording.confirmStop();
   const handleCancelStop      = () => recording.cancelStop();
@@ -218,6 +247,106 @@ export function ChatPanel({
     medications: patient.medications,
     allergies: patient.allergies,
   } : {};
+
+  // ── Live copilot ────────────────────────────────────────────────────────────
+  // Declared as hoisted functions so handleLiveChunk can be referenced by the
+  // useRecording() call above before this point (same reason as processConsultation).
+
+  function resetCopilot() {
+    copilotPendingRef.current = [];
+    copilotBusyRef.current = false;
+    copilotStateRef.current = null;
+    copilotDismissRef.current = [];
+    copilotDisabledRef.current = false;
+    setCopilotState(null);
+    setCopilotRefreshing(false);
+    setCopilotLastUpdateAt(null);
+    setDismissedSuggestions([]);
+  }
+
+  async function runCopilotRefresh() {
+    if (copilotBusyRef.current || copilotDisabledRef.current || !patient) return;
+    const chunks = copilotPendingRef.current;
+    if (chunks.length === 0) return;
+    copilotPendingRef.current = [];
+    copilotBusyRef.current = true;
+    const requestedPatientId = patient.id;
+    setCopilotRefreshing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('live-copilot', {
+        body: {
+          audioChunks: chunks,
+          prevState: copilotStateRef.current,
+          dismissed: copilotDismissRef.current,
+          patientContext,
+          chiefComplaint,
+        },
+      });
+      // Any failure (quota, network, function error) silently disables the
+      // copilot for the rest of this consult — it must never nag mid-consult.
+      if (error) { copilotDisabledRef.current = true; return; }
+      // Stale guard: patient switched or recording ended during the call.
+      if (activePatientIdRef.current !== requestedPatientId) return;
+      const next: CopilotState = {
+        resumo:        Array.isArray(data?.resumo)        ? data.resumo        : [],
+        alertas:       Array.isArray(data?.alertas)       ? data.alertas       : [],
+        nao_explorado: Array.isArray(data?.nao_explorado) ? data.nao_explorado : [],
+        sugestoes:     Array.isArray(data?.sugestoes)     ? data.sugestoes     : [],
+      };
+      copilotStateRef.current = next;
+      setCopilotState(next);
+      setCopilotLastUpdateAt(Date.now());
+      queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
+    } catch {
+      copilotDisabledRef.current = true;
+    } finally {
+      copilotBusyRef.current = false;
+      setCopilotRefreshing(false);
+      // Drain any chunks that queued while we were busy.
+      if (!copilotDisabledRef.current && copilotPendingRef.current.length >= COPILOT_CHUNKS_PER_REFRESH) {
+        void runCopilotRefresh();
+      }
+    }
+  }
+
+  async function handleLiveChunk(blob: Blob, mimeType: string) {
+    if (copilotDisabledRef.current || !patient) return;
+    try {
+      const data = await blobToBase64(blob);
+      copilotPendingRef.current.push({ mimeType, data });
+      // Cap backlog if calls are lagging — keep the most recent windows.
+      if (copilotPendingRef.current.length > 4) {
+        copilotPendingRef.current = copilotPendingRef.current.slice(-4);
+      }
+      if (!copilotBusyRef.current && copilotPendingRef.current.length >= COPILOT_CHUNKS_PER_REFRESH) {
+        void runCopilotRefresh();
+      }
+    } catch {
+      /* base64 failure — skip this chunk */
+    }
+  }
+
+  const handleDismissSuggestion = (text: string) => {
+    copilotDismissRef.current = [...copilotDismissRef.current, text].slice(-12);
+    setDismissedSuggestions(copilotDismissRef.current);
+    setCopilotState(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, sugestoes: prev.sugestoes.filter(s => s !== text) };
+      copilotStateRef.current = next;
+      return next;
+    });
+  };
+
+  // Tick a clock while recording so "atualizado há Xs" stays live.
+  useEffect(() => {
+    if (!isRecording || copilotLastUpdateAt === null) return;
+    const id = setInterval(() => setCopilotNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isRecording, copilotLastUpdateAt]);
+
+  const copilotSecondsSince = copilotLastUpdateAt === null
+    ? null
+    : Math.max(0, Math.floor((copilotNow - copilotLastUpdateAt) / 1000));
 
   /** supabase-js wraps non-2xx as FunctionsHttpError with the JSON body on
    *  err.context. Returns true when the error was a quota 429 (and toasts). */
@@ -949,6 +1078,17 @@ export function ChatPanel({
       {/* Input Area */}
       <div className="px-3 md:px-4 py-3 space-y-2 md:space-y-3 border-t border-border/30">
         <UsageOverBanner />
+
+        {/* Live copilot — glanceable summary + suggestions while recording */}
+        {isRecording && !stopConfirming && (
+          <LiveCopilotCard
+            state={copilotState}
+            isRefreshing={copilotRefreshing}
+            secondsSinceUpdate={copilotSecondsSince}
+            onDismissSuggestion={handleDismissSuggestion}
+          />
+        )}
+
         {/* Recording Status Banner */}
         {isRecording && (
           <div className={cn(
