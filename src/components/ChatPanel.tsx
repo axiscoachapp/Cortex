@@ -396,6 +396,12 @@ export function ChatPanel({
     // Clear the stale pre-briefing cache for this patient now that a new
     // consultation has been saved — the parent will regenerate on next select.
     onConsultationSaved?.(patient.id);
+    // First visit seeded the Anamnese Social / Histórico Médico — refresh the
+    // profile views so the new bullets appear without a reselect.
+    if (data.historyFilled) {
+      queryClient.invalidateQueries({ queryKey: ['patients', userId] });
+      queryClient.invalidateQueries({ queryKey: ['patient-detail', patient.id] });
+    }
     // The doctor may have switched patients during the 30s+ processing window.
     // The note was saved to the correct chart (closure `patient`); just don't
     // inject it into the chat of whoever is displayed now.
@@ -403,7 +409,12 @@ export function ChatPanel({
     setCurrentConsultationId(data.consultationId ?? null);
     pushToChat(data.soapNote, data.whatsappMessage, data.profileUpdates, data.consultationId ?? undefined);
     setReviewData(null);
-    toast({ title: 'Consulta salva!', description: 'Evolução clínica gerada com sucesso.' });
+    toast({
+      title: 'Consulta salva!',
+      description: data.historyFilled
+        ? 'Evolução gerada. Anamnese e histórico preenchidos a partir da 1ª consulta.'
+        : 'Evolução clínica gerada com sucesso.',
+    });
   };
 
   /** Upload with up to 3 attempts and exponential backoff. */

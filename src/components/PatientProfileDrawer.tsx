@@ -624,10 +624,23 @@ interface EditableSectionProps {
   placeholder: string;
 }
 
+/** Split a stored history/anamnesis value into bullet lines. New content is
+ *  saved one item per line; legacy prose (a single long paragraph) is split on
+ *  sentence boundaries so it still reads as bullets. */
+function toBulletLines(text: string): string[] {
+  if (!text?.trim()) return [];
+  let lines = text.split(/\r?\n/).map(l => l.replace(/^\s*[-•*]\s*/, '').trim()).filter(Boolean);
+  if (lines.length === 1 && lines[0].length > 90) {
+    lines = lines[0].split(/(?<=[.!?])\s+(?=[A-ZÀ-Ú0-9])/).map(s => s.trim()).filter(Boolean);
+  }
+  return lines;
+}
+
 function EditableSection({
   icon, iconBg, title, value, isEditing, draftValue,
   onEdit, onCancel, onSave, onDraftChange, placeholder,
 }: EditableSectionProps) {
+  const bullets = toBulletLines(value);
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
@@ -664,13 +677,19 @@ function EditableSection({
             </Button>
           </div>
         </div>
-      ) : (
-        <p className={cn(
-          'text-sm leading-relaxed pl-10 whitespace-pre-wrap',
-          value ? 'text-muted-foreground' : 'text-muted-foreground/50 italic',
-        )}>
-          {value || placeholder}
+      ) : bullets.length === 0 ? (
+        <p className="text-sm leading-relaxed pl-10 text-muted-foreground/50 italic">
+          {placeholder}
         </p>
+      ) : (
+        <ul className="pl-10 space-y-1.5">
+          {bullets.map((b, i) => (
+            <li key={i} className="text-sm text-muted-foreground leading-snug flex items-start gap-2">
+              <span className="mt-1.5 w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
+              <span>{b}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

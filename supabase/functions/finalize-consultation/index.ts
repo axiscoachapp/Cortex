@@ -62,6 +62,30 @@ const FINAL_SCHEMA = {
   required: ['soap_note', 'whatsapp_message'],
 };
 
+// First-visit anamnesis extraction — populates the patient's history fields.
+const HISTORY_SYSTEM = `Você é um assistente médico estruturando a anamnese de uma PRIMEIRA consulta.
+A partir da evolução SOAP e da transcrição, extraia o histórico do paciente em DUAS listas de tópicos.
+Extraia APENAS o que foi realmente dito. Não infira nem invente.
+
+- medical_history (Histórico Médico): antecedentes pessoais patológicos, cirurgias, internações,
+  doenças crônicas com ano/início quando mencionado, alergias com a reação, e antecedentes FAMILIARES.
+- social_anamnesis (Anamnese Social): estado civil, com quem mora, profissão/ocupação, hábitos
+  (tabagismo, etilismo, atividade física, alimentação, sono), e contexto de vida clinicamente relevante.
+
+REGRAS:
+- Cada item é um tópico curto e telegráfico (máximo ~15 palavras). UM fato por item.
+- Não repita entre as duas listas. Não inclua a queixa/doença atual (isso é do SOAP).
+- Retorne listas vazias se a informação não estiver presente.`;
+
+const HISTORY_SCHEMA = {
+  type: 'object',
+  properties: {
+    medical_history:  { type: 'array', items: { type: 'string' } },
+    social_anamnesis: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['medical_history', 'social_anamnesis'],
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -148,6 +172,15 @@ serve(async (req) => {
       }
     }
 
+    // First visit? Check for a prior consultation BEFORE inserting this one.
+    // The first consultation seeds the patient's anamnesis/history fields.
+    const { count: priorCount } = await supabase
+      .from('consultations')
+      .select('id', { count: 'exact', head: true })
+      .eq('patient_id', patientId)
+      .eq('user_id', userId);
+    const isFirstVisit = (priorCount ?? 0) === 0;
+
     // ── Save to DB ────────────────────────────────────────────────────────────
     const { data: consultation, error: insertError } = await supabase
       .from('consultations')
@@ -219,8 +252,65 @@ serve(async (req) => {
       }
     } catch { /* non-critical — proceed without profile updates */ }
 
+    // ── First-visit anamnesis → seed the patient's history fields ─────────────
+    // On the first consultation, build the Anamnese Social and Histórico Médico
+    // as bullet lists and write them ONLY where the field is still empty, so a
+    // manually-entered history is never overwritten.
+    let historyFilled = false;
+    if (isFirstVisit) {
+      try {
+        const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+        if (GEMINI_API_KEY && soapNote.trim()) {
+          const { data: existing } = await supabase
+            .from('patients')
+            .select('medical_history, social_anamnesis')
+            .eq('id', patientId)
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          const needMedical = !existing?.medical_history?.trim();
+          const needSocial  = !existing?.social_anamnesis?.trim();
+
+          if (needMedical || needSocial) {
+            await checkQuota(supabase, userId, 1);
+            const { text: histRaw, usage: histUsage } = await callGemini(
+              GEMINI_API_KEY,
+              [{ text: `Evolução SOAP:\n${soapNote}\n\nTranscrição:\n${transcription}` }],
+              {
+                systemInstruction: HISTORY_SYSTEM,
+                temperature: 0,
+                maxOutputTokens: 700,
+                thinkingBudget: 0,
+                responseMimeType: 'application/json',
+                responseSchema: HISTORY_SCHEMA,
+              },
+            );
+            await recordUsage(supabase, userId, creditsFromUsage(histUsage));
+
+            const parsed = JSON.parse(histRaw);
+            const toBullets = (v: unknown): string =>
+              Array.isArray(v)
+                ? v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+                    .map(x => `- ${x.trim()}`).join('\n')
+                : '';
+            const medical = toBullets(parsed.medical_history);
+            const social  = toBullets(parsed.social_anamnesis);
+
+            const patch: Record<string, string> = {};
+            if (needMedical && medical) patch.medical_history  = medical;
+            if (needSocial  && social)  patch.social_anamnesis = social;
+
+            if (Object.keys(patch).length > 0) {
+              await supabase.from('patients').update(patch).eq('id', patientId).eq('user_id', userId);
+              historyFilled = true;
+            }
+          }
+        }
+      } catch { /* non-critical — the consultation is already saved */ }
+    }
+
     return new Response(
-      JSON.stringify({ consultationId: consultation.id, soapNote, whatsappMessage, profileUpdates }),
+      JSON.stringify({ consultationId: consultation.id, soapNote, whatsappMessage, profileUpdates, isFirstVisit, historyFilled }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 
