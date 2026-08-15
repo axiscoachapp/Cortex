@@ -8,6 +8,7 @@ import {
 import { useRecording, ConsultationMode } from '@/hooks/useRecording';
 import { RecordingModeDialog } from '@/components/RecordingModeDialog';
 import { LiveCopilotCard, CopilotState } from '@/components/LiveCopilotCard';
+import { QuestionChecklistCard } from '@/components/QuestionChecklistCard';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { SoapNoteView } from '@/components/SoapNoteView';
 import { Button } from '@/components/ui/button';
@@ -109,6 +110,11 @@ export function ChatPanel({
   const [copilotLastUpdateAt, setCopilotLastUpdateAt] = useState<number | null>(null);
   const [copilotNow, setCopilotNow] = useState<number>(() => Date.now());
   const [dismissedSuggestions, setDismissedSuggestions] = useState<string[]>([]);
+
+  // Pre-consult question checklist (from history + chief complaint).
+  const [checklistQuestions, setChecklistQuestions] = useState<string[]>([]);
+  const [checklistLoading, setChecklistLoading] = useState(false);
+  const checklistCacheRef = useRef<Map<string, string[]>>(new Map());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const consultationCommentsRef = useRef<string[]>([]);
@@ -349,6 +355,53 @@ export function ChatPanel({
   const copilotSecondsSince = copilotLastUpdateAt === null
     ? null
     : Math.max(0, Math.floor((copilotNow - copilotLastUpdateAt) / 1000));
+
+  // ── Pre-consult question checklist ──────────────────────────────────────────
+  async function runChecklist(force = false) {
+    if (!patient) return;
+    const requestedId = patient.id;
+    const cached = checklistCacheRef.current.get(requestedId);
+    if (cached && !force) {
+      setChecklistQuestions(cached);
+      setChecklistLoading(false);
+      return;
+    }
+    setChecklistLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-questions', {
+        body: {
+          chiefComplaint,
+          patientContext: {
+            name: patient.name,
+            age: patient.age,
+            diagnoses: patient.diagnoses,
+            medications: patient.medications,
+            allergies: patient.allergies,
+            medicalHistory: patient.medicalHistory,
+            socialAnamnesis: patient.socialAnamnesis,
+          },
+        },
+      });
+      if (error) return;                                   // non-critical helper — stay silent
+      if (activePatientIdRef.current !== requestedId) return;
+      const qs: string[] = Array.isArray(data?.questions) ? data.questions : [];
+      checklistCacheRef.current.set(requestedId, qs);
+      setChecklistQuestions(qs);
+      queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
+    } catch {
+      /* non-critical */
+    } finally {
+      if (activePatientIdRef.current === requestedId) setChecklistLoading(false);
+    }
+  }
+
+  // Generate the checklist when a patient's consult opens (cached per patient).
+  useEffect(() => {
+    setChecklistQuestions([]);
+    setChecklistLoading(false);
+    if (patient) runChecklist(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient?.id]);
 
   /** supabase-js wraps non-2xx as FunctionsHttpError with the JSON body on
    *  err.context. Returns true when the error was a quota 429 (and toasts). */
@@ -885,6 +938,13 @@ export function ChatPanel({
             </div>
           </div>
         )}
+
+        {/* Pre-consult question checklist — from history + chief complaint */}
+        <QuestionChecklistCard
+          questions={checklistQuestions}
+          isLoading={checklistLoading}
+          onRefresh={() => runChecklist(true)}
+        />
 
         {/* Messages */}
         {(() => {
