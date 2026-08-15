@@ -116,6 +116,10 @@ export function ChatPanel({
   const [checklistLoading, setChecklistLoading] = useState(false);
   const checklistCacheRef = useRef<Map<string, string[]>>(new Map());
 
+  // Document attachment from the chat (upload + AI review).
+  const [attachingFile, setAttachingFile] = useState(false);
+  const attachInputRef = useRef<HTMLInputElement>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const consultationCommentsRef = useRef<string[]>([]);
   // Tracks the currently displayed patient so async work started for a
@@ -402,6 +406,76 @@ export function ChatPanel({
     if (patient) runChecklist(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient?.id]);
+
+  // ── Attach document from chat: upload → AI review → connect to record ───────
+  const handleAttachSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !patient) return;
+    if (file.size > 15 * 1024 * 1024) {
+      toast({ title: 'Arquivo muito grande', description: 'Máximo de 15 MB para análise.', variant: 'destructive' });
+      return;
+    }
+    setAttachingFile(true);
+    const forPatientId = patient.id;
+    try {
+      // Same storage convention as PatientFiles (Perfil → Documentos).
+      const safeName = file.name.replace(/[^\w.\-]/g, '_').slice(0, 80);
+      const storagePath = `patients/${userId}/${forPatientId}/${crypto.randomUUID()}-${safeName}`;
+      const { error: upErr } = await supabase.storage
+        .from('patient-files')
+        .upload(storagePath, file, { contentType: file.type || undefined, upsert: false });
+      if (upErr) throw upErr;
+
+      const { data: row, error: dbErr } = await supabase.from('patient_files').insert({
+        patient_id: forPatientId,
+        user_id: userId,
+        storage_path: storagePath,
+        file_name: file.name,
+        mime_type: file.type || null,
+        size_bytes: file.size,
+        tag: file.type?.startsWith('image/') ? 'Imagem' : 'PDF',
+      }).select('id').single();
+      if (dbErr) {
+        await supabase.storage.from('patient-files').remove([storagePath]).catch(() => {});
+        throw dbErr;
+      }
+      queryClient.invalidateQueries({ queryKey: ['patient-files', forPatientId] });
+
+      // AI review — the file is saved either way; analysis failure is not fatal.
+      const { data, error } = await supabase.functions.invoke('analyze-document', {
+        body: { fileId: row.id },
+      });
+      if (error) {
+        if (!(await handleQuotaError(error))) {
+          toast({ title: 'Documento anexado', description: 'Envio concluído, mas a análise automática falhou.' });
+        }
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
+      queryClient.invalidateQueries({ queryKey: ['patient-files', forPatientId] });
+      queryClient.invalidateQueries({ queryKey: ['patients', userId] });
+      queryClient.invalidateQueries({ queryKey: ['patient-detail', forPatientId] });
+      if (activePatientIdRef.current !== forPatientId) return;
+
+      const findings = Array.isArray(data?.keyFindings) && data.keyFindings.length > 0
+        ? `\n\n${data.keyFindings.map((f: string) => `• ${f}`).join('\n')}`
+        : '';
+      onMessagesChange(prev => [...prev, {
+        id: `doc-${Date.now()}`,
+        type: 'assistant',
+        title: `Documento analisado — ${data?.documentType ?? 'Documento'}`,
+        content: `📎 ${file.name}\n\n${data?.summary ?? ''}${findings}`,
+        timestamp: new Date(),
+      }]);
+      toast({ title: 'Documento anexado e analisado', description: data?.profileNote || undefined });
+    } catch (err: any) {
+      toast({ title: 'Erro ao anexar documento', description: err?.message ?? 'Tente novamente.', variant: 'destructive' });
+    } finally {
+      setAttachingFile(false);
+    }
+  };
 
   /** supabase-js wraps non-2xx as FunctionsHttpError with the JSON body on
    *  err.context. Returns true when the error was a quota 429 (and toasts). */
@@ -1292,13 +1366,23 @@ export function ChatPanel({
           </div>
 
           <div className="flex items-center gap-3">
+            <input
+              ref={attachInputRef}
+              type="file"
+              accept="image/*,application/pdf,.pdf,.png,.jpg,.jpeg,.webp,.heic"
+              className="hidden"
+              onChange={handleAttachSelected}
+            />
             <Button
               variant="ghost" size="icon"
               className="text-slate-400 hover:text-foreground h-9 w-9"
-              title="Arquivos do paciente"
-              onClick={() => toast({ title: 'Arquivos', description: 'Use "Perfil Completo & Arquivos" no painel direito para gerenciar anexos.' })}
+              title="Anexar documento ou imagem do paciente"
+              onClick={() => attachInputRef.current?.click()}
+              disabled={attachingFile}
             >
-              <Paperclip className="w-4 h-4" />
+              {attachingFile
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Paperclip className="w-4 h-4" />}
             </Button>
             <div className="flex-1 relative">
               <input

@@ -21,6 +21,7 @@ interface PatientFileRow {
   size_bytes: number | null;
   tag: string | null;
   created_at: string;
+  ai_summary: string | null;
 }
 
 const BUCKET = 'patient-files';
@@ -57,7 +58,7 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patient_files')
-        .select('id, storage_path, file_name, mime_type, size_bytes, tag, created_at')
+        .select('id, storage_path, file_name, mime_type, size_bytes, tag, created_at, ai_summary')
         .eq('patient_id', patientId)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -261,6 +262,14 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
                   {f.size_bytes !== null && <span>· {humanSize(f.size_bytes)}</span>}
                   {f.tag && <span>· {f.tag}</span>}
                 </p>
+                {f.ai_summary && (
+                  <p
+                    className="text-[11px] text-muted-foreground/80 mt-1 whitespace-pre-wrap line-clamp-3"
+                    title={f.ai_summary}
+                  >
+                    🤖 {f.ai_summary}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-0.5 shrink-0">

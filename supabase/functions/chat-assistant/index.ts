@@ -61,6 +61,8 @@ Responda sempre em português brasileiro. Suas respostas devem ser diretas, obje
 
 Quando o médico perguntar sobre o histórico do paciente ("o que conversamos na última consulta?", "qual foi a conduta?", "como ele evoluiu?"), use o bloco de "Histórico de Consultas Anteriores" abaixo como fonte primária de verdade. Cite datas quando relevante.
 
+Quando houver um bloco de "Documentos Anexados", use os resumos dos documentos (exames, laudos, receitas externas) para responder perguntas sobre resultados e valores — cite o nome do documento e a data. Se o médico perguntar por um exame que não está nos documentos, diga que não foi anexado.
+
 Você também pode ajudar com:
 - Diagnóstico diferencial
 - Interações medicamentosas
@@ -119,13 +121,14 @@ serve(async (req) => {
       throw err;
     }
 
-    // ── Pull full patient row + recent consultations when patientId provided ──
+    // ── Pull patient row + recent consultations + attached docs when patientId ──
     let patientRow: any = null;
     let consultations: any[] = [];
+    let attachedDocs: any[] = [];
     if (patientId) {
       // Ownership enforced: the service-role client bypasses RLS, so every
       // query MUST be scoped to the JWT-derived userId.
-      const [{ data: p }, { data: c }] = await Promise.all([
+      const [{ data: p }, { data: c }, { data: docs }] = await Promise.all([
         supabase
           .from('patients')
           .select('name, age, diagnoses, medications, allergies, social_anamnesis, medical_history, clinical_notes')
@@ -139,9 +142,17 @@ serve(async (req) => {
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(5),
+        supabase
+          .from('patient_files')
+          .select('file_name, ai_summary, created_at')
+          .eq('patient_id', patientId)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(8),
       ]);
       patientRow = p;
       consultations = c ?? [];
+      attachedDocs = docs ?? [];
     }
 
     // Merge: DB row wins; fall back to client-provided context.
@@ -191,6 +202,20 @@ Alergias: ${allergies}`;
       historySummary = '--- Histórico de Consultas Anteriores ---\nNenhuma consulta anterior registrada.\n----------------------------\n\n';
     }
 
+    // ── Attached documents block (AI reviews of uploads) ─────────────────────
+    let docsSummary = '';
+    const docsWithInfo = attachedDocs.filter((d: any) => d.ai_summary || d.file_name);
+    if (docsWithInfo.length > 0) {
+      docsSummary = '--- Documentos Anexados (mais recente primeiro) ---\n';
+      for (const d of docsWithInfo) {
+        const date = formatDate(d.created_at);
+        docsSummary += `\n[${date}] ${d.file_name}`;
+        if (d.ai_summary) docsSummary += `\n${condense(d.ai_summary, 500)}`;
+        docsSummary += '\n';
+      }
+      docsSummary += '----------------------------\n\n';
+    }
+
     // ── Build conversation history ───────────────────────────────────────────
     const historyLines: string[] = [];
     if (Array.isArray(chatHistory)) {
@@ -210,7 +235,7 @@ Alergias: ${allergies}`;
       ? historyLines.join('\n') + '\n'
       : '';
 
-    const promptText = `${patientSummary}${historySummary}${conversationBlock}Médico: ${userMessage}`;
+    const promptText = `${patientSummary}${historySummary}${docsSummary}${conversationBlock}Médico: ${userMessage}`;
 
     const { text: reply, usage } = await callGemini(
       GEMINI_API_KEY,
