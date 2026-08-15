@@ -22,12 +22,20 @@ interface UserSettings {
   specialty: Specialty;
   daily_credit_limit: number;
   live_copilot_enabled: boolean;
+  doctor_name: string;
+  crm_number: string;
+  crm_uf: string;
+  professional_address: string;
 }
 
 const DEFAULTS: UserSettings = {
   specialty: 'geral',
   daily_credit_limit: 1500,
   live_copilot_enabled: true,
+  doctor_name: '',
+  crm_number: '',
+  crm_uf: '',
+  professional_address: '',
 };
 
 export function useUserSettings() {
@@ -41,7 +49,7 @@ export function useUserSettings() {
       if (!user?.id) return DEFAULTS;
       const { data, error } = await supabase
         .from('user_settings')
-        .select('specialty, daily_credit_limit, live_copilot_enabled')
+        .select('specialty, daily_credit_limit, live_copilot_enabled, doctor_name, crm_number, crm_uf, professional_address')
         .eq('user_id', user.id)
         .maybeSingle();
       if (error) throw error;
@@ -49,6 +57,10 @@ export function useUserSettings() {
         specialty:            (data?.specialty as Specialty) ?? DEFAULTS.specialty,
         daily_credit_limit:   data?.daily_credit_limit       ?? DEFAULTS.daily_credit_limit,
         live_copilot_enabled: data?.live_copilot_enabled     ?? DEFAULTS.live_copilot_enabled,
+        doctor_name:          data?.doctor_name              ?? '',
+        crm_number:           data?.crm_number               ?? '',
+        crm_uf:               data?.crm_uf                   ?? '',
+        professional_address: data?.professional_address     ?? '',
       };
     },
     enabled: !!user?.id,
@@ -81,9 +93,18 @@ export function useUserSettings() {
   return {
     specialty:            data?.specialty            ?? DEFAULTS.specialty,
     liveCopilotEnabled:   data?.live_copilot_enabled ?? DEFAULTS.live_copilot_enabled,
+    prescriber: {
+      doctorName:          data?.doctor_name          ?? '',
+      crmNumber:           data?.crm_number           ?? '',
+      crmUf:               data?.crm_uf               ?? '',
+      professionalAddress: data?.professional_address ?? '',
+    },
+    /** True when the CFM-mandatory prescription fields are filled. */
+    prescriberComplete: !!(data?.doctor_name?.trim() && data?.crm_number?.trim() && data?.crm_uf?.trim()),
     isLoading,
     setSpecialty:         (specialty: Specialty) => mutation.mutate({ specialty }),
     setLiveCopilotEnabled: (live_copilot_enabled: boolean) => mutation.mutate({ live_copilot_enabled }),
+    updateSettings:       (patch: Partial<UserSettings>) => mutation.mutate(patch),
     isSaving:             mutation.isPending,
   };
 }

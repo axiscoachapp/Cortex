@@ -1,5 +1,7 @@
-import { Settings2, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Settings2, Sparkles, BadgeCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
 } from '@/components/ui/sheet';
@@ -13,8 +15,23 @@ export function SpecialtySettingsSheet() {
   const {
     specialty, setSpecialty,
     liveCopilotEnabled, setLiveCopilotEnabled,
+    prescriber, updateSettings,
     isSaving,
   } = useUserSettings();
+
+  // Local draft for the prescriber fields — saved on blur so each keystroke
+  // doesn't fire an upsert.
+  const [draft, setDraft] = useState(prescriber);
+  useEffect(() => { setDraft(prescriber); }, [prescriber.doctorName, prescriber.crmNumber, prescriber.crmUf, prescriber.professionalAddress]);
+
+  const saveDraft = () => {
+    updateSettings({
+      doctor_name:          draft.doctorName.trim(),
+      crm_number:           draft.crmNumber.trim(),
+      crm_uf:               draft.crmUf.trim().toUpperCase().slice(0, 2),
+      professional_address: draft.professionalAddress.trim(),
+    });
+  };
 
   return (
     <Sheet>
@@ -61,6 +78,46 @@ export function SpecialtySettingsSheet() {
             {isSaving && (
               <p className="text-xs text-muted-foreground">Salvando...</p>
             )}
+          </div>
+
+          {/* Prescriber identity — mandatory content on digital prescriptions */}
+          <div className="space-y-3 pt-5 border-t border-border/50">
+            <div className="space-y-0.5">
+              <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                <BadgeCheck className="w-3.5 h-3.5 text-medical-blue" />
+                Dados do prescritor
+              </label>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Obrigatórios na receita digital (CFM 2.299/2021): nome, CRM e endereço profissional.
+              </p>
+            </div>
+            <Input
+              value={draft.doctorName}
+              onChange={e => setDraft(d => ({ ...d, doctorName: e.target.value }))}
+              onBlur={saveDraft}
+              placeholder="Nome completo do médico"
+            />
+            <div className="grid grid-cols-[1fr_80px] gap-2">
+              <Input
+                value={draft.crmNumber}
+                onChange={e => setDraft(d => ({ ...d, crmNumber: e.target.value }))}
+                onBlur={saveDraft}
+                placeholder="CRM (número)"
+              />
+              <Input
+                value={draft.crmUf}
+                onChange={e => setDraft(d => ({ ...d, crmUf: e.target.value.toUpperCase().slice(0, 2) }))}
+                onBlur={saveDraft}
+                placeholder="UF"
+                maxLength={2}
+              />
+            </div>
+            <Input
+              value={draft.professionalAddress}
+              onChange={e => setDraft(d => ({ ...d, professionalAddress: e.target.value }))}
+              onBlur={saveDraft}
+              placeholder="Endereço profissional"
+            />
           </div>
 
           {/* Live copilot toggle */}

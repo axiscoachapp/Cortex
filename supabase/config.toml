@@ -2,3 +2,9 @@ project_id = "conhcwuwtrkerpbblzgu"
 
 [functions.process-clinical-notes]
 verify_jwt = true
+
+# Public by design: the QR-code validation endpoint is called by pharmacies and
+# the ITI validator without any JWT. Access is gated by the patient-held secret
+# code inside the function.
+[functions.validate-prescription]
+verify_jwt = false

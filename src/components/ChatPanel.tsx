@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send,
   Copy, Check, Pencil, Pause, Play, Loader2, Download, StopCircle, Brain,
-  HelpCircle, StickyNote, ClipboardList, Share2, MonitorSpeaker,
+  HelpCircle, StickyNote, ClipboardList, Share2, MonitorSpeaker, FileSignature,
 } from 'lucide-react';
 import { useRecording, ConsultationMode } from '@/hooks/useRecording';
 import { RecordingModeDialog } from '@/components/RecordingModeDialog';
@@ -119,6 +119,9 @@ export function ChatPanel({
   // Document attachment from the chat (upload + AI review).
   const [attachingFile, setAttachingFile] = useState(false);
   const attachInputRef = useRef<HTMLInputElement>(null);
+
+  // Digital prescription (Phase 1 — unsigned PDF with validation QR).
+  const [generatingRx, setGeneratingRx] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const consultationCommentsRef = useRef<string[]>([]);
@@ -474,6 +477,52 @@ export function ChatPanel({
       toast({ title: 'Erro ao anexar documento', description: err?.message ?? 'Tente novamente.', variant: 'destructive' });
     } finally {
       setAttachingFile(false);
+    }
+  };
+
+  // ── Digital prescription ────────────────────────────────────────────────────
+  const handleGeneratePrescription = async (consultationId?: string) => {
+    if (!patient || generatingRx) return;
+    if (!patient.medications || patient.medications.length === 0) {
+      toast({
+        title: 'Sem medicamentos no perfil',
+        description: 'Adicione medicamentos ao paciente (ou aceite a atualização do perfil) antes de gerar a receita.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setGeneratingRx(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-prescription', {
+        body: { patientId: patient.id, consultationId: consultationId ?? currentConsultationId ?? undefined },
+      });
+      if (error) {
+        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
+          ? await (error as any).context.json().catch(() => null)
+          : null;
+        if (body?.missingPrescriber) {
+          toast({
+            title: 'Complete os dados do prescritor',
+            description: 'Preencha nome, CRM e endereço em Configurações (ícone de engrenagem) — são obrigatórios na receita.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        throw error;
+      }
+      if (data?.previewUrl) window.open(data.previewUrl, '_blank');
+      toast({
+        title: 'Receita digital gerada',
+        description: `Código de acesso do paciente: ${data?.accessCode}. Assinatura ICP-Brasil será habilitada com o provedor de assinatura.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao gerar receita',
+        description: err?.message ?? 'Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingRx(false);
     }
   };
 
@@ -1142,6 +1191,18 @@ export function ChatPanel({
                         >
                           <Share2 className="w-3.5 h-3.5" />
                           Gerar Encaminhamento
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-xs"
+                          disabled={generatingRx}
+                          onClick={() => handleGeneratePrescription(message.consultationId)}
+                        >
+                          {generatingRx
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <FileSignature className="w-3.5 h-3.5" />}
+                          Receita Digital
                         </Button>
                       </div>
                     )}
