@@ -4,8 +4,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays, Plus, ChevronRight, Clock, Users, UserPlus,
   RefreshCw, Stethoscope, CalendarX, Shield, Bell, MessageCircle, Mail, Loader2,
+  Sparkles, FileStack, BookOpen,
 } from 'lucide-react';
 import { SpecialtySettingsSheet } from '@/components/SpecialtySettingsSheet';
+import { OnboardingCard } from '@/components/OnboardingCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Patient } from '@/types/patient';
@@ -148,6 +150,32 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
             <p className="text-muted-foreground mt-0.5 capitalize">{todayLabel()}</p>
           </div>
           <SpecialtySettingsSheet />
+        </div>
+
+        {/* First-run onboarding checklist */}
+        <OnboardingCard
+          patientCount={totalPatients}
+          hasConsultation={patients.some(p => p.status !== 'novo')}
+          userId={userId}
+        />
+
+        {/* Shortcuts to assistant, templates, knowledge base */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            { label: 'Assistente', icon: Sparkles, to: '/assistente' },
+            { label: 'Modelos', icon: FileStack, to: '/modelos' },
+            { label: 'Conhecimento', icon: BookOpen, to: '/conhecimento' },
+            { label: 'Pacientes', icon: Users, to: '/gerenciar-pacientes' },
+          ].map(({ label, icon: Icon, to }) => (
+            <button
+              key={to}
+              onClick={() => navigate(to)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border/50 bg-white hover:border-medical-blue/30 hover:bg-medical-blue-light/20 transition-all"
+            >
+              <Icon className="w-4 h-4 text-medical-blue shrink-0" />
+              <span className="text-xs font-medium text-foreground truncate">{label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Stats */}

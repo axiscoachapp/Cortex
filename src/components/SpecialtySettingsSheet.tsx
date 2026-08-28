@@ -49,8 +49,16 @@ export function SpecialtySettingsSheet() {
     });
   };
 
+  // Allow other components (e.g. the onboarding checklist) to open settings.
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const openHandler = () => setOpen(true);
+    window.addEventListener('open-cortex-settings', openHandler);
+    return () => window.removeEventListener('open-cortex-settings', openHandler);
+  }, []);
+
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
           variant="ghost"

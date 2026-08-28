@@ -18,6 +18,8 @@ const CalendarPage = lazy(() => import("./pages/Calendar"));
 const GoogleOAuthCallback = lazy(() => import("./pages/GoogleOAuthCallback"));
 const DataPrivacy = lazy(() => import("./pages/DataPrivacy"));
 const TemplatesPage = lazy(() => import("./pages/Templates"));
+const KnowledgeBasePage = lazy(() => import("./pages/KnowledgeBase"));
+const AssistantPage = lazy(() => import("./pages/Assistant"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -62,6 +64,8 @@ const App = () => (
               <Route path="/google-oauth-callback" element={<GoogleOAuthCallback />} />
               <Route path="/privacidade" element={<DataPrivacy />} />
               <Route path="/modelos" element={<TemplatesPage />} />
+              <Route path="/conhecimento" element={<KnowledgeBasePage />} />
+              <Route path="/assistente" element={<AssistantPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

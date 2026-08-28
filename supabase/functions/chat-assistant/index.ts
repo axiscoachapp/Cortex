@@ -4,6 +4,7 @@ import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import { embedText } from "../_shared/gemini.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -62,6 +63,8 @@ Responda sempre em português brasileiro. Suas respostas devem ser diretas, obje
 Quando o médico perguntar sobre o histórico do paciente ("o que conversamos na última consulta?", "qual foi a conduta?", "como ele evoluiu?"), use o bloco de "Histórico de Consultas Anteriores" abaixo como fonte primária de verdade. Cite datas quando relevante.
 
 Quando houver um bloco de "Documentos Anexados", use os resumos dos documentos (exames, laudos, receitas externas) para responder perguntas sobre resultados e valores — cite o nome do documento e a data. Se o médico perguntar por um exame que não está nos documentos, diga que não foi anexado.
+
+Quando houver um bloco de "Base de Conhecimento do Médico", use esse conteúdo como referência confiável (protocolos, artigos e diretrizes que o próprio médico cadastrou) para fundamentar a resposta.
 
 Você também pode ajudar com:
 - Diagnóstico diferencial
@@ -235,7 +238,27 @@ Alergias: ${allergies}`;
       ? historyLines.join('\n') + '\n'
       : '';
 
-    const promptText = `${patientSummary}${historySummary}${docsSummary}${conversationBlock}Médico: ${userMessage}`;
+    // ── Knowledge base retrieval (RAG) ───────────────────────────────────────
+    // Embed the question, pull the doctor's most relevant knowledge chunks.
+    let knowledgeBlock = '';
+    try {
+      const queryEmbedding = await embedText(GEMINI_API_KEY, userMessage, 'RETRIEVAL_QUERY');
+      if (queryEmbedding.length > 0) {
+        const { data: matches } = await supabase.rpc('match_knowledge', {
+          p_user_id: userId,
+          query_embedding: queryEmbedding,
+          match_count: 5,
+        });
+        const relevant = (matches ?? []).filter((m: any) => m.similarity > 0.5);
+        if (relevant.length > 0) {
+          knowledgeBlock = '--- Base de Conhecimento do Médico (use como referência confiável) ---\n'
+            + relevant.map((m: any) => condense(m.content, 700)).join('\n---\n')
+            + '\n----------------------------\n\n';
+        }
+      }
+    } catch { /* RAG is best-effort — never block the answer */ }
+
+    const promptText = `${patientSummary}${historySummary}${docsSummary}${knowledgeBlock}${conversationBlock}Médico: ${userMessage}`;
 
     const { text: reply, usage } = await callGemini(
       GEMINI_API_KEY,

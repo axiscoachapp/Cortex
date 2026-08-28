@@ -102,6 +102,78 @@ export async function uploadToGeminiFiles(
   return fileUri;
 }
 
+// gemini-embedding-001 is the current embedding model; 768-dim output matches
+// the vector(768) column (cosine distance, so no magnitude normalization needed).
+const EMBED_MODEL = 'gemini-embedding-001';
+const EMBED_DIM = 768;
+const EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent`;
+const EMBED_BATCH_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:batchEmbedContents`;
+
+/** Embed a single text → 768-dim vector. */
+export async function embedText(apiKey: string, text: string, taskType = 'RETRIEVAL_QUERY'): Promise<number[]> {
+  const res = await fetch(`${EMBED_URL}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: `models/${EMBED_MODEL}`,
+      content: { parts: [{ text: text.slice(0, 8000) }] },
+      taskType,
+      outputDimensionality: EMBED_DIM,
+    }),
+  });
+  if (!res.ok) throw new Error(`Embed error ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  return json.embedding?.values ?? [];
+}
+
+/** Embed many texts (documents). Batch first; on failure, sequential fallback. */
+export async function embedBatch(apiKey: string, texts: string[]): Promise<number[][]> {
+  const res = await fetch(`${EMBED_BATCH_URL}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: texts.map(t => ({
+        model: `models/${EMBED_MODEL}`,
+        content: { parts: [{ text: t.slice(0, 8000) }] },
+        taskType: 'RETRIEVAL_DOCUMENT',
+        outputDimensionality: EMBED_DIM,
+      })),
+    }),
+  });
+  if (res.ok) {
+    const json = await res.json();
+    return (json.embeddings ?? []).map((e: any) => e.values ?? []);
+  }
+  // Fallback: some models/regions don't expose batchEmbedContents — embed one by one.
+  const out: number[][] = [];
+  for (const t of texts) {
+    out.push(await embedText(apiKey, t, 'RETRIEVAL_DOCUMENT'));
+  }
+  return out;
+}
+
+/** Split text into ~overlapping chunks on paragraph/sentence boundaries. */
+export function chunkText(text: string, size = 1200, overlap = 150): string[] {
+  const clean = (text ?? '').replace(/\r\n/g, '\n').trim();
+  if (clean.length <= size) return clean ? [clean] : [];
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < clean.length) {
+    let end = Math.min(i + size, clean.length);
+    if (end < clean.length) {
+      // Prefer to break at a paragraph or sentence boundary within the window.
+      const slice = clean.slice(i, end);
+      const brk = Math.max(slice.lastIndexOf('\n\n'), slice.lastIndexOf('. '));
+      if (brk > size * 0.5) end = i + brk + 1;
+    }
+    const chunk = clean.slice(i, end).trim();
+    if (chunk) chunks.push(chunk);
+    if (end >= clean.length) break;
+    i = end - overlap;
+  }
+  return chunks;
+}
+
 /** Tolerant parse of a model JSON response: strips ```json fences and parses.
  *  Returns null on failure so the caller can salvage individual fields. */
 export function parseModelJson(raw: string): Record<string, any> | null {

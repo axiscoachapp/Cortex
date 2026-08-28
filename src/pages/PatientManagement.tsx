@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Brain, Plus, Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import { Brain, Plus, Pencil, Trash2, ArrowLeft, Upload } from 'lucide-react';
+import { ImportPatientsModal } from '@/components/ImportPatientsModal';
 import { toast } from 'sonner';
 import { Patient } from '@/types/patient';
 
@@ -20,6 +21,7 @@ const PatientManagement = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -142,6 +144,11 @@ const PatientManagement = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base md:text-xl">Pacientes</CardTitle>
+            <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4 md:mr-2" />
+              <span className="hidden sm:inline">Importar</span>
+            </Button>
             <Dialog open={dialogOpen} onOpenChange={(open) => {
               setDialogOpen(open);
               if (!open) resetForm();
@@ -219,6 +226,7 @@ const PatientManagement = () => {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -299,6 +307,10 @@ const PatientManagement = () => {
           </CardContent>
         </Card>
       </main>
+
+      {user && (
+        <ImportPatientsModal open={importOpen} onOpenChange={setImportOpen} userId={user.id} />
+      )}
     </div>
   );
 };
