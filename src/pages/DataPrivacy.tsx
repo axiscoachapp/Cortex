@@ -77,7 +77,7 @@ export default function DataPrivacy() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-background border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+          <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <Shield className="h-5 w-5 text-medical-blue" />

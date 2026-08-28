@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Brain, Mic, FileText, Sparkles, MessagesSquare, Eye, EyeOff, ArrowRight, Check,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const features = [
@@ -20,6 +20,7 @@ const features = [
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { signIn, signUp, enableAdminBypass, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,22 +34,22 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { toast.error('Preencha todos os campos'); return; }
+    if (!email || !password) { toast({ title: 'Preencha todos os campos', variant: 'destructive' }); return; }
     setLoading(true);
     const { error } = await signIn(email, password);
     setLoading(false);
-    if (error) { toast.error(error.message); } else { navigate('/'); }
+    if (error) { toast({ title: error.message, variant: 'destructive' }); } else { navigate('/'); }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { toast.error('Preencha todos os campos'); return; }
-    if (password.length < 6) { toast.error('Senha deve ter mínimo 6 caracteres'); return; }
+    if (!email || !password) { toast({ title: 'Preencha todos os campos', variant: 'destructive' }); return; }
+    if (password.length < 6) { toast({ title: 'Senha deve ter mínimo 6 caracteres', variant: 'destructive' }); return; }
     setLoading(true);
     const { error } = await signUp(email, password);
     setLoading(false);
     if (error) {
-      toast.error(error.message.includes('already registered') ? 'Email já cadastrado' : error.message);
+      toast({ title: error.message.includes('already registered') ? 'Email já cadastrado' : error.message, variant: 'destructive' });
     } else { navigate('/'); }
   };
 

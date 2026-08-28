@@ -9,7 +9,7 @@ import { PatientSnapshot } from '@/components/PatientSnapshot';
 import { NewConsultationModal } from '@/components/NewConsultationModal';
 import { WelcomeDashboard } from '@/components/WelcomeDashboard';
 import { Button } from '@/components/ui/button';
-import { LogOut, Home, Users, Mic, User } from 'lucide-react';
+import { LogOut, Home, PanelLeft, Mic, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Patient, ChatMessage } from '@/types/patient';
 import { useToast } from '@/hooks/use-toast';
@@ -205,7 +205,7 @@ const Index = () => {
 
   const navItems = [
     { id: 'home' as const, icon: Home, label: 'Início', disabled: false },
-    { id: 'list' as const, icon: Users, label: 'Pacientes', disabled: false },
+    { id: 'list' as const, icon: PanelLeft, label: 'Menu', disabled: false },
     { id: 'chat' as const, icon: Mic, label: 'Consulta', disabled: !selectedPatient },
     { id: 'info' as const, icon: User, label: 'Perfil', disabled: !selectedPatient },
   ];
@@ -226,6 +226,7 @@ const Index = () => {
             selectedPatient={selectedPatient}
             onSelectPatient={handleSelectPatient}
             onNewConsultation={() => setShowNewConsultationModal(true)}
+            userId={user?.id ?? ''}
           />
         </div>
 

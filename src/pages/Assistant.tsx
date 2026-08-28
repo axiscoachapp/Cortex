@@ -29,6 +29,7 @@ export default function AssistantPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
 
@@ -71,7 +72,7 @@ export default function AssistantPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-background border-b sticky top-0 z-10">
         <div className="container mx-auto px-3 md:px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+          <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <Sparkles className="h-5 w-5 text-medical-blue shrink-0" />
@@ -87,10 +88,12 @@ export default function AssistantPage() {
             </h2>
             <div className="w-full relative">
               <input
+                ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') send(input); }}
                 placeholder="Escreva o que você precisa"
+                aria-label="Escreva o que você precisa"
                 className="w-full h-14 pl-5 pr-14 rounded-2xl border border-border bg-white shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30"
                 autoFocus
               />
@@ -109,7 +112,7 @@ export default function AssistantPage() {
                 <button
                   key={label}
                   type="button"
-                  onClick={() => { setInput(prompt); }}
+                  onClick={() => { setInput(prompt); inputRef.current?.focus(); }}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-border bg-white text-xs font-medium text-foreground/80 hover:border-medical-blue/40 hover:bg-medical-blue-light/30 transition-all"
                 >
                   <Icon className="w-3.5 h-3.5 text-medical-blue" />

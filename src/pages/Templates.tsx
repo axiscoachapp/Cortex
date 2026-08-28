@@ -171,7 +171,7 @@ export default function TemplatesPage() {
       <header className="bg-background border-b sticky top-0 z-10">
         <div className="container mx-auto px-3 md:px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+            <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <FileStack className="h-5 w-5 text-medical-blue shrink-0" />

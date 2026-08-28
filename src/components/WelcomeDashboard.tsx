@@ -78,17 +78,20 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
   const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(); dayEnd.setHours(23, 59, 59, 999);
 
-  const { data: todayApts = [], isLoading: aptsLoading } = useQuery<Appointment[]>({
+  const { data: todayApts = [], isLoading: aptsLoading, isError: aptsError, refetch: refetchApts } = useQuery<Appointment[]>({
     queryKey: ['appointments-today', userId, dayStart.toDateString()],
     queryFn: async () => {
       if (!userId) return [];
-      const { data } = await supabase
+      // Throw on failure so isError is set — otherwise a failed load looks
+      // identical to an empty agenda, telling a doctor no one is coming in.
+      const { data, error } = await supabase
         .from('appointments')
         .select('*')
         .eq('user_id', userId)
         .gte('start_time', dayStart.toISOString())
         .lte('start_time', dayEnd.toISOString())
         .order('start_time');
+      if (error) throw error;
       return data ?? [];
     },
     enabled: !!userId,
@@ -152,6 +155,16 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
           <SpecialtySettingsSheet />
         </div>
 
+        {/* Primary action — the app's core verb, kept at the top */}
+        <Button
+          onClick={onNewConsultation}
+          className="w-full h-12 gap-2 text-sm font-semibold shadow-sm"
+          style={{ background: 'linear-gradient(135deg, hsl(210 70% 50%), hsl(220 70% 40%))' }}
+        >
+          <Plus className="w-4 h-4" />
+          Nova Consulta
+        </Button>
+
         {/* First-run onboarding checklist */}
         <OnboardingCard
           patientCount={totalPatients}
@@ -159,8 +172,8 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
           userId={userId}
         />
 
-        {/* Shortcuts to assistant, templates, knowledge base */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {/* Shortcuts — mobile only; on desktop the sidebar nav covers these */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:hidden">
           {[
             { label: 'Assistente', icon: Sparkles, to: '/assistente' },
             { label: 'Modelos', icon: FileStack, to: '/modelos' },
@@ -247,8 +260,8 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
           </section>
         )}
 
-        {/* Today's agenda */}
-        <section>
+        {/* Today's agenda — mobile only; the desktop sidebar shows it */}
+        <section className="md:hidden">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <CalendarDays className="w-4 h-4 text-medical-blue" />
@@ -267,6 +280,16 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
               {[1, 2].map(i => (
                 <div key={i} className="h-16 rounded-xl bg-muted/40 animate-pulse" />
               ))}
+            </div>
+          ) : aptsError ? (
+            <div className="rounded-xl border border-dashed border-red-200 bg-red-50/40 p-6 text-center">
+              <p className="text-sm text-red-700">Não foi possível carregar a agenda</p>
+              <button
+                onClick={() => refetchApts()}
+                className="mt-3 text-xs font-medium text-medical-blue hover:underline"
+              >
+                Tentar novamente
+              </button>
             </div>
           ) : todayApts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-6 text-center">
@@ -418,21 +441,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
           </section>
         )}
 
-        {/* Quick actions */}
-        <div className="flex gap-3 pt-2">
-          <Button onClick={onNewConsultation} className="gap-2 shadow-sm" style={{
-            background: 'linear-gradient(135deg, hsl(210 70% 50%), hsl(220 70% 40%))',
-          }}>
-            <Plus className="w-4 h-4" />
-            Nova Consulta
-          </Button>
-          <Button variant="outline" onClick={() => navigate('/agenda')} className="gap-2">
-            <CalendarDays className="w-4 h-4" />
-            Ver Agenda
-          </Button>
-        </div>
-
-        <div className="pb-4">
+        <div className="pb-4 pt-2">
           <Link
             to="/privacidade"
             className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"

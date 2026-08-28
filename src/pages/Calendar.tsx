@@ -192,9 +192,10 @@ export default function CalendarPage() {
   const handleGoogleConnect = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!clientId) {
+      console.warn('Google Calendar: VITE_GOOGLE_CLIENT_ID is not configured');
       toast({
-        title: 'Google Client ID não configurado',
-        description: 'Adicione VITE_GOOGLE_CLIENT_ID ao arquivo .env',
+        title: 'Integração com o Google Calendar indisponível',
+        description: 'Este recurso ainda não está configurado. Fale com o suporte.',
         variant: 'destructive',
       });
       return;
@@ -229,7 +230,7 @@ export default function CalendarPage() {
       <header className="bg-background border-b sticky top-0 z-10">
         <div className="container mx-auto px-3 md:px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+            <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <CalendarDays className="h-5 w-5 md:h-6 md:w-6 text-medical-blue shrink-0" />
@@ -288,7 +289,7 @@ export default function CalendarPage() {
             {/* New appointment */}
             <Button variant="medical" size="sm" onClick={handleNewAppointment} className="gap-1.5">
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nova Consulta</span>
+              <span className="hidden sm:inline">Novo Agendamento</span>
             </Button>
           </div>
         </div>

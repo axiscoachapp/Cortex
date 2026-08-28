@@ -13,12 +13,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Brain, Plus, Pencil, Trash2, ArrowLeft, Upload } from 'lucide-react';
 import { ImportPatientsModal } from '@/components/ImportPatientsModal';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { Patient } from '@/types/patient';
 
 const PatientManagement = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -47,7 +48,7 @@ const PatientManagement = () => {
     e.preventDefault();
     
     if (!formData.name || !formData.age || !formData.last_visit) {
-      toast.error('Preencha todos os campos obrigatórios');
+      toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
       return;
     }
 
@@ -68,21 +69,21 @@ const PatientManagement = () => {
           .eq('id', editingPatient.id);
 
         if (error) throw error;
-        toast.success('Paciente atualizado com sucesso!');
+        toast({ title: 'Paciente atualizado com sucesso!' });
       } else {
         const { error } = await supabase
           .from('patients')
           .insert([patientData]);
 
         if (error) throw error;
-        toast.success('Paciente adicionado com sucesso!');
+        toast({ title: 'Paciente adicionado com sucesso!' });
       }
 
       setDialogOpen(false);
       resetForm();
       queryClient.invalidateQueries({ queryKey: ['patients', user.id] });
     } catch (error: any) {
-      toast.error('Erro ao salvar paciente');
+      toast({ title: 'Erro ao salvar paciente', variant: 'destructive' });
     }
   };
 
@@ -96,10 +97,10 @@ const PatientManagement = () => {
         .eq('id', id);
 
       if (error) throw error;
-      toast.success('Paciente excluído com sucesso!');
+      toast({ title: 'Paciente excluído com sucesso!' });
       queryClient.invalidateQueries({ queryKey: ['patients', user.id] });
     } catch (error: any) {
-      toast.error('Erro ao excluir paciente');
+      toast({ title: 'Erro ao excluir paciente', variant: 'destructive' });
     }
   };
 
@@ -131,7 +132,7 @@ const PatientManagement = () => {
       <header className="bg-background border-b">
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+            <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <Brain className="h-6 w-6 md:h-8 md:w-8 text-primary shrink-0" />
@@ -257,10 +258,10 @@ const PatientManagement = () => {
                         </div>
                       </div>
                       <div className="flex gap-0.5 shrink-0">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(patient)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Editar paciente" onClick={() => handleEdit(patient)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(patient.id)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Excluir paciente" onClick={() => handleDelete(patient.id)}>
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                       </div>
@@ -290,10 +291,10 @@ const PatientManagement = () => {
                           <TableCell>{new Date(patient.lastVisit).toLocaleDateString('pt-BR')}</TableCell>
                           <TableCell><span className="capitalize">{patient.status}</span></TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(patient)}>
+                            <Button variant="ghost" size="icon" aria-label="Editar paciente" onClick={() => handleEdit(patient)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(patient.id)}>
+                            <Button variant="ghost" size="icon" aria-label="Excluir paciente" onClick={() => handleDelete(patient.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </TableCell>

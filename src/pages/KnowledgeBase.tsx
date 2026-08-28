@@ -54,6 +54,8 @@ export default function KnowledgeBasePage() {
     },
     enabled: !!user?.id,
     staleTime: 20_000,
+    // Poll while anything is still indexing so the badge flips to "Pronto".
+    refetchInterval: (q) => (q.state.data as KBDoc[] | undefined)?.some(d => d.status === 'processing') ? 4000 : false,
   });
 
   const filtered = docs.filter(d => d.title.toLowerCase().includes(search.trim().toLowerCase()));
@@ -97,7 +99,7 @@ export default function KnowledgeBasePage() {
       <header className="bg-background border-b sticky top-0 z-10">
         <div className="container mx-auto px-3 md:px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+            <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <BookOpen className="h-5 w-5 text-medical-blue shrink-0" />
@@ -139,6 +141,10 @@ export default function KnowledgeBasePage() {
               <Plus className="w-4 h-4" /> Adicionar conhecimento
             </Button>
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-10 text-sm text-muted-foreground">
+            Nenhum documento corresponde à busca.
+          </div>
         ) : (
           <div className="space-y-2">
             {filtered.map(d => {
@@ -155,7 +161,7 @@ export default function KnowledgeBasePage() {
                     </p>
                   </div>
                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${meta.cls}`}>{meta.label}</span>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-destructive shrink-0"
+                  <Button size="icon" variant="ghost" aria-label="Excluir documento" className="h-8 w-8 hover:text-destructive shrink-0"
                     onClick={() => handleDelete(d)} disabled={busyId === d.id}>
                     {busyId === d.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />}
                   </Button>
