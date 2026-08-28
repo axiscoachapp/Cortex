@@ -102,6 +102,34 @@ export async function uploadToGeminiFiles(
   return fileUri;
 }
 
+/** Tolerant parse of a model JSON response: strips ```json fences and parses.
+ *  Returns null on failure so the caller can salvage individual fields. */
+export function parseModelJson(raw: string): Record<string, any> | null {
+  let s = (raw ?? '').trim();
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+/** Extract a top-level JSON string field even from TRUNCATED output (e.g. the
+ *  model hit maxOutputTokens mid-string, leaving invalid JSON). Prevents the
+ *  raw JSON envelope from leaking into the document shown to the doctor. */
+export function salvageJsonString(raw: string, field: string): string | null {
+  const re = new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)`, 'i');
+  const m = (raw ?? '').match(re);
+  if (!m) return null;
+  try {
+    return JSON.parse(`"${m[1]}"`);
+  } catch {
+    // Unterminated capture — unescape best-effort.
+    return m[1].replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  }
+}
+
+/** Collapse pathological blank-line runs the model sometimes emits as padding. */
+export function collapseBlankLines(s: string): string {
+  return (s ?? '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 export function buildPatientSummary(ctx: any, chiefComplaint: string): string {
   if (!ctx) return '';
   const diagnoses = ctx.diagnoses?.map((d: any) => `${d.code} ${d.description}`).join('; ') || 'Nenhum';

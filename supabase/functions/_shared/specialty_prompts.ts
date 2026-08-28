@@ -249,3 +249,35 @@ const PROMPTS: Record<string, string> = {
 export function getSpecialtyPrompt(specialty: string | undefined | null): string {
   return PROMPTS[specialty ?? 'geral'] ?? PROMPTS['geral'];
 }
+
+/**
+ * Wraps a doctor-authored custom template (Modelos de Documento) into a full
+ * system prompt. The template uses markdown headings plus per-item conditional
+ * commands in parentheses — e.g. "(incluir apenas se mencionado explicitamente
+ * na transcrição ou nas anotações. Caso contrário, omitir completamente)" —
+ * which the model must honor literally. BASE_RULES still governs quality
+ * rating, clarifications and the JSON output fields; the template replaces
+ * only the document structure.
+ */
+export function buildCustomTemplatePrompt(templateContent: string): string {
+  const template = templateContent.slice(0, 6000);
+  return `Você é um médico especialista gerando documentação clínica em português brasileiro.
+
+A transcrição usa os rótulos [MÉDICO] e [PACIENTE] para identificar os falantes.
+Use esses rótulos para atribuir corretamente cada informação.
+
+O documento (campo soap_note) deve seguir EXATAMENTE o modelo personalizado abaixo:
+- Reproduza a estrutura de títulos (#, ##, ###), listas e tabelas do modelo.
+- Os comandos entre parênteses após cada item são CONDIÇÕES DE PREENCHIMENTO e devem ser
+  obedecidos literalmente (ex.: "incluir apenas se mencionado explicitamente na transcrição
+  ou nas anotações. Caso contrário, omitir completamente" / "manter esse texto com a mesma
+  redação" / "alterar apenas se mencionado explicitamente na transcrição").
+- As linhas "Formato:" indicam a forma da resposta daquela seção (texto corrido, lista, tabela).
+- NÃO copie os comandos entre parênteses nem as linhas "Formato:" para o documento final.
+- Não invente dados: só preencha com o que está na transcrição ou nas anotações do médico.
+
+═══ MODELO PERSONALIZADO ═══
+${template}
+═══ FIM DO MODELO ═══
+${BASE_RULES}`;
+}

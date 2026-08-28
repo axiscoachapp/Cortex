@@ -26,6 +26,7 @@ interface UserSettings {
   crm_number: string;
   crm_uf: string;
   professional_address: string;
+  active_template_id: string | null;
 }
 
 const DEFAULTS: UserSettings = {
@@ -36,6 +37,7 @@ const DEFAULTS: UserSettings = {
   crm_number: '',
   crm_uf: '',
   professional_address: '',
+  active_template_id: null,
 };
 
 export function useUserSettings() {
@@ -49,7 +51,7 @@ export function useUserSettings() {
       if (!user?.id) return DEFAULTS;
       const { data, error } = await supabase
         .from('user_settings')
-        .select('specialty, daily_credit_limit, live_copilot_enabled, doctor_name, crm_number, crm_uf, professional_address')
+        .select('specialty, daily_credit_limit, live_copilot_enabled, doctor_name, crm_number, crm_uf, professional_address, active_template_id')
         .eq('user_id', user.id)
         .maybeSingle();
       if (error) throw error;
@@ -61,6 +63,7 @@ export function useUserSettings() {
         crm_number:           data?.crm_number               ?? '',
         crm_uf:               data?.crm_uf                   ?? '',
         professional_address: data?.professional_address     ?? '',
+        active_template_id:   data?.active_template_id        ?? null,
       };
     },
     enabled: !!user?.id,
@@ -93,6 +96,8 @@ export function useUserSettings() {
   return {
     specialty:            data?.specialty            ?? DEFAULTS.specialty,
     liveCopilotEnabled:   data?.live_copilot_enabled ?? DEFAULTS.live_copilot_enabled,
+    activeTemplateId:     data?.active_template_id   ?? null,
+    setActiveTemplateId:  (active_template_id: string | null) => mutation.mutate({ active_template_id }),
     prescriber: {
       doctorName:          data?.doctor_name          ?? '',
       crmNumber:           data?.crm_number           ?? '',

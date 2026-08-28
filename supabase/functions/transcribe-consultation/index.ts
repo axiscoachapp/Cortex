@@ -3,8 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini, uploadToGeminiFiles, buildPatientSummary } from "../_shared/gemini.ts";
-import { getSpecialtyPrompt } from "../_shared/specialty_prompts.ts";
+import { callGemini, uploadToGeminiFiles, buildPatientSummary, parseModelJson, salvageJsonString, collapseBlankLines } from "../_shared/gemini.ts";
+import { getSpecialtyPrompt, buildCustomTemplatePrompt } from "../_shared/specialty_prompts.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
@@ -68,7 +68,7 @@ serve(async (req) => {
     const { userId } = await requireUser(req);
     const {
       patientId, chiefComplaint, patientContext,
-      audioStoragePath, audioMimeType, consultationComments, userSpecialty,
+      audioStoragePath, audioMimeType, consultationComments, userSpecialty, templateContent,
     } = await req.json();
 
     if (!patientId || !audioStoragePath) {
@@ -177,7 +177,9 @@ serve(async (req) => {
       GEMINI_API_KEY,
       [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsText}` }],
       {
-        systemInstruction: getSpecialtyPrompt(userSpecialty),
+        systemInstruction: (typeof templateContent === 'string' && templateContent.trim())
+          ? buildCustomTemplatePrompt(templateContent)
+          : getSpecialtyPrompt(userSpecialty),
         temperature: 0.3,
         maxOutputTokens: 2000,
         thinkingBudget: 512,
@@ -193,17 +195,21 @@ serve(async (req) => {
     let transcriptionQuality: 'good' | 'partial' | 'poor' = 'good';
     let differentialDiagnoses: string[] = [];
     let drugInteractionAlerts: string[] = [];
-    try {
-      const parsed = JSON.parse(draftRaw);
+    const parsed = parseModelJson(draftRaw);
+    if (parsed) {
       soapNote              = parsed.soap_note              ?? '';
       whatsappMessage       = parsed.whatsapp_message       ?? '';
       clarifications        = Array.isArray(parsed.clarifications)         ? parsed.clarifications         : [];
       transcriptionQuality  = parsed.transcription_quality                 ?? 'good';
       differentialDiagnoses = Array.isArray(parsed.differential_diagnoses) ? parsed.differential_diagnoses : [];
       drugInteractionAlerts = Array.isArray(parsed.drug_interaction_alerts)? parsed.drug_interaction_alerts: [];
-    } catch {
-      soapNote = draftRaw;
+    } else {
+      // Truncated/invalid JSON — salvage the text fields; arrays stay empty.
+      soapNote        = salvageJsonString(draftRaw, 'soap_note') ?? draftRaw;
+      whatsappMessage = salvageJsonString(draftRaw, 'whatsapp_message') ?? '';
     }
+    soapNote        = collapseBlankLines(soapNote);
+    whatsappMessage = collapseBlankLines(whatsappMessage);
 
     return new Response(
       JSON.stringify({

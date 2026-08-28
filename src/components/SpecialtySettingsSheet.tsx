@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Settings2, Sparkles, BadgeCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Settings2, Sparkles, BadgeCheck, FileStack, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
 } from '@/components/ui/sheet';
@@ -16,8 +19,21 @@ export function SpecialtySettingsSheet() {
     specialty, setSpecialty,
     liveCopilotEnabled, setLiveCopilotEnabled,
     prescriber, updateSettings,
+    activeTemplateId, setActiveTemplateId,
     isSaving,
   } = useUserSettings();
+
+  const { data: templates = [] } = useQuery<Array<{ id: string; name: string }>>({
+    queryKey: ['document-templates-min'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('document_templates')
+        .select('id, name')
+        .order('name');
+      return data ?? [];
+    },
+    staleTime: 60_000,
+  });
 
   // Local draft for the prescriber fields — saved on blur so each keystroke
   // doesn't fire an upsert.
@@ -78,6 +94,38 @@ export function SpecialtySettingsSheet() {
             {isSaving && (
               <p className="text-xs text-muted-foreground">Salvando...</p>
             )}
+          </div>
+
+          {/* Document template — replaces the default SOAP structure */}
+          <div className="space-y-2 pt-5 border-t border-border/50">
+            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              <FileStack className="w-3.5 h-3.5 text-medical-blue" />
+              Modelo da evolução
+            </label>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Escolha um modelo para estruturar as evoluções geradas pela IA, ou mantenha o SOAP padrão.
+            </p>
+            <Select
+              value={activeTemplateId ?? 'default'}
+              onValueChange={(v) => setActiveTemplateId(v === 'default' ? null : v)}
+              disabled={isSaving}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">SOAP padrão (por especialidade)</SelectItem>
+                {templates.map(t => (
+                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Link
+              to="/modelos"
+              className="inline-flex items-center gap-1 text-xs text-medical-blue hover:text-medical-blue-dark font-medium mt-1"
+            >
+              Gerenciar modelos <ChevronRight className="w-3 h-3" />
+            </Link>
           </div>
 
           {/* Prescriber identity — mandatory content on digital prescriptions */}

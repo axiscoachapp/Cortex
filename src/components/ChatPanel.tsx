@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send,
   Copy, Check, Pencil, Pause, Play, Loader2, Download, StopCircle, Brain,
@@ -144,7 +144,24 @@ export function ChatPanel({
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { specialty, liveCopilotEnabled } = useUserSettings();
+  const { specialty, liveCopilotEnabled, activeTemplateId } = useUserSettings();
+
+  // The doctor's active document template (if any) replaces the default SOAP
+  // structure in transcribe/finalize. Fetched once and cached by React Query.
+  const { data: activeTemplateContent } = useQuery<string | null>({
+    queryKey: ['active-template-content', activeTemplateId],
+    queryFn: async () => {
+      if (!activeTemplateId) return null;
+      const { data } = await supabase
+        .from('document_templates')
+        .select('content')
+        .eq('id', activeTemplateId)
+        .maybeSingle();
+      return data?.content ?? null;
+    },
+    enabled: !!activeTemplateId,
+    staleTime: 5 * 60_000,
+  });
 
   const recording = useRecording({
     onStop: processConsultation,
@@ -575,10 +592,12 @@ export function ChatPanel({
           soapNote: directSoapNote,
           whatsappMessage: directWhatsappMessage ?? '',
           userSpecialty: specialty,
+          templateContent: activeTemplateContent ?? undefined,
         }
       : {
           patientId: patient.id, userId, chiefComplaint, transcription, doctorComments, patientContext,
           userSpecialty: specialty,
+          templateContent: activeTemplateContent ?? undefined,
         };
     const { data, error } = await supabase.functions.invoke('finalize-consultation', { body });
     if (error) {
@@ -670,6 +689,7 @@ export function ChatPanel({
           consultationComments: comments,
           patientContext,
           userSpecialty: specialty,
+          templateContent: activeTemplateContent ?? undefined,
         },
       });
       if (error) {

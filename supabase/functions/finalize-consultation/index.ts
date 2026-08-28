@@ -3,8 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini, buildPatientSummary } from "../_shared/gemini.ts";
-import { getSpecialtyPrompt } from "../_shared/specialty_prompts.ts";
+import { callGemini, buildPatientSummary, parseModelJson, salvageJsonString, collapseBlankLines } from "../_shared/gemini.ts";
+import { getSpecialtyPrompt, buildCustomTemplatePrompt } from "../_shared/specialty_prompts.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
@@ -94,7 +94,7 @@ serve(async (req) => {
   try {
     const { userId } = await requireUser(req);
     const body = await req.json();
-    const { patientId, chiefComplaint, transcription, patientContext, userSpecialty } = body;
+    const { patientId, chiefComplaint, transcription, patientContext, userSpecialty, templateContent } = body;
 
     if (!patientId || transcription === undefined) {
       return new Response(
@@ -152,9 +152,11 @@ serve(async (req) => {
         GEMINI_API_KEY,
         [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsSection}` }],
         {
-          systemInstruction: getSpecialtyPrompt(userSpecialty),
+          systemInstruction: (typeof templateContent === 'string' && templateContent.trim())
+          ? buildCustomTemplatePrompt(templateContent)
+          : getSpecialtyPrompt(userSpecialty),
           temperature: 0.3,
-          maxOutputTokens: 2000,
+          maxOutputTokens: 3000,   // headroom for custom templates
           thinkingBudget: 1024,
           responseMimeType: 'application/json',
           responseSchema: FINAL_SCHEMA,
@@ -162,14 +164,18 @@ serve(async (req) => {
       );
       await recordUsage(supabase, userId, creditsFromUsage(finalUsage));
 
-      try {
-        const parsed = JSON.parse(finalRaw);
+      const parsed = parseModelJson(finalRaw);
+      if (parsed) {
         soapNote        = parsed.soap_note        ?? '';
         whatsappMessage = parsed.whatsapp_message ?? '';
-      } catch {
-        soapNote        = finalRaw;
-        whatsappMessage = '';
+      } else {
+        // Truncated/invalid JSON — salvage the fields so the raw envelope
+        // never leaks into the document the doctor sees.
+        soapNote        = salvageJsonString(finalRaw, 'soap_note') ?? finalRaw;
+        whatsappMessage = salvageJsonString(finalRaw, 'whatsapp_message') ?? '';
       }
+      soapNote        = collapseBlankLines(soapNote);
+      whatsappMessage = collapseBlankLines(whatsappMessage);
     }
 
     // First visit? Check for a prior consultation BEFORE inserting this one.
