@@ -1,22 +1,24 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { callGemini, parseModelJson, parseModelObject } from '../../supabase/functions/_shared/gemini';
 import { mergeMedications } from './medicationMerge';
-import { createPaginatedWriter, wrapMeasuredText, validateDocumentCounts } from '../../supabase/functions/_shared/documentLayout';
+import { createPaginatedWriter, wrapMeasuredText, validateDocumentCounts, validateCertificateDays } from '../../supabase/functions/_shared/documentLayout';
 
 describe('clinical generation boundaries', () => {
+  beforeEach(()=>vi.stubGlobal('Deno',{env:{get:()=> 'true'}}));
+  afterEach(()=>vi.unstubAllGlobals());
   it('rejects truncated, blocked and empty model responses', async () => {
     for (const response of [
       { candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: 'partial' }] } }] },
       { promptFeedback: { blockReason: 'SAFETY' }, candidates: [] },
       { candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '' }] } }] },
     ]) {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => response }));
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(response))));
       await expect(callGemini('test', [])).rejects.toThrow();
     }
     vi.unstubAllGlobals();
   });
   it('joins all non-thinking text parts after a complete response', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'thought', thought: true }, { text: 'first ' }, { text: 'second' }] } }] }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'thought', thought: true }, { text: 'first ' }, { text: 'second' }] } }] }))));
     await expect(callGemini('test', [])).resolves.toMatchObject({ text: 'first second' });
     vi.unstubAllGlobals();
   });
@@ -44,6 +46,10 @@ describe('medication reconciliation', () => {
 });
 
 describe('clinical PDF completeness', () => {
+  it('validates the exact certificate duration without silently clamping it', () => {
+    for (const value of [0.5, 1, 1.5, 365]) expect(validateCertificateDays(value)).toBe(value);
+    for (const value of [0, 0.1, 1.1, 366, NaN, Infinity, '1', undefined]) expect(() => validateCertificateDays(value)).toThrow();
+  });
   it('wraps long words and measures proportional text widths', () => {
     const measure = (s: string) => [...s].reduce((n, c) => n + (c === 'W' ? 10 : 2), 0);
     const lines = wrapMeasuredText('WWW abc aaaaaaaaaaaaaaaaaaaaaaaaa', 20, measure);

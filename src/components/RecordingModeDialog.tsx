@@ -54,7 +54,7 @@ export function RecordingModeDialog({ open, onOpenChange, onSelect }: RecordingM
                 <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                   Paciente no consultório. Grava pelo microfone do dispositivo.
                 </p>
-                <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-medium text-muted-foreground/70">
+                <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-medium text-muted-foreground">
                   <Mic className="w-3 h-3" />
                   Microfone
                 </span>
@@ -85,12 +85,12 @@ export function RecordingModeDialog({ open, onOpenChange, onSelect }: RecordingM
                   computador, para capturar as duas vozes.
                 </p>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground/70">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
                     <Mic className="w-3 h-3" />
                     Microfone
                   </span>
-                  <span className="text-[10px] text-muted-foreground/40">+</span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground/70">
+                  <span className="text-[10px] text-muted-foreground">+</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
                     <MonitorSpeaker className="w-3 h-3" />
                     Áudio do computador
                   </span>

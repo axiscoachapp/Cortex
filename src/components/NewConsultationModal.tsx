@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -5,11 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ageFromBirthdate } from '@/lib/patientImport';
+import { clinicDate } from '@/lib/dates';
 import { Patient } from '@/types/patient';
 
 interface NewPatientData {
   name: string;
-  age: number;
+  age: number | null;
+  dateOfBirth?: string;
   profession: string;
   phone?: string;
 }
@@ -26,6 +30,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
   const [newPatientName, setNewPatientName] = useState('');
   const [newPatientAge, setNewPatientAge] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [newPatientProfession, setNewPatientProfession] = useState('');
   const [newPatientPhone, setNewPatientPhone] = useState('');
   const [chiefComplaint, setChiefComplaint] = useState('');
@@ -33,7 +38,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
   const [submitError, setSubmitError] = useState('');
   const resetForm = () => {
     setIsNewPatient(false); setSelectedPatientId(''); setNewPatientName('');
-    setNewPatientAge(''); setNewPatientProfession(''); setNewPatientPhone('');
+    setNewPatientAge(''); setDateOfBirth(''); setNewPatientProfession(''); setNewPatientPhone('');
     setChiefComplaint(''); setSubmitError('');
   };
 
@@ -46,7 +51,8 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
       if (isNewPatient) {
         await onStartConsultation(null, {
           name: newPatientName.trim(),
-          age: newPatientAge === '' ? 0 : Number(newPatientAge),
+          age: dateOfBirth ? ageFromBirthdate(dateOfBirth, clinicDate()) : newPatientAge === '' ? null : Number(newPatientAge),
+          dateOfBirth: dateOfBirth || undefined,
           profession: newPatientProfession.trim(),
           phone: newPatientPhone.trim() || undefined,
         }, chiefComplaint.trim());
@@ -63,10 +69,11 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
   };
 
   const validAge = newPatientAge === '' || (Number.isInteger(Number(newPatientAge)) && Number(newPatientAge) >= 0 && Number(newPatientAge) <= 130);
-  const isValid = !!chiefComplaint.trim() && (isNewPatient ? !!newPatientName.trim() && validAge : !!selectedPatientId);
+  const isValid = !!chiefComplaint.trim() && (isNewPatient ? !!newPatientName.trim() && (dateOfBirth ? ageFromBirthdate(dateOfBirth, clinicDate()) !== null : validAge) : !!selectedPatientId);
+  const canClose = useUnsavedChanges(open && (!!chiefComplaint.trim() || !!newPatientName.trim() || !!dateOfBirth || !!newPatientAge || !!newPatientPhone || !!newPatientProfession));
   const close = (next: boolean) => {
     if (saving) return;
-    if (!next && (chiefComplaint.trim() || newPatientName.trim()) && !window.confirm('Descartar os dados desta consulta?')) return;
+    if (!canClose(next)) return;
     if (!next) resetForm();
     onOpenChange(next);
   };
@@ -114,7 +121,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
                 <SelectContent>
                   {patients.map((patient) => (
                     <SelectItem key={patient.id} value={patient.id}>
-                      {patient.name} - {patient.age} anos
+                      {patient.name} - {patient.age === null ? 'Idade não informada' : `${patient.age} anos`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -131,6 +138,10 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
                   placeholder="Nome completo"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-patient-birth-date">Data de nascimento (opcional)</Label>
+                <Input id="new-patient-birth-date" type="date" max={clinicDate()} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="new-patient-age">Idade</Label>
@@ -140,6 +151,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
                       min={0}
                       max={130}
                       step={1}
+                    disabled={!!dateOfBirth}
                     value={newPatientAge}
                     onChange={(e) => setNewPatientAge(e.target.value)}
                     placeholder="Ex: 35"

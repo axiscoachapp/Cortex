@@ -5,14 +5,16 @@ import { useToast } from '@/hooks/use-toast';
 
 export type Specialty =
   | 'geral' | 'psiquiatria' | 'cardiologia' | 'pediatria'
-  | 'ginecologia' | 'dermatologia' | 'neurologia' | 'ortopedia' | 'endocrinologia';
+  | 'ginecologia' | 'prenatal' | 'urologia' | 'dermatologia' | 'neurologia' | 'ortopedia' | 'endocrinologia';
 
 export const SPECIALTY_LABELS: Record<Specialty, string> = {
   geral:          'Clínica Geral / Medicina de Família',
   psiquiatria:    'Psiquiatria',
   cardiologia:    'Cardiologia',
   pediatria:      'Pediatria',
-  ginecologia:    'Ginecologia / Obstetrícia',
+  ginecologia:    'Ginecologia',
+  prenatal:      'Obstetrícia / Pré-natal',
+  urologia:      'Urologia',
   dermatologia:   'Dermatologia',
   neurologia:     'Neurologia',
   ortopedia:      'Ortopedia',

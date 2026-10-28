@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 
 interface DocumentPreviewModalProps {
@@ -61,18 +62,21 @@ export function DocumentPreviewModal({
   patientName,
 }: DocumentPreviewModalProps) {
   const [copied, setCopied] = useState(false);
+  const [error,setError]=useState('');
 
   const title = type === 'patient_summary' ? 'Resumo para o Paciente' : 'Encaminhamento Médico';
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(content);
+    setError('');
+    try {await navigator.clipboard.writeText(content);}
+    catch {setError('Não foi possível copiar. Selecione o texto e copie manualmente ou permita o acesso à área de transferência.');return;}
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handlePrint = () => {
     const win = window.open('', '_blank');
-    if (!win) return;
+    if (!win) {setError('A janela de impressão foi bloqueada. Permita pop-ups e tente imprimir novamente.');return;}
     win.document.write(`<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -117,14 +121,15 @@ export function DocumentPreviewModal({
         <DialogHeader className="px-5 py-4 border-b border-border/50 shrink-0">
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="text-base font-semibold">{title}</DialogTitle>
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7 text-muted-foreground shrink-0">
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fechar prévia do documento" className="h-7 w-7 text-muted-foreground shrink-0">
               <X className="w-3.5 h-3.5" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{patientName}</p>
+          <DialogDescription className="text-xs text-muted-foreground mt-0.5">{patientName} · Confira o conteúdo antes de compartilhar.</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-4 min-h-[200px]">
+          {error&&<p role="alert" className="text-sm text-destructive mb-3">{error}</p>}
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-40 gap-3">
               <Loader2 className="w-7 h-7 animate-spin text-medical-blue" />

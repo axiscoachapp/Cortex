@@ -13,7 +13,7 @@ vi.mock('@/components/OnboardingCard', () => ({ OnboardingCard: () => null }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {
   from: () => {
     const query = { select: () => query, eq: () => query, gte: () => query, lte: () => query, order: () => query,
-      range: async (from: number) => ({ error: null, data: from ? [] : [{ id: 'appointment', patient_id: 'patient', title: 'Consulta teste', start_time: new Date().toISOString(), end_time: new Date().toISOString(), status: 'agendado', type: 'retorno', notes: null, reminder_sent: false }] }),
+      range: async (from: number) => ({ error: null, data: from ? [] : [{ id: 'appointment', patient_id: 'patient', title: 'Consulta teste', start_time: new Date(Date.now()+3600000).toISOString(), end_time: new Date(Date.now()+5400000).toISOString(), status: 'agendado', type: 'retorno', notes: null, reminder_sent: false }] }),
     }; return query;
   }, functions: { invoke: mocks.invoke },
 } }));

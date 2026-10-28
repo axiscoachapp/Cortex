@@ -16,7 +16,14 @@ export function clinicDate(date = new Date()): string {
   return `${field('year')}-${field('month')}-${field('day')}`;
 }
 
-export function daysSinceDateOnly(value: string, now = new Date()): number {
+export function daysSinceDateOnly(value: string | null, now = new Date()): number {
+  if (!value) return 0;
   if (formatDateOnly(value) === 'Data inválida') return 0;
   return Math.round((Date.parse(`${clinicDate(now)}T12:00:00Z`) - Date.parse(`${value}T12:00:00Z`)) / 86_400_000);
+}
+
+export function ageAtDate(birthDate: string, onDate = clinicDate()): number | null {
+  if (formatDateOnly(birthDate)==='Data inválida'||formatDateOnly(onDate)==='Data inválida'||birthDate>onDate) return null;
+  const years=Number(onDate.slice(0,4))-Number(birthDate.slice(0,4))-(onDate.slice(5)<birthDate.slice(5)?1:0);
+  return years>=0&&years<=150?years:null;
 }

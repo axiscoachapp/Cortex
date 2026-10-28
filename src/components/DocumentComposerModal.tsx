@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pill, FileSignature, ClipboardPlus, Search, X, Loader2, AlertTriangle, FlaskConical,
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { validateCertificateDays } from '../../supabase/functions/_shared/documentLayout';
 import { Patient, Medication } from '@/types/patient';
 
 export type RxDocType = 'receita_simples' | 'receita_antimicrobiano' | 'atestado' | 'solicitacao_exames';
@@ -66,6 +68,7 @@ export function DocumentComposerModal({
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<CatalogHit[]>([]);
   const [searching, setSearching] = useState(false);
+  const [catalogError, setCatalogError] = useState(false);
   const [days, setDays] = useState('1');
   const [cid, setCid] = useState('');
   const [note, setNote] = useState('');
@@ -125,12 +128,13 @@ export function DocumentComposerModal({
     if (q.length < 3) { setHits([]); setSearching(false); return; }
     setSearching(true);
     searchTimer.current = setTimeout(async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('medication_catalog')
         .select('id, product_name, active_ingredient, therapeutic_class, is_antimicrobial')
         .or(`product_name.ilike.%${q}%,active_ingredient.ilike.%${q}%`)
         .limit(8);
       if (cancelled) return;
+      setCatalogError(!!error);
       setHits((data as CatalogHit[]) ?? []);
       setSearching(false);
     }, 300);
@@ -180,32 +184,35 @@ export function DocumentComposerModal({
     [examsText],
   );
 
+  let validDays = false;
+  try { validateCertificateDays(days.trim() ? Number(days) : NaN); validDays = true; } catch { /* retain invalid input for correction */ }
   const canGenerate = isAtestado
-    ? Number(days) > 0
+    ? validDays
     : isExames
     ? examList.length > 0 && examList.length <= 20
     : selectedMeds.length > 0 && selectedMeds.length <= 15;
 
   const handleGenerate = async () => {
+    if (!canGenerate || isGenerating) return;
     await onGenerate({
       docType,
       medications: isReceita
         ? selectedMeds.map(({ name, dosage, instructions }) => ({ name, dosage, instructions }))
         : [],
       content: isAtestado
-        ? { days: Number(days) || 1, cid: cid.trim() || undefined, note: note.trim() || undefined }
+        ? { days: validateCertificateDays(Number(days)), cid: cid.trim() || undefined, note: note.trim() || undefined }
         : isExames
         ? { exams: examList, indication: indication.trim() || undefined }
         : undefined,
     });
   };
 
+  const selection = (values: ComposerMed[]) => values.map(({ name, dosage, instructions, checked }) => ({ name, dosage, instructions, checked }));
+  const dirty = docType !== 'receita_simples' || !!query.trim() || days !== '1' || !!cid.trim() || !!note.trim() || !!examsText.trim() || !!indication.trim()
+    || JSON.stringify(selection(meds)) !== JSON.stringify(selection(initialMedicationSelection.current));
+  const canClose = useUnsavedChanges(open && dirty);
   const changeOpen = (next: boolean) => {
-    if (isGenerating) return;
-    const selection = (values: ComposerMed[]) => values.map(({ name, dosage, instructions, checked }) => ({ name, dosage, instructions, checked }));
-    const dirty = docType !== 'receita_simples' || query.trim() || days !== '1' || cid.trim() || note.trim() || examsText.trim() || indication.trim()
-      || JSON.stringify(selection(meds)) !== JSON.stringify(selection(initialMedicationSelection.current));
-    if (!next && dirty && !window.confirm('Descartar as alterações deste documento?')) return;
+    if (isGenerating || !canClose(next)) return;
     onOpenChange(next);
   };
 
@@ -287,6 +294,7 @@ export function DocumentComposerModal({
             </div>
           ) : isAtestado ? (
             <div className="space-y-3">
+              {!validDays && <p role="alert" className="text-xs text-destructive">Informe de 0,5 a 365 dias, em intervalos de meio dia.</p>}
               <div className="grid grid-cols-[110px_1fr] gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-foreground/80">Dias de afastamento</label>
@@ -347,7 +355,7 @@ export function DocumentComposerModal({
               {/* Medication list */}
               <div className="space-y-1.5">
                 {meds.length === 0 && (
-                  <p className="text-xs text-muted-foreground/70 italic py-2">
+                  <p className="text-xs text-muted-foreground italic py-2">
                     Sem medicamentos no perfil — adicione pela busca acima.
                   </p>
                 )}
@@ -373,7 +381,7 @@ export function DocumentComposerModal({
                           type="button"
                           aria-label={`Remover ${m.name} da receita`}
                           onClick={() => setMeds(prev => prev.filter((_, j) => j !== i))}
-                          className="w-4 h-4 flex items-center justify-center rounded text-muted-foreground/50 hover:text-red-500"
+                          className="w-4 h-4 flex items-center justify-center rounded text-muted-foreground hover:text-red-500"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -404,6 +412,7 @@ export function DocumentComposerModal({
           )}
         </div>
 
+        {catalogError && <p role="alert" className="px-5 text-xs text-destructive">Não foi possível consultar o catálogo. Edite a busca para tentar novamente ou preencha o medicamento manualmente.</p>}
         <div className="px-5 py-3 border-t border-border/50 shrink-0 flex gap-2 justify-end">
           <Button variant="outline" size="sm" onClick={() => changeOpen(false)} disabled={isGenerating}>
             Cancelar

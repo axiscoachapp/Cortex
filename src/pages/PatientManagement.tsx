@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,7 +16,8 @@ import { Brain, Plus, Pencil, Trash2, ArrowLeft, Upload } from 'lucide-react';
 import { ImportPatientsModal } from '@/components/ImportPatientsModal';
 import { useToast } from '@/hooks/use-toast';
 import { Patient } from '@/types/patient';
-import { formatDateOnly } from '@/lib/dates';
+import { ageFromBirthdate } from '@/lib/patientImport';
+import { clinicDate, formatDateOnly } from '@/lib/dates';
 import { fetchAllRows } from '@/lib/pagination';
 
 const PatientManagement = () => {
@@ -32,6 +34,7 @@ const PatientManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     age: '',
+    date_of_birth: '',
     profession: '',
     last_visit: '',
     status: 'novo' as Patient['status'],
@@ -50,7 +53,7 @@ const PatientManagement = () => {
     e.preventDefault();
     
     if (saving) return;
-    if (!formData.name.trim() || !formData.age || !formData.last_visit || !Number.isInteger(Number(formData.age)) || Number(formData.age) < 0 || Number(formData.age) > 130) {
+    if (!formData.name.trim() || (!formData.date_of_birth && formData.age !== '' && (!Number.isInteger(Number(formData.age)) || Number(formData.age) < 0 || Number(formData.age) > 130)) || (formData.date_of_birth && ageFromBirthdate(formData.date_of_birth, clinicDate()) === null)) {
       toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
       return;
     }
@@ -59,18 +62,23 @@ const PatientManagement = () => {
     try {
       const patientData = {
         name: formData.name.trim(),
-        age: parseInt(formData.age),
+        age: formData.date_of_birth ? ageFromBirthdate(formData.date_of_birth, clinicDate()) : formData.age === '' ? null : Number(formData.age),
+        date_of_birth: formData.date_of_birth || null,
         profession: formData.profession,
-        last_visit: formData.last_visit,
+        last_visit: formData.last_visit || null,
         status: formData.status,
         user_id: user?.id,
       };
 
       if (editingPatient) {
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
           .from('patients')
           .update(patientData)
-          .eq('id', editingPatient.id);
+          .eq('id', editingPatient.id).eq('revision', editingPatient.revision ?? 0).select('id').maybeSingle();
+        if (!updated && !error) {
+          toast({ title: 'Paciente alterado em outra sessão', description: 'Seus dados continuam no formulário. Reabra o paciente para comparar antes de salvar.', variant: 'destructive' });
+          return;
+        }
 
         if (error) throw error;
         toast({ title: 'Paciente atualizado com sucesso!' });
@@ -108,9 +116,10 @@ const PatientManagement = () => {
     setEditingPatient(patient);
     setFormData({
       name: patient.name,
-      age: patient.age.toString(),
+      age: patient.age?.toString() ?? '',
+      date_of_birth: patient.dateOfBirth ?? '',
       profession: patient.profession,
-      last_visit: patient.lastVisit,
+      last_visit: patient.lastVisit ?? '',
       status: patient.status,
     });
     setDialogOpen(true);
@@ -120,6 +129,7 @@ const PatientManagement = () => {
     setFormData({
       name: '',
       age: '',
+      date_of_birth: '',
       profession: '',
       last_visit: '',
       status: 'novo',
@@ -128,12 +138,13 @@ const PatientManagement = () => {
   };
 
   const baseline = editingPatient ? {
-    name: editingPatient.name, age: editingPatient.age.toString(), profession: editingPatient.profession,
-    last_visit: editingPatient.lastVisit, status: editingPatient.status,
-  } : { name: '', age: '', profession: '', last_visit: '', status: 'novo' };
+    name: editingPatient.name, age: editingPatient.age?.toString() ?? '', date_of_birth: editingPatient.dateOfBirth ?? '', profession: editingPatient.profession,
+    last_visit: editingPatient.lastVisit ?? '', status: editingPatient.status,
+  } : { name: '', age: '', date_of_birth: '', profession: '', last_visit: '', status: 'novo' };
   const dirty = JSON.stringify(formData) !== JSON.stringify(baseline);
+  const canClose = useUnsavedChanges(dialogOpen && dirty);
   const setDialog = (open: boolean) => {
-    if (saving || (!open && dirty && !window.confirm('Descartar alterações do paciente?'))) return;
+    if (saving || !canClose(open)) return;
     setDialogOpen(open);
     if (!open) resetForm();
   };
@@ -193,7 +204,7 @@ const PatientManagement = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="age">Idade *</Label>
+                    <Label htmlFor="age">Idade (se conhecida)</Label>
                     <Input
                       id="age"
                       type="number"
@@ -202,8 +213,12 @@ const PatientManagement = () => {
                       step={1}
                       value={formData.age}
                       onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                      required
+                      disabled={!!formData.date_of_birth}
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="date_of_birth">Data de nascimento (se conhecida)</Label>
+                    <Input id="date_of_birth" type="date" max={clinicDate()} value={formData.date_of_birth} onChange={e => setFormData({ ...formData, date_of_birth: e.target.value })} />
                   </div>
                   <div>
                     <Label htmlFor="profession">Profissão</Label>
@@ -214,13 +229,12 @@ const PatientManagement = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="last_visit">Última Visita *</Label>
+                    <Label htmlFor="last_visit">Última visita concluída (se conhecida)</Label>
                     <Input
                       id="last_visit"
                       type="date"
                       value={formData.last_visit}
                       onChange={(e) => setFormData({ ...formData, last_visit: e.target.value })}
-                      required
                     />
                   </div>
                   <div>
@@ -271,14 +285,14 @@ const PatientManagement = () => {
                       <div className="flex-1 min-w-0">
                         <Link to={`/?patient=${encodeURIComponent(patient.id)}`} aria-label={`Abrir prontuário de ${patient.name}`} className="font-medium text-sm text-medical-blue hover:underline truncate block">{patient.name}</Link>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {patient.age} anos{patient.profession ? ` · ${patient.profession}` : ''}
+                          {patient.age === null ? 'Idade não informada' : `${patient.age} anos`}{patient.profession ? ` · ${patient.profession}` : ''}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[10px] capitalize font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                             {patient.status}
                           </span>
                           <span className="text-[10px] text-muted-foreground">
-                            {formatDateOnly(patient.lastVisit)}
+                            {patient.lastVisit ? formatDateOnly(patient.lastVisit) : 'Sem consulta concluída'}
                           </span>
                         </div>
                       </div>
@@ -311,9 +325,9 @@ const PatientManagement = () => {
                       {visiblePatients.map((patient) => (
                         <TableRow key={patient.id}>
                           <TableCell className="font-medium"><Link to={`/?patient=${encodeURIComponent(patient.id)}`} aria-label={`Abrir prontuário de ${patient.name}`} className="text-medical-blue hover:underline">{patient.name}</Link></TableCell>
-                          <TableCell>{patient.age}</TableCell>
+                          <TableCell>{patient.age ?? 'Não informada'}</TableCell>
                           <TableCell>{patient.profession}</TableCell>
-                          <TableCell>{formatDateOnly(patient.lastVisit)}</TableCell>
+                          <TableCell>{patient.lastVisit ? formatDateOnly(patient.lastVisit) : 'Sem consulta concluída'}</TableCell>
                           <TableCell><span className="capitalize">{patient.status}</span></TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" aria-label="Editar paciente" onClick={() => handleEdit(patient)}>

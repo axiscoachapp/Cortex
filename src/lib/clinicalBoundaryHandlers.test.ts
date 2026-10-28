@@ -17,7 +17,9 @@ const briefing = { returnInfo: 'Synthetic return', previousComplaint: '', pendin
 
 function database(seed: Record<string, Row[]> = {}, failedTable?: string) {
   const tables = structuredClone(seed);
-  return { tables, from(table: string) {
+  const reads: string[] = [];
+  return { tables, reads, rpc: vi.fn(async (_name: string, _args?: unknown): Promise<{data:unknown;error:unknown}> => ({data:[],error:null})), from(table: string) {
+    reads.push(table);
     const filters: Array<(row: Row) => boolean> = [];
     let patch: Row | undefined;
     const execute = () => {
@@ -43,8 +45,8 @@ function database(seed: Record<string, Row[]> = {}, failedTable?: string) {
 function loadHandler(name: string, db = database()) {
   const reserve = vi.fn(async () => ({ reservationId: 'reservation' }));
   const settle = vi.fn(async () => {});
-  const generate = vi.fn(async () => ({ text: '{}', usage: { promptTokenCount: 10 } }));
-  const embed = vi.fn(async () => []);
+  const generate = vi.fn(async (_key?: string, _parts?: unknown, _options?: unknown) => ({ text: '{}', usage: { promptTokenCount: 10 } }));
+  const embed = vi.fn(async (): Promise<number[]> => []);
   const network = vi.fn(async () => new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{}' }] } }], usageMetadata: { promptTokenCount: 10 } })));
   let handler!: (request: Request) => Promise<Response>;
   const source = readFileSync(new URL(`../../supabase/functions/${name}/index.ts`, import.meta.url), 'utf8');
@@ -118,6 +120,13 @@ describe('clinical request boundaries before quota reservation', () => {
     expect((await handler.run({ mode: 'from_example', input: 'x'.repeat(12001) })).status).toBe(413);
     expect(handler.reserve).not.toHaveBeenCalled();
   });
+  it('rejects patient examples before a provider can convert identifying data into a reusable template', async () => {
+    const handler = loadHandler('create-template-ai');
+    const response = await handler.run({ mode: 'from_example', input: 'Prontuário sintético de pessoa identificada' });
+    expect(response.status).toBe(400);
+    expect(handler.reserve).not.toHaveBeenCalled();
+    expect(handler.generate).not.toHaveBeenCalled();
+  });
   it('rejects a non-text SOAP before reserving', async () => {
     const handler = loadHandler('generate-document');
     expect((await handler.run({ type: 'referral', soapNote: { text: 'SOAP' } })).status).toBe(400);
@@ -142,7 +151,7 @@ describe('clinical result failures remain failures', () => {
   it('does not convert a model object into printable template text', async () => {
     const handler = loadHandler('create-template-ai');
     handler.generate.mockResolvedValue({ text: '{"name":"Template","description":"","content":{"invalid":true}}', usage: { promptTokenCount: 1 } });
-    expect((await handler.run({ mode: 'from_description', input: 'Synthetic description' })).status).toBe(500);
+    expect((await handler.run({ mode: 'from_structure', specialty: 'urologia' })).status).toBe(500);
     expect(handler.settle).toHaveBeenCalledOnce();
   });
   it('retains a reservation when a started provider call fails', async () => {
@@ -264,10 +273,50 @@ describe('clinical catch logs exclude provider payloads', () => {
       const log = vi.spyOn(console, 'error').mockImplementation(() => {});
       const handler = loadHandler(name);
       handler.generate.mockRejectedValue(new Error('SYNTHETIC_PRIVATE_PROVIDER_PAYLOAD'));
-      const response = await handler.run({ mode: 'from_description', input: 'Template', chiefComplaint: 'Complaint', audioChunks: [{ data: 'YXVkaW8=' }] });
+      const response = await handler.run({ mode: 'from_structure', specialty: 'urologia', chiefComplaint: 'Complaint', audioChunks: [{ data: 'YXVkaW8=' }] });
       expect(response.status).toBe(500);
       expect(log).toHaveBeenCalledWith(`${name} error:`);
       expect(JSON.stringify(log.mock.calls)).not.toContain('SYNTHETIC_PRIVATE_PROVIDER_PAYLOAD');
     });
   }
+});
+
+describe('authorized shared protocol citations and delayed revocation',()=>{
+  const source={document_id:'66666666-6666-4666-8666-666666666666',content:'SYNTHETIC_SHARED_PROTOCOL_EXCERPT',similarity:0.9,source_title:'Protocolo da clínica',source_reference:'https://example.invalid/publicacao',source_version:'v3',source_author:'Dra Revisora Sintética',source_owner_user_id:'77777777-7777-4777-8777-777777777777',reviewed_at:'2026-10-28T12:00:00Z',authorization_revision:4,source_review_revision:2};
+  it('uses RPC-authorized source version and reviewer metadata without an owner-only second lookup',async()=>{
+    const db=database();db.rpc.mockImplementation(async name=>({data:name==='match_knowledge'?[source]:true,error:null}));
+    const handler=loadHandler('chat-assistant',db);handler.embed.mockResolvedValue([0.1]);handler.generate.mockResolvedValue({text:'Resposta com fonte autorizada',usage:{promptTokenCount:10}});
+    const response=await handler.run({userMessage:'Consultar protocolo'});
+    expect(response.status).toBe(200);
+    expect((await response.json()).sources).toEqual([expect.objectContaining({id:source.document_id,label:source.source_title,sourceVersion:'v3',sourceReference:source.source_reference,reviewedBy:source.source_author,reviewedAt:source.reviewed_at,shared:true})]);
+    expect(JSON.stringify(handler.generate.mock.calls[0][1])).toContain('Revisado/compartilhado por: Dra Revisora Sintética');
+    expect(db.reads).not.toContain('knowledge_documents');
+    expect(db.rpc).toHaveBeenCalledWith('authorize_protocol_sources',{p_actor_user_id:user,p_sources:[{document_id:source.document_id,authorization_revision:4,source_review_revision:2}]});
+  });
+  it('does not send a revoked source to the model after retrieval',async()=>{
+    const db=database();db.rpc.mockImplementation(async name=>({data:name==='match_knowledge'?[source]:false,error:null}));
+    const handler=loadHandler('chat-assistant',db);handler.embed.mockResolvedValue([0.1]);
+    const response=await handler.run({userMessage:'Consultar protocolo'});
+    expect(response.status).toBe(409);expect(handler.generate).not.toHaveBeenCalled();
+    expect(await response.text()).not.toContain(source.content);
+  });
+  it('suppresses derived text after a source is revoked during generation while settling used quota',async()=>{
+    let active=true;const db=database();db.rpc.mockImplementation(async name=>({data:name==='match_knowledge'?[source]:active,error:null}));
+    const handler=loadHandler('chat-assistant',db);handler.embed.mockResolvedValue([0.1]);
+    handler.generate.mockImplementation(async()=>{active=false;return{text:'SYNTHETIC_DERIVED_SHARED_TEXT',usage:{promptTokenCount:10}};});
+    const response=await handler.run({userMessage:'Consultar protocolo'});
+    expect(response.status).toBe(409);expect(handler.settle).toHaveBeenCalledOnce();
+    expect(await response.text()).not.toContain('SYNTHETIC_DERIVED_SHARED_TEXT');
+  });
+  it('fails closed on a post-generation authorization outage after settling used quota',async()=>{
+    let checks=0;const db=database();db.rpc.mockImplementation(async name=>{
+      if(name==='match_knowledge')return{data:[source],error:null};
+      if(++checks>1)throw new Error('Synthetic authorization outage');
+      return{data:true,error:null};
+    });
+    const handler=loadHandler('chat-assistant',db);handler.embed.mockResolvedValue([0.1]);handler.generate.mockResolvedValue({text:'SYNTHETIC_PRIVATE_REPLY',usage:{promptTokenCount:10}});
+    const response=await handler.run({userMessage:'Consultar protocolo'});
+    expect(response.status).toBe(409);expect(handler.settle).toHaveBeenCalledOnce();
+    expect(await response.text()).not.toContain('SYNTHETIC_PRIVATE_REPLY');
+  });
 });

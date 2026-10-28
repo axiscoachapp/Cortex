@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Settings2, Sparkles, BadgeCheck, FileStack, ChevronRight } from 'lucide-react';
@@ -41,6 +42,7 @@ export function SpecialtySettingsSheet() {
   // Keep an explicit draft so background refreshes cannot overwrite typing.
   const [draft, setDraft] = useState(prescriber);
   const [identityDirty, setIdentityDirty] = useState(false);
+  useUnsavedChanges(identityDirty);
   const [saveStatus, setSaveStatus] = useState('');
   const [identityError, setIdentityError] = useState('');
   useEffect(() => {
@@ -80,7 +82,7 @@ export function SpecialtySettingsSheet() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground/60 hover:text-muted-foreground"
+          className="h-8 w-8 text-muted-foreground hover:text-muted-foreground"
           title="Configurações"
           aria-label="Configurações"
         >

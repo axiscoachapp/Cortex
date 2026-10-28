@@ -1,7 +1,14 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { escapeHtml, whatsappPhone } from '../../supabase/functions/_shared/reminders';
+import { escapeHtml, whatsappPhone, canRemindAppointment } from '../../supabase/functions/_shared/reminders';
 describe('reminder content safety', () => {
+  it('only reminds future scheduled or confirmed appointments', () => {
+    const now = new Date('2026-10-28T15:00:00Z');
+    for (const status of ['cancelado','realizado']) expect(canRemindAppointment(status,'2026-10-29T15:00:00Z',now)).toBe(false);
+    expect(canRemindAppointment('agendado','2026-10-28T14:00:00Z',now)).toBe(false);
+    expect(canRemindAppointment('confirmado','invalid',now)).toBe(false);
+    expect(canRemindAppointment('confirmado','2026-10-29T15:00:00Z',now)).toBe(true);
+  });
   it('escapes names and notes without creating active HTML', () => {
     expect(escapeHtml('<a href="https://evil">A&B</a>')).toBe('&lt;a href=&quot;https://evil&quot;&gt;A&amp;B&lt;/a&gt;');
   });

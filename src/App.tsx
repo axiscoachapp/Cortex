@@ -6,6 +6,8 @@ import { createBrowserRouter, RouterProvider, Navigate, Outlet, useLocation } fr
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { Brain } from "lucide-react";
 import { AppErrorBoundary, RecoveryScreen } from '@/components/AppErrorBoundary';
+import { UnsavedChangesRouteGuard } from '@/hooks/useUnsavedChanges';
+import { SessionAssurance } from '@/components/SessionAssurance';
 
 // Critical routes — keep eager.
 const Index = lazy(() => import("./pages/Index"));
@@ -20,6 +22,9 @@ const DataPrivacy = lazy(() => import("./pages/DataPrivacy"));
 const TemplatesPage = lazy(() => import("./pages/Templates"));
 const KnowledgeBasePage = lazy(() => import("./pages/KnowledgeBase"));
 const AssistantPage = lazy(() => import("./pages/Assistant"));
+const SharingPage = lazy(() => import('./pages/Sharing'));
+const ClinicalWorkspacePage = lazy(() => import('./pages/ClinicalWorkspace'));
+const AccountSecurityPage = lazy(() => import('./pages/AccountSecurity'));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -38,7 +43,7 @@ const RouteFallback = () => (
     <div className="flex flex-col items-center gap-3">
       <div
         className="w-8 h-8 rounded-lg flex items-center justify-center animate-pulse"
-        style={{ background: 'linear-gradient(135deg, hsl(210 70% 50%), hsl(220 70% 40%))' }}
+        style={{ background: 'hsl(var(--primary))' }}
       >
         <Brain className="w-4 h-4 text-white" />
       </div>
@@ -52,7 +57,7 @@ function ProtectedRoute() {
   const location = useLocation();
   if (loading) return <RouteFallback />;
   if (!user) return <Navigate to={`/auth?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
-  return <Outlet key={user.id} />;
+  return <><UnsavedChangesRouteGuard />{location.pathname==='/seguranca'?<Outlet key={user.id}/>:<SessionAssurance key={user.id}><Outlet key={user.id}/></SessionAssurance>}</>;
 }
 
 const router = createBrowserRouter([
@@ -68,6 +73,9 @@ const router = createBrowserRouter([
     { path: '/modelos', element: <TemplatesPage /> },
     { path: '/conhecimento', element: <KnowledgeBasePage /> },
     { path: '/assistente', element: <AssistantPage /> },
+    { path: '/compartilhamento', element: <SharingPage /> },
+    { path: '/trabalho', element: <ClinicalWorkspacePage /> },
+    { path: '/seguranca', element: <AccountSecurityPage /> },
   ] },
   { path: '*', element: <NotFound /> },
   ] },

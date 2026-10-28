@@ -154,7 +154,7 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
                     <p className="text-sm font-semibold text-foreground">{s.name}</p>
                     <p className="text-xs text-muted-foreground">{s.hint}</p>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground/50" />
+                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
                 </button>
               ))}
             </div>
@@ -174,7 +174,7 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
                         {rows.slice(0, 2).map(r => r[i]).filter(Boolean).join(' · ') || '—'}
                       </p>
                     </div>
-                    <ArrowRight className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+                    <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
                     <Select value={mapping[i]} onValueChange={(v) => setMapping(m => m.map((x, j) => j === i ? v as Target : x))}>
                       <SelectTrigger aria-label={`Campo para ${h || `coluna ${i + 1}`}`} className="w-40 h-9 text-xs shrink-0"><SelectValue /></SelectTrigger>
                       <SelectContent>

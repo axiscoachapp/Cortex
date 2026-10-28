@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send,
@@ -27,6 +29,9 @@ import { printSoap } from '@/lib/printDoc';
 import { UsageMeter, UsageOverBanner } from '@/components/UsageMeter';
 import { ConsultationDraft, loadConsultationDraft, saveConsultationDraft } from '@/lib/consultationDrafts';
 import { functionErrorBody } from '@/lib/functionErrors';
+import { ClinicalProposals } from '@/components/ClinicalProposals';
+import { useSessionHidden } from '@/contexts/SessionVisibility';
+import { ClinicalAnswer } from '@/components/ClinicalAnswer';
 
 /** Thrown after an error was already surfaced to the user (e.g. quota toast)
  *  so upstream catch blocks skip their generic error toast. */
@@ -57,6 +62,7 @@ export interface PreBriefing {
 }
 
 interface ChatPanelProps {
+  appointmentId?: string | null;
   patient: Patient | null;
   messages: ChatMessage[];
   /** Accepts a functional updater so concurrent async writers (transcription
@@ -76,6 +82,7 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({
+  appointmentId = null,
   patient,
   messages,
   onMessagesChange,
@@ -89,6 +96,7 @@ export function ChatPanel({
   onWorkStateChange,
   onCaptureStateChange,
 }: ChatPanelProps) {
+  const sessionHidden=useSessionHidden();
   const [showBriefing, setShowBriefing] = useState(true);
   const [briefingExpanded, setBriefingExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -271,7 +279,8 @@ export function ChatPanel({
   const handlePauseToggle     = () => recording.pauseToggle();
 
   const handleCopy = async (text: string, messageId: string) => {
-    await navigator.clipboard.writeText(text);
+    try { await navigator.clipboard.writeText(text); }
+    catch { toast({title:'Não foi possível copiar',description:'Selecione o texto e copie manualmente, ou permita o acesso à área de transferência.',variant:'destructive'});return; }
     setCopiedId(messageId);
     toast({ title: 'Texto copiado!', description: 'Copiado para a área de transferência.' });
     setTimeout(() => setCopiedId(null), 2000);
@@ -330,6 +339,7 @@ export function ChatPanel({
   const patientContext = patient ? {
     name: patient.name,
     age: patient.age,
+            dateOfBirth:patient.dateOfBirth,
     diagnoses: patient.diagnoses,
     medications: patient.medications,
     allergies: patient.allergies,
@@ -454,6 +464,7 @@ export function ChatPanel({
           patientContext: {
             name: patient.name,
             age: patient.age,
+            dateOfBirth:patient.dateOfBirth,
             diagnoses: patient.diagnoses,
             medications: patient.medications,
             allergies: patient.allergies,
@@ -533,6 +544,7 @@ export function ChatPanel({
       queryClient.invalidateQueries({ queryKey: ['patient-files', forPatientId] });
       queryClient.invalidateQueries({ queryKey: ['patients', userId] });
       queryClient.invalidateQueries({ queryKey: ['patient-detail', forPatientId] });
+      queryClient.invalidateQueries({ queryKey: ['clinical-proposals',forPatientId,userId] });
       if (activePatientIdRef.current !== forPatientId) return;
 
       const findings = Array.isArray(data?.keyFindings) && data.keyFindings.length > 0
@@ -545,7 +557,7 @@ export function ChatPanel({
         content: `📎 ${file.name}\n\n${data?.summary ?? ''}${findings}`,
         timestamp: new Date(),
       }]);
-      toast({ title: 'Documento anexado e analisado', description: data?.profileNote || undefined });
+      toast({ title: 'Análise pronta para revisão', description: 'Confira a proposta antes de adicionar informações ao prontuário.' });
     } catch (err: unknown) {
       toast({ title: 'Erro ao anexar documento', description: err instanceof Error ? err.message : 'Tente novamente.', variant: 'destructive' });
     } finally {
@@ -661,6 +673,7 @@ export function ChatPanel({
     for (const key of [
       ['patients', userId], ['patient-detail'], ['patient-consultations'],
       ['patient-clinical-notes'], ['appointments'], ['appointments-today'], ['usage-daily', userId],
+      ['clinical-proposals',draft.patientId,userId],
     ]) queryClient.invalidateQueries({ queryKey: key });
     if (!isCurrentPatient(draft.patientId)) return;
     setCurrentConsultationId(data.consultationId ?? null);
@@ -706,7 +719,7 @@ export function ChatPanel({
     if (!patient) return;
     if (mountedRef.current) setAudioTasks(count => count + 1);
     const draft: ConsultationDraft = previous ?? {
-      id: crypto.randomUUID(), patientId: patient.id, chiefComplaint,
+      id: crypto.randomUUID(), patientId: patient.id, chiefComplaint, appointmentId,
       audioStoragePath: null, audioMimeType: mimeType, status: 'processing',
       transcription: '', soapDraft: '', whatsappDraft: '', clarifications: [], transcriptionQuality: 'poor',
       differentialDiagnoses: [], drugInteractionAlerts: [], originalComments: [...comments],
@@ -771,9 +784,8 @@ export function ChatPanel({
 
   const discardSavedDraft = async (draft: ConsultationDraft) => {
     if (!window.confirm('Excluir este rascunho e seu áudio? Esta ação não pode ser desfeita.')) return;
-    const { error } = await supabase.from('consultation_drafts').delete().eq('id', draft.id).eq('user_id', userId);
+    const { error } = await supabase.functions.invoke('discard-consultation', { body: { draftId: draft.id } });
     if (error) { toast({ title: 'Não foi possível excluir o rascunho', variant: 'destructive' }); return; }
-    if (draft.audioStoragePath) await supabase.storage.from('audio-recordings').remove([draft.audioStoragePath]);
     if (isCurrentPatient(draft.patientId)) setRecoveryDraft(null);
   };
 
@@ -800,6 +812,7 @@ export function ChatPanel({
           patientContext: patient ? {
             name: patient.name,
             age: patient.age,
+            dateOfBirth:patient.dateOfBirth,
             diagnoses: patient.diagnoses,
             medications: patient.medications,
             allergies: patient.allergies,
@@ -808,6 +821,7 @@ export function ChatPanel({
           } : null,
           chatHistory: messages
             .filter(m => m.type === 'user' || m.type === 'assistant')
+            .filter(m => m.type!=='assistant'||!m.sources?.some(source=>source.type==='knowledge'||source.type==='protocol'))
             .slice(-10)
             .map(m => ({ type: m.type, content: m.content })),
           userMessage: text,
@@ -824,6 +838,8 @@ export function ChatPanel({
         title: 'Assistente Clínico',
         content: data.message,
         timestamp: new Date(),
+        sources:Array.isArray(data.sources)?data.sources:[],
+        coverage:data.coverage,
       }]);
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
     } catch {
@@ -932,11 +948,11 @@ export function ChatPanel({
   };
 
   // Phase 2: generate final SOAP (with doctor comments) → save to DB → show in chat
-  const handleReviewConfirm = async (comments: string) => {
+  const handleReviewConfirm = async (comments: string, reviewedText?:string) => {
     if (!reviewData || !patient) return;
     setIsGeneratingFinal(true);
     try {
-      await submitFinalSoap(reviewData, comments);
+      await submitFinalSoap({...reviewData,soapDraft:reviewedText ?? reviewData.soapDraft}, comments);
     } catch (err) {
       if (!(err instanceof HandledError)) {
         toast({ title: 'Erro ao gerar evolução', description: 'Tente novamente.', variant: 'destructive' });
@@ -946,9 +962,9 @@ export function ChatPanel({
     }
   };
 
-  const handleReviewCancel = async (comments: string) => {
+  const handleReviewCancel = async (comments: string, reviewedText?:string) => {
     if (!reviewData) return;
-    const preserved = { ...reviewData, pendingComments: comments };
+    const preserved = { ...reviewData, pendingComments: comments,soapDraft:reviewedText ?? reviewData.soapDraft };
     setRecoveryDraft(preserved);
     setReviewData(null);
     try { await saveConsultationDraft(userId, preserved); }
@@ -1047,10 +1063,10 @@ export function ChatPanel({
       <div className="h-full w-full flex items-center justify-center bg-card">
         <div className="text-center space-y-3 px-8">
           <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto">
-            <Mic className="w-6 h-6 text-muted-foreground/40" />
+            <Mic className="w-6 h-6 text-muted-foreground" />
           </div>
           <p className="text-sm font-medium text-foreground/70">Nenhuma consulta ativa</p>
-          <p className="text-xs text-muted-foreground/60">Selecione um paciente ou inicie uma nova consulta</p>
+          <p className="text-xs text-muted-foreground">Selecione um paciente ou inicie uma nova consulta</p>
         </div>
       </div>
     );
@@ -1060,6 +1076,11 @@ export function ChatPanel({
 
   return (
     <div className="flex-1 flex flex-col bg-card h-full">
+      {!sessionHidden && (isRecording || recording.isStarting || recording.isStopping || audioTasks>0) && createPortal(
+        <div role="status" aria-label="Captura de áudio em andamento" className="fixed top-0 inset-x-0 z-40 min-h-14 bg-card border-b-2 border-record-red px-3 py-2 flex flex-wrap items-center justify-center gap-3 shadow-sm">
+          <span className="text-sm font-semibold text-record-red">{patient.name} · {isRecording?(isPaused?'Gravação pausada':'Gravando')+' '+formatTimer(recordingSeconds):'Preservando áudio…'}</span>
+          {isRecording&&<><Button size="sm" variant="outline" onClick={handlePauseToggle}>{isPaused?'Retomar gravação':'Pausar gravação'}</Button><Button size="sm" variant="destructive" onClick={handleConfirmStop}>Parar e salvar áudio</Button></>}
+        </div>,document.body)}
       {/* Header */}
       <header className="sticky top-0 z-10 px-4 md:px-6 py-3 md:py-4 border-b border-border/50 bg-card/95 backdrop-blur-sm">
         <div className="flex items-center gap-3">
@@ -1076,11 +1097,13 @@ export function ChatPanel({
             <h1 className="font-semibold text-foreground">{patient.name}</h1>
             <Badge variant="atendimento" className="mt-1">Em atendimento</Badge>
           </div>
+          <Button variant="outline" size="sm" className="ml-auto" asChild><Link to={'/trabalho?patient='+patient.id}>Consulta manual</Link></Button>
         </div>
       </header>
 
       {/* Chat Content */}
       <div className="flex-1 overflow-y-auto scrollbar-thin px-4 md:px-6 py-4 md:py-6 space-y-4">
+        <ClinicalProposals patient={patient} userId={userId}/>
 
         {draftLoadError && <div role="alert" className="rounded-lg border p-3 text-sm">
           Não foi possível verificar os rascunhos desta consulta.
@@ -1197,7 +1220,7 @@ export function ChatPanel({
                 size="icon"
                 aria-label="Ocultar resumo pré-consulta"
                 onClick={() => setShowBriefing(false)}
-                className="shrink-0 h-8 w-8 text-slate-400 hover:text-foreground"
+                className="shrink-0 h-8 w-8 text-muted-foreground hover:text-foreground"
               >
                 <X className="w-3.5 h-3.5" />
               </Button>
@@ -1250,7 +1273,7 @@ export function ChatPanel({
                 </div>
                 <div className="flex-1 max-w-[88%] md:max-w-[85%] rounded-2xl rounded-tl-sm bg-muted/60 px-4 py-3">
                   <p className="text-[11px] font-semibold text-muted-foreground mb-1">{message.title}</p>
-                  <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{message.content}</p>
+                  <ClinicalAnswer message={message} userId={userId}/>
                 </div>
               </div>
             ) : (
@@ -1261,7 +1284,7 @@ export function ChatPanel({
                       variant="ghost"
                       size="icon"
                       aria-label="Exportar evolução em PDF"
-                      className="h-7 w-7 text-muted-foreground/50 hover:text-muted-foreground"
+                      className="h-7 w-7 text-muted-foreground hover:text-muted-foreground"
                       onClick={() => handlePrintSOAP(message.content)}
                       title="Exportar PDF"
                     >
@@ -1378,7 +1401,7 @@ export function ChatPanel({
                         'gap-2 text-xs',
                         patient?.phone
                           ? 'text-whatsapp-green border-whatsapp-green/30 hover:bg-whatsapp-green/10 hover:text-whatsapp-green'
-                          : 'text-muted-foreground/60',
+                          : 'text-muted-foreground',
                       )}
                     >
                       <MessageCircle className="w-3.5 h-3.5" />
@@ -1536,6 +1559,7 @@ export function ChatPanel({
             <div className="inline-flex p-0.5 rounded-lg bg-muted/60 border border-border/40">
               <button
                 type="button"
+                aria-pressed={inputMode === 'question'}
                 onClick={() => setInputMode('question')}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
@@ -1549,11 +1573,12 @@ export function ChatPanel({
               </button>
               <button
                 type="button"
+                aria-pressed={inputMode === 'comment'}
                 onClick={() => setInputMode('comment')}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
                   inputMode === 'comment'
-                    ? 'bg-amber-500 text-white shadow-sm'
+                    ? 'bg-amber-800 text-white shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
@@ -1561,7 +1586,7 @@ export function ChatPanel({
                 Comentário
               </button>
             </div>
-            <span className="text-[10px] text-muted-foreground/70 ml-2 hidden md:inline flex-1 min-w-0 truncate">
+            <span className="text-[10px] text-muted-foreground ml-2 hidden md:inline flex-1 min-w-0 truncate">
               {inputMode === 'question'
                 ? 'pergunte sobre o histórico, conduta, interações…'
                 : isRecording
@@ -1571,7 +1596,7 @@ export function ChatPanel({
             <UsageMeter variant="inline" className="ml-auto shrink-0" />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <input
               ref={attachInputRef}
               type="file"
@@ -1581,8 +1606,9 @@ export function ChatPanel({
             />
             <Button
               variant="ghost" size="icon"
-              className="text-slate-400 hover:text-foreground h-9 w-9"
+              className="text-muted-foreground hover:text-foreground h-9 w-9"
               title="Anexar documento ou imagem do paciente"
+              aria-label="Anexar documento ou imagem do paciente"
               onClick={() => attachInputRef.current?.click()}
               disabled={attachingFile}
             >
@@ -1590,7 +1616,7 @@ export function ChatPanel({
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <Paperclip className="w-4 h-4" />}
             </Button>
-            <div className="flex-1 relative">
+            <div className="flex-1 min-w-0 relative">
               <input
                 type="text"
                 aria-label={inputMode === 'question' ? 'Pergunta ao assistente clínico' : 'Comentário clínico para este paciente'}
@@ -1605,7 +1631,7 @@ export function ChatPanel({
                     : 'Comentário — ex: "alérgico a penicilina", "iniciar Losartana 50mg", "solicitar hemograma"'
                 }
                 className={cn(
-                  'w-full h-10 px-4 rounded-xl border-0 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-slate-400',
+                  'w-full h-10 px-4 rounded-xl border-0 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-muted-foreground',
                   inputMode === 'question'
                     ? 'bg-muted/50 focus:ring-medical-blue/30'
                     : 'bg-amber-50 dark:bg-amber-950/20 focus:ring-amber-500/30',
@@ -1618,8 +1644,8 @@ export function ChatPanel({
               className={cn(
                 'h-9 w-9',
                 inputMode === 'question'
-                  ? 'text-slate-400 hover:text-medical-blue'
-                  : 'text-slate-400 hover:text-amber-600',
+                  ? 'text-muted-foreground hover:text-medical-blue'
+                  : 'text-muted-foreground hover:text-amber-600',
               )}
               onClick={handleSubmit}
               aria-label={inputMode === 'question' ? 'Enviar pergunta' : 'Adicionar comentário'}

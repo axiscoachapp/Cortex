@@ -21,6 +21,7 @@ import { PatientFiles } from '@/components/PatientFiles';
 import { PrescriptionList } from '@/components/PrescriptionList';
 import { UsageMeter } from '@/components/UsageMeter';
 import { fetchAllRows } from '@/lib/pagination';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 interface PatientProfileDrawerProps {
   patient: Patient | null;
@@ -86,6 +87,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
   const [saveError, setSaveError] = useState('');
   const [conflict, setConflict] = useState(false);
   const [visibleHistory, setVisibleHistory] = useState(50);
+  useUnsavedChanges(!!editingField && draftValue!==editBase);
   const activePatientId = useRef(patient?.id);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -247,7 +249,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                   Dossiê: {patient.name}
                 </span>
                 <p className="text-sm font-normal text-muted-foreground">
-                  {patient.age} anos{patient.profession ? ` · ${patient.profession}` : ''}
+                  {patient.age === null ? 'Idade não informada' : String(patient.age) + ' anos'}{patient.profession ? ` · ${patient.profession}` : ''}
                 </p>
               </div>
             </SheetTitle>
@@ -370,13 +372,13 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                     </div>
                     <h3 className="font-semibold text-foreground">Anotações do Médico</h3>
                   </div>
-                  <span className="text-[10px] text-muted-foreground/70">{noteEntries.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{noteEntries.length}</span>
                 </div>
                 <div className="pl-10 space-y-1.5 max-h-[260px] overflow-y-auto scrollbar-thin pr-1">
                   {noteEntries.map((n, i) => (
                     <div key={i} className="px-3 py-2 rounded-lg bg-secondary/40 border border-border/40">
                       {n.stamp && (
-                        <p className="text-[10px] text-muted-foreground/70 font-mono mb-0.5">{n.stamp}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono mb-0.5">{n.stamp}</p>
                       )}
                       <p className="text-sm text-foreground/85 leading-snug whitespace-pre-wrap">{n.body}</p>
                     </div>
@@ -728,7 +730,7 @@ function EditableSection({
           </div>
         </div>
       ) : bullets.length === 0 ? (
-        <p className="text-sm leading-relaxed pl-10 text-muted-foreground/50 italic">
+        <p className="text-sm leading-relaxed pl-10 text-muted-foreground italic">
           {placeholder}
         </p>
       ) : (

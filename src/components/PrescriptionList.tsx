@@ -89,7 +89,7 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
       <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
         <FileSignature className="w-4 h-4 text-medical-blue" />
         Receitas & Atestados
-        <span className="text-[10px] text-muted-foreground/70 font-normal">{rows.length}</span>
+        <span className="text-[10px] text-muted-foreground font-normal">{rows.length}</span>
       </h3>
       <div className="space-y-1.5">
         {rows.slice(0, visibleCount).map(rx => {

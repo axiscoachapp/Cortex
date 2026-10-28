@@ -79,7 +79,7 @@ export function ProfileUpdateCard({
 
   if (status === 'dismissed') {
     return (
-      <div className="text-xs text-muted-foreground/60 px-1">
+      <div className="text-xs text-muted-foreground px-1">
         Atualização do perfil ignorada.
       </div>
     );
@@ -411,7 +411,7 @@ function ItemRow({ children, onRemove }: { children: React.ReactNode; onRemove: 
         type="button"
         aria-label="Remover item do perfil"
         onClick={onRemove}
-        className="shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground/50 hover:text-red-500"
+        className="shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"
       >
         <X className="w-3 h-3" />
       </button>

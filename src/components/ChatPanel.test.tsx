@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Patient } from '@/types/patient';
 import { ChatPanel } from './ChatPanel';
+vi.mock('@/components/ClinicalProposals',()=>({ClinicalProposals:()=>null}));
+vi.mock('react-router-dom',()=>({Link:({to,children,...props})=><a href={to} {...props}>{children}</a>}));
 
 const mocks = vi.hoisted(() => ({ invoke: vi.fn(), toast: vi.fn(), loadDraft: vi.fn(), saveDraft: vi.fn(),
   upload: vi.fn(), from: vi.fn(), profileUpdate: vi.fn(),
@@ -42,6 +44,14 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('patient-scoped asynchronous clinical work', () => {
+  it('does not resend protocol-derived assistant replies in automatic chat history',async()=>{
+    mocks.invoke.mockResolvedValue({data:{message:'Resposta atual',questions:[],sources:[]},error:null});
+    const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    const old={id:'old',type:'assistant' as const,title:'Anterior',content:'Fonte posteriormente revogada',timestamp:new Date(),sources:[{id:'doc',type:'knowledge',label:'Protocolo',date:'2026-10-28',excerpt:'Trecho',authorizationRevision:2,sourceReviewRevision:3}]};
+    render(<QueryClientProvider client={client}><ChatPanel patient={patient('A')} messages={[old]} onMessagesChange={vi.fn()} chiefComplaint="" preBriefing={null} briefingLoading={false} userId="doctor"/></QueryClientProvider>);
+    fireEvent.change(screen.getByLabelText('Pergunta ao assistente clínico'),{target:{value:'Pergunta nova'}});fireEvent.click(screen.getByRole('button',{name:'Enviar pergunta'}));
+    await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledWith('chat-assistant',expect.objectContaining({body:expect.objectContaining({chatHistory:[]})})));
+  });
   it('accepts a reviewed medication change by revision even when storage uses the legacy dose shape', async () => {
     const legacyRow = { revision: 7, medications: [{ dose: '50 mg', name: 'Losartana' }], diagnoses: [], allergies: [] };
     mocks.from.mockImplementation(() => {

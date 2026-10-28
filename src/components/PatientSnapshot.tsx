@@ -39,7 +39,7 @@ function SectionHeader({ icon: Icon, label, action }: {
   return (
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2">
-        <Icon className="w-3.5 h-3.5 text-muted-foreground/70" />
+        <Icon className="w-3.5 h-3.5 text-muted-foreground" />
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
           {label}
         </span>
@@ -136,9 +136,9 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
       <aside className="w-full h-full flex items-center justify-center bg-[hsl(215_40%_98%)]">
         <div className="text-center p-8 space-y-3">
           <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto">
-            <User className="w-6 h-6 text-muted-foreground/40" />
+            <User className="w-6 h-6 text-muted-foreground" />
           </div>
-          <p className="text-sm text-muted-foreground/60">Selecione um paciente</p>
+          <p className="text-sm text-muted-foreground">Selecione um paciente</p>
         </div>
       </aside>
     );
@@ -150,7 +150,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
     <aside className="w-full h-full flex flex-col overflow-hidden bg-[hsl(215_40%_98%)]">
       {/* Header */}
       <div className="px-5 pt-5 pb-4 border-b border-border/50 bg-white/60">
-        <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest mb-3">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">
           Perfil Ativo
         </p>
         <div className="flex items-center gap-3">
@@ -159,14 +159,14 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
               className="w-12 h-12 rounded-xl object-cover ring-1 ring-border/50 shrink-0" />
           ) : (
             <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-white text-sm font-bold shadow-sm"
-              style={{ background: 'linear-gradient(135deg, hsl(210 70% 50%), hsl(220 70% 40%))' }}>
+              style={{ background: 'hsl(var(--primary))' }}>
               {initials}
             </div>
           )}
           <div className="min-w-0">
             <h3 className="font-semibold text-foreground text-sm leading-tight truncate">{patient.name}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {patient.age} anos{patient.profession ? ` · ${patient.profession}` : ''}
+              {patient.age === null ? 'Idade não informada' : String(patient.age) + ' anos'}{patient.profession ? ` · ${patient.profession}` : ''}
             </p>
           </div>
         </div>
@@ -179,7 +179,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
         <section className="p-4">
           <SectionHeader icon={Stethoscope} label="Diagnósticos" />
           {patient.diagnoses.length === 0 ? (
-            <p className="text-xs text-muted-foreground/60 italic">Nenhum diagnóstico registrado</p>
+            <p className="text-xs text-muted-foreground italic">Nenhum diagnóstico registrado</p>
           ) : (
             <div className="space-y-1.5">
               {patient.diagnoses.map((d, i) => (
@@ -208,7 +208,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
             }
           />
           {patient.medications.length === 0 ? (
-            <p className="text-xs text-muted-foreground/60 italic">Nenhuma medicação registrada</p>
+            <p className="text-xs text-muted-foreground italic">Nenhuma medicação registrada</p>
           ) : (
             <div className="space-y-1.5">
               {patient.medications.map((m, i) => (
@@ -218,7 +218,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
                     <div className="flex items-baseline justify-between gap-1">
                       <span className="text-xs font-medium text-foreground truncate">{m.name}</span>
                       {m.startedAt && (
-                        <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                        <span className="text-[10px] text-muted-foreground shrink-0">
                           {formatMedicationDuration(m.startedAt)}
                         </span>
                       )}
@@ -240,7 +240,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
           />
           {patient.allergies.length === 0 ? (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/80 border border-border/40">
-              <span className="text-xs text-muted-foreground/60">Nenhuma alergia registrada</span>
+              <span className="text-xs text-muted-foreground">Nenhuma alergia registrada</span>
             </div>
           ) : (
             <div className="space-y-1">
@@ -261,14 +261,14 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
               icon={StickyNote}
               label="Anotações do Médico"
               action={
-                <span className="text-[10px] text-muted-foreground/70">{noteEntries.length}</span>
+                <span className="text-[10px] text-muted-foreground">{noteEntries.length}</span>
               }
             />
             <div className="space-y-1.5 max-h-[220px] overflow-y-auto scrollbar-thin pr-1">
               {noteEntries.map((n, i) => (
                 <div key={i} className="px-3 py-2 rounded-lg bg-white/80 border border-border/40">
                   {n.stamp && (
-                    <p className="text-[10px] text-muted-foreground/70 font-mono mb-0.5">
+                    <p className="text-[10px] text-muted-foreground font-mono mb-0.5">
                       {n.stamp}
                     </p>
                   )}

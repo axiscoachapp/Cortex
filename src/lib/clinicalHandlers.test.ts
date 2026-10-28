@@ -1,11 +1,12 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as gemini from '../../supabase/functions/_shared/gemini';
 import * as http from '../../supabase/functions/_shared/http';
 import * as storage from '../../supabase/functions/_shared/storage';
 import * as dates from '../../supabase/functions/_shared/clinicDate';
+import * as patientAge from '../../supabase/functions/_shared/patientAge';
 import * as layout from '../../supabase/functions/_shared/documentLayout';
 
 type Row = Record<string, unknown>;
@@ -13,6 +14,7 @@ const user = '11111111-1111-4111-8111-111111111111';
 const patient = '22222222-2222-4222-8222-222222222222';
 const draftId = '33333333-3333-4333-8333-333333333333';
 const audio = `consultations/${user}/${draftId}.webm`;
+afterEach(()=>vi.useRealTimers());
 
 function database(seed: Record<string, Row[]>) {
   const tables = structuredClone(seed);
@@ -21,7 +23,7 @@ function database(seed: Record<string, Row[]>) {
   const upload = vi.fn(async () => ({ error: null as unknown }));
   const download = vi.fn(async () => ({ data: new Blob(['voice']), error: null }));
   const db = {
-    tables, writes, remove, upload, download,
+    tables, writes, remove, upload, download, drawnText: [] as string[],
     storage: { from: () => ({ download, remove, upload,
       createSignedUrl: async () => ({ data: { signedUrl: 'https://example.invalid/document' }, error: null }) }) },
     rpc: vi.fn(async () => ({ data: true as unknown, error: null as unknown })),
@@ -42,7 +44,9 @@ function database(seed: Record<string, Row[]>) {
       const query = {
         select: (_fields?: string, options?: { head?: boolean }) => { head = options?.head ?? false; return query; },
         eq: (key: string, expected: unknown) => { filters.push(row => row[key] === expected); return query; },
-        gte: () => query, lt: () => query, in: () => query, order: () => query, limit: () => query,
+        gte: () => query, lt: () => query,
+        in: (key: string, expected: unknown[]) => { filters.push(row => expected.includes(row[key])); return query; },
+        order: () => query, limit: () => query,
         insert: (rows: Row | Row[]) => { action = 'insert'; value = rows; return query; },
         update: (row: Row) => { action = 'update'; value = row; return query; },
         delete: () => { action = 'delete'; return query; },
@@ -60,7 +64,7 @@ function handler(name: string, db: ReturnType<typeof database>, generation = vi.
   const source = readFileSync(new URL(`../../supabase/functions/${name}/index.ts`, import.meta.url), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const dependencies: Record<string, unknown> = {
-    '../_shared/documentLayout.ts': layout,
+    '../_shared/documentLayout.ts': layout, '../_shared/patientAge.ts': patientAge,
     '../_shared/gemini.ts': { ...gemini, callGemini: generation, uploadToGeminiFiles: async () => 'https://provider.invalid/file' },
     '../_shared/storage.ts': storage, '../_shared/clinicDate.ts': dates,
     '../_shared/http.ts': { ...http, fetchWithDeadline: network },
@@ -72,7 +76,7 @@ function handler(name: string, db: ReturnType<typeof database>, generation = vi.
     if (id.includes('/http/server.ts')) return { serve: (fn: typeof run) => { run = fn; } };
     if (id.includes('@supabase/supabase-js')) return { createClient: () => db };
     if (id.includes('pdf-lib@')) {
-      const page = { getSize: () => ({ width: 595.28, height: 841.89 }), drawText: () => {}, drawLine: () => {} };
+      const page = { getSize: () => ({ width: 595.28, height: 841.89 }), drawText: (text: string) => { db.drawnText.push(text); }, drawLine: () => {} };
       const document = { addPage: () => page, getPages: () => [page], embedFont: async () => ({ widthOfTextAtSize: (text: string) => text.length * 5 }), save: async () => new Uint8Array([1,2,3]) };
       return { PDFDocument: { create: async () => document }, StandardFonts: { Helvetica: 'regular', HelveticaBold: 'bold' }, rgb: (...values: number[]) => values };
     }
@@ -85,6 +89,55 @@ function handler(name: string, db: ReturnType<typeof database>, generation = vi.
 }
 
 describe('clinical edge handler regressions', () => {
+  it('issues the current DOB-derived age in both PDF and immutable snapshot without rewriting static age', async()=>{
+    vi.useFakeTimers();vi.setSystemTime(new Date('2026-10-28T12:00:00Z'));
+    const db=database({patients:[{id:patient,user_id:user,name:'Pessoa sintética',age:12,date_of_birth:'2000-10-28',medications:[]}],user_settings:[{user_id:user,doctor_name:'Médico sintético',crm_number:'123',crm_uf:'PR',professional_address:'Endereço sintético'}]});
+    const response=await handler('generate-prescription',db)({patientId:patient,docType:'receita_simples',medications:[{name:'Medicamento sintético',dosage:'dose de teste',instructions:'instrução de teste'}]});
+    expect(response.status).toBe(200);
+    expect(db.tables.prescriptions[0].issuance_snapshot).toMatchObject({patient:{age:26,dateOfBirth:'2000-10-28'}});
+    expect(db.drawnText.some(text=>text.includes('Pessoa sintética, 26 anos'))).toBe(true);
+    expect(db.tables.patients[0].age).toBe(12);
+  });
+  for (const linked of [true, false]) it(`binds encounter completion to the saved source and explicit appointment (linked=${linked})`, async () => {
+    const appointment = (id: string, status = 'agendado') => ({ id, patient_id: patient, user_id: user, status });
+    const db = database({ patients: [{ id: patient, user_id: user }],
+      consultation_drafts: [{ id: draftId, patient_id: patient, user_id: user, appointment_id: linked ? 'morning' : null }],
+      appointments: [appointment('morning'), appointment('later', 'confirmado'), appointment('cancelled', 'cancelado')] });
+    const response = await handler('finalize-consultation', db, vi.fn(async () => { throw new Error('optional'); }))({ patientId: patient, draftId, transcription: '', saveDirect: true, reviewed: true, soapNote: 'Aprovado', whatsappMessage: '' });
+    expect(response.status).toBe(200);
+    expect(db.tables.consultations[0].appointment_id).toBe(linked ? 'morning' : null);
+    expect(db.rpc).toHaveBeenCalledWith('complete_consultation_metadata', { p_user_id: user, p_patient_id: patient, p_consultation_id: draftId });
+  });
+  it('rejects a replay with a different approved text instead of returning success for old content', async () => {
+    const db=database({patients:[{id:patient,user_id:user}],consultation_drafts:[{id:draftId,patient_id:patient,user_id:user}]});
+    const run=handler('finalize-consultation',db,vi.fn(async()=>{throw new Error('optional');}));
+    const body={patientId:patient,draftId,transcription:'Fonte',saveDirect:true,reviewed:true,soapNote:'Primeiro texto aprovado',whatsappMessage:''};
+    expect((await run(body)).status).toBe(200);
+    expect((await run({...body,soapNote:'Segundo texto diferente'})).status).toBe(409);
+    expect(db.tables.consultations).toHaveLength(1);
+    expect(db.tables.consultations[0].soap_note).toBe('Primeiro texto aprovado');
+  });
+  it('retains source on metadata failure then repairs completion on an identical retry', async () => {
+    const db=database({patients:[{id:patient,user_id:user}],consultation_drafts:[{id:draftId,patient_id:patient,user_id:user}]});
+    db.rpc.mockResolvedValueOnce({data:false,error:new Error('metadata unavailable')});
+    const run=handler('finalize-consultation',db,vi.fn(async()=>{throw new Error('optional');}));
+    const body={patientId:patient,draftId,transcription:'Fonte',saveDirect:true,reviewed:true,soapNote:'Texto aprovado',whatsappMessage:''};
+    expect((await run(body)).status).toBe(503);
+    expect(db.tables.consultations).toHaveLength(1);expect(db.tables.consultation_drafts).toHaveLength(1);
+    expect((await run(body)).status).toBe(200);
+    expect(db.tables.consultations).toHaveLength(1);expect(db.tables.consultation_drafts).toHaveLength(0);
+    expect(db.rpc).toHaveBeenCalledTimes(2);
+  });
+  it('keeps newly extracted history as source-linked proposals instead of changing the chart', async () => {
+    const db = database({ patients: [{ id: patient, user_id: user, revision: 1, medical_history: '', social_anamnesis: '' }],
+      consultation_drafts: [{ id: draftId, patient_id: patient, user_id: user }] });
+    const generation = vi.fn().mockResolvedValueOnce({ text: JSON.stringify({ diagnoses: [], medications: [], allergies: [] }) })
+      .mockResolvedValueOnce({ text: JSON.stringify({ medical_history: ['Fato para revisão'], social_anamnesis: ['Outro fato para revisão'] }) });
+    const response = await handler('finalize-consultation', db, generation)({ patientId: patient, draftId, transcription: 'Fonte', saveDirect: true, reviewed: true, soapNote: 'SOAP aprovado', whatsappMessage: '' });
+    expect(response.status).toBe(200);
+    expect(db.tables.patients[0]).toMatchObject({ medical_history: '', social_anamnesis: '' });
+    expect(await response.json()).toMatchObject({ historyFilled: false, historyProposals: { sourceConsultationId: draftId, medicalHistory: ['Fato para revisão'], socialAnamnesis: ['Outro fato para revisão'] } });
+  });
   it('rejects an audio path that is not the exact source registered for the draft', async () => {
     const db = database({ patients: [{ id: patient, user_id: user }], consultation_drafts: [{ id: draftId, patient_id: patient, user_id: user, audio_storage_path: audio }] });
     const generation = vi.fn();

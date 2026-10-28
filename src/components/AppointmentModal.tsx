@@ -1,3 +1,5 @@
+import { canRemindAppointment } from '../../supabase/functions/_shared/reminders';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -28,6 +30,7 @@ interface AppointmentModalProps {
   defaultStart?: Date;
   defaultEnd?: Date;
   patients: Patient[];
+  patientLookupUnavailable?: boolean;
   userId: string;
   googleConnected: boolean;
   onSaved: () => void;
@@ -65,6 +68,7 @@ export function AppointmentModal({
   defaultStart,
   defaultEnd,
   patients,
+  patientLookupUnavailable = false,
   userId,
   googleConnected,
   onSaved,
@@ -140,14 +144,14 @@ export function AppointmentModal({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || saving || deleting) return;
+    if (!title.trim() || saving || deleting || patientLookupUnavailable) return;
 
     if (isNewPatient) {
       if (!newName.trim()) {
         toast({ title: 'Nome do paciente é obrigatório', variant: 'destructive' });
         return;
       }
-      if (!newAge || !Number.isInteger(Number(newAge)) || Number(newAge) < 0 || Number(newAge) > 130) {
+      if (newAge !== '' && (!Number.isInteger(Number(newAge)) || Number(newAge) < 0 || Number(newAge) > 130)) {
         toast({ title: 'Idade inválida', variant: 'destructive' });
         return;
       }
@@ -175,9 +179,9 @@ export function AppointmentModal({
           .insert([{
             user_id: userId,
             name: newName.trim(),
-            age: parseInt(newAge),
+            age: newAge === '' ? null : Number(newAge),
             phone: newPhone.trim() || null,
-            last_visit: startDt.toISOString().split('T')[0],
+            last_visit: null,
             status: 'novo',
           }])
           .select('id')
@@ -199,6 +203,7 @@ export function AppointmentModal({
         end_time: endDt.toISOString(),
         status,
         notes: notes.trim() || null,
+        ...(googleConnected ? { google_sync_status: 'pending', google_sync_error: null } : {}),
       };
 
       let savedId = appointment?.id;
@@ -229,14 +234,15 @@ export function AppointmentModal({
               google_event_id: appointment?.googleEventId,
             },
           },
-        }).then(({ error: syncError }) => {
-          if (syncError) {
+        }).then(({ data: syncResult, error: syncError }) => {
+          queryClient.invalidateQueries({ queryKey: ['appointments', userId] });
+          if (syncError || syncResult?.success !== true) {
             toast({
               title: 'Google Calendar não sincronizado',
               description: 'A consulta foi salva, mas não foi enviada ao Google Calendar.',
             });
           }
-        }).catch(() => {});
+        }).catch(() => { queryClient.invalidateQueries({ queryKey: ['appointments', userId] }); });
       }
 
       toast({
@@ -276,7 +282,7 @@ export function AppointmentModal({
   };
 
   const handleEmailReminder = async () => {
-    if (!appointment) return;
+    if (!appointment || !canRemindAppointment(status, appointment.startTime)) return;
     setSendingEmail(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-appointment-reminder', {
@@ -293,7 +299,7 @@ export function AppointmentModal({
   };
 
   const handleWhatsAppReminder = async () => {
-    if (!appointment) return;
+    if (!appointment || !canRemindAppointment(status, appointment.startTime)) return;
     const requestedId = appointment.id;
     setLoadingWa(true);
     try {
@@ -316,10 +322,11 @@ export function AppointmentModal({
     }
   };
 
-  const canSave = title.trim() && (!isNewPatient || (newName.trim() && newAge));
+  const canSave = !patientLookupUnavailable && title.trim() && (!isNewPatient || newName.trim());
   const dirty = initialForm !== JSON.stringify([patientId, title, type, format(date, 'yyyy-MM-dd'), startTime, endTime, status, notes, newName, newAge, newPhone]);
+  const canClose = useUnsavedChanges(open && dirty);
   const requestClose = (next: boolean) => {
-    if (saving || deleting || (!next && dirty && !window.confirm('Descartar alterações do agendamento?'))) return;
+    if (saving || deleting || !canClose(next)) return;
     onOpenChange(next);
   };
 
@@ -336,7 +343,8 @@ export function AppointmentModal({
           {/* Patient */}
           <div className="space-y-1.5">
             <Label htmlFor="appointment-patient">Paciente</Label>
-            <Select value={patientId} onValueChange={setPatientId}>
+            {patientLookupUnavailable && <p role="alert" className="text-xs text-destructive">Cadastro de pacientes indisponível. Recarregue a lista antes de salvar.</p>}
+            <Select disabled={patientLookupUnavailable} value={patientId} onValueChange={setPatientId}>
               <SelectTrigger id="appointment-patient">
                 <SelectValue placeholder="Selecionar paciente..." />
               </SelectTrigger>
@@ -350,7 +358,7 @@ export function AppointmentModal({
                 {patients.length > 0 && <SelectSeparator />}
                 {patients.map(p => (
                   <SelectItem key={p.id} value={p.id}>
-                    {p.name} — {p.age} anos
+                    {p.name} — {p.age === null ? 'Idade não informada' : `${p.age} anos`}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -374,7 +382,7 @@ export function AppointmentModal({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="appointment-new-age" className="text-xs">Idade *</Label>
+                    <Label htmlFor="appointment-new-age" className="text-xs">Idade (opcional)</Label>
                     <Input
                       id="appointment-new-age"
                       type="number"
@@ -498,7 +506,7 @@ export function AppointmentModal({
                 size="sm"
                 className="gap-1.5 flex-1"
                 onClick={handleEmailReminder}
-                disabled={sendingEmail || !selectedPatient.email}
+                disabled={sendingEmail || !selectedPatient.email || !canRemindAppointment(status, appointment!.startTime)}
                 title={!selectedPatient.email ? 'Paciente sem email cadastrado' : undefined}
               >
                 {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
@@ -510,7 +518,7 @@ export function AppointmentModal({
                 size="sm"
                 className="gap-1.5 flex-1 text-whatsapp-green border-whatsapp-green/30 hover:bg-whatsapp-green/10"
                 onClick={handleWhatsAppReminder}
-                disabled={loadingWa || !selectedPatient.phone}
+                disabled={loadingWa || !selectedPatient.phone || !canRemindAppointment(status, appointment!.startTime)}
                 title={!selectedPatient.phone ? 'Paciente sem telefone cadastrado' : undefined}
               >
                 {loadingWa ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5" />}
@@ -518,10 +526,12 @@ export function AppointmentModal({
               </Button>
             </div>
           )}
-          {appointment && waLinks[appointment.id] && <div role="status" className="text-xs space-y-1">
+          {appointment && canRemindAppointment(status, appointment.startTime) && waLinks[appointment.id] && <div role="status" className="text-xs space-y-1">
             <p>Link pronto. O lembrete só será enviado quando você confirmar no WhatsApp.</p>
             <a href={waLinks[appointment.id]} target="_blank" rel="noopener noreferrer" className="text-medical-blue underline">Abrir WhatsApp para revisar e enviar</a>
           </div>}
+
+          {appointment && !canRemindAppointment(status, appointment.startTime) && <p className="text-xs text-muted-foreground">Lembretes disponíveis apenas para agendamentos futuros agendados ou confirmados.</p>}
 
           {/* Actions */}
           <div className="flex gap-2 pt-2">

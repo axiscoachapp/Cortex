@@ -23,6 +23,7 @@ interface PatientFileRow {
   tag: string | null;
   created_at: string;
   ai_summary: string | null;
+  ai_review_status?: string;
 }
 
 const BUCKET = 'patient-files';
@@ -61,7 +62,7 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
     queryFn: async () => {
       return fetchAllRows<PatientFileRow>((from, to) => supabase
         .from('patient_files')
-        .select('id, storage_path, file_name, mime_type, size_bytes, tag, created_at, ai_summary')
+        .select('id, storage_path, file_name, mime_type, size_bytes, tag, created_at, ai_summary, ai_review_status')
         .eq('patient_id', patientId)
         .order('created_at', { ascending: false }).order('id').range(from, to));
     },
@@ -275,12 +276,13 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
                   {f.size_bytes !== null && <span>· {humanSize(f.size_bytes)}</span>}
                   {f.tag && <span>· {f.tag}</span>}
                 </p>
-                {f.ai_summary && (
+                {f.ai_review_status === 'rejected' && <p className="text-xs text-muted-foreground mt-1">Análise rejeitada; consulte o documento original.</p>}
+                {f.ai_summary && f.ai_review_status !== 'rejected' && (
                   <p
                     className="text-[11px] text-muted-foreground/80 mt-1 whitespace-pre-wrap line-clamp-3"
                     title={f.ai_summary}
                   >
-                    🤖 {f.ai_summary}
+                    Análise automática — confira no documento original: {f.ai_summary}
                   </p>
                 )}
               </div>

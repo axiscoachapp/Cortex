@@ -1,6 +1,7 @@
 import { Patient } from '@/types/patient';
+import { ageAtDate } from '@/lib/dates';
 
-type PatientRow = Record<string, unknown> & { id: string; name: string; age: number; last_visit: string; status: string };
+type PatientRow = Record<string, unknown> & { id: string; name: string; age: number | null; last_visit: string | null; status: string };
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const text = (value: unknown): string => typeof value === 'string' ? value : '';
 
@@ -8,7 +9,8 @@ export function mapPatientRow(row: PatientRow): Patient {
   return {
     id: row.id,
     name: row.name,
-    age: row.age,
+    age: typeof row.date_of_birth==='string' ? ageAtDate(row.date_of_birth) : row.age,
+    dateOfBirth: text(row.date_of_birth) || undefined,
     revision: typeof row.revision === 'number' ? row.revision : 0,
     profession: text(row.profession),
     photoUrl: text(row.photo_url) || undefined,

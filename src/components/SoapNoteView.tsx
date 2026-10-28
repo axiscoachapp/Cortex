@@ -59,7 +59,7 @@ export function SoapNoteView({ text }: { text: string }) {
           </p>
           {content
             ? <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/85">{content}</p>
-            : <p className="text-sm italic text-muted-foreground/60">Não relatado na consulta.</p>
+            : <p className="text-sm italic text-muted-foreground">Não relatado na consulta.</p>
           }
         </div>
       ))}

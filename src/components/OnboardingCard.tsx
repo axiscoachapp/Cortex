@@ -52,7 +52,7 @@ export function OnboardingCard({ patientCount, hasConsultation, userId, onNewCon
             <p className="text-[11px] text-muted-foreground">{doneCount} de {required.length} passos concluídos</p>
           </div>
         </div>
-        <button onClick={dismiss} className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-white/60" title="Dispensar">
+        <button onClick={dismiss} className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/60" title="Dispensar">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -76,11 +76,11 @@ export function OnboardingCard({ patientCount, hasConsultation, userId, onNewCon
             </div>
             <div className="flex-1 min-w-0">
               <p className={cn('text-xs font-medium', done ? 'text-muted-foreground line-through' : 'text-foreground')}>
-                {label}{optional && <span className="text-[9px] text-muted-foreground/60 font-normal"> · opcional</span>}
+                {label}{optional && <span className="text-[9px] text-muted-foreground font-normal"> · opcional</span>}
               </p>
               {!done && <p className="text-[10px] text-muted-foreground">{hint}</p>}
             </div>
-            {!done && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />}
+            {!done && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
           </button>
         ))}
       </div>

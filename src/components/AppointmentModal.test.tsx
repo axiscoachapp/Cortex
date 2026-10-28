@@ -16,7 +16,7 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: {
 
 const appointment: Appointment = {
   id: 'appointment-a', userId: 'doctor', patientId: null, title: 'Consulta de teste',
-  startTime: new Date('2026-05-01T12:00:00Z'), endTime: new Date('2026-05-01T12:30:00Z'),
+  startTime: new Date('2099-05-01T12:00:00Z'), endTime: new Date('2099-05-01T12:30:00Z'),
   status: 'agendado', type: 'retorno', reminderSent: false, googleEventId: 'event-a',
 };
 
@@ -68,3 +68,5 @@ describe('Appointment removal and unsaved changes', () => {
     expect(screen.getByLabelText('Observações')).toHaveValue('Novo detalhe');
   });
 });
+
+vi.mock('@/hooks/useUnsavedChanges', () => ({ useUnsavedChanges: (dirty: boolean) => (next: boolean) => next || !dirty || window.confirm('Descartar alterações?') }));

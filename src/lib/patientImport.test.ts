@@ -17,4 +17,8 @@ describe('Patient import validation', () => {
     expect(result.records[0].age).toBe(0);
     expect(result.rejected.map(row => row.row)).toEqual([3, 4, 5]);
   });
+  it('does not manufacture a completed visit for newly imported people', () => {
+    const result = preparePatientImport([['Pessoa', '40']], ['name', 'age'], 'doctor', '2026-10-28');
+    expect(result.records[0].last_visit).toBeNull();
+  });
 });

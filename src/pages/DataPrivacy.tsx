@@ -10,7 +10,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { assembleDataExport } from '@/lib/dataExport';
+import { assembleDataExport, writeDataExport } from '@/lib/dataExport';
 import { functionErrorBody } from '@/lib/functionErrors';
 
 export default function DataPrivacy() {
@@ -30,7 +30,21 @@ export default function DataPrivacy() {
     if (!user?.id || exporting || deleting) return;
     setExporting(true);
     setExportError('');
+    let destination: { write(chunk: string): Promise<void>; close(): Promise<void>; abort(): Promise<void> } | undefined;
     try {
+      // Request the destination during the click gesture. File writes commit
+      // only after the server confirms the snapshot remained consistent.
+      const picker = (window as Window & { showSaveFilePicker?: (options: object) => Promise<{ createWritable(): Promise<NonNullable<typeof destination>> }> }).showSaveFilePicker;
+      if (picker) {
+        const handle = await picker.call(window, { suggestedName: `cortex-dados-${new Date().toISOString().slice(0, 10)}.json`, types: [{ description: 'Dados Cortex', accept: { 'application/json': ['.json'] } }] });
+        destination = await handle.createWritable();
+        const count = await writeDataExport(user.id, body => supabase.functions.invoke('export-user-data', { body }), setExportProgress, chunk => destination!.write(chunk));
+        await destination.close();
+        destination = undefined;
+        setExportProgress(`Exportação concluída: ${count} arquivos incluídos com verificação SHA-256.`);
+        toast({ title: 'Exportação concluída', description: 'Cópia consistente dos registros e arquivos verificados.' });
+        return;
+      }
       const exportData = await assembleDataExport(user.id, body => supabase.functions.invoke('export-user-data', { body }), setExportProgress);
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -42,9 +56,11 @@ export default function DataPrivacy() {
       URL.revokeObjectURL(url);
 
       setExportProgress(`Exportação concluída: ${exportData.files.length} arquivos incluídos com verificação SHA-256.`);
-      toast({ title: 'Exportação concluída', description: 'Todos os dados e arquivos foram incluídos no JSON.' });
+      toast({ title: 'Exportação concluída', description: 'Cópia consistente dos registros e arquivos verificados.' });
     } catch (error) {
+      if (destination) await destination.abort().catch(() => {});
       setExportProgress('');
+      if (error instanceof DOMException && error.name === 'AbortError') return;
       setExportError(error instanceof Error ? error.message : 'Não foi possível concluir a exportação. Nenhum arquivo parcial foi baixado. Tente novamente.');
     } finally {
       setExporting(false);
@@ -62,7 +78,7 @@ export default function DataPrivacy() {
         throw new Error(typeof body?.error === 'string' ? body.error.slice(0, 300) : 'A exclusão não foi concluída. Tente novamente para terminar a remoção dos dados.');
       }
       if (data?.success !== true) throw new Error('O servidor não confirmou a exclusão completa. Tente novamente.');
-      toast({ title: 'Conta excluída', description: 'Todos os seus dados foram removidos permanentemente.' });
+      toast({ title: 'Conta excluída', description: 'Conta e arquivos ativos removidos. Logs e backups seguem as políticas de retenção aplicáveis.' });
       await signOut();
       navigate('/auth');
     } catch (error) {
@@ -97,9 +113,9 @@ export default function DataPrivacy() {
           </p>
           <ul className="text-sm text-muted-foreground space-y-1.5 list-none">
             {[
-              'Acesso aos dados: você pode exportar uma cópia completa a qualquer momento.',
+              'Acesso aos dados: exporte uma cópia consistente dos seus registros e arquivos.',
               'Correção: edite pacientes e consultas diretamente no aplicativo.',
-              'Exclusão: apaga permanentemente todos os dados, incluindo prontuários.',
+              'Exclusão: remove dados ativos elegíveis; prontuários com custódia compartilhada precisam de resolução prévia.',
               'Portabilidade: o arquivo exportado está em formato JSON aberto.',
             ].map((item, i) => (
               <li key={i} className="flex items-start gap-2">
@@ -121,7 +137,7 @@ export default function DataPrivacy() {
             além dos arquivos anexados, áudios e documentos gerados. Os arquivos ficam em Base64,
             com checksum SHA-256 para verificar a integridade. Credenciais de integração são excluídas.
           </p>
-          <p className="text-xs text-muted-foreground">O download pelo navegador suporta até 100 MB de arquivos. Para volumes maiores, solicite uma exportação completa ao suporte antes de excluir a conta.</p>
+          <p className="text-xs text-muted-foreground">Em navegadores com gravação direta em arquivo, a exportação é escrita em partes e pode superar 100 MB. Nos demais navegadores, o limite é 100 MB. Alterações durante a exportação exigem reinício para preservar a consistência.</p>
           {exportProgress && <p role="status" className="text-sm break-words">{exportProgress}</p>}
           {exportError && <p role="alert" className="text-sm text-destructive">{exportError}</p>}
           <Button
@@ -143,7 +159,7 @@ export default function DataPrivacy() {
             Excluir conta e dados
           </h2>
           <p className="text-sm text-muted-foreground">
-            Remove permanentemente todos os seus pacientes, consultas, arquivos e conta de acesso.
+            Remove sua conta e os registros e arquivos ativos elegíveis. A remoção das cópias externas identificadas é confirmada antes da conclusão. Envios sem confirmação precisam de reconciliação pelo suporte; falhas permanecem disponíveis para nova tentativa. Logs operacionais e backups seguem políticas de retenção próprias.
             Esta ação é <strong>irreversível</strong> — considere exportar seus dados antes de prosseguir.
           </p>
 
@@ -164,10 +180,10 @@ export default function DataPrivacy() {
                 <AlertDialogDescription asChild>
                 <div className="space-y-2">
                   <p>
-                    Isso excluirá <strong>permanentemente</strong>:
+                    A exclusão dos dados ativos inclui:
                   </p>
                   <ul className="list-disc list-inside text-sm space-y-1">
-                    <li>Todos os pacientes e prontuários</li>
+                    <li>Pacientes e prontuários elegíveis, após resolução de eventual custódia compartilhada</li>
                     <li>Todas as consultas e transcrições</li>
                     <li>Todos os agendamentos</li>
                     <li>Todos os arquivos enviados</li>

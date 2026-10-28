@@ -56,7 +56,7 @@ export function preparePatientImport(rows: string[][], mapping: ImportTarget[], 
     else if (birthdate && (ageFromBirthdate(birthdate, today) === null || (ageValue && ageFromBirthdate(birthdate, today) !== age))) reason = 'Data de nascimento inválida ou incompatível com a idade';
     else if (field('email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field('email'))) reason = 'Email inválido';
     if (reason) { rejected.push({ row: index + 2, reason }); return; }
-    records.push({ id: crypto.randomUUID(), user_id: userId, name, age: age!, last_visit: today, status: 'novo', phone: field('phone') || null, email: field('email') || null, profession: field('profession') || '' });
+    records.push({ id: crypto.randomUUID(), user_id: userId, name, age: age!, last_visit: null, status: 'novo', phone: field('phone') || null, email: field('email') || null, profession: field('profession') || '' });
   });
   return { records, rejected };
 }

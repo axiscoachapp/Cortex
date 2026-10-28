@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface ConsultationDraft {
   id: string;
   patientId: string;
+  appointmentId?: string | null;
   chiefComplaint: string;
   audioStoragePath: string | null;
   audioMimeType: string;
@@ -21,7 +22,7 @@ export interface ConsultationDraft {
 export async function saveConsultationDraft(userId: string, draft: ConsultationDraft): Promise<void> {
   const { error } = await supabase.from('consultation_drafts').upsert({
     id: draft.id, user_id: userId, patient_id: draft.patientId,
-    chief_complaint: draft.chiefComplaint, audio_storage_path: draft.audioStoragePath,
+    chief_complaint: draft.chiefComplaint, audio_storage_path: draft.audioStoragePath, appointment_id:draft.appointmentId ?? null,
     content: { ...draft }, status: draft.status, updated_at: new Date().toISOString(),
   }, { onConflict: 'id' });
   if (error) throw error;
@@ -34,7 +35,7 @@ export async function loadConsultationDraft(userId: string, patientId: string): 
   if (!data) return null;
   const content = data.content as unknown as Partial<ConsultationDraft>;
   return {
-    ...content, id: data.id, patientId, chiefComplaint: data.chief_complaint,
+    ...content, id: data.id, patientId, chiefComplaint: data.chief_complaint, appointmentId:data.appointment_id,
     audioStoragePath: data.audio_storage_path, audioMimeType: content.audioMimeType ?? 'audio/webm', status: data.status as ConsultationDraft['status'],
     transcription: content.transcription ?? '', soapDraft: content.soapDraft ?? '', whatsappDraft: content.whatsappDraft ?? '',
     clarifications: content.clarifications ?? [], transcriptionQuality: content.transcriptionQuality ?? 'poor',
