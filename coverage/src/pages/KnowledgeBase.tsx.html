@@ -1,0 +1,454 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/pages/KnowledgeBase.tsx</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/pages</a> KnowledgeBase.tsx</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">72.79% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>99/136</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">62.5% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>75/120</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">65.71% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>23/35</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">80.88% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>55/68</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line medium'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32x</span>
+<span class="cline-any cline-yes">32x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">52x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">24x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, BookOpen, Plus, Loader2, FileText, Search, RotateCw, Archive } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { fetchAllRows } from '@/lib/pagination';
+import { functionErrorBody } from '@/lib/functionErrors';
+import { createKnowledgeSource, reviewKnowledgeSource } from '@/lib/knowledge';
+import { ProtocolShareControls, SharedProtocolsPanel } from '@/components/ProtocolSharing';
+&nbsp;
+interface KBDoc {
+  id: string; title: string; source_type: string; char_count: number; status: string; created_at: string;
+  source_reference: string | null; source_version: string | null; review_status: string;
+  reviewed_at: string | null; reviewer_name: string | null; indexed_at: string | null;
+}
+interface SourceDetail extends KBDoc { source_text: string | null; supersedes_document_id: string | null }
+const date = <span class="fstat-no" title="function not covered" >(v</span>alue: string) =&gt; <span class="cstat-no" title="statement not covered" >new Date(value).toLocaleString('pt-BR');</span>
+function statusLabel(doc: KBDoc) {
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (doc.review_status === 'retired') <span class="cstat-no" title="statement not covered" >return 'Retirado';</span>
+  if (doc.review_status !== 'approved') return 'Aguardando revisão';
+  return doc.status === 'ready' ? 'Revisado e disponível' : <span class="branch-1 cbranch-no" title="branch not covered" >doc.status === 'processing' ? 'Indexando' : doc.status === 'error' ? 'Falha na indexação' : 'Revisado · não indexado';</span>
+}
+&nbsp;
+export default function KnowledgeBasePage() {
+  const navigate = useNavigate(); const { user } = useAuth(); const { toast } = useToast(); const queryClient = useQueryClient();
+  const [search, setSearch] = useState(''); const [visibleCount, setVisibleCount] = useState(50);
+  const [addOpen, setAddOpen] = useState(false); const [title, setTitle] = useState(''); const [content, setContent] = useState('');
+  const [reference, setReference] = useState(''); const [version, setVersion] = useState(''); const [supersedes, setSupersedes] = useState&lt;string | null&gt;(null);
+  const [selectedId, setSelectedId] = useState&lt;string | null&gt;(null); const [saving, setSaving] = useState(false); const [busyId, setBusyId] = useState&lt;string | null&gt;(null);
+  const [operationError, setOperationError] = useState(''); const [draftError, setDraftError] = useState('');
+  const guardDraft = useUnsavedChanges(addOpen &amp;&amp; !!(title.trim() || content.trim() || reference.trim() || version.trim()));
+  const { data: docs = [], isLoading, isError, refetch } = useQuery&lt;KBDoc[]&gt;({
+    queryKey: ['knowledge-docs', user?.id], enabled: !!user?.id, staleTime: 20_000,
+    queryFn: () =&gt; fetchAllRows&lt;KBDoc&gt;((from, to) =&gt; supabase.from('knowledge_documents')
+      .select('id,title,source_type,char_count,status,created_at,source_reference,source_version,review_status,reviewed_at,reviewer_name,indexed_at')
+      .order('created_at', { ascending: false }).order('id').range(from, to)),
+    refetchInterval: q =&gt; q.state.data?.some(doc =&gt; doc.status === 'processing') ? <span class="branch-0 cbranch-no" title="branch not covered" >4000 : f</span>alse,
+  });
+  const source = useQuery&lt;SourceDetail&gt;({
+    queryKey: ['knowledge-source', user?.id, selectedId], enabled: !!selectedId &amp;&amp; !!user?.id,
+    queryFn: async () =&gt; {
+      const { data, error } = await supabase.from('knowledge_documents').select('*').eq('id', selectedId!).eq('user_id', user!.id).single();
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (error || !data) <span class="cstat-no" title="statement not covered" >throw new Error('Não foi possível carregar o texto original.');</span>
+      return data as unknown as SourceDetail;
+    },
+  });
+  const refresh = async () =&gt; {
+    await queryClient.invalidateQueries({ queryKey: ['knowledge-docs', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['knowledge-source', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['usage-daily', user?.id] });
+  };
+  const filtered = docs.filter(doc =&gt; `${doc.title} ${doc.source_reference ?? ''}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const closeAdd = <span class="fstat-no" title="function not covered" >(n</span>ext: boolean) =&gt; {
+<span class="cstat-no" title="statement not covered" >    if (saving || !guardDraft(next)) <span class="cstat-no" title="statement not covered" >return;</span></span>
+<span class="cstat-no" title="statement not covered" >    if (!next) { <span class="cstat-no" title="statement not covered" >setTitle(''); <span class="cstat-no" title="statement not covered" >s</span>etContent(''); <span class="cstat-no" title="statement not covered" >s</span>etReference(''); <span class="cstat-no" title="statement not covered" >s</span>etVersion(''); <span class="cstat-no" title="statement not covered" >s</span>etSupersedes(null); <span class="cstat-no" title="statement not covered" >s</span>etDraftError(''); }</span></span>
+<span class="cstat-no" title="statement not covered" >    setAddOpen(next);</span>
+  };
+  const newVersion = (doc: SourceDetail) =&gt; {
+    setTitle(doc.title); setContent(doc.source_text ?? ''); setReference(doc.source_reference ?? ''); setVersion(''); setSupersedes(doc.id); setSelectedId(null); setAddOpen(true);
+  };
+  const create = async () =&gt; {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!title.trim() || content.trim().length &lt; 20 || content.length &gt; 60_000 || !reference.trim() || !version.trim()) {
+<span class="cstat-no" title="statement not covered" >      setDraftError('Informe título, fonte, versão e texto original com 20 a 60.000 caracteres.'); <span class="cstat-no" title="statement not covered" >r</span>eturn;</span>
+    }
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (saving) <span class="cstat-no" title="statement not covered" >return;</span>
+    setSaving(true); setDraftError('');
+    try {
+      const id = await createKnowledgeSource({ title, text: content, reference, version, supersedesDocumentId: supersedes });
+      setAddOpen(false); setTitle(''); setContent(''); setReference(''); setVersion(''); setSupersedes(null); setSelectedId(id);
+      await refresh(); toast({ title: 'Original preservado', description: 'Revise a versão antes de disponibilizá-la ao assistente.' });
+    } catch (error) { <span class="cstat-no" title="statement not covered" >setDraftError(error instanceof Error ? error.message : 'Não foi possível salvar. Seu texto foi mantido.'); }</span>
+    finally { setSaving(false); }
+  };
+  const index = async (doc: SourceDetail, approve: boolean) =&gt; {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (busyId) <span class="cstat-no" title="statement not covered" >return;</span>
+    setBusyId(doc.id); setOperationError('');
+    try {
+      <span class="missing-if-branch" title="else path not taken" >E</span>if (approve) await reviewKnowledgeSource(doc.id, true);
+      const { data, error } = await supabase.functions.invoke('ingest-knowledge', { body: { documentId: doc.id } });
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (error) { const body = <span class="cstat-no" title="statement not covered" >await functionErrorBody(error); <span class="cstat-no" title="statement not covered" >t</span>hrow new Error(typeof body?.error === 'string' ? body.error : 'Não foi possível indexar. O original permanece salvo.'); }</span>
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (data?.status !== 'ready') <span class="cstat-no" title="statement not covered" >throw new Error('A indexação ainda não foi confirmada. Reabra a fonte antes de tentar novamente.');</span>
+      toast({ title: 'Fonte revisada e disponível', description: 'O assistente pode consultar esta versão e citar a fonte.' });
+    } catch (error) { <span class="cstat-no" title="statement not covered" >setOperationError(error instanceof Error ? error.message : 'A indexação falhou. O original foi preservado.'); }</span>
+    finally { setBusyId(null); await refresh(); }
+  };
+  const retire = async (doc: SourceDetail) =&gt; {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (busyId || !window.confirm(`Retirar "${doc.title}" das referências do assistente? O original e a revisão serão preservados.`)) <span class="cstat-no" title="statement not covered" >return;</span>
+    setBusyId(doc.id); setOperationError('');
+    try { await reviewKnowledgeSource(doc.id, false); toast({ title: 'Fonte retirada', description: 'Novas consultas não usarão esta versão.' }); }
+    catch (error) { <span class="cstat-no" title="statement not covered" >setOperationError(error instanceof Error ? error.message : 'Não foi possível retirar a fonte.'); }</span>
+    finally { setBusyId(null); await refresh(); }
+  };
+  return &lt;div className="min-h-screen bg-background"&gt;
+    &lt;header className="bg-card border-b sticky top-0 z-10"&gt;&lt;div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-3"&gt;
+      &lt;div className="flex items-center gap-3 min-w-0"&gt;&lt;Button variant="ghost" size="icon" aria-label="Voltar" onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >n</span>avigate('/')}&gt;&lt;</span>ArrowLeft className="w-5 h-5" /&gt;&lt;/Button&gt;&lt;BookOpen className="w-5 h-5 text-primary shrink-0" /&gt;&lt;div&gt;&lt;h1 className="text-lg font-semibold"&gt;Biblioteca de protocolos&lt;/h1&gt;&lt;p className="text-xs text-muted-foreground hidden sm:block"&gt;Fontes originais, versões e revisão médica&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;Button size="sm" onClick={() =&gt; { setSupersedes(null); setAddOpen(true); }} aria-label="Adicionar conhecimento"&gt;&lt;Plus className="w-4 h-4 sm:mr-2" /&gt;&lt;span className="hidden sm:inline"&gt;Adicionar fonte&lt;/span&gt;&lt;/Button&gt;
+    &lt;/div&gt;&lt;/header&gt;
+    &lt;main className="max-w-4xl mx-auto px-4 py-6 space-y-4"&gt;
+      &lt;p className="text-sm text-muted-foreground rounded-xl border bg-card p-4"&gt;Somente versões revisadas e com indexação concluída entram nas respostas do assistente. Use protocolos gerais e referências; anexos e informações identificáveis de pacientes não devem ser reutilizados nesta biblioteca.&lt;/p&gt;
+      &lt;div className="relative"&gt;&lt;Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" /&gt;&lt;Input aria-label="Buscar conhecimento" value={search} onChange={<span class="fstat-no" title="function not covered" >e =&gt; { <span class="cstat-no" title="statement not covered" >s</span>etSearch(e.target.value); <span class="cstat-no" title="statement not covered" >s</span>etVisibleCount(50); }</span>} placeholder="Buscar título ou fonte" className="pl-9" /&gt;&lt;/div&gt;
+      {isLoading ? &lt;p role="status"&gt;Carregando fontes…&lt;/p&gt; : isError ? <span class="branch-0 cbranch-no" title="branch not covered" >&lt;div role="alert" className="space-y-3"&gt;&lt;p&gt;Não foi possível carregar a biblioteca.&lt;/p&gt;&lt;Button variant="outline" onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >r</span>efetch()}&gt;T</span>entar novamente&lt;/Button&gt;&lt;/div&gt; : !d</span>ocs.length ? <span class="branch-0 cbranch-no" title="branch not covered" >&lt;div className="border rounded-xl bg-card py-12 text-center space-y-3"&gt;&lt;BookOpen className="w-8 h-8 text-primary mx-auto" /&gt;&lt;h2 className="font-semibold"&gt;Sua biblioteca está vazia&lt;/h2&gt;&lt;p className="text-sm text-muted-foreground"&gt;Adicione o texto original de um protocolo para começar a revisão.&lt;/p&gt;&lt;Button variant="outline" onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etAddOpen(true)}&gt;A</span>dicionar fonte&lt;/Button&gt;&lt;/div&gt; : !f</span>iltered.length ? <span class="branch-0 cbranch-no" title="branch not covered" >&lt;p&gt;Nenhuma fonte corresponde à busca.&lt;/p&gt; : filtered.s</span>lice(0, visibleCount).map(doc =&gt; &lt;article key={doc.id} className="border rounded-xl bg-card p-4 flex gap-3 items-start"&gt;&lt;FileText className="w-5 h-5 mt-1 text-primary shrink-0" /&gt;&lt;div className="min-w-0 flex-1 space-y-1"&gt;&lt;h2 className="font-semibold break-words"&gt;{doc.title}&lt;/h2&gt;&lt;p className="text-xs text-muted-foreground break-words"&gt;Versão {doc.source_version ?? 'não informada'} · {doc.source_reference ?? 'Fonte original não preservada'}&lt;/p&gt;&lt;p className="text-xs text-muted-foreground"&gt;{doc.reviewed_at ? <span class="branch-0 cbranch-no" title="branch not covered" >`Revisão: ${date(doc.reviewed_at)} · ${doc.reviewer_name ?? 'Médico'}` </span>: 'Revisão pendente'} · {doc.char_count.toLocaleString('pt-BR')} caracteres&lt;/p&gt;&lt;p className="text-xs font-medium"&gt;{statusLabel(doc)}&lt;/p&gt;&lt;/div&gt;&lt;Button size="sm" variant="outline" onClick={() =&gt; { setOperationError(''); setSelectedId(doc.id); }}&gt;Ver fonte&lt;/Button&gt;&lt;/article&gt;)}
+      {filtered.length &gt; visibleCount &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >&lt;Button variant="outline" onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etVisibleCount(<span class="fstat-no" title="function not covered" >n =&gt; <span class="cstat-no" title="statement not covered" >n</span> + 50)}&gt;M</span></span>ostrar mais fontes&lt;/Button&gt;}</span>
+      &lt;SharedProtocolsPanel /&gt;
+    &lt;/main&gt;
+    &lt;Dialog open={addOpen} onOpenChange={closeAdd}&gt;&lt;DialogContent className="max-w-2xl max-h-[92dvh] flex flex-col"&gt;&lt;DialogHeader&gt;&lt;DialogTitle&gt;{supersedes ? 'Adicionar nova versão' : 'Adicionar fonte'}&lt;/DialogTitle&gt;&lt;DialogDescription&gt;O original é preservado. Alterações de conteúdo criam outra versão, com nova revisão.&lt;/DialogDescription&gt;&lt;/DialogHeader&gt;
+      &lt;div className="overflow-y-auto space-y-4 px-1"&gt;&lt;div className="space-y-1"&gt;&lt;Label htmlFor="knowledge-title"&gt;Título&lt;/Label&gt;&lt;Input id="knowledge-title" maxLength={200} value={title} onChange={e =&gt; setTitle(e.target.value)} /&gt;&lt;/div&gt;&lt;div className="grid sm:grid-cols-2 gap-4"&gt;&lt;div className="space-y-1"&gt;&lt;Label htmlFor="knowledge-reference"&gt;Fonte / referência bibliográfica&lt;/Label&gt;&lt;Input id="knowledge-reference" maxLength={2000} value={reference} onChange={e =&gt; setReference(e.target.value)} placeholder="Publicação, entidade ou endereço da fonte" /&gt;&lt;/div&gt;&lt;div className="space-y-1"&gt;&lt;Label htmlFor="knowledge-version"&gt;Versão / edição&lt;/Label&gt;&lt;Input id="knowledge-version" maxLength={80} value={version} onChange={e =&gt; setVersion(e.target.value)} placeholder="Ex.: edição 2026" /&gt;&lt;/div&gt;&lt;/div&gt;&lt;div className="space-y-1"&gt;&lt;Label htmlFor="knowledge-content"&gt;Texto original do protocolo&lt;/Label&gt;&lt;Textarea id="knowledge-content" rows={12} maxLength={60000} value={content} onChange={e =&gt; setContent(e.target.value)} /&gt;&lt;p className="text-xs text-muted-foreground"&gt;{content.length.toLocaleString('pt-BR')} / 60.000 caracteres. Não inclua prontuários ou dados de pacientes.&lt;/p&gt;&lt;/div&gt;{draftError &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >&lt;p role="alert" className="text-sm text-destructive"&gt;{draftError}&lt;/p&gt;}&lt;/div&gt;</span>
+      &lt;div className="border-t pt-4 flex justify-end gap-2"&gt;&lt;Button variant="outline" disabled={saving} onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >c</span>loseAdd(false)}&gt;C</span>ancelar&lt;/Button&gt;&lt;Button disabled={saving} onClick={create}&gt;{saving &amp;&amp; &lt;Loader2 className="w-4 h-4 mr-2 animate-spin" /&gt;}Salvar original para revisão&lt;/Button&gt;&lt;/div&gt;
+    &lt;/DialogContent&gt;&lt;/Dialog&gt;
+    &lt;Dialog open={!!selectedId} onOpenChange={<span class="fstat-no" title="function not covered" >next =&gt; { <span class="cstat-no" title="statement not covered" >i</span>f (!next &amp;&amp; !busyId) { <span class="cstat-no" title="statement not covered" >setSelectedId(null); <span class="cstat-no" title="statement not covered" >s</span>etOperationError(''); }</span> }</span>}&gt;&lt;DialogContent className="max-w-3xl max-h-[92dvh] flex flex-col"&gt;&lt;DialogHeader&gt;&lt;DialogTitle&gt;{source.data?.title ?? 'Fonte original'}&lt;/DialogTitle&gt;&lt;DialogDescription&gt;Revise o texto completo e sua procedência. A aprovação identifica o médico e a data desta versão.&lt;/DialogDescription&gt;&lt;/DialogHeader&gt;
+      {source.isLoading ? &lt;p role="status"&gt;Carregando original…&lt;/p&gt; : source.isError ? <span class="branch-0 cbranch-no" title="branch not covered" >&lt;div role="alert"&gt;&lt;p&gt;Não foi possível carregar o original.&lt;/p&gt;&lt;Button variant="outline" onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >s</span>ource.refetch()}&gt;T</span>entar novamente&lt;/Button&gt;&lt;/div&gt; : source.d</span>ata &amp;&amp; &lt;&gt;&lt;div className="overflow-y-auto space-y-4 px-1"&gt;&lt;dl className="grid sm:grid-cols-2 gap-3 text-sm"&gt;&lt;div&gt;&lt;dt className="font-medium"&gt;Fonte&lt;/dt&gt;&lt;dd className="break-words"&gt;{source.data.source_reference ?? 'Não preservada'}&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt className="font-medium"&gt;Versão&lt;/dt&gt;&lt;dd&gt;{source.data.source_version ?? 'Não informada'}&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt className="font-medium"&gt;Revisão&lt;/dt&gt;&lt;dd&gt;{source.data.reviewed_at ? <span class="branch-0 cbranch-no" title="branch not covered" >`${source.data.reviewer_name} · ${date(source.data.reviewed_at)}` </span>: 'Pendente'}&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt className="font-medium"&gt;Disponibilidade&lt;/dt&gt;&lt;dd&gt;{statusLabel(source.data)}&lt;/dd&gt;&lt;/div&gt;&lt;/dl&gt;
+      {source.data.source_text ? &lt;pre className="whitespace-pre-wrap break-words text-sm font-sans border rounded-lg p-4 bg-muted/30"&gt;{source.data.source_text}&lt;/pre&gt; : &lt;p className="rounded-lg border p-4 text-sm"&gt;O texto original desta fonte antiga não foi preservado. Ela permanece fora das respostas. Adicione uma nova versão com o original para revisar e indexar.&lt;/p&gt;}{operationError &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >&lt;p role="alert" className="text-sm text-destructive"&gt;{operationError}&lt;/p&gt;}&lt;</span>ProtocolShareControls source={source.data}/&gt;&lt;/div&gt;
+      &lt;div className="flex flex-wrap gap-2 border-t pt-4"&gt;&lt;Button variant="outline" disabled={!!busyId} onClick={() =&gt; newVersion(source.data!)}&gt;&lt;Plus className="w-4 h-4 mr-2" /&gt;Nova versão&lt;/Button&gt;{source.data.source_text &amp;&amp; (source.data.review_status !== 'approved' ? &lt;Button disabled={!!busyId} onClick={() =&gt; index(source.data!, true)}&gt;{busyId &amp;&amp; &lt;Loader2 className="w-4 h-4 mr-2 animate-spin" /&gt;}Revisei o original · aprovar e indexar&lt;/Button&gt; : &lt;&gt;&lt;Button variant="outline" disabled={!!busyId} onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >i</span>ndex(source.data!, false)}&gt;&lt;</span>RotateCw className="w-4 h-4 mr-2" /&gt;{source.data.status === 'ready' ? 'Reindexar mesma versão' : <span class="branch-1 cbranch-no" title="branch not covered" >'Tentar indexação'}&lt;/Button&gt;&lt;</span>Button variant="outline" disabled={!!busyId} onClick={() =&gt; retire(source.data!)}&gt;&lt;Archive className="w-4 h-4 mr-2" /&gt;Retirar das referências&lt;/Button&gt;&lt;/&gt; )}&lt;/div&gt;&lt;/&gt;}
+    &lt;/DialogContent&gt;&lt;/Dialog&gt;
+  &lt;/div&gt;;
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-28T14:08:11.008Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

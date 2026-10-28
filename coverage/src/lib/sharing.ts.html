@@ -1,0 +1,229 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/lib/sharing.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/lib</a> sharing.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">75% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>15/20</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">27.77% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>5/18</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">62.5% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>5/8</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">92.3% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>12/13</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line medium'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44x</span>
+<span class="cline-any cline-yes">44x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { supabase } from '@/integrations/supabase/client';
+&nbsp;
+export interface ClinicMembership { clinic_id: string; name: string; role: 'admin' | 'doctor'; status: 'invited' | 'active' | 'inactive' }
+export interface ClinicMember { clinic_id: string; user_id: string; name: string; role: 'admin' | 'doctor'; status: 'invited' | 'active' | 'inactive' }
+export interface ReceivedShare { patient_id: string; name: string; owner_name: string; permission: 'read' | 'contribute'; allow_download: boolean; revision: number; expires_at: string | null }
+export interface GrantedShare { id: string; patient_id: string; patient_name: string; recipient_name: string; permission: 'read' | 'contribute'; allow_download: boolean; revoked_at: string | null; expires_at: string | null }
+export interface SharingOverview { memberships: ClinicMembership[]; members: ClinicMember[]; received: ReceivedShare[]; granted: GrantedShare[] }
+export interface SharedChart {
+  permission: 'owner' | 'read' | 'contribute'; allow_download: boolean; authorization_revision: number;
+  patient: { id: string; name: string; age: number | null; allergies: string[] | null; medications: unknown; diagnoses: unknown; clinical_notes: string | null; medical_history: string | null; social_anamnesis: string | null };
+  consultations: { id: string; created_at: string; chief_complaint: string | null; soap_note: string | null; author_user_id: string }[];
+  consultation_count: number;
+  entries: { id: string; created_at: string; author_name: string; author_user_id: string; entry_type: string; content: string }[]; entry_count: number;
+  files: { id: string; file_name: string; mime_type: string | null; created_at: string }[]; file_count: number;
+  prescriptions: { id: string; created_at: string; status: string; expires_at: string }[];
+  structured_history: { id: string; kind: string; title: string; content: string; details: Record&lt;string, unknown&gt;; status: string; created_at: string; updated_at: string; author_user_id: string; author_name: string }[];
+  structured_history_count: number;
+}
+&nbsp;
+export class SharingError extends Error {
+  constructor(message: string, readonly code?: string) { super(message); }
+}
+type SharingRpcName = 'sharing_overview' | 'get_shared_patient_chart' | 'check_shared_patient_access' | 'patient_sharing_audit'
+  | 'create_clinic' | 'invite_clinic_doctor' | 'respond_clinic_invitation' | 'offboard_clinic_doctor'
+  | 'grant_patient_share' | 'revoke_patient_share' | 'append_shared_chart_entry'
+  | 'protocol_sharing_overview' | 'grant_protocol_share' | 'revoke_protocol_share' | 'get_shared_protocol' | 'check_shared_protocol_access';
+&nbsp;
+// RPCs keep chart access in PostgreSQL; the legacy owner-only Supabase client
+// never substitutes a recipient ID for an owner's identity.
+export async function sharingRpc&lt;T&gt;(name: SharingRpcName, args?: Record&lt;string, unknown&gt;): Promise&lt;T&gt; {
+  const controller = new AbortController();
+  let timer: ReturnType&lt;typeof setTimeout&gt; | undefined;
+  try {
+    const timeout = new Promise&lt;never&gt;((_, reject) =&gt; {
+      timer = setTimeout(() =&gt; { controller.abort(); reject(new SharingError('Não foi possível verificar o acesso a tempo. Tente novamente.', 'ACCESS_UNVERIFIED')); }, 10_000);
+    });
+    const request = supabase.rpc(name as never, args as never).abortSignal(controller.signal);
+    const { data, error } = await Promise.race([request, timeout]);
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (error) <span class="cstat-no" title="statement not covered" >throw new SharingError(error.message || 'Não foi possível concluir a operação.', error.code);</span>
+    return data as T;
+  } finally { <span class="missing-if-branch" title="else path not taken" >E</span>if (timer !== undefined) clearTimeout(timer); }
+}
+&nbsp;
+export function sharedClinicalList(value: unknown): string {
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (!Array.isArray(value)) <span class="cstat-no" title="statement not covered" >return 'Não informado';</span>
+  return value.map(<span class="fstat-no" title="function not covered" >item =&gt; <span class="cstat-no" title="statement not covered" >t</span>ypeof item === 'string' ? item : item &amp;&amp; typeof item === 'object'</span>
+    ? Object.entries(item).filter(<span class="fstat-no" title="function not covered" >([</span>, val]) =&gt; <span class="cstat-no" title="statement not covered" >typeof val === 'string' || typeof val === 'number').m</span>ap(<span class="fstat-no" title="function not covered" >([</span>key, val]) =&gt; <span class="cstat-no" title="statement not covered" >`${key}: ${val}`)</span>.join(' · ') : '').filter(Boolean).join('\n') || 'Não informado';
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-28T14:08:11.008Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

@@ -1,0 +1,139 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/pages/About.tsx</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/pages</a> About.tsx</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/3</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/0</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/2</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/3</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Link } from 'react-router-dom';
+import { ArrowRight, FileText, Users, CalendarDays, ClipboardList } from 'lucide-react';
+import { BrandLockup } from '@/components/BrandLockup';
+import { Button } from '@/components/ui/button';
+const features=<span class="cstat-no" title="statement not covered" >[</span>
+  {icon:FileText,title:'Documentação com revisão',text:'Registre uma consulta manualmente ou revise o rascunho preparado a partir de uma gravação. O médico confirma o texto final.'},
+  {icon:Users,title:'Cada médico, seus pacientes',text:'As listas são privadas. Um paciente pode ser compartilhado explicitamente com outro médico, com permissão de leitura ou contribuição.'},
+  {icon:CalendarDays,title:'Agenda ligada à consulta',text:'Organize os atendimentos e acompanhe o estado de cada agendamento. Integrações externas mostram seu estado de sincronização.'},
+  {icon:ClipboardList,title:'Continuidade do cuidado',text:'Retome rascunhos, registre observações, reconcilie medicações e acompanhe resultados, encaminhamentos e retornos.'},
+];
+export default function <span class="fstat-no" title="function not covered" >About(){<span class="cstat-no" title="statement not covered" >r</span>eturn &lt;div className="min-h-screen bg-background"&gt;</span>
+  &lt;header className="border-b bg-card"&gt;&lt;div className="max-w-6xl mx-auto p-5 flex justify-between items-center gap-4"&gt;&lt;Link to="/auth" aria-label="Haddad Nicola — entrar"&gt;&lt;BrandLockup compact/&gt;&lt;/Link&gt;&lt;Button asChild&gt;&lt;Link to="/auth"&gt;Entrar&lt;ArrowRight className="w-4 h-4"/&gt;&lt;/Link&gt;&lt;/Button&gt;&lt;/div&gt;&lt;/header&gt;
+  &lt;main className="max-w-6xl mx-auto px-5 py-16 sm:py-24"&gt;&lt;p className="text-xs uppercase tracking-[.2em] text-primary"&gt;Haddad Nicola · Ambiente clínico&lt;/p&gt;&lt;h1 className="font-serif text-4xl sm:text-6xl max-w-3xl leading-tight mt-6"&gt;Documentar com clareza.&lt;br/&gt;&lt;span className="text-primary"&gt;Acompanhar com atenção.&lt;/span&gt;&lt;/h1&gt;&lt;p className="text-muted-foreground text-lg leading-relaxed max-w-2xl mt-6"&gt;O Cortex reúne documentação, agenda e acompanhamento para o trabalho individual dos médicos do consultório.&lt;/p&gt;
+    &lt;div className="grid sm:grid-cols-2 gap-5 mt-14"&gt;{features.map(<span class="fstat-no" title="function not covered" >({</span>icon:Icon,title,text})=&gt;<span class="cstat-no" title="statement not covered" >&lt;article key={title} c</span>lassName="bg-card border rounded-xl p-7"&gt;&lt;Icon className="h-6 w-6 text-primary mb-5"/&gt;&lt;h2 className="font-serif text-2xl"&gt;{title}&lt;/h2&gt;&lt;p className="text-sm leading-relaxed text-muted-foreground mt-3"&gt;{text}&lt;/p&gt;&lt;/article&gt;)}&lt;/div&gt;
+    &lt;section className="border-y border-border py-8 mt-12 space-y-3 max-w-3xl"&gt;&lt;h2 className="font-serif text-2xl"&gt;Autoria e responsabilidade clínica&lt;/h2&gt;&lt;p className="text-sm text-muted-foreground leading-relaxed"&gt;As sugestões de IA são rascunhos para revisão. Arquivos, textos clínicos e dados de conta seguem o fluxo de processamento e retenção configurado para o ambiente. Consulte os controles de privacidade na sua conta para exportação e solicitações de exclusão.&lt;/p&gt;&lt;p className="text-sm text-muted-foreground leading-relaxed"&gt;A disponibilidade de recursos depende da configuração do serviço e das integrações. O envio ou a abertura de uma mensagem não comprova sua entrega ao paciente.&lt;/p&gt;&lt;/section&gt;
+    &lt;Button asChild className="mt-8"&gt;&lt;Link to="/auth"&gt;Acessar minha conta&lt;ArrowRight className="h-4 w-4"/&gt;&lt;/Link&gt;&lt;/Button&gt;
+  &lt;/main&gt;&lt;footer className="border-t py-6 text-center text-xs text-muted-foreground"&gt;Cortex · Haddad Nicola Consultório Médico&lt;/footer&gt;
+&lt;/div&gt;;}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-28T14:08:11.008Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

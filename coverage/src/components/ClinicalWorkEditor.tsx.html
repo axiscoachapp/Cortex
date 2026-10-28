@@ -1,0 +1,454 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/components/ClinicalWorkEditor.tsx</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/components</a> ClinicalWorkEditor.tsx</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">74.5% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>114/153</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">80.7% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>184/228</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">60.46% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>26/43</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">84.88% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>73/86</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line medium'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">51x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">38x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">301x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { useCallback, useEffect, useRef, useState } from 'react';
+import { Save, Check } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { clinicDate } from '@/lib/dates';
+import { ENCOUNTER_TEMPLATES, validateWorkItem, WORK_KINDS, WorkKind } from '@/lib/clinicalWorkspace';
+import type { Tables, Json } from '@/integrations/supabase/types';
+type Item=Tables&lt;'clinical_work_items'&gt;;
+function detailsOf(item?:Item):Record&lt;string,string&gt; {
+ return item?.details &amp;&amp; typeof item.details==='object' &amp;&amp; !Array.isArray(item.details) ? Object.fromEntries(Object.entries(item.details).filter((entry):entry is [string,string]=&gt;typeof entry[1]==='string')) : <span class="branch-1 cbranch-no" title="branch not covered" >{};</span>
+}
+export function ClinicalWorkEditor({item,patientId,userId,onSaved,onClose,onExitGuardChange}:{item?:Item;patientId:string;userId:string;onSaved:()=&gt;void;onClose:()=&gt;void;onExitGuardChange?:(guard:()=&gt;boolean)=&gt;void}) {
+  const [kind,setKind]=useState&lt;WorkKind&gt;(item?.kind as WorkKind ?? 'draft');
+  const [title,setTitle]=useState(item?.title ?? 'Consulta manual');
+  const [content,setContent]=useState(item?.content ?? '');
+  const [details,setDetails]=useState&lt;Record&lt;string,string&gt;&gt;(item?detailsOf(item):{date:clinicDate(),state:'active'});
+  const [due,setDue]=useState(item?.due_date ?? '');
+  const [saved,setSaved]=useState&lt;Item|undefined&gt;(item);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState('');
+  const [notice,setNotice]=useState('');
+  const [medicationContext,setMedicationContext]=useState&lt;{revision:number;medications:Array&lt;{name:string;dosage:string;instructions:string}&gt;}&gt;();
+  const [medicationError,setMedicationError]=useState('');
+  const saving=useRef(false);
+  const snapshot=JSON.stringify({kind,title,content,details,due});
+  const [lastSaved,setLastSaved]=useState(item?snapshot:'');
+  const locked=!!saved &amp;&amp; ['approved','done'].includes(saved.status) &amp;&amp; ['draft','instruction','medication'].includes(kind);
+  const dirty=!locked &amp;&amp; snapshot!==lastSaved &amp;&amp; (!!content.trim() || title!=='Consulta manual');
+  const canClose=useUnsavedChanges(dirty||busy,'Há alterações não salvas neste registro. Descartar e abrir outro?',{blocking:busy});
+  useEffect(()=&gt;{onExitGuardChange?.(()=&gt;!busy&amp;&amp;canClose(false));},[busy,canClose,onExitGuardChange]);
+  const loadMedicationContext=useCallback(async()=&gt;{
+    setMedicationError('');
+    const {data,error:failure}=await supabase.from('patients').select('revision,medications').eq('id',patientId).eq('user_id',userId).single();
+    <span class="missing-if-branch" title="if path not taken" >I</span>if(failure||!data){<span class="cstat-no" title="statement not covered" >setMedicationError('Não foi possível carregar a lista ativa. Atualize antes de aprovar a reconciliação.');<span class="cstat-no" title="statement not covered" >r</span>eturn;}</span>
+    const medications=Array.isArray(data.medications)?data.medications.filter((entry):entry is {name:string;dosage:string;instructions:string}=&gt;!!entry&amp;&amp;typeof entry==='object'&amp;&amp;!Array.isArray(entry)&amp;&amp;typeof entry.name==='string').map(entry=&gt;({name:entry.name,dosage:typeof entry.dosage==='string'?entry.dosage:<span class="branch-1 cbranch-no" title="branch not covered" >'',i</span>nstructions:typeof entry.instructions==='string'?entry.instructions:<span class="branch-1 cbranch-no" title="branch not covered" >''}</span>)):<span class="branch-1 cbranch-no" title="branch not covered" >[];</span>
+    setMedicationContext({revision:data.revision,medications});
+  },[patientId,userId]);
+  useEffect(()=&gt;{if(kind==='medication'&amp;&amp;!locked)void loadMedicationContext();},[kind,locked,loadMedicationContext]);
+  const value=(key:string,text:string)=&gt;setDetails(previous=&gt;({...previous,[key]:text}));
+  const save=async(approve=false):Promise&lt;Item|undefined&gt;=&gt;{
+    <span class="missing-if-branch" title="if path not taken" >I</span>if(saving.current || locked) <span class="cstat-no" title="statement not covered" >return saved;</span>
+    const invalid=validateWorkItem(kind,title,content,details);
+    <span class="missing-if-branch" title="if path not taken" >I</span>if(invalid){<span class="cstat-no" title="statement not covered" >setError(invalid);<span class="cstat-no" title="statement not covered" >r</span>eturn;}</span>
+    saving.current=true;setBusy(true);setError('');
+    const savingSnapshot=snapshot;
+    try {
+      const patch={title:title.trim(),content,details:details as Json,due_date:due||null,status:approve?<span class="branch-0 cbranch-no" title="branch not covered" >'approved':k</span>ind==='draft'||kind==='instruction'?'draft':'open'};
+      const response=saved
+        ? await supabase.from('clinical_work_items').update(patch).eq('id',saved.id).eq('revision',saved.revision).select().maybeSingle()
+        : await supabase.from('clinical_work_items').insert({...patch,patient_id:patientId,user_id:userId,kind}).select().single();
+      if(response.error||!response.data)throw new Error('Não foi possível salvar. O item pode ter sido alterado em outra sessão; seu texto permanece aqui.');
+      setSaved(response.data);setLastSaved(savingSnapshot);setNotice(`Salvo às ${new Date().toLocaleTimeString('pt-BR')}`);onSaved();return response.data;
+    }catch(e){setError(e instanceof Error?e.message:<span class="branch-1 cbranch-no" title="branch not covered" >'Não foi possível salvar. Tente novamente.');}</span>
+    finally{saving.current=false;setBusy(false);}
+  };
+  // Only physician-authored manual drafts autosave. Approval is always an explicit action.
+  useEffect(()=&gt;{
+    if(kind!=='draft'||!dirty||!content.trim()||busy||error)return;
+    const timer=setTimeout(<span class="fstat-no" title="function not covered" >()=&gt;{<span class="cstat-no" title="statement not covered" >v</span>oid save();}</span>,1200);return()=&gt;clearTimeout(timer);
+    // save captures the exact content/revision associated with this timer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[snapshot,dirty,kind,busy,error]);
+  const finalize=async()=&gt;{
+    const row=dirty||<span class="branch-1 cbranch-no" title="branch not covered" >!saved?a</span>wait save():<span class="branch-1 cbranch-no" title="branch not covered" >saved;i</span>f(!row)return;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if(!window.confirm('Confirmar e registrar exatamente este texto no prontuário?'))<span class="cstat-no" title="statement not covered" >return;</span>
+    setBusy(true);setError('');
+    try{
+      const {error:failure}=await supabase.rpc('finalize_manual_encounter',{p_item_id:row.id,p_revision:row.revision});
+      <span class="missing-if-branch" title="if path not taken" >I</span>if(failure)<span class="cstat-no" title="statement not covered" >throw failure;</span>
+      setLastSaved(snapshot);setSaved({...row,status:'done'});setNotice('Consulta revisada registrada. Nenhuma chamada de IA foi necessária.');onSaved();
+    }catch{<span class="cstat-no" title="statement not covered" >setError('Não foi possível confirmar a consulta. Seu rascunho continua salvo; recarregue o item para conferir a versão e tente novamente.');}</span>
+    finally{setBusy(false);}
+  };
+  const approveMedication=async()=&gt;{
+    <span class="missing-if-branch" title="if path not taken" >I</span>if(!medicationContext||medicationError||busy)<span class="cstat-no" title="statement not covered" >return;</span>
+    const row=dirty||<span class="branch-1 cbranch-no" title="branch not covered" >!saved?a</span>wait save():<span class="branch-1 cbranch-no" title="branch not covered" >saved;<span class="missing-if-branch" title="if path not taken" >I</span>i</span>f(!row)<span class="cstat-no" title="statement not covered" >return;</span>
+    <span class="missing-if-branch" title="if path not taken" >I</span>if(!window.confirm('Aprovar exatamente este medicamento, dose, instruções e estado na lista ativa do paciente?'))<span class="cstat-no" title="statement not covered" >return;</span>
+    setBusy(true);setError('');
+    try{
+      const {data,error:failure}=await supabase.rpc('approve_medication_reconciliation',{p_item_id:row.id,p_item_revision:row.revision,p_patient_revision:medicationContext.revision});
+      if(failure||data!==true)throw new Error('Conflict');
+      setLastSaved(snapshot);setSaved({...row,status:'approved'});setNotice('Reconciliação aprovada. A lista ativa foi atualizada com o registro revisado.');onSaved();
+      setMedicationContext(undefined);void loadMedicationContext();
+    }catch{setError('A reconciliação não foi confirmada. Seu registro continua salvo; atualize e compare a lista ativa antes de tentar novamente.');}
+    finally{setBusy(false);}
+  };
+  return &lt;section className="rounded-xl border bg-card p-4 sm:p-6 space-y-4" aria-label="Editor clínico"&gt;
+    &lt;div className="flex items-center justify-between gap-3"&gt;&lt;h2 className="font-serif text-2xl"&gt;{locked?'Versão registrada':'Documentar e acompanhar'}&lt;/h2&gt;&lt;Button variant="ghost" disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()=&gt;{<span class="cstat-no" title="statement not covered" >i</span>f(!busy&amp;&amp;canClose(false))<span class="cstat-no" title="statement not covered" >onClose();}</span></span>}&gt;Fechar&lt;/Button&gt;&lt;/div&gt;
+    {error&amp;&amp;&lt;p role="alert" className="text-sm text-destructive"&gt;{error} {dirty&amp;&amp;&lt;button className="underline" onClick={<span class="fstat-no" title="function not covered" >()=&gt;{<span class="cstat-no" title="statement not covered" >s</span>etError('');<span class="cstat-no" title="statement not covered" >v</span>oid save();}</span>}&gt;Tentar salvar novamente&lt;/button&gt;}&lt;/p&gt;}
+    &lt;p role="status" className="text-xs text-muted-foreground"&gt;{busy?'Salvando…':dirty?'Alterações ainda não salvas':notice||'Conteúdo de autoria do médico. Revise antes de aprovar.'}&lt;/p&gt;
+    &lt;div className="grid sm:grid-cols-2 gap-4"&gt;&lt;label className="text-sm space-y-2"&gt;&lt;span&gt;Tipo de registro&lt;/span&gt;&lt;select aria-label="Tipo de registro" className="w-full h-10 border rounded-md bg-background px-3" value={kind} disabled={!!saved||busy||!!details.previousVersionId} onChange={e=&gt;{const next=e.target.value as WorkKind;setKind(next);setTitle(next==='medication'?<span class="branch-0 cbranch-no" title="branch not covered" >'':W</span>ORK_KINDS[next]);}}&gt;{Object.entries(WORK_KINDS).map(([key,label])=&gt;&lt;option key={key} value={key}&gt;{label}&lt;/option&gt;)}&lt;/select&gt;&lt;/label&gt;
+    &lt;label className="text-sm space-y-2"&gt;&lt;span&gt;{kind==='medication'?'Nome do medicamento':'Título / assunto'}&lt;/span&gt;&lt;Input aria-label="Título do registro" value={title} disabled={locked||busy} maxLength={200} onChange={<span class="fstat-no" title="function not covered" >e=&gt;<span class="cstat-no" title="statement not covered" >s</span>etTitle(e.target.value)}/&gt;&lt;/label&gt;&lt;/div&gt;</span>
+    {kind==='draft'&amp;&amp;!locked&amp;&amp;&lt;label className="text-sm flex flex-wrap items-center gap-3"&gt;Estrutura da consulta&lt;select aria-label="Estrutura da consulta" disabled={busy} defaultValue="livre" className="h-10 rounded-md border bg-background px-3" onChange={<span class="fstat-no" title="function not covered" >e=&gt;{<span class="cstat-no" title="statement not covered" >i</span>f(!content.trim()||window.confirm('Substituir o texto pela estrutura selecionada?')){<span class="cstat-no" title="statement not covered" >setContent(ENCOUNTER_TEMPLATES[e.target.value]);<span class="cstat-no" title="statement not covered" >v</span>alue('template',e.target.value);<span class="cstat-no" title="statement not covered" >v</span>alue('templateVersion','1');}</span>}</span>}&gt;&lt;option value="livre"&gt;Texto livre&lt;/option&gt;&lt;option value="ginecologia"&gt;Ginecologia&lt;/option&gt;&lt;option value="prenatal"&gt;Pré-natal&lt;/option&gt;&lt;option value="urologia"&gt;Urologia&lt;/option&gt;&lt;/select&gt;&lt;span className="text-xs text-muted-foreground"&gt;Estruturas em branco; registre somente fatos confirmados.&lt;/span&gt;&lt;/label&gt;}
+    &lt;label className="block text-sm space-y-2"&gt;&lt;span&gt;{kind==='draft'?'Texto exato da evolução':kind==='medication'?'Dose, via, frequência e instruções confirmadas':'Conteúdo / contexto / fonte'}&lt;/span&gt;&lt;Textarea aria-label="Conteúdo do registro" value={content} disabled={locked||busy} maxLength={100000} onChange={e=&gt;setContent(e.target.value)} className="min-h-48 leading-relaxed"/&gt;&lt;/label&gt;
+    {kind==='medication'&amp;&amp;&lt;div className="rounded-lg bg-muted/40 p-3 space-y-2"&gt;&lt;h3 className="text-xs font-semibold"&gt;Lista ativa para comparação&lt;/h3&gt;{medicationError&amp;&amp;<span class="branch-1 cbranch-no" title="branch not covered" >&lt;p role="alert" className="text-xs text-destructive"&gt;{medicationError}&lt;/p&gt;}{m</span>edicationContext?&lt;ul className="text-xs space-y-1"&gt;{medicationContext.medications.length?medicationContext.medications.map((entry,index)=&gt;&lt;li key={index}&gt;{entry.name} · {entry.dosage} · {entry.instructions}&lt;/li&gt;):<span class="branch-1 cbranch-no" title="branch not covered" >&lt;li&gt;Nenhum medicamento ativo registrado.&lt;/li&gt;}&lt;/ul&gt;:&lt;</span>p className="text-xs"&gt;Carregando lista ativa…&lt;/p&gt;}&lt;Button size="sm" variant="outline" disabled={busy} onClick={loadMedicationContext}&gt;Atualizar lista mantendo rascunho&lt;/Button&gt;&lt;p className="text-xs text-muted-foreground"&gt;Salvar o registro não altera a lista ativa. A aprovação aplica somente este medicamento; os demais são preservados.&lt;/p&gt;&lt;/div&gt;}
+    {['observation','pregnancy','medication'].includes(kind)&amp;&amp;&lt;div className="grid sm:grid-cols-2 gap-3"&gt;
+      &lt;label className="text-sm space-y-2"&gt;&lt;span&gt;{kind==='pregnancy'?<span class="branch-0 cbranch-no" title="branch not covered" >'DPP confirmada pelo médico':k</span>ind==='medication'?'Data de início / alteração / suspensão':<span class="branch-1 cbranch-no" title="branch not covered" >'Data do registro'}&lt;/span&gt;&lt;</span>Input type="date" aria-label="Data clínica" value={details.date??<span class="branch-1 cbranch-no" title="branch not covered" >''} d</span>isabled={locked||busy} onChange={<span class="fstat-no" title="function not covered" >e=&gt;<span class="cstat-no" title="statement not covered" >v</span>alue('date',e.target.value)}/&gt;&lt;/label&gt;</span>
+      &lt;label className="text-sm space-y-2"&gt;&lt;span&gt;Fonte / documento / consulta&lt;/span&gt;&lt;Input aria-label="Fonte do registro" value={details.source??''} disabled={locked||busy} onChange={<span class="fstat-no" title="function not covered" >e=&gt;<span class="cstat-no" title="statement not covered" >v</span>alue('source',e.target.value)}/&gt;&lt;/label&gt;</span>
+      {kind==='observation'&amp;&amp;<span class="branch-1 cbranch-no" title="branch not covered" >&lt;&gt;&lt;label className="text-sm"&gt;Valor&lt;Input aria-label="Valor observado" disabled={locked||busy} inputMode="decimal" value={details.value??''} onChange={<span class="fstat-no" title="function not covered" >e=&gt;<span class="cstat-no" title="statement not covered" >v</span>alue('value',e.target.value)}/&gt;&lt;/label&gt;&lt;</span>label className="text-sm"&gt;Unidade&lt;Input aria-label="Unidade da observação" disabled={locked||busy} value={details.unit??''} onChange={<span class="fstat-no" title="function not covered" >e=&gt;<span class="cstat-no" title="statement not covered" >v</span>alue('unit',e.target.value)}/&gt;&lt;/label&gt;&lt;/&gt;}</span></span>
+      {kind==='medication'&amp;&amp;&lt;label className="text-sm"&gt;Dose revisada&lt;Input aria-label="Dose revisada" value={details.dosage??<span class="branch-1 cbranch-no" title="branch not covered" >''} d</span>isabled={locked||busy} onChange={e=&gt;value('dosage',e.target.value)}/&gt;&lt;/label&gt;}
+      {kind==='medication'&amp;&amp;&lt;label className="text-sm"&gt;Estado&lt;select aria-label="Estado do medicamento" disabled={locked||busy} className="w-full h-10 border rounded-md px-3 bg-background" value={details.state??<span class="branch-1 cbranch-no" title="branch not covered" >'active'} o</span>nChange={<span class="fstat-no" title="function not covered" >e=&gt;<span class="cstat-no" title="statement not covered" >v</span>alue('state',e.target.value)}&gt;&lt;</span>option value="active"&gt;Ativo&lt;/option&gt;&lt;option value="changed"&gt;Alterado&lt;/option&gt;&lt;option value="stopped"&gt;Suspenso&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;}
+      {kind==='pregnancy'&amp;&amp;<span class="branch-1 cbranch-no" title="branch not covered" >&lt;p className="text-xs text-muted-foreground"&gt;Cada registro representa um episódio separado. A datação deve ser validada pelo médico; o sistema não infere a idade gestacional.&lt;/p&gt;}</span>
+    &lt;/div&gt;}
+    {kind==='task'&amp;&amp;&lt;div className="grid sm:grid-cols-2 gap-3"&gt;
+      &lt;label className="text-sm space-y-2"&gt;Fluxo&lt;select aria-label="Fluxo de acompanhamento" disabled={busy} className="w-full h-10 border rounded-md px-3 bg-background" value={details.workflow??'result'} onChange={e=&gt;{value('workflow',e.target.value);value('stage','requested');}}&gt;&lt;option value="result"&gt;Resultado de exame&lt;/option&gt;&lt;option value="referral"&gt;Encaminhamento&lt;/option&gt;&lt;option value="followup"&gt;Retorno&lt;/option&gt;&lt;option value="waitlist"&gt;Lista de espera&lt;/option&gt;&lt;option value="confirmation"&gt;Confirmação de consulta&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
+      &lt;label className="text-sm space-y-2"&gt;Prazo&lt;Input aria-label="Prazo da tarefa" disabled={busy} type="date" value={due} onChange={<span class="fstat-no" title="function not covered" >e=&gt;<span class="cstat-no" title="statement not covered" >s</span>etDue(e.target.value)}/&gt;&lt;/label&gt;</span>
+      &lt;label className="text-sm space-y-2"&gt;Etapa&lt;select aria-label="Etapa do acompanhamento" disabled={busy} className="w-full h-10 border rounded-md px-3 bg-background" value={details.stage??'requested'} onChange={<span class="fstat-no" title="function not covered" >e=&gt;<span class="cstat-no" title="statement not covered" >v</span>alue('stage',e.target.value)}&gt;&lt;</span>option value="requested"&gt;Solicitado / aguardando&lt;/option&gt;{['waitlist','confirmation'].includes(details.workflow)?&lt;&gt;&lt;option value="contacted"&gt;Contato realizado&lt;/option&gt;&lt;option value="confirmed"&gt;Confirmado pelo paciente&lt;/option&gt;&lt;option value="declined"&gt;Recusado pelo paciente&lt;/option&gt;&lt;/&gt;:&lt;&gt;&lt;option value="received"&gt;Recebido&lt;/option&gt;&lt;option value="reviewed"&gt;Revisado pelo médico&lt;/option&gt;&lt;option value="acted"&gt;Conduta registrada&lt;/option&gt;&lt;/&gt;}&lt;/select&gt;&lt;/label&gt;
+      {details.workflow==='waitlist'&amp;&amp;&lt;label className="text-sm space-y-2"&gt;Preferência de disponibilidade&lt;Input aria-label="Disponibilidade para lista de espera" value={details.availability??''} disabled={busy} onChange={e=&gt;value('availability',e.target.value)}/&gt;&lt;/label&gt;}
+      {['waitlist','confirmation'].includes(details.workflow)&amp;&amp;&lt;&gt;&lt;label className="text-sm space-y-2"&gt;Canal do contato&lt;select aria-label="Canal de confirmação" disabled={busy} className="w-full h-10 border rounded-md px-3 bg-background" value={details.channel??'phone'} onChange={<span class="fstat-no" title="function not covered" >e=&gt;<span class="cstat-no" title="statement not covered" >v</span>alue('channel',e.target.value)}&gt;&lt;</span>option value="phone"&gt;Telefone&lt;/option&gt;&lt;option value="whatsapp"&gt;WhatsApp&lt;/option&gt;&lt;option value="email"&gt;Email&lt;/option&gt;&lt;option value="in_person"&gt;Presencial&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;p className="text-xs text-muted-foreground"&gt;Registre somente contatos e respostas efetivamente confirmados. Salvar este acompanhamento não envia mensagens nem reserva um horário. As versões preservam as alterações.&lt;/p&gt;&lt;/&gt;}
+    &lt;/div&gt;}
+    &lt;div className="flex flex-wrap gap-2"&gt;
+      {!locked&amp;&amp;&lt;Button disabled={busy} onClick={()=&gt;save(false)} className="gap-2"&gt;&lt;Save className="h-4 w-4"/&gt;Salvar{kind==='draft'?' rascunho':''}&lt;/Button&gt;}
+      {kind==='draft'&amp;&amp;!locked&amp;&amp;&lt;Button variant="outline" disabled={busy||!content.trim()} onClick={finalize}&gt;&lt;Check className="h-4 w-4 mr-2"/&gt;Revisei: confirmar consulta&lt;/Button&gt;}
+      {kind==='instruction'&amp;&amp;!locked&amp;&amp;&lt;Button variant="outline" disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()=&gt;<span class="cstat-no" title="statement not covered" >s</span>ave(true)}&gt;A</span>provar esta versão&lt;/Button&gt;}
+      {kind==='medication'&amp;&amp;!locked&amp;&amp;&lt;Button variant="outline" disabled={busy||!medicationContext||!!medicationError} onClick={approveMedication}&gt;Aprovar reconciliação&lt;/Button&gt;}
+      {locked&amp;&amp;['instruction','medication'].includes(kind)&amp;&amp;&lt;&gt;&lt;Button variant="outline" onClick={()=&gt;{setDetails(previous=&gt;({...Object.fromEntries(Object.entries(previous).filter(<span class="fstat-no" title="function not covered" >([</span>key])=&gt;<span class="cstat-no" title="statement not covered" >!['reconciledAt','reconciledBy','patientRevisionBefore','consultationId','approvedAt'].includes(key))),</span>previousVersionId:saved!.id,versionNumber:String(Number(previous.versionNumber??'1')+1)}));setSaved(undefined);setLastSaved('');setNotice('Nova versão em rascunho. A versão aprovada anterior foi preservada.');}}&gt;Criar nova versão&lt;/Button&gt;{kind==='instruction'&amp;&amp;&lt;&gt;&lt;Button onClick={<span class="fstat-no" title="function not covered" >()=&gt;{c</span>onst blob=<span class="cstat-no" title="statement not covered" >new Blob([content],{type:'text/plain;charset=utf-8'});c</span>onst url=<span class="cstat-no" title="statement not covered" >URL.createObjectURL(blob);c</span>onst link=<span class="cstat-no" title="statement not covered" >document.createElement('a');<span class="cstat-no" title="statement not covered" >l</span>ink.href=url;<span class="cstat-no" title="statement not covered" >l</span>ink.download='orientacoes-aprovadas.txt';<span class="cstat-no" title="statement not covered" >l</span>ink.click();<span class="cstat-no" title="statement not covered" >s</span>etTimeout(<span class="fstat-no" title="function not covered" >()=&gt;<span class="cstat-no" title="statement not covered" >U</span>RL.revokeObjectURL(url),1</span>000);}</span>}&gt;Baixar versão aprovada&lt;/Button&gt;&lt;span className="text-xs text-muted-foreground self-center"&gt;O download não confirma entrega ao paciente.&lt;/span&gt;&lt;/&gt;}&lt;/&gt;}
+    &lt;/div&gt;
+  &lt;/section&gt;;
+}
+&nbsp;
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-28T14:08:11.008Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    
