@@ -2,12 +2,13 @@ import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { createBrowserRouter, RouterProvider, Navigate, Outlet, useLocation } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { Brain } from "lucide-react";
+import { AppErrorBoundary, RecoveryScreen } from '@/components/AppErrorBoundary';
 
 // Critical routes — keep eager.
-import Index from "./pages/Index";
+const Index = lazy(() => import("./pages/Index"));
 import Auth from "./pages/Auth";
 
 // Heavy / rarely visited routes — lazy load.
@@ -46,32 +47,45 @@ const RouteFallback = () => (
   </div>
 );
 
+function ProtectedRoute() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <RouteFallback />;
+  if (!user) return <Navigate to={`/auth?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
+  return <Outlet key={user.id} />;
+}
+
+const router = createBrowserRouter([
+  { errorElement: <RecoveryScreen />, children: [
+  { path: '/auth', element: <Auth /> },
+  { path: '/sobre', element: <About /> },
+  { element: <ProtectedRoute />, children: [
+    { path: '/', element: <Index /> },
+    { path: '/gerenciar-pacientes', element: <PatientManagement /> },
+    { path: '/agenda', element: <CalendarPage /> },
+    { path: '/google-oauth-callback', element: <GoogleOAuthCallback /> },
+    { path: '/privacidade', element: <DataPrivacy /> },
+    { path: '/modelos', element: <TemplatesPage /> },
+    { path: '/conhecimento', element: <KnowledgeBasePage /> },
+    { path: '/assistente', element: <AssistantPage /> },
+  ] },
+  { path: '*', element: <NotFound /> },
+  ] },
+]);
+
 const App = () => (
+  <AppErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
-        <BrowserRouter>
           <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/sobre" element={<About />} />
-              <Route path="/gerenciar-pacientes" element={<PatientManagement />} />
-              <Route path="/agenda" element={<CalendarPage />} />
-              <Route path="/google-oauth-callback" element={<GoogleOAuthCallback />} />
-              <Route path="/privacidade" element={<DataPrivacy />} />
-              <Route path="/modelos" element={<TemplatesPage />} />
-              <Route path="/conhecimento" element={<KnowledgeBasePage />} />
-              <Route path="/assistente" element={<AssistantPage />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <RouterProvider router={router} />
           </Suspense>
-        </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
+  </AppErrorBoundary>
 );
 
 export default App;

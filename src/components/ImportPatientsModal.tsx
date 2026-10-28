@@ -4,7 +4,7 @@ import {
   Upload, FileSpreadsheet, ArrowRight, ArrowLeft, Check, Loader2, X, Users,
 } from 'lucide-react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +13,8 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { clinicDate } from '@/lib/dates';
+import { parseCSV, preparePatientImport, type ImportTarget, type ImportedPatient, type ImportRejection } from '@/lib/patientImport';
 
 interface ImportPatientsModalProps {
   open: boolean;
@@ -21,7 +23,7 @@ interface ImportPatientsModalProps {
 }
 
 /** Target fields we import into `patients`. */
-type Target = 'name' | 'age' | 'birthdate' | 'phone' | 'email' | 'profession' | 'skip';
+type Target = ImportTarget;
 
 const SOURCES = [
   { id: 'iclinic',       name: 'iClinic',          hint: 'Exportação de pacientes em CSV' },
@@ -46,48 +48,6 @@ const AUTO_MAP: Array<{ match: RegExp; target: Target }> = [
   { match: /profiss|ocupa|profession/i, target: 'profession' },
 ];
 
-function parseCSV(text: string): { headers: string[]; rows: string[][] } {
-  // Detect delimiter: comma or semicolon (BR exports often use ;).
-  const firstLine = text.slice(0, 2000).split(/\r?\n/)[0] ?? '';
-  const delim = (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ';' : ',';
-  const rows: string[][] = [];
-  let cur = ''; let field = ''; let inQ = false; const line: string[] = [];
-  const pushField = () => { line.push(field); field = ''; };
-  const pushLine = () => { pushField(); rows.push([...line]); line.length = 0; };
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQ) {
-      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
-      else field += c;
-    } else if (c === '"') inQ = true;
-    else if (c === delim) pushField();
-    else if (c === '\n') { pushLine(); }
-    else if (c === '\r') { /* ignore */ }
-    else field += c;
-    cur = c;
-  }
-  if (field.length > 0 || line.length > 0) pushLine();
-  const nonEmpty = rows.filter(r => r.some(cell => cell.trim().length > 0));
-  const headers = (nonEmpty.shift() ?? []).map(h => h.trim());
-  return { headers, rows: nonEmpty };
-}
-
-function ageFromBirthdate(v: string): number | null {
-  const s = v.trim();
-  // Accept dd/mm/yyyy, yyyy-mm-dd.
-  let d: Date | null = null;
-  const br = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
-  if (br) {
-    const yr = br[3].length === 2 ? 1900 + Number(br[3]) : Number(br[3]);
-    d = new Date(yr, Number(br[2]) - 1, Number(br[1]));
-  } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-    d = new Date(s);
-  }
-  if (!d || isNaN(d.getTime())) return null;
-  const age = Math.floor((Date.now() - d.getTime()) / (365.25 * 86400000));
-  return age >= 0 && age < 130 ? age : null;
-}
-
 export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatientsModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -99,14 +59,19 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
   const [rows, setRows] = useState<string[][]>([]);
   const [mapping, setMapping] = useState<Target[]>([]);
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<{ ok: number; failed: number } | null>(null);
+  const [result, setResult] = useState<{ ok: number; failed: number; rejected: ImportRejection[] } | null>(null);
+  const [fileError, setFileError] = useState('');
+  const pendingRecords = useRef<ImportedPatient[]>([]);
 
   const reset = () => {
     setStep('source'); setSource(''); setHeaders([]); setRows([]);
-    setMapping([]); setImporting(false); setResult(null);
+    setMapping([]); setImporting(false); setResult(null); setFileError(''); pendingRecords.current = [];
   };
 
   const handleFile = async (file: File) => {
+    setFileError('');
+    try {
+    if (file.size > 5 * 1024 * 1024) throw new Error('O CSV excede 5 MB. Divida o arquivo e tente novamente.');
     const text = await file.text();
     const { headers: h, rows: r } = parseCSV(text);
     if (h.length === 0 || r.length === 0) {
@@ -121,44 +86,36 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
       return hit?.target ?? 'skip';
     }));
     setStep('map');
+    } catch (error) { setFileError(error instanceof Error ? error.message : 'Não foi possível ler o CSV. Tente novamente.'); }
   };
 
   const nameCol = useMemo(() => mapping.findIndex(m => m === 'name'), [mapping]);
-  const canImport = nameCol >= 0;
+  const canImport = nameCol >= 0 && mapping.some(target => target === 'age' || target === 'birthdate') && mapping.filter(target => target !== 'skip').length === new Set(mapping.filter(target => target !== 'skip')).size;
 
-  const handleImport = async () => {
+  const handleImport = async (retry = false) => {
+    if (importing || (!retry && !canImport)) return;
     setImporting(true);
-    const today = new Date().toISOString().slice(0, 10);
-    const records = rows.map(row => {
-      const rec: any = { user_id: userId, last_visit: today, status: 'novo' };
-      let ageFromBd: number | null = null;
-      mapping.forEach((t, i) => {
-        const val = (row[i] ?? '').trim();
-        if (!val) return;
-        if (t === 'name') rec.name = val.slice(0, 120);
-        else if (t === 'age') { const n = parseInt(val); if (n > 0 && n < 130) rec.age = n; }
-        else if (t === 'birthdate') ageFromBd = ageFromBirthdate(val);
-        else if (t === 'phone') rec.phone = val.slice(0, 40);
-        else if (t === 'email') rec.email = val.slice(0, 120);
-        else if (t === 'profession') rec.profession = val.slice(0, 80);
-      });
-      if (rec.age == null && ageFromBd != null) rec.age = ageFromBd;
-      if (rec.age == null) rec.age = 0;
-      return rec;
-    }).filter(r => r.name);
-
-    let ok = 0, failed = 0;
-    const BATCH = 200;
-    for (let i = 0; i < records.length; i += BATCH) {
-      const chunk = records.slice(i, i + BATCH);
-      const { error } = await supabase.from('patients').insert(chunk);
-      if (error) failed += chunk.length; else ok += chunk.length;
-    }
-    setImporting(false);
-    setResult({ ok, failed });
-    setStep('done');
-    queryClient.invalidateQueries({ queryKey: ['patients', userId] });
-    if (ok > 0) toast({ title: `${ok} paciente${ok > 1 ? 's importados' : ' importado'}` });
+    const prepared = retry ? { records: pendingRecords.current, rejected: result?.rejected ?? [] } : preparePatientImport(rows, mapping, userId, clinicDate());
+    const failed: ImportedPatient[] = [];
+    let ok = retry ? result?.ok ?? 0 : 0;
+    try {
+      for (let i = 0; i < prepared.records.length; i += 200) {
+        const chunk = prepared.records.slice(i, i + 200);
+        try {
+          // Stable IDs survive retries. A lost response must not duplicate a batch.
+          const { error } = await supabase.from('patients').upsert(chunk, { onConflict: 'id', ignoreDuplicates: true });
+          if (error) failed.push(...chunk); else ok += chunk.length;
+        } catch { failed.push(...chunk); }
+      }
+      pendingRecords.current = failed;
+      setResult({ ok, failed: failed.length, rejected: prepared.rejected });
+      setStep('done');
+      queryClient.invalidateQueries({ queryKey: ['patients', userId] });
+    } finally { setImporting(false); }
+  };
+  const downloadReport = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'relatorio-importacao.json'; link.click(); URL.revokeObjectURL(url);
   };
 
   return (
@@ -169,17 +126,18 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
             <Users className="w-4 h-4 text-medical-blue" />
             Importar pacientes
           </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <DialogDescription className="text-xs text-muted-foreground mt-0.5">
             {step === 'source' ? 'Selecione o prontuário de origem'
               : step === 'map' ? 'Confira o mapeamento das colunas'
               : 'Importação concluída'}
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) handleFile(f); }} />
 
         <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-4">
+          {fileError && <p role="alert" className="text-sm text-destructive mb-3">{fileError}</p>}
           {step === 'source' && (
             <div className="space-y-2">
               {SOURCES.map(s => (
@@ -218,7 +176,7 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
                     </div>
                     <ArrowRight className="w-3 h-3 text-muted-foreground/40 shrink-0" />
                     <Select value={mapping[i]} onValueChange={(v) => setMapping(m => m.map((x, j) => j === i ? v as Target : x))}>
-                      <SelectTrigger className="w-40 h-9 text-xs shrink-0"><SelectValue /></SelectTrigger>
+                      <SelectTrigger aria-label={`Campo para ${h || `coluna ${i + 1}`}`} className="w-40 h-9 text-xs shrink-0"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {(Object.keys(TARGET_LABELS) as Target[]).map(t => (
                           <SelectItem key={t} value={t}>{TARGET_LABELS[t]}</SelectItem>
@@ -230,19 +188,22 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
               </div>
               {!canImport && (
                 <p className="text-[11px] text-red-600 flex items-center gap-1.5">
-                  <X className="w-3 h-3" /> Selecione qual coluna é o <strong>Nome</strong> do paciente.
+                  <X className="w-3 h-3" /> Mapeie Nome e Idade ou Data de nascimento, sem repetir campos.
                 </p>
               )}
             </div>
           )}
 
           {step === 'done' && result && (
-            <div className="text-center py-6 space-y-2">
+            <div className="text-center py-6 space-y-2" role="status">
               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
                 <Check className="w-6 h-6 text-green-600" />
               </div>
               <p className="text-sm font-semibold text-foreground">{result.ok} paciente{result.ok !== 1 ? 's' : ''} importado{result.ok !== 1 ? 's' : ''}</p>
               {result.failed > 0 && <p className="text-xs text-red-600">{result.failed} não puderam ser importados</p>}
+              {result.rejected.length > 0 && <><p className="text-xs text-destructive">{result.rejected.length} linhas rejeitadas na validação:</p><ul className="text-xs text-left space-y-1">{result.rejected.slice(0, 50).map(row => <li key={row.row}>Linha {row.row}: {row.reason}</li>)}</ul></>}
+              <Button variant="outline" size="sm" onClick={downloadReport}>Baixar relatório completo</Button>
+              {result.failed > 0 && <Button size="sm" onClick={() => handleImport(true)} disabled={importing}>{importing ? 'Tentando…' : 'Tentar novamente os pendentes'}</Button>}
             </div>
           )}
         </div>
@@ -253,7 +214,7 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setStep('source')} disabled={importing}>
                 <ArrowLeft className="w-3.5 h-3.5" /> Voltar
               </Button>
-              <Button size="sm" className="gap-1.5" onClick={handleImport} disabled={!canImport || importing}>
+              <Button size="sm" className="gap-1.5" onClick={() => handleImport()} disabled={!canImport || importing}>
                 {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                 Importar {rows.length}
               </Button>

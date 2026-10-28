@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { functionErrorBody } from '@/lib/functionErrors';
 
 interface Msg { id: string; role: 'user' | 'assistant'; content: string }
 
@@ -28,31 +29,36 @@ export default function AssistantPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [failedQuestion, setFailedQuestion] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }, [messages, loading]);
 
-  const send = async (text: string) => {
+  const send = async (text: string, retry = false) => {
     const q = text.trim();
     if (!q || loading || !user) return;
     setInput('');
     const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: q };
-    setMessages(prev => [...prev, userMsg]);
+    if (!retry) setMessages(prev => [...prev, userMsg]);
     setLoading(true);
+    setFailedQuestion(null); setRequestError('');
     try {
       const { data, error } = await supabase.functions.invoke('chat-assistant', {
         body: {
           patientId: null,
           patientContext: null,
-          chatHistory: messages.slice(-10).map(m => ({ type: m.role, content: m.content })),
+          chatHistory: (retry ? messages.slice(0, -1) : messages).slice(-10).map(m => ({ type: m.role, content: m.content })),
           userMessage: q,
         },
       });
       if (error) {
-        const body = (error as any)?.context?.json ? await (error as any).context.json().catch(() => null) : null;
+        const body = await functionErrorBody(error);
         if (body?.quotaExceeded) {
-          toast({ title: 'Limite diário atingido', description: body.error, variant: 'destructive' });
+          setRequestError('Limite diário atingido. Tente novamente após a renovação da cota.');
+          setFailedQuestion(q);
+          queryClient.invalidateQueries({ queryKey: ['usage-daily', user.id] });
           return;
         }
         throw error;
@@ -60,7 +66,8 @@ export default function AssistantPage() {
       setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: data.message }]);
       queryClient.invalidateQueries({ queryKey: ['usage-daily', user.id] });
     } catch {
-      toast({ title: 'Erro ao consultar o assistente', description: 'Tente novamente.', variant: 'destructive' });
+      setRequestError('Não foi possível consultar o assistente. Sua pergunta foi mantida.');
+      setFailedQuestion(q);
     } finally {
       setLoading(false);
     }
@@ -69,7 +76,7 @@ export default function AssistantPage() {
   const empty = messages.length === 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="h-[100dvh] bg-slate-50 flex flex-col">
       <header className="bg-background border-b sticky top-0 z-10">
         <div className="container mx-auto px-3 md:px-4 py-3 flex items-center gap-3">
           <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
@@ -80,7 +87,11 @@ export default function AssistantPage() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 min-h-0 flex flex-col">
+        {requestError && <div role="alert" className="mx-auto w-full max-w-2xl p-3 text-sm text-destructive flex items-center gap-3">
+          <p>{requestError}</p>
+          {failedQuestion && <Button variant="outline" size="sm" disabled={loading} onClick={() => send(failedQuestion, true)}>Tentar novamente</Button>}
+        </div>}
         {empty ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4 max-w-2xl mx-auto w-full">
             <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-8">
@@ -95,10 +106,10 @@ export default function AssistantPage() {
                 placeholder="Escreva o que você precisa"
                 aria-label="Escreva o que você precisa"
                 className="w-full h-14 pl-5 pr-14 rounded-2xl border border-border bg-white shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30"
-                autoFocus
               />
               <Button
                 size="icon"
+                aria-label="Enviar pergunta"
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl h-10 w-10"
                 onClick={() => send(input)}
                 disabled={!input.trim()}
@@ -123,7 +134,7 @@ export default function AssistantPage() {
           </div>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <div className="flex-1 overflow-y-auto scrollbar-thin" role="log" aria-label="Conversa com o assistente" aria-live="polite" aria-relevant="additions text">
               <div className="container mx-auto px-3 md:px-4 py-6 max-w-2xl space-y-4">
                 {messages.map(m => (
                   <div key={m.id} className={cn('flex', m.role === 'user' ? 'justify-end' : 'items-start gap-3')}>
@@ -147,7 +158,7 @@ export default function AssistantPage() {
                     <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                       <Brain className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="bg-white border border-border/60 rounded-2xl rounded-tl-sm px-4 py-3">
+                    <div className="bg-white border border-border/60 rounded-2xl rounded-tl-sm px-4 py-3" role="status" aria-label="Aguardando resposta do assistente">
                       <div className="flex gap-1">
                         {[0, 150, 300].map(d => (
                           <div key={d} className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: `${d}ms` }} />
@@ -162,13 +173,14 @@ export default function AssistantPage() {
             <div className="border-t border-border/50 bg-background/95 backdrop-blur-sm">
               <div className="container mx-auto px-3 md:px-4 py-3 max-w-2xl flex items-center gap-2">
                 <input
+                  aria-label="Escreva o que você precisa"
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') send(input); }}
                   placeholder="Escreva o que você precisa"
                   className="flex-1 h-11 px-4 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30"
                 />
-                <Button size="icon" className="rounded-xl h-11 w-11" onClick={() => send(input)} disabled={!input.trim() || loading}>
+                <Button size="icon" aria-label="Enviar pergunta" className="rounded-xl h-11 w-11" onClick={() => send(input)} disabled={!input.trim() || loading}>
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </Button>
               </div>

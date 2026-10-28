@@ -549,8 +549,8 @@ export async function seedIfEmpty(userId: string): Promise<boolean> {
     const rows = SEED_PATIENTS.map(p => ({
       ...p,
       user_id: userId,
-      diagnoses: p.diagnoses as any,
-      medications: p.medications as any,
+      diagnoses: p.diagnoses,
+      medications: p.medications,
     }));
 
     const { data: inserted } = await supabase

@@ -25,6 +25,8 @@ import { ProfileUpdateCard, MergedProfile } from '@/components/ProfileUpdateCard
 import { ProfileUpdates } from '@/types/patient';
 import { printSoap } from '@/lib/printDoc';
 import { UsageMeter, UsageOverBanner } from '@/components/UsageMeter';
+import { ConsultationDraft, loadConsultationDraft, saveConsultationDraft } from '@/lib/consultationDrafts';
+import { functionErrorBody } from '@/lib/functionErrors';
 
 /** Thrown after an error was already surfaced to the user (e.g. quota toast)
  *  so upstream catch blocks skip their generic error toast. */
@@ -63,10 +65,14 @@ interface ChatPanelProps {
   chiefComplaint: string;
   preBriefing: PreBriefing | null;
   briefingLoading: boolean;
+  briefingError?: boolean;
+  onRetryBriefing?: () => void;
   userId: string;
   /** Called after a consultation is successfully saved so the parent can
    *  invalidate any stale pre-briefing cache entries for this patient. */
   onConsultationSaved?: (patientId: string) => void;
+  onWorkStateChange?: (busy: boolean) => void;
+  onCaptureStateChange?: (busy: boolean) => void;
 }
 
 export function ChatPanel({
@@ -76,32 +82,37 @@ export function ChatPanel({
   chiefComplaint,
   preBriefing,
   briefingLoading,
+  briefingError = false,
+  onRetryBriefing,
   userId,
   onConsultationSaved,
+  onWorkStateChange,
+  onCaptureStateChange,
 }: ChatPanelProps) {
   const [showBriefing, setShowBriefing] = useState(true);
   const [briefingExpanded, setBriefingExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [audioTasks, setAudioTasks] = useState(0);
   const [inputValue, setInputValue] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState('');
+  const editRevisionRef = useRef<number | null>(null);
   const [currentConsultationId, setCurrentConsultationId] = useState<string | null>(null);
-  const [reviewData, setReviewData] = useState<{
-    transcription: string;
-    soapDraft: string;
-    whatsappDraft: string;
-    clarifications: string[];
-    transcriptionQuality: 'good' | 'partial' | 'poor';
-    differentialDiagnoses: string[];
-    drugInteractionAlerts: string[];
-  } | null>(null);
+  const [reviewData, setReviewData] = useState<ConsultationDraft | null>(null);
+  const [recoveryDraft, setRecoveryDraft] = useState<ConsultationDraft | null>(null);
+  const [draftLoading, setDraftLoading] = useState(true);
+  const [draftLoadError, setDraftLoadError] = useState(false);
+  const [draftRetryKey, setDraftRetryKey] = useState(0);
+  const recoveryInputRef = useRef<HTMLInputElement>(null);
   const [isGeneratingFinal, setIsGeneratingFinal] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [inputMode, setInputMode] = useState<'question' | 'comment'>('question');
   const [savingNote, setSavingNote] = useState(false);
   const [consultationComments, setConsultationComments] = useState<string[]>([]);
   const [documentModal, setDocumentModal] = useState<{
+    patientId: string;
+    patientName: string;
     type: 'patient_summary' | 'referral';
     content: string;
     isLoading: boolean;
@@ -126,12 +137,17 @@ export function ChatPanel({
   const [generatingRx, setGeneratingRx] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const composerConsultationIdRef = useRef<string | undefined>(undefined);
+  const composerPatientIdRef = useRef<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const consultationCommentsRef = useRef<string[]>([]);
   // Tracks the currently displayed patient so async work started for a
   // previous patient (transcription takes 30s+) never writes into this chat.
   const activePatientIdRef = useRef<string | null>(patient?.id ?? null);
+  activePatientIdRef.current = patient?.id ?? null;
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+  const isCurrentPatient = (id: string) => mountedRef.current && activePatientIdRef.current === id;
 
   // ── Live-copilot plumbing (refs avoid stale closures inside recorder cbs) ────
   const copilotPendingRef  = useRef<Array<{ mimeType: string; data: string }>>([]);
@@ -167,6 +183,7 @@ export function ChatPanel({
     onStop: processConsultation,
     consultationCommentsRef,
     onCommentsReset: () => {
+      if (!patient || !isCurrentPatient(patient.id)) return;
       consultationCommentsRef.current = [];
       setConsultationComments([]);
     },
@@ -176,33 +193,66 @@ export function ChatPanel({
   });
 
   const { isRecording, isPaused, stopConfirming, recordingSeconds, audioLevel } = recording;
+  const recordingRef = useRef(recording);
+  recordingRef.current = recording;
+  const selectedPatientId = patient?.id ?? null;
   const [modeDialogOpen, setModeDialogOpen] = useState(false);
 
   useEffect(() => {
-    activePatientIdRef.current = patient?.id ?? null;
+    const busy = isRecording || recording.isStarting || recording.isStopping || isProcessing || !!reviewData || !!recoveryDraft || isGeneratingFinal || isChatLoading || savingNote
+      || generatingRx || composerOpen || !!documentModal || attachingFile || !!editingId || !!inputValue.trim();
+    onWorkStateChange?.(busy);
+    return () => onWorkStateChange?.(false);
+  }, [isRecording, recording.isStarting, recording.isStopping, isProcessing, reviewData, recoveryDraft, isGeneratingFinal, isChatLoading, savingNote, generatingRx, composerOpen, documentModal, attachingFile, editingId, inputValue, onWorkStateChange]);
+  useEffect(() => {
+    onCaptureStateChange?.(!!(recording.isStarting || recording.isStopping || isRecording || isProcessing || audioTasks > 0));
+    return () => onCaptureStateChange?.(false);
+  }, [recording.isStarting, recording.isStopping, isRecording, isProcessing, audioTasks, onCaptureStateChange]);
+
+  useEffect(() => {
+    // The outer navigation guard normally prevents this. If props change from
+    // another source, finish into the originating patient's recoverable draft.
+    if (recordingRef.current.isStarting) recordingRef.current.discard();
+    else if (recordingRef.current.isRecording) recordingRef.current.confirmStop();
     setShowBriefing(true);
     setBriefingExpanded(false);
     consultationCommentsRef.current = [];
     setConsultationComments([]);
     setCurrentConsultationId(null);
     setReviewData(null);
+    setRecoveryDraft(null);
+    setDraftLoading(true);
+    setDraftLoadError(false);
+    setInputValue('');
+    setEditingId(null);
+    setEditedContent('');
+    setDocumentModal(null);
+    setComposerOpen(false);
+    setIsProcessing(false);
+    setIsChatLoading(false);
+    setSavingNote(false);
+    setGeneratingRx(false);
     resetCopilot();
-    if (recording.isRecording) {
-      // Never let a recording started for patient A be processed under
-      // patient B — that would write a consultation into the wrong chart.
-      recording.discard();
-      toast({
-        title: 'Gravação descartada',
-        description: 'A gravação em andamento foi descartada ao trocar de paciente.',
-        variant: 'destructive',
-      });
-    } else {
-      recording.cancelStop();
-    }
-  }, [patient?.id]);
+    recordingRef.current.cancelStop();
+    if (!selectedPatientId) return;
+    let ignore = false;
+    loadConsultationDraft(userId, selectedPatientId).then(draft => {
+      if (ignore) return;
+      setDraftLoading(false);
+      if (!draft) return;
+      if (draft.status === 'review') setReviewData(draft);
+      else setRecoveryDraft(draft);
+    }).catch(() => {
+      if (!ignore) {
+        setDraftLoading(false); setDraftLoadError(true);
+        toast({ title: 'Não foi possível carregar rascunhos', description: 'Verifique a conexão antes de iniciar outra gravação.', variant: 'destructive' });
+      }
+    });
+    return () => { ignore = true; };
+  }, [selectedPatientId, userId, draftRetryKey, toast]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [messages, isProcessing]);
 
   const formatTimer = (secs: number) => {
@@ -249,7 +299,7 @@ export function ChatPanel({
       const summary: string = data?.summary ?? 'Comentário processado.';
       const appliedAddendum: boolean = !!data?.appliedAddendum;
 
-      onMessagesChange(prev => [...prev, {
+      if (isCurrentPatient(patient.id)) onMessagesChange(prev => [...prev, {
         id: `note-${Date.now()}`,
         type: 'assistant',
         title: appliedAddendum ? 'Adendo na consulta de hoje' : 'Comentário processado',
@@ -259,20 +309,21 @@ export function ChatPanel({
 
       // Refresh everything the comment could have touched
       queryClient.invalidateQueries({ queryKey: ['patients', userId] });
-      queryClient.invalidateQueries({ queryKey: ['patient-detail', patient.id] });
-      queryClient.invalidateQueries({ queryKey: ['patient-clinical-notes', patient.id] });
-      queryClient.invalidateQueries({ queryKey: ['patient-consultations', patient.id] });
+      queryClient.invalidateQueries({ queryKey: ['patient-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-clinical-notes'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-consultations'] });
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
 
-      toast({ title: 'Comentário processado', description: summary });
-    } catch (err: any) {
+      if (isCurrentPatient(patient.id)) toast({ title: 'Comentário processado', description: summary });
+    } catch (err: unknown) {
+      if (isCurrentPatient(patient.id)) setInputValue(current => current || text);
       toast({
         title: 'Erro ao processar comentário',
-        description: err.message ?? 'Tente novamente.',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
         variant: 'destructive',
       });
     } finally {
-      setSavingNote(false);
+      if (isCurrentPatient(patient.id)) setSavingNote(false);
     }
   };
 
@@ -346,9 +397,10 @@ export function ChatPanel({
   }
 
   async function handleLiveChunk(blob: Blob, mimeType: string) {
-    if (copilotDisabledRef.current || !patient) return;
+    if (copilotDisabledRef.current || !patient || !isCurrentPatient(patient.id)) return;
     try {
       const data = await blobToBase64(blob);
+      if (!isCurrentPatient(patient.id)) return;
       copilotPendingRef.current.push({ mimeType, data });
       // Cap backlog if calls are lagging — keep the most recent windows.
       if (copilotPendingRef.current.length > 4) {
@@ -444,7 +496,7 @@ export function ChatPanel({
     const forPatientId = patient.id;
     try {
       // Same storage convention as PatientFiles (Perfil → Documentos).
-      const safeName = file.name.replace(/[^\w.\-]/g, '_').slice(0, 80);
+      const safeName = file.name.replace(/[^\w.-]/g, '_').slice(0, 80);
       const storagePath = `patients/${userId}/${forPatientId}/${crypto.randomUUID()}-${safeName}`;
       const { error: upErr } = await supabase.storage
         .from('patient-files')
@@ -494,15 +546,16 @@ export function ChatPanel({
         timestamp: new Date(),
       }]);
       toast({ title: 'Documento anexado e analisado', description: data?.profileNote || undefined });
-    } catch (err: any) {
-      toast({ title: 'Erro ao anexar documento', description: err?.message ?? 'Tente novamente.', variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Erro ao anexar documento', description: err instanceof Error ? err.message : 'Tente novamente.', variant: 'destructive' });
     } finally {
-      setAttachingFile(false);
+      if (isCurrentPatient(forPatientId)) setAttachingFile(false);
     }
   };
 
   // ── Digital documents (receita/atestado) ────────────────────────────────────
   const handleOpenComposer = (consultationId?: string) => {
+    composerPatientIdRef.current = patient?.id ?? null;
     composerConsultationIdRef.current = consultationId ?? currentConsultationId ?? undefined;
     setComposerOpen(true);
   };
@@ -512,7 +565,7 @@ export function ChatPanel({
     medications: Medication[];
     content?: { days: number; cid?: string; note?: string };
   }) => {
-    if (!patient || generatingRx) return;
+    if (!patient || generatingRx || composerPatientIdRef.current !== patient.id) return;
     setGeneratingRx(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-prescription', {
@@ -525,9 +578,7 @@ export function ChatPanel({
         },
       });
       if (error) {
-        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
-          ? await (error as any).context.json().catch(() => null)
-          : null;
+        const body = await functionErrorBody(error);
         if (body?.missingPrescriber) {
           toast({
             title: 'Complete os dados do prescritor',
@@ -538,6 +589,8 @@ export function ChatPanel({
         }
         throw error;
       }
+      queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patient.id] });
+      if (!isCurrentPatient(patient.id)) return;
       setComposerOpen(false);
       if (data?.previewUrl) window.open(data.previewUrl, '_blank');
       const docLabel = payload.docType === 'atestado' ? 'Atestado gerado'
@@ -548,27 +601,25 @@ export function ChatPanel({
         description: `Código de acesso do paciente: ${data?.accessCode}. Assinatura ICP-Brasil será habilitada com o provedor de assinatura.`,
       });
       queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patient.id] });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: 'Erro ao gerar documento',
-        description: err?.message ?? 'Tente novamente.',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
         variant: 'destructive',
       });
     } finally {
-      setGeneratingRx(false);
+      if (isCurrentPatient(patient.id)) setGeneratingRx(false);
     }
   };
 
   /** supabase-js wraps non-2xx as FunctionsHttpError with the JSON body on
    *  err.context. Returns true when the error was a quota 429 (and toasts). */
   const handleQuotaError = async (error: unknown): Promise<boolean> => {
-    const body = (error as any)?.context && typeof (error as any).context.json === 'function'
-      ? await (error as any).context.json().catch(() => null)
-      : null;
+    const body = await functionErrorBody(error);
     if (body?.quotaExceeded) {
       toast({
         title: 'Limite diário atingido',
-        description: body.error ?? 'Aguarde o reset diário ou solicite aumento.',
+        description: typeof body.error === 'string' ? body.error : 'Aguarde o reset diário ou solicite aumento.',
         variant: 'destructive',
       });
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
@@ -577,55 +628,46 @@ export function ChatPanel({
     return false;
   };
 
-  // Shared save logic — called from auto-confirm path (saveDirect) or review modal (with comments)
-  const submitFinalSoap = async (
-    transcription: string,
-    doctorComments: string,
-    directSoapNote?: string,
-    directWhatsappMessage?: string,
-  ) => {
-    if (!patient) return;
-    const body = directSoapNote != null
-      ? {
-          patientId: patient.id, userId, chiefComplaint, transcription, patientContext,
-          saveDirect: true,
-          soapNote: directSoapNote,
-          whatsappMessage: directWhatsappMessage ?? '',
-          userSpecialty: specialty,
-          templateContent: activeTemplateContent ?? undefined,
-        }
-      : {
-          patientId: patient.id, userId, chiefComplaint, transcription, doctorComments, patientContext,
-          userSpecialty: specialty,
-          templateContent: activeTemplateContent ?? undefined,
-        };
-    const { data, error } = await supabase.functions.invoke('finalize-consultation', { body });
+  // A generated revision is previewed first; only the clinician's next
+  // explicit confirmation can persist that exact reviewed text.
+  const submitFinalSoap = async (draft: ConsultationDraft, doctorComments: string) => {
+    if (!patient || draft.patientId !== patient.id) return;
+    const comments = [...draft.originalComments, doctorComments.trim()].filter(Boolean);
+    const { data, error } = await supabase.functions.invoke('finalize-consultation', {
+      body: {
+        patientId: draft.patientId, draftId: draft.id, chiefComplaint: draft.chiefComplaint,
+        transcription: draft.transcription, patientContext, userSpecialty: specialty,
+        templateContent: activeTemplateContent ?? undefined,
+        ...(doctorComments.trim()
+          ? { doctorComments: comments.join('\n\n'), previewOnly: true }
+          : { saveDirect: true, reviewed: true, soapNote: draft.soapDraft, whatsappMessage: draft.whatsappDraft }),
+      },
+    });
     if (error) {
       if (await handleQuotaError(error)) throw new HandledError();
       throw error;
     }
-    // Clear the stale pre-briefing cache for this patient now that a new
-    // consultation has been saved — the parent will regenerate on next select.
-    onConsultationSaved?.(patient.id);
-    // First visit seeded the Anamnese Social / Histórico Médico — refresh the
-    // profile views so the new bullets appear without a reselect.
-    if (data.historyFilled) {
-      queryClient.invalidateQueries({ queryKey: ['patients', userId] });
-      queryClient.invalidateQueries({ queryKey: ['patient-detail', patient.id] });
+    if (data.previewOnly) {
+      const revised = { ...draft, soapDraft: data.soapNote, whatsappDraft: data.whatsappMessage, pendingComments: '',
+        originalComments: comments, clarifications: [], status: 'review' as const };
+      await saveConsultationDraft(userId, revised);
+      if (isCurrentPatient(draft.patientId)) {
+        setReviewData(revised);
+        toast({ title: 'Rascunho revisado', description: 'Confira o novo texto e confirme para salvar.' });
+      }
+      return;
     }
-    // The doctor may have switched patients during the 30s+ processing window.
-    // The note was saved to the correct chart (closure `patient`); just don't
-    // inject it into the chat of whoever is displayed now.
-    if (activePatientIdRef.current !== patient.id) return;
+    onConsultationSaved?.(draft.patientId);
+    for (const key of [
+      ['patients', userId], ['patient-detail'], ['patient-consultations'],
+      ['patient-clinical-notes'], ['appointments'], ['appointments-today'], ['usage-daily', userId],
+    ]) queryClient.invalidateQueries({ queryKey: key });
+    if (!isCurrentPatient(draft.patientId)) return;
     setCurrentConsultationId(data.consultationId ?? null);
     pushToChat(data.soapNote, data.whatsappMessage, data.profileUpdates, data.consultationId ?? undefined);
     setReviewData(null);
-    toast({
-      title: 'Consulta salva!',
-      description: data.historyFilled
-        ? 'Evolução gerada. Anamnese e histórico preenchidos a partir da 1ª consulta.'
-        : 'Evolução clínica gerada com sucesso.',
-    });
+    setRecoveryDraft(null);
+    toast({ title: 'Consulta salva!', description: 'A evolução revisada foi salva no prontuário.' });
   };
 
   /** Upload with up to 3 attempts and exponential backoff. */
@@ -638,7 +680,7 @@ export function ChatPanel({
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const { error } = await supabase.storage
         .from('audio-recordings')
-        .upload(path, blob, { contentType: mimeType });
+        .upload(path, blob, { contentType: mimeType, upsert: true });
       if (!error) return;
       if (attempt === maxAttempts) throw error;
       // Exponential backoff: 1 s, 2 s
@@ -651,7 +693,8 @@ export function ChatPanel({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `consulta-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
+    const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('ogg') ? 'ogg' : 'webm';
+    a.download = `consulta-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -659,81 +702,83 @@ export function ChatPanel({
   // NOTE: declared as a hoisted `function` (not a `const` arrow) so it can be
   // referenced by the useRecording() call above before this line executes.
   // A const arrow here causes a temporal-dead-zone ReferenceError at render.
-  async function processConsultation(audioBlob: Blob, mimeType: string, comments: string[]) {
+  async function processConsultation(audioBlob: Blob, mimeType: string, comments: string[], previous?: ConsultationDraft) {
     if (!patient) return;
-    setIsProcessing(true);
-
+    if (mountedRef.current) setAudioTasks(count => count + 1);
+    const draft: ConsultationDraft = previous ?? {
+      id: crypto.randomUUID(), patientId: patient.id, chiefComplaint,
+      audioStoragePath: null, audioMimeType: mimeType, status: 'processing',
+      transcription: '', soapDraft: '', whatsappDraft: '', clarifications: [], transcriptionQuality: 'poor',
+      differentialDiagnoses: [], drugInteractionAlerts: [], originalComments: [...comments],
+    };
+    if (isCurrentPatient(draft.patientId)) setIsProcessing(true);
     try {
-      const storagePath = `consultations/${userId}/${Date.now()}.webm`;
-      try {
-        await uploadAudioWithRetry(audioBlob, storagePath, mimeType);
-      } catch (uploadError) {
-        // Upload failed after retries — offer the recording as a local download
-        // so it isn't permanently lost, then surface a clear error.
-        offerLocalDownload(audioBlob, mimeType);
-        toast({
-          title: 'Erro ao enviar gravação',
-          description: 'Não foi possível enviar o áudio. O arquivo foi salvo localmente no seu dispositivo.',
-          variant: 'destructive',
-        });
-        return;
+      await saveConsultationDraft(userId, { ...draft, status: 'processing' });
+      if (!draft.audioStoragePath) {
+        const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('ogg') ? 'ogg' : 'webm';
+        const path = `consultations/${userId}/${draft.id}.${ext}`;
+        draft.audioStoragePath = path;
+        await saveConsultationDraft(userId, draft);
+        await uploadAudioWithRetry(audioBlob, path, mimeType);
       }
-
       const { data, error } = await supabase.functions.invoke('transcribe-consultation', {
-        body: {
-          patientId: patient.id,
-          userId,
-          chiefComplaint,
-          audioStoragePath: storagePath,
-          audioMimeType: mimeType,
-          consultationComments: comments,
-          patientContext,
-          userSpecialty: specialty,
-          templateContent: activeTemplateContent ?? undefined,
-        },
+        body: { patientId: draft.patientId, draftId: draft.id, chiefComplaint: draft.chiefComplaint,
+          audioStoragePath: draft.audioStoragePath, audioMimeType: mimeType,
+          consultationComments: draft.originalComments, patientContext, userSpecialty: specialty,
+          templateContent: activeTemplateContent ?? undefined },
       });
       if (error) {
-        if (await handleQuotaError(error)) return;
+        if (await handleQuotaError(error)) throw new HandledError();
         throw error;
       }
-
+      const ready: ConsultationDraft = { ...draft, status: 'review',
+        transcription: data.transcription ?? '', soapDraft: data.soapNote ?? '', whatsappDraft: data.whatsappMessage ?? '',
+        clarifications: Array.isArray(data.clarifications) ? data.clarifications : [],
+        transcriptionQuality: data.transcriptionQuality ?? 'poor',
+        differentialDiagnoses: Array.isArray(data.differentialDiagnoses) ? data.differentialDiagnoses : [],
+        drugInteractionAlerts: Array.isArray(data.drugInteractionAlerts) ? data.drugInteractionAlerts : [],
+      };
+      await saveConsultationDraft(userId, ready);
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
-      const quality = data.transcriptionQuality ?? 'good';
-      const clarifications: string[]        = Array.isArray(data.clarifications)         ? data.clarifications         : [];
-      const differentialDiagnoses: string[] = Array.isArray(data.differentialDiagnoses)  ? data.differentialDiagnoses  : [];
-      const drugInteractionAlerts: string[] = Array.isArray(data.drugInteractionAlerts)  ? data.drugInteractionAlerts  : [];
-
-      if (quality === 'good' && clarifications.length === 0 && differentialDiagnoses.length === 0 && drugInteractionAlerts.length === 0) {
-        await submitFinalSoap(data.transcription ?? '', '', data.soapNote ?? '', data.whatsappMessage ?? '');
-      } else if (activePatientIdRef.current === patient.id) {
-        // Only open the review modal if the doctor is still on this patient.
-        setReviewData({
-          transcription: data.transcription ?? '',
-          soapDraft: data.soapNote ?? '',
-          whatsappDraft: data.whatsappMessage ?? '',
-          clarifications,
-          transcriptionQuality: quality,
-          differentialDiagnoses,
-          drugInteractionAlerts,
-        });
-      }
-    } catch (err: any) {
-      if (!(err instanceof HandledError)) {
-        toast({
-          title: 'Erro ao processar consulta',
-          description: err.message || 'Tente novamente.',
-          variant: 'destructive',
-        });
-      }
+      if (isCurrentPatient(draft.patientId)) { setRecoveryDraft(null); setReviewData(ready); }
+    } catch (error) {
+      // Retain both a server draft and a local download on every failure,
+      // including provider errors after a successful upload.
+      const failed = { ...draft, status: 'error' as const };
+      await saveConsultationDraft(userId, failed).catch(() => {});
+      offerLocalDownload(audioBlob, mimeType);
+      if (isCurrentPatient(draft.patientId)) setRecoveryDraft(failed);
+      if (!(error instanceof HandledError)) toast({ title: 'Consulta preservada para nova tentativa',
+        description: 'O áudio foi baixado e, quando enviado, permanece no rascunho. Tente novamente ao recuperar a conexão.', variant: 'destructive' });
     } finally {
-      setIsProcessing(false);
+      if (mountedRef.current) setAudioTasks(count => Math.max(0, count - 1));
+      if (isCurrentPatient(draft.patientId)) setIsProcessing(false);
     }
+  }
+
+  const recoverConsultation = async (draft: ConsultationDraft) => {
+    if (draft.status === 'review') { setReviewData(draft); setRecoveryDraft(null); return; }
+    if (!draft.audioStoragePath || !isCurrentPatient(draft.patientId)) return;
+    setIsProcessing(true);
+    try {
+      const { data, error } = await supabase.storage.from('audio-recordings').download(draft.audioStoragePath);
+      if (error || !data) throw error;
+      await processConsultation(data, draft.audioMimeType, draft.originalComments, draft);
+    } catch {
+      toast({ title: 'Não foi possível recuperar o áudio', description: 'Seu rascunho continua salvo. Verifique a conexão.', variant: 'destructive' });
+    } finally { if (isCurrentPatient(draft.patientId)) setIsProcessing(false); }
   };
 
-
+  const discardSavedDraft = async (draft: ConsultationDraft) => {
+    if (!window.confirm('Excluir este rascunho e seu áudio? Esta ação não pode ser desfeita.')) return;
+    const { error } = await supabase.from('consultation_drafts').delete().eq('id', draft.id).eq('user_id', userId);
+    if (error) { toast({ title: 'Não foi possível excluir o rascunho', variant: 'destructive' }); return; }
+    if (draft.audioStoragePath) await supabase.storage.from('audio-recordings').remove([draft.audioStoragePath]);
+    if (isCurrentPatient(draft.patientId)) setRecoveryDraft(null);
+  };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isChatLoading) return;
+    if (!patient || !inputValue.trim() || isChatLoading) return;
     const text = inputValue.trim();
     setInputValue('');
 
@@ -772,6 +817,7 @@ export function ChatPanel({
         if (await handleQuotaError(error)) return;
         throw error;
       }
+      if (!isCurrentPatient(patient.id)) return;
       onMessagesChange(prev => [...prev, {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
@@ -783,7 +829,7 @@ export function ChatPanel({
     } catch {
       toast({ title: 'Erro ao consultar IA', description: 'Tente novamente.', variant: 'destructive' });
     } finally {
-      setIsChatLoading(false);
+      if (isCurrentPatient(patient.id)) setIsChatLoading(false);
     }
   };
 
@@ -813,24 +859,40 @@ export function ChatPanel({
     const target = messages.find(m => m.id === messageId);
     const targetConsultationId = target?.consultationId ?? null;
     if (targetConsultationId) {
-      const { error } = await supabase
+      if (editRevisionRef.current === null || !patient) return;
+      const { data, error } = await supabase
         .from('consultations')
-        .update({ soap_note: editedContent })
-        .eq('id', targetConsultationId);
-      if (error) {
+        .update({ soap_note: editedContent, pre_briefing: null })
+        .eq('id', targetConsultationId).eq('revision', editRevisionRef.current)
+        .select('id').maybeSingle();
+      if (error || !data) {
         toast({
           title: 'Erro ao salvar alterações',
-          description: 'A evolução não foi atualizada no prontuário. Tente novamente.',
+          description: 'O registro pode ter sido alterado em outra janela. Reabra a edição antes de tentar novamente.',
           variant: 'destructive',
         });
         return;
       }
+      queryClient.invalidateQueries({ queryKey: ['patient-consultations'] });
+      onConsultationSaved?.(patient.id);
     }
+    if (!patient || !isCurrentPatient(patient.id)) return;
     onMessagesChange(prev => prev.map(m =>
       m.id === messageId ? { ...m, content: editedContent } : m
     ));
     setEditingId(null);
     toast({ title: 'Alterações salvas', description: 'A evolução clínica foi atualizada.' });
+  };
+
+  const beginEdit = async (message: ChatMessage) => {
+    if (!patient || !message.consultationId) return;
+    const { data, error } = await supabase.from('consultations').select('soap_note,revision')
+      .eq('id', message.consultationId).eq('patient_id', patient.id).maybeSingle();
+    if (!isCurrentPatient(patient.id)) return;
+    if (error || !data) { toast({ title: 'Não foi possível abrir a edição', variant: 'destructive' }); return; }
+    editRevisionRef.current = data.revision;
+    setEditingId(message.id);
+    setEditedContent(data.soap_note ?? '');
   };
 
   const pushToChat = (soapNote: string, whatsappMessage: string, profileUpdates?: ProfileUpdates, consultationId?: string) => {
@@ -874,17 +936,24 @@ export function ChatPanel({
     if (!reviewData || !patient) return;
     setIsGeneratingFinal(true);
     try {
-      await submitFinalSoap(reviewData.transcription, comments);
+      await submitFinalSoap(reviewData, comments);
     } catch (err) {
       if (!(err instanceof HandledError)) {
         toast({ title: 'Erro ao gerar evolução', description: 'Tente novamente.', variant: 'destructive' });
       }
     } finally {
-      setIsGeneratingFinal(false);
+      if (isCurrentPatient(patient.id)) setIsGeneratingFinal(false);
     }
   };
 
-  const handleReviewCancel = () => setReviewData(null);
+  const handleReviewCancel = async (comments: string) => {
+    if (!reviewData) return;
+    const preserved = { ...reviewData, pendingComments: comments };
+    setRecoveryDraft(preserved);
+    setReviewData(null);
+    try { await saveConsultationDraft(userId, preserved); }
+    catch { toast({ title: 'Observações ainda não foram salvas', description: 'Retome a revisão e tente novamente antes de sair.', variant: 'destructive' }); }
+  };
 
   const handleSendWhatsapp = (message: string) => {
     const raw = patient?.phone?.replace(/\D/g, '') ?? '';
@@ -909,15 +978,22 @@ export function ChatPanel({
   // keep their ICD codes / startedAt; writing mapped copies here would erase them.
   const handleProfileAccept = async (merged: MergedProfile) => {
     if (!patient) return;
-    const { error } = await supabase
+    const expectedRevision = patient.revision ?? 0;
+    const { data: current, error: readError } = await supabase.from('patients').select('revision').eq('id', patient.id).single();
+    if (readError || !current || current.revision !== expectedRevision) {
+      queryClient.invalidateQueries({ queryKey: ['patients', userId] });
+      toast({ title: 'O perfil foi alterado', description: 'Confira os dados atualizados antes de aceitar novamente.', variant: 'destructive' });
+      throw new Error('Perfil alterado');
+    }
+    const { data, error } = await supabase
       .from('patients')
       .update({
-        diagnoses:   merged.diagnoses,
-        medications: merged.medications,
+        diagnoses:   merged.diagnoses.map(value => ({ ...value })),
+        medications: merged.medications.map(value => ({ ...value })),
         allergies:   merged.allergies,
       })
-      .eq('id', patient.id);
-    if (error) {
+      .eq('id', patient.id).eq('revision', expectedRevision).select('id').maybeSingle();
+    if (error || !data) {
       toast({
         title: 'Erro ao atualizar perfil',
         description: 'As alterações não foram salvas. Tente novamente.',
@@ -926,8 +1002,8 @@ export function ChatPanel({
       throw error;
     }
     queryClient.invalidateQueries({ queryKey: ['patients', userId] });
-    queryClient.invalidateQueries({ queryKey: ['patient-detail', patient.id] });
-    toast({ title: 'Perfil atualizado!', description: 'Diagnósticos, medicamentos e alergias sincronizados.' });
+    queryClient.invalidateQueries({ queryKey: ['patient-detail'] });
+    if (isCurrentPatient(patient.id)) toast({ title: 'Perfil atualizado!', description: 'Diagnósticos, medicamentos e alergias sincronizados.' });
   };
 
   const getMissingFields = (): string[] => {
@@ -940,25 +1016,27 @@ export function ChatPanel({
 
   const handleGenerateDocument = async (type: 'patient_summary' | 'referral', soapNote: string) => {
     if (!patient) return;
-    setDocumentModal({ type, content: '', isLoading: true });
+    const origin = { patientId: patient.id, patientName: patient.name };
+    setDocumentModal({ ...origin, type, content: '', isLoading: true });
     try {
       const { data, error } = await supabase.functions.invoke('generate-document', {
         body: { type, soapNote, chiefComplaint, patientContext },
       });
       if (error) {
         if (await handleQuotaError(error)) {
-          setDocumentModal(null);
+          if (isCurrentPatient(patient.id)) setDocumentModal(null);
           return;
         }
         throw error;
       }
-      setDocumentModal({ type, content: data.document ?? '', isLoading: false });
+      if (!isCurrentPatient(patient.id)) return;
+      setDocumentModal({ ...origin, type, content: data.document ?? '', isLoading: false });
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
-    } catch (err: any) {
-      setDocumentModal(null);
+    } catch (err: unknown) {
+      if (isCurrentPatient(patient.id)) setDocumentModal(null);
       toast({
         title: 'Erro ao gerar documento',
-        description: err.message ?? 'Tente novamente.',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
         variant: 'destructive',
       });
     }
@@ -1004,6 +1082,29 @@ export function ChatPanel({
       {/* Chat Content */}
       <div className="flex-1 overflow-y-auto scrollbar-thin px-4 md:px-6 py-4 md:py-6 space-y-4">
 
+        {draftLoadError && <div role="alert" className="rounded-lg border p-3 text-sm">
+          Não foi possível verificar os rascunhos desta consulta.
+          <Button variant="outline" onClick={() => setDraftRetryKey(key => key + 1)}>Tentar novamente</Button>
+        </div>}
+
+        {recoveryDraft && recoveryDraft.patientId === patient.id && (
+          <div role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm space-y-2">
+            <p>Há uma consulta preservada para este paciente. Retome a revisão ou tente processar o áudio novamente.</p>
+            <Button variant="outline" disabled={isProcessing || (!recoveryDraft.audioStoragePath && recoveryDraft.status !== 'review')}
+              onClick={() => void recoverConsultation(recoveryDraft)}>
+              {recoveryDraft.status === 'review' ? 'Retomar revisão' : 'Recuperar consulta'}
+            </Button>
+            <input ref={recoveryInputRef} type="file" accept="audio/webm,audio/mp4,audio/ogg,.webm,.m4a,.ogg" className="hidden"
+              onChange={event => {
+                const file = event.target.files?.[0]; event.target.value = '';
+                if (file) void processConsultation(file, file.type || recoveryDraft.audioMimeType, recoveryDraft.originalComments,
+                  { ...recoveryDraft, audioStoragePath: null });
+              }} />
+            <Button variant="outline" disabled={isProcessing} onClick={() => recoveryInputRef.current?.click()}>Enviar áudio salvo</Button>
+            <Button variant="ghost" disabled={isProcessing} onClick={() => void discardSavedDraft(recoveryDraft)}>Excluir rascunho</Button>
+          </div>
+        )}
+
         {/* Pre-consultation Briefing */}
         {showBriefing && (
           <div className="alert-briefing rounded-lg py-3 px-4 animate-fade-in-up">
@@ -1017,6 +1118,11 @@ export function ChatPanel({
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       Gerando resumo com IA...
+                    </div>
+                  ) : briefingError ? (
+                    <div role="alert" className="space-y-2 text-sm text-destructive">
+                      <p>Não foi possível carregar o resumo pré-consulta. O histórico pode estar temporariamente indisponível.</p>
+                      {onRetryBriefing && <Button variant="outline" size="sm" onClick={onRetryBriefing}>Tentar novamente</Button>}
                     </div>
                   ) : activeBriefing?.returnInfo ? (
                     <>
@@ -1089,6 +1195,7 @@ export function ChatPanel({
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Ocultar resumo pré-consulta"
                 onClick={() => setShowBriefing(false)}
                 className="shrink-0 h-8 w-8 text-slate-400 hover:text-foreground"
               >
@@ -1106,6 +1213,7 @@ export function ChatPanel({
         />
 
         {/* Messages */}
+        <div role="log" aria-label="Conversa clínica deste paciente" aria-live="polite" aria-relevant="additions" className="space-y-4">
         {(() => {
           const lastSoapIdx = messages.reduce((acc, m, i) => m.type === 'soap' ? i : acc, -1);
           return messages.map((message, index) => (
@@ -1152,6 +1260,7 @@ export function ChatPanel({
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label="Exportar evolução em PDF"
                       className="h-7 w-7 text-muted-foreground/50 hover:text-muted-foreground"
                       onClick={() => handlePrintSOAP(message.content)}
                       title="Exportar PDF"
@@ -1161,13 +1270,13 @@ export function ChatPanel({
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={editingId === message.id ? 'Salvar edição da evolução' : 'Editar evolução'}
                       className="h-7 w-7 text-muted-foreground hover:text-foreground"
                       onClick={() => {
                         if (editingId === message.id) {
                           handleSaveEdit(message.id);
                         } else {
-                          setEditingId(message.id);
-                          setEditedContent(message.content);
+                          void beginEdit(message);
                         }
                       }}
                     >
@@ -1200,6 +1309,7 @@ export function ChatPanel({
 
                 {message.type === 'soap' && editingId === message.id ? (
                   <textarea
+                    aria-label="Editar evolução clínica"
                     value={editedContent}
                     onChange={(e) => setEditedContent(e.target.value)}
                     className="w-full min-h-[120px] md:min-h-[200px] text-sm leading-relaxed bg-muted/30 border border-border rounded-lg p-3 text-foreground/90 focus:outline-none focus:ring-2 focus:ring-medical-blue/30 resize-y"
@@ -1281,10 +1391,11 @@ export function ChatPanel({
           </div>
         ));
         })()}
+        </div>
 
         {/* Processing spinner */}
         {isProcessing && (
-          <div className="soap-note rounded-lg p-5 animate-fade-in">
+          <div role="status" className="soap-note rounded-lg p-5 animate-fade-in">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-medical-blue-light flex items-center justify-center">
                 <Loader2 className="w-4 h-4 text-medical-blue animate-spin" />
@@ -1299,7 +1410,7 @@ export function ChatPanel({
 
         {/* Chat AI typing indicator */}
         {isChatLoading && (
-          <div className="flex items-start gap-3 animate-fade-in">
+          <div role="status" aria-label="Assistente clínico preparando resposta" className="flex items-start gap-3 animate-fade-in">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <Brain className="w-4 h-4 text-primary" />
             </div>
@@ -1482,6 +1593,7 @@ export function ChatPanel({
             <div className="flex-1 relative">
               <input
                 type="text"
+                aria-label={inputMode === 'question' ? 'Pergunta ao assistente clínico' : 'Comentário clínico para este paciente'}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
@@ -1510,6 +1622,7 @@ export function ChatPanel({
                   : 'text-slate-400 hover:text-amber-600',
               )}
               onClick={handleSubmit}
+              aria-label={inputMode === 'question' ? 'Enviar pergunta' : 'Adicionar comentário'}
               disabled={!inputValue.trim() || isChatLoading || savingNote}
               title={inputMode === 'question' ? 'Enviar pergunta' : 'Adicionar comentário'}
             >
@@ -1520,7 +1633,8 @@ export function ChatPanel({
               size="icon-lg"
               className="rounded-full"
               onClick={isRecording ? handleStopRecording : handleStartRecording}
-              disabled={isProcessing}
+              aria-label={isRecording ? 'Finalizar gravação da consulta' : 'Iniciar gravação da consulta'}
+              disabled={recording.isStarting || recording.isStopping || isProcessing || !!reviewData || !!recoveryDraft || isGeneratingFinal || draftLoading || draftLoadError}
             >
               {isProcessing
                 ? <Loader2 className="w-5 h-5 animate-spin" />
@@ -1540,7 +1654,7 @@ export function ChatPanel({
       </div>
 
       <ConsultationReviewModal
-        open={!!reviewData}
+        open={!!reviewData && reviewData.patientId === patient.id}
         patientName={patient?.name ?? ''}
         transcription={reviewData?.transcription ?? ''}
         soapDraft={reviewData?.soapDraft ?? ''}
@@ -1550,6 +1664,7 @@ export function ChatPanel({
         drugInteractionAlerts={reviewData?.drugInteractionAlerts ?? []}
         onConfirm={handleReviewConfirm}
         onCancel={handleReviewCancel}
+        initialComments={reviewData?.pendingComments ?? ''}
         isGenerating={isGeneratingFinal}
       />
 
@@ -1561,7 +1676,7 @@ export function ChatPanel({
 
       {patient && (
         <DocumentComposerModal
-          open={composerOpen}
+          open={composerOpen && composerPatientIdRef.current === patient.id}
           onOpenChange={setComposerOpen}
           patient={patient}
           onGenerate={handleComposerGenerate}
@@ -1570,12 +1685,12 @@ export function ChatPanel({
       )}
 
       <DocumentPreviewModal
-        open={!!documentModal}
+        open={!!documentModal && documentModal.patientId === patient.id}
         onClose={() => setDocumentModal(null)}
         type={documentModal?.type ?? 'patient_summary'}
         content={documentModal?.content ?? ''}
         isLoading={documentModal?.isLoading ?? false}
-        patientName={patient?.name ?? ''}
+        patientName={documentModal?.patientName ?? ''}
       />
     </div>
   );

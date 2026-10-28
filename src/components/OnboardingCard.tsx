@@ -10,11 +10,12 @@ interface OnboardingCardProps {
   patientCount: number;
   hasConsultation: boolean;
   userId: string;
+  onNewConsultation: () => void;
 }
 
 /** First-run guided checklist. Dismissed per user via localStorage — a nudge,
  *  not a wall; disappears automatically once every step is complete. */
-export function OnboardingCard({ patientCount, hasConsultation, userId }: OnboardingCardProps) {
+export function OnboardingCard({ patientCount, hasConsultation, userId, onNewConsultation }: OnboardingCardProps) {
   const navigate = useNavigate();
   const { prescriberComplete } = useUserSettings();
   const dismissKey = `cortex_onboarding_dismissed_${userId}`;
@@ -28,8 +29,8 @@ export function OnboardingCard({ patientCount, hasConsultation, userId }: Onboar
     { key: 'template', done: false, label: 'Explorar modelos de documento', icon: FileStack,
       hint: 'Personalize a estrutura das evoluções', action: () => navigate('/modelos'), optional: true },
     { key: 'consult', done: hasConsultation, label: 'Gravar sua primeira consulta', icon: Mic,
-      hint: 'Selecione um paciente e grave', action: () => {} },
-  ], [prescriberComplete, patientCount, hasConsultation, navigate]);
+      hint: 'Selecione um paciente e grave', action: onNewConsultation },
+  ], [prescriberComplete, patientCount, hasConsultation, navigate, onNewConsultation]);
 
   const required = steps.filter(s => !s.optional);
   const doneCount = required.filter(s => s.done).length;

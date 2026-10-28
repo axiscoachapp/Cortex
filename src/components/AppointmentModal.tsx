@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Trash2, Mail, MessageCircle, Loader2, UserPlus } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -85,16 +85,21 @@ export function AppointmentModal({
   const [deleting, setDeleting] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [loadingWa, setLoadingWa] = useState(false);
+  const [waLinks, setWaLinks] = useState<Record<string, string>>({});
+  const activeAppointmentId = useRef(appointment?.id);
+  activeAppointmentId.current = appointment?.id;
 
   // New patient inline fields
   const [newName, setNewName] = useState('');
   const [newAge, setNewAge] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [initialForm, setInitialForm] = useState('');
 
   const isNewPatient = patientId === NEW_PATIENT;
 
   useEffect(() => {
     if (!open) return;
+    setLoadingWa(false);
     if (appointment) {
       setPatientId(appointment.patientId ?? '');
       setTitle(appointment.title);
@@ -117,6 +122,7 @@ export function AppointmentModal({
     setNewName('');
     setNewAge('');
     setNewPhone('');
+    setInitialForm(JSON.stringify(appointment ? [appointment.patientId ?? '', appointment.title, appointment.type, format(appointment.startTime, 'yyyy-MM-dd'), toTimeString(appointment.startTime), toTimeString(appointment.endTime), appointment.status, appointment.notes ?? '', '', '', ''] : ['', '', 'retorno', format(defaultStart ?? new Date(), 'yyyy-MM-dd'), defaultStart ? toTimeString(defaultStart) : '09:00', defaultEnd ? toTimeString(defaultEnd) : '09:30', 'agendado', '', '', '', '']));
   }, [open, appointment, defaultStart, defaultEnd]);
 
   // Auto-fill title when patient or type changes
@@ -128,20 +134,20 @@ export function AppointmentModal({
       const p = patients.find(p => p.id === patientId);
       if (p) setTitle(`${p.name} — ${TYPE_LABELS[type]}`);
     }
-  }, [patientId, type, isEdit, newName, isNewPatient]);
+  }, [patientId, type, isEdit, newName, isNewPatient, patients]);
 
   const selectedPatient = isNewPatient ? undefined : patients.find(p => p.id === patientId);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || saving || deleting) return;
 
     if (isNewPatient) {
       if (!newName.trim()) {
         toast({ title: 'Nome do paciente é obrigatório', variant: 'destructive' });
         return;
       }
-      if (!newAge || parseInt(newAge) < 0) {
+      if (!newAge || !Number.isInteger(Number(newAge)) || Number(newAge) < 0 || Number(newAge) > 130) {
         toast({ title: 'Idade inválida', variant: 'destructive' });
         return;
       }
@@ -149,7 +155,7 @@ export function AppointmentModal({
 
     const startDt = buildDateTime(date, startTime);
     const endDt = buildDateTime(date, endTime);
-    if (endDt.getTime() <= startDt.getTime()) {
+    if (!Number.isFinite(startDt.getTime()) || !Number.isFinite(endDt.getTime()) || endDt.getTime() <= startDt.getTime()) {
       toast({
         title: 'Horário inválido',
         description: 'O horário de fim deve ser depois do início.',
@@ -178,6 +184,9 @@ export function AppointmentModal({
           .single();
         if (patientError) throw patientError;
         resolvedPatientId = newPatient.id;
+        // Keep the created patient selected if the appointment write fails,
+        // so retrying does not create a duplicate patient.
+        setPatientId(newPatient.id);
         queryClient.invalidateQueries({ queryKey: ['patients', userId] });
       }
 
@@ -236,21 +245,23 @@ export function AppointmentModal({
       });
       onSaved();
       onOpenChange(false);
-    } catch (err: any) {
-      toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
+    } catch {
+      toast({ title: 'Erro ao salvar', description: 'Os dados foram mantidos. Tente novamente.', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!appointment) return;
+    if (!appointment || deleting || saving) return;
+    if (!window.confirm(`Excluir a consulta "${appointment.title}" de ${format(appointment.startTime, 'dd/MM/yyyy HH:mm')}? Esta ação não pode ser desfeita.`)) return;
     setDeleting(true);
     try {
       if (googleConnected && appointment.googleEventId) {
-        supabase.functions.invoke('sync-google-calendar', {
+        const { error: syncError } = await supabase.functions.invoke('sync-google-calendar', {
           body: { action: 'delete', appointment: { id: appointment.id, google_event_id: appointment.googleEventId } },
-        }).catch(() => {});
+        });
+        if (syncError) throw syncError;
       }
       const { error } = await supabase.from('appointments').delete().eq('id', appointment.id);
       if (error) throw error;
@@ -268,11 +279,12 @@ export function AppointmentModal({
     if (!appointment) return;
     setSendingEmail(true);
     try {
-      const { error } = await supabase.functions.invoke('send-appointment-reminder', {
+      const { data, error } = await supabase.functions.invoke('send-appointment-reminder', {
         body: { appointmentId: appointment.id, type: 'email', userId },
       });
-      if (error) throw error;
+      if (error || data?.success !== true) throw error ?? new Error('Envio não confirmado');
       toast({ title: 'Lembrete enviado por email!' });
+      onSaved();
     } catch {
       toast({ title: 'Erro ao enviar email', variant: 'destructive' });
     } finally {
@@ -282,35 +294,50 @@ export function AppointmentModal({
 
   const handleWhatsAppReminder = async () => {
     if (!appointment) return;
+    const requestedId = appointment.id;
     setLoadingWa(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-appointment-reminder', {
         body: { appointmentId: appointment.id, type: 'whatsapp', userId },
       });
       if (error) throw error;
-      if (data?.waLink) window.open(data.waLink, '_blank');
+      if (typeof data?.waLink !== 'string') throw new Error('Link ausente');
+      const link = new URL(data.waLink);
+      if (link.protocol !== 'https:' || link.hostname !== 'wa.me') throw new Error('Link inválido');
+      setWaLinks(previous => ({ ...previous, [requestedId]: link.href }));
+      if (activeAppointmentId.current === requestedId) {
+        window.open(link.href, '_blank', 'noopener,noreferrer');
+        toast({ title: 'Link do WhatsApp pronto', description: 'Revise e envie a mensagem no WhatsApp. A abertura do link não confirma o envio.' });
+      }
     } catch {
       toast({ title: 'Erro ao gerar link WhatsApp', variant: 'destructive' });
     } finally {
-      setLoadingWa(false);
+      if (activeAppointmentId.current === requestedId) setLoadingWa(false);
     }
   };
 
   const canSave = title.trim() && (!isNewPatient || (newName.trim() && newAge));
+  const dirty = initialForm !== JSON.stringify([patientId, title, type, format(date, 'yyyy-MM-dd'), startTime, endTime, status, notes, newName, newAge, newPhone]);
+  const requestClose = (next: boolean) => {
+    if (saving || deleting || (!next && dirty && !window.confirm('Descartar alterações do agendamento?'))) return;
+    onOpenChange(next);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={requestClose}>
       <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Editar Consulta' : 'Nova Consulta'}</DialogTitle>
+          <DialogDescription className="sr-only">Defina o paciente, a data, os horários e o estado deste agendamento.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSave} className="space-y-4 mt-2">
+          <fieldset disabled={saving || deleting} className="space-y-4">
           {/* Patient */}
           <div className="space-y-1.5">
-            <Label>Paciente</Label>
+            <Label htmlFor="appointment-patient">Paciente</Label>
             <Select value={patientId} onValueChange={setPatientId}>
-              <SelectTrigger>
+              <SelectTrigger id="appointment-patient">
                 <SelectValue placeholder="Selecionar paciente..." />
               </SelectTrigger>
               <SelectContent>
@@ -337,18 +364,19 @@ export function AppointmentModal({
                   Novo paciente — será cadastrado ao agendar
                 </p>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Nome *</Label>
+                  <Label htmlFor="appointment-new-name" className="text-xs">Nome *</Label>
                   <Input
+                    id="appointment-new-name"
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
                     placeholder="Nome completo"
-                    autoFocus
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Idade *</Label>
+                    <Label htmlFor="appointment-new-age" className="text-xs">Idade *</Label>
                     <Input
+                      id="appointment-new-age"
                       type="number"
                       min={0}
                       max={130}
@@ -358,8 +386,10 @@ export function AppointmentModal({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Telefone <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                    <Label htmlFor="appointment-new-phone" className="text-xs">Telefone <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                     <Input
+                      id="appointment-new-phone"
+                      type="tel"
                       value={newPhone}
                       onChange={e => setNewPhone(e.target.value)}
                       placeholder="(11) 9 9999-9999"
@@ -372,8 +402,9 @@ export function AppointmentModal({
 
           {/* Title */}
           <div className="space-y-1.5">
-            <Label>Título *</Label>
+            <Label htmlFor="appointment-title">Título *</Label>
             <Input
+              id="appointment-title"
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="Título da consulta"
@@ -384,9 +415,9 @@ export function AppointmentModal({
           {/* Type + Status */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Tipo</Label>
-              <Select value={type} onValueChange={v => setType(v as any)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label htmlFor="appointment-type">Tipo</Label>
+              <Select value={type} onValueChange={(value: Appointment['type']) => setType(value)}>
+                <SelectTrigger id="appointment-type"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(TYPE_LABELS).map(([v, l]) => (
                     <SelectItem key={v} value={v}>{l}</SelectItem>
@@ -395,9 +426,9 @@ export function AppointmentModal({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Status</Label>
-              <Select value={status} onValueChange={v => setStatus(v as any)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label htmlFor="appointment-status">Status</Label>
+              <Select value={status} onValueChange={(value: Appointment['status']) => setStatus(value)}>
+                <SelectTrigger id="appointment-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(STATUS_LABELS).map(([v, l]) => (
                     <SelectItem key={v} value={v}>{l}</SelectItem>
@@ -409,10 +440,12 @@ export function AppointmentModal({
 
           {/* Date */}
           <div className="space-y-1.5">
-            <Label>Data</Label>
+            <Label htmlFor="appointment-date">Data</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
+                  id="appointment-date"
+                  type="button"
                   variant="outline"
                   className={cn('w-full justify-start text-left font-normal', !date && 'text-muted-foreground')}
                 >
@@ -435,19 +468,20 @@ export function AppointmentModal({
           {/* Times */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Início</Label>
-              <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
+              <Label htmlFor="appointment-start">Início</Label>
+              <Input id="appointment-start" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label>Fim</Label>
-              <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
+              <Label htmlFor="appointment-end">Fim</Label>
+              <Input id="appointment-end" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} required />
             </div>
           </div>
 
           {/* Notes */}
           <div className="space-y-1.5">
-            <Label>Observações</Label>
+            <Label htmlFor="appointment-notes">Observações</Label>
             <Textarea
+              id="appointment-notes"
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Motivo, observações pré-consulta..."
@@ -484,6 +518,10 @@ export function AppointmentModal({
               </Button>
             </div>
           )}
+          {appointment && waLinks[appointment.id] && <div role="status" className="text-xs space-y-1">
+            <p>Link pronto. O lembrete só será enviado quando você confirmar no WhatsApp.</p>
+            <a href={waLinks[appointment.id]} target="_blank" rel="noopener noreferrer" className="text-medical-blue underline">Abrir WhatsApp para revisar e enviar</a>
+          </div>}
 
           {/* Actions */}
           <div className="flex gap-2 pt-2">
@@ -492,6 +530,7 @@ export function AppointmentModal({
                 type="button"
                 variant="ghost"
                 size="icon"
+                aria-label="Excluir agendamento"
                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={handleDelete}
                 disabled={deleting}
@@ -500,7 +539,7 @@ export function AppointmentModal({
               </Button>
             )}
             <div className="flex-1" />
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => requestClose(false)}>
               Cancelar
             </Button>
             <Button type="submit" variant="medical" disabled={saving || !canSave}>
@@ -508,6 +547,7 @@ export function AppointmentModal({
               {isEdit ? 'Atualizar' : isNewPatient ? 'Cadastrar e Agendar' : 'Agendar'}
             </Button>
           </div>
+          </fieldset>
         </form>
       </DialogContent>
     </Dialog>

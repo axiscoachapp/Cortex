@@ -3,6 +3,7 @@ import { ClipboardCheck, Pencil, X, Plus, AlertCircle, CheckCircle2 } from 'luci
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ProfileUpdates, Diagnosis, Medication } from '@/types/patient';
+import { mergeMedications } from '@/lib/medicationMerge';
 
 /** Union of existing profile entries (untouched) plus the accepted new ones. */
 export interface MergedProfile {
@@ -33,21 +34,7 @@ function mergeDiagnoses(existing: Diagnosis[], incoming: { description: string }
   for (const inc of incoming) {
     if (!existingDescs.has(inc.description.toLowerCase().trim())) {
       base.push({ code: '', description: inc.description });
-    }
-  }
-  return base;
-}
-
-function mergeMedications(
-  existing: Medication[],
-  incoming: { name: string; dosage: string; instructions: string }[],
-): Medication[] {
-  const existingNames = new Set(existing.map(m => m.name.toLowerCase().trim()));
-  const base: Medication[] = [...existing];
-  const today = new Date().toISOString().split('T')[0];
-  for (const inc of incoming) {
-    if (!existingNames.has(inc.name.toLowerCase().trim())) {
-      base.push({ ...inc, startedAt: today });
+      existingDescs.add(inc.description.toLowerCase().trim());
     }
   }
   return base;
@@ -57,7 +44,7 @@ function mergeAllergies(existing: string[], incoming: string[]): string[] {
   const set = new Set(existing.map(a => a.toLowerCase().trim()));
   const base = [...existing];
   for (const inc of incoming) {
-    if (!set.has(inc.toLowerCase().trim())) base.push(inc);
+    if (!set.has(inc.toLowerCase().trim())) { base.push(inc); set.add(inc.toLowerCase().trim()); }
   }
   return base;
 }
@@ -141,6 +128,15 @@ export function ProfileUpdateCard({
       </div>
 
       <div className="px-4 py-3 space-y-4">
+        {initial.medications.map((next, index) => {
+          const previous = existing.medications.find(m => m.name.trim().toLowerCase() === next.name.trim().toLowerCase());
+          return previous && (previous.dosage !== next.dosage || previous.instructions !== next.instructions) ? (
+            <p key={`change-${index}`} className="text-xs rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-950">
+              <strong>Revisar alteração de {next.name}:</strong> {previous.dosage} · {previous.instructions}
+              {' → '}{next.dosage} · {next.instructions}. Ao aceitar, esta alteração substituirá a posologia anterior.
+            </p>
+          ) : null;
+        })}
         {/* Diagnoses */}
         {(status === 'editing' ? editDx.length > 0 || true : initial.diagnoses.length > 0) && (
           <Section
@@ -154,6 +150,7 @@ export function ProfileUpdateCard({
                 renderItem={(v, i) => (
                   <ItemRow key={i} onRemove={() => setEditDx(editDx.filter((_, j) => j !== i))}>
                     <input
+                      aria-label={`Diagnóstico ${i + 1}`}
                       value={v}
                       onChange={e => setEditDx(editDx.map((x, j) => j === i ? e.target.value : x))}
                       className="flex-1 text-xs bg-white border border-border/60 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-medical-blue/30"
@@ -191,6 +188,7 @@ export function ProfileUpdateCard({
                       {(['name', 'dosage', 'instructions'] as const).map(field => (
                         <input
                           key={field}
+                          aria-label={`${field === 'name' ? 'Nome' : field === 'dosage' ? 'Dose' : 'Instruções'} do medicamento ${i + 1}`}
                           value={med[field]}
                           onChange={e => setEditMeds(editMeds.map((m, j) => j === i ? { ...m, [field]: e.target.value } : m))}
                           placeholder={field === 'name' ? 'Nome' : field === 'dosage' ? 'Dose' : 'Instruções'}
@@ -205,6 +203,7 @@ export function ProfileUpdateCard({
                     {(['name', 'dosage', 'instructions'] as const).map(field => (
                       <input
                         key={field}
+                        aria-label={`${field === 'name' ? 'Nome' : field === 'dosage' ? 'Dose' : 'Instruções'} do novo medicamento`}
                         value={addMed[field]}
                         onChange={e => setAddMed({ ...addMed, [field]: e.target.value })}
                         placeholder={field === 'name' ? 'Nome' : field === 'dosage' ? 'Dose' : 'Instruções'}
@@ -213,6 +212,7 @@ export function ProfileUpdateCard({
                     ))}
                     <button
                       type="button"
+                      aria-label="Adicionar medicamento ao perfil"
                       onClick={() => {
                         if (addMed.name.trim()) {
                           setEditMeds([...editMeds, { ...addMed }]);
@@ -248,6 +248,7 @@ export function ProfileUpdateCard({
                 renderItem={(v, i) => (
                   <ItemRow key={i} onRemove={() => setEditAlg(editAlg.filter((_, j) => j !== i))}>
                     <input
+                      aria-label={`Alergia ${i + 1}`}
                       value={v}
                       onChange={e => setEditAlg(editAlg.map((x, j) => j === i ? e.target.value : x))}
                       className="flex-1 text-xs bg-white border border-border/60 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-medical-blue/30"
@@ -298,7 +299,6 @@ export function ProfileUpdateCard({
               size="sm"
               className="gap-1.5 text-xs ml-auto"
               onClick={handleAccept}
-              disabled={status === 'saving'}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               Salvar edição
@@ -409,6 +409,7 @@ function ItemRow({ children, onRemove }: { children: React.ReactNode; onRemove: 
       {children}
       <button
         type="button"
+        aria-label="Remover item do perfil"
         onClick={onRemove}
         className="shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground/50 hover:text-red-500"
       >
@@ -432,6 +433,7 @@ function AddRow({
   return (
     <div className="flex gap-1 mt-1">
       <input
+        aria-label={placeholder}
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), onAdd())}
@@ -440,6 +442,7 @@ function AddRow({
       />
       <button
         type="button"
+        aria-label={`Adicionar item: ${placeholder}`}
         onClick={onAdd}
         className="shrink-0 w-6 h-6 flex items-center justify-center rounded bg-medical-blue/10 hover:bg-medical-blue/20 text-medical-blue"
       >

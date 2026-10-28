@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,37 +9,39 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Brain, Plus, Pencil, Trash2, ArrowLeft, Upload } from 'lucide-react';
 import { ImportPatientsModal } from '@/components/ImportPatientsModal';
 import { useToast } from '@/hooks/use-toast';
 import { Patient } from '@/types/patient';
+import { formatDateOnly } from '@/lib/dates';
+import { fetchAllRows } from '@/lib/pagination';
 
 const PatientManagement = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     age: '',
     profession: '',
     last_visit: '',
-    status: 'novo' as const,
+    status: 'novo' as Patient['status'],
   });
 
-  if (!user) { navigate('/auth'); return null; }
-
-  const { data: patients = [], isLoading: loading } = useQuery<Patient[]>({
-    queryKey: ['patients', user.id],
+  const { data: patients = [], isLoading: loading, isError, refetch } = useQuery<Patient[]>({
+    queryKey: ['patients', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('patients').select('*').order('name');
-      if (error) throw error;
-      return (data ?? []).map(mapPatientRow);
+      const data = await fetchAllRows((from, to) => supabase.from('patients').select('*').order('name').order('id').range(from, to));
+      return data.map(mapPatientRow);
     },
     enabled: !!user,
   });
@@ -47,14 +49,16 @@ const PatientManagement = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.age || !formData.last_visit) {
+    if (saving) return;
+    if (!formData.name.trim() || !formData.age || !formData.last_visit || !Number.isInteger(Number(formData.age)) || Number(formData.age) < 0 || Number(formData.age) > 130) {
       toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
       return;
     }
 
+    setSaving(true);
     try {
       const patientData = {
-        name: formData.name,
+        name: formData.name.trim(),
         age: parseInt(formData.age),
         profession: formData.profession,
         last_visit: formData.last_visit,
@@ -81,26 +85,22 @@ const PatientManagement = () => {
 
       setDialogOpen(false);
       resetForm();
-      queryClient.invalidateQueries({ queryKey: ['patients', user.id] });
-    } catch (error: any) {
+      queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
+    } catch {
       toast({ title: 'Erro ao salvar paciente', variant: 'destructive' });
-    }
+    } finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este paciente?')) return;
 
     try {
-      const { error } = await supabase
-        .from('patients')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke('delete-patient', { body: { patientId: id } });
+      if (error || data?.success !== true) throw error ?? new Error('Exclusão incompleta');
       toast({ title: 'Paciente excluído com sucesso!' });
-      queryClient.invalidateQueries({ queryKey: ['patients', user.id] });
-    } catch (error: any) {
-      toast({ title: 'Erro ao excluir paciente', variant: 'destructive' });
+      queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
+    } catch {
+      toast({ title: 'Exclusão incompleta', description: 'Tente excluir novamente para concluir a remoção dos dados e arquivos.', variant: 'destructive' });
     }
   };
 
@@ -127,6 +127,24 @@ const PatientManagement = () => {
     setEditingPatient(null);
   };
 
+  const baseline = editingPatient ? {
+    name: editingPatient.name, age: editingPatient.age.toString(), profession: editingPatient.profession,
+    last_visit: editingPatient.lastVisit, status: editingPatient.status,
+  } : { name: '', age: '', profession: '', last_visit: '', status: 'novo' };
+  const dirty = JSON.stringify(formData) !== JSON.stringify(baseline);
+  const setDialog = (open: boolean) => {
+    if (saving || (!open && dirty && !window.confirm('Descartar alterações do paciente?'))) return;
+    setDialogOpen(open);
+    if (!open) resetForm();
+  };
+  const filtered = patients.filter(patient => `${patient.name} ${patient.profession}`.toLocaleLowerCase('pt-BR').includes(search.trim().toLocaleLowerCase('pt-BR')));
+  const pageCount = Math.ceil(filtered.length / 50);
+  const currentPage = Math.min(page, Math.max(0, pageCount - 1));
+  const visiblePatients = filtered.slice(currentPage * 50, currentPage * 50 + 50);
+
+  if (authLoading) return <p role="status" className="p-8">Carregando…</p>;
+  if (!user) return <Navigate to="/auth" replace />;
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-background border-b">
@@ -146,25 +164,23 @@ const PatientManagement = () => {
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base md:text-xl">Pacientes</CardTitle>
             <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+            <Button size="sm" variant="outline" aria-label="Importar pacientes" onClick={() => setImportOpen(true)}>
               <Upload className="h-4 w-4 md:mr-2" />
               <span className="hidden sm:inline">Importar</span>
             </Button>
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (!open) resetForm();
-            }}>
+            <Dialog open={dialogOpen} onOpenChange={setDialog}>
               <DialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" aria-label="Novo Paciente">
                   <Plus className="h-4 w-4 md:mr-2" />
                   <span className="hidden sm:inline">Novo Paciente</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-h-[90dvh] overflow-y-auto max-w-[calc(100vw-16px)] sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>
                     {editingPatient ? 'Editar Paciente' : 'Novo Paciente'}
                   </DialogTitle>
+                  <DialogDescription className="sr-only">Revise os dados do paciente antes de salvar.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
@@ -181,6 +197,9 @@ const PatientManagement = () => {
                     <Input
                       id="age"
                       type="number"
+                      min={0}
+                      max={130}
+                      step={1}
                       value={formData.age}
                       onChange={(e) => setFormData({ ...formData, age: e.target.value })}
                       required
@@ -208,9 +227,9 @@ const PatientManagement = () => {
                     <Label htmlFor="status">Status</Label>
                     <Select
                       value={formData.status}
-                      onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                      onValueChange={(value: Patient['status']) => setFormData({ ...formData, status: value })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="status">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -221,8 +240,8 @@ const PatientManagement = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button type="submit" className="w-full">
-                    {editingPatient ? 'Atualizar' : 'Adicionar'}
+                  <Button type="submit" className="w-full" disabled={saving}>
+                    {saving ? 'Salvando…' : editingPatient ? 'Atualizar' : 'Adicionar'}
                   </Button>
                 </form>
               </DialogContent>
@@ -230,21 +249,27 @@ const PatientManagement = () => {
             </div>
           </CardHeader>
           <CardContent>
+            <Input type="search" aria-label="Buscar pacientes" placeholder="Buscar por nome ou profissão…" value={search} onChange={event => { setSearch(event.target.value); setPage(0); }} className="mb-4" />
             {loading ? (
               <p className="text-center py-8 text-muted-foreground">Carregando...</p>
-            ) : patients.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">Nenhum paciente cadastrado</p>
+            ) : isError ? (
+              <div role="alert" className="text-center py-8 space-y-3">
+                <p>Não foi possível carregar os pacientes.</p>
+                <Button variant="outline" onClick={() => refetch()}>Tentar novamente</Button>
+              </div>
+            ) : filtered.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">{search ? 'Nenhum paciente corresponde à busca' : 'Nenhum paciente cadastrado'}</p>
             ) : (
               <>
                 {/* Mobile cards */}
                 <div className="md:hidden space-y-2">
-                  {patients.map((patient) => (
+                  {visiblePatients.map((patient) => (
                     <div key={patient.id} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-background">
                       <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold bg-medical-blue/10 text-medical-blue">
                         {patient.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-foreground truncate">{patient.name}</p>
+                        <Link to={`/?patient=${encodeURIComponent(patient.id)}`} aria-label={`Abrir prontuário de ${patient.name}`} className="font-medium text-sm text-medical-blue hover:underline truncate block">{patient.name}</Link>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {patient.age} anos{patient.profession ? ` · ${patient.profession}` : ''}
                         </p>
@@ -253,7 +278,7 @@ const PatientManagement = () => {
                             {patient.status}
                           </span>
                           <span className="text-[10px] text-muted-foreground">
-                            {new Date(patient.lastVisit).toLocaleDateString('pt-BR')}
+                            {formatDateOnly(patient.lastVisit)}
                           </span>
                         </div>
                       </div>
@@ -283,12 +308,12 @@ const PatientManagement = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {patients.map((patient) => (
+                      {visiblePatients.map((patient) => (
                         <TableRow key={patient.id}>
-                          <TableCell className="font-medium">{patient.name}</TableCell>
+                          <TableCell className="font-medium"><Link to={`/?patient=${encodeURIComponent(patient.id)}`} aria-label={`Abrir prontuário de ${patient.name}`} className="text-medical-blue hover:underline">{patient.name}</Link></TableCell>
                           <TableCell>{patient.age}</TableCell>
                           <TableCell>{patient.profession}</TableCell>
-                          <TableCell>{new Date(patient.lastVisit).toLocaleDateString('pt-BR')}</TableCell>
+                          <TableCell>{formatDateOnly(patient.lastVisit)}</TableCell>
                           <TableCell><span className="capitalize">{patient.status}</span></TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" aria-label="Editar paciente" onClick={() => handleEdit(patient)}>
@@ -305,6 +330,11 @@ const PatientManagement = () => {
                 </div>
               </>
             )}
+            {pageCount > 1 && <nav aria-label="Paginação de pacientes" className="flex items-center justify-center gap-3 pt-4">
+              <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Anterior</Button>
+              <span className="text-sm" aria-live="polite">Página {currentPage + 1} de {pageCount}</span>
+              <Button variant="outline" size="sm" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}>Próxima</Button>
+            </nav>}
           </CardContent>
         </Card>
       </main>

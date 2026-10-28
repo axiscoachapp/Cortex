@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { printPrescription } from '@/lib/printDoc';
+import { functionErrorBody } from '@/lib/functionErrors';
 
 interface PatientSnapshotProps {
   patient: Patient | null;
@@ -63,7 +64,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
   useEffect(() => { onWorkStateChange?.(hasWork); }, [hasWork, onWorkStateChange]);
 
   const { data: clinicalNotes = '', isError: notesError, refetch: retryNotes } = useQuery<string>({
-    queryKey: ['patient-clinical-notes', patient?.id],
+    queryKey: ['patient-clinical-notes', patient?.id, userId],
     queryFn: async () => {
       if (!patient?.id) return '';
       const { data, error } = await supabase
@@ -109,11 +110,9 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
         body: { patientId: patient.id, notes: notes.trim(), userId },
       });
       if (error) {
-        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
-          ? await (error as any).context.json().catch(() => null)
-          : null;
+        const body = await functionErrorBody(error);
         if (body?.quotaExceeded) {
-          toast({ title: 'Limite diário atingido', description: body.error ?? '', variant: 'destructive' });
+          toast({ title: 'Limite diário atingido', description: typeof body.error === 'string' ? body.error : '', variant: 'destructive' });
           queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
           return;
         }
@@ -122,9 +121,11 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
       toast({ title: 'Notas processadas!', description: data.message || 'Perfil atualizado com insights da IA.' });
       setDrafts(prev => prev[submittedKey] === submitted ? { ...prev, [submittedKey]: '' } : prev);
       queryClient.invalidateQueries({ queryKey: ['patient-clinical-notes', patient.id] });
+      queryClient.invalidateQueries({ queryKey: ['patient-detail', patient.id] });
+      queryClient.invalidateQueries({ queryKey: ['patients', userId] });
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
-    } catch (err: any) {
-      toast({ title: 'Erro ao processar', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Erro ao processar', description: err instanceof Error ? err.message : 'Tente novamente.', variant: 'destructive' });
     } finally {
       setProcessing(prev => ({ ...prev, [submittedKey]: false }));
     }

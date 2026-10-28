@@ -184,7 +184,11 @@
   color: hsl(var(--foreground));
 }
 .rbc-toolbar {
-  display: none; /* we use our own header */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  font-size: 0.875rem;
 }
 .rbc-header {
   background: hsl(var(--muted)/0.4);
@@ -250,4 +254,18 @@
 .rbc-slot-selection {
   background: hsl(210 65% 50% / 0.15);
   border: 1px solid hsl(210 65% 50% / 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .rbc-toolbar { justify-content: center; }
+  .rbc-toolbar .rbc-toolbar-label { flex-basis: 100%; order: -1; }
 }

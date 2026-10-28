@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useLocation, useBlocker, useBeforeUnload } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,21 +15,60 @@ import { Patient, ChatMessage } from '@/types/patient';
 import { useToast } from '@/hooks/use-toast';
 import { useSeedPatients } from '@/hooks/useSeedPatients';
 import { mapPatientRow } from '@/lib/patientMapper';
+import { clinicDate } from '@/lib/dates';
+import { fetchAllRows } from '@/lib/pagination';
+import { functionErrorBody } from '@/lib/functionErrors';
 
 const Index = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, signOut, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chiefComplaint, setChiefComplaint] = useState('');
+  const [patientMessages, setPatientMessages] = useState<Record<string, ChatMessage[]>>({});
+  const [patientComplaints, setPatientComplaints] = useState<Record<string, string>>({});
+  const [chatBusy, setChatBusy] = useState(false);
+  const [snapshotBusy, setSnapshotBusy] = useState(false);
+  const [captureBusy, setCaptureBusy] = useState(false);
+  const hasWork = chatBusy || snapshotBusy || captureBusy;
+  const selectedId = selectedPatient?.id ?? '';
+  const chatMessages = patientMessages[selectedId] ?? [];
+  const chiefComplaint = patientComplaints[selectedId] ?? '';
+  const setChatMessages = useCallback((value: ChatMessage[] | ((previous: ChatMessage[]) => ChatMessage[])) => {
+    setPatientMessages(previous => ({ ...previous, [selectedId]: typeof value === 'function' ? value(previous[selectedId] ?? []) : value }));
+  }, [selectedId]);
   const [showNewConsultationModal, setShowNewConsultationModal] = useState(false);
   const [preBriefing, setPreBriefing] = useState<PreBriefing | null>(null);
   const [briefingLoading, setBriefingLoading] = useState(false);
+  const [briefingError, setBriefingError] = useState(false);
   const [mobileView, setMobileView] = useState<'home' | 'list' | 'chat' | 'info'>('home');
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const preBriefingCache = useRef<Map<string, PreBriefing>>(new Map());
+  const selectedPatientIdRef = useRef<string | null>(null);
+  const selectedRevisionRef = useRef(0);
+  selectedRevisionRef.current = selectedPatient?.revision ?? 0;
+  const briefingRequestRef = useRef(0);
+  // Data-router blocking also covers Back and links outside the sidebar.
+  // https://reactrouter.com/6.30.1/hooks/use-blocker
+  const blocker = useBlocker(useCallback(({ currentLocation, nextLocation }) =>
+    hasWork && currentLocation.pathname !== nextLocation.pathname, [hasWork]));
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return;
+    if (captureBusy) {
+      toast({title:'Gravação ainda não salva',description:'Pare a gravação e aguarde o salvamento antes de sair desta tela.',variant:'destructive'});
+      blocker.reset();
+      return;
+    }
+    if (window.confirm('Há trabalho não concluído. Sair desta tela? Rascunhos de consulta salvos poderão ser retomados; textos ainda não enviados serão descartados.')) blocker.proceed();
+    else blocker.reset();
+  }, [blocker, captureBusy, toast]);
+  useBeforeUnload(useCallback((event) => {
+    if (hasWork) { event.preventDefault(); event.returnValue = ''; }
+  }, [hasWork]));
+  const confirmPatientChange = useCallback((nextId: string | null) =>
+    nextId === selectedPatientIdRef.current || !hasWork || window.confirm('Há trabalho não concluído. Mudar de paciente? Os rascunhos permanecem vinculados ao paciente original.'), [hasWork]);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
@@ -40,16 +79,12 @@ const Index = () => {
 
   useSeedPatients(user?.id);
 
-  const { data: patients = [] } = useQuery<Patient[]>({
+  const { data: patients = [], isError: patientsError, refetch: retryPatients } = useQuery<Patient[]>({
     queryKey: ['patients', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return (data ?? []).map(mapPatientRow);
+      const data = await fetchAllRows((from, to) => supabase.from('patients').select('*').order('name').order('id').range(from, to));
+      return data.map(mapPatientRow);
     },
     enabled: !!user?.id,
   });
@@ -59,20 +94,33 @@ const Index = () => {
   }, [user, loading, navigate]);
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
+    if (captureBusy) { toast({title:'Gravação ainda não salva',description:'Pare a gravação e aguarde o salvamento antes de sair da conta.',variant:'destructive'}); return; }
+    if (hasWork && !window.confirm('Sair da conta com trabalho não concluído? Textos ainda não enviados serão descartados.')) return;
+    try { await signOut(); navigate('/auth'); }
+    catch { toast({title:'Não foi possível sair da conta',description:'A sessão continua aberta. Verifique sua conexão e tente novamente.',variant:'destructive'}); }
   };
 
-  const handleSelectPatient = async (patient: Patient) => {
+  const activatePatient = async (patient: Patient, complaint?: string) => {
     const requestedId = patient.id;
     selectedPatientIdRef.current = requestedId;
     setSelectedPatient(patient);
-    setChatMessages([]);
-    setChiefComplaint('');
+    if (complaint !== undefined) setPatientComplaints(previous => ({ ...previous, [requestedId]: complaint }));
 
     setMobileView('chat');
+    await loadBriefing(patient);
+  };
 
-    const cached = preBriefingCache.current.get(requestedId);
+  const loadBriefing = async (patient: Patient) => {
+    if (selectedPatientIdRef.current !== patient.id) return;
+    const requestedId = patient.id;
+    const requestedRevision = patient.revision ?? 0;
+    selectedRevisionRef.current = requestedRevision;
+    const request = ++briefingRequestRef.current;
+    const isCurrentRequest = () => selectedPatientIdRef.current === requestedId && selectedRevisionRef.current === requestedRevision && briefingRequestRef.current === request;
+    setBriefingError(false);
+
+    const cacheKey = `${requestedId}/${patient.revision ?? 0}/${clinicDate()}`;
+    const cached = preBriefingCache.current.get(cacheKey);
     if (cached) {
       setPreBriefing(cached);
       setBriefingLoading(false);
@@ -97,9 +145,8 @@ const Index = () => {
       // Refresh usage meter regardless of whether briefing was cached or generated.
       queryClient.invalidateQueries({ queryKey: ['usage-daily', user?.id] });
       if (error) {
-        const body = (error as any)?.context && typeof (error as any).context.json === 'function'
-          ? await (error as any).context.json().catch(() => null)
-          : null;
+        if (isCurrentRequest()) setBriefingError(true);
+        const body = await functionErrorBody(error);
         if (body?.quotaExceeded) {
           toast({
             title: 'Limite diário atingido',
@@ -115,20 +162,44 @@ const Index = () => {
           });
         }
       } else if (data) {
-        preBriefingCache.current.set(requestedId, data);
+        if (typeof data !== 'object' || !['returnInfo','previousComplaint','pending','alert'].every(key=>typeof data[key] === 'string')) throw new Error('Resumo inválido');
         // A slow response for a previously selected patient must never
         // overwrite the briefing of the patient displayed now.
-        if (selectedPatientIdRef.current === requestedId) setPreBriefing(data);
+        if (isCurrentRequest()) { preBriefingCache.current.set(cacheKey, data); setPreBriefing(data); }
       }
     } catch {
-      // non-critical
+      if (isCurrentRequest()) {
+        setBriefingError(true);
+        toast({ title: 'Resumo pré-consulta indisponível', description: 'Tente novamente pelo resumo.' });
+      }
     } finally {
-      if (selectedPatientIdRef.current === requestedId) setBriefingLoading(false);
+      if (isCurrentRequest()) setBriefingLoading(false);
     }
   };
 
-  const preBriefingCache = useRef<Map<string, PreBriefing>>(new Map());
-  const selectedPatientIdRef = useRef<string | null>(null);
+  const previousBriefingSource = useRef<{id:string;revision:number} | null>(null);
+  useEffect(() => {
+    if (!selectedPatient) { previousBriefingSource.current = null; return; }
+    const source = {id:selectedPatient.id,revision:selectedPatient.revision ?? 0};
+    const previous = previousBriefingSource.current;
+    previousBriefingSource.current = source;
+    if (previous?.id === source.id && previous.revision !== source.revision) void loadBriefing(selectedPatient);
+    // Refetch only when saved clinical data changes, not on request state updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPatient?.id, selectedPatient?.revision]);
+
+  const handleSelectPatient = (patient: Patient) => {
+    if (!confirmPatientChange(patient.id)) return;
+    void activatePatient(patient);
+  };
+  const linkedPatientId = new URLSearchParams(location.search).get('patient');
+  useEffect(() => {
+    if (!linkedPatientId || linkedPatientId === selectedPatientIdRef.current) return;
+    const linked = patients.find(patient => patient.id === linkedPatientId);
+    if (linked && confirmPatientChange(linked.id)) void activatePatient(linked);
+    // Activation only follows the URL/patient-list change, not briefing responses.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedPatientId, patients]);
 
   // Keep the selectedPatient snapshot in sync with the patients query so
   // profile updates (diagnoses, medications) show up without re-selecting.
@@ -137,8 +208,7 @@ const Index = () => {
       if (!prev) return prev;
       const fresh = patients.find(p => p.id === prev.id);
       if (!fresh) return prev;
-      // Preserve the transient local 'atendimento' status set on consult start.
-      const next = prev.status === 'atendimento' ? { ...fresh, status: prev.status } : fresh;
+      const next = fresh;
       return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
     });
   }, [patients]);
@@ -148,6 +218,11 @@ const Index = () => {
     newPatientData: { name: string; age: number; profession: string; phone?: string } | undefined,
     complaint: string
   ) => {
+    if (captureBusy || (patientId === selectedPatientIdRef.current && hasWork)) {
+      toast({ title:'Conclua o trabalho atual',description:'Salve ou encerre o trabalho deste paciente antes de iniciar outra consulta.',variant:'destructive' });
+      throw new Error('Consulta atual ainda não concluída.');
+    }
+    if (!user || !confirmPatientChange(newPatientData ? null : patientId)) throw new Error('Consulta não iniciada.');
     let patient: Patient;
 
     if (newPatientData) {
@@ -157,7 +232,7 @@ const Index = () => {
           name: newPatientData.name,
           age: newPatientData.age,
           profession: newPatientData.profession,
-          last_visit: new Date().toISOString().split('T')[0],
+          last_visit: clinicDate(),
           status: 'atendimento',
           user_id: user!.id,
           diagnoses: [],
@@ -167,25 +242,22 @@ const Index = () => {
         }])
         .select()
         .single();
-      if (error) { toast({ title: 'Erro ao criar paciente', variant: 'destructive' }); return; }
+      if (error) { toast({ title: 'Erro ao criar paciente', variant: 'destructive' }); throw error; }
       patient = mapPatientRow(data);
       queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
     } else {
       const found = patients.find(p => p.id === patientId);
       if (!found) {
         toast({ title: 'Paciente não encontrado', description: 'Selecione o paciente novamente.', variant: 'destructive' });
-        return;
+        throw new Error('Paciente não encontrado.');
       }
       patient = found;
-      await supabase.from('patients').update({ status: 'atendimento' }).eq('id', patient.id);
+      const { error } = await supabase.from('patients').update({ status: 'atendimento' }).eq('id', patient.id);
+      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
     }
 
-    selectedPatientIdRef.current = patient.id;
-    setSelectedPatient({ ...patient, status: 'atendimento' });
-    setChiefComplaint(complaint);
-    setChatMessages([]);
-    setMobileView('chat');
+    void activatePatient({ ...patient, status: 'atendimento' }, complaint);
     toast({ title: 'Consulta iniciada', description: `Consulta com ${patient.name} iniciada.` });
   };
 
@@ -212,6 +284,7 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
+      {patientsError && <div role="alert" className="p-3 text-sm text-destructive">Pacientes indisponíveis. <button className="underline" onClick={() => retryPatients()}>Tentar novamente</button></div>}
       {/* Three-panel row — takes all space above the bottom nav */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
@@ -226,6 +299,8 @@ const Index = () => {
             selectedPatient={selectedPatient}
             onSelectPatient={handleSelectPatient}
             onNewConsultation={() => setShowNewConsultationModal(true)}
+            onHome={() => setMobileView('home')}
+            onNavigate={path => navigate(path)}
             userId={user?.id ?? ''}
           />
         </div>
@@ -241,7 +316,7 @@ const Index = () => {
           {selectedPatient && (
             <div className={cn(
               'h-full min-h-0 flex-col',
-              (!isMobile || mobileView === 'chat') ? 'flex' : 'hidden',
+              mobileView === 'chat' || (!isMobile && mobileView !== 'home') ? 'flex' : 'hidden',
             )}>
               <ChatPanel
                 patient={selectedPatient}
@@ -249,13 +324,17 @@ const Index = () => {
                 onMessagesChange={setChatMessages}
                 chiefComplaint={chiefComplaint}
                 preBriefing={preBriefing}
+                briefingError={briefingError}
+                onCaptureStateChange={setCaptureBusy}
+                onRetryBriefing={() => { if (selectedPatient) void activatePatient(selectedPatient); }}
                 briefingLoading={briefingLoading}
                 userId={user?.id ?? ''}
-                onConsultationSaved={(patientId) => preBriefingCache.current.delete(patientId)}
+                onConsultationSaved={() => { preBriefingCache.current.clear(); briefingRequestRef.current++; }}
+                onWorkStateChange={setChatBusy}
               />
             </div>
           )}
-          {(!selectedPatient || (isMobile && mobileView !== 'chat')) && (
+          {(!selectedPatient || mobileView === 'home' || (isMobile && mobileView !== 'chat')) && (
             <WelcomeDashboard
               patients={patients}
               onSelectPatient={handleSelectPatient}
@@ -273,6 +352,7 @@ const Index = () => {
         )}>
           <PatientSnapshot
             patient={selectedPatient}
+            onWorkStateChange={setSnapshotBusy}
             onAskAI={() => {
               // On mobile, jump to the chat tab; on desktop, chat is already visible.
               if (selectedPatient) setMobileView('chat');
@@ -286,6 +366,7 @@ const Index = () => {
                 onClick={handleSignOut}
                 className="h-7 w-7 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50"
                 title="Sair"
+                aria-label="Sair"
               >
                 <LogOut className="h-3.5 w-3.5" />
               </Button>

@@ -15,3 +15,8 @@ export function clinicDate(date = new Date()): string {
   const field = (type: Intl.DateTimeFormatPartTypes) => parts.find(part => part.type === type)?.value;
   return `${field('year')}-${field('month')}-${field('day')}`;
 }
+
+export function daysSinceDateOnly(value: string, now = new Date()): number {
+  if (formatDateOnly(value) === 'Data inválida') return 0;
+  return Math.round((Date.parse(`${clinicDate(now)}T12:00:00Z`) - Date.parse(`${value}T12:00:00Z`)) / 86_400_000);
+}

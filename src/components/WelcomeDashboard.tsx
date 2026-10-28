@@ -14,6 +14,8 @@ import { Patient } from '@/types/patient';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { daysSinceDateOnly } from '@/lib/dates';
+import { fetchAllRows } from '@/lib/pagination';
 
 interface Appointment {
   id: string;
@@ -43,7 +45,8 @@ const statusColor: Record<string, string> = {
 };
 
 function relativeDate(dateString: string): string {
-  const days = Math.floor((Date.now() - new Date(dateString).getTime()) / 86400000);
+  const days = daysSinceDateOnly(dateString);
+  if (days < 0) return `em ${-days} dias`;
   if (days === 0) return 'hoje';
   if (days === 1) return 'ontem';
   if (days < 7) return `há ${days} dias`;
@@ -72,6 +75,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
   const queryClient = useQueryClient();
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [sentReminderIds, setSentReminderIds] = useState<Set<string>>(new Set());
+  const [reminderLinks, setReminderLinks] = useState<Record<string, string>>({});
 
   // Local-time day bounds. toISOString() is UTC — in Brazil (UTC-3) it rolls
   // to "tomorrow" at 21:00 local and the agenda showed the wrong day.
@@ -84,15 +88,13 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
       if (!userId) return [];
       // Throw on failure so isError is set — otherwise a failed load looks
       // identical to an empty agenda, telling a doctor no one is coming in.
-      const { data, error } = await supabase
+      return fetchAllRows((from, to) => supabase
         .from('appointments')
         .select('*')
         .eq('user_id', userId)
         .gte('start_time', dayStart.toISOString())
         .lte('start_time', dayEnd.toISOString())
-        .order('start_time');
-      if (error) throw error;
-      return data ?? [];
+        .order('start_time').order('id').range(from, to));
     },
     enabled: !!userId,
   });
@@ -131,10 +133,21 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
         body: { appointmentId: apt.id, type, userId },
       });
       if (error) throw error;
-      if (type === 'whatsapp' && data?.waLink) window.open(data.waLink, '_blank');
-      setSentReminderIds(prev => new Set([...prev, apt.id]));
+      if (type === 'whatsapp') {
+        if (typeof data?.waLink !== 'string') throw new Error('Link ausente');
+        const link = new URL(data.waLink);
+        if (link.protocol !== 'https:' || link.hostname !== 'wa.me') throw new Error('Link inválido');
+        setReminderLinks(previous => ({ ...previous, [apt.id]: link.href }));
+        // Keep a real link visible: browser popup blocking and opening WhatsApp
+        // do not establish whether the user sent the message.
+        window.open(link.href, '_blank', 'noopener,noreferrer');
+        toast({ title: 'Link do WhatsApp pronto', description: 'Abra o link para revisar e enviar a mensagem. O lembrete continua pendente.' });
+      } else {
+        if (data?.success !== true) throw new Error('Envio não confirmado');
+        setSentReminderIds(prev => new Set([...prev, apt.id]));
+        toast({ title: 'Lembrete enviado por email!' });
+      }
       queryClient.invalidateQueries({ queryKey: ['appointments-today'] });
-      toast({ title: 'Lembrete enviado!', description: type === 'whatsapp' ? 'Link WhatsApp aberto.' : 'Email enviado.' });
     } catch {
       toast({ title: 'Erro ao enviar lembrete', variant: 'destructive' });
     } finally {
@@ -167,6 +180,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
 
         {/* First-run onboarding checklist */}
         <OnboardingCard
+          onNewConsultation={onNewConsultation}
           patientCount={totalPatients}
           hasConsultation={patients.some(p => p.status !== 'novo')}
           userId={userId}
@@ -238,6 +252,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
                       <p className="text-xs text-muted-foreground">
                         {typeLabels[apt.type] ?? apt.type}
                       </p>
+                      {reminderLinks[apt.id] && <a href={reminderLinks[apt.id]} target="_blank" rel="noopener noreferrer" aria-label={`Abrir WhatsApp para ${patient?.name ?? apt.title}`} className="block text-xs text-medical-blue underline mt-1">Abrir WhatsApp para revisar e enviar</a>}
                     </div>
                     <Button
                       size="sm"
@@ -414,7 +429,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {returnPatients.map(patient => {
                 const initials = patient.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-                const daysSince = Math.floor((Date.now() - new Date(patient.lastVisit).getTime()) / 86400000);
+                const daysSince = daysSinceDateOnly(patient.lastVisit);
                 return (
                   <button
                     key={patient.id}

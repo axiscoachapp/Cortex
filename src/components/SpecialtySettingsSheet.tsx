@@ -6,47 +6,64 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
+  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger,
 } from '@/components/ui/sheet';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useUserSettings, SPECIALTY_LABELS, Specialty } from '@/hooks/useUserSettings';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchAllRows } from '@/lib/pagination';
 
 export function SpecialtySettingsSheet() {
+  const { user } = useAuth();
   const {
     specialty, setSpecialty,
     liveCopilotEnabled, setLiveCopilotEnabled,
-    prescriber, updateSettings,
+    prescriber, updateSettingsAsync,
     activeTemplateId, setActiveTemplateId,
-    isSaving,
+    isSaving, isLoading,
   } = useUserSettings();
 
-  const { data: templates = [] } = useQuery<Array<{ id: string; name: string }>>({
-    queryKey: ['document-templates-min'],
+  const { data: templates = [], isError: templateError, refetch: retryTemplates } = useQuery<Array<{ id: string; name: string }>>({
+    queryKey: ['document-templates-min', user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      return fetchAllRows<{ id: string; name: string }>((from, to) => supabase
         .from('document_templates')
         .select('id, name')
-        .order('name');
-      return data ?? [];
+        .order('name').order('id').range(from, to));
     },
+    enabled: !!user?.id,
     staleTime: 60_000,
   });
 
-  // Local draft for the prescriber fields — saved on blur so each keystroke
-  // doesn't fire an upsert.
+  // Keep an explicit draft so background refreshes cannot overwrite typing.
   const [draft, setDraft] = useState(prescriber);
-  useEffect(() => { setDraft(prescriber); }, [prescriber.doctorName, prescriber.crmNumber, prescriber.crmUf, prescriber.professionalAddress]);
+  const [identityDirty, setIdentityDirty] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('');
+  const [identityError, setIdentityError] = useState('');
+  useEffect(() => {
+    if (!identityDirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [identityDirty]);
+  useEffect(() => { if (!identityDirty) setDraft({ doctorName: prescriber.doctorName, crmNumber: prescriber.crmNumber, crmUf: prescriber.crmUf, professionalAddress: prescriber.professionalAddress }); }, [prescriber.doctorName, prescriber.crmNumber, prescriber.crmUf, prescriber.professionalAddress, identityDirty]);
+  const editDraft = (patch: Partial<typeof draft>) => { setIdentityDirty(true); setSaveStatus(''); setIdentityError(''); setDraft(value => ({ ...value, ...patch })); };
 
-  const saveDraft = () => {
-    updateSettings({
+  const saveDraft = async () => {
+    if (isSaving || !identityDirty) return;
+    setIdentityError(''); setSaveStatus('');
+    try {
+    await updateSettingsAsync({
       doctor_name:          draft.doctorName.trim(),
       crm_number:           draft.crmNumber.trim(),
       crm_uf:               draft.crmUf.trim().toUpperCase().slice(0, 2),
       professional_address: draft.professionalAddress.trim(),
     });
+    setIdentityDirty(false); setSaveStatus('Dados do prescritor salvos.');
+    } catch { setIdentityError('Não foi possível salvar. Seus dados foram mantidos; tente novamente.'); }
   };
 
   // Allow other components (e.g. the onboarding checklist) to open settings.
@@ -58,25 +75,27 @@ export function SpecialtySettingsSheet() {
   }, []);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={next => { if (isSaving || (!next && identityDirty && !window.confirm('Descartar os dados do prescritor não salvos?'))) return; if (!next) setIdentityDirty(false); setOpen(next); }}>
       <SheetTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-muted-foreground/60 hover:text-muted-foreground"
           title="Configurações"
+          aria-label="Configurações"
         >
           <Settings2 className="h-4 w-4" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-80">
+      <SheetContent side="right" className="w-full max-w-sm overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Configurações</SheetTitle>
+          <SheetDescription className="sr-only">Especialidade, modelos, identidade do prescritor e preferências do copiloto.</SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-5">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
+            <label htmlFor="settings-specialty" className="text-sm font-medium text-foreground">
               Especialidade
             </label>
             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -88,7 +107,7 @@ export function SpecialtySettingsSheet() {
               onValueChange={(v) => setSpecialty(v as Specialty)}
               disabled={isSaving}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="settings-specialty" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -106,7 +125,7 @@ export function SpecialtySettingsSheet() {
 
           {/* Document template — replaces the default SOAP structure */}
           <div className="space-y-2 pt-5 border-t border-border/50">
-            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            <label htmlFor="settings-template" className="text-sm font-medium text-foreground flex items-center gap-1.5">
               <FileStack className="w-3.5 h-3.5 text-medical-blue" />
               Modelo da evolução
             </label>
@@ -118,7 +137,7 @@ export function SpecialtySettingsSheet() {
               onValueChange={(v) => setActiveTemplateId(v === 'default' ? null : v)}
               disabled={isSaving}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="settings-template" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -128,8 +147,10 @@ export function SpecialtySettingsSheet() {
                 ))}
               </SelectContent>
             </Select>
+            {templateError && <div role="alert" className="text-xs text-destructive">Não foi possível carregar os modelos. <button type="button" className="underline" onClick={() => retryTemplates()}>Tentar novamente</button></div>}
             <Link
               to="/modelos"
+              onClick={event => { if (identityDirty && !window.confirm('Descartar os dados do prescritor não salvos?')) event.preventDefault(); }}
               className="inline-flex items-center gap-1 text-xs text-medical-blue hover:text-medical-blue-dark font-medium mt-1"
             >
               Gerenciar modelos <ChevronRight className="w-3 h-3" />
@@ -148,32 +169,39 @@ export function SpecialtySettingsSheet() {
               </p>
             </div>
             <Input
+              aria-label="Nome completo do médico"
+              disabled={isSaving || isLoading}
               value={draft.doctorName}
-              onChange={e => setDraft(d => ({ ...d, doctorName: e.target.value }))}
-              onBlur={saveDraft}
+              onChange={e => editDraft({ doctorName: e.target.value })}
               placeholder="Nome completo do médico"
             />
             <div className="grid grid-cols-[1fr_80px] gap-2">
               <Input
+                aria-label="Número do CRM"
+                disabled={isSaving || isLoading}
                 value={draft.crmNumber}
-                onChange={e => setDraft(d => ({ ...d, crmNumber: e.target.value }))}
-                onBlur={saveDraft}
+                onChange={e => editDraft({ crmNumber: e.target.value })}
                 placeholder="CRM (número)"
               />
               <Input
+                aria-label="UF do CRM"
+                disabled={isSaving || isLoading}
                 value={draft.crmUf}
-                onChange={e => setDraft(d => ({ ...d, crmUf: e.target.value.toUpperCase().slice(0, 2) }))}
-                onBlur={saveDraft}
+                onChange={e => editDraft({ crmUf: e.target.value.toUpperCase().slice(0, 2) })}
                 placeholder="UF"
                 maxLength={2}
               />
             </div>
             <Input
+              aria-label="Endereço profissional"
+              disabled={isSaving || isLoading}
               value={draft.professionalAddress}
-              onChange={e => setDraft(d => ({ ...d, professionalAddress: e.target.value }))}
-              onBlur={saveDraft}
+              onChange={e => editDraft({ professionalAddress: e.target.value })}
               placeholder="Endereço profissional"
             />
+            <Button size="sm" onClick={saveDraft} disabled={isSaving || isLoading || !identityDirty}>{isSaving ? 'Salvando…' : 'Salvar dados do prescritor'}</Button>
+            {saveStatus && <p role="status" className="text-xs text-success">{saveStatus}</p>}
+            {identityError && <p role="alert" className="text-xs text-destructive">{identityError}</p>}
           </div>
 
           {/* Live copilot toggle */}

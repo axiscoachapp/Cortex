@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,7 @@ interface NewConsultationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   patients: Patient[];
-  onStartConsultation: (patientId: string | null, newPatientData: NewPatientData | undefined, chiefComplaint: string) => void;
+  onStartConsultation: (patientId: string | null, newPatientData: NewPatientData | undefined, chiefComplaint: string) => Promise<void> | void;
 }
 
 export function NewConsultationModal({ open, onOpenChange, patients, onStartConsultation }: NewConsultationModalProps) {
@@ -29,42 +29,59 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
   const [newPatientProfession, setNewPatientProfession] = useState('');
   const [newPatientPhone, setNewPatientPhone] = useState('');
   const [chiefComplaint, setChiefComplaint] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (isNewPatient) {
-      onStartConsultation(null, {
-        name: newPatientName,
-        age: parseInt(newPatientAge) || 0,
-        profession: newPatientProfession,
-        phone: newPatientPhone.trim() || undefined,
-      }, chiefComplaint);
-    } else {
-      onStartConsultation(selectedPatientId, undefined, chiefComplaint);
-    }
-    
-    // Reset form
-    setIsNewPatient(false);
-    setSelectedPatientId('');
-    setNewPatientName('');
-    setNewPatientAge('');
-    setNewPatientProfession('');
-    setNewPatientPhone('');
-    setChiefComplaint('');
-    onOpenChange(false);
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const resetForm = () => {
+    setIsNewPatient(false); setSelectedPatientId(''); setNewPatientName('');
+    setNewPatientAge(''); setNewPatientProfession(''); setNewPatientPhone('');
+    setChiefComplaint(''); setSubmitError('');
   };
 
-  const isValid = chiefComplaint.trim() && (isNewPatient ? newPatientName.trim() : selectedPatientId);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isValid || saving) return;
+    setSaving(true);
+    setSubmitError('');
+    try {
+      if (isNewPatient) {
+        await onStartConsultation(null, {
+          name: newPatientName.trim(),
+          age: newPatientAge === '' ? 0 : Number(newPatientAge),
+          profession: newPatientProfession.trim(),
+          phone: newPatientPhone.trim() || undefined,
+        }, chiefComplaint.trim());
+      } else {
+        await onStartConsultation(selectedPatientId, undefined, chiefComplaint.trim());
+      }
+      resetForm();
+      onOpenChange(false);
+    } catch {
+      setSubmitError('Não foi possível iniciar a consulta. Seus dados foram mantidos; tente novamente.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const validAge = newPatientAge === '' || (Number.isInteger(Number(newPatientAge)) && Number(newPatientAge) >= 0 && Number(newPatientAge) <= 130);
+  const isValid = !!chiefComplaint.trim() && (isNewPatient ? !!newPatientName.trim() && validAge : !!selectedPatientId);
+  const close = (next: boolean) => {
+    if (saving) return;
+    if (!next && (chiefComplaint.trim() || newPatientName.trim()) && !window.confirm('Descartar os dados desta consulta?')) return;
+    if (!next) resetForm();
+    onOpenChange(next);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={open} onOpenChange={close}>
+      <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-[500px] max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-foreground">Nova Consulta</DialogTitle>
+          <DialogDescription className="sr-only">Selecione ou cadastre um paciente e informe a queixa principal para iniciar.</DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-5 mt-2">
+        <form onSubmit={handleSubmit} className="space-y-5 mt-2" aria-busy={saving}>
+          {submitError && <p role="alert" className="text-sm text-destructive">{submitError}</p>}
+          <fieldset disabled={saving} className="space-y-5">
           {/* Patient Selection Toggle */}
           <div className="flex gap-2">
             <Button
@@ -91,7 +108,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
             <div className="space-y-2">
               <Label htmlFor="patient-select">Selecionar Paciente</Label>
               <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
-                <SelectTrigger>
+                <SelectTrigger id="patient-select">
                   <SelectValue placeholder="Selecione um paciente..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -120,6 +137,9 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
                   <Input
                     id="new-patient-age"
                     type="number"
+                      min={0}
+                      max={130}
+                      step={1}
                     value={newPatientAge}
                     onChange={(e) => setNewPatientAge(e.target.value)}
                     placeholder="Ex: 35"
@@ -160,13 +180,14 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+            <Button type="button" variant="outline" onClick={() => close(false)} className="flex-1">
               Cancelar
             </Button>
-            <Button type="submit" variant="medical" disabled={!isValid} className="flex-1">
-              Iniciar Consulta
+            <Button type="submit" variant="medical" disabled={!isValid || saving} className="flex-1">
+              {saving ? 'Iniciando…' : 'Iniciar Consulta'}
             </Button>
           </div>
+          </fieldset>
         </form>
       </DialogContent>
     </Dialog>

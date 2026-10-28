@@ -17,7 +17,8 @@ interface PatientLike {
 function openPrintable(html: string) {
   const blob = new Blob([html], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
+  const popup = window.open(url, '_blank');
+  popup?.addEventListener('load', () => { popup.opener = null; popup.print(); }, { once: true });
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
@@ -69,7 +70,6 @@ export function printSoap(soapNote: string, patient: PatientLike, chiefComplaint
 <div class="sub">${patient.age} anos${patient.profession ? ` · ${escapeHtml(patient.profession)}` : ''} &nbsp;·&nbsp; ${todayPtBR()}${chiefComplaint ? ` &nbsp;·&nbsp; Queixa: ${escapeHtml(chiefComplaint)}` : ''}</div>
 ${sectionsHtml}
 <div class="footer">Gerado pelo Cortex</div>
-<script>window.onload=()=>window.print();</script>
 </body></html>`;
 
   openPrintable(html);
@@ -99,7 +99,6 @@ export function printPrescription(patient: PatientLike) {
 <div class="rx">℞</div>
 ${medsHtml}
 <div class="ftr"><span>${todayPtBR()}</span><div class="sig"><div class="sig-line">Assinatura do Médico</div></div></div>
-<script>window.onload=()=>window.print();</script>
 </body></html>`;
 
   openPrintable(html);
@@ -189,7 +188,6 @@ ${section('Histórico Médico', extras.medicalHistory ?? '')}
 ${section('Anotações do Médico', extras.clinicalNotes ?? '')}
 ${consultationsHtml}
 <div class="footer">Gerado pelo Cortex em ${new Date().toLocaleString('pt-BR')}</div>
-<script>window.onload=()=>window.print();</script>
 </body></html>`;
 
   openPrintable(html);

@@ -10,6 +10,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { assembleDataExport } from '@/lib/dataExport';
+import { functionErrorBody } from '@/lib/functionErrors';
 
 export default function DataPrivacy() {
   const navigate = useNavigate();
@@ -18,26 +20,18 @@ export default function DataPrivacy() {
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState('');
+  const [exportProgress, setExportProgress] = useState('');
+  const [exportError, setExportError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const deleteConfirmed = confirmText.trim().toUpperCase() === 'EXCLUIR';
 
   const handleExport = async () => {
-    if (!user?.id) return;
+    if (!user?.id || exporting || deleting) return;
     setExporting(true);
+    setExportError('');
     try {
-      const [patientsRes, consultationsRes, appointmentsRes] = await Promise.all([
-        supabase.from('patients').select('*').eq('user_id', user.id),
-        supabase.from('consultations').select('*').eq('user_id', user.id),
-        supabase.from('appointments').select('*').eq('user_id', user.id),
-      ]);
-
-      const exportData = {
-        exportedAt: new Date().toISOString(),
-        userId: user.id,
-        email: user.email,
-        patients:      patientsRes.data      ?? [],
-        consultations: consultationsRes.data ?? [],
-        appointments:  appointmentsRes.data  ?? [],
-      };
+      const exportData = await assembleDataExport(user.id, body => supabase.functions.invoke('export-user-data', { body }), setExportProgress);
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -47,28 +41,32 @@ export default function DataPrivacy() {
       a.click();
       URL.revokeObjectURL(url);
 
-      toast({ title: 'Exportação concluída', description: 'Seus dados foram salvos como arquivo JSON.' });
-    } catch {
-      toast({ title: 'Erro ao exportar', description: 'Tente novamente.', variant: 'destructive' });
+      setExportProgress(`Exportação concluída: ${exportData.files.length} arquivos incluídos com verificação SHA-256.`);
+      toast({ title: 'Exportação concluída', description: 'Todos os dados e arquivos foram incluídos no JSON.' });
+    } catch (error) {
+      setExportProgress('');
+      setExportError(error instanceof Error ? error.message : 'Não foi possível concluir a exportação. Nenhum arquivo parcial foi baixado. Tente novamente.');
     } finally {
       setExporting(false);
     }
   };
 
   const handleDeleteAccount = async () => {
+    if (!deleteConfirmed || deleting || exporting) return;
     setDeleting(true);
+    setDeleteError('');
     try {
-      const { error } = await supabase.functions.invoke('delete-user-data', {});
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke('delete-user-data', {});
+      if (error) {
+        const body = await functionErrorBody(error);
+        throw new Error(typeof body?.error === 'string' ? body.error.slice(0, 300) : 'A exclusão não foi concluída. Tente novamente para terminar a remoção dos dados.');
+      }
+      if (data?.success !== true) throw new Error('O servidor não confirmou a exclusão completa. Tente novamente.');
       toast({ title: 'Conta excluída', description: 'Todos os seus dados foram removidos permanentemente.' });
       await signOut();
       navigate('/auth');
-    } catch (err: any) {
-      toast({
-        title: 'Erro ao excluir conta',
-        description: err.message ?? 'Tente novamente.',
-        variant: 'destructive',
-      });
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'A exclusão não foi concluída. Tente novamente para terminar a remoção dos dados.');
       setDeleting(false);
     }
   };
@@ -119,13 +117,17 @@ export default function DataPrivacy() {
             Exportar meus dados
           </h2>
           <p className="text-sm text-muted-foreground">
-            Baixa um arquivo JSON com todos os seus pacientes, consultas e agendamentos.
-            O arquivo pode ser aberto em qualquer editor de texto ou planilha.
+            Baixa um arquivo JSON com seus registros, configurações, modelos e base de conhecimento,
+            além dos arquivos anexados, áudios e documentos gerados. Os arquivos ficam em Base64,
+            com checksum SHA-256 para verificar a integridade. Credenciais de integração são excluídas.
           </p>
+          <p className="text-xs text-muted-foreground">O download pelo navegador suporta até 100 MB de arquivos. Para volumes maiores, solicite uma exportação completa ao suporte antes de excluir a conta.</p>
+          {exportProgress && <p role="status" className="text-sm break-words">{exportProgress}</p>}
+          {exportError && <p role="alert" className="text-sm text-destructive">{exportError}</p>}
           <Button
             variant="outline"
             onClick={handleExport}
-            disabled={exporting}
+            disabled={exporting || deleting}
             className="gap-2"
           >
             {exporting
@@ -145,21 +147,22 @@ export default function DataPrivacy() {
             Esta ação é <strong>irreversível</strong> — considere exportar seus dados antes de prosseguir.
           </p>
 
-          <AlertDialog>
+          <AlertDialog open={deleteDialogOpen} onOpenChange={next => { if (!deleting) { setDeleteDialogOpen(next); if (!next) { setConfirmText(''); setDeleteError(''); } } }}>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" disabled={deleting} className="gap-2">
+              <Button variant="destructive" disabled={deleting || exporting} className="gap-2">
                 {deleting
                   ? <><Loader2 className="w-4 h-4 animate-spin" />Excluindo...</>
                   : <><Trash2 className="w-4 h-4" />Excluir minha conta</>}
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent className="max-h-[90dvh] overflow-y-auto max-w-[calc(100vw-16px)] sm:max-w-lg">
               <AlertDialogHeader>
                 <AlertDialogTitle className="flex items-center gap-2 text-destructive">
                   <AlertTriangle className="w-5 h-5" />
                   Confirmar exclusão permanente
                 </AlertDialogTitle>
-                <AlertDialogDescription className="space-y-2">
+                <AlertDialogDescription asChild>
+                <div className="space-y-2">
                   <p>
                     Isso excluirá <strong>permanentemente</strong>:
                   </p>
@@ -173,6 +176,7 @@ export default function DataPrivacy() {
                   <p className="font-medium text-destructive">
                     Esta ação não pode ser desfeita.
                   </p>
+                </div>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <div className="space-y-1.5">
@@ -189,14 +193,15 @@ export default function DataPrivacy() {
                   className="w-full h-10 px-3 rounded-lg text-sm border border-border bg-background focus:outline-none focus:ring-2 focus:ring-destructive/30"
                 />
               </div>
+              {deleteError && <p role="alert" className="text-sm text-destructive">{deleteError}</p>}
               <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setConfirmText('')}>Cancelar</AlertDialogCancel>
+                <AlertDialogCancel disabled={deleting} onClick={() => setConfirmText('')}>Cancelar</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={handleDeleteAccount}
-                  disabled={!deleteConfirmed}
+                  onClick={event => { event.preventDefault(); void handleDeleteAccount(); }}
+                  disabled={!deleteConfirmed || deleting}
                   className="bg-destructive hover:bg-destructive/90 disabled:opacity-50"
                 >
-                  Sim, excluir tudo
+                  {deleting ? 'Excluindo…' : 'Sim, excluir tudo'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

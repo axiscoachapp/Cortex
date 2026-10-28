@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { authDestination } from '@/lib/authRedirect';
 
 const features = [
   { icon: Mic,           label: 'Transcrição em tempo real',     gradient: 'from-blue-500 to-indigo-600' },
@@ -21,24 +22,31 @@ const features = [
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signIn, signUp, enableAdminBypass, user } = useAuth();
+  const { signIn, signUp, resetPassword, resendConfirmation, updatePassword, enableAdminBypass, user, loading: authLoading } = useAuth();
+  const [params] = useSearchParams();
+  const recovering = params.get('mode') === 'recovery';
+  const destination = authDestination(params.get('next'));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
 
-  if (user) {
-    navigate('/');
-    return null;
-  }
+  if (user && !recovering) return <Navigate to={destination} replace />;
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { toast({ title: 'Preencha todos os campos', variant: 'destructive' }); return; }
     setLoading(true);
-    const { error } = await signIn(email, password);
-    setLoading(false);
-    if (error) { toast({ title: error.message, variant: 'destructive' }); } else { navigate('/'); }
+    setErrorMessage(''); setNotice('');
+    try {
+      const { error } = await signIn(email.trim(), password);
+      if (error) setErrorMessage('Não foi possível entrar. Confira seu email e sua senha e tente novamente.');
+      else navigate(destination, { replace: true });
+    } catch { setErrorMessage('Não foi possível conectar. Tente novamente.'); }
+    finally { setLoading(false); }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -46,11 +54,51 @@ const Auth = () => {
     if (!email || !password) { toast({ title: 'Preencha todos os campos', variant: 'destructive' }); return; }
     if (password.length < 6) { toast({ title: 'Senha deve ter mínimo 6 caracteres', variant: 'destructive' }); return; }
     setLoading(true);
-    const { error } = await signUp(email, password);
-    setLoading(false);
-    if (error) {
-      toast({ title: error.message.includes('already registered') ? 'Email já cadastrado' : error.message, variant: 'destructive' });
-    } else { navigate('/'); }
+    setErrorMessage(''); setNotice('');
+    try {
+      const { error, session } = await signUp(email.trim(), password);
+      if (error) setErrorMessage('Não foi possível criar a conta. Confira os dados ou tente entrar em uma conta existente.');
+      else if (session) navigate(destination, { replace: true });
+      else { setAwaitingConfirmation(true); setNotice('Confirme seu email: enviamos um link de confirmação. Abra o link e depois entre na sua conta.'); setPassword(''); }
+    } catch { setErrorMessage('Não foi possível conectar. Tente novamente.'); }
+    finally { setLoading(false); }
+  };
+
+  const handleRecoveryRequest = async () => {
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setErrorMessage('Informe seu email para receber o link de recuperação.');
+      document.getElementById('login-email')?.focus();
+      return;
+    }
+    setLoading(true); setErrorMessage(''); setNotice('');
+    try {
+      const { error } = await resetPassword(email.trim());
+      if (error) throw error;
+      setNotice('Se houver uma conta com este email, você receberá um link para redefinir a senha.');
+    } catch { setErrorMessage('Não foi possível enviar o link agora. Tente novamente.'); }
+    finally { setLoading(false); }
+  };
+
+  const handleResendConfirmation = async () => {
+    setLoading(true); setErrorMessage('');
+    try {
+      const {error}=await resendConfirmation(email.trim());
+      if(error) throw error;
+      setNotice('Se a confirmação estiver pendente, você receberá um novo link. Confira também a pasta de spam.');
+    } catch { setErrorMessage('Não foi possível reenviar agora. Aguarde um momento e tente novamente.'); }
+    finally { setLoading(false); }
+  };
+
+  const handlePasswordUpdate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (password.length < 6 || loading) return;
+    setLoading(true); setErrorMessage('');
+    try {
+      const { error } = await updatePassword(password);
+      if (error) throw error;
+      setPassword(''); navigate('/', { replace: true });
+    } catch { setErrorMessage('Não foi possível redefinir a senha. Solicite um novo link de recuperação e tente novamente.'); }
+    finally { setLoading(false); }
   };
 
   return (
@@ -196,15 +244,26 @@ const Auth = () => {
           {/* Headline */}
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-              Bem-vindo de volta
+              {recovering ? 'Redefinir senha' : 'Bem-vindo de volta'}
             </h2>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Entre na sua conta para continuar
+              {recovering ? 'Escolha uma nova senha para sua conta' : 'Entre na sua conta para continuar'}
             </p>
           </div>
 
           {/* Auth card */}
           <div className="rounded-2xl bg-card border border-border/60 shadow-card-hover p-5 sm:p-6 space-y-5">
+            {notice && <p role="status" className="text-sm text-medical-blue-dark">{notice}</p>}
+            {awaitingConfirmation && <Button type="button" variant="outline" disabled={loading} onClick={handleResendConfirmation}>Reenviar confirmação</Button>}
+            {errorMessage && <p role="alert" className="text-sm text-destructive">{errorMessage}</p>}
+            {recovering ? (
+              <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                <Label htmlFor="recovery-password">Nova senha</Label>
+                <Input id="recovery-password" name="new-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={6} value={password} onChange={event => setPassword(event.target.value)} required disabled={loading || authLoading} />
+                <Button type="submit" disabled={loading || authLoading || !user}>{loading ? 'Salvando…' : 'Salvar nova senha'}</Button>
+                {!authLoading && !user && <p role="alert" className="text-sm text-destructive">Link inválido ou expirado. <Link to="/auth" className="underline">Volte para solicitar outro link.</Link></p>}
+              </form>
+            ) : (
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2 h-10 bg-muted/60 p-1 rounded-lg">
                 <TabsTrigger value="login"  className="rounded-md text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">Entrar</TabsTrigger>
@@ -217,6 +276,8 @@ const Auth = () => {
                     <Label htmlFor="login-email" className="text-xs font-medium text-foreground/80">Email</Label>
                     <Input
                       id="login-email"
+                      name="email"
+                      spellCheck={false}
                       type="email"
                       placeholder="seu@email.com"
                       value={email}
@@ -241,14 +302,16 @@ const Auth = () => {
                       />
                       <button
                         type="button"
+                        aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                        aria-pressed={showPassword}
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        tabIndex={-1}
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
+                  <button type="button" disabled={loading} onClick={handleRecoveryRequest} className="text-sm text-medical-blue-dark hover:underline focus-visible:outline focus-visible:outline-2">Esqueci minha senha</button>
                   <Button
                     type="submit"
                     className="w-full h-10 mt-2 rounded-lg shadow-medical hover:scale-[1.01] transition-transform text-sm font-semibold"
@@ -271,6 +334,8 @@ const Auth = () => {
                     <Label htmlFor="signup-email" className="text-xs font-medium text-foreground/80">Email</Label>
                     <Input
                       id="signup-email"
+                      name="email"
+                      spellCheck={false}
                       type="email"
                       placeholder="seu@email.com"
                       value={email}
@@ -295,9 +360,10 @@ const Auth = () => {
                       />
                       <button
                         type="button"
+                        aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                        aria-pressed={showPassword}
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        tabIndex={-1}
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -320,6 +386,7 @@ const Auth = () => {
                 </form>
               </TabsContent>
             </Tabs>
+            )}
 
             {/* Trust chips */}
             <div className="flex items-center justify-center gap-4 pt-1 text-[10px] text-muted-foreground">

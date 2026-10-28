@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Patient } from '@/types/patient';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { fetchAllRows } from '@/lib/pagination';
 
 interface Appointment {
   id: string;
@@ -23,6 +24,8 @@ interface PatientSidebarProps {
   onSelectPatient: (patient: Patient) => void;
   onNewConsultation?: () => void;
   userId: string;
+  onHome?: () => void;
+  onNavigate?: (path: string) => void;
 }
 
 const typeLabels: Record<string, string> = {
@@ -45,24 +48,24 @@ const NAV_ITEMS = [
   { to: '/agenda',               icon: CalendarDays,label: 'Agenda' },
 ];
 
-export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId }: PatientSidebarProps) {
+export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId, onHome, onNavigate }: PatientSidebarProps) {
   const navigate = useNavigate();
+  const go = onNavigate ?? navigate;
 
   const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(); dayEnd.setHours(23, 59, 59, 999);
 
-  const { data: todayApts = [], isLoading } = useQuery<Appointment[]>({
+  const { data: todayApts = [], isLoading, isError, refetch } = useQuery<Appointment[]>({
     queryKey: ['appointments-today', userId, dayStart.toDateString()],
     queryFn: async () => {
       if (!userId) return [];
-      const { data } = await supabase
+      return fetchAllRows((from, to) => supabase
         .from('appointments')
-        .select('id, patient_id, title, start_time, type, status')
+        .select('*')
         .eq('user_id', userId)
         .gte('start_time', dayStart.toISOString())
         .lte('start_time', dayEnd.toISOString())
-        .order('start_time');
-      return data ?? [];
+        .order('start_time').order('id').range(from, to));
     },
     enabled: !!userId,
   });
@@ -72,7 +75,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
 
       {/* Logo + Nova Consulta */}
       <div className="px-4 pt-5 pb-4">
-        <button onClick={() => navigate('/')} className="flex items-center gap-2.5 mb-5 w-full text-left">
+        <button onClick={onHome ?? (() => go('/'))} aria-label="Cortex — Início" className="flex items-center gap-2.5 mb-5 w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-medical-blue">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: 'linear-gradient(135deg, hsl(210 70% 50%) 0%, hsl(220 70% 40%) 100%)' }}>
             <Brain className="text-white" style={{ width: '18px', height: '18px' }} />
@@ -108,11 +111,16 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
           <div className="space-y-1.5 px-1 pt-1">
             {[0, 1, 2].map(i => <div key={i} className="h-12 rounded-xl bg-white/60 animate-pulse" />)}
           </div>
+        ) : isError ? (
+          <div role="alert" className="py-6 px-3 text-center space-y-2">
+            <p className="text-xs">Não foi possível carregar a agenda.</p>
+            <Button size="sm" variant="outline" onClick={() => refetch()}>Tentar novamente</Button>
+          </div>
         ) : todayApts.length === 0 ? (
           <div className="py-8 px-3 text-center">
             <CalendarX className="w-7 h-7 text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-xs text-muted-foreground/70">Nenhuma consulta hoje</p>
-            <button onClick={() => navigate('/agenda')} className="mt-2 text-[11px] font-medium text-medical-blue hover:underline">
+            <button onClick={() => go('/agenda')} className="mt-2 text-[11px] font-medium text-medical-blue hover:underline">
               Agendar consulta
             </button>
           </div>
@@ -165,7 +173,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
         {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
           <button
             key={to}
-            onClick={() => navigate(to)}
+            onClick={() => go(to)}
             className={cn(
               'w-full flex items-center gap-2.5 h-9 px-3 rounded-lg text-xs font-medium',
               'text-muted-foreground hover:text-foreground hover:bg-white transition-all',

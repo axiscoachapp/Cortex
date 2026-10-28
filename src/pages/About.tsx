@@ -16,6 +16,7 @@ function useReveal<T extends HTMLElement>() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
     const obs = new IntersectionObserver(
       ([entry]) => entry.isIntersecting && setVisible(true),
       { threshold: 0.15, rootMargin: '0px 0px -10% 0px' },
@@ -30,17 +31,15 @@ function Reveal({
   children,
   delay = 0,
   className = '',
-  as: Tag = 'div',
 }: {
   children: React.ReactNode;
   delay?: number;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
 }) {
   const { ref, visible } = useReveal<HTMLDivElement>();
   return (
-    <Tag
-      ref={ref as never}
+    <div
+      ref={ref}
       style={{ transitionDelay: `${delay}ms` }}
       className={cn(
         'transition-all duration-700 ease-out will-change-transform',
@@ -49,7 +48,7 @@ function Reveal({
       )}
     >
       {children}
-    </Tag>
+    </div>
   );
 }
 
@@ -57,6 +56,7 @@ function Reveal({
 function useTypewriter(text: string, speed = 18, startDelay = 600) {
   const [out, setOut] = useState('');
   useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setOut(text); return; }
     let i = 0;
     let raf = 0;
     const start = window.setTimeout(() => {

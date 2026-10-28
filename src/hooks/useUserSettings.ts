@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 export type Specialty =
   | 'geral' | 'psiquiatria' | 'cardiologia' | 'pediatria'
@@ -43,6 +44,7 @@ const DEFAULTS: UserSettings = {
 export function useUserSettings() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const key = ['user-settings', user?.id];
 
   const { data, isLoading } = useQuery<UserSettings>({
@@ -71,11 +73,9 @@ export function useUserSettings() {
   });
 
   const mutation = useMutation({
-    mutationFn: async (patch: Partial<UserSettings>) => {
-      if (!user?.id) return;
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({ user_id: user.id, ...patch }, { onConflict: 'user_id' });
+    mutationFn: async (patch: Partial<Omit<UserSettings, 'daily_credit_limit'>>) => {
+      if (!user?.id) throw new Error('Entre novamente para salvar.');
+      const { error } = await supabase.rpc('update_user_settings', { p_patch: patch });
       if (error) throw error;
     },
     // Optimistic: a toggle should flip instantly; roll back if the write fails.
@@ -86,7 +86,8 @@ export function useUserSettings() {
       return { previous };
     },
     onError: (_err, _patch, ctx) => {
-      if (ctx?.previous) queryClient.setQueryData(key, ctx.previous);
+      queryClient.setQueryData(key, ctx?.previous ?? DEFAULTS);
+      toast({ title: 'Configuração não salva', description: 'Tente novamente. A configuração anterior foi mantida.', variant: 'destructive' });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: key });
@@ -105,11 +106,12 @@ export function useUserSettings() {
       professionalAddress: data?.professional_address ?? '',
     },
     /** True when the CFM-mandatory prescription fields are filled. */
-    prescriberComplete: !!(data?.doctor_name?.trim() && data?.crm_number?.trim() && data?.crm_uf?.trim()),
+    prescriberComplete: !!(data?.doctor_name?.trim() && data?.crm_number?.trim() && data?.crm_uf?.trim() && data?.professional_address?.trim()),
     isLoading,
     setSpecialty:         (specialty: Specialty) => mutation.mutate({ specialty }),
     setLiveCopilotEnabled: (live_copilot_enabled: boolean) => mutation.mutate({ live_copilot_enabled }),
-    updateSettings:       (patch: Partial<UserSettings>) => mutation.mutate(patch),
+    updateSettings:       (patch: Partial<Omit<UserSettings, 'daily_credit_limit'>>) => mutation.mutate(patch),
+    updateSettingsAsync: mutation.mutateAsync,
     isSaving:             mutation.isPending,
   };
 }
