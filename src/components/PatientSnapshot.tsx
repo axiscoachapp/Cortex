@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { User, Stethoscope, Pill, AlertTriangle, FolderOpen, Printer, FileText, Sparkles, StickyNote } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Patient } from '@/types/patient';
@@ -15,6 +15,7 @@ interface PatientSnapshotProps {
   patient: Patient | null;
   /** Optional callback — passed to the dossier drawer's "Perguntar à IA" button. */
   onAskAI?: () => void;
+  onWorkStateChange?: (busy: boolean) => void;
 }
 
 function formatMedicationDuration(startedAt: string): string {
@@ -47,24 +48,30 @@ function SectionHeader({ icon: Icon, label, action }: {
   );
 }
 
-export function PatientSnapshot({ patient, onAskAI }: PatientSnapshotProps) {
+export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: PatientSnapshotProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [processing, setProcessing] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.id;
+  const draftKey = `${userId ?? ''}/${patient?.id ?? ''}`;
+  const notes = drafts[draftKey] ?? '';
+  const isProcessing = processing[draftKey] ?? false;
+  const hasWork = Object.values(drafts).some(value => value.trim()) || Object.values(processing).some(Boolean);
+  useEffect(() => { onWorkStateChange?.(hasWork); }, [hasWork, onWorkStateChange]);
 
-  const { data: clinicalNotes = '' } = useQuery<string>({
+  const { data: clinicalNotes = '', isError: notesError, refetch: retryNotes } = useQuery<string>({
     queryKey: ['patient-clinical-notes', patient?.id],
     queryFn: async () => {
       if (!patient?.id) return '';
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('patients')
         .select('clinical_notes')
         .eq('id', patient.id)
         .single();
+      if (error) throw error;
       return data?.clinical_notes ?? '';
     },
     enabled: !!patient?.id,
@@ -94,7 +101,9 @@ export function PatientSnapshot({ patient, onAskAI }: PatientSnapshotProps) {
   const handleProcessNotes = async () => {
     if (!notes.trim()) { toast({ title: 'Adicione notas antes de processar.', variant: 'destructive' }); return; }
     if (!patient?.id) return;
-    setIsProcessing(true);
+    const submitted = notes;
+    const submittedKey = draftKey;
+    setProcessing(prev => ({ ...prev, [submittedKey]: true }));
     try {
       const { data, error } = await supabase.functions.invoke('process-clinical-notes', {
         body: { patientId: patient.id, notes: notes.trim(), userId },
@@ -111,13 +120,13 @@ export function PatientSnapshot({ patient, onAskAI }: PatientSnapshotProps) {
         throw error;
       }
       toast({ title: 'Notas processadas!', description: data.message || 'Perfil atualizado com insights da IA.' });
-      setNotes('');
+      setDrafts(prev => prev[submittedKey] === submitted ? { ...prev, [submittedKey]: '' } : prev);
       queryClient.invalidateQueries({ queryKey: ['patient-clinical-notes', patient.id] });
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
     } catch (err: any) {
       toast({ title: 'Erro ao processar', description: err.message, variant: 'destructive' });
     } finally {
-      setIsProcessing(false);
+      setProcessing(prev => ({ ...prev, [submittedKey]: false }));
     }
   };
 
@@ -274,10 +283,12 @@ export function PatientSnapshot({ patient, onAskAI }: PatientSnapshotProps) {
         {/* Clinical Notes — AI extraction */}
         <section className="p-4">
           <SectionHeader icon={FileText} label="Extrair com IA" />
+          {notesError && <div role="alert" className="text-xs text-destructive mb-2">Anotações indisponíveis. <button type="button" className="underline" onClick={() => retryNotes()}>Tentar novamente</button></div>}
           <Textarea
+            aria-label={`Anotações para ${patient.name}`}
             placeholder="Cole observações longas — a IA estrutura em sintomas, fatores de risco, histórico familiar…"
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            onChange={(e) => setDrafts(prev => ({ ...prev, [draftKey]: e.target.value }))}
             className="min-h-[100px] text-xs resize-none bg-white/80 border-border/40 focus:ring-medical-blue/20"
             disabled={isProcessing}
           />
