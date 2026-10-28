@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('/brand/fonts.css');
 
 @tailwind base;
 @tailwind components;
@@ -6,66 +6,66 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 215 25% 15%;
+    --background: 42 33% 98%;
+    --foreground: 38 9% 22%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 38 9% 22%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: 38 9% 22%;
 
-    --primary: 210 65% 50%;
+    --primary: 40 65% 30%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 215 25% 25%;
+    --secondary: 42 25% 94%;
+    --secondary-foreground: 38 8% 28%;
 
-    --muted: 210 15% 94%;
-    --muted-foreground: 215 15% 45%;
+    --muted: 42 22% 93%;
+    --muted-foreground: 38 7% 40%;
 
-    --accent: 210 30% 92%;
-    --accent-foreground: 215 25% 20%;
+    --accent: 42 40% 91%;
+    --accent-foreground: 38 9% 22%;
 
-    --destructive: 0 70% 55%;
+    --destructive: 0 65% 40%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 210 65% 50%;
+    --border: 40 20% 84%;
+    --input: 40 20% 84%;
+    --ring: 40 65% 30%;
 
     --radius: 0.75rem;
 
     /* Custom medical tokens */
-    --medical-blue: 210 65% 50%;
-    --medical-blue-light: 210 60% 95%;
-    --medical-blue-dark: 210 70% 40%;
+    --medical-blue: 40 65% 30%;
+    --medical-blue-light: 43 56% 94%;
+    --medical-blue-dark: 40 65% 27%;
     
     --alert-amber: 38 92% 50%;
     --alert-amber-light: 45 100% 96%;
     --alert-amber-border: 38 90% 85%;
     
-    --success: 152 60% 45%;
+    --success: 152 64% 28%;
     --success-light: 152 60% 95%;
     
-    --patient-active: 210 60% 97%;
-    --patient-active-border: 210 65% 80%;
+    --patient-active: 43 56% 96%;
+    --patient-active-border: 40 48% 65%;
     
-    --soap-card: 210 30% 98%;
-    --whatsapp-green: 142 70% 45%;
+    --soap-card: 42 40% 98%;
+    --whatsapp-green: 142 70% 28%;
     --whatsapp-light: 142 60% 95%;
     
-    --record-red: 0 75% 55%;
-    --record-red-hover: 0 75% 48%;
+    --record-red: 0 67% 42%;
+    --record-red-hover: 0 67% 35%;
 
-    --sidebar-background: 215 40% 98%;
-    --sidebar-foreground: 215 25% 25%;
-    --sidebar-primary: 210 65% 50%;
+    --sidebar-background: 42 35% 96%;
+    --sidebar-foreground: 38 8% 28%;
+    --sidebar-primary: 40 65% 30%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 30% 95%;
-    --sidebar-accent-foreground: 215 25% 20%;
-    --sidebar-border: 210 20% 92%;
-    --sidebar-ring: 210 65% 50%;
+    --sidebar-accent: 42 40% 92%;
+    --sidebar-accent-foreground: 38 9% 22%;
+    --sidebar-border: 40 20% 86%;
+    --sidebar-ring: 40 65% 30%;
   }
 
   .dark {
@@ -82,7 +82,7 @@
     --primary-foreground: 0 0% 100%;
 
     --secondary: 215 20% 18%;
-    --secondary-foreground: 210 20% 90%;
+    --secondary-foreground: 40 20% 84%;
 
     --muted: 215 20% 20%;
     --muted-foreground: 210 15% 60%;
@@ -98,11 +98,11 @@
     --ring: 210 60% 55%;
 
     --sidebar-background: 215 25% 10%;
-    --sidebar-foreground: 210 20% 90%;
+    --sidebar-foreground: 40 20% 84%;
     --sidebar-primary: 210 60% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 215 25% 18%;
-    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-accent-foreground: 40 20% 84%;
     --sidebar-border: 215 20% 18%;
     --sidebar-ring: 210 60% 55%;
   }
@@ -115,7 +115,7 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Montserrat', system-ui, sans-serif;
   }
 }
 
@@ -216,7 +216,7 @@
   background: hsl(var(--muted)/0.3);
 }
 .rbc-today {
-  background: hsl(210 65% 50% / 0.06) !important;
+  background: hsl(40 65% 30% / 0.06) !important;
 }
 .rbc-date-cell {
   font-size: 0.8rem;
@@ -225,7 +225,7 @@
 }
 .rbc-date-cell.rbc-now {
   font-weight: 700;
-  color: hsl(210 65% 50%);
+  color: hsl(40 65% 30%);
 }
 .rbc-event {
   border-radius: 6px !important;
@@ -234,14 +234,14 @@
   border: none !important;
 }
 .rbc-event:focus {
-  outline: 2px solid hsl(210 65% 50%);
+  outline: 2px solid hsl(40 65% 30%);
   outline-offset: 1px;
 }
 .rbc-event-label {
   font-size: 0.68rem;
 }
 .rbc-show-more {
-  color: hsl(210 65% 50%);
+  color: hsl(40 65% 30%);
   font-size: 0.72rem;
   font-weight: 600;
 }
@@ -249,11 +249,11 @@
   border-color: hsl(var(--border)/0.5) !important;
 }
 .rbc-current-time-indicator {
-  background: hsl(0 75% 55%);
+  background: hsl(0 67% 42%);
 }
 .rbc-slot-selection {
-  background: hsl(210 65% 50% / 0.15);
-  border: 1px solid hsl(210 65% 50% / 0.4);
+  background: hsl(40 65% 30% / 0.15);
+  border: 1px solid hsl(40 65% 30% / 0.4);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -269,3 +269,10 @@
   .rbc-toolbar { justify-content: center; }
   .rbc-toolbar .rbc-toolbar-label { flex-basis: 100%; order: -1; }
 }
+
+/* Clinic identity: original gold is reserved for ornament; darker ochre gives readable controls. */
+.font-serif, h1.clinic-heading { font-family: 'Source Serif 4', Georgia, serif; }
+:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
+::selection { background: #e8d39e; color: #393833; }
+
+body:has([data-session-locked]) [role="dialog"], body:has([data-session-locked]) [data-radix-popper-content-wrapper] { visibility: hidden; }
