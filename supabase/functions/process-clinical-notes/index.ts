@@ -1,9 +1,12 @@
+import { fetchWithDeadline, readJsonObject, RequestError } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import { requireCompleteModelText, parseModelObject } from '../_shared/gemini.ts';
+import { assertPromptSize } from '../_shared/modelInput.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -26,7 +29,7 @@ const INSIGHTS_SCHEMA = {
     clinical_changes:        { type: 'array', items: { type: 'string' } },
     summary:                 { type: 'string' },
   },
-  required: ['summary'],
+  required: ['summary','symptoms','behavioral_observations','risk_factors','family_history','social_factors','clinical_changes'],
 };
 
 const SYSTEM = `Você é um assistente médico especializado em extrair informações estruturadas de notas clínicas. Analise as notas e extraia informações relevantes sobre: sintomas, observações comportamentais, fatores de risco, histórico familiar, fatores sociais, e mudanças no quadro clínico. Retorne tudo em português, conciso e sem inventar dados.`;
@@ -38,9 +41,9 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { patientId, notes } = await req.json();
+    const { patientId, notes } = await readJsonObject(req);
 
-    if (!patientId || !notes) {
+    if (typeof patientId !== 'string' || typeof notes !== 'string' || !notes.trim() || notes.length > 32_000) {
       return new Response(
         JSON.stringify({ error: 'patientId and notes are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -55,20 +58,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    try {
-      await checkQuota(supabaseClient, userId, 3);
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
-    }
-
-    const { data: patient } = await supabaseClient
+    const { data: patient, error: patientError } = await supabaseClient
       .from('patients')
-      .select('clinical_notes, ai_insights')
+      .select('clinical_notes, ai_insights, revision')
       .eq('id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
 
+    if (patientError) throw new RequestError('Não foi possível consultar o prontuário. Tente novamente.', 503);
     if (!patient) {
       return new Response(
         JSON.stringify({ error: 'Paciente não encontrado' }),
@@ -81,8 +78,17 @@ ${notes}
 
 Notas anteriores:
 ${patient?.clinical_notes || 'Nenhuma nota anterior'}`;
+    assertPromptSize(prompt, SYSTEM);
 
-    const res = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    let reservationId: string;
+    try {
+      ({ reservationId } = await checkQuota(supabaseClient, userId, 100));
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
+    }
+
+    const res = await fetchWithDeadline(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -99,43 +105,35 @@ ${patient?.clinical_notes || 'Nenhuma nota anterior'}`;
     });
 
     if (!res.ok) {
-      const err = await res.text();
       if (res.status === 429) {
         return new Response(
           JSON.stringify({ error: 'Limite de requisições excedido, tente novamente em alguns segundos.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
-      throw new Error(`Gemini error ${res.status}: ${err}`);
+      throw new Error(`Gemini indisponível (${res.status})`);
     }
 
     const json = await res.json();
-    const parts: any[] = json.candidates?.[0]?.content?.parts ?? [];
-    const responsePart = parts.find((p: any) => !p.thought) ?? parts[parts.length - 1];
-    const rawText = responsePart?.text ?? '{}';
+    await recordUsage(supabaseClient, userId, creditsFromUsage(json.usageMetadata), reservationId);
+    const insights = parseModelObject(requireCompleteModelText(json), INSIGHTS_SCHEMA);
 
-    await recordUsage(supabaseClient, userId, creditsFromUsage(json.usageMetadata));
-
-    let insights: Record<string, unknown> = {};
-    try {
-      insights = JSON.parse(rawText);
-    } catch {
-      console.error('process-clinical-notes: failed to parse Gemini JSON. raw:', rawText.slice(0, 300));
-      insights = { summary: rawText.slice(0, 500) };
-    }
-
-    const stamp = `[${new Date().toLocaleString('pt-BR')}]`;
+    const stamp = `[${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}]`;
     const updatedNotes = patient?.clinical_notes
       ? `${patient.clinical_notes}\n\n${stamp}\n${notes}`
       : `${stamp}\n${notes}`;
 
-    const { error: updateError } = await supabaseClient
+    const { data: saved, error: updateError } = await supabaseClient
       .from('patients')
       .update({ clinical_notes: updatedNotes, ai_insights: insights })
       .eq('id', patientId)
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('revision', patient.revision)
+      .select('id')
+      .maybeSingle();
 
     if (updateError) throw updateError;
+    if (!saved) throw new RequestError('O prontuário foi alterado. Recarregue e envie as anotações novamente.', 409);
 
     return new Response(
       JSON.stringify({
@@ -147,8 +145,9 @@ ${patient?.clinical_notes || 'Nenhuma nota anterior'}`;
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('process-clinical-notes error:', error);
+    console.error('process-clinical-notes error:');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro ao processar notas' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

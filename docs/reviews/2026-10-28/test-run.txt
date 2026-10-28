@@ -1,0 +1,126 @@
+
+> cortex@0.1.0 test
+> vitest run --reporter=default
+
+[vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.dev/rolldown
+
+ RUN  v5.0.5 E:/Work/Cortex/cortex
+
+ ✓ src/components/ChatPanel.test.tsx (6 tests) 2138ms
+   ✓ patient-scoped asynchronous clinical work (3)
+     ✓ accepts a reviewed medication change by revision even when storage uses the legacy dose shape 1123ms
+     ✓ never appends patient A's delayed question result to patient B 314ms
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > live-copilot rejects an incomplete model object instead of blanking a successful result
+live-copilot error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > suggest-questions rejects an incomplete model object instead of blanking a successful result
+suggest-questions error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > prebriefing rejects invalid model output instead of reporting a first consultation
+generate-prebriefing error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > does not convert a model object into printable template text
+create-template-ai error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > retains a reservation when a started provider call fails
+live-copilot error:
+
+ ✓ src/lib/clinicalBoundaryHandlers.test.ts (34 tests) 2042ms
+   ✓ clinical request boundaries before quota reservation (14)
+     ✓ chat-assistant reports a failed patient read without reserving or inventing an empty history 405ms
+stderr | src/lib/clinicalHandlers.test.ts > clinical edge handler regressions > registers RX metadata before upload and removes it after an upload failure
+generate-prescription failed
+
+stderr | src/lib/clinicalHandlers.test.ts > clinical edge handler regressions > registers RX metadata before upload and retains it when object cleanup fails
+generate-prescription failed
+
+stderr | src/lib/clinicalHandlers.test.ts > clinical edge handler regressions > preserves source audio when the provider fails after upload
+transcribe-consultation failed
+
+ ✓ src/lib/clinicalHandlers.test.ts (8 tests) 1236ms
+   ✓ clinical edge handler regressions (8)
+     ✓ rejects an audio path that is not the exact source registered for the draft 360ms
+stderr | src/lib/securityHandlers.test.ts > security endpoint regressions > does not reserve paid quota when document storage download fails
+analyze-document failed
+
+stderr | src/lib/securityHandlers.test.ts > security endpoint regressions > never downloads a prescription path that aliases a different bucket
+validate-prescription failed
+
+ ✓ src/lib/securityHandlers.test.ts (15 tests) 776ms
+ ✓ src/pages/Auth.test.tsx (8 tests) 4560ms
+   ✓ Auth page (8)
+     ✓ returns to the original callback after sign in 2226ms
+     ✓ explains email confirmation when signup does not create a session 1342ms
+     ✓ lets a user request password recovery without disclosing account existence 547ms
+ ✓ src/pages/PatientManagement.test.tsx (2 tests) 1280ms
+   ✓ Patient directory (2)
+     ✓ shows a retryable load error instead of claiming no patients exist 674ms
+     ✓ searches all loaded patients and opens their chart without starting a consultation 597ms
+ ✓ src/components/PatientProfileDrawer.test.tsx (1 test) 1758ms
+   ✓ Concurrent clinical history editing (1)
+     ✓ preserves the draft and requires review when the patient revision changed 1750ms
+ ✓ src/components/NewConsultationModal.test.tsx (1 test) 2058ms
+   ✓ New consultation submission (1)
+     ✓ keeps the entered patient and complaint when saving fails 2039ms
+ ✓ src/pages/DataPrivacy.test.tsx (1 test) 2729ms
+   ✓ Account deletion recovery (1)
+     ✓ keeps the confirmation open and allows retry when deletion is incomplete 2719ms
+ ✓ src/components/PatientSnapshot.test.tsx (2 tests) 2535ms
+   ✓ patient note ownership (2)
+     ✓ keeps each draft attached to its originating patient 1684ms
+     ✓ does not let a late success for A erase B’s draft 843ms
+ ✓ src/components/WelcomeDashboard.test.tsx (3 tests) 2512ms
+   ✓ WhatsApp reminder preparation (3)
+     ✓ keeps the reminder pending and exposes a clickable link when a popup is blocked 1717ms
+     ✓ removes an email reminder from the pending list only after confirmed success 467ms
+     ✓ keeps an email reminder pending when the server does not confirm delivery 306ms
+ ✓ src/pages/Index.test.tsx (6 tests) 4638ms
+   ✓ patient activation (6)
+     ✓ blocks route exit and logout until captured audio is saved 2015ms
+     ✓ refreshes the selected briefing after a clinical revision changes 656ms
+     ✓ passes an explicit error state when a briefing response fails 390ms
+     ✓ loads B’s own briefing when starting a consultation after viewing A 717ms
+     ✓ returns to the dashboard using desktop Home 586ms
+ ✓ src/components/AppointmentModal.test.tsx (4 tests) 3681ms
+   ✓ Appointment removal and unsaved changes (4)
+     ✓ offers an explicit WhatsApp link after a blocked popup without claiming delivery 1449ms
+     ✓ retains the local appointment until Google confirms deletion 463ms
+     ✓ keeps an edited appointment open if discard is declined 1490ms
+ ✓ src/components/SpecialtySettingsSheet.test.tsx (1 test) 1981ms
+   ✓ Prescriber identity draft (1)
+     ✓ preserves typing across background refresh and failed explicit save 1956ms
+ ✓ src/lib/calendarSync.test.ts (4 tests) 708ms
+   ✓ Google Calendar mutation boundaries (4)
+     ✓ never accepts a body event id when the owned appointment is missing 530ms
+ ✓ src/components/PatientFiles.test.tsx (1 test) 647ms
+   ✓ Patient file removal (1)
+     ✓ retains metadata and offers a retry when the storage deletion fails 638ms
+ ✓ src/components/PrescriptionList.test.tsx (1 test) 878ms
+   ✓ prescription trust display (1)
+     ✓ requires reissue for legacy rows and never labels an unattested signature as signed 871ms
+ ✓ src/lib/maintenanceAuth.test.ts (2 tests) 405ms
+   ✓ maintenance authentication (2)
+     ✓ fails closed when the service secret is missing 342ms
+ ✓ src/pages/GoogleOAuthCallback.test.tsx (2 tests) 228ms
+ ✓ src/lib/httpBoundary.test.ts (3 tests) 98ms
+ ✓ src/hooks/useRecording.test.tsx (3 tests) 235ms
+ ✓ src/lib/securityBoundaries.test.ts (15 tests) 81ms
+ ✓ src/lib/clinicalSafety.test.ts (9 tests) 42ms
+ ✓ src/lib/dataExport.test.ts (3 tests) 68ms
+ ✓ src/lib/patientMapper.test.ts (4 tests) 63ms
+ ✓ src/lib/pagination.test.ts (2 tests) 29ms
+ ✓ src/lib/oauthBoundary.test.ts (3 tests) 38ms
+ ✓ src/lib/quotaReservation.test.ts (6 tests) 20ms
+ ✓ src/lib/patientImport.test.ts (3 tests) 38ms
+ ✓ src/lib/authRedirect.test.ts (2 tests) 10ms
+ ✓ src/lib/reminderSafety.test.ts (10 tests) 16ms
+ ✓ src/lib/dates.test.ts (4 tests) 13ms
+
+ Test Files  32 passed (32)
+      Tests  169 passed (169)
+   Start at  09:06:17
+   Duration  267.30s (environment 57%, tests 15%, setup 13%, import 12%, transform 3%, worker 1%)
+
+    Isolate  32 workers spawned · ~4.92s startup each (spawn + environment, per file)
+             at least ~152.64s faster with isolate: false — reuses workers across files instead of one per file
+

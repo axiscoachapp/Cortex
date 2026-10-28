@@ -1,5 +1,7 @@
+import { readJsonObject, RequestError, fetchWithDeadline } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
+import { escapeHtml, whatsappPhone, canRemindAppointment } from "../_shared/reminders.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import {
   checkQuota, recordUsage, quotaResponse, QuotaExceededError,
@@ -38,9 +40,9 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { appointmentId, type } = await req.json();
+    const { appointmentId, type } = await readJsonObject(req);
 
-    if (!appointmentId || !type) {
+    if (typeof appointmentId !== 'string' || !appointmentId || !['email','whatsapp'].includes(type)) {
       return new Response(
         JSON.stringify({ error: 'appointmentId e type são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -52,17 +54,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    try {
-      await checkQuota(supabase, userId, REMINDER_COST);
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
-    }
-
     // Fetch appointment + patient
     const { data: appt, error: apptError } = await supabase
       .from('appointments')
-      .select('*, patients(name, phone, email)')
+      .select('id, patient_id, start_time, type, notes, status')
       .eq('id', appointmentId)
       .eq('user_id', userId)
       .single();
@@ -74,14 +69,24 @@ serve(async (req) => {
       );
     }
 
-    const patient = appt.patients as any;
+    if (!canRemindAppointment(appt.status, appt.start_time)) throw new RequestError('Lembretes estão disponíveis apenas para agendamentos futuros agendados ou confirmados.', 409);
+
+    // Authorize the referenced patient independently, including historic rows
+    // created before tenant-consistent foreign keys were installed.
+    const { data: patient, error: patientError } = await supabase.from('patients')
+      .select('name, phone, email').eq('id', appt.patient_id).eq('user_id', userId)
+      .is('deletion_requested_at', null).maybeSingle();
+    if (patientError || !patient || !['agendado','confirmado'].includes(appt.status)) {
+      return new Response(JSON.stringify({error:'Paciente ou agendamento indisponível'}),
+        {status:404,headers:{...corsHeaders,'Content-Type':'application/json'}});
+    }
     const patientName = patient?.name ?? 'Paciente';
     const dateStr = formatDate(appt.start_time);
     const typeLabel = TYPE_LABELS[appt.type] ?? appt.type;
 
     // ── WhatsApp ───────────────────────────────────────────────────────────
     if (type === 'whatsapp') {
-      const phone = patient?.phone?.replace(/\D/g, '');
+      const phone = patient.phone ? whatsappPhone(patient.phone) : null;
       if (!phone) {
         return new Response(
           JSON.stringify({ error: 'Paciente sem telefone cadastrado' }),
@@ -100,16 +105,8 @@ Em caso de necessidade, entre em contato para reagendamento.
 
 Até breve! 💙`;
 
-      const waLink = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
-
-      // Persist so the pending-reminders list stays correct across reloads.
-      await supabase
-        .from('appointments')
-        .update({ reminder_sent: true })
-        .eq('id', appointmentId)
-        .eq('user_id', userId);
-
-      await recordUsage(supabase, userId, REMINDER_COST);
+      const waLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      // Opening WhatsApp is not proof of delivery. Keep reminder_sent false.
 
       return new Response(
         JSON.stringify({ message, waLink }),
@@ -129,6 +126,7 @@ Até breve! 💙`;
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
+      const quota = await checkQuota(supabase, userId, REMINDER_COST, 'communication');
 
       const html = `
 <!DOCTYPE html>
@@ -143,11 +141,11 @@ Até breve! 💙`;
       <span style="font-size: 20px; font-weight: 700; color: #111827;">Cortex</span>
     </div>
     <h2 style="color: #111827; font-size: 18px; font-weight: 600; margin: 0 0 8px;">Lembrete de Consulta</h2>
-    <p style="color: #6B7280; margin: 0 0 24px;">Olá <strong>${patientName}</strong>, você tem uma consulta agendada:</p>
+    <p style="color: #6B7280; margin: 0 0 24px;">Olá <strong>${escapeHtml(patientName)}</strong>, você tem uma consulta agendada:</p>
     <div style="background: #EFF6FF; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-      <p style="margin: 0 0 8px; font-weight: 600; color: #1D4ED8;">📅 ${dateStr}</p>
-      <p style="margin: 0; color: #374151;">Tipo: <strong>${typeLabel}</strong></p>
-      ${appt.notes ? `<p style="margin: 8px 0 0; color: #374151;">Observações: ${appt.notes}</p>` : ''}
+      <p style="margin: 0 0 8px; font-weight: 600; color: #1D4ED8;">📅 ${escapeHtml(dateStr)}</p>
+      <p style="margin: 0; color: #374151;">Tipo: <strong>${escapeHtml(typeLabel)}</strong></p>
+      ${appt.notes ? `<p style="margin: 8px 0 0; color: #374151;">Observações: ${escapeHtml(appt.notes)}</p>` : ''}
     </div>
     <p style="color: #6B7280; font-size: 14px; margin: 0;">Em caso de necessidade de reagendamento, entre em contato com seu médico.</p>
     <hr style="border: 0; border-top: 1px solid #E5E7EB; margin: 24px 0;">
@@ -156,11 +154,12 @@ Até breve! 💙`;
 </body>
 </html>`;
 
-      const emailRes = await fetch('https://api.resend.com/emails', {
+      const emailRes = await fetchWithDeadline('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${RESEND_API_KEY}`,
           'Content-Type': 'application/json',
+          'Idempotency-Key': `appointment-reminder-${appt.id}-${Date.parse(appt.start_time)}`,
         },
         body: JSON.stringify({
           from: 'Cortex <noreply@resend.dev>',
@@ -171,18 +170,18 @@ Até breve! 💙`;
       });
 
       if (!emailRes.ok) {
-        const err = await emailRes.text();
-        throw new Error(`Resend error: ${err}`);
+        throw new Error('Não foi possível enviar o email');
       }
 
       // Mark reminder as sent
-      await supabase
+      await recordUsage(supabase, userId, REMINDER_COST, quota.reservationId);
+      const {error: updateError} = await supabase
         .from('appointments')
         .update({ reminder_sent: true })
         .eq('id', appointmentId)
         .eq('user_id', userId);
 
-      await recordUsage(supabase, userId, REMINDER_COST);
+      if (updateError) throw new Error('Email enviado, mas não foi possível atualizar o agendamento');
 
       return new Response(
         JSON.stringify({ success: true }),
@@ -196,8 +195,9 @@ Até breve! 💙`;
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({error:error.message}),{status:error.status,headers:{...corsHeaders,'Content-Type':'application/json'}});
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('send-appointment-reminder error:', error);
+    if (error instanceof QuotaExceededError) return quotaResponse(error, corsHeaders);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

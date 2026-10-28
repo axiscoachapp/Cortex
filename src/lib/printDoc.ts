@@ -7,7 +7,7 @@
 
 interface PatientLike {
   name: string;
-  age: number;
+  age: number | null;
   profession?: string;
   phone?: string;
   allergies?: string[];
@@ -17,7 +17,9 @@ interface PatientLike {
 function openPrintable(html: string) {
   const blob = new Blob([html], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
+  const popup = window.open(url, '_blank');
+  if (!popup) {URL.revokeObjectURL(url);window.alert('A impressão foi bloqueada. Permita pop-ups e tente novamente.');return;}
+  popup?.addEventListener('load', () => { popup.opener = null; popup.print(); }, { once: true });
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
@@ -63,13 +65,12 @@ export function printSoap(soapNote: string, patient: PatientLike, chiefComplaint
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Evolução — ${escapeHtml(patient.name)}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11pt;color:#111827;padding:48px 56px;max-width:800px}h1{font-size:17pt;font-weight:700;color:#1d4ed8}.sub{color:#6b7280;font-size:9.5pt;margin-top:2px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #e5e7eb}.footer{margin-top:32px;padding-top:12px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:8pt}@media print{body{padding:24px 32px}}</style>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11pt;color:#111827;padding:48px 56px;max-width:800px}h1{font-size:17pt;font-weight:700;color:#846015}.sub{color:#6b7280;font-size:9.5pt;margin-top:2px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #e5e7eb}.footer{margin-top:32px;padding-top:12px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:8pt}@media print{body{padding:24px 32px}}</style>
 </head><body>
 <h1>${escapeHtml(patient.name)}</h1>
-<div class="sub">${patient.age} anos${patient.profession ? ` · ${escapeHtml(patient.profession)}` : ''} &nbsp;·&nbsp; ${todayPtBR()}${chiefComplaint ? ` &nbsp;·&nbsp; Queixa: ${escapeHtml(chiefComplaint)}` : ''}</div>
+<div class="sub">${patient.age === null ? 'Idade não informada' : patient.age + ' anos'}${patient.profession ? ` · ${escapeHtml(patient.profession)}` : ''} &nbsp;·&nbsp; ${todayPtBR()}${chiefComplaint ? ` &nbsp;·&nbsp; Queixa: ${escapeHtml(chiefComplaint)}` : ''}</div>
 ${sectionsHtml}
-<div class="footer">Gerado pelo Cortex</div>
-<script>window.onload=()=>window.print();</script>
+<div class="footer">Haddad Nicola · Cortex</div>
 </body></html>`;
 
   openPrintable(html);
@@ -89,17 +90,16 @@ export function printPrescription(patient: PatientLike) {
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Receita — ${escapeHtml(patient.name)}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:11pt;color:#111827;padding:60px;max-width:680px;margin:0 auto}.hdr{text-align:center;border-bottom:2px solid #1d4ed8;padding-bottom:16px;margin-bottom:24px}.hdr h1{font-size:18pt;font-weight:700;color:#1d4ed8}.hdr p{font-size:10pt;color:#6b7280;margin-top:4px}.pbox{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px 16px;margin-bottom:24px;font-size:10pt;color:#374151}.allergy{color:#dc2626;margin-top:4px}.rx{font-size:26pt;font-style:italic;font-weight:700;color:#1d4ed8;margin-bottom:20px}.ftr{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:flex-end;font-size:10pt;color:#6b7280}.sig{text-align:center}.sig-line{width:200px;border-top:1px solid #374151;margin:50px auto 4px;font-size:9pt;color:#6b7280}@media print{body{padding:40px}}</style>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:11pt;color:#111827;padding:60px;max-width:680px;margin:0 auto}.hdr{text-align:center;border-bottom:2px solid #846015;padding-bottom:16px;margin-bottom:24px}.hdr h1{font-size:18pt;font-weight:700;color:#846015}.hdr p{font-size:10pt;color:#6b7280;margin-top:4px}.pbox{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px 16px;margin-bottom:24px;font-size:10pt;color:#374151}.allergy{color:#dc2626;margin-top:4px}.rx{font-size:26pt;font-style:italic;font-weight:700;color:#846015;margin-bottom:20px}.ftr{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:flex-end;font-size:10pt;color:#6b7280}.sig{text-align:center}.sig-line{width:200px;border-top:1px solid #374151;margin:50px auto 4px;font-size:9pt;color:#6b7280}@media print{body{padding:40px}}</style>
 </head><body>
-<div class="hdr"><h1>RECEITA MÉDICA</h1><p>Gerado pelo Cortex</p></div>
+<div class="hdr"><h1>RECEITA MÉDICA</h1><p>Haddad Nicola · Cortex</p></div>
 <div class="pbox">
-  <div><strong>Paciente:</strong> ${escapeHtml(patient.name)} &nbsp;·&nbsp; <strong>Idade:</strong> ${patient.age} anos${patient.profession ? ` &nbsp;·&nbsp; ${escapeHtml(patient.profession)}` : ''}</div>
+  <div><strong>Paciente:</strong> ${escapeHtml(patient.name)} &nbsp;·&nbsp; <strong>Idade:</strong> ${patient.age === null ? 'Idade não informada' : patient.age + ' anos'}${patient.profession ? ` &nbsp;·&nbsp; ${escapeHtml(patient.profession)}` : ''}</div>
   ${patient.allergies && patient.allergies.length > 0 ? `<div class="allergy">⚠ Alergias: ${escapeHtml(patient.allergies.join(', '))}</div>` : ''}
 </div>
 <div class="rx">℞</div>
 ${medsHtml}
 <div class="ftr"><span>${todayPtBR()}</span><div class="sig"><div class="sig-line">Assinatura do Médico</div></div></div>
-<script>window.onload=()=>window.print();</script>
 </body></html>`;
 
   openPrintable(html);
@@ -164,10 +164,10 @@ export function printDossier(
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:10.5pt;color:#111827;padding:48px 56px;max-width:820px}
-h1{font-size:20pt;color:#1d4ed8;font-weight:700}
+h1{font-size:20pt;color:#846015;font-weight:700}
 .sub{color:#6b7280;font-size:10pt;margin-top:4px;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid #e5e7eb}
 section{margin-bottom:24px}
-h2{font-size:11pt;text-transform:uppercase;letter-spacing:0.08em;color:#1d4ed8;margin-bottom:8px;font-weight:700}
+h2{font-size:11pt;text-transform:uppercase;letter-spacing:0.08em;color:#846015;margin-bottom:8px;font-weight:700}
 h3{font-size:11pt;margin-bottom:6px;color:#111827;font-weight:600}
 ul{list-style:none;padding:0}
 li{padding:4px 0;font-size:10pt;line-height:1.55}
@@ -180,7 +180,7 @@ li{padding:4px 0;font-size:10pt;line-height:1.55}
 </style>
 </head><body>
 <h1>Dossiê do Paciente</h1>
-<div class="sub"><strong>${escapeHtml(patient.name)}</strong> · ${patient.age} anos${patient.profession ? ` · ${escapeHtml(patient.profession)}` : ''}${patient.phone ? ` · ${escapeHtml(patient.phone)}` : ''} &nbsp;·&nbsp; ${todayPtBR()}</div>
+<div class="sub"><strong>${escapeHtml(patient.name)}</strong> · ${patient.age === null ? 'Idade não informada' : patient.age + ' anos'}${patient.profession ? ` · ${escapeHtml(patient.profession)}` : ''}${patient.phone ? ` · ${escapeHtml(patient.phone)}` : ''} &nbsp;·&nbsp; ${todayPtBR()}</div>
 ${diagnosesHtml}
 ${medsHtml}
 ${allergiesHtml}
@@ -188,8 +188,7 @@ ${section('Anamnese Social', extras.socialAnamnesis ?? '')}
 ${section('Histórico Médico', extras.medicalHistory ?? '')}
 ${section('Anotações do Médico', extras.clinicalNotes ?? '')}
 ${consultationsHtml}
-<div class="footer">Gerado pelo Cortex em ${new Date().toLocaleString('pt-BR')}</div>
-<script>window.onload=()=>window.print();</script>
+<div class="footer">Haddad Nicola · Cortex em ${new Date().toLocaleString('pt-BR')}</div>
 </body></html>`;
 
   openPrintable(html);

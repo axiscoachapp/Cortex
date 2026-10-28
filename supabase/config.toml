@@ -1,4 +1,12 @@
-project_id = "conhcwuwtrkerpbblzgu"
+project_id = "cortex-local"
+
+[auth]
+site_url = "http://localhost:8080"
+additional_redirect_urls = ["http://localhost:8080/**", "http://127.0.0.1:8080/**"]
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
 
 [functions.process-clinical-notes]
 verify_jwt = true

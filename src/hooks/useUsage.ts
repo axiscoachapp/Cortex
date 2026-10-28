@@ -37,10 +37,10 @@ export function useUsage(userId: string | undefined) {
       const today = new Date().toISOString().slice(0, 10);
 
       // Both reads are RLS-scoped to auth.uid() — safe.
-      const [{ data: usage }, { data: settings }] = await Promise.all([
+      const [usageResult, settingsResult] = await Promise.all([
         supabase
           .from('usage_daily')
-          .select('credits_used, calls')
+          .select('credits_used, credits_reserved, calls')
           .eq('user_id', userId!)
           .eq('day', today)
           .maybeSingle(),
@@ -50,8 +50,11 @@ export function useUsage(userId: string | undefined) {
           .eq('user_id', userId!)
           .maybeSingle(),
       ]);
-
-      const used = Number(usage?.credits_used ?? 0);
+      if (usageResult.error) throw usageResult.error;
+      if (settingsResult.error) throw settingsResult.error;
+      const usage = usageResult.data;
+      const settings = settingsResult.data;
+      const used = Number(usage?.credits_used ?? 0) + Number(usage?.credits_reserved ?? 0);
       const calls = Number(usage?.calls ?? 0);
       const limit = Number(settings?.daily_credit_limit ?? DEFAULT_LIMIT);
       const percent = limit > 0 ? Math.min(999, Math.round((used / limit) * 100)) : 0;

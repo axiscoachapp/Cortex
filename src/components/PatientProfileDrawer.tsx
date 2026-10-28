@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   FileText, Calendar, User, Heart, Brain, Sparkles, Pencil, Check, X,
@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { SoapNoteView } from '@/components/SoapNoteView';
 import { Patient } from '@/types/patient';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,8 @@ import { printSoap, printDossier, escapeHtml } from '@/lib/printDoc';
 import { PatientFiles } from '@/components/PatientFiles';
 import { PrescriptionList } from '@/components/PrescriptionList';
 import { UsageMeter } from '@/components/UsageMeter';
+import { fetchAllRows } from '@/lib/pagination';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 interface PatientProfileDrawerProps {
   patient: Patient | null;
@@ -49,6 +51,7 @@ interface Consultation {
 }
 
 interface PatientDetail {
+  revision: number;
   ai_insights: AIInsights | null;
   social_anamnesis: string;
   medical_history: string;
@@ -78,6 +81,14 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<'social' | 'medical' | null>(null);
   const [draftValue, setDraftValue] = useState('');
+  const [editBase, setEditBase] = useState('');
+  const [editRevision, setEditRevision] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [conflict, setConflict] = useState(false);
+  const [visibleHistory, setVisibleHistory] = useState(50);
+  useUnsavedChanges(!!editingField && draftValue!==editBase);
+  const activePatientId = useRef(patient?.id);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -87,20 +98,30 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
     setExpandedId(null);
     setEditingField(null);
     setDraftValue('');
+    setEditBase(''); setEditRevision(null); setSaveError(''); setConflict(false); setSaving(false); setVisibleHistory(50);
+    activePatientId.current = patient?.id;
   }, [patient?.id]);
+  useEffect(() => {
+    if (!editingField || draftValue === editBase) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [editingField, draftValue, editBase]);
 
   /* ── Queries ─────────────────────────────────────────────────────────── */
-  const enabled = !!patient?.id && open;
+  const enabled = !!patient?.id && !!user?.id && open;
 
-  const { data: detail, isLoading: detailLoading } = useQuery<PatientDetail>({
-    queryKey: ['patient-detail', patient?.id],
+  const { data: detail, isLoading: detailLoading, isError: detailError, refetch: refetchDetail } = useQuery<PatientDetail>({
+    queryKey: ['patient-detail', patient?.id, user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('patients')
-        .select('ai_insights, social_anamnesis, medical_history, clinical_notes')
+        .select('revision, ai_insights, social_anamnesis, medical_history, clinical_notes')
         .eq('id', patient!.id)
         .single();
+      if (error || !data) throw error ?? new Error('Patient not found');
       return {
+        revision: data.revision,
         ai_insights: (data?.ai_insights as AIInsights) ?? null,
         social_anamnesis: data?.social_anamnesis ?? '',
         medical_history: data?.medical_history ?? '',
@@ -111,15 +132,14 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
     staleTime: 30_000,
   });
 
-  const { data: consultations = [], isLoading: consultationsLoading } = useQuery<Consultation[]>({
-    queryKey: ['patient-consultations', patient?.id],
+  const { data: consultations = [], isLoading: consultationsLoading, isError: consultationsError, refetch: refetchConsultations } = useQuery<Consultation[]>({
+    queryKey: ['patient-consultations', patient?.id, user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      return fetchAllRows<Consultation>((from, to) => supabase
         .from('consultations')
         .select('id, created_at, chief_complaint, soap_note, whatsapp_message, transcription')
         .eq('patient_id', patient!.id)
-        .order('created_at', { ascending: false });
-      return data ?? [];
+        .order('created_at', { ascending: false }).order('id').range(from, to));
     },
     enabled,
     staleTime: 30_000,
@@ -155,30 +175,48 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
 
   /* ── Editing ─────────────────────────────────────────────────────────── */
   const startEdit = (field: 'social' | 'medical') => {
+    if (detailLoading || detailError || !detail || saving) return;
+    if (editingField && draftValue !== editBase && !window.confirm('Descartar as alterações desta seção?')) return;
     setEditingField(field);
-    setDraftValue(field === 'social' ? socialAnamnesis : medicalHistory);
+    const value = field === 'social' ? socialAnamnesis : medicalHistory;
+    setDraftValue(value); setEditBase(value); setEditRevision(detail.revision); setSaveError(''); setConflict(false);
   };
 
   const cancelEdit = () => {
+    if (saving || (draftValue !== editBase && !window.confirm('Descartar as alterações desta seção?'))) return;
     setEditingField(null);
     setDraftValue('');
+    setSaveError(''); setConflict(false); setEditRevision(null);
   };
 
   const saveEdit = async (field: 'social' | 'medical') => {
-    if (!patient?.id) return;
+    if (!patient?.id || saving || conflict || editRevision === null) return;
+    const requestedId = patient.id;
     const update = field === 'social'
       ? { social_anamnesis: draftValue }
       : { medical_history: draftValue };
 
-    const { error } = await supabase.from('patients').update(update).eq('id', patient.id);
-    if (error) { toast({ title: 'Erro ao salvar', variant: 'destructive' }); return; }
-
-    setEditingField(null);
-    setDraftValue('');
-    // Refresh drawer detail AND the global patients query (used by sidebar/snapshot).
-    queryClient.invalidateQueries({ queryKey: ['patient-detail', patient.id] });
-    queryClient.invalidateQueries({ queryKey: ['patients'] });
-    toast({ title: 'Salvo com sucesso' });
+    setSaving(true); setSaveError('');
+    try {
+      const { data, error } = await supabase.from('patients').update(update).eq('id', requestedId).eq('revision', editRevision).select('id').maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        if (activePatientId.current === requestedId) { setConflict(true); setSaveError('O prontuário foi alterado em outro atendimento. Seu texto foi mantido. Compare com a versão atual antes de salvar.'); await refetchDetail(); }
+        return;
+      }
+      if (activePatientId.current === requestedId) { setEditingField(null); setDraftValue(''); }
+      queryClient.invalidateQueries({ queryKey: ['patient-detail', requestedId] });
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      toast({ title: 'Salvo com sucesso' });
+    } catch {
+      if (activePatientId.current === requestedId) setSaveError('Não foi possível salvar. Seu texto foi mantido; tente novamente.');
+    } finally { if (activePatientId.current === requestedId) setSaving(false); }
+  };
+  const requestOpenChange = (next: boolean) => {
+    if (saving || (!next && editingField && draftValue !== editBase && !window.confirm('Descartar as alterações do prontuário?'))) return false;
+    if (!next) { setEditingField(null); setDraftValue(''); setSaveError(''); setConflict(false); }
+    onOpenChange(next);
+    return true;
   };
 
   /* ── Print ───────────────────────────────────────────────────────────── */
@@ -195,9 +233,10 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
   if (!patient) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={requestOpenChange}>
       <SheetContent className="w-full sm:max-w-xl md:max-w-2xl overflow-y-auto">
         <SheetHeader className="border-b border-border pb-4">
+          <SheetDescription className="sr-only">Dados clínicos, histórico de consultas e documentos deste paciente.</SheetDescription>
           <div className="flex items-start justify-between gap-3">
             <SheetTitle className="flex items-center gap-3 text-lg min-w-0">
               <div className="w-10 h-10 rounded-full bg-medical-blue-light border-2 border-medical-blue/30 flex items-center justify-center shrink-0">
@@ -210,7 +249,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                   Dossiê: {patient.name}
                 </span>
                 <p className="text-sm font-normal text-muted-foreground">
-                  {patient.age} anos{patient.profession ? ` · ${patient.profession}` : ''}
+                  {patient.age === null ? 'Idade não informada' : String(patient.age) + ' anos'}{patient.profession ? ` · ${patient.profession}` : ''}
                 </p>
               </div>
             </SheetTitle>
@@ -220,7 +259,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                   variant="outline"
                   size="sm"
                   className="gap-1.5 h-8"
-                  onClick={() => { onOpenChange(false); onAskAI(); }}
+                  onClick={() => { if (requestOpenChange(false)) onAskAI(); }}
                   title="Abrir o chat para perguntar à IA sobre este paciente"
                 >
                   <MessagesSquare className="w-3.5 h-3.5" />
@@ -232,6 +271,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                 size="sm"
                 className="gap-1.5 h-8"
                 onClick={handlePrintDossier}
+                disabled={detailLoading || consultationsLoading || detailError || consultationsError}
                 title="Imprimir dossiê completo"
               >
                 <Printer className="w-3.5 h-3.5" />
@@ -266,9 +306,9 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
 
           {/* Quick stats strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-            <Stat icon={Stethoscope} label="Consultas" value={String(stats.total)} loading={consultationsLoading} />
-            <Stat icon={Clock} label="Última visita" value={stats.lastVisit} loading={consultationsLoading} />
-            <Stat icon={Calendar} label="Primeira" value={stats.firstVisit} loading={consultationsLoading} />
+            <Stat icon={Stethoscope} label="Consultas" value={String(stats.total)} loading={consultationsLoading || consultationsError} />
+            <Stat icon={Clock} label="Última visita" value={stats.lastVisit} loading={consultationsLoading || consultationsError} />
+            <Stat icon={Calendar} label="Primeira" value={stats.firstVisit} loading={consultationsLoading || consultationsError} />
             <Stat icon={Activity} label="Med. ativas" value={String(stats.activeMeds)} />
           </div>
 
@@ -277,6 +317,9 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
             <UsageMeter variant="pill" />
           </div>
         </SheetHeader>
+        {detailError && <div role="alert" className="py-4 text-sm space-y-2"><p>Não foi possível carregar os dados clínicos. A edição está indisponível até o carregamento ser concluído.</p><Button variant="outline" size="sm" onClick={() => refetchDetail()}>Tentar novamente</Button></div>}
+        {consultationsError && <div role="alert" className="py-4 text-sm space-y-2"><p>Não foi possível carregar o histórico de consultas.</p><Button variant="outline" size="sm" onClick={() => refetchConsultations()}>Tentar novamente</Button></div>}
+        {saveError && <div role="alert" className="py-3 text-sm text-destructive space-y-2"><p>{saveError}</p>{conflict && detail && <><p className="whitespace-pre-wrap text-foreground">Versão atual: {editingField === 'social' ? detail.social_anamnesis : detail.medical_history}</p><Button variant="outline" size="sm" onClick={() => { setEditRevision(detail.revision); setConflict(false); setSaveError(''); }}>Conferi a versão atual — continuar revisão</Button></>}</div>}
 
         <Tabs defaultValue="overview" className="mt-6">
           <TabsList className="grid w-full grid-cols-3 mb-6 h-10">
@@ -300,6 +343,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
               onCancel={cancelEdit}
               onSave={() => saveEdit('social')}
               onDraftChange={setDraftValue}
+              disabled={saving || detailLoading || detailError || conflict}
               placeholder="Adicione informações sociais do paciente (estado civil, trabalho, hábitos...)"
             />
 
@@ -314,6 +358,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
               onCancel={cancelEdit}
               onSave={() => saveEdit('medical')}
               onDraftChange={setDraftValue}
+              disabled={saving || detailLoading || detailError || conflict}
               placeholder="Adicione cirurgias, doenças preexistentes, histórico familiar..."
             />
 
@@ -327,13 +372,13 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                     </div>
                     <h3 className="font-semibold text-foreground">Anotações do Médico</h3>
                   </div>
-                  <span className="text-[10px] text-muted-foreground/70">{noteEntries.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{noteEntries.length}</span>
                 </div>
                 <div className="pl-10 space-y-1.5 max-h-[260px] overflow-y-auto scrollbar-thin pr-1">
                   {noteEntries.map((n, i) => (
                     <div key={i} className="px-3 py-2 rounded-lg bg-secondary/40 border border-border/40">
                       {n.stamp && (
-                        <p className="text-[10px] text-muted-foreground/70 font-mono mb-0.5">{n.stamp}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono mb-0.5">{n.stamp}</p>
                       )}
                       <p className="text-sm text-foreground/85 leading-snug whitespace-pre-wrap">{n.body}</p>
                     </div>
@@ -354,7 +399,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                 <div className="pl-10 p-4 rounded-lg bg-secondary/50 border border-border">
                   <p className="text-sm text-muted-foreground">Carregando...</p>
                 </div>
-              ) : aiInsights && Object.keys(aiInsights).length > 0 ? (
+              ) : detailError ? null : aiInsights && Object.keys(aiInsights).length > 0 ? (
                 <div className="pl-10 space-y-4">
                   {aiInsights.summary && (
                     <div className="p-4 rounded-lg bg-medical-blue-light/30 border border-medical-blue/20">
@@ -403,7 +448,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                   <div key={i} className="h-20 rounded-lg bg-secondary/40 animate-pulse" />
                 ))}
               </div>
-            ) : consultations.length === 0 ? (
+            ) : consultationsError ? null : consultations.length === 0 ? (
               <div className="p-6 text-center rounded-lg border border-border bg-card">
                 <p className="text-sm text-muted-foreground">Nenhuma consulta registrada ainda.</p>
               </div>
@@ -411,7 +456,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
               <div className="relative">
                 <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-border" />
                 <div className="space-y-4">
-                  {consultations.map((c, idx) => {
+                  {consultations.slice(0, visibleHistory).map((c, idx) => {
                     const isFirst = idx === 0;
                     const isExpanded = expandedId === c.id;
                     return (
@@ -514,7 +559,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                 </p>
               </div>
               {user?.id ? (
-                <PatientFiles patientId={patient.id} userId={user.id} />
+                <PatientFiles key={patient.id} patientId={patient.id} userId={user.id} />
               ) : (
                 <p className="text-xs text-muted-foreground">Faça login para anexar arquivos.</p>
               )}
@@ -535,13 +580,13 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                     <div key={i} className="h-16 rounded-lg bg-secondary/40 animate-pulse" />
                   ))}
                 </div>
-              ) : consultations.length === 0 ? (
+              ) : consultationsError ? null : consultations.length === 0 ? (
                 <div className="p-6 text-center rounded-lg border border-border bg-card">
                   <p className="text-sm text-muted-foreground">Nenhuma consulta registrada ainda.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {consultations.map(c => (
+                  {consultations.slice(0, visibleHistory).map(c => (
                     <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-secondary/30 transition-colors">
                       <div className="w-10 h-10 rounded-lg bg-medical-blue-light flex items-center justify-center shrink-0">
                         <FileText className="w-5 h-5 text-medical-blue" />
@@ -591,6 +636,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
             </section>
           </TabsContent>
         </Tabs>
+        {consultations.length > visibleHistory && <Button variant="outline" className="mt-4" onClick={() => setVisibleHistory(count => count + 50)}>Mostrar mais consultas</Button>}
       </SheetContent>
     </Sheet>
   );
@@ -615,6 +661,7 @@ function Stat({
 }
 
 interface EditableSectionProps {
+  disabled?: boolean;
   icon: React.ReactNode;
   iconBg: string;
   title: string;
@@ -642,7 +689,7 @@ function toBulletLines(text: string): string[] {
 
 function EditableSection({
   icon, iconBg, title, value, isEditing, draftValue,
-  onEdit, onCancel, onSave, onDraftChange, placeholder,
+  onEdit, onCancel, onSave, onDraftChange, placeholder, disabled,
 }: EditableSectionProps) {
   const bullets = toBulletLines(value);
   return (
@@ -655,7 +702,7 @@ function EditableSection({
           <h3 className="font-semibold text-foreground">{title}</h3>
         </div>
         {!isEditing && (
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
+          <Button variant="ghost" size="icon" aria-label={`Editar ${title}`} disabled={disabled} className="h-7 w-7" onClick={onEdit}>
             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
           </Button>
         )}
@@ -664,25 +711,26 @@ function EditableSection({
       {isEditing ? (
         <div className="pl-10 space-y-2">
           <Textarea
+            aria-label={title}
+            disabled={disabled}
             value={draftValue}
             onChange={(e) => onDraftChange(e.target.value)}
             placeholder={placeholder}
             className="min-h-[100px] text-sm resize-none"
-            autoFocus
           />
           <div className="flex gap-2">
-            <Button size="sm" variant="medical" onClick={onSave} className="gap-1.5">
+            <Button size="sm" variant="medical" disabled={disabled} onClick={onSave} className="gap-1.5">
               <Check className="w-3.5 h-3.5" />
               Salvar
             </Button>
-            <Button size="sm" variant="ghost" onClick={onCancel} className="gap-1.5">
+            <Button size="sm" variant="ghost" disabled={disabled} onClick={onCancel} className="gap-1.5">
               <X className="w-3.5 h-3.5" />
               Cancelar
             </Button>
           </div>
         </div>
       ) : bullets.length === 0 ? (
-        <p className="text-sm leading-relaxed pl-10 text-muted-foreground/50 italic">
+        <p className="text-sm leading-relaxed pl-10 text-muted-foreground italic">
           {placeholder}
         </p>
       ) : (

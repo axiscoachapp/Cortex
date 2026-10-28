@@ -13,10 +13,13 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
-import QRCode from "https://esm.sh/qrcode@1.5.3";
+import { createPaginatedWriter, validateDocumentCounts, validateCertificateDays } from "../_shared/documentLayout.ts";
+import { toDataURL } from "https://esm.sh/qrcode@1.5.3";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import { readJsonObject, RequestError } from "../_shared/http.ts";
+import { currentPatientAge } from "../_shared/patientAge.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -60,7 +63,7 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const body = await req.json();
+    const body = await readJsonObject(req);
     const { patientId, consultationId } = body;
     const docType: DocType = ['receita_simples', 'receita_antimicrobiano', 'atestado', 'solicitacao_exames'].includes(body.docType)
       ? body.docType
@@ -85,7 +88,7 @@ serve(async (req) => {
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (!settings?.doctor_name?.trim() || !settings?.crm_number?.trim() || !settings?.crm_uf?.trim()) {
+    if (!settings?.doctor_name?.trim() || !settings?.crm_number?.trim() || !settings?.crm_uf?.trim() || !settings?.professional_address?.trim()) {
       return new Response(
         JSON.stringify({
           error: 'Dados do prescritor incompletos',
@@ -98,7 +101,7 @@ serve(async (req) => {
     // Patient — ownership enforced.
     const { data: patient } = await supabase
       .from('patients')
-      .select('id, name, age, medications')
+      .select('id, name, age, date_of_birth, medications')
       .eq('id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -109,6 +112,12 @@ serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+    const patientAge = currentPatientAge(patient);
+    if (consultationId) {
+      const { data: consultation } = await supabase.from('consultations').select('id')
+        .eq('id', consultationId).eq('patient_id', patientId).eq('user_id', userId).maybeSingle();
+      if (!consultation) throw new Error('A consulta selecionada não pertence a este paciente.');
+    }
 
     // Medication list (receita types): explicit list from the caller wins;
     // else current profile meds. Atestado/solicitação carry content instead.
@@ -118,9 +127,12 @@ serve(async (req) => {
     const rawMeds: Medication[] = Array.isArray(body.medications) && body.medications.length > 0
       ? body.medications
       : (Array.isArray(patient.medications) ? patient.medications : []);
-    const meds = !isReceita ? [] : rawMeds
-      .filter((m: any) => m && typeof m.name === 'string' && m.name.trim())
-      .slice(0, 15);
+    validateDocumentCounts(docType, rawMeds.length, Array.isArray(body.content?.exams) ? body.content.exams.length : 0);
+    if (isReceita && rawMeds.some((m: Medication) => !m || typeof m.name !== 'string' || !m.name.trim()
+      || typeof m.dosage !== 'string' || typeof m.instructions !== 'string')) {
+      throw new Error('Revise nome, dose e instruções de todos os medicamentos.');
+    }
+    const meds = !isReceita ? [] : rawMeds;
 
     if (isReceita && meds.length === 0) {
       return new Response(
@@ -129,19 +141,22 @@ serve(async (req) => {
       );
     }
 
-    // Atestado content: afastamento days (0.5–365), optional CID + note.
+    // Atestado duration is exact clinician input; invalid values are never clamped.
+    if (isAtestado) {
+      try { validateCertificateDays(body.content?.days); }
+      catch { throw new RequestError('Informe entre 0,5 e 365 dias, em intervalos de meio dia.'); }
+    }
     const atestado = isAtestado ? {
-      days: Math.min(365, Math.max(0.5, Number(body.content?.days) || 1)),
+      days: validateCertificateDays(body.content?.days),
       cid: (body.content?.cid ?? '').toString().trim().slice(0, 20),
       note: (body.content?.note ?? '').toString().trim().slice(0, 400),
     } : null;
 
     // Exam request content: 1–20 exams + optional clinical indication.
-    const exames = isExames ? {
+    const exames: { exams: string[]; indication: string } | null = isExames ? {
       exams: (Array.isArray(body.content?.exams) ? body.content.exams : [])
-        .filter((e: any): e is string => typeof e === 'string' && e.trim().length > 0)
-        .map((e: string) => e.trim().slice(0, 120))
-        .slice(0, 20),
+        .filter((e: unknown): e is string => typeof e === 'string' && e.trim().length > 0)
+        .map((e: string) => e.trim()),
       indication: (body.content?.indication ?? '').toString().trim().slice(0, 300),
     } : null;
 
@@ -161,26 +176,24 @@ serve(async (req) => {
 
     // ── Build the PDF ─────────────────────────────────────────────────────────
     const pdf = await PDFDocument.create();
-    const page = pdf.addPage([595.28, 841.89]); // A4 portrait, points
+    const firstPage = pdf.addPage([595.28, 841.89]); // A4 portrait, points
     const helv = await pdf.embedFont(StandardFonts.Helvetica);
     const helvBold = await pdf.embedFont(StandardFonts.HelveticaBold);
-    const { width, height } = page.getSize();
+    const { width, height } = firstPage.getSize();
     const margin = 56;
-    let y = height - margin;
 
     const ink = rgb(0.09, 0.14, 0.18);
     const mut = rgb(0.42, 0.48, 0.54);
     const blue = rgb(0.11, 0.39, 0.72);
 
-    const text = (s: string, opts: { x?: number; size?: number; bold?: boolean; color?: any } = {}) => {
-      page.drawText(s, {
-        x: opts.x ?? margin, y,
-        size: opts.size ?? 10.5,
-        font: opts.bold ? helvBold : helv,
-        color: opts.color ?? ink,
-      });
-    };
-    const down = (n: number) => { y -= n; };
+    const writer = createPaginatedWriter({
+      page: firstPage, width, top: height - margin, bottom: 190, margin,
+      regular: helv, bold: helvBold, ink, continuation: `Continuação — ${patient.name}`,
+      addPage: () => pdf.addPage([width, height]),
+      draw: (target, value, options) => target.drawText(value, options),
+    });
+    const text = writer.text;
+    const down = writer.down;
 
     // Header — prescriber
     text(settings.doctor_name.trim(), { size: 15, bold: true, color: blue }); down(16);
@@ -189,31 +202,21 @@ serve(async (req) => {
       text(settings.professional_address.trim(), { size: 9, color: mut }); down(13);
     }
     down(6);
-    page.drawLine({
-      start: { x: margin, y }, end: { x: width - margin, y },
+    writer.page.drawLine({
+      start: { x: margin, y: writer.y }, end: { x: width - margin, y: writer.y },
       thickness: 1.4, color: blue,
     });
     down(28);
 
     // Simple word-wrap helper — content lines are short in practice.
-    const wrapText = (s: string, opts: { x?: number; size?: number; color?: any; max?: number } = {}) => {
-      const max = opts.max ?? 90;
-      const words = s.trim().split(/\s+/);
-      let line = '';
-      for (const w of words) {
-        if ((line + ' ' + w).length > max) {
-          text(line, { x: opts.x, size: opts.size, color: opts.color }); down((opts.size ?? 10) + 4);
-          line = w;
-        } else {
-          line = line ? `${line} ${w}` : w;
-        }
-      }
-      if (line) { text(line, { x: opts.x, size: opts.size, color: opts.color }); down((opts.size ?? 10) + 4); }
+    const wrapText = (s: string, opts: { x?: number; size?: number; color?: ReturnType<typeof rgb>; max?: number } = {}) => {
+      text(s, opts);
+      down((opts.size ?? 10) + 4);
     };
 
     // Title + patient + date
     text(DOC_TITLES[docType], { size: 13, bold: true }); down(22);
-    text(`Paciente: ${patient.name}${patient.age ? `, ${patient.age} anos` : ''}`, { size: 11 }); down(15);
+    text(`Paciente: ${patient.name}, ${patientAge !== null ? `${patientAge} anos` : 'idade não informada'}`, { size: 11 }); down(15);
     const emitted = now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
     const dateLine = isReceita
       ? `Emitido em: ${emitted} · Válida até ${expiresAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`
@@ -264,10 +267,11 @@ serve(async (req) => {
       });
     }
 
-    // Footer block — pinned to the bottom area
-    y = 168;
-    page.drawLine({
-      start: { x: margin, y }, end: { x: width - margin, y },
+    // Every page reserves the same footer area; no medication can overlap it.
+    for (const bodyPage of pdf.getPages()) {
+    writer.footer(bodyPage, 168);
+    writer.page.drawLine({
+      start: { x: margin, y: writer.y }, end: { x: width - margin, y: writer.y },
       thickness: 0.8, color: rgb(0.85, 0.89, 0.92),
     });
     down(18);
@@ -275,9 +279,9 @@ serve(async (req) => {
     // QR code (left) + validation info (right of it)
     let qrDrawn = false;
     try {
-      const qrDataUrl: string = await QRCode.toDataURL(validationUrl, { margin: 0, width: 220 });
+      const qrDataUrl: string = await toDataURL(validationUrl, { margin: 0, width: 220 });
       const qrPng = await pdf.embedPng(qrDataUrl);
-      page.drawImage(qrPng, { x: margin, y: y - 92, width: 92, height: 92 });
+      writer.page.drawImage(qrPng, { x: margin, y: writer.y - 92, width: 92, height: 92 });
       qrDrawn = true;
     } catch { /* fall back to text-only validation info */ }
 
@@ -289,18 +293,25 @@ serve(async (req) => {
     text(validationUrl.replace('https://', ''), { x: infoX, size: 7, color: mut }); down(20);
 
     // Signature status notice — replaced by the PAdES signature block in Phase 1b.
+    // The QR occupies y=58..150; keep the notice below its lower edge.
+    writer.footer(bodyPage, 42);
     text('Documento gerado eletronicamente pelo Cortex. Assinatura digital ICP-Brasil pendente —', { size: 8, color: mut }); down(10);
     text('até a assinatura, este documento não substitui a receita assinada.', { size: 8, color: mut });
+    }
 
     const pdfBytes = await pdf.save();
+    const pdfSha256 = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(pdfBytes).buffer))]
+      .map(byte => byte.toString(16).padStart(2, '0')).join('');
+    const issuanceSnapshot = {
+      prescriber: { doctor_name: settings.doctor_name.trim(), crm_number: settings.crm_number.trim(), crm_uf: settings.crm_uf.trim().toUpperCase(), professional_address: settings.professional_address?.trim() ?? '' },
+      patient: { name: patient.name, age: patientAge, dateOfBirth: patient.date_of_birth ?? null },
+      pdf_sha256: pdfSha256, template_version: 'cortex-clinical-document-v1', issued_at: now.toISOString(),
+    };
 
     // ── Store + record ────────────────────────────────────────────────────────
     const storagePath = `rx/${userId}/${prescriptionId}.pdf`;
-    const { error: upErr } = await supabase.storage
-      .from('prescriptions')
-      .upload(storagePath, pdfBytes, { contentType: 'application/pdf', upsert: false });
-    if (upErr) throw new Error(`Erro ao armazenar PDF: ${upErr.message}`);
-
+    // Register the owned object path before upload so concurrent deletion can
+    // enumerate it. It remains unavailable for validation until upload succeeds.
     const { error: insErr } = await supabase.from('prescriptions').insert({
       id: prescriptionId,
       user_id: userId,
@@ -311,12 +322,26 @@ serve(async (req) => {
       content: atestado ?? exames,
       storage_path: storagePath,
       secret_code: code,
-      status: 'generated',
+      status: 'revoked',
       expires_at: expiresAt.toISOString(),
+      issuance_snapshot: issuanceSnapshot,
     });
     if (insErr) {
-      await supabase.storage.from('prescriptions').remove([storagePath]).catch(() => {});
       throw insErr;
+    }
+    try {
+      const { error: upErr } = await supabase.storage.from('prescriptions')
+        .upload(storagePath, pdfBytes, { contentType: 'application/pdf', upsert: false });
+      if (upErr) throw new Error(`Erro ao armazenar PDF: ${upErr.message}`);
+      const { data: activated, error: activationError } = await supabase.from('prescriptions')
+        .update({ status: 'generated', issuance_verified_at: new Date().toISOString() })
+        .eq('id', prescriptionId).eq('user_id', userId).select('id').maybeSingle();
+      if (activationError || !activated) throw new Error('O paciente foi alterado durante a geração. Gere novamente.');
+    } catch (error) {
+      const { error: cleanupError } = await supabase.storage.from('prescriptions').remove([storagePath]);
+      // Keep the revoked metadata if removal fails so deletion can retry it.
+      if (!cleanupError) await supabase.from('prescriptions').delete().eq('id', prescriptionId).eq('user_id', userId);
+      throw error;
     }
 
     // Short-lived preview URL for the doctor's browser.
@@ -338,8 +363,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('generate-prescription error:', error instanceof Error ? error.message : 'unknown');
+    console.error('generate-prescription failed');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

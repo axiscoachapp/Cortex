@@ -1,20 +1,23 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, FileStack, Plus, Search, Pencil, Copy, Trash2, Loader2,
-  Sparkles, ClipboardPaste, FileText,
+  Sparkles, FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { fetchAllRows } from '@/lib/pagination';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { functionErrorBody } from '@/lib/functionErrors';
 
 export interface DocumentTemplate {
   id: string;
@@ -25,7 +28,7 @@ export interface DocumentTemplate {
   created_at: string;
 }
 
-type CreateMode = 'ai' | 'example' | 'existing';
+type CreateMode = 'ai' | 'existing';
 
 export default function TemplatesPage() {
   const navigate = useNavigate();
@@ -37,6 +40,7 @@ export default function TemplatesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createMode, setCreateMode] = useState<CreateMode>('ai');
   const [createInput, setCreateInput] = useState('');
+  const [templateReviewed, setTemplateReviewed] = useState(false);
   const [baseTemplateId, setBaseTemplateId] = useState('');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<DocumentTemplate | null>(null);
@@ -44,15 +48,14 @@ export default function TemplatesPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const { data: templates = [], isLoading } = useQuery<DocumentTemplate[]>({
+  const { data: templates = [], isLoading, isError, refetch } = useQuery<DocumentTemplate[]>({
     queryKey: ['document-templates', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const data = await fetchAllRows<DocumentTemplate>((from, to) => supabase
         .from('document_templates')
         .select('id, user_id, name, description, content, created_at')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data as DocumentTemplate[]) ?? [];
+        .order('created_at', { ascending: false }).order('id').range(from, to));
+      return data;
     },
     enabled: !!user?.id,
     staleTime: 30_000,
@@ -66,6 +69,23 @@ export default function TemplatesPage() {
   }, [templates, search]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['document-templates', user?.id] });
+  const editDirty = !!editing && (!editing.id || editDraft.name !== editing.name || editDraft.description !== (editing.description ?? '') || editDraft.content !== editing.content);
+  const createDirty = createOpen && (!!createInput.trim() || !!baseTemplateId);
+  const canClose = useUnsavedChanges(editDirty || createDirty);
+  useEffect(() => {
+    if (!editDirty && !createDirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [editDirty, createDirty]);
+  const closeEditor = () => {
+    if (!savingEdit && canClose(false)) setEditing(null);
+  };
+  const closeCreate = (next: boolean) => {
+    if (creating || !canClose(next)) return;
+    if (!next) { setCreateInput(''); setBaseTemplateId(''); }
+    setCreateOpen(next);
+  };
 
   const handleCreate = async () => {
     if (!user?.id) return;
@@ -83,35 +103,32 @@ export default function TemplatesPage() {
         if (error) throw error;
         toast({ title: 'Modelo duplicado', description: 'Edite a cópia como preferir.' });
       } else {
-        if (createInput.trim().length < 10) {
-          toast({ title: 'Descreva ou cole o conteúdo', description: 'Mínimo de 10 caracteres.', variant: 'destructive' });
+        if (!createInput) {
+          toast({ title: 'Selecione a especialidade', variant: 'destructive' });
           return;
         }
         const { data, error } = await supabase.functions.invoke('create-template-ai', {
           body: {
-            mode: createMode === 'example' ? 'from_example' : 'from_description',
-            input: createInput,
+            mode: 'from_structure',
+            specialty: createInput,
           },
         });
         if (error) {
-          const body = (error as any)?.context?.json ? await (error as any).context.json().catch(() => null) : null;
-          throw new Error(body?.error ?? 'Falha na geração');
+          const body = await functionErrorBody(error);
+          throw new Error(typeof body?.error === 'string' ? body.error : 'Falha na geração');
         }
-        const { error: insErr } = await supabase.from('document_templates').insert({
-          user_id: user.id,
-          name: data.name,
-          description: data.description,
-          content: data.content,
-        });
-        if (insErr) throw insErr;
+        if (!data || typeof data.name !== 'string' || typeof data.content !== 'string' || !data.content.trim()) throw new Error('Modelo inválido');
+        setEditing({ id: '', user_id: user.id, name: data.name, description: data.description ?? '', content: data.content, created_at: new Date().toISOString() });
+        setEditDraft({ name: data.name, description: data.description ?? '', content: data.content });
+        setTemplateReviewed(false);
         queryClient.invalidateQueries({ queryKey: ['usage-daily', user.id] });
-        toast({ title: 'Modelo criado pela IA', description: `"${data.name}" — revise e ajuste como preferir.` });
+        toast({ title: 'Rascunho gerado', description: 'Revise todo o conteúdo e confirme antes de ativar o modelo.' });
       }
       setCreateOpen(false);
       setCreateInput('');
       invalidate();
-    } catch (err: any) {
-      toast({ title: 'Erro ao criar modelo', description: err?.message, variant: 'destructive' });
+    } catch {
+      toast({ title: 'Erro ao criar modelo', description: 'Seu rascunho foi mantido. Tente novamente.', variant: 'destructive' });
     } finally {
       setCreating(false);
     }
@@ -123,24 +140,20 @@ export default function TemplatesPage() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editing) return;
+    if (!editing || savingEdit || (!editing.id && !templateReviewed)) return;
+    if (!editDraft.name.trim() || !editDraft.content.trim()) { toast({ title: 'Preencha o nome e o conteúdo do modelo', variant: 'destructive' }); return; }
     setSavingEdit(true);
     try {
-      const { error } = await supabase
-        .from('document_templates')
-        .update({
-          name: editDraft.name.trim() || editing.name,
-          description: editDraft.description.trim() || null,
-          content: editDraft.content,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', editing.id);
+      const payload = { name: editDraft.name.trim(), description: editDraft.description.trim() || null, content: editDraft.content, updated_at: new Date().toISOString() };
+      const { error } = editing.id
+        ? await supabase.from('document_templates').update(payload).eq('id', editing.id)
+        : await supabase.from('document_templates').insert({ ...payload, user_id: user!.id });
       if (error) throw error;
       toast({ title: 'Modelo salvo' });
       setEditing(null);
       invalidate();
-    } catch (err: any) {
-      toast({ title: 'Erro ao salvar', description: err?.message, variant: 'destructive' });
+    } catch {
+      toast({ title: 'Erro ao salvar', description: 'Suas alterações foram mantidas. Tente novamente.', variant: 'destructive' });
     } finally {
       setSavingEdit(false);
     }
@@ -182,7 +195,7 @@ export default function TemplatesPage() {
               </p>
             </div>
           </div>
-          <Button variant="medical" size="sm" className="gap-1.5" onClick={() => { setCreateMode('ai'); setCreateOpen(true); }}>
+          <Button variant="medical" size="sm" aria-label="Criar meu modelo" className="gap-1.5" onClick={() => { setCreateMode('ai'); setCreateOpen(true); }}>
             <Sparkles className="w-4 h-4" />
             <span className="hidden sm:inline">Criar meu modelo</span>
           </Button>
@@ -191,8 +204,9 @@ export default function TemplatesPage() {
 
       <main className="container mx-auto px-3 md:px-4 py-6 max-w-3xl space-y-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
+            aria-label="Buscar modelos"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Pesquise pelo nome do modelo"
@@ -202,6 +216,8 @@ export default function TemplatesPage() {
 
         {isLoading ? (
           <div className="space-y-2">{[0, 1, 2].map(i => <div key={i} className="h-20 rounded-xl bg-muted/40 animate-pulse" />)}</div>
+        ) : isError ? (
+          <div role="alert" className="text-center py-10 space-y-3"><p>Não foi possível carregar os modelos.</p><Button variant="outline" onClick={() => refetch()}>Tentar novamente</Button></div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-14 text-sm text-muted-foreground">
             Nenhum modelo encontrado.
@@ -246,7 +262,7 @@ export default function TemplatesPage() {
           </div>
         )}
 
-        <p className="text-[11px] text-muted-foreground/70 leading-relaxed pt-2">
+        <p className="text-[11px] text-muted-foreground leading-relaxed pt-2">
           O modelo escolhido ao iniciar uma gravação substitui a estrutura SOAP padrão. Use títulos
           (##), itens com descrição e comandos condicionais entre parênteses — ex.:
           "(incluir apenas se mencionado explicitamente na transcrição. Caso contrário, omitir completamente)".
@@ -254,21 +270,23 @@ export default function TemplatesPage() {
       </main>
 
       {/* Create dialog */}
-      <Dialog open={createOpen} onOpenChange={(v) => { if (!creating) setCreateOpen(v); }}>
+      <Dialog open={createOpen} onOpenChange={closeCreate}>
         <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-lg max-h-[92vh] flex flex-col gap-0 p-0">
           <DialogHeader className="px-5 py-4 border-b border-border/50 shrink-0">
             <DialogTitle className="text-base font-semibold">Criar modelo</DialogTitle>
+            <DialogDescription className="sr-only">Crie um modelo a partir de uma estrutura vazia de especialidade ou de um modelo existente.</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
             <div className="grid grid-cols-3 gap-2">
               {([
                 { value: 'ai' as const,       label: 'Criar com IA',        hint: 'Descreva o que deseja',        icon: Sparkles },
-                { value: 'example' as const,  label: 'Do meu exemplo',      hint: 'Cole um documento seu',        icon: ClipboardPaste },
+
                 { value: 'existing' as const, label: 'De um existente',     hint: 'Duplique e edite',             icon: Copy },
               ]).map(({ value, label, hint, icon: Icon }) => (
                 <button
                   key={value}
                   type="button"
+                  aria-pressed={createMode === value}
                   onClick={() => setCreateMode(value)}
                   className={cn(
                     'rounded-lg border p-2.5 text-left transition-all',
@@ -286,8 +304,9 @@ export default function TemplatesPage() {
 
             {createMode === 'existing' ? (
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground/80">Modelo de origem</label>
+                <label htmlFor="template-source" className="text-xs font-medium text-foreground/80">Modelo de origem</label>
                 <select
+                  id="template-source"
                   value={baseTemplateId}
                   onChange={e => setBaseTemplateId(e.target.value)}
                   className="w-full h-10 px-3 rounded-lg text-sm border border-border bg-background"
@@ -297,25 +316,17 @@ export default function TemplatesPage() {
                 </select>
               </div>
             ) : (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground/80">
-                  {createMode === 'ai'
-                    ? 'Descreva o modelo que deseja'
-                    : 'Cole seu documento/anamnese/laudo de exemplo'}
-                </label>
-                <Textarea
-                  value={createInput}
-                  onChange={e => setCreateInput(e.target.value)}
-                  placeholder={createMode === 'ai'
-                    ? 'Ex: "Quero uma anamnese para reumatologia pediátrica" ou "Um modelo para organizar resultados de exames em tabela"'
-                    : 'Cole aqui um documento real — a IA transforma em modelo reutilizável, removendo os dados do paciente'}
-                  className="min-h-[140px] text-sm"
-                />
+              <div className="space-y-2">
+                <label htmlFor="template-specialty" className="text-xs font-medium">Estrutura da consulta</label>
+                <select id="template-specialty" className="w-full h-10 rounded-md border bg-background px-3" value={createInput} onChange={e => setCreateInput(e.target.value)}>
+                  <option value="">Selecione…</option><option value="ginecologia">Ginecologia</option><option value="prenatal">Pré-natal</option><option value="urologia">Urologia</option><option value="retorno">Retorno</option><option value="geral">Consulta geral</option>
+                </select>
+                <p className="text-xs text-muted-foreground">A geração usa apenas a estrutura selecionada. Revise o rascunho antes de ativar. Para outros formatos, duplique um modelo e edite os campos manualmente.</p>
               </div>
             )}
           </div>
           <div className="px-5 py-3 border-t border-border/50 shrink-0 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setCreateOpen(false)} disabled={creating}>Cancelar</Button>
+            <Button variant="outline" size="sm" onClick={() => closeCreate(false)} disabled={creating}>Cancelar</Button>
             <Button size="sm" className="gap-1.5" onClick={handleCreate} disabled={creating}>
               {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
               {createMode === 'existing' ? 'Duplicar' : 'Criar modelo'}
@@ -325,23 +336,29 @@ export default function TemplatesPage() {
       </Dialog>
 
       {/* Edit dialog */}
-      <Dialog open={!!editing} onOpenChange={(v) => { if (!v && !savingEdit) setEditing(null); }}>
+      <Dialog open={!!editing} onOpenChange={(v) => { if (!v) closeEditor(); }}>
         <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-2xl max-h-[92vh] flex flex-col gap-0 p-0">
           <DialogHeader className="px-5 py-4 border-b border-border/50 shrink-0">
-            <DialogTitle className="text-base font-semibold">Editar modelo</DialogTitle>
+            <DialogTitle className="text-base font-semibold">{editing?.id ? 'Editar modelo' : 'Revisar rascunho do modelo'}</DialogTitle>
+            <DialogDescription className="sr-only">Revise o nome, a descrição e as instruções do modelo antes de salvar.</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-            <Input value={editDraft.name} onChange={e => setEditDraft(d => ({ ...d, name: e.target.value }))} placeholder="Nome" />
-            <Input value={editDraft.description} onChange={e => setEditDraft(d => ({ ...d, description: e.target.value }))} placeholder="Descrição (1 frase)" />
+            <label htmlFor="template-name" className="text-xs font-medium">Nome</label>
+            <Input id="template-name" value={editDraft.name} onChange={e => setEditDraft(d => ({ ...d, name: e.target.value }))} placeholder="Nome" />
+            <label htmlFor="template-description" className="text-xs font-medium">Descrição</label>
+            <Input id="template-description" value={editDraft.description} onChange={e => setEditDraft(d => ({ ...d, description: e.target.value }))} placeholder="Descrição (1 frase)" />
+            <label htmlFor="template-content" className="text-xs font-medium">Conteúdo do modelo</label>
             <Textarea
+              id="template-content"
               value={editDraft.content}
               onChange={e => setEditDraft(d => ({ ...d, content: e.target.value }))}
               className="min-h-[380px] text-xs font-mono leading-relaxed"
             />
           </div>
+          {!editing?.id && <label className="px-5 py-2 text-xs flex items-start gap-2"><input type="checkbox" checked={templateReviewed} onChange={e => setTemplateReviewed(e.target.checked)} />Revisei a estrutura e confirmei que não contém dados de pacientes, achados ou negativas predefinidas.</label>}
           <div className="px-5 py-3 border-t border-border/50 shrink-0 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setEditing(null)} disabled={savingEdit}>Cancelar</Button>
-            <Button size="sm" className="gap-1.5" onClick={handleSaveEdit} disabled={savingEdit}>
+            <Button variant="outline" size="sm" onClick={closeEditor} disabled={savingEdit}>Cancelar</Button>
+            <Button size="sm" className="gap-1.5" onClick={handleSaveEdit} disabled={savingEdit || (!editing?.id && !templateReviewed)}>
               {savingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Salvar modelo
             </Button>

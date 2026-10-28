@@ -1,3 +1,4 @@
+import { fetchWithDeadline, readJsonObject, RequestError } from "../_shared/http.ts";
 /**
  * Live consultation copilot.
  *
@@ -13,12 +14,13 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini, buildPatientSummary } from "../_shared/gemini.ts";
+import { callGemini, buildPatientSummary, parseModelObject } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import { assertPromptSize, isRecord, optionalText, readPatientContext } from '../_shared/modelInput.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -64,6 +66,7 @@ const COPILOT_SCHEMA = {
   },
   required: ['resumo', 'alertas', 'nao_explorado', 'sugestoes'],
 };
+interface CopilotState { resumo: string[]; alertas: string[]; nao_explorado: string[]; sugestoes: string[] }
 
 function strArr(v: unknown, max: number): string[] {
   return Array.isArray(v)
@@ -78,23 +81,25 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { audioChunks, prevState, dismissed, patientContext, chiefComplaint } = await req.json();
+    const body: Record<string, unknown> = await readJsonObject(req, 8 * 1024 * 1024);
+    const { audioChunks, prevState, dismissed } = body;
+    const patientContext = readPatientContext(body.patientContext);
+    const chiefComplaint = optionalText(body.chiefComplaint, 'Queixa principal');
 
-    if (!Array.isArray(audioChunks) || audioChunks.length === 0) {
+    if (!Array.isArray(audioChunks) || audioChunks.length === 0 || audioChunks.length > MAX_CHUNKS) {
       return new Response(
-        JSON.stringify({ error: 'audioChunks é obrigatório' }),
+        JSON.stringify({ error: `Envie entre 1 e ${MAX_CHUNKS} trechos de áudio.` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
-    const chunks = audioChunks.slice(0, MAX_CHUNKS);
-    for (const c of chunks) {
-      if (typeof c?.data !== 'string' || c.data.length === 0 || c.data.length > MAX_CHUNK_BASE64) {
-        return new Response(
-          JSON.stringify({ error: 'chunk de áudio inválido' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
+    const chunks = audioChunks.map((chunk: unknown) => {
+      if (!isRecord(chunk) || typeof chunk.data !== 'string' || !chunk.data || chunk.data.length > MAX_CHUNK_BASE64) {
+        throw new RequestError('Trecho de áudio inválido.');
       }
-    }
+      const mimeType = optionalText(chunk.mimeType, 'Tipo do áudio') || 'audio/webm';
+      if (!mimeType.startsWith('audio/') || mimeType.length > 100) throw new RequestError('Tipo do áudio inválido.');
+      return { data: chunk.data, mimeType };
+    });
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
@@ -104,24 +109,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // ~30s audio ≈ 1 credit + text state/context in + short structured out.
-    try {
-      await checkQuota(supabase, userId, 3);
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
-    }
-
     // Sanitize the incoming state — it round-trips through the client, so cap
     // sizes rather than trusting it verbatim.
-    const prev = prevState && typeof prevState === 'object'
-      ? {
-          resumo:        strArr(prevState.resumo, 6),
-          alertas:       strArr(prevState.alertas, 3),
-          nao_explorado: strArr(prevState.nao_explorado, 4),
-          sugestoes:     strArr(prevState.sugestoes, 4),
-        }
-      : null;
+    let prev: CopilotState | null = null;
+    if (prevState != null) {
+      try { prev = parseModelObject<CopilotState>(JSON.stringify(prevState), COPILOT_SCHEMA); }
+      catch { throw new RequestError('Estado anterior do copiloto inválido.'); }
+      prev = { resumo: strArr(prev.resumo, 6), alertas: strArr(prev.alertas, 3), nao_explorado: strArr(prev.nao_explorado, 4), sugestoes: strArr(prev.sugestoes, 4) };
+    }
+    if (dismissed != null && (!Array.isArray(dismissed) || dismissed.some(value => typeof value !== 'string'))) throw new RequestError('Sugestões descartadas inválidas.');
     const dismissedList = strArr(dismissed, 12);
 
     const patientBlock = buildPatientSummary(patientContext, chiefComplaint ?? '');
@@ -138,11 +134,19 @@ serve(async (req) => {
     ].filter(Boolean).join('\n\n');
 
     const parts: object[] = [
-      ...chunks.map((c: any) => ({
-        inlineData: { mimeType: c.mimeType ?? 'audio/webm', data: c.data },
+      ...chunks.map(c => ({
+        inlineData: { mimeType: c.mimeType, data: c.data },
       })),
       { text: promptText },
     ];
+    assertPromptSize(promptText, COPILOT_SYSTEM);
+    let reservationId: string;
+    try {
+      ({ reservationId } = await checkQuota(supabase, userId, 400));
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
+    }
 
     const { text: raw, usage } = await callGemini(GEMINI_API_KEY, parts, {
       systemInstruction: COPILOT_SYSTEM,
@@ -153,21 +157,13 @@ serve(async (req) => {
       responseSchema: COPILOT_SCHEMA,
     });
 
-    await recordUsage(supabase, userId, creditsFromUsage(usage));
+    await recordUsage(supabase, userId, creditsFromUsage(usage), reservationId);
 
-    let state = prev ?? { resumo: [], alertas: [], nao_explorado: [], sugestoes: [] };
-    try {
-      const parsed = JSON.parse(raw);
-      state = {
-        resumo:        strArr(parsed.resumo, 6),
-        alertas:       strArr(parsed.alertas, 3),
-        nao_explorado: strArr(parsed.nao_explorado, 4),
-        sugestoes:     strArr(parsed.sugestoes, 4),
-      };
-    } catch {
-      // Unparseable output — return the previous state unchanged rather than
-      // blanking the card mid-consult.
-    }
+    const parsed = parseModelObject<CopilotState>(raw, COPILOT_SCHEMA);
+    const state = {
+      resumo: strArr(parsed.resumo, 6), alertas: strArr(parsed.alertas, 3),
+      nao_explorado: strArr(parsed.nao_explorado, 4), sugestoes: strArr(parsed.sugestoes, 4),
+    };
 
     return new Response(
       JSON.stringify(state),
@@ -175,8 +171,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('live-copilot error:', error instanceof Error ? error.message : 'unknown');
+    console.error('live-copilot error:');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

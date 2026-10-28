@@ -1,18 +1,20 @@
+import { readJsonObject, RequestError, fetchWithDeadline } from "../_shared/http.ts";
 /**
  * AI review of an attached patient document (exam PDF, imaging photo, external
  * prescription...). Reads the file from storage, has Gemini produce a short
  * clinical review, then:
  *   - stores the review on the patient_files row (ai_summary)
- *   - appends a stamped note to the patient's clinical_notes, so the info
- *     flows into chat-assistant answers and pre-briefings automatically.
+ *   - stores a pending proposal for separate physician review.
+ *     It never promotes extraction directly into longitudinal chart facts.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
+import { assertPatientFilePath } from "../_shared/storage.ts";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini, uploadToGeminiFiles } from "../_shared/gemini.ts";
+import { callGemini, uploadToGeminiFiles, parseModelObject, trackGeminiFile, cleanupGeminiFile } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
@@ -63,7 +65,7 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { fileId } = await req.json();
+    const { fileId } = await readJsonObject(req);
 
     if (!fileId) {
       return new Response(
@@ -83,7 +85,7 @@ serve(async (req) => {
     // Ownership: the file row must belong to the authenticated user.
     const { data: fileRow } = await supabase
       .from('patient_files')
-      .select('id, patient_id, storage_path, file_name, mime_type, size_bytes')
+      .select('id, patient_id, storage_path, file_name, mime_type, size_bytes, ai_review_status')
       .eq('id', fileId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -94,7 +96,12 @@ serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+    if (fileRow.ai_review_status && fileRow.ai_review_status !== 'pending') throw new RequestError('Este documento já foi revisado. Anexe uma nova versão para uma nova análise.', 409);
 
+    const storagePath = assertPatientFilePath(fileRow.storage_path, userId, fileRow.patient_id);
+    const { data: ownedPatient, error: patientError } = await supabase.from('patients')
+      .select('id').eq('id', fileRow.patient_id).eq('user_id', userId).is('deletion_requested_at', null).maybeSingle();
+    if (patientError || !ownedPatient) throw new Error('Paciente indisponível');
     const mime = fileRow.mime_type ?? '';
     const supported = SUPPORTED_PREFIXES.some(p => mime.startsWith(p)) || SUPPORTED_EXACT.includes(mime);
     if (!supported) {
@@ -110,20 +117,17 @@ serve(async (req) => {
       );
     }
 
-    try {
-      await checkQuota(supabase, userId, 5);
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
-    }
-
     const { data: blob, error: dlErr } = await supabase.storage
       .from('patient-files')
-      .download(fileRow.storage_path);
+      .download(storagePath);
     if (dlErr || !blob) throw new Error(`Erro ao baixar arquivo: ${dlErr?.message}`);
 
+    if (blob.size > MAX_ANALYZE_BYTES) throw new Error('Arquivo muito grande para análise');
     const buffer = await blob.arrayBuffer();
-    const fileUri = await uploadToGeminiFiles(GEMINI_API_KEY, buffer, mime);
+    const {reservationId} = await checkQuota(supabase,userId,400);
+    const fileUri = await uploadToGeminiFiles(GEMINI_API_KEY, buffer, mime, { db: supabase, userId, patientId: fileRow.patient_id });
+    try {
+    await trackGeminiFile(GEMINI_API_KEY, fileUri, supabase, userId, fileRow.patient_id);
 
     const { text: raw, usage } = await callGemini(
       GEMINI_API_KEY,
@@ -140,64 +144,40 @@ serve(async (req) => {
         responseSchema: SCHEMA,
       },
     );
-    await recordUsage(supabase, userId, creditsFromUsage(usage));
+    await recordUsage(supabase, userId, creditsFromUsage(usage), reservationId);
 
-    let documentType = 'Documento';
-    let summary = '';
-    let keyFindings: string[] = [];
-    let profileNote = '';
-    try {
-      const parsed = JSON.parse(raw);
-      documentType = (parsed.document_type ?? 'Documento').toString().slice(0, 80);
-      summary      = (parsed.summary ?? '').toString().slice(0, 1200);
-      keyFindings  = Array.isArray(parsed.key_findings)
-        ? parsed.key_findings.filter((x: any): x is string => typeof x === 'string' && x.trim()).slice(0, 6)
-        : [];
-      profileNote  = (parsed.profile_note ?? '').toString().slice(0, 300);
-    } catch {
-      summary = 'Não foi possível analisar o documento.';
-    }
+    const parsed = parseModelObject(raw, SCHEMA) as {
+      document_type: string; summary: string; key_findings: string[]; profile_note: string;
+    };
+    const documentType = parsed.document_type.slice(0,80);
+    const summary = parsed.summary.slice(0,1200);
+    const keyFindings = parsed.key_findings.filter(value=>value.trim()).slice(0,6).map(value=>value.slice(0,300));
+    const profileNote = parsed.profile_note.slice(0,300);
 
     // Persist the review on the file row (shown in the Documentos tab).
     const aiSummary = [
       `${documentType}: ${summary}`,
       ...keyFindings.map(f => `- ${f}`),
     ].join('\n');
-    await supabase
-      .from('patient_files')
-      .update({ ai_summary: aiSummary })
-      .eq('id', fileRow.id)
-      .eq('user_id', userId);
-
-    // Connect to the record: stamped clinical_notes entry — chat-assistant and
-    // pre-briefing already read clinical_notes, so the info reaches both.
-    if (profileNote.trim()) {
-      const { data: patientRow } = await supabase
-        .from('patients')
-        .select('clinical_notes')
-        .eq('id', fileRow.patient_id)
-        .eq('user_id', userId)
-        .maybeSingle();
-      const stamp = new Date().toLocaleString('pt-BR', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-      });
-      const entry = `[${stamp}] 📎 ${fileRow.file_name}: ${profileNote.trim()}`;
-      const merged = patientRow?.clinical_notes ? `${patientRow.clinical_notes}\n${entry}` : entry;
-      await supabase
-        .from('patients')
-        .update({ clinical_notes: merged })
-        .eq('id', fileRow.patient_id)
-        .eq('user_id', userId);
-    }
+    const {error: saveError} = await supabase.rpc('save_document_review',{
+      p_user_id:userId,p_file_id:fileRow.id,p_summary:aiSummary,p_profile_note:profileNote.trim(),
+    });
+    if (saveError) throw new Error('Não foi possível salvar a análise. Tente novamente.');
 
     return new Response(
-      JSON.stringify({ documentType, summary, keyFindings, profileNote }),
+      JSON.stringify({ documentType, summary, keyFindings, profileNote, reviewStatus: 'pending', sourceFileId: fileRow.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 
+    } finally {
+      await cleanupGeminiFile(GEMINI_API_KEY, fileUri, supabase, userId);
+    }
+
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({error:error.message}),{status:error.status,headers:{...corsHeaders,'Content-Type':'application/json'}});
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('analyze-document error:', error instanceof Error ? error.message : 'unknown');
+    if (error instanceof QuotaExceededError) return quotaResponse(error,corsHeaders);
+    console.error('analyze-document failed');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

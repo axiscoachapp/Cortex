@@ -1,207 +1,123 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  ArrowLeft, BookOpen, Plus, Trash2, Loader2, FileText, Search,
-} from 'lucide-react';
+import { ArrowLeft, BookOpen, Plus, Loader2, FileText, Search, RotateCw, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { fetchAllRows } from '@/lib/pagination';
+import { functionErrorBody } from '@/lib/functionErrors';
+import { createKnowledgeSource, reviewKnowledgeSource } from '@/lib/knowledge';
+import { ProtocolShareControls, SharedProtocolsPanel } from '@/components/ProtocolSharing';
 
 interface KBDoc {
-  id: string;
-  title: string;
-  source_type: string;
-  char_count: number;
-  status: 'processing' | 'ready' | 'error';
-  created_at: string;
+  id: string; title: string; source_type: string; char_count: number; status: string; created_at: string;
+  source_reference: string | null; source_version: string | null; review_status: string;
+  reviewed_at: string | null; reviewer_name: string | null; indexed_at: string | null;
+}
+interface SourceDetail extends KBDoc { source_text: string | null; supersedes_document_id: string | null }
+const date = (value: string) => new Date(value).toLocaleString('pt-BR');
+function statusLabel(doc: KBDoc) {
+  if (doc.review_status === 'retired') return 'Retirado';
+  if (doc.review_status !== 'approved') return 'Aguardando revisão';
+  return doc.status === 'ready' ? 'Revisado e disponível' : doc.status === 'processing' ? 'Indexando' : doc.status === 'error' ? 'Falha na indexação' : 'Revisado · não indexado';
 }
 
-const STATUS_META: Record<KBDoc['status'], { label: string; cls: string }> = {
-  processing: { label: 'Processando', cls: 'bg-amber-100 text-amber-700' },
-  ready:      { label: 'Pronto',       cls: 'bg-green-100 text-green-700' },
-  error:      { label: 'Erro',         cls: 'bg-red-100 text-red-700' },
-};
-
 export default function KnowledgeBasePage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const [search, setSearch] = useState('');
-  const [addOpen, setAddOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
-
-  const { data: docs = [], isLoading } = useQuery<KBDoc[]>({
-    queryKey: ['knowledge-docs', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('knowledge_documents')
-        .select('id, title, source_type, char_count, status, created_at')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data as KBDoc[]) ?? [];
-    },
-    enabled: !!user?.id,
-    staleTime: 20_000,
-    // Poll while anything is still indexing so the badge flips to "Pronto".
-    refetchInterval: (q) => (q.state.data as KBDoc[] | undefined)?.some(d => d.status === 'processing') ? 4000 : false,
+  const navigate = useNavigate(); const { user } = useAuth(); const { toast } = useToast(); const queryClient = useQueryClient();
+  const [search, setSearch] = useState(''); const [visibleCount, setVisibleCount] = useState(50);
+  const [addOpen, setAddOpen] = useState(false); const [title, setTitle] = useState(''); const [content, setContent] = useState('');
+  const [reference, setReference] = useState(''); const [version, setVersion] = useState(''); const [supersedes, setSupersedes] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null); const [saving, setSaving] = useState(false); const [busyId, setBusyId] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState(''); const [draftError, setDraftError] = useState('');
+  const guardDraft = useUnsavedChanges(addOpen && !!(title.trim() || content.trim() || reference.trim() || version.trim()));
+  const { data: docs = [], isLoading, isError, refetch } = useQuery<KBDoc[]>({
+    queryKey: ['knowledge-docs', user?.id], enabled: !!user?.id, staleTime: 20_000,
+    queryFn: () => fetchAllRows<KBDoc>((from, to) => supabase.from('knowledge_documents')
+      .select('id,title,source_type,char_count,status,created_at,source_reference,source_version,review_status,reviewed_at,reviewer_name,indexed_at')
+      .order('created_at', { ascending: false }).order('id').range(from, to)),
+    refetchInterval: q => q.state.data?.some(doc => doc.status === 'processing') ? 4000 : false,
   });
-
-  const filtered = docs.filter(d => d.title.toLowerCase().includes(search.trim().toLowerCase()));
-
-  const handleAdd = async () => {
-    if (!title.trim() || content.trim().length < 20) {
-      toast({ title: 'Preencha o título e o conteúdo', description: 'Mínimo de 20 caracteres.', variant: 'destructive' });
-      return;
+  const source = useQuery<SourceDetail>({
+    queryKey: ['knowledge-source', user?.id, selectedId], enabled: !!selectedId && !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('knowledge_documents').select('*').eq('id', selectedId!).eq('user_id', user!.id).single();
+      if (error || !data) throw new Error('Não foi possível carregar o texto original.');
+      return data as unknown as SourceDetail;
+    },
+  });
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['knowledge-docs', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['knowledge-source', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['usage-daily', user?.id] });
+  };
+  const filtered = docs.filter(doc => `${doc.title} ${doc.source_reference ?? ''}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const closeAdd = (next: boolean) => {
+    if (saving || !guardDraft(next)) return;
+    if (!next) { setTitle(''); setContent(''); setReference(''); setVersion(''); setSupersedes(null); setDraftError(''); }
+    setAddOpen(next);
+  };
+  const newVersion = (doc: SourceDetail) => {
+    setTitle(doc.title); setContent(doc.source_text ?? ''); setReference(doc.source_reference ?? ''); setVersion(''); setSupersedes(doc.id); setSelectedId(null); setAddOpen(true);
+  };
+  const create = async () => {
+    if (!title.trim() || content.trim().length < 20 || content.length > 60_000 || !reference.trim() || !version.trim()) {
+      setDraftError('Informe título, fonte, versão e texto original com 20 a 60.000 caracteres.'); return;
     }
-    setSaving(true);
+    if (saving) return;
+    setSaving(true); setDraftError('');
     try {
-      const { error } = await supabase.functions.invoke('ingest-knowledge', {
-        body: { title, text: content },
-      });
-      if (error) {
-        const body = (error as any)?.context?.json ? await (error as any).context.json().catch(() => null) : null;
-        throw new Error(body?.error ?? 'Falha ao indexar');
-      }
-      queryClient.invalidateQueries({ queryKey: ['knowledge-docs', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['usage-daily', user?.id] });
-      toast({ title: 'Conhecimento adicionado', description: 'O assistente já pode usá-lo nas conversas.' });
-      setAddOpen(false); setTitle(''); setContent('');
-    } catch (err: any) {
-      toast({ title: 'Erro ao adicionar', description: err?.message, variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
+      const id = await createKnowledgeSource({ title, text: content, reference, version, supersedesDocumentId: supersedes });
+      setAddOpen(false); setTitle(''); setContent(''); setReference(''); setVersion(''); setSupersedes(null); setSelectedId(id);
+      await refresh(); toast({ title: 'Original preservado', description: 'Revise a versão antes de disponibilizá-la ao assistente.' });
+    } catch (error) { setDraftError(error instanceof Error ? error.message : 'Não foi possível salvar. Seu texto foi mantido.'); }
+    finally { setSaving(false); }
   };
-
-  const handleDelete = async (d: KBDoc) => {
-    if (!window.confirm(`Excluir "${d.title}" da base de conhecimento?`)) return;
-    setBusyId(d.id);
-    const { error } = await supabase.from('knowledge_documents').delete().eq('id', d.id);
-    setBusyId(null);
-    if (error) toast({ title: 'Erro ao excluir', variant: 'destructive' });
-    else { toast({ title: 'Excluído' }); queryClient.invalidateQueries({ queryKey: ['knowledge-docs', user?.id] }); }
+  const index = async (doc: SourceDetail, approve: boolean) => {
+    if (busyId) return;
+    setBusyId(doc.id); setOperationError('');
+    try {
+      if (approve) await reviewKnowledgeSource(doc.id, true);
+      const { data, error } = await supabase.functions.invoke('ingest-knowledge', { body: { documentId: doc.id } });
+      if (error) { const body = await functionErrorBody(error); throw new Error(typeof body?.error === 'string' ? body.error : 'Não foi possível indexar. O original permanece salvo.'); }
+      if (data?.status !== 'ready') throw new Error('A indexação ainda não foi confirmada. Reabra a fonte antes de tentar novamente.');
+      toast({ title: 'Fonte revisada e disponível', description: 'O assistente pode consultar esta versão e citar a fonte.' });
+    } catch (error) { setOperationError(error instanceof Error ? error.message : 'A indexação falhou. O original foi preservado.'); }
+    finally { setBusyId(null); await refresh(); }
   };
-
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-background border-b sticky top-0 z-10">
-        <div className="container mx-auto px-3 md:px-4 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <BookOpen className="h-5 w-5 text-medical-blue shrink-0" />
-            <div className="min-w-0">
-              <h1 className="text-base md:text-lg font-semibold text-foreground leading-tight">Base de Conhecimento</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                Documentos e protocolos que o assistente usa nas conversas
-              </p>
-            </div>
-          </div>
-          <Button variant="medical" size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Adicionar conhecimento</span>
-          </Button>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-3 md:px-4 py-6 max-w-3xl space-y-4">
-        {docs.length > 0 && (
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Pesquise pelo nome" className="pl-9" />
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="space-y-2">{[0, 1].map(i => <div key={i} className="h-16 rounded-xl bg-muted/40 animate-pulse" />)}</div>
-        ) : docs.length === 0 ? (
-          <div className="text-center py-16 space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-medical-blue-light flex items-center justify-center mx-auto">
-              <BookOpen className="w-6 h-6 text-medical-blue" />
-            </div>
-            <p className="text-sm font-semibold text-foreground">Sua base de conhecimento está vazia</p>
-            <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-              Adicione protocolos, artigos ou diretrizes para que o assistente use essas informações
-              durante as conversas, com respostas mais precisas para você.
-            </p>
-            <Button variant="medical" size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
-              <Plus className="w-4 h-4" /> Adicionar conhecimento
-            </Button>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-10 text-sm text-muted-foreground">
-            Nenhum documento corresponde à busca.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map(d => {
-              const meta = STATUS_META[d.status];
-              return (
-                <div key={d.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border/60 bg-white">
-                  <div className="w-9 h-9 rounded-lg bg-medical-blue-light flex items-center justify-center shrink-0">
-                    <FileText className="w-4 h-4 text-medical-blue" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{d.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(d.created_at).toLocaleDateString('pt-BR')} · {(d.char_count / 1000).toFixed(1)}k caracteres
-                    </p>
-                  </div>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${meta.cls}`}>{meta.label}</span>
-                  <Button size="icon" variant="ghost" aria-label="Excluir documento" className="h-8 w-8 hover:text-destructive shrink-0"
-                    onClick={() => handleDelete(d)} disabled={busyId === d.id}>
-                    {busyId === d.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </main>
-
-      <Dialog open={addOpen} onOpenChange={(v) => { if (!saving) setAddOpen(v); }}>
-        <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-lg max-h-[92vh] flex flex-col gap-0 p-0">
-          <DialogHeader className="px-5 py-4 border-b border-border/50 shrink-0">
-            <DialogTitle className="text-base font-semibold">Adicionar conhecimento</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground/80">Título</label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Protocolo de manejo de HAS" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground/80">Conteúdo</label>
-              <Textarea
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                placeholder="Cole aqui o protocolo, artigo ou diretriz. O texto é dividido e indexado para o assistente consultar."
-                className="min-h-[240px] text-sm"
-              />
-              <p className="text-[10px] text-muted-foreground">{content.length.toLocaleString('pt-BR')} caracteres</p>
-            </div>
-          </div>
-          <div className="px-5 py-3 border-t border-border/50 shrink-0 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setAddOpen(false)} disabled={saving}>Cancelar</Button>
-            <Button size="sm" className="gap-1.5" onClick={handleAdd} disabled={saving}>
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-              Adicionar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+  const retire = async (doc: SourceDetail) => {
+    if (busyId || !window.confirm(`Retirar "${doc.title}" das referências do assistente? O original e a revisão serão preservados.`)) return;
+    setBusyId(doc.id); setOperationError('');
+    try { await reviewKnowledgeSource(doc.id, false); toast({ title: 'Fonte retirada', description: 'Novas consultas não usarão esta versão.' }); }
+    catch (error) { setOperationError(error instanceof Error ? error.message : 'Não foi possível retirar a fonte.'); }
+    finally { setBusyId(null); await refresh(); }
+  };
+  return <div className="min-h-screen bg-background">
+    <header className="bg-card border-b sticky top-0 z-10"><div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3 min-w-0"><Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}><ArrowLeft className="w-5 h-5" /></Button><BookOpen className="w-5 h-5 text-primary shrink-0" /><div><h1 className="text-lg font-semibold">Biblioteca de protocolos</h1><p className="text-xs text-muted-foreground hidden sm:block">Fontes originais, versões e revisão médica</p></div></div>
+      <Button size="sm" onClick={() => { setSupersedes(null); setAddOpen(true); }} aria-label="Adicionar conhecimento"><Plus className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Adicionar fonte</span></Button>
+    </div></header>
+    <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      <p className="text-sm text-muted-foreground rounded-xl border bg-card p-4">Somente versões revisadas e com indexação concluída entram nas respostas do assistente. Use protocolos gerais e referências; anexos e informações identificáveis de pacientes não devem ser reutilizados nesta biblioteca.</p>
+      <div className="relative"><Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" /><Input aria-label="Buscar conhecimento" value={search} onChange={e => { setSearch(e.target.value); setVisibleCount(50); }} placeholder="Buscar título ou fonte" className="pl-9" /></div>
+      {isLoading ? <p role="status">Carregando fontes…</p> : isError ? <div role="alert" className="space-y-3"><p>Não foi possível carregar a biblioteca.</p><Button variant="outline" onClick={() => refetch()}>Tentar novamente</Button></div> : !docs.length ? <div className="border rounded-xl bg-card py-12 text-center space-y-3"><BookOpen className="w-8 h-8 text-primary mx-auto" /><h2 className="font-semibold">Sua biblioteca está vazia</h2><p className="text-sm text-muted-foreground">Adicione o texto original de um protocolo para começar a revisão.</p><Button variant="outline" onClick={() => setAddOpen(true)}>Adicionar fonte</Button></div> : !filtered.length ? <p>Nenhuma fonte corresponde à busca.</p> : filtered.slice(0, visibleCount).map(doc => <article key={doc.id} className="border rounded-xl bg-card p-4 flex gap-3 items-start"><FileText className="w-5 h-5 mt-1 text-primary shrink-0" /><div className="min-w-0 flex-1 space-y-1"><h2 className="font-semibold break-words">{doc.title}</h2><p className="text-xs text-muted-foreground break-words">Versão {doc.source_version ?? 'não informada'} · {doc.source_reference ?? 'Fonte original não preservada'}</p><p className="text-xs text-muted-foreground">{doc.reviewed_at ? `Revisão: ${date(doc.reviewed_at)} · ${doc.reviewer_name ?? 'Médico'}` : 'Revisão pendente'} · {doc.char_count.toLocaleString('pt-BR')} caracteres</p><p className="text-xs font-medium">{statusLabel(doc)}</p></div><Button size="sm" variant="outline" onClick={() => { setOperationError(''); setSelectedId(doc.id); }}>Ver fonte</Button></article>)}
+      {filtered.length > visibleCount && <Button variant="outline" onClick={() => setVisibleCount(n => n + 50)}>Mostrar mais fontes</Button>}
+      <SharedProtocolsPanel />
+    </main>
+    <Dialog open={addOpen} onOpenChange={closeAdd}><DialogContent className="max-w-2xl max-h-[92dvh] flex flex-col"><DialogHeader><DialogTitle>{supersedes ? 'Adicionar nova versão' : 'Adicionar fonte'}</DialogTitle><DialogDescription>O original é preservado. Alterações de conteúdo criam outra versão, com nova revisão.</DialogDescription></DialogHeader>
+      <div className="overflow-y-auto space-y-4 px-1"><div className="space-y-1"><Label htmlFor="knowledge-title">Título</Label><Input id="knowledge-title" maxLength={200} value={title} onChange={e => setTitle(e.target.value)} /></div><div className="grid sm:grid-cols-2 gap-4"><div className="space-y-1"><Label htmlFor="knowledge-reference">Fonte / referência bibliográfica</Label><Input id="knowledge-reference" maxLength={2000} value={reference} onChange={e => setReference(e.target.value)} placeholder="Publicação, entidade ou endereço da fonte" /></div><div className="space-y-1"><Label htmlFor="knowledge-version">Versão / edição</Label><Input id="knowledge-version" maxLength={80} value={version} onChange={e => setVersion(e.target.value)} placeholder="Ex.: edição 2026" /></div></div><div className="space-y-1"><Label htmlFor="knowledge-content">Texto original do protocolo</Label><Textarea id="knowledge-content" rows={12} maxLength={60000} value={content} onChange={e => setContent(e.target.value)} /><p className="text-xs text-muted-foreground">{content.length.toLocaleString('pt-BR')} / 60.000 caracteres. Não inclua prontuários ou dados de pacientes.</p></div>{draftError && <p role="alert" className="text-sm text-destructive">{draftError}</p>}</div>
+      <div className="border-t pt-4 flex justify-end gap-2"><Button variant="outline" disabled={saving} onClick={() => closeAdd(false)}>Cancelar</Button><Button disabled={saving} onClick={create}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar original para revisão</Button></div>
+    </DialogContent></Dialog>
+    <Dialog open={!!selectedId} onOpenChange={next => { if (!next && !busyId) { setSelectedId(null); setOperationError(''); } }}><DialogContent className="max-w-3xl max-h-[92dvh] flex flex-col"><DialogHeader><DialogTitle>{source.data?.title ?? 'Fonte original'}</DialogTitle><DialogDescription>Revise o texto completo e sua procedência. A aprovação identifica o médico e a data desta versão.</DialogDescription></DialogHeader>
+      {source.isLoading ? <p role="status">Carregando original…</p> : source.isError ? <div role="alert"><p>Não foi possível carregar o original.</p><Button variant="outline" onClick={() => source.refetch()}>Tentar novamente</Button></div> : source.data && <><div className="overflow-y-auto space-y-4 px-1"><dl className="grid sm:grid-cols-2 gap-3 text-sm"><div><dt className="font-medium">Fonte</dt><dd className="break-words">{source.data.source_reference ?? 'Não preservada'}</dd></div><div><dt className="font-medium">Versão</dt><dd>{source.data.source_version ?? 'Não informada'}</dd></div><div><dt className="font-medium">Revisão</dt><dd>{source.data.reviewed_at ? `${source.data.reviewer_name} · ${date(source.data.reviewed_at)}` : 'Pendente'}</dd></div><div><dt className="font-medium">Disponibilidade</dt><dd>{statusLabel(source.data)}</dd></div></dl>
+      {source.data.source_text ? <pre className="whitespace-pre-wrap break-words text-sm font-sans border rounded-lg p-4 bg-muted/30">{source.data.source_text}</pre> : <p className="rounded-lg border p-4 text-sm">O texto original desta fonte antiga não foi preservado. Ela permanece fora das respostas. Adicione uma nova versão com o original para revisar e indexar.</p>}{operationError && <p role="alert" className="text-sm text-destructive">{operationError}</p>}<ProtocolShareControls source={source.data}/></div>
+      <div className="flex flex-wrap gap-2 border-t pt-4"><Button variant="outline" disabled={!!busyId} onClick={() => newVersion(source.data!)}><Plus className="w-4 h-4 mr-2" />Nova versão</Button>{source.data.source_text && (source.data.review_status !== 'approved' ? <Button disabled={!!busyId} onClick={() => index(source.data!, true)}>{busyId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Revisei o original · aprovar e indexar</Button> : <><Button variant="outline" disabled={!!busyId} onClick={() => index(source.data!, false)}><RotateCw className="w-4 h-4 mr-2" />{source.data.status === 'ready' ? 'Reindexar mesma versão' : 'Tentar indexação'}</Button><Button variant="outline" disabled={!!busyId} onClick={() => retire(source.data!)}><Archive className="w-4 h-4 mr-2" />Retirar das referências</Button></> )}</div></>}
+    </DialogContent></Dialog>
+  </div>;
 }

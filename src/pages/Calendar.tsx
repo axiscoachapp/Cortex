@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Calendar as BigCalendar,
@@ -7,7 +7,7 @@ import {
   View,
   SlotInfo,
 } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay, addMinutes } from 'date-fns';
+import { format, parse, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay, getDay, addMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { ArrowLeft, Plus, CalendarDays, CheckCircle2, Loader2 } from 'lucide-react';
@@ -19,6 +19,8 @@ import { Appointment, Patient } from '@/types/patient';
 import { mapPatientRow } from '@/lib/patientMapper';
 import { AppointmentModal } from '@/components/AppointmentModal';
 import { useToast } from '@/hooks/use-toast';
+import { fetchAllRows } from '@/lib/pagination';
+import type { Tables } from '@/integrations/supabase/types';
 
 // ── Localizer ───────────────────────────────────────────────────────────────
 const localizer = dateFnsLocalizer({
@@ -30,7 +32,7 @@ const localizer = dateFnsLocalizer({
 });
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
-function mapRow(row: any): Appointment {
+function mapRow(row: Tables<'appointments'>): Appointment {
   return {
     id: row.id,
     userId: row.user_id,
@@ -38,18 +40,28 @@ function mapRow(row: any): Appointment {
     title: row.title,
     startTime: new Date(row.start_time),
     endTime: new Date(row.end_time),
-    type: row.type,
+    type: row.type as Appointment['type'],
     notes: row.notes ?? undefined,
-    status: row.status,
+    status: row.status as Appointment['status'],
     googleEventId: row.google_event_id ?? undefined,
+    googleSyncStatus: row.google_sync_status as Appointment['googleSyncStatus'],
+    googleSyncError: row.google_sync_error ?? undefined,
     reminderSent: row.reminder_sent ?? false,
   };
 }
 
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  resource: Appointment;
+}
+
 const STATUS_COLORS: Record<string, string> = {
-  agendado: '#3B82F6',
-  confirmado: '#10B981',
-  cancelado: '#94A3B8',
+  agendado: '#8B3C58',
+  confirmado: '#176C56',
+  cancelado: '#606979',
   realizado: '#475569',
 };
 
@@ -60,17 +72,11 @@ const STATUS_LABELS: Record<string, string> = {
   realizado: 'Realizado',
 };
 
-const VIEW_LABELS: Record<string, string> = {
-  month: 'Mês',
-  week: 'Semana',
-  day: 'Dia',
-};
-
 // ── Messages (pt-BR) ─────────────────────────────────────────────────────────
 const messages = {
   allDay: 'Dia todo',
-  previous: '‹',
-  next: '›',
+  previous: 'Anterior',
+  next: 'Próximo',
   today: 'Hoje',
   month: 'Mês',
   week: 'Semana',
@@ -98,6 +104,8 @@ export default function CalendarPage() {
   const [defaultSlot, setDefaultSlot] = useState<{ start: Date; end: Date } | null>(null);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [checkingGoogle, setCheckingGoogle] = useState(true);
+  const [connectingGoogle, setConnectingGoogle] = useState(false);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
@@ -116,45 +124,48 @@ export default function CalendarPage() {
     supabase
       .rpc('get_integration_status', { p_user_id: user.id })
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) toast({ title: 'Não foi possível verificar o Google Calendar', description: 'Você pode tentar conectar novamente.' });
         setGoogleConnected(data?.google_connected ?? false);
         setCheckingGoogle(false);
       });
-  }, [user?.id]);
+  }, [user?.id, toast]);
 
   // Check if just connected via OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('connected') === 'true') {
-      setGoogleConnected(true);
+    if (params.get('connected') === 'true' && googleConnected) {
       toast({ title: 'Google Calendar conectado com sucesso!' });
       window.history.replaceState({}, '', '/agenda');
     }
-  }, []);
+  }, [googleConnected, toast]);
 
   // Load patients for modal
-  const { data: patients = [] } = useQuery<Patient[]>({
+  const { data: patients = [], isError: patientsError, isLoading: patientsLoading, refetch: retryPatients } = useQuery<Patient[]>({
     queryKey: ['patients', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data } = await supabase.from('patients').select('*').order('name');
-      return (data ?? []).map(mapPatientRow);
+      const data = await fetchAllRows((from, to) => supabase.from('patients').select('*').order('name').order('id').range(from, to));
+      return data.map(mapPatientRow);
     },
     enabled: !!user?.id,
   });
 
   // Load appointments
-  const { data: appointments = [], isLoading } = useQuery<Appointment[]>({
-    queryKey: ['appointments', user?.id],
+  const periodStart = view === 'day' ? startOfDay(date) : startOfWeek(view === 'month' ? startOfMonth(date) : date, { locale: ptBR });
+  const periodEnd = view === 'day' ? endOfDay(date) : endOfWeek(view === 'month' ? endOfMonth(date) : date, { locale: ptBR });
+  const { data: appointments = [], isLoading, isError, refetch } = useQuery<Appointment[]>({
+    queryKey: ['appointments', user?.id, periodStart.toISOString(), periodEnd.toISOString()],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
+      const data = await fetchAllRows((from, to) => supabase
         .from('appointments')
         .select('*')
         .eq('user_id', user.id)
-        .order('start_time');
-      if (error) throw error;
-      return (data ?? []).map(mapRow);
+        .gte('end_time', periodStart.toISOString())
+        .lte('start_time', periodEnd.toISOString())
+        .order('start_time').order('id').range(from, to));
+      return data.map(mapRow);
     },
     enabled: !!user?.id,
   });
@@ -177,8 +188,8 @@ export default function CalendarPage() {
     setModalOpen(true);
   }, []);
 
-  const handleSelectEvent = useCallback((event: any) => {
-    setSelectedAppointment(event.resource as Appointment);
+  const handleSelectEvent = useCallback((event: CalendarEvent) => {
+    setSelectedAppointment(event.resource);
     setDefaultSlot(null);
     setModalOpen(true);
   }, []);
@@ -189,26 +200,26 @@ export default function CalendarPage() {
     setModalOpen(true);
   };
 
-  const handleGoogleConnect = () => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      console.warn('Google Calendar: VITE_GOOGLE_CLIENT_ID is not configured');
-      toast({
-        title: 'Integração com o Google Calendar indisponível',
-        description: 'Este recurso ainda não está configurado. Fale com o suporte.',
-        variant: 'destructive',
+  const handleGoogleConnect = async () => {
+    if (connectingGoogle) return;
+    setConnectingGoogle(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('google-oauth-start', {
+        body: { redirectUri: `${window.location.origin}/google-oauth-callback` },
       });
-      return;
+      if (error || !data?.authorizationUrl) throw error ?? new Error('Missing authorization URL');
+      const url = new URL(data.authorizationUrl);
+      if (url.protocol !== 'https:' || url.hostname !== 'accounts.google.com') throw new Error('Invalid authorization URL');
+      window.location.assign(url.href);
+    } catch {
+      toast({ title: 'Não foi possível conectar o Google Calendar', description: 'Tente novamente. Se o problema continuar, fale com o suporte.', variant: 'destructive' });
+      setConnectingGoogle(false);
     }
-    const redirectUri = `${window.location.origin}/google-oauth-callback`;
-    const scope = 'https://www.googleapis.com/auth/calendar.events';
-    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent&state=${user?.id}`;
-    window.location.href = url;
   };
 
   // Custom event style by status
-  const eventPropGetter = useCallback((event: any) => {
-    const appointment = event.resource as Appointment;
+  const eventPropGetter = useCallback((event: CalendarEvent) => {
+    const appointment = event.resource;
     const bg = STATUS_COLORS[appointment.status] ?? STATUS_COLORS.agendado;
     return {
       style: {
@@ -221,6 +232,17 @@ export default function CalendarPage() {
       },
     };
   }, []);
+
+  const retrySync = async (appointmentId: string) => {
+    if (syncingId) return;
+    setSyncingId(appointmentId);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-google-calendar', { body: { action: 'update', appointment: { id: appointmentId } } });
+      if (error || data?.success !== true) throw new Error('Sync pending');
+      toast({ title: 'Sincronização concluída' });
+    } catch { toast({ title: 'Sincronização pendente', description: 'A consulta permanece salva. Tente novamente ou confira a conexão Google.', variant: 'destructive' }); }
+    finally { setSyncingId(null); queryClient.invalidateQueries({ queryKey: ['appointments', user?.id] }); }
+  };
 
   const todayLabel = format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
 
@@ -242,7 +264,7 @@ export default function CalendarPage() {
 
           <div className="flex items-center gap-1.5 md:gap-2">
             {/* Status legend — desktop only */}
-            <div className="hidden md:flex items-center gap-2 mr-2">
+            <div className="hidden xl:flex items-center gap-2 mr-2">
               {Object.entries(STATUS_LABELS).map(([status, label]) => (
                 <div key={status} className="flex items-center gap-1">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: STATUS_COLORS[status] }} />
@@ -251,50 +273,39 @@ export default function CalendarPage() {
               ))}
             </div>
 
-            {/* View switcher */}
-            <div className="flex rounded-lg border border-border overflow-hidden">
-              {(isMobile ? ['day', 'week'] as View[] : ['month', 'week', 'day'] as View[]).map(v => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className={`px-2.5 md:px-3 py-1.5 text-xs font-medium transition-colors ${
-                    view === v
-                      ? 'bg-medical-blue text-white'
-                      : 'bg-background text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  {VIEW_LABELS[v as string]}
-                </button>
-              ))}
-            </div>
-
             {/* Google Calendar — icon-only on mobile */}
             {checkingGoogle ? (
-              <Button variant="outline" size="sm" disabled className="hidden sm:flex">
+              <Button variant="outline" size="sm" disabled aria-label="Verificando Google Calendar">
                 <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
                 Google
               </Button>
             ) : googleConnected ? (
-              <Badge variant="outline" className="hidden sm:flex gap-1.5 py-1.5 px-3 text-success border-success/30">
+              <Badge variant="outline" aria-label="Google Calendar conectado" className="flex gap-1.5 py-1.5 px-3 text-success border-success/30">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span className="hidden md:inline">Google Calendar</span>
               </Badge>
             ) : (
-              <Button variant="outline" size="sm" onClick={handleGoogleConnect} className="gap-1.5 hidden sm:flex">
+              <Button variant="outline" size="sm" aria-label="Conectar Google Calendar" disabled={connectingGoogle} onClick={handleGoogleConnect} className="gap-1.5">
                 <CalendarDays className="w-3.5 h-3.5" />
                 <span className="hidden md:inline">Conectar Google</span>
               </Button>
             )}
 
             {/* New appointment */}
-            <Button variant="medical" size="sm" onClick={handleNewAppointment} className="gap-1.5">
+            <Button variant="medical" size="sm" aria-label="Novo Agendamento" onClick={handleNewAppointment} className="gap-1.5">
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Novo Agendamento</span>
             </Button>
           </div>
         </div>
       </header>
+      <div className="container mx-auto px-4 pt-3 flex flex-wrap items-center gap-3 text-xs"><Link className="text-primary underline underline-offset-4" to="/trabalho">Lista de espera e confirmações</Link><span className="text-muted-foreground">Acompanhamentos manuais; um registro não envia mensagens nem reserva horários.</span></div>
 
+      {patientsError && <div role="alert" className="container mx-auto px-4 py-3 text-sm flex items-center gap-3"><p>Não foi possível carregar os pacientes. Atualize antes de criar ou alterar um vínculo.</p><Button variant="outline" size="sm" onClick={() => retryPatients()}>Recarregar pacientes</Button></div>}
+      {googleConnected && appointments.some(item => item.googleSyncStatus === 'pending' || item.googleSyncStatus === 'failed') && <section aria-label="Sincronizações pendentes" className="container mx-auto px-4 py-3 space-y-2">
+        <h2 className="text-sm font-semibold">Google Calendar · sincronizações pendentes</h2>
+        {appointments.filter(item => item.googleSyncStatus === 'pending' || item.googleSyncStatus === 'failed').map(item => <div key={item.id} className="flex items-center justify-between gap-3 text-sm border rounded-lg p-3 bg-background"><div><p>{item.title}</p><p className="text-xs text-muted-foreground">{item.googleSyncStatus === 'failed' ? 'Falha no envio; consulta salva no Cortex.' : 'Alteração aguardando sincronização.'}</p></div><Button size="sm" variant="outline" disabled={!!syncingId} onClick={() => retrySync(item.id)}>{syncingId === item.id ? 'Sincronizando…' : 'Tentar novamente'}</Button></div>)}
+      </section>}
       {/* Calendar */}
       <main className="flex-1 container mx-auto px-2 md:px-4 py-3 md:py-6">
         <div className="bg-background rounded-xl border border-border shadow-sm overflow-hidden" style={{ height: isMobile ? 'calc(100dvh - 110px)' : 'calc(100vh - 140px)' }}>
@@ -302,11 +313,18 @@ export default function CalendarPage() {
             <div className="h-full flex items-center justify-center">
               <Loader2 className="w-6 h-6 animate-spin text-medical-blue" />
             </div>
+          ) : isError ? (
+            <div role="alert" className="h-full flex flex-col items-center justify-center gap-3">
+              <p>Não foi possível carregar a agenda.</p>
+              <Button variant="outline" onClick={() => refetch()}>Tentar novamente</Button>
+            </div>
           ) : (
             <BigCalendar
+              scrollToTime={new Date(1970,0,1,8,0)}
               localizer={localizer}
               events={events}
               view={view}
+              views={isMobile ? ['day', 'week', 'month'] : ['month', 'week', 'day']}
               date={date}
               onView={setView}
               onNavigate={setDate}
@@ -329,6 +347,7 @@ export default function CalendarPage() {
         defaultStart={defaultSlot?.start}
         defaultEnd={defaultSlot?.end}
         patients={patients}
+        patientLookupUnavailable={patientsError || patientsLoading}
         userId={user?.id ?? ''}
         googleConnected={googleConnected}
         onSaved={() => {

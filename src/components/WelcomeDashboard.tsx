@@ -14,8 +14,14 @@ import { Patient } from '@/types/patient';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { daysSinceDateOnly } from '@/lib/dates';
+import { fetchAllRows } from '@/lib/pagination';
+import { BrandLockup } from '@/components/BrandLockup';
+import { mapPatientRow } from '@/lib/patientMapper';
+import { canRemindAppointment } from '../../supabase/functions/_shared/reminders';
 
 interface Appointment {
+  patient?:Parameters<typeof mapPatientRow>[0] | null;
   id: string;
   patient_id: string | null;
   title: string;
@@ -28,8 +34,9 @@ interface Appointment {
 }
 
 interface WelcomeDashboardProps {
+  counts?: {total:number;new:number;returns:number};
   patients: Patient[];
-  onSelectPatient: (patient: Patient) => void;
+  onSelectPatient: (patient: Patient,appointmentId?:string) => void;
   onNewConsultation: () => void;
   userId: string;
 }
@@ -42,8 +49,10 @@ const statusColor: Record<string, string> = {
   cancelado: 'bg-slate-400', realizado: 'bg-slate-500',
 };
 
-function relativeDate(dateString: string): string {
-  const days = Math.floor((Date.now() - new Date(dateString).getTime()) / 86400000);
+function relativeDate(dateString: string | null): string {
+  if (!dateString) return 'Sem consulta registrada';
+  const days = daysSinceDateOnly(dateString);
+  if (days < 0) return `em ${-days} dias`;
   if (days === 0) return 'hoje';
   if (days === 1) return 'ontem';
   if (days < 7) return `há ${days} dias`;
@@ -66,12 +75,13 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation, userId }: WelcomeDashboardProps) {
+export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsultation, userId }: WelcomeDashboardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [sentReminderIds, setSentReminderIds] = useState<Set<string>>(new Set());
+  const [reminderLinks, setReminderLinks] = useState<Record<string, string>>({});
 
   // Local-time day bounds. toISOString() is UTC — in Brazil (UTC-3) it rolls
   // to "tomorrow" at 21:00 local and the agenda showed the wrong day.
@@ -84,44 +94,42 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
       if (!userId) return [];
       // Throw on failure so isError is set — otherwise a failed load looks
       // identical to an empty agenda, telling a doctor no one is coming in.
-      const { data, error } = await supabase
+      return fetchAllRows((from, to) => supabase
         .from('appointments')
-        .select('*')
+        .select('*,patient:patients!appointments_patient_owner_fk(id,name,age,date_of_birth,profession,last_visit,status,revision,phone,email)')
         .eq('user_id', userId)
         .gte('start_time', dayStart.toISOString())
         .lte('start_time', dayEnd.toISOString())
-        .order('start_time');
-      if (error) throw error;
-      return data ?? [];
+        .order('start_time').order('id').range(from, to));
     },
     enabled: !!userId,
   });
 
   // Stats
-  const totalPatients = patients.length;
-  const newPatients = patients.filter(p => p.status === 'novo').length;
-  const pendingReturns = patients.filter(p => p.status === 'retorno').length;
+  const totalPatients = counts?.total ?? patients.length;
+  const newPatients = counts?.new ?? patients.filter(p => p.status === 'novo').length;
+  const pendingReturns = counts?.returns ?? patients.filter(p => p.status === 'retorno').length;
 
   // Recent patients (last 5 by lastVisit)
   const recentPatients = [...patients]
-    .sort((a, b) => new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime())
+    .sort((a, b) => new Date(b.lastVisit ?? 0).getTime() - new Date(a.lastVisit ?? 0).getTime())
     .slice(0, 5);
 
   // Upcoming returns (patients with status === 'retorno', sorted by lastVisit asc = overdue first)
   const returnPatients = patients
     .filter(p => p.status === 'retorno')
-    .sort((a, b) => new Date(a.lastVisit).getTime() - new Date(b.lastVisit).getTime())
+    .sort((a, b) => new Date(a.lastVisit ?? 0).getTime() - new Date(b.lastVisit ?? 0).getTime())
     .slice(0, 4);
 
   // Today's appointments needing reminders
   const pendingReminderApts = todayApts.filter(apt => {
-    if (apt.reminder_sent || sentReminderIds.has(apt.id) || apt.status === 'cancelado') return false;
-    const patient = patients.find(p => p.id === apt.patient_id);
+    if (apt.reminder_sent || sentReminderIds.has(apt.id) || !canRemindAppointment(apt.status,apt.start_time)) return false;
+    const patient = (apt.patient ? mapPatientRow(apt.patient) : patients.find(p => p.id === apt.patient_id));
     return !!(patient?.phone || patient?.email);
   });
 
   const handleSendReminder = async (apt: Appointment) => {
-    const patient = patients.find(p => p.id === apt.patient_id);
+    const patient = (apt.patient ? mapPatientRow(apt.patient) : patients.find(p => p.id === apt.patient_id));
     if (!patient) return;
     const hasPhone = !!patient.phone;
     const type = hasPhone ? 'whatsapp' : 'email';
@@ -131,10 +139,21 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
         body: { appointmentId: apt.id, type, userId },
       });
       if (error) throw error;
-      if (type === 'whatsapp' && data?.waLink) window.open(data.waLink, '_blank');
-      setSentReminderIds(prev => new Set([...prev, apt.id]));
+      if (type === 'whatsapp') {
+        if (typeof data?.waLink !== 'string') throw new Error('Link ausente');
+        const link = new URL(data.waLink);
+        if (link.protocol !== 'https:' || link.hostname !== 'wa.me') throw new Error('Link inválido');
+        setReminderLinks(previous => ({ ...previous, [apt.id]: link.href }));
+        // Keep a real link visible: browser popup blocking and opening WhatsApp
+        // do not establish whether the user sent the message.
+        window.open(link.href, '_blank', 'noopener,noreferrer');
+        toast({ title: 'Link do WhatsApp pronto', description: 'Abra o link para revisar e enviar a mensagem. O lembrete continua pendente.' });
+      } else {
+        if (data?.success !== true) throw new Error('Envio não confirmado');
+        setSentReminderIds(prev => new Set([...prev, apt.id]));
+        toast({ title: 'Lembrete enviado por email!' });
+      }
       queryClient.invalidateQueries({ queryKey: ['appointments-today'] });
-      toast({ title: 'Lembrete enviado!', description: type === 'whatsapp' ? 'Link WhatsApp aberto.' : 'Email enviado.' });
     } catch {
       toast({ title: 'Erro ao enviar lembrete', variant: 'destructive' });
     } finally {
@@ -146,6 +165,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
     <div className="h-full w-full bg-card overflow-y-auto scrollbar-thin">
       <div className="max-w-2xl mx-auto px-4 md:px-8 py-6 md:py-10 space-y-6 md:space-y-8">
 
+        <BrandLockup compact className="xl:hidden" />
         {/* Greeting */}
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -159,7 +179,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
         <Button
           onClick={onNewConsultation}
           className="w-full h-12 gap-2 text-sm font-semibold shadow-sm"
-          style={{ background: 'linear-gradient(135deg, hsl(210 70% 50%), hsl(220 70% 40%))' }}
+          style={{ background: 'hsl(var(--primary))' }}
         >
           <Plus className="w-4 h-4" />
           Nova Consulta
@@ -167,13 +187,14 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
 
         {/* First-run onboarding checklist */}
         <OnboardingCard
+          onNewConsultation={onNewConsultation}
           patientCount={totalPatients}
           hasConsultation={patients.some(p => p.status !== 'novo')}
           userId={userId}
         />
 
         {/* Shortcuts — mobile only; on desktop the sidebar nav covers these */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:hidden">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 xl:hidden">
           {[
             { label: 'Assistente', icon: Sparkles, to: '/assistente' },
             { label: 'Modelos', icon: FileStack, to: '/modelos' },
@@ -220,7 +241,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
             </h2>
             <div className="space-y-2">
               {pendingReminderApts.map(apt => {
-                const patient = patients.find(p => p.id === apt.patient_id);
+                const patient = (apt.patient ? mapPatientRow(apt.patient) : patients.find(p => p.id === apt.patient_id));
                 const hasPhone = !!patient?.phone;
                 const isSending = sendingReminder === apt.id;
                 return (
@@ -238,6 +259,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
                       <p className="text-xs text-muted-foreground">
                         {typeLabels[apt.type] ?? apt.type}
                       </p>
+                      {reminderLinks[apt.id] && <a href={reminderLinks[apt.id]} target="_blank" rel="noopener noreferrer" aria-label={`Abrir WhatsApp para ${patient?.name ?? apt.title}`} className="block text-xs text-medical-blue underline mt-1">Abrir WhatsApp para revisar e enviar</a>}
                     </div>
                     <Button
                       size="sm"
@@ -261,7 +283,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
         )}
 
         {/* Today's agenda — mobile only; the desktop sidebar shows it */}
-        <section className="md:hidden">
+        <section className="xl:hidden">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <CalendarDays className="w-4 h-4 text-medical-blue" />
@@ -293,7 +315,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
             </div>
           ) : todayApts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-6 text-center">
-              <CalendarX className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+              <CalendarX className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
               <p className="text-sm text-muted-foreground">Nenhuma consulta agendada para hoje</p>
               <button
                 onClick={() => navigate('/agenda')}
@@ -305,11 +327,11 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
           ) : (
             <div className="space-y-2">
               {todayApts.map(apt => {
-                const patient = patients.find(p => p.id === apt.patient_id);
+                const patient = (apt.patient ? mapPatientRow(apt.patient) : patients.find(p => p.id === apt.patient_id));
                 return (
                   <button
                     key={apt.id}
-                    onClick={() => patient && onSelectPatient(patient)}
+                    onClick={() => patient && onSelectPatient(patient,apt.id)}
                     disabled={!patient}
                     className={cn(
                       'w-full flex items-center gap-4 px-4 py-3 rounded-xl border border-border/50 bg-white',
@@ -341,7 +363,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
                       )}>
                         {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
                       </span>
-                      {patient && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />}
+                      {patient && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
                     </div>
                   </button>
                 );
@@ -381,18 +403,18 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{patient.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {patient.age} anos
+                        {patient.age === null ? 'Idade não informada' : String(patient.age) + ' anos'}
                         {patient.profession ? ` · ${patient.profession}` : ''}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] text-muted-foreground/60">{relativeDate(patient.lastVisit)}</span>
+                      <span className="text-[10px] text-muted-foreground">{relativeDate(patient.lastVisit)}</span>
                       <Badge variant={patient.status} className="text-[9px] h-4 px-1.5">
                         {patient.status === 'retorno' ? 'Retorno' :
                          patient.status === 'novo' ? 'Novo' :
                          patient.status === 'seguimento' ? 'Seguimento' : 'Atend.'}
                       </Badge>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-medical-blue transition-colors" />
+                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-medical-blue transition-colors" />
                     </div>
                   </button>
                 );
@@ -414,7 +436,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {returnPatients.map(patient => {
                 const initials = patient.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-                const daysSince = Math.floor((Date.now() - new Date(patient.lastVisit).getTime()) / 86400000);
+                const daysSince = daysSinceDateOnly(patient.lastVisit);
                 return (
                   <button
                     key={patient.id}
@@ -431,9 +453,9 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-foreground truncate leading-tight">{patient.name}</p>
-                      <p className="text-[10px] text-muted-foreground/70">{relativeDate(patient.lastVisit)}</p>
+                      <p className="text-[10px] text-muted-foreground">{relativeDate(patient.lastVisit)}</p>
                     </div>
-                    <ChevronRight className="w-3 h-3 text-muted-foreground/30 group-hover:text-amber-500 transition-colors shrink-0" />
+                    <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-amber-500 transition-colors shrink-0" />
                   </button>
                 );
               })}
@@ -444,7 +466,7 @@ export function WelcomeDashboard({ patients, onSelectPatient, onNewConsultation,
         <div className="pb-4 pt-2">
           <Link
             to="/privacidade"
-            className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-muted-foreground transition-colors"
           >
             <Shield className="w-3 h-3" />
             Privacidade & Dados (LGPD)

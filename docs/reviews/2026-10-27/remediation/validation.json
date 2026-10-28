@@ -1,0 +1,214 @@
+{
+  "status": "passed",
+  "testFiles": 32,
+  "passedFiles": 32,
+  "tests": 169,
+  "passedTests": 169,
+  "failedTests": 0,
+  "suites": [
+    {
+      "file": "src/components/AppointmentModal.test.tsx",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/components/ChatPanel.test.tsx",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/components/NewConsultationModal.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/PatientFiles.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/PatientProfileDrawer.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/PatientSnapshot.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/components/PrescriptionList.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/SpecialtySettingsSheet.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/WelcomeDashboard.test.tsx",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/hooks/useRecording.test.tsx",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/lib/authRedirect.test.ts",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/lib/calendarSync.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/lib/clinicalBoundaryHandlers.test.ts",
+      "status": "passed",
+      "tests": 34
+    },
+    {
+      "file": "src/lib/clinicalHandlers.test.ts",
+      "status": "passed",
+      "tests": 8
+    },
+    {
+      "file": "src/lib/clinicalSafety.test.ts",
+      "status": "passed",
+      "tests": 9
+    },
+    {
+      "file": "src/lib/dataExport.test.ts",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/lib/dates.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/lib/httpBoundary.test.ts",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/lib/maintenanceAuth.test.ts",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/lib/oauthBoundary.test.ts",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/lib/pagination.test.ts",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/lib/patientImport.test.ts",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/lib/patientMapper.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/lib/quotaReservation.test.ts",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/lib/reminderSafety.test.ts",
+      "status": "passed",
+      "tests": 10
+    },
+    {
+      "file": "src/lib/securityBoundaries.test.ts",
+      "status": "passed",
+      "tests": 15
+    },
+    {
+      "file": "src/lib/securityHandlers.test.ts",
+      "status": "passed",
+      "tests": 15
+    },
+    {
+      "file": "src/pages/Auth.test.tsx",
+      "status": "passed",
+      "tests": 8
+    },
+    {
+      "file": "src/pages/DataPrivacy.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/pages/GoogleOAuthCallback.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/pages/Index.test.tsx",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/pages/PatientManagement.test.tsx",
+      "status": "passed",
+      "tests": 2
+    }
+  ],
+  "checks": {
+    "lint": {
+      "errors": 0,
+      "warnings": 8
+    },
+    "appAndNodeTypecheck": "passed",
+    "edgeTypecheck": {
+      "status": "passed",
+      "functions": 22,
+      "deno": "2.9.6"
+    },
+    "build": "passed",
+    "database": {
+      "status": "passed",
+      "migrations": 26,
+      "suites": 5,
+      "engine": "PostgreSQL 16 + pgvector",
+      "environment": "disposable local Docker"
+    },
+    "npmAudit": {
+      "knownVulnerabilities": 0
+    },
+    "coverage": {
+      "scope": "all application source",
+      "statements": 36.13,
+      "branches": 31.33,
+      "functions": 28.42,
+      "lines": 37.86
+    },
+    "browser": {
+      "status": "partial",
+      "backend": "synthetic loopback only",
+      "passed": [
+        "820x900 calendar: no overflow, header controls within viewport",
+        "390x480 appointment dialog: scroll and footer reachable",
+        "390x480 new-patient consultation: scroll and footer reachable",
+        "named mobile Google control",
+        "briefing error shown separately from first visit",
+        "calendar next navigation"
+      ],
+      "limitation": "Native patient-switch confirmation appeared as expected; browser automation could not control the native dialog. Draft isolation and capture exit are covered by component tests."
+    },
+    "production": "unchanged"
+  }
+}

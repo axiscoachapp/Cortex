@@ -1,15 +1,17 @@
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pill, FileSignature, ClipboardPlus, Search, X, Loader2, AlertTriangle, FlaskConical,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { validateCertificateDays } from '../../supabase/functions/_shared/documentLayout';
 import { Patient, Medication } from '@/types/patient';
 
 export type RxDocType = 'receita_simples' | 'receita_antimicrobiano' | 'atestado' | 'solicitacao_exames';
@@ -66,18 +68,23 @@ export function DocumentComposerModal({
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<CatalogHit[]>([]);
   const [searching, setSearching] = useState(false);
+  const [catalogError, setCatalogError] = useState(false);
   const [days, setDays] = useState('1');
   const [cid, setCid] = useState('');
   const [note, setNote] = useState('');
   const [examsText, setExamsText] = useState('');
   const [indication, setIndication] = useState('');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestMedications = useRef(patient.medications);
+  const initialMedicationSelection = useRef<ComposerMed[]>([]);
+  useEffect(() => { latestMedications.current = patient.medications; }, [patient.medications]);
 
   // Reset to the patient's current medications whenever the modal opens.
   useEffect(() => {
     if (!open) return;
     setDocType('receita_simples');
-    setMeds((patient.medications ?? []).map(m => ({ ...m, checked: true })));
+    initialMedicationSelection.current = (latestMedications.current ?? []).map(m => ({ ...m, checked: true }));
+    setMeds(initialMedicationSelection.current);
     setQuery(''); setHits([]);
     setDays('1'); setCid(''); setNote('');
     setExamsText(''); setIndication('');
@@ -87,7 +94,7 @@ export function DocumentComposerModal({
   // duplication alert can compare active ingredients.
   useEffect(() => {
     if (!open) return;
-    const unresolved = (patient.medications ?? [])
+    const unresolved = (latestMedications.current ?? [])
       .map((m, i) => ({ name: m.name, i }))
       .filter(x => x.name && x.name.trim().length >= 4);
     if (unresolved.length === 0) return;
@@ -116,19 +123,22 @@ export function DocumentComposerModal({
   // Debounced catalog autocomplete (Anvisa registered medications).
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
+    let cancelled = false;
     const q = query.trim();
     if (q.length < 3) { setHits([]); setSearching(false); return; }
     setSearching(true);
     searchTimer.current = setTimeout(async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('medication_catalog')
         .select('id, product_name, active_ingredient, therapeutic_class, is_antimicrobial')
         .or(`product_name.ilike.%${q}%,active_ingredient.ilike.%${q}%`)
         .limit(8);
+      if (cancelled) return;
+      setCatalogError(!!error);
       setHits((data as CatalogHit[]) ?? []);
       setSearching(false);
     }, 300);
-    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+    return () => { cancelled = true; if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [query]);
 
   const addFromCatalog = (hit: CatalogHit) => {
@@ -174,34 +184,46 @@ export function DocumentComposerModal({
     [examsText],
   );
 
+  let validDays = false;
+  try { validateCertificateDays(days.trim() ? Number(days) : NaN); validDays = true; } catch { /* retain invalid input for correction */ }
   const canGenerate = isAtestado
-    ? Number(days) > 0
+    ? validDays
     : isExames
-    ? examList.length > 0
-    : selectedMeds.length > 0;
+    ? examList.length > 0 && examList.length <= 20
+    : selectedMeds.length > 0 && selectedMeds.length <= 15;
 
   const handleGenerate = async () => {
+    if (!canGenerate || isGenerating) return;
     await onGenerate({
       docType,
       medications: isReceita
         ? selectedMeds.map(({ name, dosage, instructions }) => ({ name, dosage, instructions }))
         : [],
       content: isAtestado
-        ? { days: Number(days) || 1, cid: cid.trim() || undefined, note: note.trim() || undefined }
+        ? { days: validateCertificateDays(Number(days)), cid: cid.trim() || undefined, note: note.trim() || undefined }
         : isExames
         ? { exams: examList, indication: indication.trim() || undefined }
         : undefined,
     });
   };
 
+  const selection = (values: ComposerMed[]) => values.map(({ name, dosage, instructions, checked }) => ({ name, dosage, instructions, checked }));
+  const dirty = docType !== 'receita_simples' || !!query.trim() || days !== '1' || !!cid.trim() || !!note.trim() || !!examsText.trim() || !!indication.trim()
+    || JSON.stringify(selection(meds)) !== JSON.stringify(selection(initialMedicationSelection.current));
+  const canClose = useUnsavedChanges(open && dirty);
+  const changeOpen = (next: boolean) => {
+    if (isGenerating || !canClose(next)) return;
+    onOpenChange(next);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!isGenerating) onOpenChange(v); }}>
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-lg max-h-[92vh] flex flex-col gap-0 p-0">
         <DialogHeader className="px-5 py-4 border-b border-border/50 shrink-0">
           <DialogTitle className="text-base font-semibold">Documento para {patient.name}</DialogTitle>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <DialogDescription className="text-xs text-muted-foreground mt-0.5">
             Gera o PDF com QR de validação. Assinatura ICP-Brasil será acoplada quando o provedor estiver conectado.
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-4 space-y-4">
@@ -212,6 +234,7 @@ export function DocumentComposerModal({
                 key={value}
                 type="button"
                 onClick={() => setDocType(value)}
+                aria-pressed={docType === value}
                 className={cn(
                   'rounded-lg border p-2.5 text-left transition-all',
                   docType === value
@@ -225,6 +248,12 @@ export function DocumentComposerModal({
               </button>
             ))}
           </div>
+
+          {(isReceita && selectedMeds.length > 15 || isExames && examList.length > 20) && (
+            <p role="alert" className="text-sm text-red-800 bg-red-50 rounded-lg p-3">
+              Divida a seleção em documentos de até 15 medicamentos ou 20 exames. Nenhum item será omitido.
+            </p>
+          )}
 
           {isReceita && hasAntimicrobial && docType === 'receita_simples' && (
             <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
@@ -248,6 +277,7 @@ export function DocumentComposerModal({
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground/80">Exames solicitados <span className="text-muted-foreground font-normal">(um por linha)</span></label>
                 <Textarea
+                  aria-label="Exames solicitados, um por linha"
                   value={examsText}
                   onChange={e => setExamsText(e.target.value)}
                   placeholder={'Hemograma completo\nGlicemia de jejum\nTSH'}
@@ -259,24 +289,25 @@ export function DocumentComposerModal({
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground/80">Indicação clínica <span className="text-muted-foreground font-normal">(opcional)</span></label>
-                <Input value={indication} onChange={e => setIndication(e.target.value)} placeholder="Ex: investigação de fadiga" maxLength={300} />
+                <Input aria-label="Indicação clínica" value={indication} onChange={e => setIndication(e.target.value)} placeholder="Ex: investigação de fadiga" maxLength={300} />
               </div>
             </div>
           ) : isAtestado ? (
             <div className="space-y-3">
+              {!validDays && <p role="alert" className="text-xs text-destructive">Informe de 0,5 a 365 dias, em intervalos de meio dia.</p>}
               <div className="grid grid-cols-[110px_1fr] gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-foreground/80">Dias de afastamento</label>
-                  <Input type="number" min={0.5} step={0.5} max={365} value={days} onChange={e => setDays(e.target.value)} />
+                  <Input aria-label="Dias de afastamento" type="number" min={0.5} step={0.5} max={365} value={days} onChange={e => setDays(e.target.value)} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-foreground/80">CID <span className="text-muted-foreground font-normal">(opcional, a pedido do paciente)</span></label>
-                  <Input value={cid} onChange={e => setCid(e.target.value)} placeholder="Ex: J06.9" maxLength={20} />
+                  <Input aria-label="CID, opcional a pedido do paciente" value={cid} onChange={e => setCid(e.target.value)} placeholder="Ex: J06.9" maxLength={20} />
                 </div>
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground/80">Observação <span className="text-muted-foreground font-normal">(opcional)</span></label>
-                <Input value={note} onChange={e => setNote(e.target.value)} placeholder="Ex: Repouso domiciliar recomendado" maxLength={400} />
+                <Input aria-label="Observação do atestado" value={note} onChange={e => setNote(e.target.value)} placeholder="Ex: Repouso domiciliar recomendado" maxLength={400} />
               </div>
             </div>
           ) : (
@@ -288,6 +319,7 @@ export function DocumentComposerModal({
                   Adicionar medicamento (base Anvisa)
                 </label>
                 <Input
+                  aria-label="Buscar medicamento na base Anvisa"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   placeholder="Digite 3+ letras — nome comercial ou princípio ativo"
@@ -323,7 +355,7 @@ export function DocumentComposerModal({
               {/* Medication list */}
               <div className="space-y-1.5">
                 {meds.length === 0 && (
-                  <p className="text-xs text-muted-foreground/70 italic py-2">
+                  <p className="text-xs text-muted-foreground italic py-2">
                     Sem medicamentos no perfil — adicione pela busca acima.
                   </p>
                 )}
@@ -335,19 +367,21 @@ export function DocumentComposerModal({
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
+                        id={`rx-medication-${i}`}
                         checked={m.checked}
                         onChange={e => setMeds(prev => prev.map((x, j) => j === i ? { ...x, checked: e.target.checked } : x))}
                         className="h-3.5 w-3.5 rounded border-border cursor-pointer"
                       />
-                      <span className="text-xs font-semibold text-foreground flex-1">{m.name}</span>
+                      <label htmlFor={`rx-medication-${i}`} className="text-xs font-semibold text-foreground flex-1 cursor-pointer">{m.name}</label>
                       {m.antimicrobial && (
                         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">ATM</span>
                       )}
                       {m.fromCatalog && (
                         <button
                           type="button"
+                          aria-label={`Remover ${m.name} da receita`}
                           onClick={() => setMeds(prev => prev.filter((_, j) => j !== i))}
-                          className="w-4 h-4 flex items-center justify-center rounded text-muted-foreground/50 hover:text-red-500"
+                          className="w-4 h-4 flex items-center justify-center rounded text-muted-foreground hover:text-red-500"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -356,12 +390,14 @@ export function DocumentComposerModal({
                     {m.checked && (
                       <div className="grid grid-cols-[110px_1fr] gap-1.5 pl-5">
                         <Input
+                          aria-label={`Dose de ${m.name}`}
                           className="h-7 text-xs"
                           value={m.dosage ?? ''}
                           onChange={e => setMeds(prev => prev.map((x, j) => j === i ? { ...x, dosage: e.target.value } : x))}
                           placeholder="Dose"
                         />
                         <Input
+                          aria-label={`Posologia e instruções de ${m.name}`}
                           className="h-7 text-xs"
                           value={m.instructions ?? ''}
                           onChange={e => setMeds(prev => prev.map((x, j) => j === i ? { ...x, instructions: e.target.value } : x))}
@@ -376,8 +412,9 @@ export function DocumentComposerModal({
           )}
         </div>
 
+        {catalogError && <p role="alert" className="px-5 text-xs text-destructive">Não foi possível consultar o catálogo. Edite a busca para tentar novamente ou preencha o medicamento manualmente.</p>}
         <div className="px-5 py-3 border-t border-border/50 shrink-0 flex gap-2 justify-end">
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isGenerating}>
+          <Button variant="outline" size="sm" onClick={() => changeOpen(false)} disabled={isGenerating}>
             Cancelar
           </Button>
           <Button size="sm" className="gap-1.5" onClick={handleGenerate} disabled={!canGenerate || isGenerating}>

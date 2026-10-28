@@ -1,0 +1,4 @@
+
+> cortex@0.1.0 typecheck:edge
+> node scripts/check-edge-functions.mjs
+

@@ -1,0 +1,8 @@
+{
+  "font": "Montserrat, system-ui, sans-serif",
+  "fontLoaded": true,
+  "mobileOverflow": false,
+  "primaryBackground": "rgb(126, 93, 27)",
+  "primaryForeground": "rgb(255, 255, 255)",
+  "primaryTextContrast": 6.05
+}

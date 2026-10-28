@@ -28,7 +28,9 @@ const levelLabel = {
 
 export function UsageMeter({ variant = 'pill', className }: UsageMeterProps) {
   const { user } = useAuth();
-  const { data, isLoading } = useUsage(user?.id);
+  const { data, isLoading, isError } = useUsage(user?.id);
+
+  if (user?.id && isError) return <span role="status" className="text-xs text-muted-foreground">Consumo indisponível</span>;
 
   if (!user?.id || isLoading || !data) return null;
 

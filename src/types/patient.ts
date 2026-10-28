@@ -1,10 +1,12 @@
 export interface Patient {
   id: string;
   name: string;
-  age: number;
+  age: number | null;
+  dateOfBirth?: string;
+  revision?: number;
   profession: string;
   photoUrl?: string;
-  lastVisit: string;
+  lastVisit: string | null;
   status: 'retorno' | 'seguimento' | 'novo' | 'atendimento';
   diagnoses: Diagnosis[];
   medications: Medication[];
@@ -39,6 +41,8 @@ export interface Appointment {
   notes?: string;
   status: 'agendado' | 'confirmado' | 'cancelado' | 'realizado';
   googleEventId?: string;
+  googleSyncStatus?: 'idle' | 'pending' | 'synced' | 'failed';
+  googleSyncError?: string;
   reminderSent: boolean;
 }
 
@@ -57,4 +61,6 @@ export interface ChatMessage {
   profileUpdates?: ProfileUpdates;
   /** For 'soap' messages: the consultation row this note was saved to. */
   consultationId?: string;
+  sources?: Array<{id:string;type:string;label:string;date:string;excerpt:string;truncated?:boolean;sourceVersion?:string;sourceReference?:string;reviewedBy?:string;reviewedAt?:string;ownerUserId?:string;shared?:boolean;authorizationRevision?:number;sourceReviewRevision?:number;reviewStatus?:string}>;
+  coverage?: {consultationsTotal?:number;documentsTotal?:number;consultationsRetrieved?:number;documentsRetrieved?:number;limited?:boolean};
 }

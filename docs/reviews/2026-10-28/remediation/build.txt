@@ -1,0 +1,64 @@
+
+> cortex@0.1.0 build
+> npm run typecheck && vite build
+
+
+> cortex@0.1.0 typecheck
+> tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json
+
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 3030 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                2.14 kB │ gzip:  0.74 kB
+dist/assets/Calendar-COks4oDc.css             10.62 kB │ gzip:  2.42 kB
+dist/assets/index-B4wDfBdJ.css                89.50 kB │ gzip: 16.13 kB
+dist/assets/loader-circle-Bw5L24RG.js          0.13 kB │ gzip:  0.14 kB
+dist/assets/plus-Cjwbum2X.js                   0.14 kB │ gzip:  0.14 kB
+dist/assets/arrow-left-C5iI_VHA.js             0.15 kB │ gzip:  0.15 kB
+dist/assets/search-CPbFYpQa.js                 0.16 kB │ gzip:  0.16 kB
+dist/assets/circle-check-CnWXuu5f.js           0.16 kB │ gzip:  0.16 kB
+dist/assets/download-Dx-EX6Ue.js               0.25 kB │ gzip:  0.21 kB
+dist/assets/pencil-BjWDu-Ny.js                 0.26 kB │ gzip:  0.22 kB
+dist/assets/book-open-Db2KjG1v.js              0.26 kB │ gzip:  0.19 kB
+dist/assets/functionErrors-DwiW8G_K.js         0.28 kB │ gzip:  0.18 kB
+dist/assets/share-2-BqPvhg_Z.js                0.34 kB │ gzip:  0.23 kB
+dist/assets/trash-2-Byv1bXbl.js                0.34 kB │ gzip:  0.24 kB
+dist/assets/clipboard-list-8IEFnpSA.js         0.39 kB │ gzip:  0.25 kB
+dist/assets/triangle-alert-Bhk4tuJC.js         0.47 kB │ gzip:  0.32 kB
+dist/assets/sparkles-DbAvZxmp.js               0.49 kB │ gzip:  0.29 kB
+dist/assets/NotFound-8ESPjpjO.js               0.51 kB │ gzip:  0.32 kB
+dist/assets/textarea-1pYbZ8Ak.js               0.54 kB │ gzip:  0.36 kB
+dist/assets/file-stack-BtFGZhWx.js             0.54 kB │ gzip:  0.34 kB
+dist/assets/stethoscope-rHChAtbG.js            0.71 kB │ gzip:  0.40 kB
+dist/assets/dates-DlubtAZ1.js                  0.94 kB │ gzip:  0.56 kB
+dist/assets/reminders-uKrZA0ub.js              2.20 kB │ gzip:  1.00 kB
+dist/assets/patientImport-CdllffMq.js          2.29 kB │ gzip:  1.32 kB
+dist/assets/GoogleOAuthCallback-DQlWakqd.js    2.52 kB │ gzip:  1.18 kB
+dist/assets/pagination-BYfvD_Ek.js             2.53 kB │ gzip:  1.05 kB
+dist/assets/About-1WsoWQYA.js                  3.56 kB │ gzip:  1.50 kB
+dist/assets/AccountSecurity-B_5limot.js        4.84 kB │ gzip:  2.09 kB
+dist/assets/Assistant-CeX1OivB.js              6.73 kB │ gzip:  2.56 kB
+dist/assets/dist-D4lpx9zR.js                   8.41 kB │ gzip:  3.10 kB
+dist/assets/KnowledgeBase-CN6dXZLZ.js         13.32 kB │ gzip:  4.39 kB
+dist/assets/Templates-BEycCsET.js             13.65 kB │ gzip:  4.38 kB
+dist/assets/DataPrivacy-Dvy97Qr5.js           16.52 kB │ gzip:  5.90 kB
+dist/assets/dist-oBzwQwv9.js                  20.59 kB │ gzip:  7.56 kB
+dist/assets/PatientManagement-C_kU43tC.js     21.31 kB │ gzip:  6.69 kB
+dist/assets/select-R6P3K18i.js                22.02 kB │ gzip:  7.56 kB
+dist/assets/Sharing-5r2z9zAN.js               22.73 kB │ gzip:  7.04 kB
+dist/assets/button-CaRR5UzC.js                24.02 kB │ gzip:  8.34 kB
+dist/assets/ClinicalWorkspace-fVS2E4fT.js     29.72 kB │ gzip:  8.54 kB
+dist/assets/chunk-6KYCQHYJ-CGTLxeje.js       100.44 kB │ gzip: 33.32 kB
+dist/assets/dist-BQzyJpCo.js                 133.13 kB │ gzip: 43.33 kB
+dist/assets/Index-DqBYb2Nx.js                215.65 kB │ gzip: 57.53 kB
+dist/assets/Calendar-C5OtfhIc.js             268.69 kB │ gzip: 79.27 kB
+dist/assets/index-BwFBQFOX.js                287.17 kB │ gzip: 82.18 kB
+
+✓ built in 7.17s
+[PLUGIN_TIMINGS] JavaScript callbacks ran for 4.3s of this 7.1s build (60%).
+1 callback is listed without a time. Its calls overlapped, so the time inside one call includes work from other calls. To find its cost, profile the build with `node --cpu-prof`:
+  - plugin vite:css transform (2 calls)
+See https://rolldown.rs/reference/InputOptions.checks#bundlertimings for more details.
+

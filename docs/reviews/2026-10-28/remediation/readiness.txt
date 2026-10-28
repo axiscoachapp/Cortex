@@ -1,0 +1,1 @@
+Passed public page, entrypoint and local brand-asset readiness checks. Auth, database, Storage and provider workflows require their separate suites.

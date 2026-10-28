@@ -73,7 +73,7 @@ export function QuestionChecklistCard({ questions, isLoading, onRefresh }: Quest
                     />
                     <span className={cn(
                       'text-[11px] leading-snug transition-colors',
-                      checked[i] ? 'text-muted-foreground/50 line-through' : 'text-foreground/80',
+                      checked[i] ? 'text-muted-foreground line-through' : 'text-foreground/80',
                     )}>
                       {q}
                     </span>

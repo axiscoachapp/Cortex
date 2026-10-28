@@ -1,9 +1,13 @@
+import { fetchWithDeadline, readJsonObject, RequestError } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import { requireCompleteModelText, parseModelObject } from '../_shared/gemini.ts';
+import { assertPromptSize, isRecord, readPatientContext } from '../_shared/modelInput.ts';
+import { clinicDate } from '../_shared/clinicDate.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -35,6 +39,12 @@ const BRIEFING_SCHEMA = {
   },
   required: ['returnInfo', 'previousComplaint', 'pending', 'alert', 'details'],
 };
+interface Briefing {
+  returnInfo: string; previousComplaint: string; pending: string; alert: string;
+  details: { lastConsultationDate: string; mainComplaint: string; previousConduct: string; evolution: string };
+}
+interface BriefingSource { patientRevision: number; consultationRevision: number; clinicDate: string }
+const SYSTEM = 'Você é um assistente médico gerando resumos pré-consulta concisos e clinicamente relevantes. Destaque pendências, alertas e a evolução do quadro de forma objetiva para o médico.';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -43,9 +53,9 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { patientId, patientContext } = await req.json();
+    const { patientId } = await readJsonObject(req);
 
-    if (!patientId) {
+    if (typeof patientId !== 'string' || !patientId) {
       return new Response(
         JSON.stringify({ error: 'patientId é obrigatório' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -62,10 +72,10 @@ serve(async (req) => {
 
     // Pull the last consultation + a slim patient row in parallel so we can
     // surface any clinical_notes the doctor saved between consultations.
-    const [{ data: last }, { data: patientRow }] = await Promise.all([
+    const [visitResult, patientResult] = await Promise.all([
       supabase
         .from('consultations')
-        .select('id, chief_complaint, soap_note, created_at, pre_briefing')
+        .select('id, chief_complaint, soap_note, created_at, pre_briefing, revision')
         .eq('patient_id', patientId)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -73,30 +83,40 @@ serve(async (req) => {
         .maybeSingle(),
       supabase
         .from('patients')
-        .select('clinical_notes')
+        .select('name,age,date_of_birth,diagnoses,medications,allergies,clinical_notes,revision')
         .eq('id', patientId)
         .eq('user_id', userId)
         .maybeSingle(),
     ]);
+    if (visitResult.error || patientResult.error) throw new RequestError('Não foi possível consultar o histórico clínico. Tente novamente.', 503);
+    if (!patientResult.data) throw new RequestError('Paciente não encontrado.', 404);
+    const patientRow = readPatientContext(patientResult.data)!;
+    const last = visitResult.data;
 
     if (!last) {
       return new Response(JSON.stringify(null), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
+    if (!Number.isSafeInteger(patientResult.data.revision) || !Number.isSafeInteger(last.revision)) {
+      throw new RequestError('Não foi possível verificar a versão do histórico clínico. Tente novamente.', 503);
+    }
+    const source: BriefingSource = {
+      patientRevision: patientResult.data.revision,
+      consultationRevision: last.revision,
+      clinicDate: clinicDate(),
+    };
 
     // ── Cache hit: return stored briefing without calling Gemini ─────────────
-    if (last.pre_briefing && typeof last.pre_briefing === 'object' && (last.pre_briefing as any).returnInfo) {
-      return new Response(
-        JSON.stringify(last.pre_briefing),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-
-    // Cache miss → we're about to call Gemini. Pre-briefing is cheap (~2 credits).
-    try {
-      await checkQuota(supabase, userId, 2);
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
+    const cacheSource: unknown = isRecord(last.pre_briefing) ? last.pre_briefing._source : null;
+    if (isRecord(cacheSource) && cacheSource.patientRevision === source.patientRevision &&
+      cacheSource.consultationRevision === source.consultationRevision && cacheSource.clinicDate === source.clinicDate) {
+      try {
+        const publicCache = { ...last.pre_briefing };
+        delete publicCache._source;
+        const cached = parseModelObject<Briefing>(JSON.stringify(publicCache), BRIEFING_SCHEMA);
+        if (cached.returnInfo.trim()) return new Response(JSON.stringify(cached), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch { /* An incomplete cache entry must be regenerated. */ }
     }
 
     // ── Build lean prompt: only send A+P sections (~60% fewer input tokens) ──
@@ -104,8 +124,8 @@ serve(async (req) => {
     const daysSince = Math.floor((Date.now() - new Date(last.created_at).getTime()) / 86400000);
     const lastDate = new Date(last.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-    const diagnoses = patientContext?.diagnoses?.map((d: any) => `${d.code} ${d.description}`).join('; ') || 'Não informado';
-    const meds = patientContext?.medications?.map((m: any) => `${m.name} ${m.dosage}`).join(', ') || 'Nenhum';
+    const diagnoses = patientRow.diagnoses?.map(d => typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`).join('; ') || 'Não informado';
+    const meds = patientRow.medications?.map(m => typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`).join(', ') || 'Nenhum';
 
     // Only the last ~6 note entries to keep tokens lean.
     const recentNotes = (patientRow?.clinical_notes ?? '')
@@ -114,23 +134,32 @@ serve(async (req) => {
       .join('\n')
       .trim();
 
-    const prompt = `Paciente: ${patientContext?.name ?? 'paciente'}, ${patientContext?.age ?? '?'} anos
+    const prompt = `Paciente: ${patientRow.name ?? 'paciente'}, ${patientRow.age == null ? 'idade não informada' : `${patientRow.age} anos`}
 Diagnósticos: ${diagnoses}
 Medicações: ${meds}
-Alergias: ${patientContext?.allergies?.join(', ') || 'Nenhuma'}
+Alergias: ${patientRow.allergies?.join(', ') || 'Nenhuma'}
 
 Última consulta: ${lastDate} (${daysSince} dias atrás)
 Queixa: ${last.chief_complaint || 'não registrada'}
 
 Avaliação e Plano da última consulta:
 ${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consultas):\n${recentNotes}` : ''}`;
+    assertPromptSize(prompt, SYSTEM);
 
-    const res = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    let reservationId: string;
+    try {
+      ({ reservationId } = await checkQuota(supabase, userId, 100));
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
+    }
+
+    const res = await fetchWithDeadline(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         systemInstruction: {
-          parts: [{ text: 'Você é um assistente médico gerando resumos pré-consulta concisos e clinicamente relevantes. Destaque pendências, alertas e a evolução do quadro de forma objetiva para o médico.' }],
+          parts: [{ text: SYSTEM }],
         },
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
@@ -144,42 +173,34 @@ ${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consulta
     });
 
     if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Gemini error ${res.status}: ${err}`);
+      throw new Error(`Gemini indisponível (${res.status})`);
     }
 
     const geminiData = await res.json();
 
-    await recordUsage(supabase, userId, creditsFromUsage(geminiData.usageMetadata));
+    await recordUsage(supabase, userId, creditsFromUsage(geminiData.usageMetadata), reservationId);
 
     // When thinkingBudget > 0, thinking tokens appear first (thought: true); find the actual response part.
     // Never log part contents — they contain patient clinical data.
-    const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
-    const responsePart = parts.find((p: any) => !p.thought) ?? parts[parts.length - 1];
-    const rawText = responsePart?.text ?? '';
+    const rawText = requireCompleteModelText(geminiData);
 
-    let briefing: Record<string, unknown> | null = null;
-    try {
-      const parsed = JSON.parse(rawText);
-      // Only treat as valid if it has at least returnInfo
-      if (parsed && typeof parsed === 'object' && parsed.returnInfo) {
-        briefing = parsed;
-      }
-    } catch {
-      // invalid JSON — don't cache
-    }
-
-    if (!briefing) {
-      console.error('Gemini returned unusable briefing (invalid JSON or missing returnInfo)');
-      return new Response(JSON.stringify(null), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
+    const briefing = parseModelObject<Briefing>(rawText, BRIEFING_SCHEMA);
+    if (!briefing.returnInfo.trim()) throw new Error('Resumo pré-consulta incompleto. Tente novamente.');
 
     // ── Cache only valid results ──────────────────────────────────────────────
-    await supabase
+    // The cache update itself advances consultation_revision. Record the
+    // resulting version so the next read can reuse it without another paid call.
+    const cachedBriefing = { ...briefing, _source: { ...source, consultationRevision: source.consultationRevision + 1 } };
+    const { data: savedCache, error: cacheError } = await supabase
       .from('consultations')
-      .update({ pre_briefing: briefing })
+      .update({ pre_briefing: cachedBriefing })
       .eq('id', last.id)
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('revision', source.consultationRevision)
+      .select('id')
+      .maybeSingle();
+    if (cacheError) throw new RequestError('Não foi possível salvar o resumo pré-consulta. Tente novamente.', 503);
+    if (!savedCache) throw new RequestError('A consulta foi alterada durante a geração do resumo. Selecione o paciente novamente.', 409);
 
     return new Response(
       JSON.stringify(briefing),
@@ -187,8 +208,9 @@ ${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consulta
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('generate-prebriefing error:', error);
+    console.error('generate-prebriefing error:');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

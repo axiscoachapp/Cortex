@@ -10,7 +10,8 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
+import { fetchWithDeadline } from '../_shared/http.ts';
 
 const CSV_URL = 'https://dados.anvisa.gov.br/dados/DADOS_ABERTOS_MEDICAMENTOS.csv';
 
@@ -75,14 +76,11 @@ const clean = (s: string | undefined) => (s ?? '').trim().replace(/\s+/g, ' ');
 serve(async (req) => {
   const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-  // Service-role only — this is an internal maintenance job. The platform
-  // gateway (verify_jwt) has already validated the JWT signature, so reading
-  // the role claim is safe; exact-match on the env key also accepted.
+  // The scheduled job supplies the exact Vault service secret. Fail closed
+  // without configuration and never treat a decoded role as authentication.
   const auth = req.headers.get('Authorization') ?? '';
   const token = auth.replace(/^Bearer\s+/i, '');
-  let role = '';
-  try { role = JSON.parse(atob(token.split('.')[1] ?? '')).role ?? ''; } catch { /* not a JWT */ }
-  if (token !== SERVICE_KEY && role !== 'service_role') {
+  if (!SERVICE_KEY || token !== SERVICE_KEY) {
     return new Response(JSON.stringify({ error: 'Não autorizado' }), {
       status: 401, headers: { 'Content-Type': 'application/json' },
     });
@@ -90,7 +88,7 @@ serve(async (req) => {
 
   try {
     const httpClient = Deno.createHttpClient({ caCerts: [SECTIGO_INTERMEDIATE_PEM] });
-    const res = await fetch(CSV_URL, {
+    const res = await fetchWithDeadline(CSV_URL, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
       client: httpClient,
     } as RequestInit & { client: Deno.HttpClient });
@@ -150,7 +148,7 @@ serve(async (req) => {
       { headers: { 'Content-Type': 'application/json' } },
     );
   } catch (error) {
-    console.error('refresh-medication-catalog error:', error instanceof Error ? error.message : 'unknown');
+    console.error('refresh-medication-catalog failed');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },

@@ -6,6 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 export type ConsultationMode = 'presencial' | 'online';
 
 export interface RecordingState {
+  isStarting: boolean;
+  isStopping: boolean;
   isRecording: boolean;
   isPaused: boolean;
   stopConfirming: boolean;
@@ -61,11 +63,18 @@ export function useRecording({
   const onStopRef = useRef(onStop);
   const onCommentsResetRef = useRef(onCommentsReset);
   const onLiveChunkRef = useRef(onLiveChunk);
+  const freezeCommentsRef = useRef<() => void>(() => {});
   useEffect(() => { onStopRef.current = onStop; });
   useEffect(() => { onCommentsResetRef.current = onCommentsReset; });
   useEffect(() => { onLiveChunkRef.current = onLiveChunk; });
 
   const [isRecording, setIsRecording] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [pendingStops, setPendingStops] = useState(0);
+  const startingRef = useRef(false);
+  const captureGenerationRef = useRef(0);
+  const mountedRef = useRef(true);
+  const invalidateCapture = useCallback(() => { captureGenerationRef.current++; }, []);
   const [isPaused, setIsPaused] = useState(false);
   const [stopConfirming, setStopConfirming] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -73,7 +82,6 @@ export function useRecording({
   const [mode, setMode] = useState<ConsultationMode | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef   = useRef<Blob[]>([]);
   /** Every stream we opened (mic, and in online mode the display capture) so
    *  cleanup can release them all — a missed track leaves the mic/share live. */
   const streamsRef       = useRef<MediaStream[]>([]);
@@ -83,7 +91,7 @@ export function useRecording({
 
   // ── Live-copilot chunk recorder (independent of the main recording) ──────────
   const liveRecorderRef  = useRef<MediaRecorder | null>(null);
-  const liveChunksRef    = useRef<Blob[]>([]);
+  const liveGenerationRef = useRef<symbol | null>(null);
   const liveTimerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const liveStreamRef    = useRef<MediaStream | null>(null);
 
@@ -123,20 +131,22 @@ export function useRecording({
   const startLiveRecorder = (stream: MediaStream, mimeType: string) => {
     if (!onLiveChunkRef.current) return;   // no consumer → don't record chunks
     liveStreamRef.current = stream;
+    const consume = onLiveChunkRef.current;
+    const generation = Symbol('live recording');
+    liveGenerationRef.current = generation;
 
     const spawn = () => {
       // Guard: main recording may have ended between interval ticks.
-      if (!liveStreamRef.current) return;
-      liveChunksRef.current = [];
+      if (!liveStreamRef.current || liveGenerationRef.current !== generation) return;
+      const chunks: Blob[] = [];
       const rec = new MediaRecorder(stream, { mimeType });
       liveRecorderRef.current = rec;
-      rec.ondataavailable = (e) => { if (e.data.size > 0) liveChunksRef.current.push(e.data); };
+      rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       rec.onstop = () => {
-        const blob = new Blob(liveChunksRef.current, { type: mimeType });
-        liveChunksRef.current = [];
-        if (blob.size >= MIN_LIVE_CHUNK_BYTES) onLiveChunkRef.current?.(blob, mimeType);
+        const blob = new Blob(chunks, { type: mimeType });
+        if (blob.size >= MIN_LIVE_CHUNK_BYTES) consume?.(blob, mimeType);
         // Immediately begin the next window if we're still recording.
-        if (liveStreamRef.current) spawn();
+        if (liveStreamRef.current && liveGenerationRef.current === generation) spawn();
       };
       rec.start();
     };
@@ -150,6 +160,7 @@ export function useRecording({
     const rec = liveRecorderRef.current;
     // Prevent onstop from re-spawning a new window after we've torn down.
     liveStreamRef.current = null;
+    liveGenerationRef.current = null;
     if (rec && rec.state !== 'inactive') {
       if (!emitFinal) rec.onstop = null;   // discard: drop the trailing partial
       try { rec.stop(); } catch { /* already stopped */ }
@@ -201,9 +212,19 @@ export function useRecording({
 
   // ── Public actions ─────────────────────────────────────────────────────────
 
-  const start = useCallback(async (selectedMode: ConsultationMode) => {
+  const start = async (selectedMode: ConsultationMode) => {
+    if (startingRef.current || (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive')) return;
+    const generation = ++captureGenerationRef.current;
+    startingRef.current = true;
+    setIsStarting(true);
     let micStream: MediaStream | null = null;
     let displayStream: MediaStream | null = null;
+    const stillActive = () => mountedRef.current && generation === captureGenerationRef.current;
+    const releaseAttempt = () => {
+      const owned = [micStream, displayStream].filter((stream): stream is MediaStream => !!stream);
+      owned.forEach(stream => stream.getTracks().forEach(track => track.stop()));
+      streamsRef.current = streamsRef.current.filter(stream => !owned.includes(stream));
+    };
 
     try {
       if (selectedMode === 'online') {
@@ -239,6 +260,7 @@ export function useRecording({
           return;
         }
         streamsRef.current.push(displayStream);
+        if (!stillActive()) { releaseAttempt(); return; }
 
         // No audio track => the "compartilhar áudio" box was left unticked.
         // Abort loudly: recording only the doctor's side would silently produce
@@ -258,16 +280,18 @@ export function useRecording({
       // voice coming out of the speakers isn't captured a second time.
       micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamsRef.current.push(micStream);
+      if (!stillActive()) { releaseAttempt(); return; }
 
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
+      const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']
+        .find(type => MediaRecorder.isTypeSupported(type));
+      if (!mimeType) throw new Error('Nenhum formato de gravação compatível.');
 
       // Build the audio graph. Presencial records the mic stream directly
       // (unchanged behaviour); online mixes mic + system audio into one track.
       const ctx = new AudioContext();
       audioCtxRef.current = ctx;
       if (ctx.state === 'suspended') await ctx.resume().catch(() => {});
+      if (!stillActive()) { releaseAttempt(); await ctx.close().catch(() => {}); return; }
 
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 128;
@@ -307,19 +331,28 @@ export function useRecording({
       const recorder = new MediaRecorder(recordStream, { mimeType });
       mediaRecorderRef.current = recorder;
 
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-
-      audioChunksRef.current = [];
+      // Native stop/dataavailable events can arrive after another recording
+      // starts. Each recorder owns its chunks, streams, comments and callbacks.
+      const recordingChunks: Blob[] = [];
+      const ownedStreams = [...streamsRef.current];
+      recorder.ondataavailable = e => { if (e.data.size > 0) recordingChunks.push(e.data); };
+      let finalComments: string[] | null = null;
+      freezeCommentsRef.current = () => { finalComments = [...(consultationCommentsRef.current ?? [])]; };
+      const finishForOriginalPatient = onStopRef.current;
+      const resetOriginalComments = onCommentsResetRef.current;
 
       recorder.onstop = () => {
-        stopTimer();
-        releaseStreams();
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        const comments  = consultationCommentsRef.current ?? [];
-        onCommentsResetRef.current();
-        onStopRef.current(audioBlob, mimeType, comments);
+        ownedStreams.forEach(stream => stream.getTracks().forEach(track => track.stop()));
+        streamsRef.current = streamsRef.current.filter(stream => !ownedStreams.includes(stream));
+        const audioBlob = new Blob(recordingChunks, { type: mimeType });
+        const comments = finalComments ?? [...(consultationCommentsRef.current ?? [])];
+        resetOriginalComments();
+        finishForOriginalPatient(audioBlob, mimeType, comments);
+        if (mountedRef.current) setPendingStops(count => Math.max(0, count - 1));
+        if (mediaRecorderRef.current === recorder) {
+          mediaRecorderRef.current = null;
+          if (mountedRef.current) { setIsRecording(false); setIsPaused(false); setMode(null); }
+        }
       };
 
       recorder.start(500);
@@ -339,25 +372,36 @@ export function useRecording({
       });
     } catch {
       // Release anything already opened so no device stays live on failure.
-      releaseStreams();
+      releaseAttempt();
+      if (!stillActive()) return;
       stopAudioLevel();
       toast({
         title: 'Erro ao iniciar gravação',
         description: 'Verifique se o microfone está disponível e permitido.',
         variant: 'destructive',
       });
+    } finally {
+      if (generation === captureGenerationRef.current) {
+        startingRef.current = false;
+        if (mountedRef.current) setIsStarting(false);
+      }
     }
-  }, [consultationCommentsRef, toast]);
+  };
 
   const stop = useCallback(() => {
     setStopConfirming(true);
   }, []);
 
   const confirmStop = useCallback(() => {
+    freezeCommentsRef.current();
     setStopConfirming(false);
     stopAudioLevel();
     stopLiveRecorder(true);   // emit the trailing partial chunk for a last refresh
-    mediaRecorderRef.current?.stop();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      setPendingStops(count => count + 1);
+      try { recorder.stop(); } catch { setPendingStops(count => Math.max(0, count - 1)); }
+    }
     setIsRecording(false);
     setIsPaused(false);
     setMode(null);
@@ -369,6 +413,9 @@ export function useRecording({
   }, []);
 
   const discard = useCallback(() => {
+    invalidateCapture();
+    startingRef.current = false;
+    setIsStarting(false);
     stopLiveRecorder(false);   // drop trailing chunk — this recording is abandoned
     const rec = mediaRecorderRef.current;
     if (rec && rec.state !== 'inactive') {
@@ -378,7 +425,6 @@ export function useRecording({
     }
     mediaRecorderRef.current = null;
     releaseStreams();
-    audioChunksRef.current = [];
     stopAudioLevel();
     stopTimer();
     setIsRecording(false);
@@ -386,12 +432,14 @@ export function useRecording({
     setStopConfirming(false);
     setRecordingSeconds(0);
     setMode(null);
-  }, []);
+  }, [invalidateCapture]);
 
   // Unmount safety net: release the microphone/screen share and timers if the
   // consuming component unmounts mid-recording (e.g. sign-out or route change).
   // Without this the capture indicators stay lit and the browser keeps recording.
-  useEffect(() => () => {
+  useEffect(() => { mountedRef.current = true; return () => {
+    mountedRef.current = false;
+    invalidateCapture();
     stopLiveRecorder(false);
     const rec = mediaRecorderRef.current;
     if (rec && rec.state !== 'inactive') {
@@ -403,9 +451,9 @@ export function useRecording({
     cancelAnimationFrame(animFrameRef.current);
     audioCtxRef.current?.close().catch(() => {});
     if (timerRef.current) clearInterval(timerRef.current);
-  }, []);
+  }; }, [invalidateCapture]);
 
-  const pauseToggle = useCallback(() => {
+  const pauseToggle = () => {
     if (!mediaRecorderRef.current) return;
     if (isPaused) {
       mediaRecorderRef.current.resume();
@@ -419,11 +467,13 @@ export function useRecording({
       toast({ title: 'Gravação pausada' });
     }
     setIsPaused(p => !p);
-  }, [isPaused, toast]);
+  };
 
   return {
     // state
     isRecording,
+    isStarting,
+    isStopping: pendingStops > 0,
     isPaused,
     stopConfirming,
     recordingSeconds,

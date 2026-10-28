@@ -1,12 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Upload, FileText, Image as ImageIcon, Download, Trash2, Loader2, Paperclip, AlertTriangle,
+  Upload, FileText, Image as ImageIcon, Download, Trash2, Loader2, Paperclip,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { fetchAllRows } from '@/lib/pagination';
 
 interface PatientFilesProps {
   patientId: string;
@@ -22,6 +23,7 @@ interface PatientFileRow {
   tag: string | null;
   created_at: string;
   ai_summary: string | null;
+  ai_review_status?: string;
 }
 
 const BUCKET = 'patient-files';
@@ -52,17 +54,17 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState('');
+  const [visibleCount, setVisibleCount] = useState(50);
 
-  const { data: files = [], isLoading } = useQuery<PatientFileRow[]>({
-    queryKey: ['patient-files', patientId],
+  const { data: files = [], isLoading, isError, refetch } = useQuery<PatientFileRow[]>({
+    queryKey: ['patient-files', patientId, userId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      return fetchAllRows<PatientFileRow>((from, to) => supabase
         .from('patient_files')
-        .select('id, storage_path, file_name, mime_type, size_bytes, tag, created_at, ai_summary')
+        .select('id, storage_path, file_name, mime_type, size_bytes, tag, created_at, ai_summary, ai_review_status')
         .eq('patient_id', patientId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+        .order('created_at', { ascending: false }).order('id').range(from, to));
     },
     enabled: !!patientId,
     staleTime: 30_000,
@@ -70,19 +72,22 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
 
   const uploadFiles = useCallback(async (selected: FileList | File[]) => {
     const arr = Array.from(selected);
-    if (arr.length === 0) return;
+    if (arr.length === 0 || uploading) return;
 
     setUploading(true);
+    setOperationError('');
     let okCount = 0;
-    let rejected: string[] = [];
+    const rejected: string[] = [];
 
+    try {
     for (const file of arr) {
+      if (!['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].includes(file.type)) { rejected.push(`${file.name} (tipo não suportado)`); continue; }
       if (file.size > MAX_BYTES) {
         rejected.push(`${file.name} (excede 25 MB)`);
         continue;
       }
       const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
-      const safeName = file.name.replace(/[^\w.\-]/g, '_').slice(0, 80);
+      const safeName = file.name.replace(/[^\w.-]/g, '_').slice(0, 80);
       const uid = crypto.randomUUID();
       const storagePath = `patients/${userId}/${patientId}/${uid}-${safeName}`;
 
@@ -117,20 +122,21 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
       okCount += 1;
     }
 
-    setUploading(false);
-    queryClient.invalidateQueries({ queryKey: ['patient-files', patientId] });
 
     if (okCount > 0) {
       toast({ title: `${okCount} arquivo${okCount > 1 ? 's enviados' : ' enviado'}` });
     }
     if (rejected.length > 0) {
+      setOperationError(rejected.join('\n'));
       toast({
         title: 'Alguns arquivos não foram enviados',
         description: rejected.slice(0, 3).join(' · '),
         variant: 'destructive',
       });
     }
-  }, [patientId, userId, queryClient, toast]);
+    } catch { setOperationError('O envio foi interrompido. Confira a lista antes de reenviar os arquivos pendentes.'); }
+    finally { setUploading(false); queryClient.invalidateQueries({ queryKey: ['patient-files', patientId] }); }
+  }, [patientId, userId, queryClient, toast, uploading]);
 
   const handlePickFiles = () => fileInputRef.current?.click();
 
@@ -151,14 +157,15 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
 
   const handleDownload = async (f: PatientFileRow) => {
     setBusyId(f.id);
+    setOperationError('');
     try {
       const { data, error } = await supabase.storage
         .from(BUCKET)
         .createSignedUrl(f.storage_path, 60); // 60s is plenty for a click
       if (error || !data?.signedUrl) throw error ?? new Error('Sem URL');
       window.open(data.signedUrl, '_blank');
-    } catch (err: any) {
-      toast({ title: 'Erro ao abrir', description: err?.message, variant: 'destructive' });
+    } catch {
+      setOperationError('Não foi possível abrir o arquivo. Tente novamente.');
     } finally {
       setBusyId(null);
     }
@@ -167,15 +174,17 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
   const handleDelete = async (f: PatientFileRow) => {
     if (!window.confirm(`Excluir "${f.file_name}"?`)) return;
     setBusyId(f.id);
+    setOperationError('');
     try {
       // Remove storage object first; if it's already gone we still want to clean the row.
-      await supabase.storage.from(BUCKET).remove([f.storage_path]).catch(() => {});
+      const { error: storageError } = await supabase.storage.from(BUCKET).remove([f.storage_path]);
+      if (storageError) throw storageError;
       const { error } = await supabase.from('patient_files').delete().eq('id', f.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['patient-files', patientId] });
       toast({ title: 'Arquivo excluído' });
-    } catch (err: any) {
-      toast({ title: 'Erro ao excluir', description: err?.message, variant: 'destructive' });
+    } catch {
+      setOperationError('A exclusão não foi concluída. O registro foi mantido; tente excluir novamente.');
     } finally {
       setBusyId(null);
     }
@@ -195,13 +204,15 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
       />
 
       {/* Upload dropzone */}
-      <div
+      <button
+        type="button"
+        disabled={uploading}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={handlePickFiles}
         className={cn(
-          'rounded-xl border-2 border-dashed p-5 text-center cursor-pointer transition-all',
+          'w-full rounded-xl border-2 border-dashed p-5 text-center cursor-pointer transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-medical-blue',
           dragOver
             ? 'border-medical-blue bg-medical-blue-light/40'
             : 'border-border bg-secondary/30 hover:bg-secondary/50 hover:border-medical-blue/40',
@@ -223,7 +234,8 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
             </p>
           </>
         )}
-      </div>
+      </button>
+      {operationError && <p role="alert" className="text-sm text-destructive">{operationError}</p>}
 
       {/* File list */}
       {isLoading ? (
@@ -232,6 +244,8 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
             <div key={i} className="h-16 rounded-lg bg-secondary/40 animate-pulse" />
           ))}
         </div>
+      ) : isError ? (
+        <div role="alert" className="text-sm space-y-2"><p>Não foi possível carregar os arquivos.</p><Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button></div>
       ) : files.length === 0 ? (
         <div className="flex items-center gap-2 p-4 rounded-lg border border-dashed border-border text-xs text-muted-foreground">
           <Paperclip className="w-3.5 h-3.5" />
@@ -239,7 +253,7 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {files.map(f => (
+          {files.slice(0, visibleCount).map(f => (
             <div
               key={f.id}
               className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-secondary/30 transition-colors"
@@ -262,12 +276,13 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
                   {f.size_bytes !== null && <span>· {humanSize(f.size_bytes)}</span>}
                   {f.tag && <span>· {f.tag}</span>}
                 </p>
-                {f.ai_summary && (
+                {f.ai_review_status === 'rejected' && <p className="text-xs text-muted-foreground mt-1">Análise rejeitada; consulte o documento original.</p>}
+                {f.ai_summary && f.ai_review_status !== 'rejected' && (
                   <p
                     className="text-[11px] text-muted-foreground/80 mt-1 whitespace-pre-wrap line-clamp-3"
                     title={f.ai_summary}
                   >
-                    🤖 {f.ai_summary}
+                    Análise automática — confira no documento original: {f.ai_summary}
                   </p>
                 )}
               </div>
@@ -280,6 +295,7 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
                   onClick={() => handleDownload(f)}
                   disabled={busyId === f.id}
                   title="Abrir / baixar"
+                  aria-label={`Abrir ou baixar ${f.file_name}`}
                 >
                   {busyId === f.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                 </Button>
@@ -290,6 +306,7 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
                   onClick={() => handleDelete(f)}
                   disabled={busyId === f.id}
                   title="Excluir"
+                  aria-label={`Excluir ${f.file_name}`}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
@@ -299,11 +316,7 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
         </div>
       )}
 
-      {/* Migration hint (shown only if the user hasn't deployed the migration yet) */}
-      <p className="text-[10px] text-muted-foreground/60 flex items-start gap-1.5 pt-1">
-        <AlertTriangle className="w-3 h-3 mt-px shrink-0" />
-        Requer a migração <code className="font-mono">patient_files</code> aplicada no Supabase.
-      </p>
+      {files.length > visibleCount && <Button variant="outline" size="sm" onClick={() => setVisibleCount(count => count + 50)}>Mostrar mais arquivos</Button>}
     </div>
   );
 }

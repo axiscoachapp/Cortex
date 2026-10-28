@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { User, Session, AuthError } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_BYPASS_KEY = 'cortex_admin_bypass';
@@ -8,8 +9,11 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string) => Promise<{ error: AuthError | null; session: Session | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
+  resendConfirmation: (email: string) => Promise<{ error: AuthError | null }>;
+  updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
   enableAdminBypass: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -20,41 +24,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [adminBypass, setAdminBypass] = useState(() =>
-    typeof window !== 'undefined' && localStorage.getItem(ADMIN_BYPASS_KEY) === '1'
-  );
+  const queryClient = useQueryClient();
+  const previousUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    // Set up auth state listener
+    let active = true;
+    let receivedEvent = false;
+    const applySession = (next: Session | null) => {
+      if (!active) return;
+      if (previousUserId.current !== (next?.user.id ?? null)) queryClient.clear();
+      previousUserId.current = next?.user.id ?? null;
+      setSession(next);
+      setUser(next?.user ?? null);
+      setLoading(false);
+    };
+    localStorage.removeItem(ADMIN_BYPASS_KEY);
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+        receivedEvent = true;
+        applySession(session);
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+      if (!receivedEvent) applySession(session);
+    }).catch(() => { if (!receivedEvent) applySession(null); });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => { active = false; subscription.unsubscribe(); };
+  }, [queryClient]);
 
   const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl
       }
     });
+    return { error, session: data.session };
+  };
+
+  // https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail
+  const resetPassword = async (email: string) => supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth?mode=recovery`,
+  });
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
     return { error };
+  };
+  const resendConfirmation = async (email: string) => {
+    const { error } = await supabase.auth.resend({type:'signup',email,options:{emailRedirectTo:`${window.location.origin}/`}});
+    return {error};
   };
 
   const signIn = async (email: string, password: string) => {
@@ -75,15 +98,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.warn('Admin bypass: set VITE_BYPASS_EMAIL and VITE_BYPASS_PASSWORD in .env.local');
           return;
         }
-        localStorage.setItem(ADMIN_BYPASS_KEY, '1');
-        setAdminBypass(true);
         const { error } = await supabase.auth.signInWithPassword({
           email: bypassEmail,
           password: bypassPassword,
         });
         if (error) {
-          await supabase.auth.signUp({ email: bypassEmail, password: bypassPassword });
-          await supabase.auth.signInWithPassword({ email: bypassEmail, password: bypassPassword });
+          throw error;
         }
       }
     : async () => {
@@ -93,20 +113,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     localStorage.removeItem(ADMIN_BYPASS_KEY);
-    setAdminBypass(false);
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    queryClient.clear();
+    setUser(null);
+    setSession(null);
   };
-
-  const effectiveSession = adminBypass ? null : session;
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        session: effectiveSession,
+        session,
         loading,
         signUp,
         signIn,
+        resetPassword,
+        resendConfirmation,
+        updatePassword,
         enableAdminBypass,
         signOut,
       }}

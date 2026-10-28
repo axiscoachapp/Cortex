@@ -1,14 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Plus, Brain, CalendarDays, Sparkles, FileStack, BookOpen, Users, ChevronRight, CalendarX,
+  Plus, CalendarDays, Sparkles, FileStack, BookOpen, Users, ChevronRight, CalendarX, ClipboardList, Share2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Patient } from '@/types/patient';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { fetchAllRows } from '@/lib/pagination';
+import { BrandLockup } from '@/components/BrandLockup';
+import { mapPatientRow } from '@/lib/patientMapper';
 
 interface Appointment {
+  patient?:Parameters<typeof mapPatientRow>[0] | null;
   id: string;
   patient_id: string | null;
   title: string;
@@ -20,9 +24,11 @@ interface Appointment {
 interface PatientSidebarProps {
   patients: Patient[];
   selectedPatient: Patient | null;
-  onSelectPatient: (patient: Patient) => void;
+  onSelectPatient: (patient: Patient, appointmentId?:string) => void;
   onNewConsultation?: () => void;
   userId: string;
+  onHome?: () => void;
+  onNavigate?: (path: string) => void;
 }
 
 const typeLabels: Record<string, string> = {
@@ -38,6 +44,9 @@ function formatTime(iso: string): string {
 }
 
 const NAV_ITEMS = [
+  { to: '/trabalho', icon: ClipboardList, label: 'Trabalho pendente' },
+  { to: '/compartilhamento', icon: Share2, label: 'Compartilhamento' },
+  { to: '/seguranca', icon: Users, label: 'Segurança da conta' },
   { to: '/assistente',           icon: Sparkles,    label: 'Assistente' },
   { to: '/modelos',              icon: FileStack,   label: 'Modelos' },
   { to: '/conhecimento',         icon: BookOpen,    label: 'Conhecimento' },
@@ -45,45 +54,40 @@ const NAV_ITEMS = [
   { to: '/agenda',               icon: CalendarDays,label: 'Agenda' },
 ];
 
-export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId }: PatientSidebarProps) {
+export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId, onHome, onNavigate }: PatientSidebarProps) {
   const navigate = useNavigate();
+  const go = onNavigate ?? navigate;
 
   const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(); dayEnd.setHours(23, 59, 59, 999);
 
-  const { data: todayApts = [], isLoading } = useQuery<Appointment[]>({
+  const { data: todayApts = [], isLoading, isError, refetch } = useQuery<Appointment[]>({
     queryKey: ['appointments-today', userId, dayStart.toDateString()],
     queryFn: async () => {
       if (!userId) return [];
-      const { data } = await supabase
+      return fetchAllRows((from, to) => supabase
         .from('appointments')
-        .select('id, patient_id, title, start_time, type, status')
+        .select('*,patient:patients!appointments_patient_owner_fk(id,name,age,date_of_birth,profession,last_visit,status,revision,phone,email)')
         .eq('user_id', userId)
         .gte('start_time', dayStart.toISOString())
         .lte('start_time', dayEnd.toISOString())
-        .order('start_time');
-      return data ?? [];
+        .order('start_time').order('id').range(from, to));
     },
     enabled: !!userId,
   });
 
   return (
-    <aside className="w-full h-full flex flex-col bg-[hsl(215_40%_98%)] border-r border-border/60">
+    <aside className="w-full h-full flex flex-col bg-sidebar border-r border-border/60">
 
       {/* Logo + Nova Consulta */}
       <div className="px-4 pt-5 pb-4">
-        <button onClick={() => navigate('/')} className="flex items-center gap-2.5 mb-5 w-full text-left">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg, hsl(210 70% 50%) 0%, hsl(220 70% 40%) 100%)' }}>
-            <Brain className="text-white" style={{ width: '18px', height: '18px' }} />
-          </div>
-          <span className="font-bold text-foreground tracking-tight">Cortex</span>
+        <button onClick={onHome ?? (() => go('/'))} aria-label="Haddad Nicola — Início" className="flex items-center gap-2.5 mb-5 w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-medical-blue">
+          <BrandLockup compact />
         </button>
 
         <Button
           variant="default"
           className="w-full h-9 gap-2 text-sm font-medium shadow-sm"
-          style={{ background: 'linear-gradient(135deg, hsl(210 70% 50%) 0%, hsl(220 70% 40%) 100%)' }}
           onClick={onNewConsultation}
         >
           <Plus className="w-4 h-4" />
@@ -93,7 +97,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
 
       {/* Today's agenda */}
       <div className="px-4 pb-1.5 flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
           Agenda de hoje
         </span>
         {todayApts.length > 0 && (
@@ -108,25 +112,30 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
           <div className="space-y-1.5 px-1 pt-1">
             {[0, 1, 2].map(i => <div key={i} className="h-12 rounded-xl bg-white/60 animate-pulse" />)}
           </div>
+        ) : isError ? (
+          <div role="alert" className="py-6 px-3 text-center space-y-2">
+            <p className="text-xs">Não foi possível carregar a agenda.</p>
+            <Button size="sm" variant="outline" onClick={() => refetch()}>Tentar novamente</Button>
+          </div>
         ) : todayApts.length === 0 ? (
           <div className="py-8 px-3 text-center">
-            <CalendarX className="w-7 h-7 text-muted-foreground/30 mx-auto mb-2" />
-            <p className="text-xs text-muted-foreground/70">Nenhuma consulta hoje</p>
-            <button onClick={() => navigate('/agenda')} className="mt-2 text-[11px] font-medium text-medical-blue hover:underline">
+            <CalendarX className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
+            <p className="text-xs text-muted-foreground">Nenhuma consulta hoje</p>
+            <button onClick={() => go('/agenda')} className="mt-2 text-[11px] font-medium text-medical-blue hover:underline">
               Agendar consulta
             </button>
           </div>
         ) : (
           <div className="space-y-0.5">
             {todayApts.map(apt => {
-              const patient = patients.find(p => p.id === apt.patient_id);
+              const patient = (apt.patient ? mapPatientRow(apt.patient) : patients.find(p => p.id === apt.patient_id));
               const isSelected = !!patient && selectedPatient?.id === patient.id;
               const label = patient?.name ?? apt.title;
               const initials = label.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
               return (
                 <button
                   key={apt.id}
-                  onClick={() => patient && onSelectPatient(patient)}
+                  onClick={() => patient && onSelectPatient(patient,apt.id)}
                   disabled={!patient}
                   title={!patient ? 'Consulta sem paciente vinculado' : undefined}
                   className={cn(
@@ -147,11 +156,11 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
                       <p className={cn('text-sm font-medium truncate leading-tight', isSelected ? 'text-medical-blue' : 'text-foreground')}>
                         {label}
                       </p>
-                      <p className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5">
-                        {typeLabels[apt.type] ?? apt.type}
+                      <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                        {typeLabels[apt.type] ?? apt.type} · {({agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelado',realizado:'Realizado'} as Record<string,string>)[apt.status] ?? apt.status}
                       </p>
                     </div>
-                    {patient && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />}
+                    {patient && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                   </div>
                 </button>
               );
@@ -165,7 +174,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
         {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
           <button
             key={to}
-            onClick={() => navigate(to)}
+            onClick={() => go(to)}
             className={cn(
               'w-full flex items-center gap-2.5 h-9 px-3 rounded-lg text-xs font-medium',
               'text-muted-foreground hover:text-foreground hover:bg-white transition-all',
