@@ -4,8 +4,8 @@ import { readJsonObject, RequestError, fetchWithDeadline } from "../_shared/http
  * prescription...). Reads the file from storage, has Gemini produce a short
  * clinical review, then:
  *   - stores the review on the patient_files row (ai_summary)
- *   - appends a stamped note to the patient's clinical_notes, so the info
- *     flows into chat-assistant answers and pre-briefings automatically.
+ *   - stores a pending proposal for separate physician review.
+ *     It never promotes extraction directly into longitudinal chart facts.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -14,7 +14,7 @@ import { assertPatientFilePath } from "../_shared/storage.ts";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini, uploadToGeminiFiles, parseModelObject } from "../_shared/gemini.ts";
+import { callGemini, uploadToGeminiFiles, parseModelObject, trackGeminiFile, cleanupGeminiFile } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
@@ -85,7 +85,7 @@ serve(async (req) => {
     // Ownership: the file row must belong to the authenticated user.
     const { data: fileRow } = await supabase
       .from('patient_files')
-      .select('id, patient_id, storage_path, file_name, mime_type, size_bytes')
+      .select('id, patient_id, storage_path, file_name, mime_type, size_bytes, ai_review_status')
       .eq('id', fileId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -96,6 +96,7 @@ serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+    if (fileRow.ai_review_status && fileRow.ai_review_status !== 'pending') throw new RequestError('Este documento já foi revisado. Anexe uma nova versão para uma nova análise.', 409);
 
     const storagePath = assertPatientFilePath(fileRow.storage_path, userId, fileRow.patient_id);
     const { data: ownedPatient, error: patientError } = await supabase.from('patients')
@@ -124,7 +125,9 @@ serve(async (req) => {
     if (blob.size > MAX_ANALYZE_BYTES) throw new Error('Arquivo muito grande para análise');
     const buffer = await blob.arrayBuffer();
     const {reservationId} = await checkQuota(supabase,userId,400);
-    const fileUri = await uploadToGeminiFiles(GEMINI_API_KEY, buffer, mime);
+    const fileUri = await uploadToGeminiFiles(GEMINI_API_KEY, buffer, mime, { db: supabase, userId, patientId: fileRow.patient_id });
+    try {
+    await trackGeminiFile(GEMINI_API_KEY, fileUri, supabase, userId, fileRow.patient_id);
 
     const { text: raw, usage } = await callGemini(
       GEMINI_API_KEY,
@@ -162,9 +165,13 @@ serve(async (req) => {
     if (saveError) throw new Error('Não foi possível salvar a análise. Tente novamente.');
 
     return new Response(
-      JSON.stringify({ documentType, summary, keyFindings, profileNote }),
+      JSON.stringify({ documentType, summary, keyFindings, profileNote, reviewStatus: 'pending', sourceFileId: fileRow.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
+
+    } finally {
+      await cleanupGeminiFile(GEMINI_API_KEY, fileUri, supabase, userId);
+    }
 
   } catch (error) {
     if (error instanceof RequestError) return new Response(JSON.stringify({error:error.message}),{status:error.status,headers:{...corsHeaders,'Content-Type':'application/json'}});

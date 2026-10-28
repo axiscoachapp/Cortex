@@ -1,8 +1,12 @@
 /**
  * Shared Gemini API utilities for edge functions.
  */
-import { fetchWithDeadline } from './http.ts';
+import { fetchWithDeadline, RequestError } from './http.ts';
 import { assertPromptSize, isRecord } from './modelInput.ts';
+import { beginProviderUpload, completeProviderUpload, trackGeminiFile, cleanupGeminiFile, type ProviderFileScope } from './providerFiles.ts';
+import { assertAiEnabled } from './operationControls.ts';
+import { currentPatientAge } from './patientAge.ts';
+export { trackGeminiFile, cleanupGeminiFile } from './providerFiles.ts';
 
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash';
 export interface GeminiUsage {
@@ -26,6 +30,7 @@ export async function callGemini(
   parts: object[],
   cfg: GeminiConfig = {},
 ): Promise<{ text: string; usage: GeminiUsage | undefined }> {
+  assertAiEnabled();
   assertGeminiTextBudget(parts, cfg.systemInstruction);
   const body: { contents: Array<{ parts: object[] }>; generationConfig: Record<string, unknown>; systemInstruction?: { parts: Array<{ text: string }> } } = {
     contents: [{ parts }],
@@ -54,8 +59,16 @@ export async function callGemini(
     throw new Error(`Falha no provedor de IA (${res.status}). Tente novamente.`);
   }
 
-  const json = await res.json() as GeminiResponse;
-  return { text: requireCompleteModelText(json), usage: json.usageMetadata };
+  try {
+    const json = await res.json() as GeminiResponse;
+    const text = requireCompleteModelText(json);
+    if (cfg.responseMimeType === 'application/json' && cfg.responseSchema) parseModelObject(text, cfg.responseSchema as ModelSchema);
+    return { text, usage: json.usageMetadata };
+  } catch {
+    const operationId = res.headers.get('x-cortex-operation-id') ?? crypto.randomUUID();
+    console.info(JSON.stringify({event:'model_response_invalid',operation_id:operationId,operation:'generate',provider:'gemini',model:'gemini-2.5-flash',status:'failed',error_code:'incomplete_or_invalid_output'}));
+    throw new RequestError(`A IA retornou conteúdo incompleto ou inválido. Revise a origem e tente novamente. Referência: ${operationId}`,502);
+  }
 }
 
 /** Run before reserving credits; callGemini repeats it as a final boundary. */
@@ -84,7 +97,13 @@ export async function uploadToGeminiFiles(
   apiKey: string,
   audioBuffer: ArrayBuffer,
   mimeType: string,
+  scope: ProviderFileScope,
 ): Promise<string> {
+  assertAiEnabled();
+  const lease = await beginProviderUpload(scope);
+  let uploadedUri: string | undefined;
+  let sourceUploadStarted = false;
+  try {
   const initRes = await fetchWithDeadline(
     `https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=resumable&key=${apiKey}`,
     {
@@ -96,7 +115,7 @@ export async function uploadToGeminiFiles(
         'X-Goog-Upload-Header-Content-Length': String(audioBuffer.byteLength),
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ file: { display_name: 'consultation-audio' } }),
+      body: JSON.stringify({ file: { display_name: `cortex-upload-${lease}` } }),
     },
   );
 
@@ -106,7 +125,9 @@ export async function uploadToGeminiFiles(
 
   const uploadUrl = initRes.headers.get('X-Goog-Upload-URL');
   if (!uploadUrl) throw new Error('Gemini Files API did not return an upload URL');
+  if (new URL(uploadUrl).origin !== 'https://generativelanguage.googleapis.com') throw new Error('Destino de envio externo inválido.');
 
+  sourceUploadStarted = true;
   const uploadRes = await fetchWithDeadline(uploadUrl, {
     method: 'POST',
     headers: {
@@ -124,7 +145,18 @@ export async function uploadToGeminiFiles(
   const fileInfo = await uploadRes.json();
   const fileUri = fileInfo.file?.uri;
   if (!fileUri) throw new Error('Gemini Files API did not return a file URI');
+  uploadedUri = fileUri;
+  await trackGeminiFile(apiKey, fileUri, scope.db, scope.userId, scope.patientId);
+  await completeProviderUpload(scope.db, scope.userId, lease);
   return fileUri;
+  } catch(error) {
+    // Initialization sends only a random display name and MIME/size metadata.
+    // No source bytes can exist until the second request begins.
+    if(!sourceUploadStarted || (uploadedUri && await cleanupGeminiFile(apiKey,uploadedUri,scope.db,scope.userId).catch(()=>false))) {
+      await completeProviderUpload(scope.db,scope.userId,lease).catch(()=>{});
+    }
+    throw error;
+  }
 }
 
 // gemini-embedding-001 is the current embedding model; 768-dim output matches
@@ -136,6 +168,7 @@ const EMBED_BATCH_URL = `https://generativelanguage.googleapis.com/v1beta/models
 
 /** Embed a single text → 768-dim vector. */
 export async function embedText(apiKey: string, text: string, taskType = 'RETRIEVAL_QUERY'): Promise<number[]> {
+  assertAiEnabled();
   const res = await fetchWithDeadline(`${EMBED_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -153,6 +186,7 @@ export async function embedText(apiKey: string, text: string, taskType = 'RETRIE
 
 /** Embed many texts (documents). Batch first; on failure, sequential fallback. */
 export async function embedBatch(apiKey: string, texts: string[]): Promise<number[][]> {
+  assertAiEnabled();
   const res = await fetchWithDeadline(`${EMBED_BATCH_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -256,5 +290,6 @@ export function buildPatientSummary(ctx: unknown, _chiefComplaint: string): stri
   const diagnoses = summarize(ctx.diagnoses, ['code','description']) || 'Nenhum registrado';
   const meds = summarize(ctx.medications, ['name','dosage']) || 'Nenhuma registrada';
   const allergies = (Array.isArray(ctx.allergies) ? ctx.allergies.filter(item => typeof item === 'string').join(', ') : '') || 'Não registradas';
-  return `Paciente: ${ctx.name}, ${ctx.age} anos\nDiagnósticos: ${diagnoses}\nMedicações: ${meds}\nAlergias: ${allergies}`;
+  const age = currentPatientAge(ctx);
+  return `Paciente: ${ctx.name}, ${age === null ? 'idade não informada' : `${age} anos`}\nDiagnósticos: ${diagnoses}\nMedicações: ${meds}\nAlergias: ${allergies}`;
 }

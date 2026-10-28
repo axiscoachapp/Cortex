@@ -2,12 +2,10 @@ import { fetchWithDeadline, readJsonObject, RequestError } from "../_shared/http
 /**
  * AI creation of document templates (Modelos de Documento).
  *
- * Two modes:
+ * Structured vocabulary only (no patient examples):
  *  - from_description: "Quero uma anamnese para reumatologia pediátrica" →
  *    generates a full template in the house pattern.
- *  - from_example: the doctor pastes a real document/anamnesis/laudo →
- *    converts it into a reusable template (structure kept, patient data
- *    replaced by field descriptions + conditional commands).
+ *  - from_structure selects an allowlisted specialty; output requires review.
  *
  * Returns { name, description, content } — the client saves it via RLS.
  */
@@ -46,17 +44,6 @@ ${PATTERN}
 
 Responda com JSON: name (nome curto do modelo), description (1 frase), content (o modelo completo).`;
 
-const FROM_EXAMPLE_SYSTEM = `Você converte um documento clínico real (anamnese, laudo, relatório, evolução) em um MODELO reutilizável para médicos brasileiros.
-
-Preserve a estrutura, seções e estilo do documento original, mas:
-- Substitua TODOS os dados do paciente por descrições do que preencher em cada campo.
-- Adicione comandos condicionais e "Formato:" conforme o padrão abaixo.
-- Para laudos com texto de normalidade (ex.: exames de imagem), preserve a redação normal e use o comando "(alterar apenas se mencionado explicitamente na transcrição. Caso contrário, manter a mesma escrita)".
-
-${PATTERN}
-
-Responda com JSON: name (nome curto do modelo), description (1 frase), content (o modelo completo).`;
-
 const SCHEMA = {
   type: 'object',
   properties: {
@@ -74,17 +61,17 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { mode, input } = await readJsonObject(req);
+    const { mode, input, specialty } = await readJsonObject(req);
 
-    if (!['from_description', 'from_example'].includes(mode) || typeof input !== 'string' || !input.trim()) {
-      return new Response(
-        JSON.stringify({ error: 'mode (from_description|from_example) e input são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+    if (typeof input === 'string' && input.length > 12000) throw new RequestError('O texto excede 12.000 caracteres.', 413);
+    // The model receives a closed vocabulary only. A prompt promising to remove
+    // identifiers cannot authorize using real charts as a reusable template.
+    const specialties: Record<string, string> = { ginecologia: 'ginecologia', prenatal: 'pré-natal', urologia: 'urologia', retorno: 'retorno ambulatorial', geral: 'consulta geral' };
+    if (mode !== 'from_structure' || typeof specialty !== 'string' || !Object.hasOwn(specialties, specialty) || input !== undefined) {
+      throw new RequestError('Selecione uma estrutura de especialidade. Exemplos de pacientes e texto clínico livre não são aceitos na geração de modelos.');
     }
-    if (input.length > 12000) throw new RequestError('O texto excede 12.000 caracteres. Reduza o conteúdo e tente novamente.', 413);
-    const source = input.trim();
-    const systemInstruction = mode === 'from_example' ? FROM_EXAMPLE_SYSTEM : FROM_DESCRIPTION_SYSTEM;
+    const source = `Crie uma estrutura vazia de documentação para ${specialties[specialty]}. Inclua apenas campos e instruções condicionais; não acrescente achados, negativas, nomes, datas ou valores de exemplo.`;
+    const systemInstruction = FROM_DESCRIPTION_SYSTEM;
     assertPromptSize(source, systemInstruction);
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
@@ -127,7 +114,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify(out),
+      JSON.stringify({ ...out, requiresReview: true }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 

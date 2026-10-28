@@ -88,7 +88,7 @@ serve(async (req) => {
     );
 
     const prompt = [
-      `Paciente: ${ctx.name ?? 'não informado'}, ${ctx.age ?? '?'} anos`,
+      `Paciente: ${ctx.name ?? 'não informado'}, ${ctx.age == null ? 'idade não informada' : `${ctx.age} anos`}`,
       `Queixa principal: ${complaint || 'não informada'}`,
       `Diagnósticos: ${diagnoses || 'nenhum registrado'}`,
       `Medicações em uso: ${meds || 'nenhuma'}`,

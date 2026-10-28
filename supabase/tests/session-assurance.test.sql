@@ -1,0 +1,20 @@
+begin;
+insert into auth.users(id,email) values('b0000000-0000-4000-8000-000000000001','mfa-synthetic@example.invalid');
+insert into public.patients(user_id,name,age,last_visit,status) values('b0000000-0000-4000-8000-000000000001','Synthetic protected patient',null,null,'novo');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','b0000000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claims','{"aal":"aal1"}',true);
+do $$ begin assert (select count(*) from public.patients)=1,'Unenrolled account blocked';end $$;
+reset role;
+insert into auth.mfa_factors(user_id,status,factor_type) values('b0000000-0000-4000-8000-000000000001','verified','totp');
+set local role authenticated;
+do $$ begin
+ assert (select count(*) from public.patients)=0,'Password-only token bypasses second factor';
+ begin perform public.create_clinic('Bypass clinic');raise exception 'Sharing RPC bypasses MFA';exception when insufficient_privilege then null;end;
+ begin perform public.update_user_settings('{"doctor_name":"Changed without factor"}');raise exception 'Settings RPC bypasses MFA';exception when insufficient_privilege then null;end;
+ begin perform public.revoke_prescription('b1000000-0000-4000-8000-000000000001');raise exception 'Revoke RPC bypasses MFA';exception when insufficient_privilege then null;end;
+ begin perform public.get_integration_status('b0000000-0000-4000-8000-000000000001');raise exception 'Integration RPC bypasses MFA';exception when insufficient_privilege then null;end;
+end $$;
+select set_config('request.jwt.claims','{"aal":"aal2"}',true);
+do $$ begin assert (select count(*) from public.patients)=1,'Verified session cannot read own patient';end $$;
+rollback;

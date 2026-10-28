@@ -232,6 +232,25 @@ ESTRUTURA DO SOAP — ENDOCRINOLOGIA:
 **P (Plano):** Ajuste de medicamentos (hipoglicemiantes, insulina, levotiroxina — nome, dose, horário, titulação), exames de controle, encaminhamentos, orientações dietéticas/exercício, retorno.
 ${BASE_RULES}`;
 
+// Clinic templates organize clinician-supplied facts without supplying findings.
+const UROLOGIA = `Você organiza documentação clínica em português brasileiro.
+ESTRUTURA — UROLOGIA:
+**S:** Queixa e história urológica efetivamente relatadas nesta consulta.
+**O:** Exame e resultados explicitamente informados, com valores e datas da fonte.
+**A:** Avaliação e conclusões explicitamente formuladas pelo médico.
+**P:** Plano, orientações e acompanhamento explicitamente acordados.
+Não acrescente sintomas negados, normalidade, valores ou condutas ausentes.
+${BASE_RULES}`;
+const PRENATAL = `Você organiza documentação obstétrica em português brasileiro.
+ESTRUTURA — PRÉ-NATAL:
+**S:** Queixas e evolução efetivamente relatadas nesta consulta.
+**Datação:** Somente datação e fonte explicitamente confirmadas pelo médico; não calcule nem infira.
+**O:** Medidas, exame e resultados explicitamente informados, com unidades e datas da fonte.
+**A:** Avaliação obstétrica explicitamente formulada pelo médico.
+**P:** Plano e próximo acompanhamento explicitamente acordados.
+Não acrescente negativas, normalidade, medidas, idade gestacional ou condutas ausentes.
+${BASE_RULES}`;
+
 // ─── Export ──────────────────────────────────────────────────────────────────
 
 const PROMPTS: Record<string, string> = {
@@ -240,6 +259,8 @@ const PROMPTS: Record<string, string> = {
   cardiologia:    CARDIOLOGIA,
   pediatria:      PEDIATRIA,
   ginecologia:    GINECOLOGIA,
+  prenatal:      PRENATAL,
+  urologia:      UROLOGIA,
   dermatologia:   DERMATOLOGIA,
   neurologia:     NEUROLOGIA,
   ortopedia:      ORTOPEDIA,

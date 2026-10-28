@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini, uploadToGeminiFiles, buildPatientSummary, parseModelObject, assertGeminiTextBudget, collapseBlankLines } from "../_shared/gemini.ts";
+import { callGemini, uploadToGeminiFiles, trackGeminiFile, cleanupGeminiFile, buildPatientSummary, parseModelObject, assertGeminiTextBudget, collapseBlankLines } from "../_shared/gemini.ts";
 import { assertAudioPath } from "../_shared/storage.ts";
 import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { getSpecialtyPrompt, buildCustomTemplatePrompt } from "../_shared/specialty_prompts.ts";
@@ -106,7 +106,7 @@ serve(async (req) => {
     // Verify the patient belongs to the authenticated user.
     const { data: ownedPatient } = await supabase
       .from('patients')
-      .select('id,name,age,diagnoses,medications,allergies')
+      .select('id,name,age,date_of_birth,diagnoses,medications,allergies')
       .eq('id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -135,9 +135,6 @@ serve(async (req) => {
     const mimeType = typeof audioMimeType === 'string' ? audioMimeType.split(';')[0] : 'audio/webm';
     if (!['audio/webm','audio/mp4','audio/ogg','audio/wav','audio/mpeg'].includes(mimeType)) throw new RequestError('Formato de áudio não suportado.');
 
-    // Upload to Gemini Files API
-    const geminiFileUri = await uploadToGeminiFiles(GEMINI_API_KEY, audioBuffer, mimeType);
-
     let transcriptionReservation: { reservationId: string };
     try {
       transcriptionReservation = await checkQuota(supabase, userId, 400);
@@ -145,6 +142,10 @@ serve(async (req) => {
       if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
       throw err;
     }
+    // Admission precedes external upload; owned source audio is retained.
+    const geminiFileUri = await uploadToGeminiFiles(GEMINI_API_KEY, audioBuffer, mimeType, { db: supabase, userId, patientId });
+    try {
+    await trackGeminiFile(GEMINI_API_KEY, geminiFileUri, supabase, userId, patientId);
 
     // Keep the owned source audio until the reviewed consultation is saved.
 
@@ -238,7 +239,9 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
-
+    } finally {
+      await cleanupGeminiFile(GEMINI_API_KEY, geminiFileUri, supabase, userId);
+    }
   } catch (error) {
     if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);

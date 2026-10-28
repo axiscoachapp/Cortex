@@ -1,10 +1,13 @@
 import { RequestError } from './http.ts';
+import { currentPatientAge } from './patientAge.ts';
 
 interface Diagnosis { code?: string | null; description?: string | null }
 interface Medication { name?: string | null; dosage?: string | null }
 export interface PatientContext {
   name?: string | null;
   age?: number | null;
+  date_of_birth?: string | null;
+  dateOfBirth?: string | null;
   diagnoses?: Array<string | Diagnosis> | null;
   medications?: Array<string | Medication> | null;
   allergies?: string[] | null;
@@ -29,7 +32,7 @@ export function optionalText(value: unknown, field: string): string {
 export function readPatientContext(value: unknown): PatientContext | null {
   if (value == null) return null;
   if (!isRecord(value)) throw new RequestError('Contexto do paciente inválido.');
-  for (const field of ['name', 'clinical_notes', 'medical_history', 'medicalHistory', 'social_anamnesis', 'socialAnamnesis']) {
+  for (const field of ['name', 'date_of_birth', 'dateOfBirth', 'clinical_notes', 'medical_history', 'medicalHistory', 'social_anamnesis', 'socialAnamnesis']) {
     optionalText(value[field], field);
   }
   if (value.age != null && (typeof value.age !== 'number' || !Number.isFinite(value.age))) {
@@ -46,7 +49,7 @@ export function readPatientContext(value: unknown): PatientContext | null {
   if (value.allergies != null && (!Array.isArray(value.allergies) || value.allergies.some(item => typeof item !== 'string'))) {
     throw new RequestError('Alergias inválidas.');
   }
-  return value as PatientContext;
+  return { ...value, age: currentPatientAge(value) } as PatientContext;
 }
 
 /** Match callGemini's complete text limit before the first possibly paid call.

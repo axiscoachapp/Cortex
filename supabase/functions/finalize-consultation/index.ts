@@ -5,7 +5,6 @@ import {
 } from "../_shared/quota.ts";
 import { callGemini, buildPatientSummary, parseModelObject, assertGeminiTextBudget, collapseBlankLines } from "../_shared/gemini.ts";
 import { assertAudioPath } from "../_shared/storage.ts";
-import { clinicDayBounds, clinicDate } from "../_shared/clinicDate.ts";
 import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { getSpecialtyPrompt, buildCustomTemplatePrompt } from "../_shared/specialty_prompts.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
@@ -124,7 +123,7 @@ serve(async (req) => {
     // patient belongs to the authenticated user before any write.
     const { data: ownedPatient } = await supabase
       .from('patients')
-      .select('id,name,age,diagnoses,medications,allergies')
+      .select('id,name,age,date_of_birth,diagnoses,medications,allergies')
       .eq('id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -135,9 +134,9 @@ serve(async (req) => {
       );
     }
 
-    const { data: priorSave } = await supabase.from('consultations').select('id,soap_note,whatsapp_message')
+    const { data: priorSave } = await supabase.from('consultations').select('id,soap_note,whatsapp_message,history_proposals,chief_complaint,transcription')
       .eq('id', draftId).eq('patient_id', patientId).eq('user_id', userId).maybeSingle();
-    const { data: draft } = await supabase.from('consultation_drafts').select('id,audio_storage_path')
+    const { data: draft } = await supabase.from('consultation_drafts').select('id,audio_storage_path,appointment_id')
       .eq('id', draftId).eq('patient_id', patientId).eq('user_id', userId).maybeSingle();
     const cleanupSavedDraft = async () => {
       if (!draft) return;
@@ -147,9 +146,17 @@ serve(async (req) => {
       }
       await supabase.from('consultation_drafts').delete().eq('id', draftId).eq('user_id', userId);
     };
+    const completeSavedMetadata = async () => {
+      const { data, error } = await supabase.rpc('complete_consultation_metadata', { p_user_id: userId, p_patient_id: patientId, p_consultation_id: draftId });
+      if (error || data !== true) throw new RequestError('A evolução foi salva, mas os dados da consulta ainda precisam ser concluídos. Tente novamente; seu rascunho foi mantido.', 503);
+    };
     if (priorSave) {
+      if (body.saveDirect !== true || body.reviewed !== true || body.soapNote !== priorSave.soap_note || (body.whatsappMessage ?? '') !== (priorSave.whatsapp_message ?? '') || transcription !== (priorSave.transcription ?? '') || (chiefComplaint ?? '') !== (priorSave.chief_complaint ?? '')) {
+        throw new RequestError('Esta consulta já foi registrada com outro conteúdo. Seu texto atual foi mantido para comparação; reabra o registro e use um adendo.', 409);
+      }
+      await completeSavedMetadata();
       await cleanupSavedDraft();
-      return new Response(JSON.stringify({ consultationId: priorSave.id, soapNote: priorSave.soap_note, whatsappMessage: priorSave.whatsapp_message, profileUpdates: { diagnoses: [], medications: [], allergies: [] } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ consultationId: priorSave.id, soapNote: priorSave.soap_note, whatsappMessage: priorSave.whatsapp_message, historyProposals: priorSave.history_proposals, profileUpdates: { diagnoses: [], medications: [], allergies: [] } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     if (!draft) throw new Error('Rascunho não encontrado. Reabra a consulta.');
 
@@ -212,7 +219,7 @@ serve(async (req) => {
     }
 
     // First visit? Check for a prior consultation BEFORE inserting this one.
-    // The first consultation seeds the patient's anamnesis/history fields.
+    // First-visit history can be proposed for a separate physician review.
     const { count: priorCount } = await supabase
       .from('consultations')
       .select('id', { count: 'exact', head: true })
@@ -227,6 +234,7 @@ serve(async (req) => {
         id: draftId,
         patient_id:       patientId,
         user_id:          userId,
+        appointment_id:   draft.appointment_id ?? null,
         chief_complaint:  chiefComplaint,
         transcription,
         soap_note:        soapNote,
@@ -237,24 +245,7 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    await supabase
-      .from('patients')
-      .update({ last_visit: clinicDate(), status: 'retorno' })
-      .eq('id', patientId)
-      .eq('user_id', userId);
-
-    // Best-effort: mark today's appointment as done
-    try {
-      const { start, end } = clinicDayBounds();
-      await supabase
-        .from('appointments')
-        .update({ status: 'realizado' })
-        .eq('patient_id', patientId)
-        .eq('user_id', userId)
-        .in('status', ['agendado', 'confirmado'])
-        .gte('start_time', start)
-        .lt('start_time', end);
-    } catch { /* non-critical */ }
+    await completeSavedMetadata();
 
     // ── Best-effort profile extraction ───────────────────────────────────────
     let profileUpdates: {
@@ -293,11 +284,12 @@ serve(async (req) => {
       }
     } catch { /* non-critical — proceed without profile updates */ }
 
-    // ── First-visit anamnesis → seed the patient's history fields ─────────────
+    // ── First-visit history proposals (never written automatically) ─────────
     // On the first consultation, build the Anamnese Social and Histórico Médico
     // as bullet lists and write them ONLY where the field is still empty, so a
     // manually-entered history is never overwritten.
-    let historyFilled = false;
+    const historyFilled = false;
+    const historyProposals = { sourceConsultationId: consultation.id, medicalHistory: [] as string[], socialAnamnesis: [] as string[] };
     if (isFirstVisit) {
       try {
         const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
@@ -331,32 +323,24 @@ serve(async (req) => {
             await recordUsage(supabase, userId, creditsFromUsage(histUsage), historyReservation.reservationId);
 
             const parsed = parseModelObject<HistoryExtraction>(histRaw, HISTORY_SCHEMA);
-            const toBullets = (v: unknown): string =>
-              Array.isArray(v)
-                ? v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
-                    .map(x => `- ${x.trim()}`).join('\n')
-                : '';
-            const medical = toBullets(parsed.medical_history);
-            const social  = toBullets(parsed.social_anamnesis);
-
-            const patch: Record<string, string> = {};
-            if (needMedical && medical) patch.medical_history  = medical;
-            if (needSocial  && social)  patch.social_anamnesis = social;
-
-            if (Object.keys(patch).length > 0) {
-              const { data: updated, error: historyError } = await supabase.from('patients').update(patch)
-                .eq('id', patientId).eq('user_id', userId).eq('revision', existing?.revision).select('id').maybeSingle();
-              historyFilled = !historyError && !!updated;
-            }
+            // Suggestions remain separate from the durable chart until the doctor
+            // accepts the exact text against the current patient revision.
+            historyProposals.medicalHistory = needMedical ? parsed.medical_history.filter(value => value.trim()).slice(0, 30) : [];
+            historyProposals.socialAnamnesis = needSocial ? parsed.social_anamnesis.filter(value => value.trim()).slice(0, 30) : [];
           }
         }
       } catch { /* non-critical — the consultation is already saved */ }
     }
 
+    if (historyProposals.medicalHistory.length || historyProposals.socialAnamnesis.length) {
+      const { error: proposalError } = await supabase.from('consultations').update({ history_proposals: historyProposals })
+        .eq('id', consultation.id).eq('patient_id', patientId).eq('user_id', userId);
+      if (proposalError) throw new Error('Evolução salva; reabra para recuperar a revisão pendente.');
+    }
     // Cleanup only follows a durable successful clinical save.
     await cleanupSavedDraft();
     return new Response(
-      JSON.stringify({ consultationId: consultation.id, soapNote, whatsappMessage, profileUpdates, isFirstVisit, historyFilled }),
+      JSON.stringify({ consultationId: consultation.id, soapNote, whatsappMessage, profileUpdates, isFirstVisit, historyFilled, historyProposals }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 

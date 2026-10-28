@@ -13,3 +13,8 @@ export function whatsappPhone(value: unknown): string {
   if (/^[1-9]\d{9,10}$/.test(digits)) return `55${digits}`;
   throw new Error('Informe DDD e telefone ou código internacional com +');
 }
+
+export function canRemindAppointment(status: string, startsAt: string | Date, now = new Date()): boolean {
+  const start = startsAt instanceof Date ? startsAt.getTime() : Date.parse(startsAt);
+  return ['agendado', 'confirmado'].includes(status) && Number.isFinite(start) && start > now.getTime();
+}

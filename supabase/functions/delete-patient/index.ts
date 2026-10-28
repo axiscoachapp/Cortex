@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import { assertAudioPath, assertPrescriptionPath, removeStoragePrefix } from "../_shared/storage.ts";
 import { requireSafeDeletion } from "../_shared/deletion.ts";
+import { retryProviderCleanup } from "../_shared/providerFiles.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin':Deno.env.get('ALLOWED_ORIGIN') ?? '*',
   'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type',
@@ -18,7 +19,7 @@ serve(async req=>{
     if(typeof patientId!=='string' || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(patientId)) {
       return new Response(JSON.stringify({error:'Paciente inválido'}),{status:400,headers:{...corsHeaders,'Content-Type':'application/json'}});
     }
-    const db=createClient(Deno.env.get('SUPABASE_URL') ?? '',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+    const db=createClient(Deno.env.get('SUPABASE_URL') ?? '',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {global:{fetch:fetchWithDeadline}});
     const {data:patient,error:readError}=await db.from('patients').select('id,deletion_requested_at')
       .eq('id',patientId).eq('user_id',userId).maybeSingle();
     if(readError) throw new Error('Não foi possível verificar o paciente');
@@ -29,6 +30,7 @@ serve(async req=>{
         .eq('id',patientId).eq('user_id',userId).is('deletion_requested_at',null);
       if(error) throw new Error('Não foi possível iniciar a exclusão');
     }
+    await retryProviderCleanup(db,userId,Deno.env.get('GEMINI_API_KEY'),patientId);
     await removeStoragePrefix(db.storage,'patient-files',`patients/${userId}/${patientId}`);
     // Enumerate metadata before deleting it. Failed removals leave a resumable job.
     for(let offset=0;;) {

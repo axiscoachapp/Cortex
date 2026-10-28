@@ -16,8 +16,10 @@ SET LOCAL ROLE service_role;
 SELECT public.save_document_review('a1000000-0000-4000-8000-000000000001','a4000000-0000-4000-8000-000000000001','Summary','First finding');
 SELECT public.save_document_review('a1000000-0000-4000-8000-000000000001','a4000000-0000-4000-8000-000000000001','Summary 2','Second finding');
 DO $$ BEGIN
-  ASSERT (SELECT clinical_notes LIKE '%Original note%First finding%Second finding%' FROM public.patients
-    WHERE id='a2000000-0000-4000-8000-000000000001'),'Document review overwrote notes';
+  ASSERT (SELECT clinical_notes='Original note' FROM public.patients
+    WHERE id='a2000000-0000-4000-8000-000000000001'),'Unreviewed document analysis changed chart notes';
+  ASSERT (SELECT ai_profile_proposal='Second finding' AND ai_review_status='pending' FROM public.patient_files
+    WHERE id='a4000000-0000-4000-8000-000000000001'),'Latest review proposal was not retained separately';
   ASSERT (public.reserve_usage('a1000000-0000-4000-8000-000000000001',30,'a5000000-0000-4000-8000-000000000001')->>'allowed')::boolean,'Initial reservation denied';
   ASSERT NOT (public.reserve_usage('a1000000-0000-4000-8000-000000000001',20,'a5000000-0000-4000-8000-000000000002')->>'allowed')::boolean,'Reserved spend ignored';
   PERFORM public.settle_usage('a1000000-0000-4000-8000-000000000001','a5000000-0000-4000-8000-000000000001',10);

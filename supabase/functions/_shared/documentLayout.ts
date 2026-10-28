@@ -60,3 +60,11 @@ export function validateDocumentCounts(type: string, medicationCount: number, ex
   if (type.startsWith('receita') && medicationCount > 15) throw new Error('Selecione no máximo 15 medicamentos por documento. Nenhum item foi omitido.');
   if (type === 'solicitacao_exames' && examCount > 20) throw new Error('Selecione no máximo 20 exames por documento. Nenhum item foi omitido.');
 }
+
+/** Software issuance limits: accept an exact half-day duration, never clamp it. */
+export function validateCertificateDays(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0.5 || value > 365 || !Number.isInteger(value * 2)) {
+    throw new Error('Informe entre 0,5 e 365 dias, em intervalos de meio dia.');
+  }
+  return value;
+}

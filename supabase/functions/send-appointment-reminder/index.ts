@@ -1,7 +1,7 @@
 import { readJsonObject, RequestError, fetchWithDeadline } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
-import { escapeHtml, whatsappPhone } from "../_shared/reminders.ts";
+import { escapeHtml, whatsappPhone, canRemindAppointment } from "../_shared/reminders.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import {
   checkQuota, recordUsage, quotaResponse, QuotaExceededError,
@@ -69,6 +69,8 @@ serve(async (req) => {
       );
     }
 
+    if (!canRemindAppointment(appt.status, appt.start_time)) throw new RequestError('Lembretes estão disponíveis apenas para agendamentos futuros agendados ou confirmados.', 409);
+
     // Authorize the referenced patient independently, including historic rows
     // created before tenant-consistent foreign keys were installed.
     const { data: patient, error: patientError } = await supabase.from('patients')
@@ -124,7 +126,7 @@ Até breve! 💙`;
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
-      const quota = await checkQuota(supabase, userId, REMINDER_COST);
+      const quota = await checkQuota(supabase, userId, REMINDER_COST, 'communication');
 
       const html = `
 <!DOCTYPE html>

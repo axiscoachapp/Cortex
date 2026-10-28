@@ -15,10 +15,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
-import { createPaginatedWriter, validateDocumentCounts } from "../_shared/documentLayout.ts";
+import { createPaginatedWriter, validateDocumentCounts, validateCertificateDays } from "../_shared/documentLayout.ts";
 import { toDataURL } from "https://esm.sh/qrcode@1.5.3";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import { readJsonObject, RequestError } from "../_shared/http.ts";
+import { currentPatientAge } from "../_shared/patientAge.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -100,7 +101,7 @@ serve(async (req) => {
     // Patient — ownership enforced.
     const { data: patient } = await supabase
       .from('patients')
-      .select('id, name, age, medications')
+      .select('id, name, age, date_of_birth, medications')
       .eq('id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -111,6 +112,7 @@ serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+    const patientAge = currentPatientAge(patient);
     if (consultationId) {
       const { data: consultation } = await supabase.from('consultations').select('id')
         .eq('id', consultationId).eq('patient_id', patientId).eq('user_id', userId).maybeSingle();
@@ -139,9 +141,13 @@ serve(async (req) => {
       );
     }
 
-    // Atestado content: afastamento days (0.5–365), optional CID + note.
+    // Atestado duration is exact clinician input; invalid values are never clamped.
+    if (isAtestado) {
+      try { validateCertificateDays(body.content?.days); }
+      catch { throw new RequestError('Informe entre 0,5 e 365 dias, em intervalos de meio dia.'); }
+    }
     const atestado = isAtestado ? {
-      days: Math.min(365, Math.max(0.5, Number(body.content?.days) || 1)),
+      days: validateCertificateDays(body.content?.days),
       cid: (body.content?.cid ?? '').toString().trim().slice(0, 20),
       note: (body.content?.note ?? '').toString().trim().slice(0, 400),
     } : null;
@@ -210,7 +216,7 @@ serve(async (req) => {
 
     // Title + patient + date
     text(DOC_TITLES[docType], { size: 13, bold: true }); down(22);
-    text(`Paciente: ${patient.name}${patient.age ? `, ${patient.age} anos` : ''}`, { size: 11 }); down(15);
+    text(`Paciente: ${patient.name}, ${patientAge !== null ? `${patientAge} anos` : 'idade não informada'}`, { size: 11 }); down(15);
     const emitted = now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
     const dateLine = isReceita
       ? `Emitido em: ${emitted} · Válida até ${expiresAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`
@@ -294,6 +300,13 @@ serve(async (req) => {
     }
 
     const pdfBytes = await pdf.save();
+    const pdfSha256 = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(pdfBytes).buffer))]
+      .map(byte => byte.toString(16).padStart(2, '0')).join('');
+    const issuanceSnapshot = {
+      prescriber: { doctor_name: settings.doctor_name.trim(), crm_number: settings.crm_number.trim(), crm_uf: settings.crm_uf.trim().toUpperCase(), professional_address: settings.professional_address?.trim() ?? '' },
+      patient: { name: patient.name, age: patientAge, dateOfBirth: patient.date_of_birth ?? null },
+      pdf_sha256: pdfSha256, template_version: 'cortex-clinical-document-v1', issued_at: now.toISOString(),
+    };
 
     // ── Store + record ────────────────────────────────────────────────────────
     const storagePath = `rx/${userId}/${prescriptionId}.pdf`;
@@ -311,6 +324,7 @@ serve(async (req) => {
       secret_code: code,
       status: 'revoked',
       expires_at: expiresAt.toISOString(),
+      issuance_snapshot: issuanceSnapshot,
     });
     if (insErr) {
       throw insErr;

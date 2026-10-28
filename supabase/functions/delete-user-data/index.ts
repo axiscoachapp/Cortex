@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import { removeStoragePrefix } from "../_shared/storage.ts";
 import { requireSafeDeletion } from "../_shared/deletion.ts";
+import { retryProviderCleanup } from "../_shared/providerFiles.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin':Deno.env.get('ALLOWED_ORIGIN') ?? '*',
@@ -15,11 +16,12 @@ serve(async req => {
   if (req.method!=='POST') return new Response(null,{status:405,headers:corsHeaders});
   try {
     const {userId} = await requireUser(req);
-    const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+    const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {global:{fetch:fetchWithDeadline}});
     await requireSafeDeletion(admin,userId);
     // Persistent intent blocks new writes; failed cleanup can be retried safely.
     const {error: lockError} = await admin.from('account_deletion_requests').upsert({user_id:userId});
     if (lockError) throw new Error('Não foi possível iniciar a exclusão');
+    await retryProviderCleanup(admin,userId,Deno.env.get('GEMINI_API_KEY'));
     await removeStoragePrefix(admin.storage,'patient-files',`patients/${userId}`);
     await removeStoragePrefix(admin.storage,'audio-recordings',`consultations/${userId}`);
     await removeStoragePrefix(admin.storage,'prescriptions',`rx/${userId}`);
@@ -40,7 +42,7 @@ serve(async req => {
     // succeeds so partial failures leave enough information for a safe retry.
     const {error} = await admin.auth.admin.deleteUser(userId);
     if (error) throw new Error('Não foi possível concluir a exclusão da conta');
-    return new Response(JSON.stringify({success:true,message:'Todos os dados foram excluídos permanentemente.'}),
+    return new Response(JSON.stringify({success:true,message:'Conta e dados ativos removidos. Retenções de segurança seguem as políticas aplicáveis.',receipt:{activeRecords:'removed',sourceFiles:'removed',providerFiles:'confirmed_removed_or_provider_reports_absent',operationalLogsAndBackups:'subject_to_retention_policy'}}),
       {headers:{...corsHeaders,'Content-Type':'application/json'}});
   } catch (error) {
     if (error instanceof RequestError) return new Response(JSON.stringify({error:error.message}),{status:error.status,headers:{...corsHeaders,'Content-Type':'application/json'}});

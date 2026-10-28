@@ -11,6 +11,7 @@
  */
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
+import { assertAiEnabled } from './operationControls.ts';
 
 export const DEFAULT_DAILY_LIMIT = 1500;
 
@@ -25,6 +26,13 @@ export class QuotaExceededError extends Error {
   constructor(public used: number, public limit: number) {
     super(`Limite diário atingido (${Math.round(used)}/${limit} créditos). Reseta em 24h.`);
     this.name = "QuotaExceededError";
+  }
+}
+export class OperationRateError extends QuotaExceededError {
+  constructor(used:number,limit:number,public retryAfterSeconds=60) {
+    super(used,limit);
+    this.name='OperationRateError';
+    this.message='Muitas operações em sequência. Aguarde um minuto e tente novamente.';
   }
 }
 
@@ -74,6 +82,7 @@ export async function checkQuota(
   supabase: SupabaseClient,
   userId: string | null | undefined,
   estimatedCredits: number = 0,
+  operation: 'ai' | 'communication' = 'ai',
 ): Promise<QuotaReservation> {
   if (!userId) {
     // No identity → refuse. A silent pass-through here let callers bypass
@@ -82,6 +91,10 @@ export async function checkQuota(
     throw new Error("checkQuota chamado sem userId autenticado");
   }
   if (!Number.isFinite(estimatedCredits) || estimatedCredits < 0) throw new Error('Estimativa de consumo inválida');
+  if(operation==='ai') assertAiEnabled();
+  const {data:admission,error:admissionError}=await supabase.rpc('admit_operation',{p_user_id:userId,p_operation:operation});
+  if(admissionError || !admission || typeof admission.allowed!=='boolean' || !Number.isFinite(Number(admission.used)) || !Number.isFinite(Number(admission.limit))) throw new Error('Controle de operações indisponível. Tente novamente.');
+  if(!admission.allowed) throw new OperationRateError(Number(admission.used),Number(admission.limit));
   const reservationId = crypto.randomUUID();
   const {data, error} = await supabase.rpc('reserve_usage', {
     p_user_id: userId, p_credits: Math.max(25, estimatedCredits), p_reservation_id: reservationId,
@@ -118,10 +131,11 @@ export function quotaResponse(err: QuotaExceededError, corsHeaders: Record<strin
   return new Response(
     JSON.stringify({
       error: err.message,
-      quotaExceeded: true,
+      quotaExceeded: !(err instanceof OperationRateError),
+      rateLimited: err instanceof OperationRateError,
       used: err.used,
       limit: err.limit,
     }),
-    { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", ...(err instanceof OperationRateError ? {'Retry-After':String(err.retryAfterSeconds)} : {}) } },
   );
 }

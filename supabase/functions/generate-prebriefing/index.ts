@@ -83,7 +83,7 @@ serve(async (req) => {
         .maybeSingle(),
       supabase
         .from('patients')
-        .select('name,age,diagnoses,medications,allergies,clinical_notes,revision')
+        .select('name,age,date_of_birth,diagnoses,medications,allergies,clinical_notes,revision')
         .eq('id', patientId)
         .eq('user_id', userId)
         .maybeSingle(),
@@ -134,7 +134,7 @@ serve(async (req) => {
       .join('\n')
       .trim();
 
-    const prompt = `Paciente: ${patientRow.name ?? 'paciente'}, ${patientRow.age ?? '?'} anos
+    const prompt = `Paciente: ${patientRow.name ?? 'paciente'}, ${patientRow.age == null ? 'idade não informada' : `${patientRow.age} anos`}
 Diagnósticos: ${diagnoses}
 Medicações: ${meds}
 Alergias: ${patientRow.allergies?.join(', ') || 'Nenhuma'}

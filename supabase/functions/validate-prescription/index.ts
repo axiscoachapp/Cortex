@@ -17,6 +17,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { assertPrescriptionPath } from "../_shared/storage.ts";
+import { fetchWithDeadline } from "../_shared/http.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',   // deliberately public — pharmacies/validators
@@ -46,11 +47,12 @@ serve(async (req) => {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { global: { fetch: fetchWithDeadline } },
     );
 
     const { data: rx } = await supabase
       .from('prescriptions')
-      .select('id, storage_path, secret_code, status, created_at, expires_at, signed_at, signature_verified_at, issuance_verified_at, user_id, doc_type')
+      .select('id, storage_path, secret_code, status, created_at, expires_at, signed_at, signature_verified_at, issuance_verified_at, issuance_snapshot, user_id, doc_type')
       .eq('id', id)
       .maybeSingle();
 
@@ -81,12 +83,13 @@ serve(async (req) => {
     // Reject unsafe historic metadata as well as malformed current rows.
     const storagePath = assertPrescriptionPath(rx.storage_path, rx.user_id, rx.id);
 
-    // Prescriber identity for the manifest (public data on the document itself).
-    const { data: prescriber } = await supabase
-      .from('user_settings')
-      .select('doctor_name, crm_number, crm_uf')
-      .eq('user_id', rx.user_id)
-      .maybeSingle();
+    // Legacy documents are never backfilled from mutable current settings.
+    const snapshot = rx.issuance_snapshot;
+    if (!snapshot || !snapshot.prescriber || typeof snapshot.pdf_sha256 !== 'string') {
+      return new Response(JSON.stringify({ status: 'unverified', error: 'Documento sem identidade de emissão preservada. Solicite a reemissão ao prescritor.' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const prescriber = snapshot.prescriber;
 
     if (format === 'application/validador-iti+json') {
       const { data: signedUrl, error: urlError } = await supabase.storage
@@ -106,6 +109,8 @@ serve(async (req) => {
             uf: prescriber.crm_uf,
           } : null,
           dataEmissao: rx.created_at,
+          sha256: snapshot.pdf_sha256,
+          versaoModelo: snapshot.template_version,
           validaAte: rx.expires_at,
           assinadaEm: rx.signature_verified_at ? rx.signed_at : null,
           documento: signedUrl?.signedUrl ?? null,
