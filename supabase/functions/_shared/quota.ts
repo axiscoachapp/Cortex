@@ -10,7 +10,7 @@
  * Default daily limit 1500 credits = ~$1.50/day = ~$45/month worst case.
  */
 
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 
 export const DEFAULT_DAILY_LIMIT = 1500;
 
@@ -29,27 +29,31 @@ export class QuotaExceededError extends Error {
 }
 
 /** Convert raw Gemini usageMetadata into credits. Safe for unknown shapes. */
-export function creditsFromUsage(usage: any): number {
-  if (!usage) return 0;
+export function creditsFromUsage(value: unknown): number {
+  if (!value || typeof value !== 'object') return 0;
+  const usage = value as Record<string, unknown>;
   // Gemini returns:
   //   promptTokenCount       (all input incl. audio when present)
-  //   candidatesTokenCount   (output, includes thinking)
-  //   thoughtsTokenCount     (subset of output when thinkingBudget > 0)
+  // candidatesTokenCount and thoughtsTokenCount are separate billed output.
   //   promptTokensDetails: [{ modality: 'AUDIO' | 'TEXT' | 'IMAGE', tokenCount }]
-  const details: any[] = usage.promptTokensDetails ?? [];
+  const details: unknown[] = Array.isArray(usage.promptTokensDetails) ? usage.promptTokensDetails : [];
   let audioIn = 0;
   let textIn = 0;
   for (const d of details) {
-    const t = Number(d.tokenCount ?? 0);
-    if (d.modality === "AUDIO")        audioIn += t;
-    else if (d.modality === "TEXT")    textIn  += t;
+    if (!d || typeof d !== 'object') continue;
+    const detail = d as Record<string, unknown>;
+    const t = Number(detail.tokenCount ?? 0);
+    if (!Number.isFinite(t) || t < 0) throw new Error('Consumo retornado pelo provedor inválido');
+    if (detail.modality === "AUDIO")        audioIn += t;
+    else if (detail.modality === "TEXT")    textIn  += t;
     else                                textIn  += t; // image/video billed as text-input here
   }
   // If breakdown missing, treat the whole prompt as text input.
   if (audioIn === 0 && textIn === 0) {
     textIn = Number(usage.promptTokenCount ?? 0);
   }
-  const out = Number(usage.candidatesTokenCount ?? 0);
+  const out = Number(usage.candidatesTokenCount ?? 0) + Number(usage.thoughtsTokenCount ?? 0);
+  if (![textIn,audioIn,out].every(n => Number.isFinite(n) && n >= 0)) throw new Error('Consumo retornado pelo provedor inválido');
 
   return (
     textIn  * CREDITS_PER_TOKEN.text_input  +
@@ -58,27 +62,7 @@ export function creditsFromUsage(usage: any): number {
   );
 }
 
-/** Fetch (with default fallback) the user's daily credit limit. */
-async function getLimit(supabase: SupabaseClient, userId: string): Promise<number> {
-  const { data } = await supabase
-    .from("user_settings")
-    .select("daily_credit_limit")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return data?.daily_credit_limit ?? DEFAULT_DAILY_LIMIT;
-}
-
-/** Fetch today's credits_used. */
-async function getUsed(supabase: SupabaseClient, userId: string): Promise<number> {
-  const today = new Date().toISOString().slice(0, 10);
-  const { data } = await supabase
-    .from("usage_daily")
-    .select("credits_used")
-    .eq("user_id", userId)
-    .eq("day", today)
-    .maybeSingle();
-  return Number(data?.credits_used ?? 0);
-}
+export interface QuotaReservation { used: number; limit: number; reservationId: string }
 
 /**
  * Throws QuotaExceededError if the user has already exceeded their daily limit,
@@ -90,35 +74,43 @@ export async function checkQuota(
   supabase: SupabaseClient,
   userId: string | null | undefined,
   estimatedCredits: number = 0,
-): Promise<{ used: number; limit: number }> {
+): Promise<QuotaReservation> {
   if (!userId) {
     // No identity → refuse. A silent pass-through here let callers bypass
     // quota entirely by omitting userId. All callers now derive userId from
     // the JWT (see _shared/auth.ts), so this only fires on programming errors.
     throw new Error("checkQuota chamado sem userId autenticado");
   }
-  const [limit, used] = await Promise.all([getLimit(supabase, userId), getUsed(supabase, userId)]);
-  if (used >= limit) throw new QuotaExceededError(used, limit);
-  if (used + estimatedCredits > limit) throw new QuotaExceededError(used, limit);
-  return { used, limit };
+  if (!Number.isFinite(estimatedCredits) || estimatedCredits < 0) throw new Error('Estimativa de consumo inválida');
+  const reservationId = crypto.randomUUID();
+  const {data, error} = await supabase.rpc('reserve_usage', {
+    p_user_id: userId, p_credits: Math.max(25, estimatedCredits), p_reservation_id: reservationId,
+  });
+  if (error || !data || typeof data.allowed !== 'boolean' || !Number.isFinite(Number(data.used)) || !Number.isFinite(Number(data.limit))) {
+    throw new Error('Controle de consumo indisponível. Tente novamente mais tarde.');
+  }
+  const used = Number(data.used); const limit = Number(data.limit);
+  if (!data.allowed) throw new QuotaExceededError(used, limit);
+  return {used, limit, reservationId};
 }
 
 /**
  * Record actual credits consumed after a successful Gemini call.
- * Atomic via the record_usage(...) SQL function. Never throws to the caller —
- * usage logging must not break the user flow.
+ * Idempotent settlement of one reservation. Accounting failures are surfaced;
+ * the reservation remains charged, including interrupted/failed paid requests.
  */
 export async function recordUsage(
   supabase: SupabaseClient,
   userId: string | null | undefined,
   credits: number,
+  reservationId: string,
 ): Promise<void> {
-  if (!userId || credits <= 0) return;
-  try {
-    await supabase.rpc("record_usage", { p_user_id: userId, p_credits: credits });
-  } catch (err) {
-    console.error("recordUsage failed:", err);
-  }
+  if (!userId || !reservationId || !Number.isFinite(credits) || credits < 0) throw new Error('Registro de consumo inválido');
+  // Missing usage must not refund an operation whose cost is unknown.
+  const {data, error} = await supabase.rpc('settle_usage', {
+    p_user_id: userId, p_reservation_id: reservationId, p_credits: credits > 0 ? credits : null,
+  });
+  if (error || data !== true) throw new Error('Não foi possível registrar o consumo');
 }
 
 /** Build a 429 Response body the frontend can render verbatim. */

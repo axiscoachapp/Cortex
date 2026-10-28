@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini, buildPatientSummary, parseModelJson, salvageJsonString, collapseBlankLines } from "../_shared/gemini.ts";
+import { callGemini, buildPatientSummary, parseModelObject, assertGeminiTextBudget, collapseBlankLines } from "../_shared/gemini.ts";
+import { assertAudioPath } from "../_shared/storage.ts";
+import { clinicDayBounds, clinicDate } from "../_shared/clinicDate.ts";
+import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { getSpecialtyPrompt, buildCustomTemplatePrompt } from "../_shared/specialty_prompts.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
@@ -20,7 +23,7 @@ const corsHeaders = {
 const EXTRACT_SYSTEM = `Você é um extrator de dados clínicos estruturados.
 Analise a evolução SOAP fornecida e extraia APENAS informações explicitamente presentes no texto.
 Não infira, não invente, não complete com conhecimento externo.
-- diagnoses: diagnósticos ou hipóteses da seção A, como descrições simples sem código CID
+- diagnoses: somente diagnósticos explicitamente confirmados; nunca hipóteses/diferenciais, como descrições simples sem código CID
 - medications: medicamentos prescritos/mantidos na seção P, com nome, dosagem e instruções de uso
 - allergies: alergias mencionadas em qualquer seção
 Retorne arrays vazios para campos sem informação no texto.`;
@@ -61,6 +64,13 @@ const FINAL_SCHEMA = {
   },
   required: ['soap_note', 'whatsapp_message'],
 };
+interface FinalGeneration { soap_note: string; whatsapp_message: string }
+interface ProfileExtraction {
+  diagnoses: Array<{ description: string }>;
+  medications: Array<{ name: string; dosage: string; instructions: string }>;
+  allergies: string[];
+}
+interface HistoryExtraction { medical_history: string[]; social_anamnesis: string[] }
 
 // First-visit anamnesis extraction — populates the patient's history fields.
 const HISTORY_SYSTEM = `Você é um assistente médico estruturando a anamnese de uma PRIMEIRA consulta.
@@ -93,10 +103,12 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const body = await req.json();
-    const { patientId, chiefComplaint, transcription, patientContext, userSpecialty, templateContent } = body;
+    const body = await readJsonObject(req);
+    const { patientId, draftId, chiefComplaint, transcription, userSpecialty, templateContent } = body;
 
-    if (!patientId || transcription === undefined) {
+    if (typeof patientId !== 'string' || typeof draftId !== 'string' || typeof transcription !== 'string'
+      || (chiefComplaint !== undefined && typeof chiefComplaint !== 'string')
+      || (body.doctorComments !== undefined && typeof body.doctorComments !== 'string')) {
       return new Response(
         JSON.stringify({ error: 'patientId e transcription são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -112,7 +124,7 @@ serve(async (req) => {
     // patient belongs to the authenticated user before any write.
     const { data: ownedPatient } = await supabase
       .from('patients')
-      .select('id')
+      .select('id,name,age,diagnoses,medications,allergies')
       .eq('id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -123,10 +135,29 @@ serve(async (req) => {
       );
     }
 
+    const { data: priorSave } = await supabase.from('consultations').select('id,soap_note,whatsapp_message')
+      .eq('id', draftId).eq('patient_id', patientId).eq('user_id', userId).maybeSingle();
+    const { data: draft } = await supabase.from('consultation_drafts').select('id,audio_storage_path')
+      .eq('id', draftId).eq('patient_id', patientId).eq('user_id', userId).maybeSingle();
+    const cleanupSavedDraft = async () => {
+      if (!draft) return;
+      if (draft.audio_storage_path) {
+        const { error } = await supabase.storage.from('audio-recordings').remove([assertAudioPath(draft.audio_storage_path, userId)]);
+        if (error) return; // retain the row/path for a retry instead of orphaning audio
+      }
+      await supabase.from('consultation_drafts').delete().eq('id', draftId).eq('user_id', userId);
+    };
+    if (priorSave) {
+      await cleanupSavedDraft();
+      return new Response(JSON.stringify({ consultationId: priorSave.id, soapNote: priorSave.soap_note, whatsappMessage: priorSave.whatsapp_message, profileUpdates: { diagnoses: [], medications: [], allergies: [] } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    if (!draft) throw new Error('Rascunho não encontrado. Reabra a consulta.');
+
     let soapNote: string;
     let whatsappMessage: string;
 
     if (body.saveDirect) {
+      if (body.reviewed !== true) throw new Error('Revise e confirme a evolução antes de salvar.');
       // ── Path A: draft was already approved — save without a Gemini call ──
       soapNote       = body.soapNote       ?? '';
       whatsappMessage = body.whatsappMessage ?? '';
@@ -135,26 +166,28 @@ serve(async (req) => {
       const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
       if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
 
+      const doctorComments: string = body.doctorComments ?? '';
+      const patientSummary = buildPatientSummary(ownedPatient, chiefComplaint);
+      const commentsSection = doctorComments.trim()
+        ? `\n\nObservações do médico (incorpore obrigatoriamente no SOAP):\n${doctorComments.trim()}`
+        : '';
+
+      const finalParts = [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsSection}` }];
+      const instruction = typeof templateContent === 'string' && templateContent.trim() ? buildCustomTemplatePrompt(templateContent) : getSpecialtyPrompt(userSpecialty);
+      assertGeminiTextBudget(finalParts, instruction);
+      let finalReservation: { reservationId: string };
       try {
-        await checkQuota(supabase, userId, 5);
+        finalReservation = await checkQuota(supabase, userId, 100);
       } catch (err) {
         if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
         throw err;
       }
 
-      const doctorComments: string = body.doctorComments ?? '';
-      const patientSummary = buildPatientSummary(patientContext, chiefComplaint);
-      const commentsSection = doctorComments.trim()
-        ? `\n\nObservações do médico (incorpore obrigatoriamente no SOAP):\n${doctorComments.trim()}`
-        : '';
-
       const { text: finalRaw, usage: finalUsage } = await callGemini(
         GEMINI_API_KEY,
-        [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsSection}` }],
+        finalParts,
         {
-          systemInstruction: (typeof templateContent === 'string' && templateContent.trim())
-          ? buildCustomTemplatePrompt(templateContent)
-          : getSpecialtyPrompt(userSpecialty),
+          systemInstruction: instruction,
           temperature: 0.3,
           maxOutputTokens: 3000,   // headroom for custom templates
           thinkingBudget: 1024,
@@ -162,20 +195,20 @@ serve(async (req) => {
           responseSchema: FINAL_SCHEMA,
         },
       );
-      await recordUsage(supabase, userId, creditsFromUsage(finalUsage));
+      await recordUsage(supabase, userId, creditsFromUsage(finalUsage), finalReservation.reservationId);
 
-      const parsed = parseModelJson(finalRaw);
-      if (parsed) {
+      const parsed = parseModelObject<FinalGeneration>(finalRaw, FINAL_SCHEMA);
+      {
         soapNote        = parsed.soap_note        ?? '';
         whatsappMessage = parsed.whatsapp_message ?? '';
-      } else {
-        // Truncated/invalid JSON — salvage the fields so the raw envelope
-        // never leaks into the document the doctor sees.
-        soapNote        = salvageJsonString(finalRaw, 'soap_note') ?? finalRaw;
-        whatsappMessage = salvageJsonString(finalRaw, 'whatsapp_message') ?? '';
       }
       soapNote        = collapseBlankLines(soapNote);
       whatsappMessage = collapseBlankLines(whatsappMessage);
+    }
+    if (typeof soapNote !== 'string' || !soapNote.trim() || typeof whatsappMessage !== 'string') throw new Error('Evolução inválida ou vazia. Revise o rascunho.');
+    if (!body.saveDirect) {
+      // New generation is always shown to the clinician before it can be final.
+      return new Response(JSON.stringify({ soapNote, whatsappMessage, previewOnly: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // First visit? Check for a prior consultation BEFORE inserting this one.
@@ -191,6 +224,7 @@ serve(async (req) => {
     const { data: consultation, error: insertError } = await supabase
       .from('consultations')
       .insert([{
+        id: draftId,
         patient_id:       patientId,
         user_id:          userId,
         chief_complaint:  chiefComplaint,
@@ -205,21 +239,21 @@ serve(async (req) => {
 
     await supabase
       .from('patients')
-      .update({ last_visit: new Date().toISOString().split('T')[0], status: 'retorno' })
+      .update({ last_visit: clinicDate(), status: 'retorno' })
       .eq('id', patientId)
       .eq('user_id', userId);
 
     // Best-effort: mark today's appointment as done
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const { start, end } = clinicDayBounds();
       await supabase
         .from('appointments')
         .update({ status: 'realizado' })
         .eq('patient_id', patientId)
         .eq('user_id', userId)
         .in('status', ['agendado', 'confirmado'])
-        .gte('start_time', `${today}T00:00:00`)
-        .lte('start_time', `${today}T23:59:59`);
+        .gte('start_time', start)
+        .lt('start_time', end);
     } catch { /* non-critical */ }
 
     // ── Best-effort profile extraction ───────────────────────────────────────
@@ -232,11 +266,12 @@ serve(async (req) => {
     try {
       const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
       if (GEMINI_API_KEY && soapNote.trim()) {
+        assertGeminiTextBudget([{ text: soapNote }], EXTRACT_SYSTEM);
         // Gate the extraction on remaining budget too — a QuotaExceededError
         // here is caught below and simply skips extraction (the consultation
         // itself is already saved). Closes the saveDirect path where the main
         // quota check is skipped.
-        await checkQuota(supabase, userId, 1);
+        const extractReservation = await checkQuota(supabase, userId, 8);
         const { text: extractRaw, usage: extractUsage } = await callGemini(
           GEMINI_API_KEY,
           [{ text: soapNote }],
@@ -249,11 +284,11 @@ serve(async (req) => {
             responseSchema: EXTRACT_SCHEMA,
           },
         );
-        await recordUsage(supabase, userId, creditsFromUsage(extractUsage));
-        const parsed = JSON.parse(extractRaw);
-        const d = Array.isArray(parsed.diagnoses)   ? parsed.diagnoses.filter((x: any) => x?.description?.trim())   : [];
-        const m = Array.isArray(parsed.medications)  ? parsed.medications.filter((x: any) => x?.name?.trim())         : [];
-        const a = Array.isArray(parsed.allergies)    ? parsed.allergies.filter((x: any) => typeof x === 'string' && x.trim()) : [];
+        await recordUsage(supabase, userId, creditsFromUsage(extractUsage), extractReservation.reservationId);
+        const parsed = parseModelObject<ProfileExtraction>(extractRaw, EXTRACT_SCHEMA);
+        const d = parsed.diagnoses.filter(x => x.description.trim());
+        const m = parsed.medications.filter(x => x.name.trim());
+        const a = parsed.allergies.filter(x => x.trim());
         if (d.length || m.length || a.length) profileUpdates = { diagnoses: d, medications: m, allergies: a };
       }
     } catch { /* non-critical — proceed without profile updates */ }
@@ -269,7 +304,7 @@ serve(async (req) => {
         if (GEMINI_API_KEY && soapNote.trim()) {
           const { data: existing } = await supabase
             .from('patients')
-            .select('medical_history, social_anamnesis')
+            .select('medical_history, social_anamnesis,revision')
             .eq('id', patientId)
             .eq('user_id', userId)
             .maybeSingle();
@@ -278,10 +313,12 @@ serve(async (req) => {
           const needSocial  = !existing?.social_anamnesis?.trim();
 
           if (needMedical || needSocial) {
-            await checkQuota(supabase, userId, 1);
+            const historyParts = [{ text: `Evolução SOAP:\n${soapNote}\n\nTranscrição:\n${transcription}` }];
+            assertGeminiTextBudget(historyParts, HISTORY_SYSTEM);
+            const historyReservation = await checkQuota(supabase, userId, 10);
             const { text: histRaw, usage: histUsage } = await callGemini(
               GEMINI_API_KEY,
-              [{ text: `Evolução SOAP:\n${soapNote}\n\nTranscrição:\n${transcription}` }],
+              historyParts,
               {
                 systemInstruction: HISTORY_SYSTEM,
                 temperature: 0,
@@ -291,9 +328,9 @@ serve(async (req) => {
                 responseSchema: HISTORY_SCHEMA,
               },
             );
-            await recordUsage(supabase, userId, creditsFromUsage(histUsage));
+            await recordUsage(supabase, userId, creditsFromUsage(histUsage), historyReservation.reservationId);
 
-            const parsed = JSON.parse(histRaw);
+            const parsed = parseModelObject<HistoryExtraction>(histRaw, HISTORY_SCHEMA);
             const toBullets = (v: unknown): string =>
               Array.isArray(v)
                 ? v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
@@ -307,22 +344,27 @@ serve(async (req) => {
             if (needSocial  && social)  patch.social_anamnesis = social;
 
             if (Object.keys(patch).length > 0) {
-              await supabase.from('patients').update(patch).eq('id', patientId).eq('user_id', userId);
-              historyFilled = true;
+              const { data: updated, error: historyError } = await supabase.from('patients').update(patch)
+                .eq('id', patientId).eq('user_id', userId).eq('revision', existing?.revision).select('id').maybeSingle();
+              historyFilled = !historyError && !!updated;
             }
           }
         }
       } catch { /* non-critical — the consultation is already saved */ }
     }
 
+    // Cleanup only follows a durable successful clinical save.
+    await cleanupSavedDraft();
     return new Response(
       JSON.stringify({ consultationId: consultation.id, soapNote, whatsappMessage, profileUpdates, isFirstVisit, historyFilled }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('finalize-consultation error:', error);
+    if (error instanceof QuotaExceededError) return quotaResponse(error, corsHeaders);
+    console.error('finalize-consultation failed');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

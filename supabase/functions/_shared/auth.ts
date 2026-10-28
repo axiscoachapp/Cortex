@@ -7,7 +7,8 @@
  * Authorization header automatically.
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
+import { fetchWithDeadline } from './http.ts';
 
 export class AuthError extends Error {
   status = 401;
@@ -29,7 +30,7 @@ export async function requireUser(req: Request): Promise<{ userId: string }> {
   const userClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-    { global: { headers: { Authorization: authHeader } } },
+    { global: { headers: { Authorization: authHeader }, fetch: fetchWithDeadline } },
   );
 
   const { data: { user }, error } = await userClient.auth.getUser();

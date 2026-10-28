@@ -1,5 +1,7 @@
+import { readJsonObject, RequestError, fetchWithDeadline } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
+import { assertOAuthRedirect, configuredOAuthRedirects, hashOAuthState } from "../_shared/oauth.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
@@ -8,36 +10,36 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Vary': 'Origin',
+  'Cache-Control': 'no-store',
 };
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  if (req.method !== 'POST') return new Response(null, {status:405,headers:corsHeaders});
 
   try {
     // The tokens are stored under the JWT-derived identity — a body-supplied
     // userId would let an attacker bind their Google account to a victim's row.
     const { userId } = await requireUser(req);
-    const { code, redirectUri } = await req.json();
+    const { code, state, redirectUri: rawRedirect } = await readJsonObject(req);
+    const redirectUri = assertOAuthRedirect(rawRedirect, configuredOAuthRedirects(key=>Deno.env.get(key)));
 
-    if (!code || !redirectUri) {
+    if (typeof code !== 'string' || !code || code.length > 4096 || typeof state !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(state)) {
       return new Response(
         JSON.stringify({ error: 'code e redirectUri são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
-    // Google also validates redirect_uri against the registered list, but
-    // reject obviously foreign values before the token exchange.
-    try {
-      const parsed = new URL(redirectUri);
-      if (parsed.pathname !== '/google-oauth-callback') throw new Error();
-    } catch {
-      return new Response(
-        JSON.stringify({ error: 'redirectUri inválido' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+    const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+    const {data: verifier,error: transactionError} = await supabase.rpc('consume_google_oauth_transaction', {
+      p_state_hash:await hashOAuthState(state),p_user_id:userId,p_redirect_uri:redirectUri,
+    });
+    if (transactionError || typeof verifier !== 'string' || !verifier) {
+      return new Response(JSON.stringify({error:'Conexão expirada ou inválida. Inicie novamente pela agenda.'}),
+        {status:400,headers:{...corsHeaders,'Content-Type':'application/json'}});
     }
 
     const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
@@ -48,7 +50,7 @@ serve(async (req) => {
     }
 
     // Exchange code for tokens
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    const tokenRes = await fetchWithDeadline('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -57,12 +59,12 @@ serve(async (req) => {
         client_secret: GOOGLE_CLIENT_SECRET,
         redirect_uri: redirectUri,
         grant_type: 'authorization_code',
+        code_verifier: verifier,
       }),
     });
 
     if (!tokenRes.ok) {
-      const err = await tokenRes.text();
-      throw new Error(`Google token exchange failed: ${err}`);
+      throw new Error('Não foi possível concluir a conexão Google');
     }
 
     const tokens = await tokenRes.json();
@@ -70,11 +72,6 @@ serve(async (req) => {
     if (!tokens.refresh_token) {
       throw new Error('refresh_token não retornado. Certifique-se de usar access_type=offline e prompt=consent.');
     }
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    );
 
     const expiry = tokens.expires_in
       ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
@@ -97,10 +94,10 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({error:error.message}),{status:error.status,headers:{...corsHeaders,'Content-Type':'application/json'}});
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('google-oauth-callback error:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
+      JSON.stringify({ error: 'Não foi possível concluir a conexão Google. Inicie novamente pela agenda.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }

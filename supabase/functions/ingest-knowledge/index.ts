@@ -1,3 +1,4 @@
+import { readJsonObject, RequestError, fetchWithDeadline } from "../_shared/http.ts";
 /**
  * Ingest a document into the Base de Conhecimento (RAG).
  *
@@ -7,9 +8,10 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
+import { assertPatientFilePath } from "../_shared/storage.ts";
 import {
-  checkQuota, recordUsage, quotaResponse, QuotaExceededError,
+  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
 import { callGemini, uploadToGeminiFiles, embedBatch, chunkText } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
@@ -28,9 +30,9 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { title, text, fileId } = await req.json();
+    const { title, text, fileId } = await readJsonObject(req);
 
-    if (!title?.trim()) {
+    if (typeof title !== 'string' || !title.trim() || title.length > 200) {
       return new Response(JSON.stringify({ error: 'title é obrigatório' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -43,22 +45,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    try {
-      await checkQuota(supabase, userId, 3);
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
-    }
-
     // Resolve the raw text: pasted text, or extracted from an uploaded file.
-    let rawText = (text ?? '').toString();
+    if (text !== undefined && typeof text !== 'string') throw new RequestError('Texto inválido');
+    if (fileId !== undefined && (typeof fileId !== 'string' || !fileId)) throw new RequestError('Arquivo inválido');
+    if (fileId && text?.trim()) throw new RequestError('Envie texto ou arquivo, um de cada vez');
+    let rawText = text ?? '';
+    if (rawText.length > MAX_CHARS) throw new RequestError('Documento muito longo (máximo de 60.000 caracteres). Divida-o em partes.',413);
     let sourceType: 'text' | 'file' = 'text';
 
     if (fileId) {
       sourceType = 'file';
       const { data: fileRow } = await supabase
         .from('patient_files')
-        .select('storage_path, mime_type, user_id')
+        .select('storage_path, mime_type, user_id, patient_id')
         .eq('id', fileId)
         .eq('user_id', userId)
         .maybeSingle();
@@ -66,25 +65,35 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: 'Arquivo não encontrado' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
-      const { data: blob } = await supabase.storage.from('patient-files').download(fileRow.storage_path);
+      const path = assertPatientFilePath(fileRow.storage_path, userId, fileRow.patient_id);
+      const { data: patient, error: patientError } = await supabase.from('patients')
+        .select('id').eq('id', fileRow.patient_id).eq('user_id', userId).is('deletion_requested_at', null).maybeSingle();
+      if (patientError || !patient) throw new Error('Paciente indisponível');
+      if (!['application/pdf','image/png','image/jpeg','image/webp'].includes(fileRow.mime_type ?? '')) throw new Error('Tipo de arquivo não suportado');
+      const { data: blob } = await supabase.storage.from('patient-files').download(path);
       if (!blob) throw new Error('Erro ao baixar arquivo');
+      if (blob.size > 15 * 1024 * 1024) throw new Error('Arquivo muito grande para análise');
+      const extractionQuota = await checkQuota(supabase, userId, 400);
       const uri = await uploadToGeminiFiles(GEMINI_API_KEY, await blob.arrayBuffer(), fileRow.mime_type ?? 'application/pdf');
-      const { text: extracted } = await callGemini(
+      const { text: extracted, usage } = await callGemini(
         GEMINI_API_KEY,
         [{ fileData: { mimeType: fileRow.mime_type ?? 'application/pdf', fileUri: uri } },
          { text: 'Extraia TODO o texto legível deste documento, preservando a ordem. Retorne apenas o texto, sem comentários.' }],
         { temperature: 0, maxOutputTokens: 8000, thinkingBudget: 0 },
       );
+      await recordUsage(supabase, userId, creditsFromUsage(usage), extractionQuota.reservationId);
       rawText = extracted;
     }
 
-    rawText = rawText.slice(0, MAX_CHARS).trim();
+    if (rawText.length > MAX_CHARS) throw new RequestError('Documento extraído muito longo. Divida-o em partes de até 60.000 caracteres.',413);
+    rawText = rawText.trim();
     if (rawText.length < 20) {
       return new Response(JSON.stringify({ error: 'Conteúdo muito curto para indexar' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const chunks = chunkText(rawText).slice(0, MAX_CHUNKS);
+    const chunks = chunkText(rawText);
+    if (chunks.length > MAX_CHUNKS) throw new RequestError('Documento excede 60 trechos de indexação. Divida-o em partes.',413);
 
     // Insert the document row (ready — we complete synchronously below).
     const { data: doc, error: docErr } = await supabase
@@ -95,6 +104,7 @@ serve(async (req) => {
     if (docErr) throw docErr;
 
     try {
+      const embeddingQuota = await checkQuota(supabase, userId, 25);
       // Embed in sub-batches (batchEmbedContents caps request size).
       const embeddings: number[][] = [];
       const B = 20;
@@ -112,7 +122,9 @@ serve(async (req) => {
       if (chunkErr) throw chunkErr;
 
       await supabase.from('knowledge_documents').update({ status: 'ready' }).eq('id', doc.id);
-      await recordUsage(supabase, userId, chunks.length * 0.05);   // embeddings are cheap
+      // Embedding helpers do not expose provider usage. Retain the reservation
+      // rather than reporting an invented actual charge or refunding unknown cost.
+      await recordUsage(supabase, userId, 0, embeddingQuota.reservationId);
 
       return new Response(JSON.stringify({ documentId: doc.id, chunks: chunks.length }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -122,8 +134,10 @@ serve(async (req) => {
     }
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({error:error.message}),{status:error.status,headers:{...corsHeaders,'Content-Type':'application/json'}});
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('ingest-knowledge error:', error instanceof Error ? error.message : 'unknown');
+    if (error instanceof QuotaExceededError) return quotaResponse(error, corsHeaders);
+    console.error('ingest-knowledge failed');
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }

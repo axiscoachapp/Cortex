@@ -1,10 +1,12 @@
+import { fetchWithDeadline, readJsonObject, RequestError } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
-import { embedText } from "../_shared/gemini.ts";
+import { embedText, callGemini } from "../_shared/gemini.ts";
+import { assertPromptSize, isRecord, optionalText, readPatientContext, type PatientContext } from '../_shared/modelInput.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -13,48 +15,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Vary': 'Origin',
 };
-
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-
-interface GeminiConfig {
-  systemInstruction?: string;
-  temperature?: number;
-  maxOutputTokens?: number;
-  thinkingBudget?: number;
-}
-
-async function callGemini(apiKey: string, parts: object[], cfg: GeminiConfig = {}): Promise<{ text: string; usage: any }> {
-  const body: any = {
-    contents: [{ parts }],
-    generationConfig: {
-      temperature: cfg.temperature ?? 0.2,
-      maxOutputTokens: cfg.maxOutputTokens ?? 1024,
-    },
-  };
-
-  if (cfg.systemInstruction) {
-    body.systemInstruction = { parts: [{ text: cfg.systemInstruction }] };
-  }
-  if (cfg.thinkingBudget !== undefined) {
-    body.generationConfig.thinkingConfig = { thinkingBudget: cfg.thinkingBudget };
-  }
-
-  const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Gemini error ${res.status}: ${err}`);
-  }
-
-  const json = await res.json();
-  const parts2: any[] = json.candidates?.[0]?.content?.parts ?? [];
-  const responsePart = parts2.find((p: any) => !p.thought) ?? parts2[parts2.length - 1];
-  return { text: responsePart?.text ?? '', usage: json.usageMetadata };
-}
 
 const CHAT_SYSTEM = `Você é um assistente clínico de IA auxiliando um médico durante a consulta. Você tem acesso ao contexto do paciente e ao histórico de consultas anteriores fornecidos abaixo.
 
@@ -73,6 +33,9 @@ Você também pode ajudar com:
 - Interpretação de sintomas e achados
 
 Se não souber a resposta com segurança, diga claramente que não sabe. Nunca invente informações clínicas nem invente registros de consultas anteriores — se não estiverem no histórico abaixo, diga "não consta no histórico".`;
+interface ConsultationContext { created_at: string; chief_complaint: string | null; soap_note: string | null }
+interface AttachedDocument { created_at: string; file_name: string; ai_summary: string | null }
+interface KnowledgeMatch { similarity: number; content: string }
 
 // Strip SOAP markdown bold to keep tokens lean
 function condense(text: string, max = 600): string {
@@ -92,8 +55,11 @@ serve(async (req) => {
   try {
     const { userId } = await requireUser(req);
 
-    const body = await req.json();
-    const { patientId, patientContext, chatHistory, userMessage } = body;
+    const body: Record<string, unknown> = await readJsonObject(req);
+    const { chatHistory, userMessage } = body;
+    const patientId = optionalText(body.patientId, 'patientId');
+    const patientContext = readPatientContext(body.patientContext);
+    if (chatHistory != null && !Array.isArray(chatHistory)) throw new RequestError('Histórico da conversa inválido.');
 
     if (!userMessage || typeof userMessage !== 'string') {
       return new Response(
@@ -116,22 +82,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // ── Quota check: chat is cheap (~1 credit) but block obvious abuse. ──────
-    try {
-      await checkQuota(supabase, userId, 1);
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
-    }
-
     // ── Pull patient row + recent consultations + attached docs when patientId ──
-    let patientRow: any = null;
-    let consultations: any[] = [];
-    let attachedDocs: any[] = [];
+    let patientRow: PatientContext | null = null;
+    let consultations: ConsultationContext[] = [];
+    let attachedDocs: AttachedDocument[] = [];
     if (patientId) {
       // Ownership enforced: the service-role client bypasses RLS, so every
       // query MUST be scoped to the JWT-derived userId.
-      const [{ data: p }, { data: c }, { data: docs }] = await Promise.all([
+      const [{ data: p, error: patientError }, { data: c, error: historyError }, { data: docs, error: documentsError }] = await Promise.all([
         supabase
           .from('patients')
           .select('name, age, diagnoses, medications, allergies, social_anamnesis, medical_history, clinical_notes')
@@ -153,7 +111,9 @@ serve(async (req) => {
           .order('created_at', { ascending: false })
           .limit(8),
       ]);
-      patientRow = p;
+      if (patientError || historyError || documentsError) throw new RequestError('Não foi possível consultar o histórico clínico. Tente novamente.', 503);
+      if (!p) throw new RequestError('Paciente não encontrado.', 404);
+      patientRow = readPatientContext(p);
       consultations = c ?? [];
       attachedDocs = docs ?? [];
     }
@@ -165,10 +125,10 @@ serve(async (req) => {
     let patientSummary = '';
     if (ctx) {
       const diagnoses = Array.isArray(ctx.diagnoses)
-        ? ctx.diagnoses.map((d: any) => (typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim())).join('; ') || 'Nenhum'
+        ? ctx.diagnoses.map(d => (typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim())).join('; ') || 'Nenhum'
         : 'Nenhum';
       const medications = Array.isArray(ctx.medications)
-        ? ctx.medications.map((m: any) => (typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim())).join(', ') || 'Nenhuma'
+        ? ctx.medications.map(m => (typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim())).join(', ') || 'Nenhuma'
         : 'Nenhuma';
       const allergies = Array.isArray(ctx.allergies)
         ? ctx.allergies.join(', ') || 'Nenhuma'
@@ -181,9 +141,9 @@ Diagnósticos: ${diagnoses}
 Medicações em uso: ${medications}
 Alergias: ${allergies}`;
 
-      const social = (ctx.social_anamnesis ?? ctx.socialAnamnesis ?? '').trim?.() || '';
-      const history = (ctx.medical_history ?? ctx.medicalHistory ?? '').trim?.() || '';
-      const notes = (ctx.clinical_notes ?? '').trim?.() || '';
+      const social = (ctx.social_anamnesis ?? ctx.socialAnamnesis ?? '').trim();
+      const history = (ctx.medical_history ?? ctx.medicalHistory ?? '').trim();
+      const notes = (ctx.clinical_notes ?? '').trim();
       if (social)  patientSummary += `\nAnamnese social: ${condense(social, 400)}`;
       if (history) patientSummary += `\nHistória médica: ${condense(history, 400)}`;
       if (notes)   patientSummary += `\nAnotações do médico: ${condense(notes, 600)}`;
@@ -207,7 +167,7 @@ Alergias: ${allergies}`;
 
     // ── Attached documents block (AI reviews of uploads) ─────────────────────
     let docsSummary = '';
-    const docsWithInfo = attachedDocs.filter((d: any) => d.ai_summary || d.file_name);
+    const docsWithInfo = attachedDocs.filter(d => d.ai_summary || d.file_name);
     if (docsWithInfo.length > 0) {
       docsSummary = '--- Documentos Anexados (mais recente primeiro) ---\n';
       for (const d of docsWithInfo) {
@@ -224,7 +184,8 @@ Alergias: ${allergies}`;
     if (Array.isArray(chatHistory)) {
       // Cap turns and per-message length — client input flows into the prompt.
       for (const msg of chatHistory.slice(-10)) {
-        const content = typeof msg?.content === 'string' ? msg.content.slice(0, 2000) : '';
+        if (!isRecord(msg)) continue;
+        const content = typeof msg.content === 'string' ? msg.content.slice(0, 2000) : '';
         if (!content) continue;
         if (msg.type === 'user') {
           historyLines.push(`Médico: ${content}`);
@@ -238,25 +199,41 @@ Alergias: ${allergies}`;
       ? historyLines.join('\n') + '\n'
       : '';
 
+    // Retrieval is paid too. Bound the final prompt including the maximum five
+    // 700-character knowledge excerpts before reserving or embedding anything.
+    const basePrompt = `${patientSummary}${historySummary}${docsSummary}${conversationBlock}Médico: ${userMessage}`;
+    assertPromptSize(basePrompt, CHAT_SYSTEM, 3800);
+    let reservationId: string;
+    try {
+      ({ reservationId } = await checkQuota(supabase, userId, 100));
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
+    }
+
     // ── Knowledge base retrieval (RAG) ───────────────────────────────────────
     // Embed the question, pull the doctor's most relevant knowledge chunks.
     let knowledgeBlock = '';
     try {
       const queryEmbedding = await embedText(GEMINI_API_KEY, userMessage, 'RETRIEVAL_QUERY');
       if (queryEmbedding.length > 0) {
-        const { data: matches } = await supabase.rpc('match_knowledge', {
+        const { data: matches, error: knowledgeError } = await supabase.rpc('match_knowledge', {
           p_user_id: userId,
           query_embedding: queryEmbedding,
           match_count: 5,
         });
-        const relevant = (matches ?? []).filter((m: any) => m.similarity > 0.5);
+        if (knowledgeError) throw new RequestError('Não foi possível consultar a base de conhecimento. Tente novamente.', 503);
+        const relevant = ((matches ?? []) as KnowledgeMatch[]).filter(m => m.similarity > 0.5).slice(0, 5);
         if (relevant.length > 0) {
           knowledgeBlock = '--- Base de Conhecimento do Médico (use como referência confiável) ---\n'
-            + relevant.map((m: any) => condense(m.content, 700)).join('\n---\n')
+            + relevant.map(m => condense(m.content, 700)).join('\n---\n')
             + '\n----------------------------\n\n';
         }
       }
-    } catch { /* RAG is best-effort — never block the answer */ }
+    } catch (error) {
+      if (error instanceof RequestError) throw error;
+      // Embedding availability is best-effort; failed clinical DB reads are not.
+    }
 
     const promptText = `${patientSummary}${historySummary}${docsSummary}${knowledgeBlock}${conversationBlock}Médico: ${userMessage}`;
 
@@ -272,7 +249,7 @@ Alergias: ${allergies}`;
     );
 
     const credits = creditsFromUsage(usage);
-    await recordUsage(supabase, userId, credits);
+    await recordUsage(supabase, userId, credits, reservationId);
 
     return new Response(
       JSON.stringify({ message: reply, credits }),
@@ -280,8 +257,9 @@ Alergias: ${allergies}`;
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('chat-assistant error:', error);
+    console.error('chat-assistant error:');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

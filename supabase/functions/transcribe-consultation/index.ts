@@ -1,9 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini, uploadToGeminiFiles, buildPatientSummary, parseModelJson, salvageJsonString, collapseBlankLines } from "../_shared/gemini.ts";
+import { callGemini, uploadToGeminiFiles, buildPatientSummary, parseModelObject, assertGeminiTextBudget, collapseBlankLines } from "../_shared/gemini.ts";
+import { assertAudioPath } from "../_shared/storage.ts";
+import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { getSpecialtyPrompt, buildCustomTemplatePrompt } from "../_shared/specialty_prompts.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
@@ -56,6 +58,10 @@ const DRAFT_SCHEMA = {
     'differential_diagnoses', 'drug_interaction_alerts',
   ],
 };
+interface DraftGeneration {
+  soap_note: string; whatsapp_message: string; clarifications: string[];
+  transcription_quality: 'good' | 'partial' | 'poor'; differential_diagnoses: string[]; drug_interaction_alerts: string[];
+}
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
@@ -67,11 +73,13 @@ serve(async (req) => {
   try {
     const { userId } = await requireUser(req);
     const {
-      patientId, chiefComplaint, patientContext,
+      patientId, draftId, chiefComplaint,
       audioStoragePath, audioMimeType, consultationComments, userSpecialty, templateContent,
-    } = await req.json();
+    } = await readJsonObject(req);
 
-    if (!patientId || !audioStoragePath) {
+    if (typeof patientId !== 'string' || typeof draftId !== 'string' || typeof audioStoragePath !== 'string'
+      || (chiefComplaint !== undefined && typeof chiefComplaint !== 'string')
+      || (consultationComments !== undefined && (!Array.isArray(consultationComments) || !consultationComments.every(value => typeof value === 'string')))) {
       return new Response(
         JSON.stringify({ error: 'patientId e audioStoragePath são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -80,7 +88,7 @@ serve(async (req) => {
 
     // The service-role download bypasses storage RLS — enforce the per-user
     // path prefix here so no one can read (and then delete) another user's audio.
-    if (typeof audioStoragePath !== 'string' || !audioStoragePath.startsWith(`consultations/${userId}/`)) {
+    try { assertAudioPath(audioStoragePath, userId); } catch {
       return new Response(
         JSON.stringify({ error: 'audioStoragePath inválido' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -98,7 +106,7 @@ serve(async (req) => {
     // Verify the patient belongs to the authenticated user.
     const { data: ownedPatient } = await supabase
       .from('patients')
-      .select('id')
+      .select('id,name,age,diagnoses,medications,allergies')
       .eq('id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -109,14 +117,10 @@ serve(async (req) => {
       );
     }
 
-    // Reserve ~30 credits before starting the expensive audio call.
-    try {
-      await checkQuota(supabase, userId, 30);
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
-    }
-
+    const { data: draft } = await supabase.from('consultation_drafts').select('id,audio_storage_path')
+      .eq('id', draftId).eq('patient_id', patientId).eq('user_id', userId).maybeSingle();
+    if (!draft) throw new Error('Rascunho não encontrado. Salve o áudio antes de processar.');
+    if (draft.audio_storage_path !== audioStoragePath) throw new RequestError('O áudio não pertence a este rascunho.', 403);
     // Download from Storage
     const { data: audioBlob, error: downloadError } = await supabase.storage
       .from('audio-recordings')
@@ -125,15 +129,24 @@ serve(async (req) => {
     if (downloadError || !audioBlob) {
       throw new Error(`Erro ao baixar áudio: ${downloadError?.message}`);
     }
+    if (audioBlob.size > 25 * 1024 * 1024) throw new RequestError('Áudio acima de 25 MB. Divida a gravação antes de processar.', 413);
 
     const audioBuffer = await audioBlob.arrayBuffer();
-    const mimeType = audioMimeType ?? 'audio/webm';
+    const mimeType = typeof audioMimeType === 'string' ? audioMimeType.split(';')[0] : 'audio/webm';
+    if (!['audio/webm','audio/mp4','audio/ogg','audio/wav','audio/mpeg'].includes(mimeType)) throw new RequestError('Formato de áudio não suportado.');
 
     // Upload to Gemini Files API
     const geminiFileUri = await uploadToGeminiFiles(GEMINI_API_KEY, audioBuffer, mimeType);
 
-    // Delete from Storage immediately — it's now in Gemini Files (48h TTL)
-    supabase.storage.from('audio-recordings').remove([audioStoragePath]).catch(() => {});
+    let transcriptionReservation: { reservationId: string };
+    try {
+      transcriptionReservation = await checkQuota(supabase, userId, 400);
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
+    }
+
+    // Keep the owned source audio until the reviewed consultation is saved.
 
     // Transcribe
     const { text: transcription, usage: transUsage } = await callGemini(
@@ -149,7 +162,7 @@ serve(async (req) => {
         thinkingBudget: 0,
       },
     );
-    await recordUsage(supabase, userId, creditsFromUsage(transUsage));
+    await recordUsage(supabase, userId, creditsFromUsage(transUsage), transcriptionReservation.reservationId);
 
     // Short-circuit: no consultation in this recording
     if (transcription.trim().toUpperCase().includes('[SEM_CONSULTA]')) {
@@ -168,18 +181,20 @@ serve(async (req) => {
     }
 
     // Generate draft SOAP
-    const patientSummary = buildPatientSummary(patientContext, chiefComplaint);
+    const patientSummary = buildPatientSummary(ownedPatient, chiefComplaint);
     const commentsText = Array.isArray(consultationComments) && consultationComments.length > 0
       ? `\n\nObservações do médico durante a consulta:\n${consultationComments.join('\n')}`
       : '';
 
+    const draftParts = [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsText}` }];
+    const instruction = typeof templateContent === 'string' && templateContent.trim() ? buildCustomTemplatePrompt(templateContent) : getSpecialtyPrompt(userSpecialty);
+    assertGeminiTextBudget(draftParts, instruction);
+    const draftReservation = await checkQuota(supabase, userId, 100);
     const { text: draftRaw, usage: draftUsage } = await callGemini(
       GEMINI_API_KEY,
-      [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsText}` }],
+      draftParts,
       {
-        systemInstruction: (typeof templateContent === 'string' && templateContent.trim())
-          ? buildCustomTemplatePrompt(templateContent)
-          : getSpecialtyPrompt(userSpecialty),
+        systemInstruction: instruction,
         temperature: 0.3,
         maxOutputTokens: 2000,
         thinkingBudget: 512,
@@ -187,7 +202,7 @@ serve(async (req) => {
         responseSchema: DRAFT_SCHEMA,
       },
     );
-    await recordUsage(supabase, userId, creditsFromUsage(draftUsage));
+    await recordUsage(supabase, userId, creditsFromUsage(draftUsage), draftReservation.reservationId);
 
     let soapNote = '';
     let whatsappMessage = '';
@@ -195,21 +210,26 @@ serve(async (req) => {
     let transcriptionQuality: 'good' | 'partial' | 'poor' = 'good';
     let differentialDiagnoses: string[] = [];
     let drugInteractionAlerts: string[] = [];
-    const parsed = parseModelJson(draftRaw);
-    if (parsed) {
+    const parsed = parseModelObject<DraftGeneration>(draftRaw, DRAFT_SCHEMA);
+    {
       soapNote              = parsed.soap_note              ?? '';
       whatsappMessage       = parsed.whatsapp_message       ?? '';
       clarifications        = Array.isArray(parsed.clarifications)         ? parsed.clarifications         : [];
       transcriptionQuality  = parsed.transcription_quality                 ?? 'good';
       differentialDiagnoses = Array.isArray(parsed.differential_diagnoses) ? parsed.differential_diagnoses : [];
       drugInteractionAlerts = Array.isArray(parsed.drug_interaction_alerts)? parsed.drug_interaction_alerts: [];
-    } else {
-      // Truncated/invalid JSON — salvage the text fields; arrays stay empty.
-      soapNote        = salvageJsonString(draftRaw, 'soap_note') ?? draftRaw;
-      whatsappMessage = salvageJsonString(draftRaw, 'whatsapp_message') ?? '';
     }
     soapNote        = collapseBlankLines(soapNote);
     whatsappMessage = collapseBlankLines(whatsappMessage);
+    if (!soapNote) throw new Error('Evolução vazia. O áudio foi preservado.');
+    const result = {
+      transcription, soapDraft: soapNote, whatsappDraft: whatsappMessage, clarifications, transcriptionQuality,
+      differentialDiagnoses, drugInteractionAlerts, originalComments: consultationComments ?? [], audioMimeType: mimeType,
+    };
+    const { error: draftError } = await supabase.from('consultation_drafts')
+      .update({ content: result, status: 'review', updated_at: new Date().toISOString() })
+      .eq('id', draftId).eq('user_id', userId);
+    if (draftError) throw draftError;
 
     return new Response(
       JSON.stringify({
@@ -220,8 +240,10 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('transcribe-consultation error:', error);
+    if (error instanceof QuotaExceededError) return quotaResponse(error, corsHeaders);
+    console.error('transcribe-consultation failed');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

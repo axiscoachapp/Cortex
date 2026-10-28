@@ -1,10 +1,12 @@
+import { fetchWithDeadline, readJsonObject, RequestError } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
 import { callGemini, buildPatientSummary } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import { assertPromptSize, optionalText, readPatientContext } from '../_shared/modelInput.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -81,11 +83,13 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const {
-      type, soapNote, chiefComplaint, patientContext, targetSpecialty,
-    } = await req.json();
+    const body: Record<string, unknown> = await readJsonObject(req);
+    const { type, soapNote } = body;
+    const chiefComplaint = optionalText(body.chiefComplaint, 'Queixa principal');
+    const targetSpecialty = optionalText(body.targetSpecialty, 'Especialidade de destino');
+    const patientContext = readPatientContext(body.patientContext);
 
-    if (!type || !soapNote) {
+    if (!type || typeof soapNote !== 'string' || !soapNote.trim()) {
       return new Response(
         JSON.stringify({ error: 'type e soapNote são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -107,23 +111,25 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    try {
-      await checkQuota(supabase, userId, 2);
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
-    }
-
     const patientSummary = buildPatientSummary(patientContext, chiefComplaint);
     const referralTarget = targetSpecialty ? `\n\nEspecialidade de destino: ${targetSpecialty}` : '';
 
     const systemInstruction = type === 'patient_summary'
       ? PATIENT_SUMMARY_SYSTEM
       : REFERRAL_SYSTEM;
+    const prompt = `${patientSummary}\n\nEvolução SOAP:\n${soapNote}\n\nQueixa principal: ${chiefComplaint || 'não especificada'}${referralTarget}`;
+    assertPromptSize(prompt, systemInstruction);
+    let reservationId: string;
+    try {
+      ({ reservationId } = await checkQuota(supabase, userId, 100));
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
+    }
 
     const { text: document, usage } = await callGemini(
       GEMINI_API_KEY,
-      [{ text: `${patientSummary}\n\nEvolução SOAP:\n${soapNote}\n\nQueixa principal: ${chiefComplaint || 'não especificada'}${referralTarget}` }],
+      [{ text: prompt }],
       {
         systemInstruction,
         temperature: 0.3,
@@ -132,7 +138,7 @@ serve(async (req) => {
       },
     );
 
-    await recordUsage(supabase, userId, creditsFromUsage(usage));
+    await recordUsage(supabase, userId, creditsFromUsage(usage), reservationId);
 
     return new Response(
       JSON.stringify({ document }),
@@ -140,8 +146,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('generate-document error:', error);
+    console.error('generate-document error:');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

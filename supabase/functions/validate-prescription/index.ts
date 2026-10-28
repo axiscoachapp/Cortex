@@ -7,7 +7,7 @@
  * validation contract:
  *
  *   GET ?id=<uuid>&_secretCode=<code>                          → the PDF itself
- *   GET ?id=<uuid>&_secretCode=<code>&_format=application/validador-iti+json
+ *   GET ?id=<uuid>&_secretCode=<code>&_format=application%2Fvalidador-iti%2Bjson
  *                                                              → JSON manifest
  *
  * No enumeration surface: responses for unknown id, wrong code, revoked and
@@ -15,11 +15,14 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
+import { assertPrescriptionPath } from "../_shared/storage.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',   // deliberately public — pharmacies/validators
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Cache-Control': 'no-store',
+  'Referrer-Policy': 'no-referrer',
 };
 
 serve(async (req) => {
@@ -47,7 +50,7 @@ serve(async (req) => {
 
     const { data: rx } = await supabase
       .from('prescriptions')
-      .select('id, storage_path, secret_code, status, created_at, expires_at, signed_at, user_id, doc_type')
+      .select('id, storage_path, secret_code, status, created_at, expires_at, signed_at, signature_verified_at, issuance_verified_at, user_id, doc_type')
       .eq('id', id)
       .maybeSingle();
 
@@ -66,7 +69,17 @@ serve(async (req) => {
       );
     }
 
-    const expired = new Date(rx.expires_at).getTime() < Date.now();
+    if (!rx.issuance_verified_at || !Number.isFinite(Date.parse(rx.issuance_verified_at))) {
+      return new Response(JSON.stringify({status:'unverified',error:'Documento antigo sem emissão verificada. Solicite a reemissão ao prescritor.'}),
+        {status:409,headers:{...corsHeaders,'Content-Type':'application/json'}});
+    }
+    const expired = !Number.isFinite(Date.parse(rx.expires_at)) || Date.parse(rx.expires_at) <= Date.now();
+    if (expired) {
+      return new Response(JSON.stringify({ error: 'Receita expirada', validaAte: rx.expires_at }),
+        { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    // Reject unsafe historic metadata as well as malformed current rows.
+    const storagePath = assertPrescriptionPath(rx.storage_path, rx.user_id, rx.id);
 
     // Prescriber identity for the manifest (public data on the document itself).
     const { data: prescriber } = await supabase
@@ -76,16 +89,17 @@ serve(async (req) => {
       .maybeSingle();
 
     if (format === 'application/validador-iti+json') {
-      const { data: signedUrl } = await supabase.storage
+      const { data: signedUrl, error: urlError } = await supabase.storage
         .from('prescriptions')
-        .createSignedUrl(rx.storage_path, 300);
+        .createSignedUrl(storagePath, 300);
+      if (urlError || !signedUrl) throw new Error('Documento indisponível');
       return new Response(
         JSON.stringify({
           tipoDocumento: rx.doc_type === 'atestado' ? 'atestado'
             : rx.doc_type === 'solicitacao_exames' ? 'solicitacao'
             : 'prescricao',
           subtipo: rx.doc_type,
-          status: expired ? 'expirada' : (rx.status === 'signed' ? 'assinada' : 'gerada_sem_assinatura'),
+          status: rx.status === 'signed' && rx.signature_verified_at ? 'assinada' : 'gerada_sem_assinatura',
           emissor: prescriber ? {
             nome: prescriber.doctor_name,
             crm: prescriber.crm_number,
@@ -93,24 +107,17 @@ serve(async (req) => {
           } : null,
           dataEmissao: rx.created_at,
           validaAte: rx.expires_at,
-          assinadaEm: rx.signed_at,
+          assinadaEm: rx.signature_verified_at ? rx.signed_at : null,
           documento: signedUrl?.signedUrl ?? null,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/validador-iti+json' } },
       );
     }
 
-    if (expired) {
-      return new Response(
-        JSON.stringify({ error: 'Receita expirada', validaAte: rx.expires_at }),
-        { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-
     // Default: serve the PDF inline.
     const { data: blob, error: dlErr } = await supabase.storage
       .from('prescriptions')
-      .download(rx.storage_path);
+      .download(storagePath);
     if (dlErr || !blob) throw new Error('Erro ao carregar o documento');
 
     return new Response(blob.stream(), {
@@ -123,7 +130,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('validate-prescription error:', error instanceof Error ? error.message : 'unknown');
+    console.error('validate-prescription failed');
     return new Response(
       JSON.stringify({ error: 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

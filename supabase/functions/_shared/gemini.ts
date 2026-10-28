@@ -1,8 +1,16 @@
 /**
  * Shared Gemini API utilities for edge functions.
  */
+import { fetchWithDeadline } from './http.ts';
+import { assertPromptSize, isRecord } from './modelInput.ts';
 
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash';
+export interface GeminiUsage {
+  promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number;
+  promptTokensDetails?: Array<{ modality: string; tokenCount: number }>;
+}
+interface GeminiResponse { candidates?: Array<{ finishReason?: string; content?: { parts?: Array<{ thought?: boolean; text?: string }> } }>; promptFeedback?: { blockReason?: string }; usageMetadata?: GeminiUsage }
+export interface ModelSchema { type?: string; enum?: unknown[]; required?: string[]; properties?: Record<string, ModelSchema>; items?: ModelSchema }
 
 interface GeminiConfig {
   systemInstruction?: string;
@@ -17,8 +25,9 @@ export async function callGemini(
   apiKey: string,
   parts: object[],
   cfg: GeminiConfig = {},
-): Promise<{ text: string; usage: any }> {
-  const body: any = {
+): Promise<{ text: string; usage: GeminiUsage | undefined }> {
+  assertGeminiTextBudget(parts, cfg.systemInstruction);
+  const body: { contents: Array<{ parts: object[] }>; generationConfig: Record<string, unknown>; systemInstruction?: { parts: Array<{ text: string }> } } = {
     contents: [{ parts }],
     generationConfig: {
       temperature: cfg.temperature ?? 0.2,
@@ -35,21 +44,39 @@ export async function callGemini(
     body.generationConfig.thinkingConfig = { thinkingBudget: cfg.thinkingBudget };
   }
 
-  const res = await fetch(`${BASE_URL}:generateContent?key=${apiKey}`, {
+  const res = await fetchWithDeadline(`${BASE_URL}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Gemini error ${res.status}: ${err}`);
+    throw new Error(`Falha no provedor de IA (${res.status}). Tente novamente.`);
   }
 
-  const json = await res.json();
-  const parts2: any[] = json.candidates?.[0]?.content?.parts ?? [];
-  const responsePart = parts2.find((p: any) => !p.thought) ?? parts2[parts2.length - 1];
-  return { text: responsePart?.text ?? '', usage: json.usageMetadata };
+  const json = await res.json() as GeminiResponse;
+  return { text: requireCompleteModelText(json), usage: json.usageMetadata };
+}
+
+/** Run before reserving credits; callGemini repeats it as a final boundary. */
+export function assertGeminiTextBudget(parts: object[], systemInstruction = ''): void {
+  const text = parts.map(part => 'text' in part && typeof part.text === 'string' ? part.text : '').join('');
+  assertPromptSize(text, systemInstruction);
+}
+
+/** https://ai.google.dev/api/generate-content#FinishReason */
+export function requireCompleteModelText(value: unknown): string {
+  if (!isRecord(value)) throw new Error('Resposta do provedor inválida.');
+  const json = value as GeminiResponse;
+  const candidate = json.candidates?.[0];
+  if (json.promptFeedback?.blockReason || candidate?.finishReason !== 'STOP') {
+    throw new Error('A IA não concluiu a geração. Tente novamente.');
+  }
+  const text = (candidate.content?.parts ?? [])
+    .filter(part => !part.thought && typeof part.text === 'string')
+    .map(part => part.text).join('');
+  if (!text.trim()) throw new Error('A IA retornou conteúdo vazio. Tente novamente.');
+  return text;
 }
 
 /** Upload audio to Gemini Files API via resumable upload — handles large files. */
@@ -58,7 +85,7 @@ export async function uploadToGeminiFiles(
   audioBuffer: ArrayBuffer,
   mimeType: string,
 ): Promise<string> {
-  const initRes = await fetch(
+  const initRes = await fetchWithDeadline(
     `https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=resumable&key=${apiKey}`,
     {
       method: 'POST',
@@ -74,14 +101,13 @@ export async function uploadToGeminiFiles(
   );
 
   if (!initRes.ok) {
-    const err = await initRes.text();
-    throw new Error(`Gemini Files init error ${initRes.status}: ${err}`);
+    throw new Error(`Falha ao preparar envio de áudio (${initRes.status}).`);
   }
 
   const uploadUrl = initRes.headers.get('X-Goog-Upload-URL');
   if (!uploadUrl) throw new Error('Gemini Files API did not return an upload URL');
 
-  const uploadRes = await fetch(uploadUrl, {
+  const uploadRes = await fetchWithDeadline(uploadUrl, {
     method: 'POST',
     headers: {
       'Content-Length': String(audioBuffer.byteLength),
@@ -92,8 +118,7 @@ export async function uploadToGeminiFiles(
   });
 
   if (!uploadRes.ok) {
-    const err = await uploadRes.text();
-    throw new Error(`Gemini Files upload error ${uploadRes.status}: ${err}`);
+    throw new Error(`Falha ao enviar áudio (${uploadRes.status}).`);
   }
 
   const fileInfo = await uploadRes.json();
@@ -111,7 +136,7 @@ const EMBED_BATCH_URL = `https://generativelanguage.googleapis.com/v1beta/models
 
 /** Embed a single text → 768-dim vector. */
 export async function embedText(apiKey: string, text: string, taskType = 'RETRIEVAL_QUERY'): Promise<number[]> {
-  const res = await fetch(`${EMBED_URL}?key=${apiKey}`, {
+  const res = await fetchWithDeadline(`${EMBED_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -121,14 +146,14 @@ export async function embedText(apiKey: string, text: string, taskType = 'RETRIE
       outputDimensionality: EMBED_DIM,
     }),
   });
-  if (!res.ok) throw new Error(`Embed error ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Falha ao indexar documento (${res.status}).`);
   const json = await res.json();
   return json.embedding?.values ?? [];
 }
 
 /** Embed many texts (documents). Batch first; on failure, sequential fallback. */
 export async function embedBatch(apiKey: string, texts: string[]): Promise<number[][]> {
-  const res = await fetch(`${EMBED_BATCH_URL}?key=${apiKey}`, {
+  const res = await fetchWithDeadline(`${EMBED_BATCH_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -142,7 +167,7 @@ export async function embedBatch(apiKey: string, texts: string[]): Promise<numbe
   });
   if (res.ok) {
     const json = await res.json();
-    return (json.embeddings ?? []).map((e: any) => e.values ?? []);
+    return (json.embeddings ?? []).map((e: { values?: number[] }) => e.values ?? []);
   }
   // Fallback: some models/regions don't expose batchEmbedContents — embed one by one.
   const out: number[][] = [];
@@ -176,10 +201,32 @@ export function chunkText(text: string, size = 1200, overlap = 150): string[] {
 
 /** Tolerant parse of a model JSON response: strips ```json fences and parses.
  *  Returns null on failure so the caller can salvage individual fields. */
-export function parseModelJson(raw: string): Record<string, any> | null {
+export function parseModelJson(raw: string): Record<string, unknown> | null {
   let s = (raw ?? '').trim();
   s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
-  try { return JSON.parse(s); } catch { return null; }
+  try {
+    const parsed = JSON.parse(s);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch { return null; }
+}
+
+/** Validate provider output in code; the provider's schema hint is not a boundary. */
+export function parseModelObject<T extends object = Record<string, unknown>>(raw: string, schema: ModelSchema): T {
+  const parsed = parseModelJson(raw);
+  const check = (value: unknown, rule: ModelSchema): boolean => {
+    if (rule.enum && !rule.enum.includes(value)) return false;
+    if (rule.type === 'string') return typeof value === 'string';
+    if (rule.type === 'number') return typeof value === 'number' && Number.isFinite(value);
+    if (rule.type === 'integer') return Number.isInteger(value);
+    if (rule.type === 'boolean') return typeof value === 'boolean';
+    if (rule.type === 'array') return Array.isArray(value) && value.every(item => check(item, rule.items ?? {}));
+    if (rule.type === 'object') return isRecord(value)
+      && (rule.required ?? []).every((key: string) => Object.prototype.hasOwnProperty.call(value, key))
+      && Object.entries(rule.properties ?? {}).every(([key, child]) => value[key] === undefined || check(value[key], child));
+    return true;
+  };
+  if (!parsed || !check(parsed, schema)) throw new Error('Resposta clínica incompleta ou inválida. Revise o conteúdo e tente novamente.');
+  return parsed as T;
 }
 
 /** Extract a top-level JSON string field even from TRUNCATED output (e.g. the
@@ -202,10 +249,12 @@ export function collapseBlankLines(s: string): string {
   return (s ?? '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-export function buildPatientSummary(ctx: any, chiefComplaint: string): string {
-  if (!ctx) return '';
-  const diagnoses = ctx.diagnoses?.map((d: any) => `${d.code} ${d.description}`).join('; ') || 'Nenhum';
-  const meds      = ctx.medications?.map((m: any) => `${m.name} ${m.dosage}`).join(', ')  || 'Nenhum';
-  const allergies = ctx.allergies?.join(', ') || 'Nenhuma';
+export function buildPatientSummary(ctx: unknown, _chiefComplaint: string): string {
+  if (!isRecord(ctx)) return '';
+  const summarize = (value: unknown, fields: string[]) => Array.isArray(value)
+    ? value.map(item => typeof item === 'string' ? item : isRecord(item) ? fields.map(field => typeof item[field] === 'string' ? item[field] : '').filter(Boolean).join(' ') : '').filter(Boolean).join('; ') : '';
+  const diagnoses = summarize(ctx.diagnoses, ['code','description']) || 'Nenhum registrado';
+  const meds = summarize(ctx.medications, ['name','dosage']) || 'Nenhuma registrada';
+  const allergies = (Array.isArray(ctx.allergies) ? ctx.allergies.filter(item => typeof item === 'string').join(', ') : '') || 'Não registradas';
   return `Paciente: ${ctx.name}, ${ctx.age} anos\nDiagnósticos: ${diagnoses}\nMedicações: ${meds}\nAlergias: ${allergies}`;
 }

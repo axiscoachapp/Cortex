@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import { requireCompleteModelText, parseModelObject, assertGeminiTextBudget } from "../_shared/gemini.ts";
+import { clinicDayBounds } from "../_shared/clinicDate.ts";
+import { readJsonObject, RequestError, fetchWithDeadline } from "../_shared/http.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -14,6 +17,13 @@ const corsHeaders = {
 };
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+type StoredMedication = string | { name: string; dosage?: string; instructions?: string; startedAt?: string };
+type StoredDiagnosis = string | { code?: string; description: string };
+interface CommentExtraction {
+  allergies_add: string[]; medications_add: Array<{ name: string; dosage: string }>;
+  medications_remove: string[]; diagnoses_add: Array<{ code: string; description: string }>;
+  consultation_addendum: string; long_term_note: string; summary: string;
+}
 
 const COMMENT_SCHEMA = {
   type: 'object',
@@ -83,7 +93,7 @@ REGRAS CRÍTICAS:
 
 3. NÃO INFIRA — Só extraia o que está EXPLÍCITO. "PA 160/100" sozinho não vira diagnóstico de HAS. Só adicione diagnósticos se o médico declarar explicitamente ("confirmado HAS", "diagnóstico de diabetes tipo 2").
 
-4. DEDUPE — Se a alergia/medicação/diagnóstico já estiver no contexto atual do paciente fornecido abaixo, NÃO inclua em _add.
+4. DEDUPE — Se a alergia/diagnóstico já estiver no contexto atual, NÃO inclua em _add. Para medicação existente, inclua medications_add somente quando o médico mudar explicitamente a dose; preserve o nome exato e informe a nova dose. Nunca omita uma mudança de posologia explícita.
 
 5. ROTEAMENTO:
    - Dados estruturados persistentes do paciente → allergies/medications/diagnoses
@@ -108,9 +118,9 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { patientId, comment } = await req.json();
+    const { patientId, comment } = await readJsonObject(req);
 
-    if (!patientId || !comment?.trim()) {
+    if (typeof patientId !== 'string' || typeof comment !== 'string' || !comment.trim() || comment.length > 32000) {
       return new Response(
         JSON.stringify({ error: 'patientId e comment são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -125,32 +135,24 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    try {
-      await checkQuota(supabase, userId, 2);
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
-    }
-
     // Pull current patient profile + today's consultation in parallel
     const now = new Date();
-    const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
-    const todayEnd   = new Date(now); todayEnd.setHours(23, 59, 59, 999);
+    const { start: todayStart, end: todayEnd } = clinicDayBounds(now);
 
     const [{ data: patient }, { data: todayConsult }] = await Promise.all([
       supabase
         .from('patients')
-        .select('name, allergies, medications, diagnoses, clinical_notes')
+        .select('name, allergies, medications, diagnoses, clinical_notes,revision')
         .eq('id', patientId)
         .eq('user_id', userId)
         .maybeSingle(),
       supabase
         .from('consultations')
-        .select('id, soap_note')
+        .select('id, soap_note,revision')
         .eq('patient_id', patientId)
         .eq('user_id', userId)
-        .gte('created_at', todayStart.toISOString())
-        .lte('created_at', todayEnd.toISOString())
+        .gte('created_at', todayStart)
+        .lt('created_at', todayEnd)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -165,14 +167,14 @@ serve(async (req) => {
 
     const hasConsultToday = !!todayConsult?.id;
     const existingAllergies: string[] = Array.isArray(patient?.allergies) ? patient!.allergies : [];
-    const existingMeds: any[] = Array.isArray(patient?.medications) ? patient!.medications : [];
-    const existingDiag: any[] = Array.isArray(patient?.diagnoses) ? patient!.diagnoses : [];
+    const existingMeds: StoredMedication[] = Array.isArray(patient?.medications) ? patient!.medications : [];
+    const existingDiag: StoredDiagnosis[] = Array.isArray(patient?.diagnoses) ? patient!.diagnoses : [];
 
     const ctxLines = [
       `Paciente: ${patient?.name ?? 'desconhecido'}`,
       `Alergias atuais: ${existingAllergies.join(', ') || 'nenhuma'}`,
-      `Medicações atuais: ${existingMeds.map((m: any) => typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim()).join(', ') || 'nenhuma'}`,
-      `Diagnósticos atuais: ${existingDiag.map((d: any) => typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim()).join('; ') || 'nenhum'}`,
+      `Medicações atuais: ${existingMeds.map(m => typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim()).join(', ') || 'nenhuma'}`,
+      `Diagnósticos atuais: ${existingDiag.map(d => typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim()).join('; ') || 'nenhum'}`,
       `Há consulta registrada para HOJE: ${hasConsultToday ? 'sim' : 'não'}`,
     ].join('\n');
 
@@ -182,7 +184,16 @@ ${ctxLines}
 Comentário do médico:
 """${comment.trim()}"""`;
 
-    const res = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    assertGeminiTextBudget([{ text: prompt }], SYSTEM);
+    let reservation: { reservationId: string };
+    try {
+      reservation = await checkQuota(supabase, userId, 100);
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
+    }
+
+    const res = await fetchWithDeadline(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -199,23 +210,13 @@ Comentário do médico:
     });
 
     if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Gemini error ${res.status}: ${err}`);
+      throw new Error(`Falha no provedor de IA (${res.status}). Tente novamente.`);
     }
 
     const json = await res.json();
-    const parts: any[] = json.candidates?.[0]?.content?.parts ?? [];
-    const responsePart = parts.find((p: any) => !p.thought) ?? parts[parts.length - 1];
-    const rawText = responsePart?.text ?? '{}';
-
-    await recordUsage(supabase, userId, creditsFromUsage(json.usageMetadata));
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(rawText);
-    } catch {
-      parsed = {};
-    }
+    const rawText = requireCompleteModelText(json);
+    await recordUsage(supabase, userId, creditsFromUsage(json.usageMetadata), reservation.reservationId);
+    const parsed = parseModelObject<CommentExtraction>(rawText, COMMENT_SCHEMA);
 
     const allergiesAdd:   string[]                                = Array.isArray(parsed.allergies_add)      ? parsed.allergies_add      : [];
     const medsAdd:        Array<{ name: string; dosage: string }> = Array.isArray(parsed.medications_add)    ? parsed.medications_add    : [];
@@ -226,7 +227,7 @@ Comentário do médico:
     const aiSummary:      string                                  = (parsed.summary ?? '').trim();
 
     // ── Server-side merge & apply ────────────────────────────────────────────
-    const patientUpdates: any = {};
+    const patientUpdates: { allergies?: string[]; medications?: StoredMedication[]; diagnoses?: StoredDiagnosis[]; clinical_notes?: string } = {};
     const appliedProfile: { allergies: string[]; medicationsAdded: string[]; medicationsRemoved: string[]; diagnoses: string[] } = {
       allergies: [], medicationsAdded: [], medicationsRemoved: [], diagnoses: [],
     };
@@ -244,22 +245,30 @@ Comentário do médico:
     // Medications (add + remove)
     if (medsAdd.length > 0 || medsRemove.length > 0) {
       const removeLower = new Set(medsRemove.map(norm));
-      const filtered = existingMeds.filter((m: any) => {
+      const filtered = existingMeds.filter(m => {
         const name = typeof m === 'string' ? m : m.name;
         return name ? !removeLower.has(norm(name)) : true;
       });
       const actuallyRemoved = existingMeds
-        .filter((m: any) => {
+        .filter(m => {
           const name = typeof m === 'string' ? m : m.name;
           return name && removeLower.has(norm(name));
         })
-        .map((m: any) => typeof m === 'string' ? m : m.name);
+        .map(m => typeof m === 'string' ? m : m.name);
 
-      const existingNames = new Set(filtered.map((m: any) => norm(typeof m === 'string' ? m : m.name)));
-      const newMeds = medsAdd.filter(m => m.name?.trim() && !existingNames.has(norm(m.name)));
+      const newMeds = medsAdd.filter(m => m.name?.trim()).filter(m => {
+        const old = filtered.find(existing => norm(typeof existing === 'string' ? existing : existing.name) === norm(m.name));
+        return !old || typeof old === 'string' || old.dosage !== m.dosage;
+      });
 
       if (newMeds.length > 0 || actuallyRemoved.length > 0) {
-        patientUpdates.medications = [...filtered, ...newMeds];
+        const merged = [...filtered];
+        for (const med of newMeds) {
+          const index = merged.findIndex(old => norm(typeof old === 'string' ? old : old.name) === norm(med.name));
+          if (index >= 0) merged[index] = { ...(typeof merged[index] === 'object' ? merged[index] : {}), ...med };
+          else merged.push({ ...med, instructions: '' });
+        }
+        patientUpdates.medications = merged;
         appliedProfile.medicationsAdded   = newMeds.map(m => `${m.name}${m.dosage ? ` ${m.dosage}` : ''}`.trim());
         appliedProfile.medicationsRemoved = actuallyRemoved;
       }
@@ -267,7 +276,7 @@ Comentário do médico:
 
     // Diagnoses
     if (diagnosesAdd.length > 0) {
-      const existingDescs = new Set(existingDiag.map((d: any) => norm(typeof d === 'string' ? d : d.description ?? '')));
+      const existingDescs = new Set(existingDiag.map(d => norm(typeof d === 'string' ? d : d.description ?? '')));
       const newDiag = diagnosesAdd.filter(d => d.description?.trim() && !existingDescs.has(norm(d.description)));
       if (newDiag.length > 0) {
         patientUpdates.diagnoses = [...existingDiag, ...newDiag];
@@ -288,45 +297,25 @@ Comentário do médico:
       appliedLongTermNote = true;
     }
 
-    if (Object.keys(patientUpdates).length > 0) {
-      const { error: patientErr } = await supabase
-        .from('patients')
-        .update(patientUpdates)
-        .eq('id', patientId)
-        .eq('user_id', userId);
-      if (patientErr) throw patientErr;
-    }
-
-    // Addendum → today's consultation
-    let appliedAddendum = false;
-    if (addendumText && hasConsultToday) {
-      const hhmm = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      const block = `**Adendo [${hhmm}]:** ${addendumText}`;
-      const mergedSoap = todayConsult!.soap_note
-        ? `${todayConsult!.soap_note}\n\n${block}`
-        : block;
-      const { error: consultErr } = await supabase
-        .from('consultations')
-        .update({ soap_note: mergedSoap })
-        .eq('id', todayConsult!.id)
-        .eq('user_id', userId);
-      if (consultErr) throw consultErr;
-      appliedAddendum = true;
-    }
-
-    // Fallback: classifier extracted nothing useful → don't lose the comment
-    const nothingApplied =
-      Object.keys(patientUpdates).length === 0 &&
-      !appliedAddendum;
-
+    const appliedAddendum = !!(addendumText && hasConsultToday);
+    const nothingApplied = Object.keys(patientUpdates).length === 0 && !appliedAddendum;
     if (nothingApplied) {
-      const stamp = now.toLocaleString('pt-BR', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-      });
+      const stamp = now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
       const entry = `[${stamp}] ${comment.trim()}`;
-      const merged = patient?.clinical_notes ? `${patient.clinical_notes}\n${entry}` : entry;
-      await supabase.from('patients').update({ clinical_notes: merged }).eq('id', patientId).eq('user_id', userId);
+      patientUpdates.clinical_notes = patient.clinical_notes ? `${patient.clinical_notes}\n${entry}` : entry;
       appliedLongTermNote = true;
+    }
+    const hhmm = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+    const { error: applyError } = await supabase.rpc('apply_clinical_comment', {
+      p_user_id: userId, p_patient_id: patientId, p_expected_revision: patient.revision,
+      p_patient_patch: patientUpdates,
+      p_consultation_id: appliedAddendum ? todayConsult.id : null,
+      p_expected_consultation_revision: appliedAddendum ? todayConsult.revision : null,
+      p_addendum: appliedAddendum ? `**Adendo [${hhmm}]:** ${addendumText}` : null,
+    });
+    if (applyError) {
+      if (applyError.code === '40001') return new Response(JSON.stringify({ error: 'O prontuário foi alterado em outra janela. Recarregue e revise o comentário antes de tentar novamente.' }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      throw applyError;
     }
 
     // ── Build user-facing summary ────────────────────────────────────────────
@@ -355,8 +344,9 @@ Comentário do médico:
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('process-comment error:', error);
+    console.error('process-comment failed');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro ao processar comentário' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

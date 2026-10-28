@@ -1,127 +1,51 @@
-/**
- * LGPD / GDPR data deletion endpoint.
- *
- * Deletes ALL data for the authenticated user:
- *   - patient_files (storage objects + DB rows)
- *   - audio-recordings (storage — should already be empty, but clean up)
- *   - consultations, appointments, user_integrations, user_settings, usage_daily
- *   - patients (cascades to the above via FK ON DELETE CASCADE where applicable)
- *   - Finally: the auth.users row itself via the admin API
- *
- * The caller must be authenticated (JWT in Authorization header) and can only
- * delete their own data.
- */
-
+import { readJsonObject, RequestError, fetchWithDeadline } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
+import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import { removeStoragePrefix } from "../_shared/storage.ts";
+import { requireSafeDeletion } from "../_shared/deletion.ts";
 
-// Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
-// secret to your app's origin to lock cross-origin access down to it.
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Vary': 'Origin',
+  'Access-Control-Allow-Origin':Deno.env.get('ALLOWED_ORIGIN') ?? '*',
+  'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type',
+  'Cache-Control':'no-store', 'Vary':'Origin',
 };
-
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Não autorizado' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // User-scoped client — RLS enforces the user can only touch their own data.
-  const userClient = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    { global: { headers: { Authorization: authHeader } } },
-  );
-
-  const { data: { user }, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !user) {
-    return new Response(JSON.stringify({ error: 'Sessão inválida' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  const userId = user.id;
-
-  // Service-role client for privileged deletes (storage, auth.users)
-  const adminClient = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-  );
-
+serve(async req => {
+  if (req.method==='OPTIONS') return new Response(null,{headers:corsHeaders});
+  if (req.method!=='POST') return new Response(null,{status:405,headers:corsHeaders});
   try {
-    // 1. Collect and delete patient file storage objects
-    const { data: fileRows } = await adminClient
-      .from('patient_files')
-      .select('storage_path')
-      .eq('user_id', userId);
-
-    if (fileRows && fileRows.length > 0) {
-      const paths = fileRows.map((r: any) => r.storage_path);
-      await adminClient.storage.from('patient-files').remove(paths);
-    }
-
-    // 2. Delete any residual audio recordings — list() pages at 100 objects,
-    //    so loop until the folder is empty.
-    for (;;) {
-      const { data: audioObjects } = await adminClient.storage
-        .from('audio-recordings')
-        .list(`consultations/${userId}`, { limit: 100 });
-      if (!audioObjects || audioObjects.length === 0) break;
-      const audioPaths = audioObjects.map((o: any) => `consultations/${userId}/${o.name}`);
-      await adminClient.storage.from('audio-recordings').remove(audioPaths);
-      if (audioObjects.length < 100) break;
-    }
-
-    // 2b. Revoke the Google OAuth grant so the stored refresh token becomes
-    //     useless even outside our DB. Best-effort — deletion proceeds regardless.
-    try {
-      const { data: integration } = await adminClient
-        .from('user_integrations')
-        .select('google_refresh_token')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (integration?.google_refresh_token) {
-        await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(integration.google_refresh_token)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        });
+    const {userId} = await requireUser(req);
+    const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+    await requireSafeDeletion(admin,userId);
+    // Persistent intent blocks new writes; failed cleanup can be retried safely.
+    const {error: lockError} = await admin.from('account_deletion_requests').upsert({user_id:userId});
+    if (lockError) throw new Error('Não foi possível iniciar a exclusão');
+    await removeStoragePrefix(admin.storage,'patient-files',`patients/${userId}`);
+    await removeStoragePrefix(admin.storage,'audio-recordings',`consultations/${userId}`);
+    await removeStoragePrefix(admin.storage,'prescriptions',`rx/${userId}`);
+    const {data: integration,error: integrationError} = await admin.from('user_integrations')
+      .select('google_refresh_token').eq('user_id',userId).maybeSingle();
+    if (integrationError) throw new Error('Não foi possível verificar as integrações');
+    if (integration?.google_refresh_token) {
+      const response = await fetchWithDeadline('https://oauth2.googleapis.com/revoke',{
+        method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:new URLSearchParams({token:integration.google_refresh_token}),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(()=>null);
+        if (response.status!==400 || body?.error!=='invalid_token') throw new Error('Não foi possível desconectar o Google. Tente a exclusão novamente.');
       }
-    } catch { /* best-effort */ }
-
-    // 3. Delete DB rows — most cascade automatically from patients/user_id FK,
-    //    but we delete explicitly for clarity and to cover non-cascaded tables.
-    await adminClient.from('consultations')      .delete().eq('user_id', userId);
-    await adminClient.from('appointments')       .delete().eq('user_id', userId);
-    await adminClient.from('patient_files')      .delete().eq('user_id', userId);
-    await adminClient.from('patients')           .delete().eq('user_id', userId);
-    await adminClient.from('user_integrations')  .delete().eq('user_id', userId);
-    await adminClient.from('usage_daily')        .delete().eq('user_id', userId);
-    await adminClient.from('user_settings')      .delete().eq('user_id', userId);
-
-    // 4. Delete the auth user (must be last — invalidates all sessions)
-    const { error: deleteUserErr } = await adminClient.auth.admin.deleteUser(userId);
-    if (deleteUserErr) throw deleteUserErr;
-
-    return new Response(
-      JSON.stringify({ success: true, message: 'Todos os dados foram excluídos permanentemente.' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    }
+    // Cascades include drafts and revisions. Remove metadata only after storage
+    // succeeds so partial failures leave enough information for a safe retry.
+    const {error} = await admin.auth.admin.deleteUser(userId);
+    if (error) throw new Error('Não foi possível concluir a exclusão da conta');
+    return new Response(JSON.stringify({success:true,message:'Todos os dados foram excluídos permanentemente.'}),
+      {headers:{...corsHeaders,'Content-Type':'application/json'}});
   } catch (error) {
-    console.error('delete-user-data error:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro ao excluir dados' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    if (error instanceof RequestError) return new Response(JSON.stringify({error:error.message}),{status:error.status,headers:{...corsHeaders,'Content-Type':'application/json'}});
+    if (error instanceof AuthError) return authResponse(error,corsHeaders);
+    return new Response(JSON.stringify({error:error instanceof Error ? error.message : 'Exclusão incompleta. Tente novamente.'}),
+      {status:503,headers:{...corsHeaders,'Content-Type':'application/json'}});
   }
 });

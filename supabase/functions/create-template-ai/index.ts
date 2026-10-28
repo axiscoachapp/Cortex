@@ -1,3 +1,4 @@
+import { fetchWithDeadline, readJsonObject, RequestError } from "../_shared/http.ts";
 /**
  * AI creation of document templates (Modelos de Documento).
  *
@@ -12,12 +13,13 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini } from "../_shared/gemini.ts";
+import { callGemini, parseModelObject } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import { assertPromptSize } from '../_shared/modelInput.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -72,7 +74,7 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { mode, input } = await req.json();
+    const { mode, input } = await readJsonObject(req);
 
     if (!['from_description', 'from_example'].includes(mode) || typeof input !== 'string' || !input.trim()) {
       return new Response(
@@ -80,6 +82,10 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+    if (input.length > 12000) throw new RequestError('O texto excede 12.000 caracteres. Reduza o conteúdo e tente novamente.', 413);
+    const source = input.trim();
+    const systemInstruction = mode === 'from_example' ? FROM_EXAMPLE_SYSTEM : FROM_DESCRIPTION_SYSTEM;
+    assertPromptSize(source, systemInstruction);
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
@@ -89,8 +95,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
+    let reservationId: string;
     try {
-      await checkQuota(supabase, userId, 3);
+      ({ reservationId } = await checkQuota(supabase, userId, 100));
     } catch (err) {
       if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
       throw err;
@@ -98,9 +105,9 @@ serve(async (req) => {
 
     const { text: raw, usage } = await callGemini(
       GEMINI_API_KEY,
-      [{ text: input.trim().slice(0, 12000) }],
+      [{ text: source }],
       {
-        systemInstruction: mode === 'from_example' ? FROM_EXAMPLE_SYSTEM : FROM_DESCRIPTION_SYSTEM,
+        systemInstruction,
         temperature: 0.3,
         maxOutputTokens: 3000,
         thinkingBudget: 0,
@@ -108,19 +115,11 @@ serve(async (req) => {
         responseSchema: SCHEMA,
       },
     );
-    await recordUsage(supabase, userId, creditsFromUsage(usage));
+    await recordUsage(supabase, userId, creditsFromUsage(usage), reservationId);
 
-    let out = { name: 'Novo modelo', description: '', content: '' };
-    try {
-      const parsed = JSON.parse(raw);
-      out = {
-        name:        (parsed.name ?? 'Novo modelo').toString().slice(0, 80),
-        description: (parsed.description ?? '').toString().slice(0, 200),
-        content:     (parsed.content ?? '').toString().slice(0, 8000),
-      };
-    } catch { /* fall through */ }
+    const out = parseModelObject<{ name: string; description: string; content: string }>(raw, SCHEMA);
 
-    if (!out.content.trim()) {
+    if (!out.name.trim() || !out.content.trim()) {
       return new Response(
         JSON.stringify({ error: 'Não foi possível gerar o modelo. Tente reformular.' }),
         { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -133,8 +132,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('create-template-ai error:', error instanceof Error ? error.message : 'unknown');
+    console.error('create-template-ai error:');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

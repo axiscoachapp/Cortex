@@ -1,3 +1,4 @@
+import { fetchWithDeadline, readJsonObject, RequestError } from "../_shared/http.ts";
 /**
  * Pre-consultation question checklist.
  *
@@ -11,12 +12,13 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini } from "../_shared/gemini.ts";
+import { callGemini, parseModelObject } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import { assertPromptSize, optionalText, readPatientContext } from '../_shared/modelInput.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -55,19 +57,19 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { patientContext, chiefComplaint } = await req.json();
+    const body: Record<string, unknown> = await readJsonObject(req);
 
-    const ctx = patientContext ?? {};
+    const ctx = readPatientContext(body.patientContext) ?? {};
     const diagnoses = Array.isArray(ctx.diagnoses)
-      ? ctx.diagnoses.map((d: any) => (typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim())).filter(Boolean).join('; ')
+      ? ctx.diagnoses.map(d => (typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim())).filter(Boolean).join('; ')
       : '';
     const meds = Array.isArray(ctx.medications)
-      ? ctx.medications.map((m: any) => (typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim())).filter(Boolean).join(', ')
+      ? ctx.medications.map(m => (typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim())).filter(Boolean).join(', ')
       : '';
     const allergies = Array.isArray(ctx.allergies) ? ctx.allergies.join(', ') : '';
     const medicalHistory  = (ctx.medicalHistory  ?? ctx.medical_history  ?? '').toString().slice(0, 1500);
     const socialAnamnesis = (ctx.socialAnamnesis ?? ctx.social_anamnesis ?? '').toString().slice(0, 1500);
-    const complaint = (chiefComplaint ?? '').toString().slice(0, 500);
+    const complaint = optionalText(body.chiefComplaint, 'Queixa principal').slice(0, 500);
 
     // Nothing to base questions on → return empty rather than pay for a call.
     if (!complaint && !diagnoses && !meds && !medicalHistory && !socialAnamnesis) {
@@ -85,13 +87,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    try {
-      await checkQuota(supabase, userId, 2);
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
-    }
-
     const prompt = [
       `Paciente: ${ctx.name ?? 'não informado'}, ${ctx.age ?? '?'} anos`,
       `Queixa principal: ${complaint || 'não informada'}`,
@@ -101,6 +96,14 @@ serve(async (req) => {
       medicalHistory  ? `Histórico médico:\n${medicalHistory}`   : '',
       socialAnamnesis ? `Anamnese social:\n${socialAnamnesis}`   : '',
     ].filter(Boolean).join('\n');
+    assertPromptSize(prompt, SYSTEM);
+    let reservationId: string;
+    try {
+      ({ reservationId } = await checkQuota(supabase, userId, 100));
+    } catch (err) {
+      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      throw err;
+    }
 
     const { text: raw, usage } = await callGemini(
       GEMINI_API_KEY,
@@ -115,15 +118,11 @@ serve(async (req) => {
       },
     );
 
-    await recordUsage(supabase, userId, creditsFromUsage(usage));
+    await recordUsage(supabase, userId, creditsFromUsage(usage), reservationId);
 
-    let questions: string[] = [];
-    try {
-      const parsed = JSON.parse(raw);
-      questions = Array.isArray(parsed.questions)
-        ? parsed.questions.filter((q: any): q is string => typeof q === 'string' && q.trim().length > 0).slice(0, 10)
-        : [];
-    } catch { /* unparseable → empty */ }
+    const parsed = parseModelObject<{ questions: string[] }>(raw, SCHEMA);
+    const questions = parsed.questions.filter(question => question.trim()).slice(0, 10);
+    if (!questions.length) throw new Error('A IA não retornou perguntas. Tente novamente.');
 
     return new Response(
       JSON.stringify({ questions }),
@@ -131,8 +130,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
-    console.error('suggest-questions error:', error instanceof Error ? error.message : 'unknown');
+    console.error('suggest-questions error:');
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
