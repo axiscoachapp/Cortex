@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-28",
+  "baseline": "1ad2116",
+  "initialCoverage": {
+    "exitCode": 1,
+    "reportedPassingTests": 161,
+    "reportedPassingFiles": 31,
+    "missingFile": "src/pages/Auth.test.tsx",
+    "status": "incomplete; not a successful full check",
+    "partialLineCoverage": 35.84
+  },
+  "authIsolated": {
+    "tests": 8,
+    "passed": 8,
+    "exitCode": 0
+  },
+  "fullTests": {
+    "files": 32,
+    "tests": 169,
+    "passed": 169,
+    "exitCode": 0,
+    "log": "test-run.txt"
+  },
+  "build": "passed including app/node typecheck",
+  "edge": {
+    "passed": 22
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 8
+  },
+  "database": {
+    "migrations": 26,
+    "suites": 5,
+    "status": "passed on retry after Docker became available"
+  },
+  "npmVulnerabilities": 0,
+  "defectEvidence": {
+    "workflowProbes": 4,
+    "routeRegression": "failed expected-safe assertion, confirmed defect",
+    "timeout": "stalled body reproduced"
+  },
+  "browser": {
+    "backend": "synthetic loopback only",
+    "tablet": "820x900, question input66px",
+    "mobile": "390x844",
+    "limits": "no actual provider, microphone, external integration or patient data"
+  }
+}

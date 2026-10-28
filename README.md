@@ -1,96 +1,48 @@
-# Cortex
+# Cortex · Haddad Nicola
 
-> Assistente médico com IA — grave a consulta, a IA escreve o prontuário.
-
-Cortex é um copiloto clínico em português brasileiro para profissionais de saúde. Grava a consulta, transcreve com identificação de falantes, gera a evolução SOAP e a mensagem de WhatsApp, organiza o briefing pré-consulta e responde perguntas sobre o histórico completo do paciente.
-
-## Stack
-
-- **Frontend**: Vite + React 18 + TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, React Router
-- **Backend**: Supabase (Postgres + Auth + Storage + Edge Functions em Deno)
-- **IA**: Gemini 2.5 Flash via Files API para áudios longos, JSON-schema responses
-
-## Estrutura
-
-```
-src/
-  pages/        # Index, Auth, About, Calendar, PatientManagement
-  components/   # ChatPanel, PatientSnapshot, PatientSidebar, modais…
-  contexts/     # AuthContext (Supabase auth + dev bypass)
-  hooks/        # useSeedPatients, useIsMobile, useToast
-  integrations/supabase/   # client + typed schema
-  lib/          # patientMapper, cn helper
-supabase/
-  functions/    # edge functions (Deno)
-    chat-assistant/         # Pergunta com histórico de consultas
-    generate-prebriefing/   # Briefing pré-consulta com cache
-    process-consultation/   # Áudio → transcrição → SOAP → WhatsApp
-    process-clinical-notes/ # Extrai sintomas/fatores estruturados
-    sync-google-calendar/   # Sincronização bidirecional Google
-    google-oauth-callback/  # OAuth do Google Calendar
-    send-appointment-reminder/
-  migrations/   # schema, RLS, índices
-```
+Ambiente clínico para contas individuais de médicos, com listas privadas, compartilhamento explícito de pacientes, documentação revisada, agenda e acompanhamento. A marca usa os arquivos oficiais do consultório, Montserrat e Source Serif, com fontes locais e controles em dourado escuro para leitura.
 
 ## Desenvolvimento
 
-```sh
-# Pré-requisitos: Node 20+, Supabase CLI
-npm install
-npm run dev          # http://localhost:8080
-```
-
-### Variáveis de ambiente
-
-Crie `.env.local` na raiz (já presente como `.env.example`):
+Requisitos: Node.js >=22.12, npm e Docker para os testes PostgreSQL. Use `npm ci`. Crie `.env.local` a partir de `.env.example`, com URL e chave pública explícitas do backend. Uma configuração ausente ou incompatível interrompe o início/build; não há projeto real escolhido automaticamente.
 
 ```sh
-VITE_SUPABASE_URL=...
-VITE_SUPABASE_PUBLISHABLE_KEY=...
+npm run dev
+npm test
+npm run lint
+npm run build
+npm run typecheck:edge
+npm run test:db
+node scripts/generate-database-types.mjs
+node scripts/smoke-app.mjs http://127.0.0.1:8080
 ```
 
-### Edge functions
+Os dois últimos scripts de banco criam e removem bancos descartáveis próprios. Não executam reset de um projeto vinculado. Tipos são gerados do esquema completo das migrations com postgres-meta. O build inclui TypeScript de app e ferramentas.
 
-Segredos exigidos no projeto Supabase:
+## Fluxos
 
-| Segredo                      | Origem                       |
-|------------------------------|------------------------------|
-| `GEMINI_API_KEY`             | Google AI Studio             |
-| `GOOGLE_CLIENT_ID/SECRET`    | OAuth para Google Calendar   |
+- `/`: consulta, contexto do paciente, gravação e revisão de rascunhos.
+- `/trabalho`: consulta manual sem IA, rascunhos recuperáveis, linha do tempo/revisões, tarefas, medidas, episódios gestacionais, medicações e orientações versionadas.
+- `/compartilhamento`: membros da clínica e permissões explícitas de leitura/contribuição/download. Pertencer à clínica não revela prontuários. Contribuições têm autoria e são preservadas após revogação.
+- `/agenda`: agenda local e sincronização de saída com Google; falhas e novas tentativas são visíveis. Não existe sincronização bidirecional completa.
+- `/conhecimento`: originais e versões de fontes, revisão explícita, indexação/repetição e retirada do uso.
+- `/seguranca`: inscrição/verificação de aplicativo autenticador. Uma conta com fator verificado precisa de sessão `aal2` para dados clínicos e operações protegidas.
+- `/privacidade`: exportação consistente, recibos de exclusão e limites de retenção.
 
-Deploy:
+Gravações e trabalho em andamento permanecem vinculados ao paciente de origem. Uma consulta manual confirma o texto exato do médico por operação SQL atômica. A conclusão de uma consulta só conclui o agendamento explicitamente vinculado.
 
-```sh
-supabase functions deploy chat-assistant
-supabase functions deploy generate-prebriefing
-supabase functions deploy process-consultation
-supabase functions deploy process-clinical-notes
-supabase functions deploy sync-google-calendar
-supabase functions deploy google-oauth-callback
-supabase functions deploy send-appointment-reminder
-```
+## IA e integrações
 
-## Assets de marca
+**Mantenha `AI_ENABLED=false` nas Edge Functions.** IA é desabilitada por padrão; a escolha do provedor e a avaliação clínica serão discutidas separadamente. A integração existente permanece no código, protegida por um bloqueio antes da reserva de quota e da chamada externa. Documentação manual funciona sem provedor. Nenhum teste automatizado deve usar dados reais ou chaves de provedor.
 
-Favicon e imagem de compartilhamento são gerados a partir de SVGs em `public/`:
+Os nomes das Edge Functions seguem as pastas em `supabase/functions/`. O fluxo atual usa `transcribe-consultation` e `finalize-consultation`, não o antigo `process-consultation`. Verifique todos os handlers com `npm run typecheck:edge`.
 
-```sh
-node scripts/generate-icons.mjs
-```
+Configure explicitamente no ambiente de implantação: Supabase, origem permitida, URLs de retorno e, apenas para integrações autorizadas, credenciais externas. Credenciais secretas nunca devem ter prefixo `VITE_`. O atalho de desenvolvimento usa uma conta de teste real apenas em DEV; produção não inclui o atalho.
 
-Gera `favicon.ico` (multi-size), `favicon-{16,32,48}.png`, `apple-touch-icon.png` e `og-image.png`.
+## Verificação e implantação
 
-## Build
+[Revisão original](docs/reviews/2026-10-28/APP_REVIEW.md), [roadmap](docs/reviews/2026-10-28/ROADMAP.md) e resultados em `docs/reviews/2026-10-28/remediation/`.
 
-```sh
-npm run build       # produção
-npm run preview     # serve dist/
-```
+O código e as migrations são preparados localmente. Implantação exige ensaio em staging com Auth/Storage nativos, MFA, revogação durante operações, exportação/exclusão e restauração de banco **e arquivos**. Testes com mocks e PostgreSQL descartável não demonstram a configuração do serviço hospedado. Ver [runbook](docs/reviews/2026-10-28/remediation/RUNBOOK.md).
 
-## Deploy
-
-Frontend hospedado na Vercel (config em `vercel.json`). Edge functions são deployadas via Supabase CLI.
-
-## Modo admin (dev only)
-
-A página `/auth` mostra um botão "Admin — pular login (dev)" apenas em builds de desenvolvimento (`import.meta.env.DEV`). Em produção o atalho é ignorado e o botão não é renderizado.
+A migração de PersonalMed 2005 é uma tarefa posterior. Não execute importação, corte de sistema ou alterações nos arquivos originais como parte desta implementação.

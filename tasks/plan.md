@@ -1,5 +1,28 @@
 # Cortex audit remediation
 
+## Authorized implementation — 2026-10-28
+
+Implementation and local verification completed. See `docs/reviews/2026-10-28/remediation/IMPLEMENTATION.md` and `validation.json`. Provider selection, production/staging rollout evidence and legacy migration remain separately identified; no deployment or real patient/provider operation occurred.
+
+Execute APP_REVIEW.md and its functionality map, and adapt the app to Haddad Nicola's website brand. API-provider selection/contracting and PersonalMed migration are explicitly deferred by the user. Existing clinical AI calls must remain controllable; manual work must not depend on provider availability. No production deployment is part of this local implementation.
+
+Ordered, verified slices (preserve historical sections below):
+1. Patient/encounter identity and clinical acceptance: authoritative URL, nullable demographics, revision-aware editors, exact appointment link, no hidden AI chart writes, reviewable template generation. Verify regression/component/handler tests.
+2. Privacy integrity: server audio discard, complete deadlines, immutable issuance, provider cleanup receipt, consistent exports, explicit environment. Verify failed cleanup, stalled body, concurrent export and snapshot tests.
+3. Sharing: private owner paths plus explicit revocable read/contribute boundary, attributed append-only entries, authenticated downloads and custody guards. Verify outsider/revocation/offboarding SQL and UI tests.
+4. Usable documentation: direct reviewed-text editing, autosaved manual encounter, pending work queue, source-linked history/timeline and task tracking. Verify recovery and exact approved persistence without AI calls.
+5. Specialty/longitudinal functions: gynecology/prenatal/urology templates, observations, medication states, follow-ups, reviewed/versioned knowledge and instructions. Verify ownership, empty/failed/dirty states and provenance.
+6. Brand and UX: official clinic logo/palette/type, responsive workspace, persistent recording controls, semantic states, contrast and recoverable copy/print. Verify 390/768/820/1280 widths and keyboard behavior with synthetic browser backend.
+7. Operations and documentation: PHI-free operation IDs/diagnostics, kill switch, rate controls, runbooks, current claims/README. Run full tests, build/types, lint, Edge checks, SQL and final adversarial review; record external release rehearsals honestly.
+
+Independent lanes reserve migrations 20261029000100 (privacy), 20261029000200 (clinical), 20261029000300 (sharing); root uses 20261029001000+ for additional clinical workspace features. Root integrates shared types and routes. Each lane writes focused tests; no unrelated files are staged.
+
+## Subsequent review and clinic roadmap — 2026-10-28
+
+The remediation plan below remains the historical record of completed work. A new read-only review of baseline `1ad2116` is complete in `docs/reviews/2026-10-28/APP_REVIEW.md`.
+
+The next proposed work is documented in `docs/reviews/2026-10-28/ROADMAP.md`: resolve AI-provider eligibility, repair newly identified clinical/context/lifecycle defects, then add private doctor workspaces with explicit patient-sharing grants. All doctors at Haddad Nicola are in scope; reception is not an initial requirement. PersonalMed 2005 migration is a later separately validated project. See `AI_PROVIDER_OPTIONS.md` for the requested API alternatives. These proposed implementation slices have not been performed by the review.
+
 Repair all 40 findings in docs/reviews/2026-10-27/APP_REVIEW.md. Work locally on codex/app-audit-remediation; retain the existing review and user files. Production deployment is a separate action.
 
 ## Ordered increments

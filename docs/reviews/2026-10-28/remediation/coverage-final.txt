@@ -1,0 +1,334 @@
+
+> cortex@0.1.0 test:coverage
+> vitest run --coverage --reporter=default
+
+[vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.dev/rolldown
+
+ RUN  v5.0.5 E:/Work/Cortex/cortex
+      Coverage enabled with v8
+
+ ✓ src/components/NewConsultationModal.test.tsx (4 tests) 9261ms
+   ✓ New consultation submission (4)
+     ✓ preserves age  without inventing a newborn 3074ms
+     ✓ preserves age 0 without inventing a newborn 2004ms
+     ✓ preserves age 42 without inventing a newborn 1800ms
+     ✓ keeps the entered patient and complaint when saving fails 2371ms
+ ✓ src/pages/Auth.test.tsx (8 tests) 7273ms
+   ✓ Auth page (8)
+     ✓ returns to the original callback after sign in 3516ms
+     ✓ explains email confirmation when signup does not create a session 2243ms
+     ✓ lets a user request password recovery without disclosing account existence 888ms
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > live-copilot rejects an incomplete model object instead of blanking a successful result
+live-copilot error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > suggest-questions rejects an incomplete model object instead of blanking a successful result
+suggest-questions error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > prebriefing rejects invalid model output instead of reporting a first consultation
+generate-prebriefing error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > does not convert a model object into printable template text
+create-template-ai error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > retains a reservation when a started provider call fails
+live-copilot error:
+
+ ✓ src/lib/clinicalBoundaryHandlers.test.ts (39 tests) 6089ms
+   ✓ clinical request boundaries before quota reservation (15)
+     ✓ chat-assistant reports a failed patient read without reserving or inventing an empty history 580ms
+     ✓ chat-assistant rejects a failed history read instead of asserting no previous consultation 301ms
+ ✓ src/components/AppointmentModal.test.tsx (4 tests) 3795ms
+   ✓ Appointment removal and unsaved changes (4)
+     ✓ offers an explicit WhatsApp link after a blocked popup without claiming delivery 1387ms
+     ✓ retains the local appointment until Google confirms deletion 544ms
+     ✓ keeps an edited appointment open if discard is declined 1563ms
+ ✓ src/pages/Index.test.tsx (8 tests) 4002ms
+   ✓ patient activation (8)
+     ✓ does not remount capture when the current patient is selected again 1375ms
+     ✓ keeps the selected patient and URL aligned after a directory refresh 454ms
+     ✓ blocks route exit and logout until captured audio is saved 812ms
+     ✓ refreshes the selected briefing after a clinical revision changes 340ms
+ ✓ src/components/WelcomeDashboard.test.tsx (3 tests) 3057ms
+   ✓ WhatsApp reminder preparation (3)
+     ✓ keeps the reminder pending and exposes a clickable link when a popup is blocked 1783ms
+     ✓ removes an email reminder from the pending list only after confirmed success 718ms
+     ✓ keeps an email reminder pending when the server does not confirm delivery 546ms
+ ✓ src/pages/Sharing.test.tsx (8 tests) 2035ms
+   ✓ selective sharing workspace (8)
+     ✓ shows a received read-only chart without clinical editing or downloads 717ms
+ ✓ src/components/ClinicalProposals.test.tsx (5 tests) 1330ms
+   ✓ clinical proposal approval (5)
+     ✓ locks the exact decision text and competing actions until the save resolves 408ms
+     ✓ sends only the exact edited and explicitly accepted note with the displayed chart revision 354ms
+     ✓ keeps an edited note after a revision conflict instead of replacing it with the AI proposal 466ms
+ ✓ src/pages/KnowledgeBase.test.tsx (4 tests) 1653ms
+   ✓ reviewed protocol library (4)
+     ✓ saves the original and source metadata without automatically sending it to AI 769ms
+     ✓ keeps legacy sources unavailable until a new original version is supplied 328ms
+ ✓ src/components/ClinicalWorkEditor.test.tsx (8 tests) 1833ms
+   ✓ manual encounter approval (8)
+     ✓ stores a patient waitlist preference without sending or booking 738ms
+ ✓ src/pages/PatientManagement.test.tsx (3 tests) 2583ms
+   ✓ Patient directory (3)
+     ✓ shows a retryable load error instead of claiming no patients exist 602ms
+     ✓ searches all loaded patients and opens their chart without starting a consultation 609ms
+     ✓ retains edited demographics when another session changed the patient 1362ms
+ ✓ src/components/PatientProfileDrawer.test.tsx (1 test) 1739ms
+   ✓ Concurrent clinical history editing (1)
+     ✓ preserves the draft and requires review when the patient revision changed 1731ms
+stderr | src/lib/clinicalHandlers.test.ts > clinical edge handler regressions > registers RX metadata before upload and removes it after an upload failure
+generate-prescription failed
+
+stderr | src/lib/clinicalHandlers.test.ts > clinical edge handler regressions > registers RX metadata before upload and retains it when object cleanup fails
+generate-prescription failed
+
+stderr | src/lib/clinicalHandlers.test.ts > clinical edge handler regressions > preserves source audio when the provider fails after upload
+transcribe-consultation failed
+
+ ✓ src/lib/clinicalHandlers.test.ts (14 tests) 2552ms
+   ✓ clinical edge handler regressions (14)
+     ✓ issues the current DOB-derived age in both PDF and immutable snapshot without rewriting static age 509ms
+ ✓ src/components/ChatPanel.test.tsx (7 tests) 1942ms
+   ✓ patient-scoped asynchronous clinical work (4)
+     ✓ does not resend protocol-derived assistant replies in automatic chat history 907ms
+     ✓ accepts a reviewed medication change by revision even when storage uses the legacy dose shape 376ms
+ ✓ src/components/SpecialtySettingsSheet.test.tsx (1 test) 1484ms
+   ✓ Prescriber identity draft (1)
+     ✓ preserves typing across background refresh and failed explicit save 1477ms
+ ✓ src/components/PatientSnapshot.test.tsx (2 tests) 1380ms
+   ✓ patient note ownership (2)
+     ✓ keeps each draft attached to its originating patient 695ms
+     ✓ does not let a late success for A erase B’s draft 678ms
+ ✓ src/pages/DataPrivacy.test.tsx (1 test) 1052ms
+   ✓ Account deletion recovery (1)
+     ✓ keeps the confirmation open and allows retry when deletion is incomplete 1044ms
+ ✓ src/components/ProtocolSharing.test.tsx (6 tests) 1552ms
+   ✓ exact-version read-only protocol sharing (6)
+     ✓ shows attributed original source text without edit, reindex or export actions 941ms
+ ✓ src/components/DocumentPreviewModal.test.tsx (2 tests) 964ms
+   ✓ document preview recovery (2)
+     ✓ offers recovery when clipboard access is rejected 732ms
+ ✓ src/components/ClinicalAnswer.test.tsx (4 tests) 567ms
+   ✓ cached protocol-derived answers (4)
+     ✓ checks access before rendering and hides the reply after permission changes 307ms
+stderr | src/lib/securityHandlers.test.ts > security endpoint regressions > does not reserve paid quota when document storage download fails
+analyze-document failed
+
+stderr | src/lib/securityHandlers.test.ts > security endpoint regressions > never downloads a prescription path that aliases a different bucket
+validate-prescription failed
+
+ ✓ src/lib/securityHandlers.test.ts (17 tests) 1306ms
+   ✓ security endpoint regressions (17)
+     ✓ returns the complete SQL snapshot without repaginating mutable tables under the API row cap 310ms
+ ✓ src/components/PatientFiles.test.tsx (1 test) 887ms
+   ✓ Patient file removal (1)
+     ✓ retains metadata and offers a retry when the storage deletion fails 879ms
+ ✓ src/components/SessionAssurance.test.tsx (4 tests) 483ms
+   ✓ session assurance (4)
+     ✓ preserves an existing capture tree behind the lock when a recheck fails 349ms
+stderr | src/lib/calendarSync.test.ts > Google Calendar mutation boundaries > retains creation identity before a successful provider response is lost, then updates it on retry
+sync-google-calendar failed
+
+ ✓ src/lib/calendarSync.test.ts (6 tests) 1795ms
+   ✓ Google Calendar mutation boundaries (6)
+     ✓ never accepts a body event id when the owned appointment is missing 743ms
+ ✓ src/components/PrescriptionList.test.tsx (1 test) 1215ms
+   ✓ prescription trust display (1)
+     ✓ requires reissue for legacy rows and never labels an unattested signature as signed 1202ms
+ ✓ src/lib/privacyHandlers.test.ts (7 tests) 1846ms
+   ✓ privacy edge regressions (7)
+     ✓ retains draft metadata if audio removal fails and allows a later retry 563ms
+     ✓ creates one server snapshot rather than paginating mutable tables 337ms
+ ✓ src/lib/knowledgeIngestion.test.ts (5 tests) 3895ms
+   ✓ reviewed knowledge ingestion (5)
+     ✓ rejects patient attachments and ad hoc request text before quota or embedding 2683ms
+     ✓ does not restore a source whose approval was withdrawn during indexing 450ms
+ ✓ src/lib/maintenanceAuth.test.ts (2 tests) 1171ms
+   ✓ maintenance authentication (2)
+     ✓ fails closed when the service secret is missing 969ms
+ ✓ src/lib/sharedFileHandler.test.ts (3 tests) 590ms
+   ✓ shared file authenticated delivery (3)
+     ✓ does not fetch storage before explicit current download authorization 447ms
+ ✓ src/lib/authAssurance.test.ts (4 tests) 655ms
+   ✓ authenticated Edge MFA assurance (4)
+     ✓ requires aal2 for an enrolled user after Auth validates identity 499ms
+ ✓ src/pages/GoogleOAuthCallback.test.tsx (2 tests) 222ms
+ ✓ src/lib/providerCleanup.test.ts (6 tests) 133ms
+ ✓ src/lib/operationControls.test.ts (4 tests) 167ms
+ ✓ src/lib/providerUpload.test.ts (3 tests) 202ms
+ ✓ src/lib/httpBoundary.test.ts (7 tests) 130ms
+ ✓ src/hooks/useRecording.test.tsx (3 tests) 120ms
+ ✓ src/lib/sharing.test.ts (2 tests) 46ms
+ ✓ src/lib/quotaReservation.test.ts (8 tests) 64ms
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"provider_operation","operation_id":"e35d423e-47d7-467e-9262-b7621d3f5a76","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","duration_ms":34,"status":"success","http_status":200,"error_code":null}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"model_response_invalid","operation_id":"e35d423e-47d7-467e-9262-b7621d3f5a76","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","status":"failed","error_code":"incomplete_or_invalid_output"}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"provider_operation","operation_id":"f0a87ed7-d26c-46e1-8f45-86c3f2c7306c","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","duration_ms":2,"status":"success","http_status":200,"error_code":null}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"model_response_invalid","operation_id":"f0a87ed7-d26c-46e1-8f45-86c3f2c7306c","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","status":"failed","error_code":"incomplete_or_invalid_output"}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"provider_operation","operation_id":"acb2f13d-e7ca-42e5-a47d-a2c607abb4d8","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","duration_ms":2,"status":"success","http_status":200,"error_code":null}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"model_response_invalid","operation_id":"acb2f13d-e7ca-42e5-a47d-a2c607abb4d8","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","status":"failed","error_code":"incomplete_or_invalid_output"}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > joins all non-thinking text parts after a complete response
+{"event":"provider_operation","operation_id":"800b4412-58c0-4d21-9e60-eebdb086600d","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","duration_ms":3,"status":"success","http_status":200,"error_code":null}
+
+ ✓ src/lib/clinicalSafety.test.ts (10 tests) 171ms
+ ✓ src/lib/dataExport.test.ts (5 tests) 37ms
+ ✓ src/lib/securityBoundaries.test.ts (15 tests) 73ms
+ ✓ src/lib/patientAge.test.ts (4 tests) 29ms
+ ✓ src/lib/patientImport.test.ts (4 tests) 33ms
+ ✓ src/lib/oauthBoundary.test.ts (3 tests) 42ms
+ ✓ src/lib/reminderSafety.test.ts (11 tests) 27ms
+ ✓ src/lib/clinicalWorkspace.test.ts (3 tests) 20ms
+ ✓ src/lib/dates.test.ts (5 tests) 15ms
+ ✓ src/lib/authRedirect.test.ts (2 tests) 9ms
+ ✓ src/integrations/supabase/environment.test.ts (4 tests) 19ms
+ ✓ src/lib/pagination.test.ts (2 tests) 41ms
+ ✓ src/lib/patientMapper.test.ts (4 tests) 29ms
+
+ Test Files  51 passed (51)
+      Tests  289 passed (289)
+   Start at  11:02:04
+   Duration  366.69s (environment 48%, tests 22%, setup 13%, import 12%, transform 3%, worker 2%)
+
+    Isolate  51 workers spawned · ~3.57s startup each (spawn + environment, per file)
+             at least ~178.68s faster with isolate: false — reuses workers across files instead of one per file
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |    42.7 |    39.16 |   34.07 |   45.08 |                   
+ src               |       0 |        0 |       0 |       0 |                   
+  App.tsx          |       0 |        0 |       0 |       0 | 13-85             
+  main.tsx         |       0 |      100 |     100 |       0 | 5                 
+ src/components    |   47.29 |     42.8 |    38.5 |   50.98 |                   
+  ...rBoundary.tsx |       0 |        0 |       0 |       0 | 4-18              
+  ...mentModal.tsx |   49.47 |     41.5 |   48.27 |   52.69 | ...27,438,468-484 
+  ChatPanel.tsx    |   47.21 |    41.52 |   38.05 |    52.7 | ...1563,1612,1715 
+  ...calAnswer.tsx |      95 |    67.44 |     100 |     100 | 11-18,30-31       
+  ...Proposals.tsx |   68.49 |    62.19 |      70 |      80 | 65-69,72-76       
+  ...orkEditor.tsx |    74.5 |     80.7 |   60.46 |   84.88 | ...09-110,112,117 
+  ...viewModal.tsx |       0 |        0 |       0 |       0 | 30-266            
+  ...oserModal.tsx |       0 |        0 |       0 |       0 | 47-417            
+  ...viewModal.tsx |   51.16 |    41.46 |   66.66 |   54.54 | ...-74,80-115,119 
+  ...entsModal.tsx |       0 |        0 |       0 |       0 | 28-225            
+  ...pilotCard.tsx |       0 |        0 |       0 |       0 | 26-147            
+  NavLink.tsx      |       0 |        0 |       0 |       0 | 11-26             
+  ...tionModal.tsx |   73.21 |    75.47 |      50 |   76.08 | ...43,165-176,195 
+  ...rdingCard.tsx |       0 |        0 |       0 |       0 | 19-62             
+  PatientFiles.tsx |   33.91 |    28.88 |   43.47 |   36.08 | ...11,248,295,319 
+  ...ileDrawer.tsx |   57.95 |    46.05 |   48.97 |   63.49 | ...39,685,753-758 
+  ...ntSidebar.tsx |       0 |        0 |       0 |       0 | 34-177            
+  ...tSnapshot.tsx |   54.54 |    37.34 |   59.09 |   57.74 | ...35,186-287,312 
+  ...ptionList.tsx |      50 |    64.58 |   33.33 |   55.26 | ...,77-80,120-146 
+  ...pdateCard.tsx |   41.11 |     32.6 |   21.73 |   52.94 | ...49-321,398-439 
+  ...olSharing.tsx |   78.14 |    65.62 |   70.96 |   88.88 | ...,91-93,117,119 
+  ...klistCard.tsx |       0 |        0 |       0 |       0 | 12-71             
+  ...odeDialog.tsx |       0 |        0 |       0 |       0 | 18-68             
+  ...Assurance.tsx |   83.33 |       90 |      60 |     100 | 11                
+  SoapNoteView.tsx |   14.28 |        0 |       0 |   14.28 | 11-18,36-53       
+  ...ingsSheet.tsx |   72.58 |    67.39 |   58.33 |    77.5 | ...39-155,185-201 
+  UsageMeter.tsx   |       0 |        0 |       0 |       0 | 15-126            
+  ...Dashboard.tsx |   81.65 |    59.16 |   76.31 |   89.15 | ...21,334,388,443 
+ src/components/ui |   20.84 |     3.79 |   19.73 |   20.95 |                   
+  accordion.tsx    |       0 |      100 |       0 |       0 | 7-50              
+  alert.tsx        |       0 |      100 |       0 |       0 | 6-41              
+  aspect-ratio.tsx |       0 |      100 |     100 |       0 | 3                 
+  avatar.tsx       |       0 |      100 |       0 |       0 | 6-36              
+  breadcrumb.tsx   |       0 |        0 |       0 |       0 | 7-80              
+  calendar.tsx     |      25 |        0 |       0 |      25 | 11-46             
+  card.tsx         |   88.88 |      100 |   66.66 |   88.88 | 26,38             
+  carousel.tsx     |       0 |        0 |       0 |       0 | 29-222            
+  chart.tsx        |       0 |        0 |       0 |       0 | 7-300             
+  checkbox.tsx     |       0 |      100 |       0 |       0 | 7-24              
+  collapsible.tsx  |       0 |      100 |     100 |       0 | 3-7               
+  command.tsx      |       0 |      100 |       0 |       0 | 9-120             
+  context-menu.tsx |       0 |        0 |       0 |       0 | 7-160             
+  dialog.tsx       |   95.45 |      100 |   83.33 |   95.45 | 60                
+  drawer.tsx       |       0 |        0 |       0 |       0 | 6-74              
+  ...down-menu.tsx |       0 |        0 |       0 |       0 | 7-161             
+  form.tsx         |       0 |        0 |       0 |       0 | 9-127             
+  hover-card.tsx   |       0 |        0 |       0 |       0 | 6-25              
+  input-otp.tsx    |       0 |        0 |       0 |       0 | 7-59              
+  menubar.tsx      |       0 |        0 |       0 |       0 | 7-188             
+  ...tion-menu.tsx |       0 |      100 |       0 |       0 | 8-108             
+  pagination.tsx   |       0 |        0 |       0 |       0 | 7-71              
+  progress.tsx     |       0 |        0 |       0 |       0 | 6-21              
+  radio-group.tsx  |       0 |      100 |       0 |       0 | 7-34              
+  resizable.tsx    |       0 |        0 |       0 |       0 | 6-22              
+  scroll-area.tsx  |       0 |        0 |       0 |       0 | 6-36              
+  select.tsx       |   95.83 |      100 |   85.71 |   95.83 | 97                
+  separator.tsx    |       0 |        0 |       0 |       0 | 6-18              
+  sheet.tsx        |   95.65 |      100 |   83.33 |   95.65 | 76                
+  sidebar.tsx      |       0 |        0 |       0 |       0 | 15-610            
+  skeleton.tsx     |       0 |      100 |       0 |       0 | 4                 
+  slider.tsx       |       0 |      100 |       0 |       0 | 6-21              
+  sonner.tsx       |       0 |        0 |       0 |       0 | 6-9               
+  table.tsx        |   91.66 |      100 |      75 |   91.66 | 28,67             
+  toast.tsx        |       0 |      100 |       0 |       0 | 8-96              
+  toaster.tsx      |       0 |        0 |       0 |       0 | 5-10              
+  toggle-group.tsx |       0 |        0 |       0 |       0 | 8-47              
+  toggle.tsx       |       0 |      100 |       0 |       0 | 7-35              
+  tooltip.tsx      |       0 |        0 |       0 |       0 | 6-26              
+ src/contexts      |    4.05 |        0 |    5.88 |    3.07 |                   
+  AuthContext.tsx  |       0 |        0 |       0 |       0 | 6-148             
+ src/data          |       0 |        0 |       0 |       0 |                   
+  mockData.ts      |       0 |      100 |     100 |       0 | 8-128             
+  seedData.ts      |       0 |        0 |       0 |       0 | 7-597             
+ src/hooks         |   48.07 |    22.45 |   41.07 |   50.12 |                   
+  use-mobile.tsx   |       0 |      100 |       0 |       0 | 3-18              
+  use-toast.ts     |   32.07 |        5 |   16.66 |   33.33 | ...19,129-159,182 
+  useRecording.ts  |   59.04 |    33.04 |   55.17 |   63.45 | ...46-447,457-469 
+  ...edPatients.ts |       0 |        0 |       0 |       0 | 11-18             
+  ...vedChanges.ts |      68 |    48.27 |   78.57 |   81.81 | 12-14,39          
+  useUsage.ts      |       0 |        0 |       0 |       0 | 4-62              
+  ...erSettings.ts |       0 |        0 |       0 |       0 | 10-115            
+ ...tions/supabase |      76 |    93.75 |     100 |   73.68 |                   
+  client.ts        |       0 |      100 |     100 |       0 | 5-11              
+  environment.ts   |   86.36 |    93.75 |     100 |    87.5 | 19,23             
+ src/lib           |   71.83 |    62.77 |   67.69 |   76.19 |                   
+  ...lWorkspace.ts |   78.94 |    88.88 |     100 |     100 | 14,16-18          
+  ...tionDrafts.ts |       0 |        0 |       0 |       0 | 23-37             
+  dataExport.ts    |   91.93 |    88.88 |     100 |     100 | 24,28-43,51-52,83 
+  dates.ts         |   86.36 |    83.33 |     100 |     100 | 4,20-21,28        
+  ...tionErrors.ts |   77.77 |     87.5 |     100 |   85.71 | 9                 
+  knowledge.ts     |       0 |        0 |       0 |       0 | 6-18              
+  ...ationMerge.ts |   91.66 |       75 |     100 |     100 | 8                 
+  pagination.ts    |      90 |    83.33 |     100 |     100 | 17                
+  patientImport.ts |   92.68 |    81.25 |     100 |     100 | ...43,51,54,56-57 
+  patientMapper.ts |     100 |    94.59 |     100 |     100 | 5,12              
+  printDoc.ts      |       0 |        0 |       0 |       0 | 18-194            
+  sharing.ts       |      75 |    27.77 |    62.5 |    92.3 | 47                
+ src/pages         |   42.39 |    35.69 |   30.08 |   49.53 |                   
+  About.tsx        |       0 |      100 |       0 |       0 | 5-14              
+  ...tSecurity.tsx |       0 |        0 |       0 |       0 | 10-21             
+  Assistant.tsx    |       0 |        0 |       0 |       0 | 18-185            
+  Auth.tsx         |   64.35 |    56.94 |   69.23 |   76.31 | ...,84-92,116,128 
+  Calendar.tsx     |       0 |        0 |       0 |       0 | 26-356            
+  ...Workspace.tsx |       0 |        0 |       0 |       0 | 16-59             
+  DataPrivacy.tsx  |   40.78 |       48 |   46.15 |   44.44 | ...6,80-83,94,214 
+  ...hCallback.tsx |      65 |    66.66 |   57.14 |   67.64 | ...46-47,51,68-76 
+  Index.tsx        |   76.88 |    65.85 |   71.05 |   85.11 | ...22,351-382,409 
+  ...ledgeBase.tsx |   72.79 |     62.5 |   65.71 |   80.88 | ...08,110,115-118 
+  NotFound.tsx     |       0 |      100 |       0 |       0 | 3-4               
+  ...anagement.tsx |   54.54 |    55.78 |   42.85 |   58.62 | ...72,303,333-350 
+  Sharing.tsx      |   62.45 |    49.55 |   38.57 |   76.87 | ...15,225-228,231 
+  Templates.tsx    |       0 |        0 |       0 |       0 | 34-358            
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 42.7% ( 2442/5718 )
+Branches     : 39.16% ( 1902/4856 )
+Functions    : 34.07% ( 492/1444 )
+Lines        : 45.08% ( 1970/4370 )
+================================================================================

@@ -1,0 +1,336 @@
+
+> cortex@0.1.0 test
+> vitest run --reporter=default
+
+[vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.dev/rolldown
+
+ RUN  v5.0.5 E:/Work/Cortex/cortex
+
+ ✓ src/components/NewConsultationModal.test.tsx (4 tests) 4236ms
+   ✓ New consultation submission (4)
+     ✓ preserves age  without inventing a newborn 1807ms
+     ✓ preserves age 0 without inventing a newborn 873ms
+     ✓ preserves age 42 without inventing a newborn 635ms
+     ✓ keeps the entered patient and complaint when saving fails 913ms
+stderr | src/lib/clinicalHandlers.test.ts > clinical edge handler regressions > registers RX metadata before upload and removes it after an upload failure
+generate-prescription failed
+
+stderr | src/lib/clinicalHandlers.test.ts > clinical edge handler regressions > registers RX metadata before upload and retains it when object cleanup fails
+generate-prescription failed
+
+stderr | src/lib/clinicalHandlers.test.ts > clinical edge handler regressions > preserves source audio when the provider fails after upload
+transcribe-consultation failed
+
+ ✓ src/lib/clinicalHandlers.test.ts (11 tests) 1948ms
+   ✓ clinical edge handler regressions (11)
+     ✓ completes only the explicitly linked appointment (linked=true) 773ms
+ ✓ src/pages/Auth.test.tsx (8 tests) 8225ms
+   ✓ Auth page (8)
+     ✓ returns to the original callback after sign in 3543ms
+     ✓ explains email confirmation when signup does not create a session 2879ms
+     ✓ lets a user request password recovery without disclosing account existence 1097ms
+ ✓ src/components/AppointmentModal.test.tsx (4 tests) 5724ms
+   ✓ Appointment removal and unsaved changes (4)
+     ✓ offers an explicit WhatsApp link after a blocked popup without claiming delivery 2507ms
+     ✓ does not delete an appointment when the confirmation is declined 642ms
+     ✓ retains the local appointment until Google confirms deletion 797ms
+     ✓ keeps an edited appointment open if discard is declined 1756ms
+ ✓ src/pages/Index.test.tsx (8 tests) 3616ms
+   ✓ patient activation (8)
+     ✓ does not remount capture when the current patient is selected again 1198ms
+     ✓ blocks route exit and logout until captured audio is saved 783ms
+     ✓ refreshes the selected briefing after a clinical revision changes 313ms
+     ✓ loads B’s own briefing when starting a consultation after viewing A 354ms
+     ✓ returns to the dashboard using desktop Home 351ms
+ ✓ src/components/PatientSnapshot.test.tsx (2 tests) 882ms
+   ✓ patient note ownership (2)
+     ✓ keeps each draft attached to its originating patient 531ms
+     ✓ does not let a late success for A erase B’s draft 344ms
+ ✓ src/components/ClinicalProposals.test.tsx (4 tests) 1328ms
+   ✓ clinical proposal approval (4)
+     ✓ sends only the exact edited and explicitly accepted note with the displayed chart revision 840ms
+     ✓ keeps an edited note after a revision conflict instead of replacing it with the AI proposal 367ms
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > live-copilot rejects an incomplete model object instead of blanking a successful result
+live-copilot error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > suggest-questions rejects an incomplete model object instead of blanking a successful result
+suggest-questions error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > prebriefing rejects invalid model output instead of reporting a first consultation
+generate-prebriefing error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > does not convert a model object into printable template text
+create-template-ai error:
+
+stderr | src/lib/clinicalBoundaryHandlers.test.ts > clinical result failures remain failures > retains a reservation when a started provider call fails
+live-copilot error:
+
+ ✓ src/lib/clinicalBoundaryHandlers.test.ts (35 tests) 1413ms
+   ✓ clinical request boundaries before quota reservation (15)
+     ✓ chat-assistant reports a failed patient read without reserving or inventing an empty history 392ms
+ ✓ src/components/SpecialtySettingsSheet.test.tsx (1 test) 1189ms
+   ✓ Prescriber identity draft (1)
+     ✓ preserves typing across background refresh and failed explicit save 1183ms
+ ✓ src/components/PatientProfileDrawer.test.tsx (1 test) 2498ms
+   ✓ Concurrent clinical history editing (1)
+     ✓ preserves the draft and requires review when the patient revision changed 2484ms
+ ✓ src/components/ClinicalWorkEditor.test.tsx (7 tests) 1023ms
+   ✓ manual encounter approval (7)
+     ✓ requires an explicit reconciliation decision binding the saved medication and current patient revisions 598ms
+ ✓ src/pages/KnowledgeBase.test.tsx (4 tests) 2363ms
+   ✓ reviewed protocol library (4)
+     ✓ saves the original and source metadata without automatically sending it to AI 1390ms
+     ✓ shows preserved source/version and requires explicit original review before indexing 307ms
+     ✓ keeps legacy sources unavailable until a new original version is supplied 343ms
+     ✓ retires a reviewed source through the review boundary while preserving its original 314ms
+ ✓ src/components/WelcomeDashboard.test.tsx (3 tests) 3460ms
+   ✓ WhatsApp reminder preparation (3)
+     ✓ keeps the reminder pending and exposes a clickable link when a popup is blocked 1921ms
+     ✓ removes an email reminder from the pending list only after confirmed success 784ms
+     ✓ keeps an email reminder pending when the server does not confirm delivery 738ms
+ ✓ src/pages/DataPrivacy.test.tsx (1 test) 939ms
+   ✓ Account deletion recovery (1)
+     ✓ keeps the confirmation open and allows retry when deletion is incomplete 930ms
+ ✓ src/pages/Sharing.test.tsx (8 tests) 1403ms
+   ✓ selective sharing workspace (8)
+     ✓ shows a received read-only chart without clinical editing or downloads 493ms
+ ✓ src/pages/PatientManagement.test.tsx (3 tests) 1708ms
+   ✓ Patient directory (3)
+     ✓ shows a retryable load error instead of claiming no patients exist 432ms
+     ✓ searches all loaded patients and opens their chart without starting a consultation 366ms
+     ✓ retains edited demographics when another session changed the patient 904ms
+stderr | src/lib/calendarSync.test.ts > Google Calendar mutation boundaries > retains creation identity before a successful provider response is lost, then updates it on retry
+sync-google-calendar failed
+
+ ✓ src/lib/calendarSync.test.ts (6 tests) 617ms
+   ✓ Google Calendar mutation boundaries (6)
+     ✓ never accepts a body event id when the owned appointment is missing 308ms
+ ✓ src/components/ChatPanel.test.tsx (6 tests) 1172ms
+   ✓ patient-scoped asynchronous clinical work (3)
+     ✓ accepts a reviewed medication change by revision even when storage uses the legacy dose shape 640ms
+ ✓ src/components/PatientFiles.test.tsx (1 test) 741ms
+   ✓ Patient file removal (1)
+     ✓ retains metadata and offers a retry when the storage deletion fails 731ms
+ ✓ src/components/PrescriptionList.test.tsx (1 test) 974ms
+   ✓ prescription trust display (1)
+     ✓ requires reissue for legacy rows and never labels an unattested signature as signed 951ms
+stderr | src/lib/securityHandlers.test.ts > security endpoint regressions > does not reserve paid quota when document storage download fails
+analyze-document failed
+
+stderr | src/lib/securityHandlers.test.ts > security endpoint regressions > never downloads a prescription path that aliases a different bucket
+validate-prescription failed
+
+ ❯ src/lib/securityHandlers.test.ts (15 tests | 9 failed) 2348ms
+   ❯ security endpoint regressions (15)
+     × exports every row even when the server row cap is lower than the requested page 631ms
+     ✓ does not reserve paid quota when document storage download fails 269ms
+     ✓ never downloads a prescription path that aliases a different bucket 435ms
+     ✓ does not mint a download URL for an expired prescription manifest 237ms
+     × does not label legacy client-forged signature metadata as verified 63ms
+     ✓ quarantines legacy forged future expiry without serving or signing a download URL 38ms
+     × rejects an appointment referencing another owner’s patient 68ms
+     ✓ generates WhatsApp link without falsely recording delivery 89ms
+     × retains account metadata when storage cleanup cannot complete 66ms
+     × blocks delete-user-data before storage or metadata changes when legacy relations cross owners 87ms
+     × blocks delete-patient before storage or metadata changes when legacy relations cross owners 87ms
+     ✓ rejects an invalid OAuth transaction before contacting Google 65ms
+     × exports every own row across pages without exporting OAuth secrets 96ms
+     × returns actual bytes for an owned private export file 53ms
+     × rejects cross-user and normalization aliases in file exports 56ms
+ ✓ src/lib/authAssurance.test.ts (4 tests) 877ms
+   ✓ authenticated Edge MFA assurance (4)
+     ✓ requires aal2 for an enrolled user after Auth validates identity 659ms
+ ✓ src/components/SessionAssurance.test.tsx (4 tests) 800ms
+   ✓ session assurance (4)
+     ✓ preserves an existing capture tree behind the lock when a recheck fails 635ms
+ ✓ src/lib/privacyHandlers.test.ts (7 tests) 592ms
+   ✓ privacy edge regressions (7)
+     ✓ retains draft metadata if audio removal fails and allows a later retry 313ms
+ ✓ src/lib/maintenanceAuth.test.ts (2 tests) 384ms
+   ✓ maintenance authentication (2)
+     ✓ fails closed when the service secret is missing 313ms
+ ✓ src/lib/sharedFileHandler.test.ts (3 tests) 350ms
+ ✓ src/lib/knowledgeIngestion.test.ts (5 tests) 498ms
+   ✓ reviewed knowledge ingestion (5)
+     ✓ rejects patient attachments and ad hoc request text before quota or embedding 393ms
+ ✓ src/hooks/useRecording.test.tsx (3 tests) 139ms
+ ✓ src/pages/GoogleOAuthCallback.test.tsx (2 tests) 107ms
+ ✓ src/lib/providerUpload.test.ts (3 tests) 181ms
+ ✓ src/lib/httpBoundary.test.ts (7 tests) 134ms
+ ✓ src/lib/operationControls.test.ts (4 tests) 159ms
+ ✓ src/lib/securityBoundaries.test.ts (15 tests) 41ms
+ ✓ src/lib/providerCleanup.test.ts (6 tests) 100ms
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"provider_operation","operation_id":"605606f8-6e90-40a5-950d-dae9d70c0700","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","duration_ms":7,"status":"success","http_status":200,"error_code":null}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"model_response_invalid","operation_id":"605606f8-6e90-40a5-950d-dae9d70c0700","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","status":"failed","error_code":"incomplete_or_invalid_output"}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"provider_operation","operation_id":"e289baab-e5f9-4bd4-ba71-aa008e512fd6","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","duration_ms":1,"status":"success","http_status":200,"error_code":null}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"model_response_invalid","operation_id":"e289baab-e5f9-4bd4-ba71-aa008e512fd6","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","status":"failed","error_code":"incomplete_or_invalid_output"}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"provider_operation","operation_id":"93db43ff-1361-447e-8533-d9eca19f87b6","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","duration_ms":2,"status":"success","http_status":200,"error_code":null}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > rejects truncated, blocked and empty model responses
+{"event":"model_response_invalid","operation_id":"93db43ff-1361-447e-8533-d9eca19f87b6","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","status":"failed","error_code":"incomplete_or_invalid_output"}
+
+stdout | src/lib/clinicalSafety.test.ts > clinical generation boundaries > joins all non-thinking text parts after a complete response
+{"event":"provider_operation","operation_id":"e113aea2-d0a5-4daf-8010-4b25bc23025f","operation":"generate","provider":"gemini","model":"gemini-2.5-flash","duration_ms":2,"status":"success","http_status":200,"error_code":null}
+
+ ✓ src/lib/clinicalSafety.test.ts (10 tests) 72ms
+ ✓ src/lib/patientMapper.test.ts (4 tests) 12ms
+ ✓ src/lib/quotaReservation.test.ts (8 tests) 48ms
+ ✓ src/lib/oauthBoundary.test.ts (3 tests) 27ms
+ ✓ src/lib/pagination.test.ts (2 tests) 12ms
+ ✓ src/lib/dataExport.test.ts (5 tests) 74ms
+ ✓ src/lib/sharing.test.ts (2 tests) 28ms
+ ✓ src/lib/reminderSafety.test.ts (11 tests) 18ms
+ ✓ src/integrations/supabase/environment.test.ts (4 tests) 26ms
+ ✓ src/lib/clinicalWorkspace.test.ts (3 tests) 26ms
+ ✓ src/lib/patientImport.test.ts (4 tests) 17ms
+ ✓ src/lib/dates.test.ts (4 tests) 12ms
+ ✓ src/lib/authRedirect.test.ts (2 tests) 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/securityHandlers.test.ts > security endpoint regressions > exports every row even when the server row cap is lower than the requested page
+TypeError: Cannot read properties of undefined (reading 'patients')
+ ❯ src/lib/securityHandlers.test.ts:86:43
+     84|     const response=await loadHandler('export-user-data',db)(new Reques…
+     85|     expect(response.status).toBe(200);
+     86|     expect((await response.json()).tables.patients).toHaveLength(251);
+       |                                           ^
+     87|   });
+     88|   it('does not reserve paid quota when document storage download fails…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  src/lib/securityHandlers.test.ts > security endpoint regressions > does not label legacy client-forged signature metadata as verified
+AssertionError: expected 409 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 409
+
+ ❯ src/lib/securityHandlers.test.ts:109:29
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  src/lib/securityHandlers.test.ts > security endpoint regressions > rejects an appointment referencing another owner’s patient
+AssertionError: expected 409 to be 404 // Object.is equality
+
+- Expected
++ Received
+
+- 404
++ 409
+
+ ❯ src/lib/securityHandlers.test.ts:124:29
+    122|     const db=fakeDatabase({appointments:[{id:'appointment',user_id:use…
+    123|     const response=await loadHandler('send-appointment-reminder',db)(n…
+    124|     expect(response.status).toBe(404); expect(await response.text()).n…
+       |                             ^
+    125|   });
+    126|   it('generates WhatsApp link without falsely recording delivery',asyn…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  src/lib/securityHandlers.test.ts > security endpoint regressions > retains account metadata when storage cleanup cannot complete
+Error: Unsupported test dependency ../_shared/providerFiles.ts
+ ❯ compiled src/lib/securityHandlers.test.ts:74:11
+     72|     if(id.includes('@supabase/supabase-js')) return {createClient:()=>…
+     73|     if(id in modules) return modules[id];
+     74|     throw new Error(`Unsupported test dependency ${id}`);
+       |           ^
+     75|   };
+     76|   new Function('require','exports','Deno','fetch',compiled)(require,{}…
+ ❯ eval src/lib/securityHandlers.test.ts:76:3
+ ❯ loadHandler src/lib/securityHandlers.test.ts:76:51
+ ❯ src/lib/securityHandlers.test.ts:135:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  src/lib/securityHandlers.test.ts > security endpoint regressions > blocks delete-user-data before storage or metadata changes when legacy relations cross owners
+ FAIL  src/lib/securityHandlers.test.ts > security endpoint regressions > blocks delete-patient before storage or metadata changes when legacy relations cross owners
+Error: Unsupported test dependency ../_shared/providerFiles.ts
+ ❯ compiled src/lib/securityHandlers.test.ts:74:11
+     72|     if(id.includes('@supabase/supabase-js')) return {createClient:()=>…
+     73|     if(id in modules) return modules[id];
+     74|     throw new Error(`Unsupported test dependency ${id}`);
+       |           ^
+     75|   };
+     76|   new Function('require','exports','Deno','fetch',compiled)(require,{}…
+ ❯ eval src/lib/securityHandlers.test.ts:76:3
+ ❯ loadHandler src/lib/securityHandlers.test.ts:76:51
+ ❯ src/lib/securityHandlers.test.ts:142:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  src/lib/securityHandlers.test.ts > security endpoint regressions > exports every own row across pages without exporting OAuth secrets
+AssertionError: expected undefined to be '11111111-1111-4111-8111-111111111111' // Object.is equality
+
+- Expected:
+"11111111-1111-4111-8111-111111111111"
+
++ Received:
+undefined
+
+ ❯ src/lib/securityHandlers.test.ts:161:29
+    159|     expect(response.status).toBe(200);
+    160|     const manifest=await response.json();
+    161|     expect(manifest.userId).toBe(user); expect(manifest.tables.patient…
+       |                             ^
+    162|     expect(JSON.stringify(manifest)).not.toContain('DO_NOT_EXPORT');
+    163|     expect(manifest.tables).toHaveProperty('clinical_record_revisions'…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  src/lib/securityHandlers.test.ts > security endpoint regressions > returns actual bytes for an owned private export file
+AssertionError: expected 400 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 400
+
+ ❯ src/lib/securityHandlers.test.ts:169:29
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  src/lib/securityHandlers.test.ts > security endpoint regressions > rejects cross-user and normalization aliases in file exports
+AssertionError: expected 400 to be 403 // Object.is equality
+
+- Expected
++ Received
+
+- 403
++ 400
+
+ ❯ src/lib/securityHandlers.test.ts:176:31
+    174|     for(const path of [`rx/${patient}/${rxId}.pdf`,`rx/${user}/../${pa…
+    175|       const response=await handler(new Request('https://edge.invalid',…
+    176|       expect(response.status).toBe(403);
+       |                               ^
+    177|     }
+    178|     expect(db.download).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+
+ Test Files  1 failed | 46 passed (47)
+      Tests  9 failed | 251 passed (260)
+   Start at  10:18:38
+   Duration  326.87s (environment 54%, tests 17%, import 14%, setup 12%, transform 2%, worker 1%)
+
+    Isolate  47 workers spawned · ~3.93s startup each (spawn + environment, per file)
+             at least ~180.85s faster with isolate: false — reuses workers across files instead of one per file
+

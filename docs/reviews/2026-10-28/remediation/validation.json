@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-28",
+  "baseline": "1ad2116",
+  "scope": "APP_REVIEW app fixes and clinic functions; Haddad Nicola brand",
+  "deferred": ["AI-provider selection and clinical evaluation", "PersonalMed migration", "production deployment"],
+  "coverageRun": {
+    "command": "npm run test:coverage -- --reporter=default",
+    "exitCode": 0,
+    "testFiles": 51,
+    "tests": 289,
+    "passed": 289,
+    "lineCoverage": 45.08,
+    "statementCoverage": 42.7,
+    "branchCoverage": 39.16,
+    "functionCoverage": 34.07,
+    "log": "coverage-final.txt"
+  },
+  "database": {"exitCode": 0, "migrations": 39, "suites": 18, "log": "database-final.txt", "environment": "disposable local PostgreSQL"},
+  "build": {"exitCode": 0, "includes": "app/node TypeScript and production bundle", "backend": "explicit https://build-fixture.invalid", "log": "build-final.txt"},
+  "edge": {"exitCode": 0, "functions": 24, "log": "edge-final.txt"},
+  "lint": {"exitCode": 0, "errors": 0, "existingFastRefreshWarnings": 8, "log": "lint-final.txt"},
+  "dependencies": {"auditExitCode": 0, "reportedVulnerabilities": 0, "log": "npm-audit.json"},
+  "readiness": {"exitCode": 0, "target": "local production preview", "checks": ["public page", "entrypoint", "local brand assets"], "log": "readiness-preview.txt"},
+  "browser": {
+    "backend": "synthetic loopback only",
+    "viewports": ["1280x900", "820x900", "768x900", "390x844"],
+    "tabletComposerWidth": 610,
+    "previousTabletComposerWidth": 66,
+    "mobileComposerWidth": 188,
+    "renderedPrimaryTextContrast": 6.05,
+    "font": "locally bundled Montserrat and Source Serif 4",
+    "observedErrorsOrWarnings": 0,
+    "flows": ["dashboard", "patient selection", "manual draft save and reload recovery", "responsive navigation", "sharing controls and empty states", "calendar", "sign-out", "branded authentication", "keyboard email-to-password focus"],
+    "limits": "No actual microphone, hosted Auth/Storage, real model/email/OAuth/signature or real patient data used"
+  },
+  "review": {"independentAgentReview": true, "externalCrossModelReview": "skipped at user request"},
+  "releaseEvidenceStillRequired": ["hosted Auth/Storage/MFA and integration rehearsals", "database plus private-file restore", "clinic workflow and permitted provider evaluation before enabling AI"]
+}
