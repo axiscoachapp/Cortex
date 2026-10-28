@@ -30,4 +30,10 @@ jobs:
       - run: npm run test:coverage
       - run: npm run test:db
       - run: npm run build
+      - name: Verify built public application and local brand assets
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/cortex-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid"' EXIT
+          node scripts/smoke-app.mjs http://127.0.0.1:4173
       - run: npm audit --audit-level=moderate
