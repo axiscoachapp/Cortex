@@ -18,8 +18,19 @@ function openPrintable(html: string) {
   const blob = new Blob([html], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const popup = window.open(url, '_blank');
-  if (!popup) {URL.revokeObjectURL(url);window.alert('A impressão foi bloqueada. Permita pop-ups e tente novamente.');return;}
-  popup?.addEventListener('load', () => { popup.opener = null; popup.print(); }, { once: true });
+  if (!popup) {
+    URL.revokeObjectURL(url);
+    window.alert('A impressão foi bloqueada. Permita pop-ups e tente novamente.');
+    return;
+  }
+  popup?.addEventListener(
+    'load',
+    () => {
+      popup.opener = null;
+      popup.print();
+    },
+    { once: true },
+  );
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
@@ -55,13 +66,18 @@ export function printSoap(soapNote: string, patient: PatientLike, chiefComplaint
   const bg: Record<string, string> = { S: '#eff6ff', O: '#f8fafc', A: '#fffbeb', P: '#f0fdf4' };
   const border: Record<string, string> = { S: '#3b82f6', O: '#94a3b8', A: '#f59e0b', P: '#22c55e' };
 
-  const sectionsHtml = sections.length > 0
-    ? sections.map(({ letter, title, content }) =>
-        `<div style="margin-bottom:14px;background:${bg[letter] ?? '#f9fafb'};border-left:3px solid ${border[letter] ?? '#e5e7eb'};padding:10px 14px;border-radius:0 6px 6px 0">
+  const sectionsHtml =
+    sections.length > 0
+      ? sections
+          .map(
+            ({ letter, title, content }) =>
+              `<div style="margin-bottom:14px;background:${bg[letter] ?? '#f9fafb'};border-left:3px solid ${border[letter] ?? '#e5e7eb'};padding:10px 14px;border-radius:0 6px 6px 0">
           <div style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.55;margin-bottom:5px">${escapeHtml(title)}</div>
           <div style="font-size:10.5pt;line-height:1.65;white-space:pre-wrap">${escapeHtml(content || 'Não relatado na consulta.')}</div>
-        </div>`).join('')
-    : `<div style="white-space:pre-wrap;font-size:10.5pt;line-height:1.65">${escapeHtml(soapNote)}</div>`;
+        </div>`,
+          )
+          .join('')
+      : `<div style="white-space:pre-wrap;font-size:10.5pt;line-height:1.65">${escapeHtml(soapNote)}</div>`;
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Evolução — ${escapeHtml(patient.name)}</title>
@@ -82,11 +98,15 @@ ${sectionsHtml}
 
 export function printPrescription(patient: PatientLike) {
   const meds = patient.medications ?? [];
-  const medsHtml = meds.map((mm, i) => `
+  const medsHtml = meds
+    .map(
+      (mm, i) => `
     <div style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid #e5e7eb">
       <div style="font-size:11pt;font-weight:700;color:#111827">${i + 1}. ${escapeHtml(mm.name)} <span style="font-weight:400;color:#6b7280">${escapeHtml(mm.dosage)}</span></div>
       ${mm.instructions ? `<div style="margin-top:4px;font-size:10pt;color:#374151">${escapeHtml(mm.instructions)}</div>` : ''}
-    </div>`).join('');
+    </div>`,
+    )
+    .join('');
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Receita — ${escapeHtml(patient.name)}</title>
@@ -123,26 +143,23 @@ interface DossierExtras {
   diagnoses?: Array<{ code: string; description: string }>;
 }
 
-export function printDossier(
-  patient: PatientLike,
-  consultations: ConsultationLike[],
-  extras: DossierExtras = {},
-) {
+export function printDossier(patient: PatientLike, consultations: ConsultationLike[], extras: DossierExtras = {}) {
   const section = (title: string, body: string) =>
-    body.trim()
-      ? `<section><h2>${escapeHtml(title)}</h2><div class="body">${escapeHtml(body)}</div></section>`
-      : '';
+    body.trim() ? `<section><h2>${escapeHtml(title)}</h2><div class="body">${escapeHtml(body)}</div></section>` : '';
 
   const diagnosesHtml = (extras.diagnoses ?? []).length
-    ? `<section><h2>Diagnósticos</h2><ul>${extras.diagnoses!.map(d =>
-        `<li><strong>${escapeHtml(d.code)}</strong> · ${escapeHtml(d.description)}</li>`,
-      ).join('')}</ul></section>`
+    ? `<section><h2>Diagnósticos</h2><ul>${extras
+        .diagnoses!.map((d) => `<li><strong>${escapeHtml(d.code)}</strong> · ${escapeHtml(d.description)}</li>`)
+        .join('')}</ul></section>`
     : '';
 
   const medsHtml = (patient.medications ?? []).length
-    ? `<section><h2>Medicações em uso</h2><ul>${(patient.medications ?? []).map(m =>
-        `<li><strong>${escapeHtml(m.name)}</strong> ${escapeHtml(m.dosage)}${m.instructions ? ` — ${escapeHtml(m.instructions)}` : ''}</li>`,
-      ).join('')}</ul></section>`
+    ? `<section><h2>Medicações em uso</h2><ul>${(patient.medications ?? [])
+        .map(
+          (m) =>
+            `<li><strong>${escapeHtml(m.name)}</strong> ${escapeHtml(m.dosage)}${m.instructions ? ` — ${escapeHtml(m.instructions)}` : ''}</li>`,
+        )
+        .join('')}</ul></section>`
     : '';
 
   const allergiesHtml = (patient.allergies ?? []).length
@@ -150,13 +167,19 @@ export function printDossier(
     : '';
 
   const consultationsHtml = consultations.length
-    ? `<section><h2>Histórico de consultas (${consultations.length})</h2>${consultations.map(c => {
-        const date = new Date(c.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-        return `<article class="consult">
+    ? `<section><h2>Histórico de consultas (${consultations.length})</h2>${consultations
+        .map((c) => {
+          const date = new Date(c.created_at).toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+          });
+          return `<article class="consult">
           <h3>${date}${c.chief_complaint ? ` — ${escapeHtml(c.chief_complaint)}` : ''}</h3>
           ${c.soap_note ? `<div class="soap">${escapeHtml(c.soap_note).replace(/\n/g, '<br>')}</div>` : ''}
         </article>`;
-      }).join('')}</section>`
+        })
+        .join('')}</section>`
     : '';
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">

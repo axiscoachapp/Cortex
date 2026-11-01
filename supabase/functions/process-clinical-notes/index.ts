@@ -1,10 +1,8 @@
-import { fetchWithDeadline, readJsonObject, RequestError } from "../_shared/http.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
-import {
-  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
-} from "../_shared/quota.ts";
-import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+import { fetchWithDeadline, readJsonObject, RequestError } from '../_shared/http.ts';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
+import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
+import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 import { requireCompleteModelText, parseModelObject } from '../_shared/gemini.ts';
 import { assertPromptSize } from '../_shared/modelInput.ts';
 
@@ -13,7 +11,7 @@ import { assertPromptSize } from '../_shared/modelInput.ts';
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Vary': 'Origin',
+  Vary: 'Origin',
 };
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
@@ -21,15 +19,23 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/
 const INSIGHTS_SCHEMA = {
   type: 'object',
   properties: {
-    symptoms:                { type: 'array', items: { type: 'string' } },
+    symptoms: { type: 'array', items: { type: 'string' } },
     behavioral_observations: { type: 'array', items: { type: 'string' } },
-    risk_factors:            { type: 'array', items: { type: 'string' } },
-    family_history:          { type: 'array', items: { type: 'string' } },
-    social_factors:          { type: 'array', items: { type: 'string' } },
-    clinical_changes:        { type: 'array', items: { type: 'string' } },
-    summary:                 { type: 'string' },
+    risk_factors: { type: 'array', items: { type: 'string' } },
+    family_history: { type: 'array', items: { type: 'string' } },
+    social_factors: { type: 'array', items: { type: 'string' } },
+    clinical_changes: { type: 'array', items: { type: 'string' } },
+    summary: { type: 'string' },
   },
-  required: ['summary','symptoms','behavioral_observations','risk_factors','family_history','social_factors','clinical_changes'],
+  required: [
+    'summary',
+    'symptoms',
+    'behavioral_observations',
+    'risk_factors',
+    'family_history',
+    'social_factors',
+    'clinical_changes',
+  ],
 };
 
 const SYSTEM = `Você é um assistente médico especializado em extrair informações estruturadas de notas clínicas. Analise as notas e extraia informações relevantes sobre: sintomas, observações comportamentais, fatores de risco, histórico familiar, fatores sociais, e mudanças no quadro clínico. Retorne tudo em português, conciso e sem inventar dados.`;
@@ -44,10 +50,10 @@ serve(async (req) => {
     const { patientId, notes } = await readJsonObject(req);
 
     if (typeof patientId !== 'string' || typeof notes !== 'string' || !notes.trim() || notes.length > 32_000) {
-      return new Response(
-        JSON.stringify({ error: 'patientId and notes are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+      return new Response(JSON.stringify({ error: 'patientId and notes are required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
@@ -67,10 +73,10 @@ serve(async (req) => {
 
     if (patientError) throw new RequestError('Não foi possível consultar o prontuário. Tente novamente.', 503);
     if (!patient) {
-      return new Response(
-        JSON.stringify({ error: 'Paciente não encontrado' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+      return new Response(JSON.stringify({ error: 'Paciente não encontrado' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const prompt = `Notas clínicas novas:
@@ -143,14 +149,17 @@ ${patient?.clinical_notes || 'Nenhuma nota anterior'}`;
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
-
   } catch (error) {
-    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (error instanceof RequestError)
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: error.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('process-clinical-notes error:');
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro ao processar notas' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Erro ao processar notas' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

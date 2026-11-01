@@ -1,20 +1,27 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
+import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
 import {
-  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
-} from "../_shared/quota.ts";
-import { callGemini, uploadToGeminiFiles, trackGeminiFile, cleanupGeminiFile, buildPatientSummary, parseModelObject, assertGeminiTextBudget, collapseBlankLines } from "../_shared/gemini.ts";
-import { assertAudioPath } from "../_shared/storage.ts";
-import { readJsonObject, RequestError } from "../_shared/http.ts";
-import { getSpecialtyPrompt, buildCustomTemplatePrompt } from "../_shared/specialty_prompts.ts";
-import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
+  callGemini,
+  uploadToGeminiFiles,
+  trackGeminiFile,
+  cleanupGeminiFile,
+  buildPatientSummary,
+  parseModelObject,
+  assertGeminiTextBudget,
+  collapseBlankLines,
+} from '../_shared/gemini.ts';
+import { assertAudioPath } from '../_shared/storage.ts';
+import { readJsonObject, RequestError } from '../_shared/http.ts';
+import { getSpecialtyPrompt, buildCustomTemplatePrompt } from '../_shared/specialty_prompts.ts';
+import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Vary': 'Origin',
+  Vary: 'Origin',
 };
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
@@ -46,21 +53,29 @@ Ignore ruídos de fundo, tosses e sons não-verbais. Retorne apenas a transcriç
 const DRAFT_SCHEMA = {
   type: 'object',
   properties: {
-    soap_note:              { type: 'string' },
-    whatsapp_message:       { type: 'string' },
-    clarifications:         { type: 'array', items: { type: 'string' } },
-    transcription_quality:  { type: 'string', enum: ['good', 'partial', 'poor'] },
+    soap_note: { type: 'string' },
+    whatsapp_message: { type: 'string' },
+    clarifications: { type: 'array', items: { type: 'string' } },
+    transcription_quality: { type: 'string', enum: ['good', 'partial', 'poor'] },
     differential_diagnoses: { type: 'array', items: { type: 'string' } },
-    drug_interaction_alerts:{ type: 'array', items: { type: 'string' } },
+    drug_interaction_alerts: { type: 'array', items: { type: 'string' } },
   },
   required: [
-    'soap_note', 'whatsapp_message', 'clarifications', 'transcription_quality',
-    'differential_diagnoses', 'drug_interaction_alerts',
+    'soap_note',
+    'whatsapp_message',
+    'clarifications',
+    'transcription_quality',
+    'differential_diagnoses',
+    'drug_interaction_alerts',
   ],
 };
 interface DraftGeneration {
-  soap_note: string; whatsapp_message: string; clarifications: string[];
-  transcription_quality: 'good' | 'partial' | 'poor'; differential_diagnoses: string[]; drug_interaction_alerts: string[];
+  soap_note: string;
+  whatsapp_message: string;
+  clarifications: string[];
+  transcription_quality: 'good' | 'partial' | 'poor';
+  differential_diagnoses: string[];
+  drug_interaction_alerts: string[];
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -73,35 +88,45 @@ serve(async (req) => {
   try {
     const { userId } = await requireUser(req);
     const {
-      patientId, draftId, chiefComplaint,
-      audioStoragePath, audioMimeType, consultationComments, userSpecialty, templateContent,
+      patientId,
+      draftId,
+      chiefComplaint,
+      audioStoragePath,
+      audioMimeType,
+      consultationComments,
+      userSpecialty,
+      templateContent,
     } = await readJsonObject(req);
 
-    if (typeof patientId !== 'string' || typeof draftId !== 'string' || typeof audioStoragePath !== 'string'
-      || (chiefComplaint !== undefined && typeof chiefComplaint !== 'string')
-      || (consultationComments !== undefined && (!Array.isArray(consultationComments) || !consultationComments.every(value => typeof value === 'string')))) {
-      return new Response(
-        JSON.stringify({ error: 'patientId e audioStoragePath são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+    if (
+      typeof patientId !== 'string' ||
+      typeof draftId !== 'string' ||
+      typeof audioStoragePath !== 'string' ||
+      (chiefComplaint !== undefined && typeof chiefComplaint !== 'string') ||
+      (consultationComments !== undefined &&
+        (!Array.isArray(consultationComments) || !consultationComments.every((value) => typeof value === 'string')))
+    ) {
+      return new Response(JSON.stringify({ error: 'patientId e audioStoragePath são obrigatórios' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // The service-role download bypasses storage RLS — enforce the per-user
     // path prefix here so no one can read (and then delete) another user's audio.
-    try { assertAudioPath(audioStoragePath, userId); } catch {
-      return new Response(
-        JSON.stringify({ error: 'audioStoragePath inválido' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+    try {
+      assertAudioPath(audioStoragePath, userId);
+    } catch {
+      return new Response(JSON.stringify({ error: 'audioStoragePath inválido' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    );
+    const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
     // Verify the patient belongs to the authenticated user.
     const { data: ownedPatient } = await supabase
@@ -111,16 +136,22 @@ serve(async (req) => {
       .eq('user_id', userId)
       .maybeSingle();
     if (!ownedPatient) {
-      return new Response(
-        JSON.stringify({ error: 'Paciente não encontrado' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+      return new Response(JSON.stringify({ error: 'Paciente não encontrado' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const { data: draft } = await supabase.from('consultation_drafts').select('id,audio_storage_path')
-      .eq('id', draftId).eq('patient_id', patientId).eq('user_id', userId).maybeSingle();
+    const { data: draft } = await supabase
+      .from('consultation_drafts')
+      .select('id,audio_storage_path')
+      .eq('id', draftId)
+      .eq('patient_id', patientId)
+      .eq('user_id', userId)
+      .maybeSingle();
     if (!draft) throw new Error('Rascunho não encontrado. Salve o áudio antes de processar.');
-    if (draft.audio_storage_path !== audioStoragePath) throw new RequestError('O áudio não pertence a este rascunho.', 403);
+    if (draft.audio_storage_path !== audioStoragePath)
+      throw new RequestError('O áudio não pertence a este rascunho.', 403);
     // Download from Storage
     const { data: audioBlob, error: downloadError } = await supabase.storage
       .from('audio-recordings')
@@ -129,11 +160,13 @@ serve(async (req) => {
     if (downloadError || !audioBlob) {
       throw new Error(`Erro ao baixar áudio: ${downloadError?.message}`);
     }
-    if (audioBlob.size > 25 * 1024 * 1024) throw new RequestError('Áudio acima de 25 MB. Divida a gravação antes de processar.', 413);
+    if (audioBlob.size > 25 * 1024 * 1024)
+      throw new RequestError('Áudio acima de 25 MB. Divida a gravação antes de processar.', 413);
 
     const audioBuffer = await audioBlob.arrayBuffer();
     const mimeType = typeof audioMimeType === 'string' ? audioMimeType.split(';')[0] : 'audio/webm';
-    if (!['audio/webm','audio/mp4','audio/ogg','audio/wav','audio/mpeg'].includes(mimeType)) throw new RequestError('Formato de áudio não suportado.');
+    if (!['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/mpeg'].includes(mimeType))
+      throw new RequestError('Formato de áudio não suportado.');
 
     let transcriptionReservation: { reservationId: string };
     try {
@@ -143,113 +176,137 @@ serve(async (req) => {
       throw err;
     }
     // Admission precedes external upload; owned source audio is retained.
-    const geminiFileUri = await uploadToGeminiFiles(GEMINI_API_KEY, audioBuffer, mimeType, { db: supabase, userId, patientId });
+    const geminiFileUri = await uploadToGeminiFiles(GEMINI_API_KEY, audioBuffer, mimeType, {
+      db: supabase,
+      userId,
+      patientId,
+    });
     try {
-    await trackGeminiFile(GEMINI_API_KEY, geminiFileUri, supabase, userId, patientId);
+      await trackGeminiFile(GEMINI_API_KEY, geminiFileUri, supabase, userId, patientId);
 
-    // Keep the owned source audio until the reviewed consultation is saved.
+      // Keep the owned source audio until the reviewed consultation is saved.
 
-    // Transcribe
-    const { text: transcription, usage: transUsage } = await callGemini(
-      GEMINI_API_KEY,
-      [
-        { fileData: { mimeType, fileUri: geminiFileUri } },
-        { text: TRANSCRIPTION_PROMPT },
-      ],
-      {
-        systemInstruction: 'Você é um transcritor de áudio de máxima fidelidade. Você transcreve EXCLUSIVAMENTE o que foi realmente dito, palavra por palavra. Você NUNCA inventa, completa ou imagina falas. Quando o áudio não é uma consulta médica, você transcreve o conteúdo real como ele é.',
-        temperature: 0.1,
-        maxOutputTokens: 8000,
-        thinkingBudget: 0,
-      },
-    );
-    await recordUsage(supabase, userId, creditsFromUsage(transUsage), transcriptionReservation.reservationId);
-
-    // Short-circuit: no consultation in this recording
-    if (transcription.trim().toUpperCase().includes('[SEM_CONSULTA]')) {
-      return new Response(
-        JSON.stringify({
-          transcription: '',
-          soapNote: 'Gravação não corresponde a uma consulta médica — revise ou descarte.',
-          whatsappMessage: '',
-          clarifications: [
-            'Esta gravação não parece ser uma consulta médica (parece uma conversa aleatória, teste, ou gravação acidental). Deseja descartar e usar o chat de Pergunta, ou houve mesmo uma consulta? Descreva os detalhes da consulta abaixo se quiser prosseguir.',
-          ],
-          transcriptionQuality: 'poor',
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      // Transcribe
+      const { text: transcription, usage: transUsage } = await callGemini(
+        GEMINI_API_KEY,
+        [{ fileData: { mimeType, fileUri: geminiFileUri } }, { text: TRANSCRIPTION_PROMPT }],
+        {
+          systemInstruction:
+            'Você é um transcritor de áudio de máxima fidelidade. Você transcreve EXCLUSIVAMENTE o que foi realmente dito, palavra por palavra. Você NUNCA inventa, completa ou imagina falas. Quando o áudio não é uma consulta médica, você transcreve o conteúdo real como ele é.',
+          temperature: 0.1,
+          maxOutputTokens: 8000,
+          thinkingBudget: 0,
+        },
       );
-    }
+      await recordUsage(supabase, userId, creditsFromUsage(transUsage), transcriptionReservation.reservationId);
 
-    // Generate draft SOAP
-    const patientSummary = buildPatientSummary(ownedPatient, chiefComplaint);
-    const commentsText = Array.isArray(consultationComments) && consultationComments.length > 0
-      ? `\n\nObservações do médico durante a consulta:\n${consultationComments.join('\n')}`
-      : '';
+      // Short-circuit: no consultation in this recording
+      if (transcription.trim().toUpperCase().includes('[SEM_CONSULTA]')) {
+        return new Response(
+          JSON.stringify({
+            transcription: '',
+            soapNote: 'Gravação não corresponde a uma consulta médica — revise ou descarte.',
+            whatsappMessage: '',
+            clarifications: [
+              'Esta gravação não parece ser uma consulta médica (parece uma conversa aleatória, teste, ou gravação acidental). Deseja descartar e usar o chat de Pergunta, ou houve mesmo uma consulta? Descreva os detalhes da consulta abaixo se quiser prosseguir.',
+            ],
+            transcriptionQuality: 'poor',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
 
-    const draftParts = [{ text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsText}` }];
-    const instruction = typeof templateContent === 'string' && templateContent.trim() ? buildCustomTemplatePrompt(templateContent) : getSpecialtyPrompt(userSpecialty);
-    assertGeminiTextBudget(draftParts, instruction);
-    const draftReservation = await checkQuota(supabase, userId, 100);
-    const { text: draftRaw, usage: draftUsage } = await callGemini(
-      GEMINI_API_KEY,
-      draftParts,
-      {
+      // Generate draft SOAP
+      const patientSummary = buildPatientSummary(ownedPatient, chiefComplaint);
+      const commentsText =
+        Array.isArray(consultationComments) && consultationComments.length > 0
+          ? `\n\nObservações do médico durante a consulta:\n${consultationComments.join('\n')}`
+          : '';
+
+      const draftParts = [
+        {
+          text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsText}`,
+        },
+      ];
+      const instruction =
+        typeof templateContent === 'string' && templateContent.trim()
+          ? buildCustomTemplatePrompt(templateContent)
+          : getSpecialtyPrompt(userSpecialty);
+      assertGeminiTextBudget(draftParts, instruction);
+      const draftReservation = await checkQuota(supabase, userId, 100);
+      const { text: draftRaw, usage: draftUsage } = await callGemini(GEMINI_API_KEY, draftParts, {
         systemInstruction: instruction,
         temperature: 0.3,
         maxOutputTokens: 2000,
         thinkingBudget: 512,
         responseMimeType: 'application/json',
         responseSchema: DRAFT_SCHEMA,
-      },
-    );
-    await recordUsage(supabase, userId, creditsFromUsage(draftUsage), draftReservation.reservationId);
+      });
+      await recordUsage(supabase, userId, creditsFromUsage(draftUsage), draftReservation.reservationId);
 
-    let soapNote = '';
-    let whatsappMessage = '';
-    let clarifications: string[] = [];
-    let transcriptionQuality: 'good' | 'partial' | 'poor' = 'good';
-    let differentialDiagnoses: string[] = [];
-    let drugInteractionAlerts: string[] = [];
-    const parsed = parseModelObject<DraftGeneration>(draftRaw, DRAFT_SCHEMA);
-    {
-      soapNote              = parsed.soap_note              ?? '';
-      whatsappMessage       = parsed.whatsapp_message       ?? '';
-      clarifications        = Array.isArray(parsed.clarifications)         ? parsed.clarifications         : [];
-      transcriptionQuality  = parsed.transcription_quality                 ?? 'good';
-      differentialDiagnoses = Array.isArray(parsed.differential_diagnoses) ? parsed.differential_diagnoses : [];
-      drugInteractionAlerts = Array.isArray(parsed.drug_interaction_alerts)? parsed.drug_interaction_alerts: [];
-    }
-    soapNote        = collapseBlankLines(soapNote);
-    whatsappMessage = collapseBlankLines(whatsappMessage);
-    if (!soapNote) throw new Error('Evolução vazia. O áudio foi preservado.');
-    const result = {
-      transcription, soapDraft: soapNote, whatsappDraft: whatsappMessage, clarifications, transcriptionQuality,
-      differentialDiagnoses, drugInteractionAlerts, originalComments: consultationComments ?? [], audioMimeType: mimeType,
-    };
-    const { error: draftError } = await supabase.from('consultation_drafts')
-      .update({ content: result, status: 'review', updated_at: new Date().toISOString() })
-      .eq('id', draftId).eq('user_id', userId);
-    if (draftError) throw draftError;
+      let soapNote = '';
+      let whatsappMessage = '';
+      let clarifications: string[] = [];
+      let transcriptionQuality: 'good' | 'partial' | 'poor' = 'good';
+      let differentialDiagnoses: string[] = [];
+      let drugInteractionAlerts: string[] = [];
+      const parsed = parseModelObject<DraftGeneration>(draftRaw, DRAFT_SCHEMA);
+      {
+        soapNote = parsed.soap_note ?? '';
+        whatsappMessage = parsed.whatsapp_message ?? '';
+        clarifications = Array.isArray(parsed.clarifications) ? parsed.clarifications : [];
+        transcriptionQuality = parsed.transcription_quality ?? 'good';
+        differentialDiagnoses = Array.isArray(parsed.differential_diagnoses) ? parsed.differential_diagnoses : [];
+        drugInteractionAlerts = Array.isArray(parsed.drug_interaction_alerts) ? parsed.drug_interaction_alerts : [];
+      }
+      soapNote = collapseBlankLines(soapNote);
+      whatsappMessage = collapseBlankLines(whatsappMessage);
+      if (!soapNote) throw new Error('Evolução vazia. O áudio foi preservado.');
+      const result = {
+        transcription,
+        soapDraft: soapNote,
+        whatsappDraft: whatsappMessage,
+        clarifications,
+        transcriptionQuality,
+        differentialDiagnoses,
+        drugInteractionAlerts,
+        originalComments: consultationComments ?? [],
+        audioMimeType: mimeType,
+      };
+      const { error: draftError } = await supabase
+        .from('consultation_drafts')
+        .update({ content: result, status: 'review', updated_at: new Date().toISOString() })
+        .eq('id', draftId)
+        .eq('user_id', userId);
+      if (draftError) throw draftError;
 
-    return new Response(
-      JSON.stringify({
-        transcription, soapNote, whatsappMessage, clarifications, transcriptionQuality,
-        differentialDiagnoses, drugInteractionAlerts,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+      return new Response(
+        JSON.stringify({
+          transcription,
+          soapNote,
+          whatsappMessage,
+          clarifications,
+          transcriptionQuality,
+          differentialDiagnoses,
+          drugInteractionAlerts,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     } finally {
       await cleanupGeminiFile(GEMINI_API_KEY, geminiFileUri, supabase, userId);
     }
   } catch (error) {
-    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (error instanceof RequestError)
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: error.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
     if (error instanceof QuotaExceededError) return quotaResponse(error, corsHeaders);
     console.error('transcribe-consultation failed');
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

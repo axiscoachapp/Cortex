@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, FileText, AlertCircle, CheckCircle, AlertTriangle, Stethoscope, Pill } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  AlertCircle,
+  CheckCircle,
+  AlertTriangle,
+  Stethoscope,
+  Pill,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,12 +29,11 @@ interface ConsultationReviewModalProps {
   transcriptionQuality: 'good' | 'partial' | 'poor';
   differentialDiagnoses: string[];
   drugInteractionAlerts: string[];
-  onConfirm: (comments: string, reviewedText?:string) => void;
-  onCancel: (comments: string, reviewedText?:string) => void;
+  onConfirm: (comments: string, reviewedText?: string) => void;
+  onCancel: (comments: string, reviewedText?: string) => void;
   initialComments?: string;
   isGenerating: boolean;
 }
-
 
 const qualityConfig = {
   good: {
@@ -62,7 +70,7 @@ export function ConsultationReviewModal({
   const [transcriptionExpanded, setTranscriptionExpanded] = useState(false);
   const [answers, setAnswers] = useState<string[]>([]);
   const [extraComments, setExtraComments] = useState('');
-  const [reviewedText,setReviewedText]=useState(soapDraft);
+  const [reviewedText, setReviewedText] = useState(soapDraft);
 
   useEffect(() => {
     if (open) {
@@ -71,7 +79,7 @@ export function ConsultationReviewModal({
       setReviewedText(soapDraft);
       setTranscriptionExpanded(transcriptionQuality === 'poor');
     }
-  }, [open, clarifications, transcriptionQuality, initialComments,soapDraft]);
+  }, [open, clarifications, transcriptionQuality, initialComments, soapDraft]);
 
   const buildFinalComments = (): string => {
     const parts: string[] = [];
@@ -87,20 +95,25 @@ export function ConsultationReviewModal({
   const QualityIcon = quality.icon;
 
   const hasClarifications = clarifications.length > 0;
-  const anyAnswered = answers.some(a => a.trim().length > 0);
+  const anyAnswered = answers.some((a) => a.trim().length > 0);
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v && !isGenerating) onCancel(buildFinalComments(),reviewedText); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v && !isGenerating) onCancel(buildFinalComments(), reviewedText);
+      }}
+    >
       <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-2xl max-h-[92vh] flex flex-col gap-0 p-0">
         <DialogHeader className="px-4 md:px-6 py-3 md:py-4 border-b border-border/50 shrink-0">
           <div className="flex items-center justify-between gap-3">
-            <DialogTitle className="text-base font-semibold">
-              Revisão da Consulta — {patientName}
-            </DialogTitle>
-            <span className={cn(
-              'flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border shrink-0',
-              quality.className,
-            )}>
+            <DialogTitle className="text-base font-semibold">Revisão da Consulta — {patientName}</DialogTitle>
+            <span
+              className={cn(
+                'flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border shrink-0',
+                quality.className,
+              )}
+            >
               <QualityIcon className="w-3 h-3" />
               {quality.label}
             </span>
@@ -111,7 +124,6 @@ export function ConsultationReviewModal({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto scrollbar-thin px-4 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5">
-
           {/* SOAP draft */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -120,8 +132,17 @@ export function ConsultationReviewModal({
               </div>
               <span className="text-sm font-semibold text-medical-blue">Rascunho gerado pela IA</span>
             </div>
-            <label className="block text-xs text-muted-foreground" htmlFor="reviewed-soap">Edite diretamente o texto que será registrado</label>
-            <textarea id="reviewed-soap" aria-label="Texto revisado da consulta" className="w-full min-h-64 rounded-lg border bg-background p-3 text-sm leading-relaxed" value={reviewedText} onChange={e=>setReviewedText(e.target.value)} disabled={isGenerating}/>
+            <label className="block text-xs text-muted-foreground" htmlFor="reviewed-soap">
+              Edite diretamente o texto que será registrado
+            </label>
+            <textarea
+              id="reviewed-soap"
+              aria-label="Texto revisado da consulta"
+              className="w-full min-h-64 rounded-lg border bg-background p-3 text-sm leading-relaxed"
+              value={reviewedText}
+              onChange={(e) => setReviewedText(e.target.value)}
+              disabled={isGenerating}
+            />
           </div>
 
           {/* Drug interaction alerts — highest priority, show first */}
@@ -129,9 +150,7 @@ export function ConsultationReviewModal({
             <div className="rounded-lg border border-red-200/70 bg-red-50/60 p-3 space-y-2">
               <div className="flex items-center gap-2">
                 <Pill className="w-4 h-4 text-red-600 shrink-0" />
-                <span className="text-sm font-semibold text-red-700">
-                  Alertas de Interação Medicamentosa
-                </span>
+                <span className="text-sm font-semibold text-red-700">Alertas de Interação Medicamentosa</span>
                 <span className="ml-auto text-[10px] text-red-500/70 font-medium">Sugestão da IA — verificar</span>
               </div>
               <ul className="space-y-1.5">
@@ -150,10 +169,10 @@ export function ConsultationReviewModal({
             <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 p-3 space-y-2">
               <div className="flex items-center gap-2">
                 <Stethoscope className="w-4 h-4 text-amber-600 shrink-0" />
-                <span className="text-sm font-semibold text-amber-700">
-                  Hipóteses Diagnósticas
+                <span className="text-sm font-semibold text-amber-700">Hipóteses Diagnósticas</span>
+                <span className="ml-auto text-[10px] text-amber-500/70 font-medium">
+                  Sugestão da IA — contexto clínico
                 </span>
-                <span className="ml-auto text-[10px] text-amber-500/70 font-medium">Sugestão da IA — contexto clínico</span>
               </div>
               <ul className="space-y-1.5">
                 {differentialDiagnoses.map((dx, i) => (
@@ -176,9 +195,11 @@ export function ConsultationReviewModal({
                 className="w-full flex items-center justify-between px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors text-left"
               >
                 <span className="text-sm font-medium text-foreground/80">Ver transcrição completa</span>
-                {transcriptionExpanded
-                  ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                {transcriptionExpanded ? (
+                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                )}
               </button>
               {transcriptionExpanded && (
                 <div className="px-4 py-3 text-xs leading-relaxed text-foreground/70 whitespace-pre-wrap max-h-56 overflow-y-auto scrollbar-thin border-t border-border/40">
@@ -199,7 +220,8 @@ export function ConsultationReviewModal({
                   </span>
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Responda as perguntas abaixo para garantir que o SOAP final seja preciso. Deixe em branco se não aplicável.
+                  Responda as perguntas abaixo para garantir que o SOAP final seja preciso. Deixe em branco se não
+                  aplicável.
                 </p>
               </div>
               {clarifications.map((question, i) => (
@@ -259,17 +281,22 @@ export function ConsultationReviewModal({
         </div>
 
         <DialogFooter className="px-4 md:px-6 py-3 md:py-4 border-t border-border/50 shrink-0 flex-col-reverse gap-2 sm:flex-row sm:gap-0">
-          <Button variant="outline" onClick={() => onCancel(buildFinalComments(),reviewedText)} disabled={isGenerating} className="w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => onCancel(buildFinalComments(), reviewedText)}
+            disabled={isGenerating}
+            className="w-full sm:w-auto"
+          >
             Fechar e retomar depois
           </Button>
           <Button
-            onClick={() => onConfirm(buildFinalComments(),reviewedText)}
+            onClick={() => onConfirm(buildFinalComments(), reviewedText)}
             disabled={isGenerating || !reviewedText.trim()}
             className="gap-2 w-full sm:w-auto sm:min-w-[160px]"
           >
             {isGenerating
               ? 'Gerando evolução...'
-              : (anyAnswered || extraComments.trim())
+              : anyAnswered || extraComments.trim()
                 ? 'Gerar com observações'
                 : 'Confirmar e salvar'}
           </Button>

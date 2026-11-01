@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  ArrowLeft, FileStack, Plus, Search, Pencil, Copy, Trash2, Loader2,
-  Sparkles, FileText,
-} from 'lucide-react';
+import { ArrowLeft, FileStack, Plus, Search, Pencil, Copy, Trash2, Loader2, Sparkles, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -48,13 +43,22 @@ export default function TemplatesPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const { data: templates = [], isLoading, isError, refetch } = useQuery<DocumentTemplate[]>({
+  const {
+    data: templates = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<DocumentTemplate[]>({
     queryKey: ['document-templates', user?.id],
     queryFn: async () => {
-      const data = await fetchAllRows<DocumentTemplate>((from, to) => supabase
-        .from('document_templates')
-        .select('id, user_id, name, description, content, created_at')
-        .order('created_at', { ascending: false }).order('id').range(from, to));
+      const data = await fetchAllRows<DocumentTemplate>((from, to) =>
+        supabase
+          .from('document_templates')
+          .select('id, user_id, name, description, content, created_at')
+          .order('created_at', { ascending: false })
+          .order('id')
+          .range(from, to),
+      );
       return data;
     },
     enabled: !!user?.id,
@@ -64,17 +68,24 @@ export default function TemplatesPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return templates;
-    return templates.filter(t =>
-      t.name.toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q));
+    return templates.filter((t) => t.name.toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q));
   }, [templates, search]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['document-templates', user?.id] });
-  const editDirty = !!editing && (!editing.id || editDraft.name !== editing.name || editDraft.description !== (editing.description ?? '') || editDraft.content !== editing.content);
+  const editDirty =
+    !!editing &&
+    (!editing.id ||
+      editDraft.name !== editing.name ||
+      editDraft.description !== (editing.description ?? '') ||
+      editDraft.content !== editing.content);
   const createDirty = createOpen && (!!createInput.trim() || !!baseTemplateId);
   const canClose = useUnsavedChanges(editDirty || createDirty);
   useEffect(() => {
     if (!editDirty && !createDirty) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [editDirty, createDirty]);
@@ -83,7 +94,10 @@ export default function TemplatesPage() {
   };
   const closeCreate = (next: boolean) => {
     if (creating || !canClose(next)) return;
-    if (!next) { setCreateInput(''); setBaseTemplateId(''); }
+    if (!next) {
+      setCreateInput('');
+      setBaseTemplateId('');
+    }
     setCreateOpen(next);
   };
 
@@ -92,8 +106,11 @@ export default function TemplatesPage() {
     setCreating(true);
     try {
       if (createMode === 'existing') {
-        const base = templates.find(t => t.id === baseTemplateId);
-        if (!base) { toast({ title: 'Escolha um modelo de origem', variant: 'destructive' }); return; }
+        const base = templates.find((t) => t.id === baseTemplateId);
+        if (!base) {
+          toast({ title: 'Escolha um modelo de origem', variant: 'destructive' });
+          return;
+        }
         const { error } = await supabase.from('document_templates').insert({
           user_id: user.id,
           name: `${base.name} (cópia)`,
@@ -117,8 +134,16 @@ export default function TemplatesPage() {
           const body = await functionErrorBody(error);
           throw new Error(typeof body?.error === 'string' ? body.error : 'Falha na geração');
         }
-        if (!data || typeof data.name !== 'string' || typeof data.content !== 'string' || !data.content.trim()) throw new Error('Modelo inválido');
-        setEditing({ id: '', user_id: user.id, name: data.name, description: data.description ?? '', content: data.content, created_at: new Date().toISOString() });
+        if (!data || typeof data.name !== 'string' || typeof data.content !== 'string' || !data.content.trim())
+          throw new Error('Modelo inválido');
+        setEditing({
+          id: '',
+          user_id: user.id,
+          name: data.name,
+          description: data.description ?? '',
+          content: data.content,
+          created_at: new Date().toISOString(),
+        });
         setEditDraft({ name: data.name, description: data.description ?? '', content: data.content });
         setTemplateReviewed(false);
         queryClient.invalidateQueries({ queryKey: ['usage-daily', user.id] });
@@ -128,7 +153,11 @@ export default function TemplatesPage() {
       setCreateInput('');
       invalidate();
     } catch {
-      toast({ title: 'Erro ao criar modelo', description: 'Seu rascunho foi mantido. Tente novamente.', variant: 'destructive' });
+      toast({
+        title: 'Erro ao criar modelo',
+        description: 'Seu rascunho foi mantido. Tente novamente.',
+        variant: 'destructive',
+      });
     } finally {
       setCreating(false);
     }
@@ -141,10 +170,18 @@ export default function TemplatesPage() {
 
   const handleSaveEdit = async () => {
     if (!editing || savingEdit || (!editing.id && !templateReviewed)) return;
-    if (!editDraft.name.trim() || !editDraft.content.trim()) { toast({ title: 'Preencha o nome e o conteúdo do modelo', variant: 'destructive' }); return; }
+    if (!editDraft.name.trim() || !editDraft.content.trim()) {
+      toast({ title: 'Preencha o nome e o conteúdo do modelo', variant: 'destructive' });
+      return;
+    }
     setSavingEdit(true);
     try {
-      const payload = { name: editDraft.name.trim(), description: editDraft.description.trim() || null, content: editDraft.content, updated_at: new Date().toISOString() };
+      const payload = {
+        name: editDraft.name.trim(),
+        description: editDraft.description.trim() || null,
+        content: editDraft.content,
+        updated_at: new Date().toISOString(),
+      };
       const { error } = editing.id
         ? await supabase.from('document_templates').update(payload).eq('id', editing.id)
         : await supabase.from('document_templates').insert({ ...payload, user_id: user!.id });
@@ -153,7 +190,11 @@ export default function TemplatesPage() {
       setEditing(null);
       invalidate();
     } catch {
-      toast({ title: 'Erro ao salvar', description: 'Suas alterações foram mantidas. Tente novamente.', variant: 'destructive' });
+      toast({
+        title: 'Erro ao salvar',
+        description: 'Suas alterações foram mantidas. Tente novamente.',
+        variant: 'destructive',
+      });
     } finally {
       setSavingEdit(false);
     }
@@ -163,11 +204,17 @@ export default function TemplatesPage() {
     if (!user?.id) return;
     setBusyId(t.id);
     const { error } = await supabase.from('document_templates').insert({
-      user_id: user.id, name: `${t.name} (cópia)`, description: t.description, content: t.content,
+      user_id: user.id,
+      name: `${t.name} (cópia)`,
+      description: t.description,
+      content: t.content,
     });
     setBusyId(null);
     if (error) toast({ title: 'Erro ao duplicar', variant: 'destructive' });
-    else { toast({ title: 'Modelo duplicado' }); invalidate(); }
+    else {
+      toast({ title: 'Modelo duplicado' });
+      invalidate();
+    }
   };
 
   const handleDelete = async (t: DocumentTemplate) => {
@@ -176,7 +223,10 @@ export default function TemplatesPage() {
     const { error } = await supabase.from('document_templates').delete().eq('id', t.id);
     setBusyId(null);
     if (error) toast({ title: 'Erro ao excluir', variant: 'destructive' });
-    else { toast({ title: 'Modelo excluído' }); invalidate(); }
+    else {
+      toast({ title: 'Modelo excluído' });
+      invalidate();
+    }
   };
 
   return (
@@ -195,7 +245,16 @@ export default function TemplatesPage() {
               </p>
             </div>
           </div>
-          <Button variant="medical" size="sm" aria-label="Criar meu modelo" className="gap-1.5" onClick={() => { setCreateMode('ai'); setCreateOpen(true); }}>
+          <Button
+            variant="medical"
+            size="sm"
+            aria-label="Criar meu modelo"
+            className="gap-1.5"
+            onClick={() => {
+              setCreateMode('ai');
+              setCreateOpen(true);
+            }}
+          >
             <Sparkles className="w-4 h-4" />
             <span className="hidden sm:inline">Criar meu modelo</span>
           </Button>
@@ -208,26 +267,36 @@ export default function TemplatesPage() {
           <Input
             aria-label="Buscar modelos"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Pesquise pelo nome do modelo"
             className="pl-9"
           />
         </div>
 
         {isLoading ? (
-          <div className="space-y-2">{[0, 1, 2].map(i => <div key={i} className="h-20 rounded-xl bg-muted/40 animate-pulse" />)}</div>
-        ) : isError ? (
-          <div role="alert" className="text-center py-10 space-y-3"><p>Não foi possível carregar os modelos.</p><Button variant="outline" onClick={() => refetch()}>Tentar novamente</Button></div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-14 text-sm text-muted-foreground">
-            Nenhum modelo encontrado.
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-20 rounded-xl bg-muted/40 animate-pulse" />
+            ))}
           </div>
+        ) : isError ? (
+          <div role="alert" className="text-center py-10 space-y-3">
+            <p>Não foi possível carregar os modelos.</p>
+            <Button variant="outline" onClick={() => refetch()}>
+              Tentar novamente
+            </Button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-14 text-sm text-muted-foreground">Nenhum modelo encontrado.</div>
         ) : (
           <div className="space-y-2">
-            {filtered.map(t => {
+            {filtered.map((t) => {
               const builtin = t.user_id === null;
               return (
-                <div key={t.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border/60 bg-white shadow-[0_1px_4px_hsl(0_0%_0%/0.04)]">
+                <div
+                  key={t.id}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border/60 bg-white shadow-[0_1px_4px_hsl(0_0%_0%/0.04)]"
+                >
                   <div className="w-9 h-9 rounded-lg bg-medical-blue-light flex items-center justify-center shrink-0">
                     <FileText className="w-4 h-4 text-medical-blue" />
                   </div>
@@ -235,23 +304,49 @@ export default function TemplatesPage() {
                     <p className="text-sm font-semibold text-foreground truncate">{t.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{t.description ?? '—'}</p>
                   </div>
-                  <span className={cn(
-                    'text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0',
-                    builtin ? 'bg-medical-blue-light text-medical-blue' : 'bg-green-100 text-green-700',
-                  )}>
+                  <span
+                    className={cn(
+                      'text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0',
+                      builtin ? 'bg-medical-blue-light text-medical-blue' : 'bg-green-100 text-green-700',
+                    )}
+                  >
                     {builtin ? 'Cortex' : 'Meu'}
                   </span>
                   <div className="flex items-center gap-0.5 shrink-0">
                     {!builtin && (
-                      <Button size="icon" variant="ghost" className="h-8 w-8" title="Editar" onClick={() => openEdit(t)}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        title="Editar"
+                        onClick={() => openEdit(t)}
+                      >
                         <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
                     )}
-                    <Button size="icon" variant="ghost" className="h-8 w-8" title="Duplicar" disabled={busyId === t.id} onClick={() => handleDuplicate(t)}>
-                      {busyId === t.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      title="Duplicar"
+                      disabled={busyId === t.id}
+                      onClick={() => handleDuplicate(t)}
+                    >
+                      {busyId === t.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
                     </Button>
                     {!builtin && (
-                      <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-destructive" title="Excluir" disabled={busyId === t.id} onClick={() => handleDelete(t)}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 hover:text-destructive"
+                        title="Excluir"
+                        disabled={busyId === t.id}
+                        onClick={() => handleDelete(t)}
+                      >
                         <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
                     )}
@@ -263,9 +358,9 @@ export default function TemplatesPage() {
         )}
 
         <p className="text-[11px] text-muted-foreground leading-relaxed pt-2">
-          O modelo escolhido ao iniciar uma gravação substitui a estrutura SOAP padrão. Use títulos
-          (##), itens com descrição e comandos condicionais entre parênteses — ex.:
-          "(incluir apenas se mencionado explicitamente na transcrição. Caso contrário, omitir completamente)".
+          O modelo escolhido ao iniciar uma gravação substitui a estrutura SOAP padrão. Use títulos (##), itens com
+          descrição e comandos condicionais entre parênteses — ex.: "(incluir apenas se mencionado explicitamente na
+          transcrição. Caso contrário, omitir completamente)".
         </p>
       </main>
 
@@ -274,15 +369,17 @@ export default function TemplatesPage() {
         <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-lg max-h-[92vh] flex flex-col gap-0 p-0">
           <DialogHeader className="px-5 py-4 border-b border-border/50 shrink-0">
             <DialogTitle className="text-base font-semibold">Criar modelo</DialogTitle>
-            <DialogDescription className="sr-only">Crie um modelo a partir de uma estrutura vazia de especialidade ou de um modelo existente.</DialogDescription>
+            <DialogDescription className="sr-only">
+              Crie um modelo a partir de uma estrutura vazia de especialidade ou de um modelo existente.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
             <div className="grid grid-cols-3 gap-2">
-              {([
-                { value: 'ai' as const,       label: 'Criar com IA',        hint: 'Descreva o que deseja',        icon: Sparkles },
+              {[
+                { value: 'ai' as const, label: 'Criar com IA', hint: 'Descreva o que deseja', icon: Sparkles },
 
-                { value: 'existing' as const, label: 'De um existente',     hint: 'Duplique e edite',             icon: Copy },
-              ]).map(({ value, label, hint, icon: Icon }) => (
+                { value: 'existing' as const, label: 'De um existente', hint: 'Duplique e edite', icon: Copy },
+              ].map(({ value, label, hint, icon: Icon }) => (
                 <button
                   key={value}
                   type="button"
@@ -295,7 +392,12 @@ export default function TemplatesPage() {
                       : 'border-border/60 bg-white hover:border-medical-blue/40',
                   )}
                 >
-                  <Icon className={cn('w-3.5 h-3.5 mb-1', createMode === value ? 'text-medical-blue' : 'text-muted-foreground')} />
+                  <Icon
+                    className={cn(
+                      'w-3.5 h-3.5 mb-1',
+                      createMode === value ? 'text-medical-blue' : 'text-muted-foreground',
+                    )}
+                  />
                   <p className="text-[11px] font-semibold leading-tight">{label}</p>
                   <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{hint}</p>
                 </button>
@@ -304,29 +406,52 @@ export default function TemplatesPage() {
 
             {createMode === 'existing' ? (
               <div className="space-y-1.5">
-                <label htmlFor="template-source" className="text-xs font-medium text-foreground/80">Modelo de origem</label>
+                <label htmlFor="template-source" className="text-xs font-medium text-foreground/80">
+                  Modelo de origem
+                </label>
                 <select
                   id="template-source"
                   value={baseTemplateId}
-                  onChange={e => setBaseTemplateId(e.target.value)}
+                  onChange={(e) => setBaseTemplateId(e.target.value)}
                   className="w-full h-10 px-3 rounded-lg text-sm border border-border bg-background"
                 >
                   <option value="">Selecionar…</option>
-                  {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             ) : (
               <div className="space-y-2">
-                <label htmlFor="template-specialty" className="text-xs font-medium">Estrutura da consulta</label>
-                <select id="template-specialty" className="w-full h-10 rounded-md border bg-background px-3" value={createInput} onChange={e => setCreateInput(e.target.value)}>
-                  <option value="">Selecione…</option><option value="ginecologia">Ginecologia</option><option value="prenatal">Pré-natal</option><option value="urologia">Urologia</option><option value="retorno">Retorno</option><option value="geral">Consulta geral</option>
+                <label htmlFor="template-specialty" className="text-xs font-medium">
+                  Estrutura da consulta
+                </label>
+                <select
+                  id="template-specialty"
+                  className="w-full h-10 rounded-md border bg-background px-3"
+                  value={createInput}
+                  onChange={(e) => setCreateInput(e.target.value)}
+                >
+                  <option value="">Selecione…</option>
+                  <option value="ginecologia">Ginecologia</option>
+                  <option value="prenatal">Pré-natal</option>
+                  <option value="urologia">Urologia</option>
+                  <option value="retorno">Retorno</option>
+                  <option value="geral">Consulta geral</option>
                 </select>
-                <p className="text-xs text-muted-foreground">A geração usa apenas a estrutura selecionada. Revise o rascunho antes de ativar. Para outros formatos, duplique um modelo e edite os campos manualmente.</p>
+                <p className="text-xs text-muted-foreground">
+                  A geração usa apenas a estrutura selecionada. Revise o rascunho antes de ativar. Para outros formatos,
+                  duplique um modelo e edite os campos manualmente.
+                </p>
               </div>
             )}
           </div>
           <div className="px-5 py-3 border-t border-border/50 shrink-0 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => closeCreate(false)} disabled={creating}>Cancelar</Button>
+            <Button variant="outline" size="sm" onClick={() => closeCreate(false)} disabled={creating}>
+              Cancelar
+            </Button>
             <Button size="sm" className="gap-1.5" onClick={handleCreate} disabled={creating}>
               {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
               {createMode === 'existing' ? 'Duplicar' : 'Criar modelo'}
@@ -336,29 +461,70 @@ export default function TemplatesPage() {
       </Dialog>
 
       {/* Edit dialog */}
-      <Dialog open={!!editing} onOpenChange={(v) => { if (!v) closeEditor(); }}>
+      <Dialog
+        open={!!editing}
+        onOpenChange={(v) => {
+          if (!v) closeEditor();
+        }}
+      >
         <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-2xl max-h-[92vh] flex flex-col gap-0 p-0">
           <DialogHeader className="px-5 py-4 border-b border-border/50 shrink-0">
-            <DialogTitle className="text-base font-semibold">{editing?.id ? 'Editar modelo' : 'Revisar rascunho do modelo'}</DialogTitle>
-            <DialogDescription className="sr-only">Revise o nome, a descrição e as instruções do modelo antes de salvar.</DialogDescription>
+            <DialogTitle className="text-base font-semibold">
+              {editing?.id ? 'Editar modelo' : 'Revisar rascunho do modelo'}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Revise o nome, a descrição e as instruções do modelo antes de salvar.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-            <label htmlFor="template-name" className="text-xs font-medium">Nome</label>
-            <Input id="template-name" value={editDraft.name} onChange={e => setEditDraft(d => ({ ...d, name: e.target.value }))} placeholder="Nome" />
-            <label htmlFor="template-description" className="text-xs font-medium">Descrição</label>
-            <Input id="template-description" value={editDraft.description} onChange={e => setEditDraft(d => ({ ...d, description: e.target.value }))} placeholder="Descrição (1 frase)" />
-            <label htmlFor="template-content" className="text-xs font-medium">Conteúdo do modelo</label>
+            <label htmlFor="template-name" className="text-xs font-medium">
+              Nome
+            </label>
+            <Input
+              id="template-name"
+              value={editDraft.name}
+              onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))}
+              placeholder="Nome"
+            />
+            <label htmlFor="template-description" className="text-xs font-medium">
+              Descrição
+            </label>
+            <Input
+              id="template-description"
+              value={editDraft.description}
+              onChange={(e) => setEditDraft((d) => ({ ...d, description: e.target.value }))}
+              placeholder="Descrição (1 frase)"
+            />
+            <label htmlFor="template-content" className="text-xs font-medium">
+              Conteúdo do modelo
+            </label>
             <Textarea
               id="template-content"
               value={editDraft.content}
-              onChange={e => setEditDraft(d => ({ ...d, content: e.target.value }))}
+              onChange={(e) => setEditDraft((d) => ({ ...d, content: e.target.value }))}
               className="min-h-[380px] text-xs font-mono leading-relaxed"
             />
           </div>
-          {!editing?.id && <label className="px-5 py-2 text-xs flex items-start gap-2"><input type="checkbox" checked={templateReviewed} onChange={e => setTemplateReviewed(e.target.checked)} />Revisei a estrutura e confirmei que não contém dados de pacientes, achados ou negativas predefinidas.</label>}
+          {!editing?.id && (
+            <label className="px-5 py-2 text-xs flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={templateReviewed}
+                onChange={(e) => setTemplateReviewed(e.target.checked)}
+              />
+              Revisei a estrutura e confirmei que não contém dados de pacientes, achados ou negativas predefinidas.
+            </label>
+          )}
           <div className="px-5 py-3 border-t border-border/50 shrink-0 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={closeEditor} disabled={savingEdit}>Cancelar</Button>
-            <Button size="sm" className="gap-1.5" onClick={handleSaveEdit} disabled={savingEdit || (!editing?.id && !templateReviewed)}>
+            <Button variant="outline" size="sm" onClick={closeEditor} disabled={savingEdit}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={handleSaveEdit}
+              disabled={savingEdit || (!editing?.id && !templateReviewed)}
+            >
               {savingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Salvar modelo
             </Button>

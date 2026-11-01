@@ -47,9 +47,9 @@ export interface Appointment {
 }
 
 export interface ProfileUpdates {
-  diagnoses:   Array<{ description: string }>;
+  diagnoses: Array<{ description: string }>;
   medications: Array<{ name: string; dosage: string; instructions: string }>;
-  allergies:   string[];
+  allergies: string[];
 }
 
 export interface ChatMessage {
@@ -61,6 +61,28 @@ export interface ChatMessage {
   profileUpdates?: ProfileUpdates;
   /** For 'soap' messages: the consultation row this note was saved to. */
   consultationId?: string;
-  sources?: Array<{id:string;type:string;label:string;date:string;excerpt:string;truncated?:boolean;sourceVersion?:string;sourceReference?:string;reviewedBy?:string;reviewedAt?:string;ownerUserId?:string;shared?:boolean;authorizationRevision?:number;sourceReviewRevision?:number;reviewStatus?:string}>;
-  coverage?: {consultationsTotal?:number;documentsTotal?:number;consultationsRetrieved?:number;documentsRetrieved?:number;limited?:boolean};
+  sources?: Array<{
+    id: string;
+    type: string;
+    label: string;
+    date: string;
+    excerpt: string;
+    truncated?: boolean;
+    sourceVersion?: string;
+    sourceReference?: string;
+    reviewedBy?: string;
+    reviewedAt?: string;
+    ownerUserId?: string;
+    shared?: boolean;
+    authorizationRevision?: number;
+    sourceReviewRevision?: number;
+    reviewStatus?: string;
+  }>;
+  coverage?: {
+    consultationsTotal?: number;
+    documentsTotal?: number;
+    consultationsRetrieved?: number;
+    documentsRetrieved?: number;
+    limited?: boolean;
+  };
 }

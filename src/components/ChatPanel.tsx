@@ -3,9 +3,28 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import {
-  X, AlertTriangle, FileText, MessageCircle, Mic, Paperclip, Send,
-  Copy, Check, Pencil, Pause, Play, Loader2, Download, StopCircle, Brain,
-  HelpCircle, StickyNote, ClipboardList, Share2, MonitorSpeaker, FileSignature,
+  X,
+  AlertTriangle,
+  FileText,
+  MessageCircle,
+  Mic,
+  Paperclip,
+  Send,
+  Copy,
+  Check,
+  Pencil,
+  Pause,
+  Play,
+  Loader2,
+  Download,
+  StopCircle,
+  Brain,
+  HelpCircle,
+  StickyNote,
+  ClipboardList,
+  Share2,
+  MonitorSpeaker,
+  FileSignature,
 } from 'lucide-react';
 import { useRecording, ConsultationMode } from '@/hooks/useRecording';
 import { RecordingModeDialog } from '@/components/RecordingModeDialog';
@@ -96,7 +115,7 @@ export function ChatPanel({
   onWorkStateChange,
   onCaptureStateChange,
 }: ChatPanelProps) {
-  const sessionHidden=useSessionHidden();
+  const sessionHidden = useSessionHidden();
   const [showBriefing, setShowBriefing] = useState(true);
   const [briefingExpanded, setBriefingExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -154,15 +173,20 @@ export function ChatPanel({
   const activePatientIdRef = useRef<string | null>(patient?.id ?? null);
   activePatientIdRef.current = patient?.id ?? null;
   const mountedRef = useRef(true);
-  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   const isCurrentPatient = (id: string) => mountedRef.current && activePatientIdRef.current === id;
 
   // ── Live-copilot plumbing (refs avoid stale closures inside recorder cbs) ────
-  const copilotPendingRef  = useRef<Array<{ mimeType: string; data: string }>>([]);
-  const copilotBusyRef     = useRef(false);
-  const copilotStateRef    = useRef<CopilotState | null>(null);
-  const copilotDismissRef  = useRef<string[]>([]);
-  const copilotDisabledRef = useRef(false);   // set on quota/repeated failure
+  const copilotPendingRef = useRef<Array<{ mimeType: string; data: string }>>([]);
+  const copilotBusyRef = useRef(false);
+  const copilotStateRef = useRef<CopilotState | null>(null);
+  const copilotDismissRef = useRef<string[]>([]);
+  const copilotDisabledRef = useRef(false); // set on quota/repeated failure
   // Fire a refresh once this many ~30s chunks are queued → ~60s suggestion cadence.
   const COPILOT_CHUNKS_PER_REFRESH = 2;
 
@@ -207,13 +231,46 @@ export function ChatPanel({
   const [modeDialogOpen, setModeDialogOpen] = useState(false);
 
   useEffect(() => {
-    const busy = isRecording || recording.isStarting || recording.isStopping || isProcessing || !!reviewData || !!recoveryDraft || isGeneratingFinal || isChatLoading || savingNote
-      || generatingRx || composerOpen || !!documentModal || attachingFile || !!editingId || !!inputValue.trim();
+    const busy =
+      isRecording ||
+      recording.isStarting ||
+      recording.isStopping ||
+      isProcessing ||
+      !!reviewData ||
+      !!recoveryDraft ||
+      isGeneratingFinal ||
+      isChatLoading ||
+      savingNote ||
+      generatingRx ||
+      composerOpen ||
+      !!documentModal ||
+      attachingFile ||
+      !!editingId ||
+      !!inputValue.trim();
     onWorkStateChange?.(busy);
     return () => onWorkStateChange?.(false);
-  }, [isRecording, recording.isStarting, recording.isStopping, isProcessing, reviewData, recoveryDraft, isGeneratingFinal, isChatLoading, savingNote, generatingRx, composerOpen, documentModal, attachingFile, editingId, inputValue, onWorkStateChange]);
+  }, [
+    isRecording,
+    recording.isStarting,
+    recording.isStopping,
+    isProcessing,
+    reviewData,
+    recoveryDraft,
+    isGeneratingFinal,
+    isChatLoading,
+    savingNote,
+    generatingRx,
+    composerOpen,
+    documentModal,
+    attachingFile,
+    editingId,
+    inputValue,
+    onWorkStateChange,
+  ]);
   useEffect(() => {
-    onCaptureStateChange?.(!!(recording.isStarting || recording.isStopping || isRecording || isProcessing || audioTasks > 0));
+    onCaptureStateChange?.(
+      !!(recording.isStarting || recording.isStopping || isRecording || isProcessing || audioTasks > 0),
+    );
     return () => onCaptureStateChange?.(false);
   }, [recording.isStarting, recording.isStopping, isRecording, isProcessing, audioTasks, onCaptureStateChange]);
 
@@ -244,48 +301,71 @@ export function ChatPanel({
     recordingRef.current.cancelStop();
     if (!selectedPatientId) return;
     let ignore = false;
-    loadConsultationDraft(userId, selectedPatientId).then(draft => {
-      if (ignore) return;
-      setDraftLoading(false);
-      if (!draft) return;
-      if (draft.status === 'review') setReviewData(draft);
-      else setRecoveryDraft(draft);
-    }).catch(() => {
-      if (!ignore) {
-        setDraftLoading(false); setDraftLoadError(true);
-        toast({ title: 'Não foi possível carregar rascunhos', description: 'Verifique a conexão antes de iniciar outra gravação.', variant: 'destructive' });
-      }
-    });
-    return () => { ignore = true; };
+    loadConsultationDraft(userId, selectedPatientId)
+      .then((draft) => {
+        if (ignore) return;
+        setDraftLoading(false);
+        if (!draft) return;
+        if (draft.status === 'review') setReviewData(draft);
+        else setRecoveryDraft(draft);
+      })
+      .catch(() => {
+        if (!ignore) {
+          setDraftLoading(false);
+          setDraftLoadError(true);
+          toast({
+            title: 'Não foi possível carregar rascunhos',
+            description: 'Verifique a conexão antes de iniciar outra gravação.',
+            variant: 'destructive',
+          });
+        }
+      });
+    return () => {
+      ignore = true;
+    };
   }, [selectedPatientId, userId, draftRetryKey, toast]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    });
   }, [messages, isProcessing]);
 
   const formatTimer = (secs: number) => {
-    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const m = Math.floor(secs / 60)
+      .toString()
+      .padStart(2, '0');
     const s = (secs % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   };
 
   // Clicking record asks presencial vs. online first — online additionally
   // captures the computer/tab audio so the patient's side is recorded too.
-  const handleStartRecording  = () => setModeDialogOpen(true);
-  const handleModeSelected    = (mode: ConsultationMode) => { resetCopilot(); recording.start(mode); };
-  const handleStopRecording   = () => recording.stop();
-  const handleConfirmStop     = () => recording.confirmStop();
-  const handleCancelStop      = () => recording.cancelStop();
-  const handlePauseToggle     = () => recording.pauseToggle();
+  const handleStartRecording = () => setModeDialogOpen(true);
+  const handleModeSelected = (mode: ConsultationMode) => {
+    resetCopilot();
+    recording.start(mode);
+  };
+  const handleStopRecording = () => recording.stop();
+  const handleConfirmStop = () => recording.confirmStop();
+  const handleCancelStop = () => recording.cancelStop();
+  const handlePauseToggle = () => recording.pauseToggle();
 
   const handleCopy = async (text: string, messageId: string) => {
-    try { await navigator.clipboard.writeText(text); }
-    catch { toast({title:'Não foi possível copiar',description:'Selecione o texto e copie manualmente, ou permita o acesso à área de transferência.',variant:'destructive'});return; }
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      toast({
+        title: 'Não foi possível copiar',
+        description: 'Selecione o texto e copie manualmente, ou permita o acesso à área de transferência.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setCopiedId(messageId);
     toast({ title: 'Texto copiado!', description: 'Copiado para a área de transferência.' });
     setTimeout(() => setCopiedId(null), 2000);
   };
-
 
   const addTranscriptionComment = (text: string) => {
     consultationCommentsRef.current = [...consultationCommentsRef.current, text];
@@ -308,13 +388,17 @@ export function ChatPanel({
       const summary: string = data?.summary ?? 'Comentário processado.';
       const appliedAddendum: boolean = !!data?.appliedAddendum;
 
-      if (isCurrentPatient(patient.id)) onMessagesChange(prev => [...prev, {
-        id: `note-${Date.now()}`,
-        type: 'assistant',
-        title: appliedAddendum ? 'Adendo na consulta de hoje' : 'Comentário processado',
-        content: `📝 ${text}\n\n→ ${summary}`,
-        timestamp: new Date(),
-      }]);
+      if (isCurrentPatient(patient.id))
+        onMessagesChange((prev) => [
+          ...prev,
+          {
+            id: `note-${Date.now()}`,
+            type: 'assistant',
+            title: appliedAddendum ? 'Adendo na consulta de hoje' : 'Comentário processado',
+            content: `📝 ${text}\n\n→ ${summary}`,
+            timestamp: new Date(),
+          },
+        ]);
 
       // Refresh everything the comment could have touched
       queryClient.invalidateQueries({ queryKey: ['patients', userId] });
@@ -325,7 +409,7 @@ export function ChatPanel({
 
       if (isCurrentPatient(patient.id)) toast({ title: 'Comentário processado', description: summary });
     } catch (err: unknown) {
-      if (isCurrentPatient(patient.id)) setInputValue(current => current || text);
+      if (isCurrentPatient(patient.id)) setInputValue((current) => current || text);
       toast({
         title: 'Erro ao processar comentário',
         description: err instanceof Error ? err.message : 'Tente novamente.',
@@ -336,14 +420,16 @@ export function ChatPanel({
     }
   };
 
-  const patientContext = patient ? {
-    name: patient.name,
-    age: patient.age,
-            dateOfBirth:patient.dateOfBirth,
-    diagnoses: patient.diagnoses,
-    medications: patient.medications,
-    allergies: patient.allergies,
-  } : {};
+  const patientContext = patient
+    ? {
+        name: patient.name,
+        age: patient.age,
+        dateOfBirth: patient.dateOfBirth,
+        diagnoses: patient.diagnoses,
+        medications: patient.medications,
+        allergies: patient.allergies,
+      }
+    : {};
 
   // ── Live copilot ────────────────────────────────────────────────────────────
   // Declared as hoisted functions so handleLiveChunk can be referenced by the
@@ -381,14 +467,17 @@ export function ChatPanel({
       });
       // Any failure (quota, network, function error) silently disables the
       // copilot for the rest of this consult — it must never nag mid-consult.
-      if (error) { copilotDisabledRef.current = true; return; }
+      if (error) {
+        copilotDisabledRef.current = true;
+        return;
+      }
       // Stale guard: patient switched or recording ended during the call.
       if (activePatientIdRef.current !== requestedPatientId) return;
       const next: CopilotState = {
-        resumo:        Array.isArray(data?.resumo)        ? data.resumo        : [],
-        alertas:       Array.isArray(data?.alertas)       ? data.alertas       : [],
+        resumo: Array.isArray(data?.resumo) ? data.resumo : [],
+        alertas: Array.isArray(data?.alertas) ? data.alertas : [],
         nao_explorado: Array.isArray(data?.nao_explorado) ? data.nao_explorado : [],
-        sugestoes:     Array.isArray(data?.sugestoes)     ? data.sugestoes     : [],
+        sugestoes: Array.isArray(data?.sugestoes) ? data.sugestoes : [],
       };
       copilotStateRef.current = next;
       setCopilotState(next);
@@ -427,9 +516,9 @@ export function ChatPanel({
   const handleDismissSuggestion = (text: string) => {
     copilotDismissRef.current = [...copilotDismissRef.current, text].slice(-12);
     setDismissedSuggestions(copilotDismissRef.current);
-    setCopilotState(prev => {
+    setCopilotState((prev) => {
       if (!prev) return prev;
-      const next = { ...prev, sugestoes: prev.sugestoes.filter(s => s !== text) };
+      const next = { ...prev, sugestoes: prev.sugestoes.filter((s) => s !== text) };
       copilotStateRef.current = next;
       return next;
     });
@@ -442,9 +531,8 @@ export function ChatPanel({
     return () => clearInterval(id);
   }, [isRecording, copilotLastUpdateAt]);
 
-  const copilotSecondsSince = copilotLastUpdateAt === null
-    ? null
-    : Math.max(0, Math.floor((copilotNow - copilotLastUpdateAt) / 1000));
+  const copilotSecondsSince =
+    copilotLastUpdateAt === null ? null : Math.max(0, Math.floor((copilotNow - copilotLastUpdateAt) / 1000));
 
   // ── Pre-consult question checklist ──────────────────────────────────────────
   async function runChecklist(force = false) {
@@ -464,7 +552,7 @@ export function ChatPanel({
           patientContext: {
             name: patient.name,
             age: patient.age,
-            dateOfBirth:patient.dateOfBirth,
+            dateOfBirth: patient.dateOfBirth,
             diagnoses: patient.diagnoses,
             medications: patient.medications,
             allergies: patient.allergies,
@@ -473,7 +561,7 @@ export function ChatPanel({
           },
         },
       });
-      if (error) return;                                   // non-critical helper — stay silent
+      if (error) return; // non-critical helper — stay silent
       if (activePatientIdRef.current !== requestedId) return;
       const qs: string[] = Array.isArray(data?.questions) ? data.questions : [];
       checklistCacheRef.current.set(requestedId, qs);
@@ -514,17 +602,24 @@ export function ChatPanel({
         .upload(storagePath, file, { contentType: file.type || undefined, upsert: false });
       if (upErr) throw upErr;
 
-      const { data: row, error: dbErr } = await supabase.from('patient_files').insert({
-        patient_id: forPatientId,
-        user_id: userId,
-        storage_path: storagePath,
-        file_name: file.name,
-        mime_type: file.type || null,
-        size_bytes: file.size,
-        tag: file.type?.startsWith('image/') ? 'Imagem' : 'PDF',
-      }).select('id').single();
+      const { data: row, error: dbErr } = await supabase
+        .from('patient_files')
+        .insert({
+          patient_id: forPatientId,
+          user_id: userId,
+          storage_path: storagePath,
+          file_name: file.name,
+          mime_type: file.type || null,
+          size_bytes: file.size,
+          tag: file.type?.startsWith('image/') ? 'Imagem' : 'PDF',
+        })
+        .select('id')
+        .single();
       if (dbErr) {
-        await supabase.storage.from('patient-files').remove([storagePath]).catch(() => {});
+        await supabase.storage
+          .from('patient-files')
+          .remove([storagePath])
+          .catch(() => {});
         throw dbErr;
       }
       queryClient.invalidateQueries({ queryKey: ['patient-files', forPatientId] });
@@ -544,22 +639,33 @@ export function ChatPanel({
       queryClient.invalidateQueries({ queryKey: ['patient-files', forPatientId] });
       queryClient.invalidateQueries({ queryKey: ['patients', userId] });
       queryClient.invalidateQueries({ queryKey: ['patient-detail', forPatientId] });
-      queryClient.invalidateQueries({ queryKey: ['clinical-proposals',forPatientId,userId] });
+      queryClient.invalidateQueries({ queryKey: ['clinical-proposals', forPatientId, userId] });
       if (activePatientIdRef.current !== forPatientId) return;
 
-      const findings = Array.isArray(data?.keyFindings) && data.keyFindings.length > 0
-        ? `\n\n${data.keyFindings.map((f: string) => `• ${f}`).join('\n')}`
-        : '';
-      onMessagesChange(prev => [...prev, {
-        id: `doc-${Date.now()}`,
-        type: 'assistant',
-        title: `Documento analisado — ${data?.documentType ?? 'Documento'}`,
-        content: `📎 ${file.name}\n\n${data?.summary ?? ''}${findings}`,
-        timestamp: new Date(),
-      }]);
-      toast({ title: 'Análise pronta para revisão', description: 'Confira a proposta antes de adicionar informações ao prontuário.' });
+      const findings =
+        Array.isArray(data?.keyFindings) && data.keyFindings.length > 0
+          ? `\n\n${data.keyFindings.map((f: string) => `• ${f}`).join('\n')}`
+          : '';
+      onMessagesChange((prev) => [
+        ...prev,
+        {
+          id: `doc-${Date.now()}`,
+          type: 'assistant',
+          title: `Documento analisado — ${data?.documentType ?? 'Documento'}`,
+          content: `📎 ${file.name}\n\n${data?.summary ?? ''}${findings}`,
+          timestamp: new Date(),
+        },
+      ]);
+      toast({
+        title: 'Análise pronta para revisão',
+        description: 'Confira a proposta antes de adicionar informações ao prontuário.',
+      });
     } catch (err: unknown) {
-      toast({ title: 'Erro ao anexar documento', description: err instanceof Error ? err.message : 'Tente novamente.', variant: 'destructive' });
+      toast({
+        title: 'Erro ao anexar documento',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
     } finally {
       if (isCurrentPatient(forPatientId)) setAttachingFile(false);
     }
@@ -594,7 +700,8 @@ export function ChatPanel({
         if (body?.missingPrescriber) {
           toast({
             title: 'Complete os dados do prescritor',
-            description: 'Preencha nome, CRM e endereço em Configurações (ícone de engrenagem) — são obrigatórios no documento.',
+            description:
+              'Preencha nome, CRM e endereço em Configurações (ícone de engrenagem) — são obrigatórios no documento.',
             variant: 'destructive',
           });
           return;
@@ -605,9 +712,12 @@ export function ChatPanel({
       if (!isCurrentPatient(patient.id)) return;
       setComposerOpen(false);
       if (data?.previewUrl) window.open(data.previewUrl, '_blank');
-      const docLabel = payload.docType === 'atestado' ? 'Atestado gerado'
-        : payload.docType === 'solicitacao_exames' ? 'Solicitação de exames gerada'
-        : 'Receita digital gerada';
+      const docLabel =
+        payload.docType === 'atestado'
+          ? 'Atestado gerado'
+          : payload.docType === 'solicitacao_exames'
+            ? 'Solicitação de exames gerada'
+            : 'Receita digital gerada';
       toast({
         title: docLabel,
         description: `Código de acesso do paciente: ${data?.accessCode}. Assinatura ICP-Brasil será habilitada com o provedor de assinatura.`,
@@ -647,8 +757,12 @@ export function ChatPanel({
     const comments = [...draft.originalComments, doctorComments.trim()].filter(Boolean);
     const { data, error } = await supabase.functions.invoke('finalize-consultation', {
       body: {
-        patientId: draft.patientId, draftId: draft.id, chiefComplaint: draft.chiefComplaint,
-        transcription: draft.transcription, patientContext, userSpecialty: specialty,
+        patientId: draft.patientId,
+        draftId: draft.id,
+        chiefComplaint: draft.chiefComplaint,
+        transcription: draft.transcription,
+        patientContext,
+        userSpecialty: specialty,
         templateContent: activeTemplateContent ?? undefined,
         ...(doctorComments.trim()
           ? { doctorComments: comments.join('\n\n'), previewOnly: true }
@@ -660,8 +774,15 @@ export function ChatPanel({
       throw error;
     }
     if (data.previewOnly) {
-      const revised = { ...draft, soapDraft: data.soapNote, whatsappDraft: data.whatsappMessage, pendingComments: '',
-        originalComments: comments, clarifications: [], status: 'review' as const };
+      const revised = {
+        ...draft,
+        soapDraft: data.soapNote,
+        whatsappDraft: data.whatsappMessage,
+        pendingComments: '',
+        originalComments: comments,
+        clarifications: [],
+        status: 'review' as const,
+      };
       await saveConsultationDraft(userId, revised);
       if (isCurrentPatient(draft.patientId)) {
         setReviewData(revised);
@@ -671,10 +792,16 @@ export function ChatPanel({
     }
     onConsultationSaved?.(draft.patientId);
     for (const key of [
-      ['patients', userId], ['patient-detail'], ['patient-consultations'],
-      ['patient-clinical-notes'], ['appointments'], ['appointments-today'], ['usage-daily', userId],
-      ['clinical-proposals',draft.patientId,userId],
-    ]) queryClient.invalidateQueries({ queryKey: key });
+      ['patients', userId],
+      ['patient-detail'],
+      ['patient-consultations'],
+      ['patient-clinical-notes'],
+      ['appointments'],
+      ['appointments-today'],
+      ['usage-daily', userId],
+      ['clinical-proposals', draft.patientId, userId],
+    ])
+      queryClient.invalidateQueries({ queryKey: key });
     if (!isCurrentPatient(draft.patientId)) return;
     setCurrentConsultationId(data.consultationId ?? null);
     pushToChat(data.soapNote, data.whatsappMessage, data.profileUpdates, data.consultationId ?? undefined);
@@ -684,12 +811,7 @@ export function ChatPanel({
   };
 
   /** Upload with up to 3 attempts and exponential backoff. */
-  const uploadAudioWithRetry = async (
-    blob: Blob,
-    path: string,
-    mimeType: string,
-    maxAttempts = 3,
-  ): Promise<void> => {
+  const uploadAudioWithRetry = async (blob: Blob, path: string, mimeType: string, maxAttempts = 3): Promise<void> => {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const { error } = await supabase.storage
         .from('audio-recordings')
@@ -697,7 +819,7 @@ export function ChatPanel({
       if (!error) return;
       if (attempt === maxAttempts) throw error;
       // Exponential backoff: 1 s, 2 s
-      await new Promise(r => setTimeout(r, 1000 * attempt));
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
     }
   };
 
@@ -715,14 +837,30 @@ export function ChatPanel({
   // NOTE: declared as a hoisted `function` (not a `const` arrow) so it can be
   // referenced by the useRecording() call above before this line executes.
   // A const arrow here causes a temporal-dead-zone ReferenceError at render.
-  async function processConsultation(audioBlob: Blob, mimeType: string, comments: string[], previous?: ConsultationDraft) {
+  async function processConsultation(
+    audioBlob: Blob,
+    mimeType: string,
+    comments: string[],
+    previous?: ConsultationDraft,
+  ) {
     if (!patient) return;
-    if (mountedRef.current) setAudioTasks(count => count + 1);
+    if (mountedRef.current) setAudioTasks((count) => count + 1);
     const draft: ConsultationDraft = previous ?? {
-      id: crypto.randomUUID(), patientId: patient.id, chiefComplaint, appointmentId,
-      audioStoragePath: null, audioMimeType: mimeType, status: 'processing',
-      transcription: '', soapDraft: '', whatsappDraft: '', clarifications: [], transcriptionQuality: 'poor',
-      differentialDiagnoses: [], drugInteractionAlerts: [], originalComments: [...comments],
+      id: crypto.randomUUID(),
+      patientId: patient.id,
+      chiefComplaint,
+      appointmentId,
+      audioStoragePath: null,
+      audioMimeType: mimeType,
+      status: 'processing',
+      transcription: '',
+      soapDraft: '',
+      whatsappDraft: '',
+      clarifications: [],
+      transcriptionQuality: 'poor',
+      differentialDiagnoses: [],
+      drugInteractionAlerts: [],
+      originalComments: [...comments],
     };
     if (isCurrentPatient(draft.patientId)) setIsProcessing(true);
     try {
@@ -735,17 +873,28 @@ export function ChatPanel({
         await uploadAudioWithRetry(audioBlob, path, mimeType);
       }
       const { data, error } = await supabase.functions.invoke('transcribe-consultation', {
-        body: { patientId: draft.patientId, draftId: draft.id, chiefComplaint: draft.chiefComplaint,
-          audioStoragePath: draft.audioStoragePath, audioMimeType: mimeType,
-          consultationComments: draft.originalComments, patientContext, userSpecialty: specialty,
-          templateContent: activeTemplateContent ?? undefined },
+        body: {
+          patientId: draft.patientId,
+          draftId: draft.id,
+          chiefComplaint: draft.chiefComplaint,
+          audioStoragePath: draft.audioStoragePath,
+          audioMimeType: mimeType,
+          consultationComments: draft.originalComments,
+          patientContext,
+          userSpecialty: specialty,
+          templateContent: activeTemplateContent ?? undefined,
+        },
       });
       if (error) {
         if (await handleQuotaError(error)) throw new HandledError();
         throw error;
       }
-      const ready: ConsultationDraft = { ...draft, status: 'review',
-        transcription: data.transcription ?? '', soapDraft: data.soapNote ?? '', whatsappDraft: data.whatsappMessage ?? '',
+      const ready: ConsultationDraft = {
+        ...draft,
+        status: 'review',
+        transcription: data.transcription ?? '',
+        soapDraft: data.soapNote ?? '',
+        whatsappDraft: data.whatsappMessage ?? '',
         clarifications: Array.isArray(data.clarifications) ? data.clarifications : [],
         transcriptionQuality: data.transcriptionQuality ?? 'poor',
         differentialDiagnoses: Array.isArray(data.differentialDiagnoses) ? data.differentialDiagnoses : [],
@@ -753,7 +902,10 @@ export function ChatPanel({
       };
       await saveConsultationDraft(userId, ready);
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
-      if (isCurrentPatient(draft.patientId)) { setRecoveryDraft(null); setReviewData(ready); }
+      if (isCurrentPatient(draft.patientId)) {
+        setRecoveryDraft(null);
+        setReviewData(ready);
+      }
     } catch (error) {
       // Retain both a server draft and a local download on every failure,
       // including provider errors after a successful upload.
@@ -761,16 +913,25 @@ export function ChatPanel({
       await saveConsultationDraft(userId, failed).catch(() => {});
       offerLocalDownload(audioBlob, mimeType);
       if (isCurrentPatient(draft.patientId)) setRecoveryDraft(failed);
-      if (!(error instanceof HandledError)) toast({ title: 'Consulta preservada para nova tentativa',
-        description: 'O áudio foi baixado e, quando enviado, permanece no rascunho. Tente novamente ao recuperar a conexão.', variant: 'destructive' });
+      if (!(error instanceof HandledError))
+        toast({
+          title: 'Consulta preservada para nova tentativa',
+          description:
+            'O áudio foi baixado e, quando enviado, permanece no rascunho. Tente novamente ao recuperar a conexão.',
+          variant: 'destructive',
+        });
     } finally {
-      if (mountedRef.current) setAudioTasks(count => Math.max(0, count - 1));
+      if (mountedRef.current) setAudioTasks((count) => Math.max(0, count - 1));
       if (isCurrentPatient(draft.patientId)) setIsProcessing(false);
     }
   }
 
   const recoverConsultation = async (draft: ConsultationDraft) => {
-    if (draft.status === 'review') { setReviewData(draft); setRecoveryDraft(null); return; }
+    if (draft.status === 'review') {
+      setReviewData(draft);
+      setRecoveryDraft(null);
+      return;
+    }
     if (!draft.audioStoragePath || !isCurrentPatient(draft.patientId)) return;
     setIsProcessing(true);
     try {
@@ -778,14 +939,23 @@ export function ChatPanel({
       if (error || !data) throw error;
       await processConsultation(data, draft.audioMimeType, draft.originalComments, draft);
     } catch {
-      toast({ title: 'Não foi possível recuperar o áudio', description: 'Seu rascunho continua salvo. Verifique a conexão.', variant: 'destructive' });
-    } finally { if (isCurrentPatient(draft.patientId)) setIsProcessing(false); }
+      toast({
+        title: 'Não foi possível recuperar o áudio',
+        description: 'Seu rascunho continua salvo. Verifique a conexão.',
+        variant: 'destructive',
+      });
+    } finally {
+      if (isCurrentPatient(draft.patientId)) setIsProcessing(false);
+    }
   };
 
   const discardSavedDraft = async (draft: ConsultationDraft) => {
     if (!window.confirm('Excluir este rascunho e seu áudio? Esta ação não pode ser desfeita.')) return;
     const { error } = await supabase.functions.invoke('discard-consultation', { body: { draftId: draft.id } });
-    if (error) { toast({ title: 'Não foi possível excluir o rascunho', variant: 'destructive' }); return; }
+    if (error) {
+      toast({ title: 'Não foi possível excluir o rascunho', variant: 'destructive' });
+      return;
+    }
     if (isCurrentPatient(draft.patientId)) setRecoveryDraft(null);
   };
 
@@ -801,7 +971,7 @@ export function ChatPanel({
       content: text,
       timestamp: new Date(),
     };
-    onMessagesChange(prev => [...prev, userMsg]);
+    onMessagesChange((prev) => [...prev, userMsg]);
     setIsChatLoading(true);
 
     try {
@@ -809,21 +979,27 @@ export function ChatPanel({
         body: {
           patientId: patient?.id ?? null,
           userId,
-          patientContext: patient ? {
-            name: patient.name,
-            age: patient.age,
-            dateOfBirth:patient.dateOfBirth,
-            diagnoses: patient.diagnoses,
-            medications: patient.medications,
-            allergies: patient.allergies,
-            socialAnamnesis: patient.socialAnamnesis,
-            medicalHistory: patient.medicalHistory,
-          } : null,
+          patientContext: patient
+            ? {
+                name: patient.name,
+                age: patient.age,
+                dateOfBirth: patient.dateOfBirth,
+                diagnoses: patient.diagnoses,
+                medications: patient.medications,
+                allergies: patient.allergies,
+                socialAnamnesis: patient.socialAnamnesis,
+                medicalHistory: patient.medicalHistory,
+              }
+            : null,
           chatHistory: messages
-            .filter(m => m.type === 'user' || m.type === 'assistant')
-            .filter(m => m.type!=='assistant'||!m.sources?.some(source=>source.type==='knowledge'||source.type==='protocol'))
+            .filter((m) => m.type === 'user' || m.type === 'assistant')
+            .filter(
+              (m) =>
+                m.type !== 'assistant' ||
+                !m.sources?.some((source) => source.type === 'knowledge' || source.type === 'protocol'),
+            )
             .slice(-10)
-            .map(m => ({ type: m.type, content: m.content })),
+            .map((m) => ({ type: m.type, content: m.content })),
           userMessage: text,
         },
       });
@@ -832,15 +1008,18 @@ export function ChatPanel({
         throw error;
       }
       if (!isCurrentPatient(patient.id)) return;
-      onMessagesChange(prev => [...prev, {
-        id: `assistant-${Date.now()}`,
-        type: 'assistant',
-        title: 'Assistente Clínico',
-        content: data.message,
-        timestamp: new Date(),
-        sources:Array.isArray(data.sources)?data.sources:[],
-        coverage:data.coverage,
-      }]);
+      onMessagesChange((prev) => [
+        ...prev,
+        {
+          id: `assistant-${Date.now()}`,
+          type: 'assistant',
+          title: 'Assistente Clínico',
+          content: data.message,
+          timestamp: new Date(),
+          sources: Array.isArray(data.sources) ? data.sources : [],
+          coverage: data.coverage,
+        },
+      ]);
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
     } catch {
       toast({ title: 'Erro ao consultar IA', description: 'Tente novamente.', variant: 'destructive' });
@@ -872,15 +1051,17 @@ export function ChatPanel({
     // Update the consultation this specific message belongs to — using the
     // panel-level currentConsultationId here would overwrite the LATEST
     // consultation even when the doctor edited an older SOAP card.
-    const target = messages.find(m => m.id === messageId);
+    const target = messages.find((m) => m.id === messageId);
     const targetConsultationId = target?.consultationId ?? null;
     if (targetConsultationId) {
       if (editRevisionRef.current === null || !patient) return;
       const { data, error } = await supabase
         .from('consultations')
         .update({ soap_note: editedContent, pre_briefing: null })
-        .eq('id', targetConsultationId).eq('revision', editRevisionRef.current)
-        .select('id').maybeSingle();
+        .eq('id', targetConsultationId)
+        .eq('revision', editRevisionRef.current)
+        .select('id')
+        .maybeSingle();
       if (error || !data) {
         toast({
           title: 'Erro ao salvar alterações',
@@ -893,25 +1074,35 @@ export function ChatPanel({
       onConsultationSaved?.(patient.id);
     }
     if (!patient || !isCurrentPatient(patient.id)) return;
-    onMessagesChange(prev => prev.map(m =>
-      m.id === messageId ? { ...m, content: editedContent } : m
-    ));
+    onMessagesChange((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: editedContent } : m)));
     setEditingId(null);
     toast({ title: 'Alterações salvas', description: 'A evolução clínica foi atualizada.' });
   };
 
   const beginEdit = async (message: ChatMessage) => {
     if (!patient || !message.consultationId) return;
-    const { data, error } = await supabase.from('consultations').select('soap_note,revision')
-      .eq('id', message.consultationId).eq('patient_id', patient.id).maybeSingle();
+    const { data, error } = await supabase
+      .from('consultations')
+      .select('soap_note,revision')
+      .eq('id', message.consultationId)
+      .eq('patient_id', patient.id)
+      .maybeSingle();
     if (!isCurrentPatient(patient.id)) return;
-    if (error || !data) { toast({ title: 'Não foi possível abrir a edição', variant: 'destructive' }); return; }
+    if (error || !data) {
+      toast({ title: 'Não foi possível abrir a edição', variant: 'destructive' });
+      return;
+    }
     editRevisionRef.current = data.revision;
     setEditingId(message.id);
     setEditedContent(data.soap_note ?? '');
   };
 
-  const pushToChat = (soapNote: string, whatsappMessage: string, profileUpdates?: ProfileUpdates, consultationId?: string) => {
+  const pushToChat = (
+    soapNote: string,
+    whatsappMessage: string,
+    profileUpdates?: ProfileUpdates,
+    consultationId?: string,
+  ) => {
     const now = new Date();
     const cards: ChatMessage[] = [
       {
@@ -930,11 +1121,12 @@ export function ChatPanel({
         timestamp: now,
       },
     ];
-    if (profileUpdates && (
-      profileUpdates.diagnoses.length > 0 ||
-      profileUpdates.medications.length > 0 ||
-      profileUpdates.allergies.length > 0
-    )) {
+    if (
+      profileUpdates &&
+      (profileUpdates.diagnoses.length > 0 ||
+        profileUpdates.medications.length > 0 ||
+        profileUpdates.allergies.length > 0)
+    ) {
       cards.push({
         id: `profile-${now.getTime()}`,
         type: 'profile-update',
@@ -944,15 +1136,15 @@ export function ChatPanel({
         profileUpdates,
       });
     }
-    onMessagesChange(prev => [...prev, ...cards]);
+    onMessagesChange((prev) => [...prev, ...cards]);
   };
 
   // Phase 2: generate final SOAP (with doctor comments) → save to DB → show in chat
-  const handleReviewConfirm = async (comments: string, reviewedText?:string) => {
+  const handleReviewConfirm = async (comments: string, reviewedText?: string) => {
     if (!reviewData || !patient) return;
     setIsGeneratingFinal(true);
     try {
-      await submitFinalSoap({...reviewData,soapDraft:reviewedText ?? reviewData.soapDraft}, comments);
+      await submitFinalSoap({ ...reviewData, soapDraft: reviewedText ?? reviewData.soapDraft }, comments);
     } catch (err) {
       if (!(err instanceof HandledError)) {
         toast({ title: 'Erro ao gerar evolução', description: 'Tente novamente.', variant: 'destructive' });
@@ -962,13 +1154,20 @@ export function ChatPanel({
     }
   };
 
-  const handleReviewCancel = async (comments: string, reviewedText?:string) => {
+  const handleReviewCancel = async (comments: string, reviewedText?: string) => {
     if (!reviewData) return;
-    const preserved = { ...reviewData, pendingComments: comments,soapDraft:reviewedText ?? reviewData.soapDraft };
+    const preserved = { ...reviewData, pendingComments: comments, soapDraft: reviewedText ?? reviewData.soapDraft };
     setRecoveryDraft(preserved);
     setReviewData(null);
-    try { await saveConsultationDraft(userId, preserved); }
-    catch { toast({ title: 'Observações ainda não foram salvas', description: 'Retome a revisão e tente novamente antes de sair.', variant: 'destructive' }); }
+    try {
+      await saveConsultationDraft(userId, preserved);
+    } catch {
+      toast({
+        title: 'Observações ainda não foram salvas',
+        description: 'Retome a revisão e tente novamente antes de sair.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSendWhatsapp = (message: string) => {
@@ -995,20 +1194,31 @@ export function ChatPanel({
   const handleProfileAccept = async (merged: MergedProfile) => {
     if (!patient) return;
     const expectedRevision = patient.revision ?? 0;
-    const { data: current, error: readError } = await supabase.from('patients').select('revision').eq('id', patient.id).single();
+    const { data: current, error: readError } = await supabase
+      .from('patients')
+      .select('revision')
+      .eq('id', patient.id)
+      .single();
     if (readError || !current || current.revision !== expectedRevision) {
       queryClient.invalidateQueries({ queryKey: ['patients', userId] });
-      toast({ title: 'O perfil foi alterado', description: 'Confira os dados atualizados antes de aceitar novamente.', variant: 'destructive' });
+      toast({
+        title: 'O perfil foi alterado',
+        description: 'Confira os dados atualizados antes de aceitar novamente.',
+        variant: 'destructive',
+      });
       throw new Error('Perfil alterado');
     }
     const { data, error } = await supabase
       .from('patients')
       .update({
-        diagnoses:   merged.diagnoses.map(value => ({ ...value })),
-        medications: merged.medications.map(value => ({ ...value })),
-        allergies:   merged.allergies,
+        diagnoses: merged.diagnoses.map((value) => ({ ...value })),
+        medications: merged.medications.map((value) => ({ ...value })),
+        allergies: merged.allergies,
       })
-      .eq('id', patient.id).eq('revision', expectedRevision).select('id').maybeSingle();
+      .eq('id', patient.id)
+      .eq('revision', expectedRevision)
+      .select('id')
+      .maybeSingle();
     if (error || !data) {
       toast({
         title: 'Erro ao atualizar perfil',
@@ -1019,7 +1229,8 @@ export function ChatPanel({
     }
     queryClient.invalidateQueries({ queryKey: ['patients', userId] });
     queryClient.invalidateQueries({ queryKey: ['patient-detail'] });
-    if (isCurrentPatient(patient.id)) toast({ title: 'Perfil atualizado!', description: 'Diagnósticos, medicamentos e alergias sincronizados.' });
+    if (isCurrentPatient(patient.id))
+      toast({ title: 'Perfil atualizado!', description: 'Diagnósticos, medicamentos e alergias sincronizados.' });
   };
 
   const getMissingFields = (): string[] => {
@@ -1076,11 +1287,33 @@ export function ChatPanel({
 
   return (
     <div className="flex-1 flex flex-col bg-card h-full">
-      {!sessionHidden && (isRecording || recording.isStarting || recording.isStopping || audioTasks>0) && createPortal(
-        <div role="status" aria-label="Captura de áudio em andamento" className="fixed top-0 inset-x-0 z-40 min-h-14 bg-card border-b-2 border-record-red px-3 py-2 flex flex-wrap items-center justify-center gap-3 shadow-sm">
-          <span className="text-sm font-semibold text-record-red">{patient.name} · {isRecording?(isPaused?'Gravação pausada':'Gravando')+' '+formatTimer(recordingSeconds):'Preservando áudio…'}</span>
-          {isRecording&&<><Button size="sm" variant="outline" onClick={handlePauseToggle}>{isPaused?'Retomar gravação':'Pausar gravação'}</Button><Button size="sm" variant="destructive" onClick={handleConfirmStop}>Parar e salvar áudio</Button></>}
-        </div>,document.body)}
+      {!sessionHidden &&
+        (isRecording || recording.isStarting || recording.isStopping || audioTasks > 0) &&
+        createPortal(
+          <div
+            role="status"
+            aria-label="Captura de áudio em andamento"
+            className="fixed top-0 inset-x-0 z-40 min-h-14 bg-card border-b-2 border-record-red px-3 py-2 flex flex-wrap items-center justify-center gap-3 shadow-sm"
+          >
+            <span className="text-sm font-semibold text-record-red">
+              {patient.name} ·{' '}
+              {isRecording
+                ? (isPaused ? 'Gravação pausada' : 'Gravando') + ' ' + formatTimer(recordingSeconds)
+                : 'Preservando áudio…'}
+            </span>
+            {isRecording && (
+              <>
+                <Button size="sm" variant="outline" onClick={handlePauseToggle}>
+                  {isPaused ? 'Retomar gravação' : 'Pausar gravação'}
+                </Button>
+                <Button size="sm" variant="destructive" onClick={handleConfirmStop}>
+                  Parar e salvar áudio
+                </Button>
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
       {/* Header */}
       <header className="sticky top-0 z-10 px-4 md:px-6 py-3 md:py-4 border-b border-border/50 bg-card/95 backdrop-blur-sm">
         <div className="flex items-center gap-3">
@@ -1089,42 +1322,72 @@ export function ChatPanel({
           ) : (
             <div className="w-10 h-10 rounded-full bg-medical-blue-light flex items-center justify-center">
               <span className="text-medical-blue font-semibold text-sm">
-                {patient.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                {patient.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)}
               </span>
             </div>
           )}
           <div>
             <h1 className="font-semibold text-foreground">{patient.name}</h1>
-            <Badge variant="atendimento" className="mt-1">Em atendimento</Badge>
+            <Badge variant="atendimento" className="mt-1">
+              Em atendimento
+            </Badge>
           </div>
-          <Button variant="outline" size="sm" className="ml-auto" asChild><Link to={'/trabalho?patient='+patient.id}>Consulta manual</Link></Button>
+          <Button variant="outline" size="sm" className="ml-auto" asChild>
+            <Link to={'/trabalho?patient=' + patient.id}>Consulta manual</Link>
+          </Button>
         </div>
       </header>
 
       {/* Chat Content */}
       <div className="flex-1 overflow-y-auto scrollbar-thin px-4 md:px-6 py-4 md:py-6 space-y-4">
-        <ClinicalProposals patient={patient} userId={userId}/>
+        <ClinicalProposals patient={patient} userId={userId} />
 
-        {draftLoadError && <div role="alert" className="rounded-lg border p-3 text-sm">
-          Não foi possível verificar os rascunhos desta consulta.
-          <Button variant="outline" onClick={() => setDraftRetryKey(key => key + 1)}>Tentar novamente</Button>
-        </div>}
+        {draftLoadError && (
+          <div role="alert" className="rounded-lg border p-3 text-sm">
+            Não foi possível verificar os rascunhos desta consulta.
+            <Button variant="outline" onClick={() => setDraftRetryKey((key) => key + 1)}>
+              Tentar novamente
+            </Button>
+          </div>
+        )}
 
         {recoveryDraft && recoveryDraft.patientId === patient.id && (
           <div role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm space-y-2">
             <p>Há uma consulta preservada para este paciente. Retome a revisão ou tente processar o áudio novamente.</p>
-            <Button variant="outline" disabled={isProcessing || (!recoveryDraft.audioStoragePath && recoveryDraft.status !== 'review')}
-              onClick={() => void recoverConsultation(recoveryDraft)}>
+            <Button
+              variant="outline"
+              disabled={isProcessing || (!recoveryDraft.audioStoragePath && recoveryDraft.status !== 'review')}
+              onClick={() => void recoverConsultation(recoveryDraft)}
+            >
               {recoveryDraft.status === 'review' ? 'Retomar revisão' : 'Recuperar consulta'}
             </Button>
-            <input ref={recoveryInputRef} type="file" accept="audio/webm,audio/mp4,audio/ogg,.webm,.m4a,.ogg" className="hidden"
-              onChange={event => {
-                const file = event.target.files?.[0]; event.target.value = '';
-                if (file) void processConsultation(file, file.type || recoveryDraft.audioMimeType, recoveryDraft.originalComments,
-                  { ...recoveryDraft, audioStoragePath: null });
-              }} />
-            <Button variant="outline" disabled={isProcessing} onClick={() => recoveryInputRef.current?.click()}>Enviar áudio salvo</Button>
-            <Button variant="ghost" disabled={isProcessing} onClick={() => void discardSavedDraft(recoveryDraft)}>Excluir rascunho</Button>
+            <input
+              ref={recoveryInputRef}
+              type="file"
+              accept="audio/webm,audio/mp4,audio/ogg,.webm,.m4a,.ogg"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (file)
+                  void processConsultation(
+                    file,
+                    file.type || recoveryDraft.audioMimeType,
+                    recoveryDraft.originalComments,
+                    { ...recoveryDraft, audioStoragePath: null },
+                  );
+              }}
+            />
+            <Button variant="outline" disabled={isProcessing} onClick={() => recoveryInputRef.current?.click()}>
+              Enviar áudio salvo
+            </Button>
+            <Button variant="ghost" disabled={isProcessing} onClick={() => void discardSavedDraft(recoveryDraft)}>
+              Excluir rascunho
+            </Button>
           </div>
         )}
 
@@ -1144,8 +1407,15 @@ export function ChatPanel({
                     </div>
                   ) : briefingError ? (
                     <div role="alert" className="space-y-2 text-sm text-destructive">
-                      <p>Não foi possível carregar o resumo pré-consulta. O histórico pode estar temporariamente indisponível.</p>
-                      {onRetryBriefing && <Button variant="outline" size="sm" onClick={onRetryBriefing}>Tentar novamente</Button>}
+                      <p>
+                        Não foi possível carregar o resumo pré-consulta. O histórico pode estar temporariamente
+                        indisponível.
+                      </p>
+                      {onRetryBriefing && (
+                        <Button variant="outline" size="sm" onClick={onRetryBriefing}>
+                          Tentar novamente
+                        </Button>
+                      )}
                     </div>
                   ) : activeBriefing?.returnInfo ? (
                     <>
@@ -1176,25 +1446,33 @@ export function ChatPanel({
                         <div className="mt-3 pt-3 border-t border-border/30 space-y-2 text-xs text-foreground/80">
                           {activeBriefing.details.lastConsultationDate && (
                             <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">Última Consulta</span>
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">
+                                Última Consulta
+                              </span>
                               <span>{activeBriefing.details.lastConsultationDate}</span>
                             </div>
                           )}
                           {activeBriefing.details.mainComplaint && (
                             <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">Queixa Principal</span>
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">
+                                Queixa Principal
+                              </span>
                               <span>{activeBriefing.details.mainComplaint}</span>
                             </div>
                           )}
                           {activeBriefing.details.previousConduct && (
                             <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">Conduta Anterior</span>
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">
+                                Conduta Anterior
+                              </span>
                               <span>{activeBriefing.details.previousConduct}</span>
                             </div>
                           )}
                           {activeBriefing.details.evolution && (
                             <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">Evolução</span>
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">
+                                Evolução
+                              </span>
                               <span>{activeBriefing.details.evolution}</span>
                             </div>
                           )}
@@ -1236,184 +1514,206 @@ export function ChatPanel({
         />
 
         {/* Messages */}
-        <div role="log" aria-label="Conversa clínica deste paciente" aria-live="polite" aria-relevant="additions" className="space-y-4">
-        {(() => {
-          const lastSoapIdx = messages.reduce((acc, m, i) => m.type === 'soap' ? i : acc, -1);
-          return messages.map((message, index) => (
-          <div
-            key={message.id}
-            className={cn(
-              'animate-fade-in-up relative',
-              message.type === 'soap' && 'soap-note rounded-lg p-5',
-              message.type === 'whatsapp' && 'whatsapp-card p-5',
-              message.type === 'user' && 'flex justify-end',
-            )}
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            {message.type === 'profile-update' ? (
-              <ProfileUpdateCard
-                initial={message.profileUpdates!}
-                existing={{
-                  diagnoses:   patient?.diagnoses   ?? [],
-                  medications: patient?.medications ?? [],
-                  allergies:   patient?.allergies   ?? [],
-                }}
-                missingFields={getMissingFields()}
-                onAccept={handleProfileAccept}
-                onDismiss={() => {}}
-              />
-            ) : message.type === 'user' ? (
-              <div className="max-w-[88%] md:max-w-[75%] bg-medical-blue text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2 text-sm">
-                {message.content}
-              </div>
-            ) : message.type === 'assistant' ? (
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Brain className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1 max-w-[88%] md:max-w-[85%] rounded-2xl rounded-tl-sm bg-muted/60 px-4 py-3">
-                  <p className="text-[11px] font-semibold text-muted-foreground mb-1">{message.title}</p>
-                  <ClinicalAnswer message={message} userId={userId}/>
-                </div>
-              </div>
-            ) : (
-              <>
-                {message.type === 'soap' && (
-                  <div className="absolute top-3 right-3 flex items-center gap-0.5">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Exportar evolução em PDF"
-                      className="h-7 w-7 text-muted-foreground hover:text-muted-foreground"
-                      onClick={() => handlePrintSOAP(message.content)}
-                      title="Exportar PDF"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={editingId === message.id ? 'Salvar edição da evolução' : 'Editar evolução'}
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                      onClick={() => {
-                        if (editingId === message.id) {
-                          handleSaveEdit(message.id);
-                        } else {
-                          void beginEdit(message);
-                        }
-                      }}
-                    >
-                      {editingId === message.id
-                        ? <Check className="w-3.5 h-3.5 text-success" />
-                        : <Pencil className="w-3.5 h-3.5" />}
-                    </Button>
-                  </div>
+        <div
+          role="log"
+          aria-label="Conversa clínica deste paciente"
+          aria-live="polite"
+          aria-relevant="additions"
+          className="space-y-4"
+        >
+          {(() => {
+            const lastSoapIdx = messages.reduce((acc, m, i) => (m.type === 'soap' ? i : acc), -1);
+            return messages.map((message, index) => (
+              <div
+                key={message.id}
+                className={cn(
+                  'animate-fade-in-up relative',
+                  message.type === 'soap' && 'soap-note rounded-lg p-5',
+                  message.type === 'whatsapp' && 'whatsapp-card p-5',
+                  message.type === 'user' && 'flex justify-end',
                 )}
-
-                <div className="flex items-start gap-3 mb-3">
-                  <div className={cn(
-                    'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                    message.type === 'soap' && 'bg-medical-blue-light',
-                    message.type === 'whatsapp' && 'bg-whatsapp-green/20',
-                  )}>
-                    {message.type === 'soap' && <FileText className="w-4 h-4 text-medical-blue" />}
-                    {message.type === 'whatsapp' && <MessageCircle className="w-4 h-4 text-whatsapp-green" />}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className={cn(
-                      'font-semibold text-sm',
-                      message.type === 'soap' ? 'text-medical-blue' : 'text-foreground',
-                    )}>{message.title}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {message.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                </div>
-
-                {message.type === 'soap' && editingId === message.id ? (
-                  <textarea
-                    aria-label="Editar evolução clínica"
-                    value={editedContent}
-                    onChange={(e) => setEditedContent(e.target.value)}
-                    className="w-full min-h-[120px] md:min-h-[200px] text-sm leading-relaxed bg-muted/30 border border-border rounded-lg p-3 text-foreground/90 focus:outline-none focus:ring-2 focus:ring-medical-blue/30 resize-y"
-                    autoFocus
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                {message.type === 'profile-update' ? (
+                  <ProfileUpdateCard
+                    initial={message.profileUpdates!}
+                    existing={{
+                      diagnoses: patient?.diagnoses ?? [],
+                      medications: patient?.medications ?? [],
+                      allergies: patient?.allergies ?? [],
+                    }}
+                    missingFields={getMissingFields()}
+                    onAccept={handleProfileAccept}
+                    onDismiss={() => {}}
                   />
-                ) : message.type === 'soap' ? (
+                ) : message.type === 'user' ? (
+                  <div className="max-w-[88%] md:max-w-[75%] bg-medical-blue text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2 text-sm">
+                    {message.content}
+                  </div>
+                ) : message.type === 'assistant' ? (
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Brain className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1 max-w-[88%] md:max-w-[85%] rounded-2xl rounded-tl-sm bg-muted/60 px-4 py-3">
+                      <p className="text-[11px] font-semibold text-muted-foreground mb-1">{message.title}</p>
+                      <ClinicalAnswer message={message} userId={userId} />
+                    </div>
+                  </div>
+                ) : (
                   <>
-                    <SoapNoteView text={message.content} />
-                    {currentConsultationId && index === lastSoapIdx && (
-                      <div className="mt-3 pt-3 border-t border-border/30 flex gap-2 flex-wrap">
+                    {message.type === 'soap' && (
+                      <div className="absolute top-3 right-3 flex items-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Exportar evolução em PDF"
+                          className="h-7 w-7 text-muted-foreground hover:text-muted-foreground"
+                          onClick={() => handlePrintSOAP(message.content)}
+                          title="Exportar PDF"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={editingId === message.id ? 'Salvar edição da evolução' : 'Editar evolução'}
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            if (editingId === message.id) {
+                              handleSaveEdit(message.id);
+                            } else {
+                              void beginEdit(message);
+                            }
+                          }}
+                        >
+                          {editingId === message.id ? (
+                            <Check className="w-3.5 h-3.5 text-success" />
+                          ) : (
+                            <Pencil className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-3 mb-3">
+                      <div
+                        className={cn(
+                          'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+                          message.type === 'soap' && 'bg-medical-blue-light',
+                          message.type === 'whatsapp' && 'bg-whatsapp-green/20',
+                        )}
+                      >
+                        {message.type === 'soap' && <FileText className="w-4 h-4 text-medical-blue" />}
+                        {message.type === 'whatsapp' && <MessageCircle className="w-4 h-4 text-whatsapp-green" />}
+                      </div>
+                      <div className="flex-1">
+                        <h4
+                          className={cn(
+                            'font-semibold text-sm',
+                            message.type === 'soap' ? 'text-medical-blue' : 'text-foreground',
+                          )}
+                        >
+                          {message.title}
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {message.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+
+                    {message.type === 'soap' && editingId === message.id ? (
+                      <textarea
+                        aria-label="Editar evolução clínica"
+                        value={editedContent}
+                        onChange={(e) => setEditedContent(e.target.value)}
+                        className="w-full min-h-[120px] md:min-h-[200px] text-sm leading-relaxed bg-muted/30 border border-border rounded-lg p-3 text-foreground/90 focus:outline-none focus:ring-2 focus:ring-medical-blue/30 resize-y"
+                        autoFocus
+                      />
+                    ) : message.type === 'soap' ? (
+                      <>
+                        <SoapNoteView text={message.content} />
+                        {currentConsultationId && index === lastSoapIdx && (
+                          <div className="mt-3 pt-3 border-t border-border/30 flex gap-2 flex-wrap">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5 text-xs"
+                              onClick={() => handleGenerateDocument('patient_summary', message.content)}
+                            >
+                              <ClipboardList className="w-3.5 h-3.5" />
+                              Resumo para Paciente
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5 text-xs"
+                              onClick={() => handleGenerateDocument('referral', message.content)}
+                            >
+                              <Share2 className="w-3.5 h-3.5" />
+                              Gerar Encaminhamento
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5 text-xs"
+                              disabled={generatingRx}
+                              onClick={() => handleOpenComposer(message.consultationId)}
+                            >
+                              <FileSignature className="w-3.5 h-3.5" />
+                              Receita / Atestado
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/80">
+                        {message.content}
+                      </div>
+                    )}
+
+                    {message.type === 'whatsapp' && (
+                      <div className="mt-4 pt-3 border-t border-whatsapp-green/20 flex gap-2 flex-wrap">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="gap-1.5 text-xs"
-                          onClick={() => handleGenerateDocument('patient_summary', message.content)}
+                          onClick={() => handleCopy(message.content, message.id)}
+                          className="gap-2 text-xs"
                         >
-                          <ClipboardList className="w-3.5 h-3.5" />
-                          Resumo para Paciente
+                          {copiedId === message.id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-success" />
+                              Copiado!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              Copiar
+                            </>
+                          )}
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="gap-1.5 text-xs"
-                          onClick={() => handleGenerateDocument('referral', message.content)}
+                          onClick={() => handleSendWhatsapp(message.content)}
+                          title={patient?.phone ? `Enviar para ${patient.phone}` : 'Telefone não cadastrado no perfil'}
+                          className={cn(
+                            'gap-2 text-xs',
+                            patient?.phone
+                              ? 'text-whatsapp-green border-whatsapp-green/30 hover:bg-whatsapp-green/10 hover:text-whatsapp-green'
+                              : 'text-muted-foreground',
+                          )}
                         >
-                          <Share2 className="w-3.5 h-3.5" />
-                          Gerar Encaminhamento
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 text-xs"
-                          disabled={generatingRx}
-                          onClick={() => handleOpenComposer(message.consultationId)}
-                        >
-                          <FileSignature className="w-3.5 h-3.5" />
-                          Receita / Atestado
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          Enviar via WhatsApp
                         </Button>
                       </div>
                     )}
                   </>
-                ) : (
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/80">
-                    {message.content}
-                  </div>
                 )}
-
-                {message.type === 'whatsapp' && (
-                  <div className="mt-4 pt-3 border-t border-whatsapp-green/20 flex gap-2 flex-wrap">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCopy(message.content, message.id)}
-                      className="gap-2 text-xs"
-                    >
-                      {copiedId === message.id
-                        ? <><Check className="w-3.5 h-3.5 text-success" />Copiado!</>
-                        : <><Copy className="w-3.5 h-3.5" />Copiar</>}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSendWhatsapp(message.content)}
-                      title={patient?.phone ? `Enviar para ${patient.phone}` : 'Telefone não cadastrado no perfil'}
-                      className={cn(
-                        'gap-2 text-xs',
-                        patient?.phone
-                          ? 'text-whatsapp-green border-whatsapp-green/30 hover:bg-whatsapp-green/10 hover:text-whatsapp-green'
-                          : 'text-muted-foreground',
-                      )}
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      Enviar via WhatsApp
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        ));
-        })()}
+              </div>
+            ));
+          })()}
         </div>
 
         {/* Processing spinner */}
@@ -1433,15 +1733,22 @@ export function ChatPanel({
 
         {/* Chat AI typing indicator */}
         {isChatLoading && (
-          <div role="status" aria-label="Assistente clínico preparando resposta" className="flex items-start gap-3 animate-fade-in">
+          <div
+            role="status"
+            aria-label="Assistente clínico preparando resposta"
+            className="flex items-start gap-3 animate-fade-in"
+          >
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <Brain className="w-4 h-4 text-primary" />
             </div>
             <div className="rounded-2xl rounded-tl-sm bg-muted/60 px-4 py-3">
               <div className="flex gap-1 items-center h-4">
-                {[0, 150, 300].map(delay => (
-                  <div key={delay} className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce"
-                    style={{ animationDelay: `${delay}ms` }} />
+                {[0, 150, 300].map((delay) => (
+                  <div
+                    key={delay}
+                    className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce"
+                    style={{ animationDelay: `${delay}ms` }}
+                  />
                 ))}
               </div>
             </div>
@@ -1467,11 +1774,16 @@ export function ChatPanel({
 
         {/* Recording Status Banner */}
         {isRecording && (
-          <div className={cn(
-            'border rounded-lg p-3 animate-fade-in',
-            stopConfirming ? 'bg-amber-500/10 border-amber-500/40' :
-            isPaused ? 'bg-amber-500/10 border-amber-500/30' : 'bg-record-red/10 border-record-red/30',
-          )}>
+          <div
+            className={cn(
+              'border rounded-lg p-3 animate-fade-in',
+              stopConfirming
+                ? 'bg-amber-500/10 border-amber-500/40'
+                : isPaused
+                  ? 'bg-amber-500/10 border-amber-500/30'
+                  : 'bg-record-red/10 border-record-red/30',
+            )}
+          >
             {stopConfirming ? (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
@@ -1504,15 +1816,15 @@ export function ChatPanel({
                     ) : (
                       <div className="flex gap-[2px] items-end h-4">
                         {[0.5, 0.8, 1.0, 0.7, 0.9, 0.6].map((mult, i) => (
-                          <div key={i} className="w-1 rounded-full bg-record-red transition-all duration-100"
-                            style={{ height: `${Math.max(20, audioLevel * mult * 100)}%` }} />
+                          <div
+                            key={i}
+                            className="w-1 rounded-full bg-record-red transition-all duration-100"
+                            style={{ height: `${Math.max(20, audioLevel * mult * 100)}%` }}
+                          />
                         ))}
                       </div>
                     )}
-                    <span className={cn(
-                      'text-sm font-semibold',
-                      isPaused ? 'text-amber-500' : 'text-record-red',
-                    )}>
+                    <span className={cn('text-sm font-semibold', isPaused ? 'text-amber-500' : 'text-record-red')}>
                       {isPaused ? 'Gravação pausada' : `Gravando... ${formatTimer(recordingSeconds)}`}
                     </span>
                     {recording.mode === 'online' && (
@@ -1531,13 +1843,22 @@ export function ChatPanel({
                       isPaused ? 'text-amber-500 hover:text-amber-600' : 'text-record-red hover:text-record-red/80',
                     )}
                   >
-                    {isPaused
-                      ? <><Play className="w-4 h-4" />Retomar</>
-                      : <><Pause className="w-4 h-4" />Pausar</>}
+                    {isPaused ? (
+                      <>
+                        <Play className="w-4 h-4" />
+                        Retomar
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="w-4 h-4" />
+                        Pausar
+                      </>
+                    )}
                   </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-snug">
-                  Use o modo <span className="font-semibold text-foreground/80">Comentário</span> abaixo para adicionar notas que ajudarão a IA a transcrever melhor.
+                  Use o modo <span className="font-semibold text-foreground/80">Comentário</span> abaixo para adicionar
+                  notas que ajudarão a IA a transcrever melhor.
                 </p>
                 {consultationComments.length > 0 && (
                   <div className="mt-2 space-y-1">
@@ -1590,8 +1911,8 @@ export function ChatPanel({
               {inputMode === 'question'
                 ? 'pergunte sobre o histórico, conduta, interações…'
                 : isRecording
-                ? 'será incluído no contexto da transcrição'
-                : 'atualiza perfil, adendo da consulta de hoje ou anotação'}
+                  ? 'será incluído no contexto da transcrição'
+                  : 'atualiza perfil, adendo da consulta de hoje ou anotação'}
             </span>
             <UsageMeter variant="inline" className="ml-auto shrink-0" />
           </div>
@@ -1605,30 +1926,33 @@ export function ChatPanel({
               onChange={handleAttachSelected}
             />
             <Button
-              variant="ghost" size="icon"
+              variant="ghost"
+              size="icon"
               className="text-muted-foreground hover:text-foreground h-9 w-9"
               title="Anexar documento ou imagem do paciente"
               aria-label="Anexar documento ou imagem do paciente"
               onClick={() => attachInputRef.current?.click()}
               disabled={attachingFile}
             >
-              {attachingFile
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Paperclip className="w-4 h-4" />}
+              {attachingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
             </Button>
             <div className="flex-1 min-w-0 relative">
               <input
                 type="text"
-                aria-label={inputMode === 'question' ? 'Pergunta ao assistente clínico' : 'Comentário clínico para este paciente'}
+                aria-label={
+                  inputMode === 'question' ? 'Pergunta ao assistente clínico' : 'Comentário clínico para este paciente'
+                }
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSubmit();
+                }}
                 placeholder={
                   inputMode === 'question'
                     ? 'Pergunte ao assistente — o que conversamos na última consulta?'
                     : isRecording
-                    ? 'Comentário para a transcrição — ex: "paciente referiu dor irradiando"'
-                    : 'Comentário — ex: "alérgico a penicilina", "iniciar Losartana 50mg", "solicitar hemograma"'
+                      ? 'Comentário para a transcrição — ex: "paciente referiu dor irradiando"'
+                      : 'Comentário — ex: "alérgico a penicilina", "iniciar Losartana 50mg", "solicitar hemograma"'
                 }
                 className={cn(
                   'w-full h-10 px-4 rounded-xl border-0 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-muted-foreground',
@@ -1660,11 +1984,18 @@ export function ChatPanel({
               className="rounded-full"
               onClick={isRecording ? handleStopRecording : handleStartRecording}
               aria-label={isRecording ? 'Finalizar gravação da consulta' : 'Iniciar gravação da consulta'}
-              disabled={recording.isStarting || recording.isStopping || isProcessing || !!reviewData || !!recoveryDraft || isGeneratingFinal || draftLoading || draftLoadError}
+              disabled={
+                recording.isStarting ||
+                recording.isStopping ||
+                isProcessing ||
+                !!reviewData ||
+                !!recoveryDraft ||
+                isGeneratingFinal ||
+                draftLoading ||
+                draftLoadError
+              }
             >
-              {isProcessing
-                ? <Loader2 className="w-5 h-5 animate-spin" />
-                : <Mic className="w-5 h-5" />}
+              {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mic className="w-5 h-5" />}
             </Button>
           </div>
         </div>
@@ -1672,10 +2003,10 @@ export function ChatPanel({
           {isProcessing
             ? 'Processando consulta, aguarde...'
             : isChatLoading
-            ? 'Assistente clínico pensando...'
-            : isRecording
-            ? 'Clique no botão vermelho para finalizar · use Comentário para guiar a IA'
-            : 'Grave com o botão vermelho · Pergunta consulta a IA · Comentário vira anotação'}
+              ? 'Assistente clínico pensando...'
+              : isRecording
+                ? 'Clique no botão vermelho para finalizar · use Comentário para guiar a IA'
+                : 'Grave com o botão vermelho · Pergunta consulta a IA · Comentário vira anotação'}
         </p>
       </div>
 
@@ -1694,11 +2025,7 @@ export function ChatPanel({
         isGenerating={isGeneratingFinal}
       />
 
-      <RecordingModeDialog
-        open={modeDialogOpen}
-        onOpenChange={setModeDialogOpen}
-        onSelect={handleModeSelected}
-      />
+      <RecordingModeDialog open={modeDialogOpen} onOpenChange={setModeDialogOpen} onSelect={handleModeSelected} />
 
       {patient && (
         <DocumentComposerModal

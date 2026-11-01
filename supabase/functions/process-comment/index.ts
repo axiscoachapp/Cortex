@@ -1,28 +1,30 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
-import {
-  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
-} from "../_shared/quota.ts";
-import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
-import { requireCompleteModelText, parseModelObject, assertGeminiTextBudget } from "../_shared/gemini.ts";
-import { clinicDayBounds } from "../_shared/clinicDate.ts";
-import { readJsonObject, RequestError, fetchWithDeadline } from "../_shared/http.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
+import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
+import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
+import { requireCompleteModelText, parseModelObject, assertGeminiTextBudget } from '../_shared/gemini.ts';
+import { clinicDayBounds } from '../_shared/clinicDate.ts';
+import { readJsonObject, RequestError, fetchWithDeadline } from '../_shared/http.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Vary': 'Origin',
+  Vary: 'Origin',
 };
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 type StoredMedication = string | { name: string; dosage?: string; instructions?: string; startedAt?: string };
 type StoredDiagnosis = string | { code?: string; description: string };
 interface CommentExtraction {
-  allergies_add: string[]; medications_add: Array<{ name: string; dosage: string }>;
-  medications_remove: string[]; diagnoses_add: Array<{ code: string; description: string }>;
-  consultation_addendum: string; long_term_note: string; summary: string;
+  allergies_add: string[];
+  medications_add: Array<{ name: string; dosage: string }>;
+  medications_remove: string[];
+  diagnoses_add: Array<{ code: string; description: string }>;
+  consultation_addendum: string;
+  long_term_note: string;
+  summary: string;
 }
 
 const COMMENT_SCHEMA = {
@@ -38,7 +40,7 @@ const COMMENT_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          name:   { type: 'string' },
+          name: { type: 'string' },
           dosage: { type: 'string' },
         },
         required: ['name', 'dosage'],
@@ -55,7 +57,7 @@ const COMMENT_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          code:        { type: 'string' },
+          code: { type: 'string' },
           description: { type: 'string' },
         },
         required: ['code', 'description'],
@@ -64,18 +66,28 @@ const COMMENT_SCHEMA = {
     },
     consultation_addendum: {
       type: 'string',
-      description: 'Texto a anexar ao SOAP da consulta de HOJE. String vazia se não se aplica ou se não há consulta hoje.',
+      description:
+        'Texto a anexar ao SOAP da consulta de HOJE. String vazia se não se aplica ou se não há consulta hoje.',
     },
     long_term_note: {
       type: 'string',
-      description: 'Fato persistente sobre o paciente (anamnese social, histórico familiar, contexto de vida). String vazia se não se aplica.',
+      description:
+        'Fato persistente sobre o paciente (anamnese social, histórico familiar, contexto de vida). String vazia se não se aplica.',
     },
     summary: {
       type: 'string',
       description: 'Resumo em UMA frase em PT-BR do que será aplicado. Se nada, explica que nada foi atualizado.',
     },
   },
-  required: ['allergies_add', 'medications_add', 'medications_remove', 'diagnoses_add', 'consultation_addendum', 'long_term_note', 'summary'],
+  required: [
+    'allergies_add',
+    'medications_add',
+    'medications_remove',
+    'diagnoses_add',
+    'consultation_addendum',
+    'long_term_note',
+    'summary',
+  ],
 };
 
 const SYSTEM = `Você analisa um comentário curto que um médico escreveu sobre um paciente e extrai atualizações estruturadas para múltiplos destinos.
@@ -121,19 +133,16 @@ serve(async (req) => {
     const { patientId, comment } = await readJsonObject(req);
 
     if (typeof patientId !== 'string' || typeof comment !== 'string' || !comment.trim() || comment.length > 32000) {
-      return new Response(
-        JSON.stringify({ error: 'patientId e comment são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+      return new Response(JSON.stringify({ error: 'patientId e comment são obrigatórios' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    );
+    const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
     // Pull current patient profile + today's consultation in parallel
     const now = new Date();
@@ -159,10 +168,10 @@ serve(async (req) => {
     ]);
 
     if (!patient) {
-      return new Response(
-        JSON.stringify({ error: 'Paciente não encontrado' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+      return new Response(JSON.stringify({ error: 'Paciente não encontrado' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const hasConsultToday = !!todayConsult?.id;
@@ -173,8 +182,8 @@ serve(async (req) => {
     const ctxLines = [
       `Paciente: ${patient?.name ?? 'desconhecido'}`,
       `Alergias atuais: ${existingAllergies.join(', ') || 'nenhuma'}`,
-      `Medicações atuais: ${existingMeds.map(m => typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim()).join(', ') || 'nenhuma'}`,
-      `Diagnósticos atuais: ${existingDiag.map(d => typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim()).join('; ') || 'nenhum'}`,
+      `Medicações atuais: ${existingMeds.map((m) => (typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim())).join(', ') || 'nenhuma'}`,
+      `Diagnósticos atuais: ${existingDiag.map((d) => (typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim())).join('; ') || 'nenhum'}`,
       `Há consulta registrada para HOJE: ${hasConsultToday ? 'sim' : 'não'}`,
     ].join('\n');
 
@@ -218,24 +227,41 @@ Comentário do médico:
     await recordUsage(supabase, userId, creditsFromUsage(json.usageMetadata), reservation.reservationId);
     const parsed = parseModelObject<CommentExtraction>(rawText, COMMENT_SCHEMA);
 
-    const allergiesAdd:   string[]                                = Array.isArray(parsed.allergies_add)      ? parsed.allergies_add      : [];
-    const medsAdd:        Array<{ name: string; dosage: string }> = Array.isArray(parsed.medications_add)    ? parsed.medications_add    : [];
-    const medsRemove:     string[]                                = Array.isArray(parsed.medications_remove) ? parsed.medications_remove : [];
-    const diagnosesAdd:   Array<{ code: string; description: string }> = Array.isArray(parsed.diagnoses_add) ? parsed.diagnoses_add      : [];
-    const addendumText:   string                                  = (parsed.consultation_addendum ?? '').trim();
-    const longTermNote:   string                                  = (parsed.long_term_note ?? '').trim();
-    const aiSummary:      string                                  = (parsed.summary ?? '').trim();
+    const allergiesAdd: string[] = Array.isArray(parsed.allergies_add) ? parsed.allergies_add : [];
+    const medsAdd: Array<{ name: string; dosage: string }> = Array.isArray(parsed.medications_add)
+      ? parsed.medications_add
+      : [];
+    const medsRemove: string[] = Array.isArray(parsed.medications_remove) ? parsed.medications_remove : [];
+    const diagnosesAdd: Array<{ code: string; description: string }> = Array.isArray(parsed.diagnoses_add)
+      ? parsed.diagnoses_add
+      : [];
+    const addendumText: string = (parsed.consultation_addendum ?? '').trim();
+    const longTermNote: string = (parsed.long_term_note ?? '').trim();
+    const aiSummary: string = (parsed.summary ?? '').trim();
 
     // ── Server-side merge & apply ────────────────────────────────────────────
-    const patientUpdates: { allergies?: string[]; medications?: StoredMedication[]; diagnoses?: StoredDiagnosis[]; clinical_notes?: string } = {};
-    const appliedProfile: { allergies: string[]; medicationsAdded: string[]; medicationsRemoved: string[]; diagnoses: string[] } = {
-      allergies: [], medicationsAdded: [], medicationsRemoved: [], diagnoses: [],
+    const patientUpdates: {
+      allergies?: string[];
+      medications?: StoredMedication[];
+      diagnoses?: StoredDiagnosis[];
+      clinical_notes?: string;
+    } = {};
+    const appliedProfile: {
+      allergies: string[];
+      medicationsAdded: string[];
+      medicationsRemoved: string[];
+      diagnoses: string[];
+    } = {
+      allergies: [],
+      medicationsAdded: [],
+      medicationsRemoved: [],
+      diagnoses: [],
     };
 
     // Allergies
     if (allergiesAdd.length > 0) {
       const existingLower = new Set(existingAllergies.map(norm));
-      const newOnes = allergiesAdd.filter(a => a.trim() && !existingLower.has(norm(a)));
+      const newOnes = allergiesAdd.filter((a) => a.trim() && !existingLower.has(norm(a)));
       if (newOnes.length > 0) {
         patientUpdates.allergies = [...existingAllergies, ...newOnes];
         appliedProfile.allergies = newOnes;
@@ -245,42 +271,46 @@ Comentário do médico:
     // Medications (add + remove)
     if (medsAdd.length > 0 || medsRemove.length > 0) {
       const removeLower = new Set(medsRemove.map(norm));
-      const filtered = existingMeds.filter(m => {
+      const filtered = existingMeds.filter((m) => {
         const name = typeof m === 'string' ? m : m.name;
         return name ? !removeLower.has(norm(name)) : true;
       });
       const actuallyRemoved = existingMeds
-        .filter(m => {
+        .filter((m) => {
           const name = typeof m === 'string' ? m : m.name;
           return name && removeLower.has(norm(name));
         })
-        .map(m => typeof m === 'string' ? m : m.name);
+        .map((m) => (typeof m === 'string' ? m : m.name));
 
-      const newMeds = medsAdd.filter(m => m.name?.trim()).filter(m => {
-        const old = filtered.find(existing => norm(typeof existing === 'string' ? existing : existing.name) === norm(m.name));
-        return !old || typeof old === 'string' || old.dosage !== m.dosage;
-      });
+      const newMeds = medsAdd
+        .filter((m) => m.name?.trim())
+        .filter((m) => {
+          const old = filtered.find(
+            (existing) => norm(typeof existing === 'string' ? existing : existing.name) === norm(m.name),
+          );
+          return !old || typeof old === 'string' || old.dosage !== m.dosage;
+        });
 
       if (newMeds.length > 0 || actuallyRemoved.length > 0) {
         const merged = [...filtered];
         for (const med of newMeds) {
-          const index = merged.findIndex(old => norm(typeof old === 'string' ? old : old.name) === norm(med.name));
+          const index = merged.findIndex((old) => norm(typeof old === 'string' ? old : old.name) === norm(med.name));
           if (index >= 0) merged[index] = { ...(typeof merged[index] === 'object' ? merged[index] : {}), ...med };
           else merged.push({ ...med, instructions: '' });
         }
         patientUpdates.medications = merged;
-        appliedProfile.medicationsAdded   = newMeds.map(m => `${m.name}${m.dosage ? ` ${m.dosage}` : ''}`.trim());
+        appliedProfile.medicationsAdded = newMeds.map((m) => `${m.name}${m.dosage ? ` ${m.dosage}` : ''}`.trim());
         appliedProfile.medicationsRemoved = actuallyRemoved;
       }
     }
 
     // Diagnoses
     if (diagnosesAdd.length > 0) {
-      const existingDescs = new Set(existingDiag.map(d => norm(typeof d === 'string' ? d : d.description ?? '')));
-      const newDiag = diagnosesAdd.filter(d => d.description?.trim() && !existingDescs.has(norm(d.description)));
+      const existingDescs = new Set(existingDiag.map((d) => norm(typeof d === 'string' ? d : (d.description ?? ''))));
+      const newDiag = diagnosesAdd.filter((d) => d.description?.trim() && !existingDescs.has(norm(d.description)));
       if (newDiag.length > 0) {
         patientUpdates.diagnoses = [...existingDiag, ...newDiag];
-        appliedProfile.diagnoses = newDiag.map(d => `${d.code ? `${d.code} ` : ''}${d.description}`.trim());
+        appliedProfile.diagnoses = newDiag.map((d) => `${d.code ? `${d.code} ` : ''}${d.description}`.trim());
       }
     }
 
@@ -288,12 +318,14 @@ Comentário do médico:
     let appliedLongTermNote = false;
     if (longTermNote) {
       const stamp = now.toLocaleString('pt-BR', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       });
       const entry = `[${stamp}] ${longTermNote}`;
-      patientUpdates.clinical_notes = patient?.clinical_notes
-        ? `${patient.clinical_notes}\n${entry}`
-        : entry;
+      patientUpdates.clinical_notes = patient?.clinical_notes ? `${patient.clinical_notes}\n${entry}` : entry;
       appliedLongTermNote = true;
     }
 
@@ -307,30 +339,49 @@ Comentário do médico:
     }
     const hhmm = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
     const { error: applyError } = await supabase.rpc('apply_clinical_comment', {
-      p_user_id: userId, p_patient_id: patientId, p_expected_revision: patient.revision,
+      p_user_id: userId,
+      p_patient_id: patientId,
+      p_expected_revision: patient.revision,
       p_patient_patch: patientUpdates,
       p_consultation_id: appliedAddendum ? todayConsult.id : null,
       p_expected_consultation_revision: appliedAddendum ? todayConsult.revision : null,
       p_addendum: appliedAddendum ? `**Adendo [${hhmm}]:** ${addendumText}` : null,
     });
     if (applyError) {
-      if (applyError.code === '40001') return new Response(JSON.stringify({ error: 'O prontuário foi alterado em outra janela. Recarregue e revise o comentário antes de tentar novamente.' }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      if (applyError.code === '40001')
+        return new Response(
+          JSON.stringify({
+            error:
+              'O prontuário foi alterado em outra janela. Recarregue e revise o comentário antes de tentar novamente.',
+          }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
       throw applyError;
     }
 
     // ── Build user-facing summary ────────────────────────────────────────────
     const summaryParts: string[] = [];
-    if (appliedProfile.allergies.length)          summaryParts.push(`Alergia${appliedProfile.allergies.length > 1 ? 's' : ''} adicionada${appliedProfile.allergies.length > 1 ? 's' : ''}: ${appliedProfile.allergies.join(', ')}`);
-    if (appliedProfile.medicationsAdded.length)   summaryParts.push(`Medicação${appliedProfile.medicationsAdded.length > 1 ? 'ões' : ''} adicionada${appliedProfile.medicationsAdded.length > 1 ? 's' : ''}: ${appliedProfile.medicationsAdded.join(', ')}`);
-    if (appliedProfile.medicationsRemoved.length) summaryParts.push(`Medicação${appliedProfile.medicationsRemoved.length > 1 ? 'ões' : ''} suspensa${appliedProfile.medicationsRemoved.length > 1 ? 's' : ''}: ${appliedProfile.medicationsRemoved.join(', ')}`);
-    if (appliedProfile.diagnoses.length)          summaryParts.push(`Diagnóstico${appliedProfile.diagnoses.length > 1 ? 's' : ''} adicionado${appliedProfile.diagnoses.length > 1 ? 's' : ''}: ${appliedProfile.diagnoses.join('; ')}`);
-    if (appliedAddendum)                          summaryParts.push('Adendo salvo na consulta de hoje');
-    if (appliedLongTermNote && !nothingApplied)   summaryParts.push('Anotação adicionada ao prontuário');
-    if (nothingApplied)                           summaryParts.push('Salvo como anotação no prontuário (sem dados estruturados extraídos)');
+    if (appliedProfile.allergies.length)
+      summaryParts.push(
+        `Alergia${appliedProfile.allergies.length > 1 ? 's' : ''} adicionada${appliedProfile.allergies.length > 1 ? 's' : ''}: ${appliedProfile.allergies.join(', ')}`,
+      );
+    if (appliedProfile.medicationsAdded.length)
+      summaryParts.push(
+        `Medicação${appliedProfile.medicationsAdded.length > 1 ? 'ões' : ''} adicionada${appliedProfile.medicationsAdded.length > 1 ? 's' : ''}: ${appliedProfile.medicationsAdded.join(', ')}`,
+      );
+    if (appliedProfile.medicationsRemoved.length)
+      summaryParts.push(
+        `Medicação${appliedProfile.medicationsRemoved.length > 1 ? 'ões' : ''} suspensa${appliedProfile.medicationsRemoved.length > 1 ? 's' : ''}: ${appliedProfile.medicationsRemoved.join(', ')}`,
+      );
+    if (appliedProfile.diagnoses.length)
+      summaryParts.push(
+        `Diagnóstico${appliedProfile.diagnoses.length > 1 ? 's' : ''} adicionado${appliedProfile.diagnoses.length > 1 ? 's' : ''}: ${appliedProfile.diagnoses.join('; ')}`,
+      );
+    if (appliedAddendum) summaryParts.push('Adendo salvo na consulta de hoje');
+    if (appliedLongTermNote && !nothingApplied) summaryParts.push('Anotação adicionada ao prontuário');
+    if (nothingApplied) summaryParts.push('Salvo como anotação no prontuário (sem dados estruturados extraídos)');
 
-    const summary = summaryParts.length > 0
-      ? summaryParts.join(' · ')
-      : (aiSummary || 'Nada a atualizar.');
+    const summary = summaryParts.length > 0 ? summaryParts.join(' · ') : aiSummary || 'Nada a atualizar.';
 
     return new Response(
       JSON.stringify({
@@ -342,9 +393,12 @@ Comentário do médico:
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
-
   } catch (error) {
-    if (error instanceof RequestError) return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (error instanceof RequestError)
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: error.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('process-comment failed');
     return new Response(

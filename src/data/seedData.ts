@@ -22,8 +22,10 @@ const SEED_PATIENTS = [
       { name: 'Zolpidem', dosage: '10mg', instructions: 'Se necessário ao deitar', startedAt: '2025-10-15' },
     ],
     allergies: ['Dipirona'],
-    social_anamnesis: 'Casado, 2 filhos (7 e 10 anos). Professor de matemática em escola pública, turmas superlotadas. Rotina extensa: sai às 6h, volta às 19h. Não tabagista. Etilista social (1-2 cervejas no final de semana). Pratica caminhada 2x por semana. Alimentação irregular, costuma pular o almoço.',
-    medical_history: 'Apendicectomia em 2015. Histórico familiar: Mãe com diabetes tipo 2, Pai com hipertensão e episódio depressivo. Nega outras comorbidades. Vacinação em dia. Exame físico sem alterações em outubro/2025.',
+    social_anamnesis:
+      'Casado, 2 filhos (7 e 10 anos). Professor de matemática em escola pública, turmas superlotadas. Rotina extensa: sai às 6h, volta às 19h. Não tabagista. Etilista social (1-2 cervejas no final de semana). Pratica caminhada 2x por semana. Alimentação irregular, costuma pular o almoço.',
+    medical_history:
+      'Apendicectomia em 2015. Histórico familiar: Mãe com diabetes tipo 2, Pai com hipertensão e episódio depressivo. Nega outras comorbidades. Vacinação em dia. Exame físico sem alterações em outubro/2025.',
   },
   {
     name: 'Maria Oliveira',
@@ -42,8 +44,10 @@ const SEED_PATIENTS = [
       { name: 'Clonazepam', dosage: '0,5mg', instructions: '1cp à noite (uso pontual)', startedAt: '2026-01-20' },
     ],
     allergies: [],
-    social_anamnesis: 'Divorciada há 3 anos, 1 filha de 17 anos. Sócia em escritório de advocacia trabalhista. Jornada de 10-12h/dia, inclusive fins de semana durante audiências. Pratica yoga 1x/semana. Ex-tabagista (parou há 8 anos). Nega etilismo. Refere dificuldade em "desligar" fora do trabalho.',
-    medical_history: 'Sem cirurgias. Diagnóstico de gastrite funcional em 2022 (gastro). Histórico familiar: Mãe com TAG, Pai falecido de IAM. Nega alergias. Densitometria óssea normal (2024).',
+    social_anamnesis:
+      'Divorciada há 3 anos, 1 filha de 17 anos. Sócia em escritório de advocacia trabalhista. Jornada de 10-12h/dia, inclusive fins de semana durante audiências. Pratica yoga 1x/semana. Ex-tabagista (parou há 8 anos). Nega etilismo. Refere dificuldade em "desligar" fora do trabalho.',
+    medical_history:
+      'Sem cirurgias. Diagnóstico de gastrite funcional em 2022 (gastro). Histórico familiar: Mãe com TAG, Pai falecido de IAM. Nega alergias. Densitometria óssea normal (2024).',
   },
   {
     name: 'Carlos Santos',
@@ -63,8 +67,10 @@ const SEED_PATIENTS = [
       { name: 'Losartana', dosage: '50mg', instructions: '1cp manhã', startedAt: '2022-03-01' },
     ],
     allergies: ['Sulfa', 'Penicilina'],
-    social_anamnesis: 'Casado há 26 anos, 3 filhos adultos. Engenheiro autônomo com empresa própria de 8 funcionários. Alto estresse por gestão de contratos e equipe. Ex-tabagista (parou há 5 anos após orientação cardiológica). Nega etilismo. Sedentário (tentou academia, não manteve). Dorme em média 5-6h/noite.',
-    medical_history: 'Apendicectomia em 2000. Diagnóstico de HA desde 2022. Histórico familiar: Pai com depressão recorrente (2 internações), irmã com depressão. Colonoscopia normal (2023). Nega tabagismo atual. Alergia a sulfa e penicilina confirmadas clinicamente.',
+    social_anamnesis:
+      'Casado há 26 anos, 3 filhos adultos. Engenheiro autônomo com empresa própria de 8 funcionários. Alto estresse por gestão de contratos e equipe. Ex-tabagista (parou há 5 anos após orientação cardiológica). Nega etilismo. Sedentário (tentou academia, não manteve). Dorme em média 5-6h/noite.',
+    medical_history:
+      'Apendicectomia em 2000. Diagnóstico de HA desde 2022. Histórico familiar: Pai com depressão recorrente (2 internações), irmã com depressão. Colonoscopia normal (2023). Nega tabagismo atual. Alergia a sulfa e penicilina confirmadas clinicamente.',
   },
   {
     name: 'Ana Beatriz Costa',
@@ -80,11 +86,18 @@ const SEED_PATIENTS = [
     ],
     medications: [
       { name: 'Paroxetina', dosage: '20mg', instructions: '1cp manhã com alimento', startedAt: '2025-12-03' },
-      { name: 'Propranolol', dosage: '10mg', instructions: 'SOS antes de situações de alto estresse', startedAt: '2025-12-03' },
+      {
+        name: 'Propranolol',
+        dosage: '10mg',
+        instructions: 'SOS antes de situações de alto estresse',
+        startedAt: '2025-12-03',
+      },
     ],
     allergies: [],
-    social_anamnesis: 'Solteira, mora sozinha em apartamento desde os 25 anos. Trabalha como freelancer (home office integral). Círculo social pequeno: 2-3 amigos próximos, contato principalmente por mensagem. Recusa convites sociais com frequência. Não tabagista. Bebe raramente (1-2x/ano em ocasiões especiais). Nega atividade física regular.',
-    medical_history: 'Nega comorbidades. Sem cirurgias. Histórico familiar: Mãe com TAG tratada, avô paterno com depressão. Menarque aos 13 anos, ciclos irregulares. Exames gerais normais em novembro/2025.',
+    social_anamnesis:
+      'Solteira, mora sozinha em apartamento desde os 25 anos. Trabalha como freelancer (home office integral). Círculo social pequeno: 2-3 amigos próximos, contato principalmente por mensagem. Recusa convites sociais com frequência. Não tabagista. Bebe raramente (1-2x/ano em ocasiões especiais). Nega atividade física regular.',
+    medical_history:
+      'Nega comorbidades. Sem cirurgias. Histórico familiar: Mãe com TAG tratada, avô paterno com depressão. Menarque aos 13 anos, ciclos irregulares. Exames gerais normais em novembro/2025.',
   },
   {
     name: 'Roberto Almeida',
@@ -105,8 +118,10 @@ const SEED_PATIENTS = [
       { name: 'Enalapril', dosage: '10mg', instructions: '1cp manhã', startedAt: '2019-08-01' },
     ],
     allergies: ['AAS'],
-    social_anamnesis: 'Viúvo há 2 anos (esposa faleceu de câncer de mama). 2 filhos adultos que moram em São Paulo e Curitiba. Aposentado há 3 anos. Isolamento social progressivo após viuvez — raramente sai de casa. Vizinhos relatam que "sumiu". Não tabagista. Nega etilismo. Sedentário. Come sozinho, com frequência perde refeições.',
-    medical_history: 'DM tipo 2 desde 2020 (endócrino). Hipertensão desde 2018. IAM em 2019 (revascularizado com 2 stents). Alergia a AAS — reação prévia de broncoespasmo. Cardiologista acompanha semestralmente. Ecocardiograma 2025: FE 58%.',
+    social_anamnesis:
+      'Viúvo há 2 anos (esposa faleceu de câncer de mama). 2 filhos adultos que moram em São Paulo e Curitiba. Aposentado há 3 anos. Isolamento social progressivo após viuvez — raramente sai de casa. Vizinhos relatam que "sumiu". Não tabagista. Nega etilismo. Sedentário. Come sozinho, com frequência perde refeições.',
+    medical_history:
+      'DM tipo 2 desde 2020 (endócrino). Hipertensão desde 2018. IAM em 2019 (revascularizado com 2 stents). Alergia a AAS — reação prévia de broncoespasmo. Cardiologista acompanha semestralmente. Ecocardiograma 2025: FE 58%.',
   },
 ];
 
@@ -122,7 +137,8 @@ function buildConsultations(patientIds: string[], userId: string) {
     // ── JOÃO ──────────────────────────────────────────────────────────────
 
     {
-      patient_id: joaoId, user_id: userId,
+      patient_id: joaoId,
+      user_id: userId,
       chief_complaint: 'Insônia há 3 meses, humor deprimido e dificuldade de concentração no trabalho',
       created_at: '2025-10-15T09:00:00Z',
       transcription: `Médico: Bom dia João, pode me contar o que está acontecendo?
@@ -152,7 +168,8 @@ Qualquer dúvida me chama! Retorno em 60 dias. Cuide-se! 💙`,
     },
 
     {
-      patient_id: joaoId, user_id: userId,
+      patient_id: joaoId,
+      user_id: userId,
       chief_complaint: 'Retorno — melhora parcial do humor, insônia ainda presente',
       created_at: '2025-12-10T10:30:00Z',
       transcription: `Médico: João, como foi esse período?
@@ -182,7 +199,8 @@ Retorno em 60 dias. Qualquer coisa me avisa! 💙`,
     },
 
     {
-      patient_id: joaoId, user_id: userId,
+      patient_id: joaoId,
+      user_id: userId,
       chief_complaint: 'Retorno — boa evolução geral, questiona possibilidade de reduzir medicação',
       created_at: '2026-02-20T09:00:00Z',
       transcription: `Médico: João, como você está?
@@ -212,7 +230,8 @@ Próximo retorno em julho. Continue se cuidando! 💙`,
     // ── MARIA ─────────────────────────────────────────────────────────────
 
     {
-      patient_id: mariaId, user_id: userId,
+      patient_id: mariaId,
+      user_id: userId,
       chief_complaint: 'Ansiedade intensa há 6 meses, palpitações, insônia e preocupação excessiva com trabalho',
       created_at: '2025-11-08T14:00:00Z',
       transcription: `Médico: Maria, pode me contar o que está acontecendo?
@@ -242,7 +261,8 @@ Qualquer dúvida me chama. Retorno em 10 semanas! 💙`,
     },
 
     {
-      patient_id: mariaId, user_id: userId,
+      patient_id: mariaId,
+      user_id: userId,
       chief_complaint: 'Retorno — melhora discreta da ansiedade, ainda com episódios noturnos e dores somáticas',
       created_at: '2026-01-20T15:00:00Z',
       transcription: `Médico: Maria, como foi o período?
@@ -270,7 +290,8 @@ Retorno em 8 semanas. Você está no caminho certo! 💙`,
     },
 
     {
-      patient_id: mariaId, user_id: userId,
+      patient_id: mariaId,
+      user_id: userId,
       chief_complaint: 'Retorno — boa resposta ao ajuste de dose, mantendo sintomas residuais leves',
       created_at: '2026-03-15T14:30:00Z',
       transcription: `Médico: Maria, como está?
@@ -301,7 +322,8 @@ Próximo retorno em 3 meses. Muito orgulho do seu empenho! 💙`,
     // ── CARLOS ────────────────────────────────────────────────────────────
 
     {
-      patient_id: carlosId, user_id: userId,
+      patient_id: carlosId,
+      user_id: userId,
       chief_complaint: 'Novo episódio depressivo — piora após término de projeto grande, insônia severa e anedonia',
       created_at: '2025-09-25T11:00:00Z',
       transcription: `Médico: Carlos, você mencionou que isso já aconteceu antes?
@@ -330,7 +352,8 @@ Se os pensamentos de "sumir" ficarem mais intensos, me ligue imediatamente ou v�
     },
 
     {
-      patient_id: carlosId, user_id: userId,
+      patient_id: carlosId,
+      user_id: userId,
       chief_complaint: 'Retorno — resposta parcial, insônia persiste, associando Quetiapina',
       created_at: '2025-11-18T11:00:00Z',
       transcription: `Médico: Carlos, como está?
@@ -357,7 +380,8 @@ Retorno em 10 semanas. Continue assim! 💙`,
     },
 
     {
-      patient_id: carlosId, user_id: userId,
+      patient_id: carlosId,
+      user_id: userId,
       chief_complaint: 'Retorno — melhora significativa, dormindo bem, voltou a exercitar-se',
       created_at: '2026-01-30T10:00:00Z',
       transcription: `Médico: Carlos, como está?
@@ -388,7 +412,8 @@ Retorno em 4 meses. Orgulho da sua recuperação! 💙`,
     // ── ANA ───────────────────────────────────────────────────────────────
 
     {
-      patient_id: anaId, user_id: userId,
+      patient_id: anaId,
+      user_id: userId,
       chief_complaint: 'Evitamento social severo, crise de pânico em videochamadas de trabalho',
       created_at: '2025-12-03T16:00:00Z',
       transcription: `Médico: Ana, você pode me contar um pouco sobre o que está passando?
@@ -417,7 +442,8 @@ Qualquer dúvida me chama. Retorno em 10 semanas! 💙`,
     },
 
     {
-      patient_id: anaId, user_id: userId,
+      patient_id: anaId,
+      user_id: userId,
       chief_complaint: 'Retorno — melhora leve, iniciou terapia, ainda com evitamento',
       created_at: '2026-02-14T16:00:00Z',
       transcription: `Médico: Ana, como foi esse período?
@@ -446,7 +472,8 @@ Próximo retorno em 3 meses. Muito orgulho! 💙`,
     // ── ROBERTO ───────────────────────────────────────────────────────────
 
     {
-      patient_id: robertoId, user_id: userId,
+      patient_id: robertoId,
+      user_id: userId,
       chief_complaint: 'Tristeza profunda após viuvez, insônia, perda de apetite e isolamento social',
       created_at: '2025-10-28T10:00:00Z',
       transcription: `Médico: Roberto, o que te trouxe aqui?
@@ -477,7 +504,8 @@ Retorno em 10 semanas. Não está sozinho nisto.`,
     },
 
     {
-      patient_id: robertoId, user_id: userId,
+      patient_id: robertoId,
+      user_id: userId,
       chief_complaint: 'Retorno — sem melhora, iniciando medicação',
       created_at: '2026-01-10T09:30:00Z',
       transcription: `Médico: Roberto, como foi esse tempo?
@@ -505,7 +533,8 @@ Retorno em 8 semanas. Estou aqui. 💙`,
     },
 
     {
-      patient_id: robertoId, user_id: userId,
+      patient_id: robertoId,
+      user_id: userId,
       chief_complaint: 'Retorno — melhora do sono e apetite, humor ainda deprimido',
       created_at: '2026-03-28T09:00:00Z',
       transcription: `Médico: Roberto, como está?
@@ -546,35 +575,25 @@ export async function seedIfEmpty(userId: string): Promise<boolean> {
 
   if (patientCount === 0) {
     // Insert patients and capture IDs
-    const rows = SEED_PATIENTS.map(p => ({
+    const rows = SEED_PATIENTS.map((p) => ({
       ...p,
       user_id: userId,
       diagnoses: p.diagnoses,
       medications: p.medications,
     }));
 
-    const { data: inserted } = await supabase
-      .from('patients')
-      .insert(rows)
-      .select('id, name');
+    const { data: inserted } = await supabase.from('patients').insert(rows).select('id, name');
 
     if (!inserted) return false;
 
     // Match IDs to the persona order
-    patientIds = SEED_PATIENTS.map(sp =>
-      inserted.find(r => r.name === sp.name)?.id ?? ''
-    ).filter(Boolean);
+    patientIds = SEED_PATIENTS.map((sp) => inserted.find((r) => r.name === sp.name)?.id ?? '').filter(Boolean);
   } else {
     // Patients already exist — fetch IDs in persona order
-    const { data: existing } = await supabase
-      .from('patients')
-      .select('id, name')
-      .eq('user_id', userId);
+    const { data: existing } = await supabase.from('patients').select('id, name').eq('user_id', userId);
 
     if (!existing) return false;
-    patientIds = SEED_PATIENTS.map(sp =>
-      existing.find(r => r.name === sp.name)?.id ?? ''
-    ).filter(Boolean);
+    patientIds = SEED_PATIENTS.map((sp) => existing.find((r) => r.name === sp.name)?.id ?? '').filter(Boolean);
   }
 
   if (patientIds.length < 5) return false;

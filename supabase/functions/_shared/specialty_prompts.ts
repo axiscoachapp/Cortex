@@ -254,16 +254,16 @@ ${BASE_RULES}`;
 // ─── Export ──────────────────────────────────────────────────────────────────
 
 const PROMPTS: Record<string, string> = {
-  geral:          GERAL,
-  psiquiatria:    PSIQUIATRIA,
-  cardiologia:    CARDIOLOGIA,
-  pediatria:      PEDIATRIA,
-  ginecologia:    GINECOLOGIA,
-  prenatal:      PRENATAL,
-  urologia:      UROLOGIA,
-  dermatologia:   DERMATOLOGIA,
-  neurologia:     NEUROLOGIA,
-  ortopedia:      ORTOPEDIA,
+  geral: GERAL,
+  psiquiatria: PSIQUIATRIA,
+  cardiologia: CARDIOLOGIA,
+  pediatria: PEDIATRIA,
+  ginecologia: GINECOLOGIA,
+  prenatal: PRENATAL,
+  urologia: UROLOGIA,
+  dermatologia: DERMATOLOGIA,
+  neurologia: NEUROLOGIA,
+  ortopedia: ORTOPEDIA,
   endocrinologia: ENDOCRINOLOGIA,
 };
 

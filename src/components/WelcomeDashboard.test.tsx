@@ -10,15 +10,59 @@ const mocks = vi.hoisted(() => ({ invoke: vi.fn(), toast: vi.fn() }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
 vi.mock('@/components/SpecialtySettingsSheet', () => ({ SpecialtySettingsSheet: () => null }));
 vi.mock('@/components/OnboardingCard', () => ({ OnboardingCard: () => null }));
-vi.mock('@/integrations/supabase/client', () => ({ supabase: {
-  from: () => {
-    const query = { select: () => query, eq: () => query, gte: () => query, lte: () => query, order: () => query,
-      range: async (from: number) => ({ error: null, data: from ? [] : [{ id: 'appointment', patient_id: 'patient', title: 'Consulta teste', start_time: new Date(Date.now()+3600000).toISOString(), end_time: new Date(Date.now()+5400000).toISOString(), status: 'agendado', type: 'retorno', notes: null, reminder_sent: false }] }),
-    }; return query;
-  }, functions: { invoke: mocks.invoke },
-} }));
-const patient: Patient = { id: 'patient', name: 'Pessoa de teste', age: 40, profession: '', status: 'retorno', lastVisit: '2026-05-01', diagnoses: [], medications: [], allergies: [], phone: '+5511999999999' };
-const renderDashboard = (person = patient) => render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><WelcomeDashboard patients={[person]} userId="doctor" onSelectPatient={vi.fn()} onNewConsultation={vi.fn()} /></MemoryRouter></QueryClientProvider>);
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    from: () => {
+      const query = {
+        select: () => query,
+        eq: () => query,
+        gte: () => query,
+        lte: () => query,
+        order: () => query,
+        range: async (from: number) => ({
+          error: null,
+          data: from
+            ? []
+            : [
+                {
+                  id: 'appointment',
+                  patient_id: 'patient',
+                  title: 'Consulta teste',
+                  start_time: new Date(Date.now() + 3600000).toISOString(),
+                  end_time: new Date(Date.now() + 5400000).toISOString(),
+                  status: 'agendado',
+                  type: 'retorno',
+                  notes: null,
+                  reminder_sent: false,
+                },
+              ],
+        }),
+      };
+      return query;
+    },
+    functions: { invoke: mocks.invoke },
+  },
+}));
+const patient: Patient = {
+  id: 'patient',
+  name: 'Pessoa de teste',
+  age: 40,
+  profession: '',
+  status: 'retorno',
+  lastVisit: '2026-05-01',
+  diagnoses: [],
+  medications: [],
+  allergies: [],
+  phone: '+5511999999999',
+};
+const renderDashboard = (person = patient) =>
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <WelcomeDashboard patients={[person]} userId="doctor" onSelectPatient={vi.fn()} onNewConsultation={vi.fn()} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
 
 describe('WhatsApp reminder preparation', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -27,7 +71,10 @@ describe('WhatsApp reminder preparation', () => {
     vi.spyOn(window, 'open').mockReturnValue(null);
     renderDashboard();
     await userEvent.click(await screen.findByRole('button', { name: 'Lembrar' }));
-    expect(await screen.findByRole('link', { name: 'Abrir WhatsApp para Pessoa de teste' })).toHaveAttribute('href', 'https://wa.me/5511999999999?text=teste');
+    expect(await screen.findByRole('link', { name: 'Abrir WhatsApp para Pessoa de teste' })).toHaveAttribute(
+      'href',
+      'https://wa.me/5511999999999?text=teste',
+    );
     expect(screen.getByRole('heading', { name: /lembretes pendentes/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lembrar' })).toBeEnabled();
     expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Lembrete enviado!' }));

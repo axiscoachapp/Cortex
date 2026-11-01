@@ -2,9 +2,23 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  CalendarDays, Plus, ChevronRight, Clock, Users, UserPlus,
-  RefreshCw, Stethoscope, CalendarX, Shield, Bell, MessageCircle, Mail, Loader2,
-  Sparkles, FileStack, BookOpen,
+  CalendarDays,
+  Plus,
+  ChevronRight,
+  Clock,
+  Users,
+  UserPlus,
+  RefreshCw,
+  Stethoscope,
+  CalendarX,
+  Shield,
+  Bell,
+  MessageCircle,
+  Mail,
+  Loader2,
+  Sparkles,
+  FileStack,
+  BookOpen,
 } from 'lucide-react';
 import { SpecialtySettingsSheet } from '@/components/SpecialtySettingsSheet';
 import { OnboardingCard } from '@/components/OnboardingCard';
@@ -21,7 +35,7 @@ import { mapPatientRow } from '@/lib/patientMapper';
 import { canRemindAppointment } from '../../supabase/functions/_shared/reminders';
 
 interface Appointment {
-  patient?:Parameters<typeof mapPatientRow>[0] | null;
+  patient?: Parameters<typeof mapPatientRow>[0] | null;
   id: string;
   patient_id: string | null;
   title: string;
@@ -34,19 +48,24 @@ interface Appointment {
 }
 
 interface WelcomeDashboardProps {
-  counts?: {total:number;new:number;returns:number};
+  counts?: { total: number; new: number; returns: number };
   patients: Patient[];
-  onSelectPatient: (patient: Patient,appointmentId?:string) => void;
+  onSelectPatient: (patient: Patient, appointmentId?: string) => void;
   onNewConsultation: () => void;
   userId: string;
 }
 
 const typeLabels: Record<string, string> = {
-  novo: 'Novo', retorno: 'Retorno', seguimento: 'Seguimento', urgencia: 'Urgência',
+  novo: 'Novo',
+  retorno: 'Retorno',
+  seguimento: 'Seguimento',
+  urgencia: 'Urgência',
 };
 const statusColor: Record<string, string> = {
-  agendado: 'bg-blue-500', confirmado: 'bg-green-500',
-  cancelado: 'bg-slate-400', realizado: 'bg-slate-500',
+  agendado: 'bg-blue-500',
+  confirmado: 'bg-green-500',
+  cancelado: 'bg-slate-400',
+  realizado: 'bg-slate-500',
 };
 
 function relativeDate(dateString: string | null): string {
@@ -67,7 +86,9 @@ function greeting(): string {
 
 function todayLabel(): string {
   return new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long', day: 'numeric', month: 'long',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
   });
 }
 
@@ -75,7 +96,13 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsultation, userId }: WelcomeDashboardProps) {
+export function WelcomeDashboard({
+  patients,
+  counts,
+  onSelectPatient,
+  onNewConsultation,
+  userId,
+}: WelcomeDashboardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -85,30 +112,43 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
 
   // Local-time day bounds. toISOString() is UTC — in Brazil (UTC-3) it rolls
   // to "tomorrow" at 21:00 local and the agenda showed the wrong day.
-  const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(); dayEnd.setHours(23, 59, 59, 999);
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date();
+  dayEnd.setHours(23, 59, 59, 999);
 
-  const { data: todayApts = [], isLoading: aptsLoading, isError: aptsError, refetch: refetchApts } = useQuery<Appointment[]>({
+  const {
+    data: todayApts = [],
+    isLoading: aptsLoading,
+    isError: aptsError,
+    refetch: refetchApts,
+  } = useQuery<Appointment[]>({
     queryKey: ['appointments-today', userId, dayStart.toDateString()],
     queryFn: async () => {
       if (!userId) return [];
       // Throw on failure so isError is set — otherwise a failed load looks
       // identical to an empty agenda, telling a doctor no one is coming in.
-      return fetchAllRows((from, to) => supabase
-        .from('appointments')
-        .select('*,patient:patients!appointments_patient_owner_fk(id,name,age,date_of_birth,profession,last_visit,status,revision,phone,email)')
-        .eq('user_id', userId)
-        .gte('start_time', dayStart.toISOString())
-        .lte('start_time', dayEnd.toISOString())
-        .order('start_time').order('id').range(from, to));
+      return fetchAllRows((from, to) =>
+        supabase
+          .from('appointments')
+          .select(
+            '*,patient:patients!appointments_patient_owner_fk(id,name,age,date_of_birth,profession,last_visit,status,revision,phone,email)',
+          )
+          .eq('user_id', userId)
+          .gte('start_time', dayStart.toISOString())
+          .lte('start_time', dayEnd.toISOString())
+          .order('start_time')
+          .order('id')
+          .range(from, to),
+      );
     },
     enabled: !!userId,
   });
 
   // Stats
   const totalPatients = counts?.total ?? patients.length;
-  const newPatients = counts?.new ?? patients.filter(p => p.status === 'novo').length;
-  const pendingReturns = counts?.returns ?? patients.filter(p => p.status === 'retorno').length;
+  const newPatients = counts?.new ?? patients.filter((p) => p.status === 'novo').length;
+  const pendingReturns = counts?.returns ?? patients.filter((p) => p.status === 'retorno').length;
 
   // Recent patients (last 5 by lastVisit)
   const recentPatients = [...patients]
@@ -117,19 +157,20 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
 
   // Upcoming returns (patients with status === 'retorno', sorted by lastVisit asc = overdue first)
   const returnPatients = patients
-    .filter(p => p.status === 'retorno')
+    .filter((p) => p.status === 'retorno')
     .sort((a, b) => new Date(a.lastVisit ?? 0).getTime() - new Date(b.lastVisit ?? 0).getTime())
     .slice(0, 4);
 
   // Today's appointments needing reminders
-  const pendingReminderApts = todayApts.filter(apt => {
-    if (apt.reminder_sent || sentReminderIds.has(apt.id) || !canRemindAppointment(apt.status,apt.start_time)) return false;
-    const patient = (apt.patient ? mapPatientRow(apt.patient) : patients.find(p => p.id === apt.patient_id));
+  const pendingReminderApts = todayApts.filter((apt) => {
+    if (apt.reminder_sent || sentReminderIds.has(apt.id) || !canRemindAppointment(apt.status, apt.start_time))
+      return false;
+    const patient = apt.patient ? mapPatientRow(apt.patient) : patients.find((p) => p.id === apt.patient_id);
     return !!(patient?.phone || patient?.email);
   });
 
   const handleSendReminder = async (apt: Appointment) => {
-    const patient = (apt.patient ? mapPatientRow(apt.patient) : patients.find(p => p.id === apt.patient_id));
+    const patient = apt.patient ? mapPatientRow(apt.patient) : patients.find((p) => p.id === apt.patient_id);
     if (!patient) return;
     const hasPhone = !!patient.phone;
     const type = hasPhone ? 'whatsapp' : 'email';
@@ -143,14 +184,17 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
         if (typeof data?.waLink !== 'string') throw new Error('Link ausente');
         const link = new URL(data.waLink);
         if (link.protocol !== 'https:' || link.hostname !== 'wa.me') throw new Error('Link inválido');
-        setReminderLinks(previous => ({ ...previous, [apt.id]: link.href }));
+        setReminderLinks((previous) => ({ ...previous, [apt.id]: link.href }));
         // Keep a real link visible: browser popup blocking and opening WhatsApp
         // do not establish whether the user sent the message.
         window.open(link.href, '_blank', 'noopener,noreferrer');
-        toast({ title: 'Link do WhatsApp pronto', description: 'Abra o link para revisar e enviar a mensagem. O lembrete continua pendente.' });
+        toast({
+          title: 'Link do WhatsApp pronto',
+          description: 'Abra o link para revisar e enviar a mensagem. O lembrete continua pendente.',
+        });
       } else {
         if (data?.success !== true) throw new Error('Envio não confirmado');
-        setSentReminderIds(prev => new Set([...prev, apt.id]));
+        setSentReminderIds((prev) => new Set([...prev, apt.id]));
         toast({ title: 'Lembrete enviado por email!' });
       }
       queryClient.invalidateQueries({ queryKey: ['appointments-today'] });
@@ -164,7 +208,6 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
   return (
     <div className="h-full w-full bg-card overflow-y-auto scrollbar-thin">
       <div className="max-w-2xl mx-auto px-4 md:px-8 py-6 md:py-10 space-y-6 md:space-y-8">
-
         <BrandLockup compact className="xl:hidden" />
         {/* Greeting */}
         <div className="flex items-start justify-between gap-2">
@@ -189,7 +232,7 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
         <OnboardingCard
           onNewConsultation={onNewConsultation}
           patientCount={totalPatients}
-          hasConsultation={patients.some(p => p.status !== 'novo')}
+          hasConsultation={patients.some((p) => p.status !== 'novo')}
           userId={userId}
         />
 
@@ -215,11 +258,20 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { icon: Users,     value: totalPatients,  label: 'Pacientes',      color: 'text-medical-blue',  bg: 'bg-medical-blue-light' },
-            { icon: UserPlus,  value: newPatients,     label: 'Novos',          color: 'text-green-600',     bg: 'bg-green-50' },
-            { icon: RefreshCw, value: pendingReturns,  label: 'Retornos',       color: 'text-amber-600',     bg: 'bg-amber-50' },
+            {
+              icon: Users,
+              value: totalPatients,
+              label: 'Pacientes',
+              color: 'text-medical-blue',
+              bg: 'bg-medical-blue-light',
+            },
+            { icon: UserPlus, value: newPatients, label: 'Novos', color: 'text-green-600', bg: 'bg-green-50' },
+            { icon: RefreshCw, value: pendingReturns, label: 'Retornos', color: 'text-amber-600', bg: 'bg-amber-50' },
           ].map(({ icon: Icon, value, label, color, bg }) => (
-            <div key={label} className="rounded-xl border border-border/50 bg-white p-3 md:p-4 shadow-[0_1px_4px_hsl(0_0%_0%/0.06)]">
+            <div
+              key={label}
+              className="rounded-xl border border-border/50 bg-white p-3 md:p-4 shadow-[0_1px_4px_hsl(0_0%_0%/0.06)]"
+            >
               <div className={cn('w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center mb-2 md:mb-3', bg)}>
                 <Icon className={cn('w-3.5 h-3.5 md:w-4 md:h-4', color)} />
               </div>
@@ -240,8 +292,10 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
               </span>
             </h2>
             <div className="space-y-2">
-              {pendingReminderApts.map(apt => {
-                const patient = (apt.patient ? mapPatientRow(apt.patient) : patients.find(p => p.id === apt.patient_id));
+              {pendingReminderApts.map((apt) => {
+                const patient = apt.patient
+                  ? mapPatientRow(apt.patient)
+                  : patients.find((p) => p.id === apt.patient_id);
                 const hasPhone = !!patient?.phone;
                 const isSending = sendingReminder === apt.id;
                 return (
@@ -253,13 +307,19 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
                       <p className="text-xs font-bold text-medical-blue">{formatTime(apt.start_time)}</p>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {patient?.name ?? apt.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {typeLabels[apt.type] ?? apt.type}
-                      </p>
-                      {reminderLinks[apt.id] && <a href={reminderLinks[apt.id]} target="_blank" rel="noopener noreferrer" aria-label={`Abrir WhatsApp para ${patient?.name ?? apt.title}`} className="block text-xs text-medical-blue underline mt-1">Abrir WhatsApp para revisar e enviar</a>}
+                      <p className="text-sm font-medium text-foreground truncate">{patient?.name ?? apt.title}</p>
+                      <p className="text-xs text-muted-foreground">{typeLabels[apt.type] ?? apt.type}</p>
+                      {reminderLinks[apt.id] && (
+                        <a
+                          href={reminderLinks[apt.id]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Abrir WhatsApp para ${patient?.name ?? apt.title}`}
+                          className="block text-xs text-medical-blue underline mt-1"
+                        >
+                          Abrir WhatsApp para revisar e enviar
+                        </a>
+                      )}
                     </div>
                     <Button
                       size="sm"
@@ -268,11 +328,13 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
                       disabled={isSending}
                       onClick={() => handleSendReminder(apt)}
                     >
-                      {isSending
-                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        : hasPhone
-                        ? <MessageCircle className="w-3.5 h-3.5 text-whatsapp-green" />
-                        : <Mail className="w-3.5 h-3.5" />}
+                      {isSending ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : hasPhone ? (
+                        <MessageCircle className="w-3.5 h-3.5 text-whatsapp-green" />
+                      ) : (
+                        <Mail className="w-3.5 h-3.5" />
+                      )}
                       Lembrar
                     </Button>
                   </div>
@@ -299,7 +361,7 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
 
           {aptsLoading ? (
             <div className="space-y-2">
-              {[1, 2].map(i => (
+              {[1, 2].map((i) => (
                 <div key={i} className="h-16 rounded-xl bg-muted/40 animate-pulse" />
               ))}
             </div>
@@ -326,12 +388,14 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
             </div>
           ) : (
             <div className="space-y-2">
-              {todayApts.map(apt => {
-                const patient = (apt.patient ? mapPatientRow(apt.patient) : patients.find(p => p.id === apt.patient_id));
+              {todayApts.map((apt) => {
+                const patient = apt.patient
+                  ? mapPatientRow(apt.patient)
+                  : patients.find((p) => p.id === apt.patient_id);
                 return (
                   <button
                     key={apt.id}
-                    onClick={() => patient && onSelectPatient(patient,apt.id)}
+                    onClick={() => patient && onSelectPatient(patient, apt.id)}
                     disabled={!patient}
                     className={cn(
                       'w-full flex items-center gap-4 px-4 py-3 rounded-xl border border-border/50 bg-white',
@@ -346,21 +410,23 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
                     </div>
                     <div className={cn('w-1 h-8 rounded-full shrink-0', statusColor[apt.status] ?? 'bg-slate-300')} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {patient?.name ?? apt.title}
-                      </p>
+                      <p className="text-sm font-medium text-foreground truncate">{patient?.name ?? apt.title}</p>
                       <p className="text-xs text-muted-foreground">
                         {typeLabels[apt.type] ?? apt.type}
                         {apt.notes ? ` · ${apt.notes}` : ''}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={cn(
-                        'text-[10px] font-medium px-2 py-0.5 rounded-full',
-                        apt.status === 'confirmado' ? 'bg-green-100 text-green-700' :
-                        apt.status === 'cancelado' ? 'bg-slate-100 text-slate-500' :
-                        'bg-blue-50 text-blue-600',
-                      )}>
+                      <span
+                        className={cn(
+                          'text-[10px] font-medium px-2 py-0.5 rounded-full',
+                          apt.status === 'confirmado'
+                            ? 'bg-green-100 text-green-700'
+                            : apt.status === 'cancelado'
+                              ? 'bg-slate-100 text-slate-500'
+                              : 'bg-blue-50 text-blue-600',
+                        )}
+                      >
                         {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
                       </span>
                       {patient && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
@@ -380,8 +446,13 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
               Pacientes Recentes
             </h2>
             <div className="space-y-1.5">
-              {recentPatients.map(patient => {
-                const initials = patient.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+              {recentPatients.map((patient) => {
+                const initials = patient.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase();
                 return (
                   <button
                     key={patient.id}
@@ -393,8 +464,11 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
                     )}
                   >
                     {patient.photoUrl ? (
-                      <img src={patient.photoUrl} alt={patient.name}
-                        className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-border/40" />
+                      <img
+                        src={patient.photoUrl}
+                        alt={patient.name}
+                        className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-border/40"
+                      />
                     ) : (
                       <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-medical-blue bg-medical-blue-light">
                         {initials}
@@ -410,9 +484,13 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-[10px] text-muted-foreground">{relativeDate(patient.lastVisit)}</span>
                       <Badge variant={patient.status} className="text-[9px] h-4 px-1.5">
-                        {patient.status === 'retorno' ? 'Retorno' :
-                         patient.status === 'novo' ? 'Novo' :
-                         patient.status === 'seguimento' ? 'Seguimento' : 'Atend.'}
+                        {patient.status === 'retorno'
+                          ? 'Retorno'
+                          : patient.status === 'novo'
+                            ? 'Novo'
+                            : patient.status === 'seguimento'
+                              ? 'Seguimento'
+                              : 'Atend.'}
                       </Badge>
                       <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-medical-blue transition-colors" />
                     </div>
@@ -434,8 +512,13 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
               </span>
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {returnPatients.map(patient => {
-                const initials = patient.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+              {returnPatients.map((patient) => {
+                const initials = patient.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase();
                 const daysSince = daysSinceDateOnly(patient.lastVisit);
                 return (
                   <button
@@ -472,7 +555,6 @@ export function WelcomeDashboard({ patients, counts, onSelectPatient, onNewConsu
             Privacidade & Dados (LGPD)
           </Link>
         </div>
-
       </div>
     </div>
   );
