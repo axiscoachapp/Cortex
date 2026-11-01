@@ -1,11 +1,14 @@
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { mapPatientRow } from '@/lib/patientMapper';
+import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ageFromBirthdate } from '@/lib/patientImport';
 import { clinicDate } from '@/lib/dates';
 import { Patient } from '@/types/patient';
@@ -28,6 +31,23 @@ interface NewConsultationModalProps {
 export function NewConsultationModal({ open, onOpenChange, patients, onStartConsultation }: NewConsultationModalProps) {
   const [isNewPatient, setIsNewPatient] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
+  const [search, setSearch] = useState('');
+  const term = search.trim().replace(/[%_,()]/g, '');
+  // Server-side search: the directory passed in only holds the first 100 patients.
+  const searchResults = useQuery({
+    queryKey: ['patients', 'consultation-search', term],
+    enabled: open && term.length >= 2,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('patients').select('*').ilike('name', `%${term}%`).order('name').limit(30);
+      if (error) throw error;
+      return (data ?? []).map(mapPatientRow);
+    },
+  });
+  const visiblePatients: Patient[] =
+    term.length >= 2
+      ? (searchResults.data ?? [])
+      : patients.filter((p) => !term || p.name.toLowerCase().includes(term.toLowerCase()));
   const [newPatientName, setNewPatientName] = useState('');
   const [newPatientAge, setNewPatientAge] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -37,7 +57,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const resetForm = () => {
-    setIsNewPatient(false); setSelectedPatientId(''); setNewPatientName('');
+    setIsNewPatient(false); setSelectedPatientId(''); setSearch(''); setNewPatientName('');
     setNewPatientAge(''); setDateOfBirth(''); setNewPatientProfession(''); setNewPatientPhone('');
     setChiefComplaint(''); setSubmitError('');
   };
@@ -113,19 +133,53 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
 
           {!isNewPatient ? (
             <div className="space-y-2">
-              <Label htmlFor="patient-select">Selecionar Paciente</Label>
-              <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
-                <SelectTrigger id="patient-select">
-                  <SelectValue placeholder="Selecione um paciente..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {patients.map((patient) => (
-                    <SelectItem key={patient.id} value={patient.id}>
-                      {patient.name} - {patient.age === null ? 'Idade não informada' : `${patient.age} anos`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="patient-search">Buscar paciente</Label>
+              <Input
+                id="patient-search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Digite o nome (mín. 2 letras)"
+                autoComplete="off"
+              />
+              <div role="listbox" aria-label="Pacientes" className="max-h-56 overflow-y-auto rounded-md border divide-y">
+                {searchResults.isError && term.length >= 2 ? (
+                  <p role="alert" className="p-3 text-sm text-destructive">
+                    Não foi possível buscar.{' '}
+                    <button type="button" className="underline" onClick={() => searchResults.refetch()}>
+                      Tentar novamente
+                    </button>
+                  </p>
+                ) : searchResults.isFetching && term.length >= 2 && !searchResults.data ? (
+                  <p role="status" className="p-3 text-sm text-muted-foreground">Buscando…</p>
+                ) : visiblePatients.length === 0 ? (
+                  <p className="p-3 text-sm text-muted-foreground">
+                    {term ? 'Nenhum paciente encontrado. Use "Novo Paciente" para cadastrar.' : 'Nenhum paciente cadastrado.'}
+                  </p>
+                ) : (
+                  visiblePatients.map((patient) => (
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={selectedPatientId === patient.id}
+                      key={patient.id}
+                      onClick={() => setSelectedPatientId(patient.id)}
+                      className={cn(
+                        'w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60',
+                        selectedPatientId === patient.id && 'bg-primary/10 font-medium',
+                      )}
+                    >
+                      {patient.name}
+                      <span className="text-muted-foreground">
+                        {' · '}
+                        {patient.age === null ? 'Idade não informada' : `${patient.age} anos`}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+              {!term && patients.length >= 100 && (
+                <p className="text-xs text-muted-foreground">Mostrando os primeiros 100. Digite o nome para buscar os demais.</p>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

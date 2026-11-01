@@ -381,6 +381,7 @@ export function ClinicalWorkEditor({
                   aria-label="Valor observado"
                   disabled={locked || busy}
                   inputMode="decimal"
+                  placeholder="Ex.: 11,5"
                   value={details.value ?? ''}
                   onChange={(e) => value('value', e.target.value)}
                 />

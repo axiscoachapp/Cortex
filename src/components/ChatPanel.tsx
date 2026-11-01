@@ -47,7 +47,13 @@ import { ProfileUpdates } from '@/types/patient';
 import { printSoap } from '@/lib/printDoc';
 import { UsageMeter, UsageOverBanner } from '@/components/UsageMeter';
 import { ConsultationDraft, loadConsultationDraft, saveConsultationDraft } from '@/lib/consultationDrafts';
-import { functionErrorBody } from '@/lib/functionErrors';
+import { functionErrorBody, functionErrorMessage } from '@/lib/functionErrors';
+import {
+  saveRescuedRecording,
+  listRescuedRecordings,
+  deleteRescuedRecording,
+  type RescuedRecording,
+} from '@/lib/recordingRescue';
 import { ClinicalProposals } from '@/components/ClinicalProposals';
 import { useSessionHidden } from '@/contexts/SessionVisibility';
 import { ClinicalAnswer } from '@/components/ClinicalAnswer';
@@ -132,6 +138,9 @@ export function ChatPanel({
   const [draftLoadError, setDraftLoadError] = useState(false);
   const [draftRetryKey, setDraftRetryKey] = useState(0);
   const recoveryInputRef = useRef<HTMLInputElement>(null);
+  // Audio whose upload did not complete, keyed by draft id. Kept only in this
+  // tab (never written to disk unless the doctor explicitly downloads it).
+  const localAudioRef = useRef(new Map<string, { blob: Blob; mimeType: string }>());
   const [isGeneratingFinal, setIsGeneratingFinal] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [inputMode, setInputMode] = useState<'question' | 'comment'>('question');
@@ -192,7 +201,7 @@ export function ChatPanel({
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { specialty, liveCopilotEnabled, activeTemplateId } = useUserSettings();
+  const { specialty, liveCopilotEnabled, activeTemplateId, prescriber } = useUserSettings();
 
   // The doctor's active document template (if any) replaces the default SOAP
   // structure in transcribe/finalize. Fetched once and cached by React Query.
@@ -222,7 +231,49 @@ export function ChatPanel({
     // Only feed the live copilot when the doctor has it enabled — this also
     // stops the second (chunk) MediaRecorder from running for nothing.
     onLiveChunk: liveCopilotEnabled ? handleLiveChunk : undefined,
+    // Unmounted mid-recording (session ended elsewhere, crash): park the audio
+    // in this browser so it can be processed after signing in again.
+    onRescue: (blob, mimeType, comments) => {
+      if (!patient) return;
+      void saveRescuedRecording({
+        id: crypto.randomUUID(),
+        userId,
+        patientId: patient.id,
+        patientName: patient.name,
+        mimeType,
+        blob,
+        comments,
+        createdAt: new Date().toISOString(),
+      }).catch(() => {});
+    },
   });
+
+  const [rescued, setRescued] = useState<RescuedRecording[]>([]);
+  useEffect(() => {
+    let active = true;
+    if (!patient) {
+      setRescued([]);
+      return;
+    }
+    void listRescuedRecordings(userId).then((all) => {
+      if (active) setRescued(all.filter((entry) => entry.patientId === patient.id));
+    });
+    return () => {
+      active = false;
+    };
+  }, [userId, patient?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const processRescued = async (entry: RescuedRecording) => {
+    setRescued((list) => list.filter((item) => item.id !== entry.id));
+    await deleteRescuedRecording(entry.id).catch(() => {});
+    // processConsultation keeps the audio in this tab if the upload fails.
+    await processConsultation(entry.blob, entry.mimeType, entry.comments);
+  };
+  const discardRescued = async (entry: RescuedRecording) => {
+    if (!window.confirm('Descartar esta gravação interrompida? O áudio será apagado deste navegador.')) return;
+    await deleteRescuedRecording(entry.id).catch(() => {});
+    setRescued((list) => list.filter((item) => item.id !== entry.id));
+  };
 
   const { isRecording, isPaused, stopConfirming, recordingSeconds, audioLevel } = recording;
   const recordingRef = useRef(recording);
@@ -412,7 +463,7 @@ export function ChatPanel({
       if (isCurrentPatient(patient.id)) setInputValue((current) => current || text);
       toast({
         title: 'Erro ao processar comentário',
-        description: err instanceof Error ? err.message : 'Tente novamente.',
+        description: await functionErrorMessage(err, 'Tente novamente.'),
         variant: 'destructive',
       });
     } finally {
@@ -663,7 +714,7 @@ export function ChatPanel({
     } catch (err: unknown) {
       toast({
         title: 'Erro ao anexar documento',
-        description: err instanceof Error ? err.message : 'Tente novamente.',
+        description: await functionErrorMessage(err, 'Tente novamente.'),
         variant: 'destructive',
       });
     } finally {
@@ -726,7 +777,7 @@ export function ChatPanel({
     } catch (err: unknown) {
       toast({
         title: 'Erro ao gerar documento',
-        description: err instanceof Error ? err.message : 'Tente novamente.',
+        description: await functionErrorMessage(err, 'Tente novamente.'),
         variant: 'destructive',
       });
     } finally {
@@ -765,7 +816,9 @@ export function ChatPanel({
         userSpecialty: specialty,
         templateContent: activeTemplateContent ?? undefined,
         ...(doctorComments.trim()
-          ? { doctorComments: comments.join('\n\n'), previewOnly: true }
+          ? // The edited text is the base for regeneration so the doctor's
+            // direct corrections are never silently replaced.
+            { doctorComments: comments.join('\n\n'), reviewedSoap: draft.soapDraft, previewOnly: true }
           : { saveDirect: true, reviewed: true, soapNote: draft.soapDraft, whatsappMessage: draft.whatsappDraft }),
       },
     });
@@ -823,8 +876,8 @@ export function ChatPanel({
     }
   };
 
-  /** Offer the physician a local download so the recording isn't lost. */
-  const offerLocalDownload = (blob: Blob, mimeType: string) => {
+  /** Explicit, doctor-initiated download of audio that never reached the server. */
+  const downloadLocalAudio = (blob: Blob, mimeType: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -863,14 +916,20 @@ export function ChatPanel({
       originalComments: [...comments],
     };
     if (isCurrentPatient(draft.patientId)) setIsProcessing(true);
+    // A previous draft with a storage path and no tab-local copy came from the
+    // server, so its audio is already uploaded.
+    let audioOnServer = !!draft.audioStoragePath && !localAudioRef.current.has(draft.id);
     try {
       await saveConsultationDraft(userId, { ...draft, status: 'processing' });
-      if (!draft.audioStoragePath) {
+      if (!audioOnServer) {
         const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('ogg') ? 'ogg' : 'webm';
         const path = `consultations/${userId}/${draft.id}.${ext}`;
+        // The path is saved first so a discard can always clean up a partial upload.
         draft.audioStoragePath = path;
         await saveConsultationDraft(userId, draft);
         await uploadAudioWithRetry(audioBlob, path, mimeType);
+        audioOnServer = true;
+        localAudioRef.current.delete(draft.id);
       }
       const { data, error } = await supabase.functions.invoke('transcribe-consultation', {
         body: {
@@ -907,19 +966,23 @@ export function ChatPanel({
         setReviewData(ready);
       }
     } catch (error) {
-      // Retain both a server draft and a local download on every failure,
-      // including provider errors after a successful upload.
+      // Never write patient audio to disk automatically. Uploaded audio is
+      // already safe in the draft; audio that did not upload is kept in this
+      // tab so the doctor can resend it or explicitly download a copy.
       const failed = { ...draft, status: 'error' as const };
+      if (!audioOnServer) localAudioRef.current.set(draft.id, { blob: audioBlob, mimeType });
       await saveConsultationDraft(userId, failed).catch(() => {});
-      offerLocalDownload(audioBlob, mimeType);
       if (isCurrentPatient(draft.patientId)) setRecoveryDraft(failed);
-      if (!(error instanceof HandledError))
+      if (!(error instanceof HandledError)) {
+        const reason = await functionErrorMessage(error, 'Não foi possível processar a consulta.');
         toast({
           title: 'Consulta preservada para nova tentativa',
-          description:
-            'O áudio foi baixado e, quando enviado, permanece no rascunho. Tente novamente ao recuperar a conexão.',
+          description: audioOnServer
+            ? `${reason} O áudio está salvo no rascunho; use "Recuperar consulta" para tentar de novo.`
+            : `${reason} O áudio ainda não foi enviado e está guardado apenas nesta aba: reenvie ou baixe uma cópia antes de fechá-la.`,
           variant: 'destructive',
         });
+      }
     } finally {
       if (mountedRef.current) setAudioTasks((count) => Math.max(0, count - 1));
       if (isCurrentPatient(draft.patientId)) setIsProcessing(false);
@@ -932,7 +995,14 @@ export function ChatPanel({
       setRecoveryDraft(null);
       return;
     }
-    if (!draft.audioStoragePath || !isCurrentPatient(draft.patientId)) return;
+    if (!isCurrentPatient(draft.patientId)) return;
+    const local = localAudioRef.current.get(draft.id);
+    if (local) {
+      // Upload never completed: resend the audio kept in this tab.
+      await processConsultation(local.blob, local.mimeType, draft.originalComments, draft);
+      return;
+    }
+    if (!draft.audioStoragePath) return;
     setIsProcessing(true);
     try {
       const { data, error } = await supabase.storage.from('audio-recordings').download(draft.audioStoragePath);
@@ -953,9 +1023,14 @@ export function ChatPanel({
     if (!window.confirm('Excluir este rascunho e seu áudio? Esta ação não pode ser desfeita.')) return;
     const { error } = await supabase.functions.invoke('discard-consultation', { body: { draftId: draft.id } });
     if (error) {
-      toast({ title: 'Não foi possível excluir o rascunho', variant: 'destructive' });
+      toast({
+        title: 'Não foi possível excluir o rascunho',
+        description: await functionErrorMessage(error, 'Tente novamente.'),
+        variant: 'destructive',
+      });
       return;
     }
+    localAudioRef.current.delete(draft.id);
     if (isCurrentPatient(draft.patientId)) setRecoveryDraft(null);
   };
 
@@ -1186,7 +1261,9 @@ export function ChatPanel({
 
   const handlePrintSOAP = (soapNote: string) => {
     if (!patient) return;
-    printSoap(soapNote, patient, chiefComplaint);
+    printSoap(soapNote, patient, chiefComplaint, {
+      author: { name: prescriber.doctorName, crm: prescriber.crmNumber, crmUf: prescriber.crmUf },
+    });
   };
 
   // Receives fully merged arrays from ProfileUpdateCard — existing entries
@@ -1263,7 +1340,7 @@ export function ChatPanel({
       if (isCurrentPatient(patient.id)) setDocumentModal(null);
       toast({
         title: 'Erro ao gerar documento',
-        description: err instanceof Error ? err.message : 'Tente novamente.',
+        description: await functionErrorMessage(err, 'Tente novamente.'),
         variant: 'destructive',
       });
     }
@@ -1355,16 +1432,58 @@ export function ChatPanel({
           </div>
         )}
 
+        {rescued.map((entry) => (
+          <div key={entry.id} role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm space-y-2">
+            <p>
+              Uma gravação desta consulta foi interrompida em {new Date(entry.createdAt).toLocaleString('pt-BR')} (a
+              sessão foi encerrada) e ficou guardada neste navegador.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" disabled={isProcessing} onClick={() => void processRescued(entry)}>
+                Processar gravação
+              </Button>
+              <Button variant="ghost" disabled={isProcessing} onClick={() => void discardRescued(entry)}>
+                Descartar
+              </Button>
+            </div>
+          </div>
+        ))}
+
         {recoveryDraft && recoveryDraft.patientId === patient.id && (
           <div role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm space-y-2">
-            <p>Há uma consulta preservada para este paciente. Retome a revisão ou tente processar o áudio novamente.</p>
+            <p>
+              {localAudioRef.current.has(recoveryDraft.id)
+                ? 'O áudio desta consulta não chegou ao servidor e está guardado apenas nesta aba. Reenvie agora ou baixe uma cópia antes de fechar a aba.'
+                : 'Há uma consulta preservada para este paciente. Retome a revisão ou tente processar o áudio novamente.'}
+            </p>
             <Button
               variant="outline"
-              disabled={isProcessing || (!recoveryDraft.audioStoragePath && recoveryDraft.status !== 'review')}
+              disabled={
+                isProcessing ||
+                (!recoveryDraft.audioStoragePath &&
+                  recoveryDraft.status !== 'review' &&
+                  !localAudioRef.current.has(recoveryDraft.id))
+              }
               onClick={() => void recoverConsultation(recoveryDraft)}
             >
-              {recoveryDraft.status === 'review' ? 'Retomar revisão' : 'Recuperar consulta'}
+              {recoveryDraft.status === 'review'
+                ? 'Retomar revisão'
+                : localAudioRef.current.has(recoveryDraft.id)
+                  ? 'Reenviar áudio'
+                  : 'Recuperar consulta'}
             </Button>
+            {localAudioRef.current.has(recoveryDraft.id) && (
+              <Button
+                variant="outline"
+                disabled={isProcessing}
+                onClick={() => {
+                  const local = localAudioRef.current.get(recoveryDraft.id);
+                  if (local) downloadLocalAudio(local.blob, local.mimeType);
+                }}
+              >
+                Baixar cópia do áudio
+              </Button>
+            )}
             <input
               ref={recoveryInputRef}
               type="file"

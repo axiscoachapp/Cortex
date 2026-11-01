@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { sharingRpc } from '@/lib/sharing';
+import { functionErrorMessage } from '@/lib/functionErrors';
 
 interface SharedProtocol {
   id: string;
@@ -56,7 +57,7 @@ function useProtocolOverview(documentId: string | null = null, search = '', limi
     } catch (err) {
       if (request !== version.current) return;
       setData(empty);
-      setError(err instanceof Error ? err.message : 'Compartilhamento indisponível.');
+      setError(await functionErrorMessage(err, 'Compartilhamento indisponível.'));
     } finally {
       busy.current = false;
       if (request === version.current) setLoading(false);
@@ -102,7 +103,7 @@ export function ProtocolShareControls({
       setNotice(message);
       await overview.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível alterar o acesso.');
+      setError(await functionErrorMessage(err, 'Não foi possível alterar o acesso.'));
     } finally {
       setBusy(false);
     }
@@ -257,7 +258,7 @@ export function SharedProtocolsPanel() {
       if (request !== requestVersion.current) return;
       setSource(null);
       authorization.current = null;
-      setError(err instanceof Error ? err.message : 'Fonte indisponível.');
+      setError(await functionErrorMessage(err, 'Fonte indisponível.'));
     } finally {
       if (requestActive.current === request) requestActive.current = null;
       if (request === requestVersion.current) setLoading(false);

@@ -32,6 +32,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { printSoap, printDossier, escapeHtml } from '@/lib/printDoc';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { PatientFiles } from '@/components/PatientFiles';
 import { PrescriptionList } from '@/components/PrescriptionList';
 import { UsageMeter } from '@/components/UsageMeter';
@@ -107,6 +108,8 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { prescriber } = useUserSettings();
+  const printAuthor = { name: prescriber.doctorName, crm: prescriber.crmNumber, crmUf: prescriber.crmUf };
 
   // Reset transient UI state on patient switch.
   useEffect(() => {
@@ -680,7 +683,12 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                                       size="sm"
                                       variant="ghost"
                                       className="h-6 px-2 text-[11px] gap-1"
-                                      onClick={() => printSoap(c.soap_note!, patient, c.chief_complaint ?? undefined)}
+                                      onClick={() =>
+                                        printSoap(c.soap_note!, patient, c.chief_complaint ?? undefined, {
+                                          consultationDate: c.created_at,
+                                          author: printAuthor,
+                                        })
+                                      }
                                     >
                                       <Printer className="w-3 h-3" /> Imprimir
                                     </Button>
@@ -783,7 +791,12 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                             size="sm"
                             variant="ghost"
                             className="h-8 px-2 gap-1 text-xs"
-                            onClick={() => printSoap(c.soap_note!, patient, c.chief_complaint ?? undefined)}
+                            onClick={() =>
+                                        printSoap(c.soap_note!, patient, c.chief_complaint ?? undefined, {
+                                          consultationDate: c.created_at,
+                                          author: printAuthor,
+                                        })
+                                      }
                           >
                             <Printer className="w-3.5 h-3.5" />
                             SOAP

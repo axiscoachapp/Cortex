@@ -36,6 +36,10 @@ interface UseRecordingOptions {
   /** Optional live-copilot feed: called every ~30s with a SELF-CONTAINED audio
    *  chunk of the last interval. The main recording is unaffected. */
   onLiveChunk?: (blob: Blob, mimeType: string) => void;
+  /** Called when the component unmounts mid-recording (session ended, crash).
+   *  Receives the audio captured so far so it can be parked for recovery
+   *  instead of being dropped. Captured at start, like onStop. */
+  onRescue?: (blob: Blob, mimeType: string, consultationComments: string[]) => void;
 }
 
 /** Rotation interval for live chunks. Each chunk is an independent WebM file
@@ -57,14 +61,19 @@ export function useRecording({
   consultationCommentsRef,
   onCommentsReset,
   onLiveChunk,
+  onRescue,
 }: UseRecordingOptions): RecordingState & RecordingActions {
   // Store callbacks in refs so recorder.onstop always calls the latest version,
   // avoiding stale-closure issues and forward-reference problems at call sites.
   const onStopRef = useRef(onStop);
   const onCommentsResetRef = useRef(onCommentsReset);
   const onLiveChunkRef = useRef(onLiveChunk);
+  const onRescueRef = useRef(onRescue);
+  /** Unmount path for the active recorder: hands its audio to onRescue. */
+  const rescueActiveRef = useRef<(() => void) | null>(null);
   const freezeCommentsRef = useRef<() => void>(() => {});
   useEffect(() => { onStopRef.current = onStop; });
+  useEffect(() => { onRescueRef.current = onRescue; });
   useEffect(() => { onCommentsResetRef.current = onCommentsReset; });
   useEffect(() => { onLiveChunkRef.current = onLiveChunk; });
 
@@ -100,6 +109,7 @@ export function useRecording({
   // ── Internal helpers ───────────────────────────────────────────────────────
 
   const startTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current); // never run two timers
     timerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
   };
 
@@ -340,6 +350,15 @@ export function useRecording({
       freezeCommentsRef.current = () => { finalComments = [...(consultationCommentsRef.current ?? [])]; };
       const finishForOriginalPatient = onStopRef.current;
       const resetOriginalComments = onCommentsResetRef.current;
+      const rescueForOriginalPatient = onRescueRef.current;
+      rescueActiveRef.current = () => {
+        // Replace the normal handler: there is no mounted UI to process it.
+        recorder.onstop = () => {
+          ownedStreams.forEach(stream => stream.getTracks().forEach(track => track.stop()));
+          const audioBlob = new Blob(recordingChunks, { type: mimeType });
+          if (audioBlob.size > 0) rescueForOriginalPatient?.(audioBlob, mimeType, [...(consultationCommentsRef.current ?? [])]);
+        };
+      };
 
       recorder.onstop = () => {
         ownedStreams.forEach(stream => stream.getTracks().forEach(track => track.stop()));
@@ -351,7 +370,13 @@ export function useRecording({
         if (mountedRef.current) setPendingStops(count => Math.max(0, count - 1));
         if (mediaRecorderRef.current === recorder) {
           mediaRecorderRef.current = null;
-          if (mountedRef.current) { setIsRecording(false); setIsPaused(false); setMode(null); }
+          rescueActiveRef.current = null;
+          // The recorder can also stop on its own (mic unplugged, permission
+          // revoked): release the timer, level meter and live recorder too.
+          stopTimer();
+          stopAudioLevel();
+          stopLiveRecorder(false);
+          if (mountedRef.current) { setIsRecording(false); setIsPaused(false); setMode(null); setStopConfirming(false); }
         }
       };
 
@@ -397,6 +422,7 @@ export function useRecording({
     setStopConfirming(false);
     stopAudioLevel();
     stopLiveRecorder(true);   // emit the trailing partial chunk for a last refresh
+    rescueActiveRef.current = null; // a confirmed stop processes the audio normally
     const recorder = mediaRecorderRef.current;
     if (recorder && recorder.state !== 'inactive') {
       setPendingStops(count => count + 1);
@@ -417,6 +443,7 @@ export function useRecording({
     startingRef.current = false;
     setIsStarting(false);
     stopLiveRecorder(false);   // drop trailing chunk — this recording is abandoned
+    rescueActiveRef.current = null; // explicit discard: nothing to rescue
     const rec = mediaRecorderRef.current;
     if (rec && rec.state !== 'inactive') {
       // Detach the handler first so the audio is dropped, not processed.
@@ -443,9 +470,12 @@ export function useRecording({
     stopLiveRecorder(false);
     const rec = mediaRecorderRef.current;
     if (rec && rec.state !== 'inactive') {
-      rec.onstop = null;
+      // Unmount is not a user decision to discard: park the audio for recovery.
+      if (rescueActiveRef.current) rescueActiveRef.current();
+      else rec.onstop = null;
       try { rec.stop(); } catch { /* already stopped */ }
     }
+    rescueActiveRef.current = null;
     streamsRef.current.forEach(s => s.getTracks().forEach(t => t.stop()));
     streamsRef.current = [];
     cancelAnimationFrame(animFrameRef.current);

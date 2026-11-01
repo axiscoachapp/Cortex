@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BrandLockup } from '@/components/BrandLockup';
+import { mfaErrorMessage, newFactorName } from '@/lib/mfa';
 export default function AccountSecurity() {
   const { user } = useAuth();
   const client = useQueryClient();
@@ -29,17 +30,20 @@ export default function AccountSecurity() {
     setNotice('');
     try {
       await action();
-    } catch {
-      setError('Não foi possível concluir. Confira o código e a conexão e tente novamente.');
+    } catch (err) {
+      setError(mfaErrorMessage(err));
     } finally {
       setBusy(false);
     }
   };
   const enroll = () =>
     run(async () => {
+      // Abandoned, never-verified setups count toward the factor limit: clear them first.
+      for (const stale of factors.data?.filter((f) => f.status !== 'verified') ?? [])
+        await supabase.auth.mfa.unenroll({ factorId: stale.id });
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
-        friendlyName: 'Cortex ' + new Date().toISOString().slice(0, 10),
+        friendlyName: newFactorName(factors.data?.filter((f) => f.status === 'verified').length ?? 0),
         issuer: 'Haddad Nicola',
       });
       if (error) throw error;
@@ -48,11 +52,17 @@ export default function AccountSecurity() {
     });
   const verify = () =>
     run(async () => {
-      const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: setup?.id || factor, code });
+      const factorId = setup?.id || factor || factors.data?.find((f) => f.status === 'verified')?.id || '';
+      const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code });
       if (error) throw error;
       setSetup(null);
       setCode('');
-      setNotice('Verificação concluída. Sua sessão está protegida pelo segundo fator.');
+      const verifiedCount = (factors.data?.filter((f) => f.status === 'verified').length ?? 0) + (setup ? 1 : 0);
+      setNotice(
+        verifiedCount < 2
+          ? 'Verificação concluída. Recomendamos adicionar um segundo autenticador (por exemplo, outro celular) como reserva: sem ele, perder o aparelho bloqueia o acesso aos prontuários.'
+          : 'Verificação concluída. Sua sessão está protegida pelo segundo fator.',
+      );
       void client.invalidateQueries({ queryKey: ['mfa-factors'] });
       void client.invalidateQueries({ queryKey: ['session-assurance'] });
     });
@@ -153,7 +163,7 @@ export default function AccountSecurity() {
               <select
                 aria-label="Autenticador"
                 className="block w-full border rounded p-2 mt-2"
-                value={factor}
+                value={factor || factors.data?.find((f) => f.status === 'verified')?.id || ''}
                 onChange={(e) => setFactor(e.target.value)}
                 required
               >
@@ -162,7 +172,7 @@ export default function AccountSecurity() {
                   ?.filter((f) => f.status === 'verified')
                   .map((f) => (
                     <option key={f.id} value={f.id}>
-                      {f.friendly_name || f.id}
+                      {f.friendly_name || 'Aplicativo autenticador'}
                     </option>
                   ))}
               </select>
@@ -180,7 +190,12 @@ export default function AccountSecurity() {
               required
             />
           </label>
-          <Button type="submit" disabled={busy || code.length !== 6 || (!setup && !factor)}>
+          <Button
+            type="submit"
+            disabled={
+              busy || code.length !== 6 || (!setup && !(factor || factors.data?.some((f) => f.status === 'verified')))
+            }
+          >
             Verificar código
           </Button>
         </form>

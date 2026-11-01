@@ -64,6 +64,19 @@ export default function ClinicalWorkspacePage() {
   const [workCompare, setWorkCompare] = useState<string | null>(null);
   const exitEditor = useRef<() => boolean>(() => true);
   const [editorVersion, setEditorVersion] = useState(0);
+  // Changing ?patient= keeps this page mounted. Reset per-patient UI state
+  // during render so patient A's open record can never appear (or be saved)
+  // under patient B's header.
+  const [statePatientId, setStatePatientId] = useState(patientId);
+  if (statePatientId !== patientId) {
+    setStatePatientId(patientId);
+    setEditing(undefined);
+    setEditorOpen(false);
+    setCompare(null);
+    setWorkCompare(null);
+    setTab('work');
+    exitEditor.current = () => true;
+  }
   const openEditor = (item?: Item) => {
     if (editorOpen && !exitEditor.current()) return;
     setEditing(item);
@@ -285,7 +298,7 @@ export default function ClinicalWorkspacePage() {
                   {audio.data.map((d) => (
                     <li key={d.id}>
                       <Link className="block py-3 text-sm" to={'/?patient=' + d.patient_id}>
-                        Retomar consulta · {names.data?.[d.patient_id] ?? 'Paciente ' + d.patient_id} ·{' '}
+                        Retomar consulta · {names.data?.[d.patient_id] ?? 'Paciente'} ·{' '}
                         {d.status === 'review'
                           ? 'Aguardando revisão'
                           : d.status === 'error'
@@ -333,7 +346,7 @@ export default function ClinicalWorkspacePage() {
                   Consulta e documentos
                 </Link>
               </div>
-              {editorOpen && user && (
+              {editorOpen && user && (!editing || editing.patient_id === patientId) && (
                 <ClinicalWorkEditor
                   key={patientId + '/' + (editing?.id ?? 'new') + '/' + editorVersion}
                   item={editing}
@@ -375,10 +388,10 @@ export default function ClinicalWorkspacePage() {
                       </p>
                       <h2 className="font-semibold mt-1">{item.title}</h2>
                       {!patientId && (
-                        <p className="text-sm mt-1">{names.data?.[item.patient_id] ?? 'Paciente ' + item.patient_id}</p>
+                        <p className="text-sm mt-1">{names.data?.[item.patient_id] ?? 'Paciente'}</p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(item.updated_at).toLocaleString('pt-BR')} · revisão {item.revision}
+                        Atualizado em {new Date(item.updated_at).toLocaleString('pt-BR')}
                         {item.due_date ? ' · prazo ' + formatDateOnly(item.due_date) : ''}
                       </p>
                     </div>

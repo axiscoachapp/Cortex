@@ -44,11 +44,15 @@ export function ClinicalAnswer({ message, userId }: { message: ChatMessage; user
       retry: false,
       staleTime: 0,
       gcTime: 0,
-      refetchInterval: 5000,
+      // Revocation is rechecked periodically; 30 s keeps this cheap (each check
+      // takes a per-user advisory lock) while still hiding revoked content quickly.
+      refetchInterval: 30_000,
       refetchOnWindowFocus: true,
     })),
   });
-  if (protocols.length && (hidden || checks.some((check) => check.isPending || check.isFetching)))
+  // Only the first check blocks the answer. During background rechecks the last
+  // confirmed result stays visible, so the text no longer flickers every few seconds.
+  if (protocols.length && (hidden || checks.some((check) => check.isPending)))
     return (
       <p role="status" className="text-xs text-muted-foreground">
         Verificando acesso às fontes desta resposta…
@@ -89,7 +93,6 @@ export function ClinicalAnswer({ message, userId }: { message: ChatMessage; user
                 {source.reviewStatus === 'pending' && (
                   <p className="text-amber-800">Análise de documento ainda não revisada pelo médico.</p>
                 )}
-                <p className="text-muted-foreground">Referência interna: {source.id}</p>
                 <p className="whitespace-pre-wrap mt-1">
                   {source.excerpt}
                   {source.truncated ? ' […]' : ''}

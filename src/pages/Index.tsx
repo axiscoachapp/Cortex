@@ -73,8 +73,10 @@ const Index = () => {
 
   useSeedPatients(user?.id);
 
+  // The directory has its own key: Pacientes/Agenda cache the full Patient[]
+  // list under ['patients', uid, 'all'], and sharing one key crashed them.
   const { data: directory, isError: patientsError, refetch: retryPatients } = useQuery<{patients:Patient[];counts:{total:number;new:number;returns:number}}>({
-    queryKey: ['patients', user?.id],
+    queryKey: ['patients', user?.id, 'directory'],
     queryFn: async () => {
       const {data,error}=await supabase.rpc('workspace_directory',{p_limit:100});
       if(error)throw error;
@@ -216,7 +218,12 @@ const Index = () => {
   useEffect(() => {
     if (!linkedPatientId || linkedPatientId === selectedPatientIdRef.current) return;
     const linked = patients.find(patient => patient.id === linkedPatientId);
-    if (confirmPatientChange(linkedPatientId)) void activatePatient(linked ?? {id:linkedPatientId} as Patient, undefined, true);
+    if (confirmPatientChange(linkedPatientId)) {
+      // A URL-driven switch has no appointment context; never carry the
+      // previous patient's appointment into the new patient's draft.
+      setSelectedAppointmentId(null);
+      void activatePatient(linked ?? {id:linkedPatientId} as Patient, undefined, true);
+    }
     // Activation only follows the URL/patient-list change, not briefing responses.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkedPatientId, patients]);
@@ -267,7 +274,13 @@ const Index = () => {
       patient = mapPatientRow(data);
       queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
     } else {
-      const found = patients.find(p => p.id === patientId);
+      // The directory only holds the first 100 patients; a patient picked via
+      // search may be outside it, so load it directly when needed.
+      let found = patients.find(p => p.id === patientId);
+      if (!found && patientId) {
+        const { data } = await supabase.from('patients').select('*').eq('id', patientId).maybeSingle();
+        if (data) found = mapPatientRow(data);
+      }
       if (!found) {
         toast({ title: 'Paciente não encontrado', description: 'Selecione o paciente novamente.', variant: 'destructive' });
         throw new Error('Paciente não encontrado.');
@@ -278,6 +291,9 @@ const Index = () => {
       queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
     }
 
+    // 'Nova Consulta' is unscheduled: drop any appointment selected earlier
+    // (it belongs to another patient and would fail the draft's appointment FK).
+    setSelectedAppointmentId(null);
     void activatePatient({ ...patient, status: 'atendimento' }, complaint);
     toast({ title: 'Consulta iniciada', description: `Consulta com ${patient.name} iniciada.` });
   };

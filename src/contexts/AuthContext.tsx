@@ -113,7 +113,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     localStorage.removeItem(ADMIN_BYPASS_KEY);
-    const { error } = await supabase.auth.signOut();
+    // 'local' ends only this browser's session. The default ('global') also
+    // revoked every other device, killing a recording in progress elsewhere.
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) throw error;
     queryClient.clear();
     setUser(null);

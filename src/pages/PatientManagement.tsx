@@ -53,7 +53,7 @@ const PatientManagement = () => {
     isError,
     refetch,
   } = useQuery<Patient[]>({
-    queryKey: ['patients', user?.id],
+    queryKey: ['patients', user?.id, 'all'],
     queryFn: async () => {
       const data = await fetchAllRows((from, to) =>
         supabase.from('patients').select('*').order('name').order('id').range(from, to),

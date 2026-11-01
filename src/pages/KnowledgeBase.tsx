@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { fetchAllRows } from '@/lib/pagination';
-import { functionErrorBody } from '@/lib/functionErrors';
+import { functionErrorBody, functionErrorMessage } from '@/lib/functionErrors';
 import { createKnowledgeSource, reviewKnowledgeSource } from '@/lib/knowledge';
 import { ProtocolShareControls, SharedProtocolsPanel } from '@/components/ProtocolSharing';
 
@@ -165,7 +165,7 @@ export default function KnowledgeBasePage() {
       await refresh();
       toast({ title: 'Original preservado', description: 'Revise a versão antes de disponibilizá-la ao assistente.' });
     } catch (error) {
-      setDraftError(error instanceof Error ? error.message : 'Não foi possível salvar. Seu texto foi mantido.');
+      setDraftError(await functionErrorMessage(error, 'Não foi possível salvar. Seu texto foi mantido.'));
     } finally {
       setSaving(false);
     }
@@ -190,7 +190,7 @@ export default function KnowledgeBasePage() {
         description: 'O assistente pode consultar esta versão e citar a fonte.',
       });
     } catch (error) {
-      setOperationError(error instanceof Error ? error.message : 'A indexação falhou. O original foi preservado.');
+      setOperationError(await functionErrorMessage(error, 'A indexação falhou. O original foi preservado.'));
     } finally {
       setBusyId(null);
       await refresh();
@@ -208,7 +208,7 @@ export default function KnowledgeBasePage() {
       await reviewKnowledgeSource(doc.id, false);
       toast({ title: 'Fonte retirada', description: 'Novas consultas não usarão esta versão.' });
     } catch (error) {
-      setOperationError(error instanceof Error ? error.message : 'Não foi possível retirar a fonte.');
+      setOperationError(await functionErrorMessage(error, 'Não foi possível retirar a fonte.'));
     } finally {
       setBusyId(null);
       await refresh();

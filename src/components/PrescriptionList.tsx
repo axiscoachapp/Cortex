@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllRows } from '@/lib/pagination';
+import { functionErrorMessage } from '@/lib/functionErrors';
 
 interface PrescriptionRow {
   id: string;
@@ -67,7 +68,7 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
       queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patientId] });
       toast({ title: 'Documento revogado' });
     } catch (err) {
-      toast({ title: 'Erro ao revogar', description: err instanceof Error ? err.message : 'Tente novamente.', variant: 'destructive' });
+      toast({ title: 'Erro ao revogar', description: await functionErrorMessage(err, 'Tente novamente.'), variant: 'destructive' });
     } finally {
       setBusyId(null);
     }

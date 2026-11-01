@@ -228,10 +228,17 @@ serve(async (req) => {
       const commentsSection = doctorComments.trim()
         ? `\n\nObservações do médico (incorpore obrigatoriamente no SOAP):\n${doctorComments.trim()}`
         : '';
+      // The physician may have edited the draft directly before adding
+      // comments. That text is authoritative: regenerate on top of it.
+      const reviewedSoap =
+        typeof body.reviewedSoap === 'string' ? body.reviewedSoap.trim().slice(0, 20000) : '';
+      const reviewedSection = reviewedSoap
+        ? `\n\nRascunho já revisado e editado pelo médico (use como base; preserve TODAS as correções, doses e dados que o médico escreveu, alterando apenas o necessário para incorporar as observações abaixo):\n${reviewedSoap}`
+        : '';
 
       const finalParts = [
         {
-          text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsSection}`,
+          text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${reviewedSection}${commentsSection}`,
         },
       ];
       const instruction =

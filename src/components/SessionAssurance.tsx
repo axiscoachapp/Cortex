@@ -6,6 +6,85 @@ import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 import { SessionVisibilityContext } from '@/contexts/SessionVisibility';
 import { confirmSessionExit } from '@/hooks/useUnsavedChanges';
+import { Input } from '@/components/ui/input';
+import { mfaErrorMessage } from '@/lib/mfa';
+
+function InlineFactorVerification({ onVerified }: { onVerified: () => void }) {
+  const [code, setCode] = useState('');
+  const [factorId, setFactorId] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const factors = useQuery({
+    queryKey: ['mfa-factors-inline'],
+    queryFn: async () => {
+      const { data, error } = await supabase.auth.mfa.listFactors();
+      if (error) throw error;
+      return data.totp.filter((f) => f.status === 'verified');
+    },
+  });
+  const verified = factors.data ?? [];
+  const selected = factorId || verified[0]?.id || '';
+  const submit = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: selected, code });
+      if (error) throw error;
+      setCode('');
+      onVerified();
+    } catch (err) {
+      setError(mfaErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submit();
+      }}
+    >
+      {verified.length > 1 && (
+        <label className="block text-sm">
+          Autenticador
+          <select
+            className="block w-full border rounded p-2 mt-2"
+            value={selected}
+            onChange={(e) => setFactorId(e.target.value)}
+          >
+            {verified.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.friendly_name || 'Aplicativo autenticador'}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <label className="block text-sm space-y-2">
+        <span>Código de 6 dígitos</span>
+        <Input
+          autoFocus
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          maxLength={6}
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+        />
+      </label>
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <Button type="submit" disabled={busy || code.length !== 6 || !selected}>
+        {busy ? 'Verificando…' : 'Verificar código'}
+      </Button>
+    </form>
+  );
+}
+
 export function SessionAssurance({ children }: { children: React.ReactNode }) {
   const { user, session, signOut } = useAuth();
   const exit = () => {
@@ -45,12 +124,15 @@ export function SessionAssurance({ children }: { children: React.ReactNode }) {
     <main className="max-w-lg mx-auto p-8 space-y-4">
       <h1 className="font-serif text-3xl">Verifique seu acesso</h1>
       <p>Confirme o código do aplicativo autenticador para abrir o ambiente clínico.</p>
-      <Button asChild>
-        <Link to="/seguranca">Verificar código</Link>
-      </Button>
+      {/* Verified inline: navigating away would unmount the workspace and any
+          recording in progress behind this gate. */}
+      <InlineFactorVerification onVerified={() => void query.refetch()} />
       <Button variant="outline" onClick={exit}>
         Sair
       </Button>
+      <p className="text-xs text-muted-foreground">
+        Perdeu o autenticador? <Link to="/seguranca" className="underline">Gerenciar autenticadores</Link>
+      </p>
     </main>
   );
   return (

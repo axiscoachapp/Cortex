@@ -159,7 +159,7 @@ export default function CalendarPage() {
     isLoading: patientsLoading,
     refetch: retryPatients,
   } = useQuery<Patient[]>({
-    queryKey: ['patients', user?.id],
+    queryKey: ['patients', user?.id, 'all'],
     queryFn: async () => {
       if (!user?.id) return [];
       const data = await fetchAllRows((from, to) =>
@@ -211,10 +211,26 @@ export default function CalendarPage() {
 
   const handleSelectSlot = useCallback((slot: SlotInfo) => {
     setSelectedAppointment(null);
-    setDefaultSlot({
-      start: slot.start,
-      end: slot.end instanceof Date ? slot.end : addMinutes(slot.start, 30),
-    });
+    // Month-view day clicks and the all-day row report midnight-to-midnight.
+    // Default those to a normal 09:00–09:30 slot on the first selected day.
+    const start = slot.start;
+    const wholeDay =
+      start.getHours() === 0 &&
+      start.getMinutes() === 0 &&
+      slot.end instanceof Date &&
+      slot.end.getHours() === 0 &&
+      slot.end.getMinutes() === 0 &&
+      slot.end.getTime() > start.getTime();
+    if (wholeDay) {
+      const morning = new Date(start);
+      morning.setHours(9, 0, 0, 0);
+      setDefaultSlot({ start: morning, end: addMinutes(morning, 30) });
+    } else {
+      setDefaultSlot({
+        start,
+        end: slot.end instanceof Date && slot.end > start ? slot.end : addMinutes(start, 30),
+      });
+    }
     setModalOpen(true);
   }, []);
 

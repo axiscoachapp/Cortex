@@ -9,8 +9,9 @@ import { PatientProfileDrawer } from './PatientProfileDrawer';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { printPrescription } from '@/lib/printDoc';
-import { functionErrorBody } from '@/lib/functionErrors';
+import { printMedicationList } from '@/lib/printDoc';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { functionErrorBody, functionErrorMessage } from '@/lib/functionErrors';
 
 interface PatientSnapshotProps {
   patient: Patient | null;
@@ -57,6 +58,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.id;
+  const { prescriber } = useUserSettings();
   const draftKey = `${userId ?? ''}/${patient?.id ?? ''}`;
   const notes = drafts[draftKey] ?? '';
   const isProcessing = processing[draftKey] ?? false;
@@ -93,10 +95,10 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
   const handleGeneratePrescription = () => {
     if (!patient) return;
     if (patient.medications.length === 0) {
-      toast({ title: 'Nenhuma medicação registrada', description: 'Adicione medicações ao perfil antes de gerar a receita.', variant: 'destructive' });
+      toast({ title: 'Nenhuma medicação registrada', description: 'Adicione medicações ao perfil antes de imprimir a lista.', variant: 'destructive' });
       return;
     }
-    printPrescription(patient);
+    printMedicationList(patient, { name: prescriber.doctorName, crm: prescriber.crmNumber, crmUf: prescriber.crmUf });
   };
 
   const handleProcessNotes = async () => {
@@ -125,7 +127,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
       queryClient.invalidateQueries({ queryKey: ['patients', userId] });
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
     } catch (err) {
-      toast({ title: 'Erro ao processar', description: err instanceof Error ? err.message : 'Tente novamente.', variant: 'destructive' });
+      toast({ title: 'Erro ao processar', description: await functionErrorMessage(err, 'Tente novamente.'), variant: 'destructive' });
     } finally {
       setProcessing(prev => ({ ...prev, [submittedKey]: false }));
     }
@@ -203,7 +205,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
                 className="flex items-center gap-1 text-[10px] text-medical-blue hover:text-medical-blue-dark transition-colors font-medium"
               >
                 <Printer className="w-3 h-3" />
-                Receita
+                Imprimir lista
               </button>
             }
           />

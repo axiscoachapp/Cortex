@@ -98,7 +98,9 @@ export function useUserSettings() {
 
   return {
     specialty:            data?.specialty            ?? DEFAULTS.specialty,
-    liveCopilotEnabled:   data?.live_copilot_enabled ?? DEFAULTS.live_copilot_enabled,
+    // Fail closed: while settings are loading or failed to load, never stream
+    // audio to the copilot (the doctor may have opted out).
+    liveCopilotEnabled:   data ? data.live_copilot_enabled : false,
     activeTemplateId:     data?.active_template_id   ?? null,
     setActiveTemplateId:  (active_template_id: string | null) => mutation.mutate({ active_template_id }),
     prescriber: {

@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { supabase } from '@/integrations/supabase/client';
 import { sharingRpc, sharedClinicalList, SharingError, type SharedChart, type SharingOverview } from '@/lib/sharing';
+import { functionErrorMessage } from '@/lib/functionErrors';
 
 const date = (value: string) => new Date(value).toLocaleString('pt-BR');
 const empty: SharingOverview = { memberships: [], members: [], received: [], granted: [] };
@@ -126,7 +127,7 @@ export default function SharingPage() {
       setError('');
     } catch (err) {
       setOverview(empty);
-      setError(err instanceof Error ? err.message : 'Não foi possível carregar os compartilhamentos.');
+      setError(await functionErrorMessage(err, 'Não foi possível carregar os compartilhamentos.'));
     } finally {
       overviewRequest.current = false;
       setLoading(false);
@@ -208,7 +209,7 @@ export default function SharingPage() {
       setAudit([]);
       authorization.current = null;
       if (err instanceof SharingError && err.code === '42501') setEntry('');
-      setChartError(err instanceof Error ? err.message : 'Acesso indisponível.');
+      setChartError(await functionErrorMessage(err, 'Acesso indisponível.'));
     } finally {
       if (chartRequest.current === version) chartRequest.current = null;
       if (version === requestVersion.current) setChartLoading(false);
@@ -241,7 +242,7 @@ export default function SharingPage() {
       setNotice(message);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'A operação não foi concluída.');
+      setError(await functionErrorMessage(err, 'A operação não foi concluída.'));
     } finally {
       setBusy(false);
     }
@@ -291,7 +292,7 @@ export default function SharingPage() {
       await loadChart(id, limit);
     } catch (err) {
       if (editorPatient.current === id)
-        setEntryError(err instanceof Error ? err.message : 'A contribuição não foi salva.');
+        setEntryError(await functionErrorMessage(err, 'A contribuição não foi salva.'));
     } finally {
       setBusy(false);
     }
@@ -313,7 +314,7 @@ export default function SharingPage() {
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
-      setEntryError(err instanceof Error ? err.message : 'Não foi possível baixar o arquivo.');
+      setEntryError(await functionErrorMessage(err, 'Não foi possível baixar o arquivo.'));
     } finally {
       setBusy(false);
     }
