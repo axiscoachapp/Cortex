@@ -345,7 +345,7 @@ class FieldStats {
       if (this.plainLengths.length) {
         const [tp50, tp90, tmax] = quantiles(this.plainLengths, [0.5, 0.9, 1]);
         const [d50, d90, dmax] = quantiles(this.dateStamps, [0.5, 0.9, 1]);
-        out.plainText = { p50: tp50, p90: tp90, max: tmax, emptyAfterStrip: this.emptyAfterStrip };
+        out.plainText = { p50: tp50, p90: tp90, max: tmax, total: this.plainLengths.reduce((a, b) => a + b, 0), count: this.plainLengths.length, emptyAfterStrip: this.emptyAfterStrip };
         out.dateStampsPerDoc = { p50: d50, p90: d90, max: dmax, docsWith2plus: this.dateStamps.filter((x) => x >= 2).length };
         if (this.rtfPictures) out.embeddedPictures = { total: this.rtfPictures, docs: this.docsWithPictures };
       }
