@@ -4,6 +4,39 @@ export type ImportTarget = 'name' | 'age' | 'birthdate' | 'phone' | 'email' | 'p
 export type ImportedPatient = TablesInsert<'patients'> & { id: string; name: string; age: number };
 export interface ImportRejection { row: number; reason: string }
 
+/**
+ * Decode an uploaded CSV. Excel in pt-BR saves Windows-1252 ("CSV separado por
+ * vírgulas"), which used to be read as UTF-8 and corrupted every accented name.
+ */
+export function decodeCsvBytes(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const start = bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf ? 3 : 0;
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(start));
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes);
+  }
+}
+
+/** ISO date (yyyy-mm-dd) for a dd/mm/yyyy or ISO birthdate, or null. */
+export function isoFromBirthdate(value: string): string | null {
+  const raw = value.trim();
+  const br = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(raw);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (!br && !iso) return null;
+  const [year, month, day] = br ? [Number(br[3]), Number(br[2]), Number(br[1])] : [Number(iso![1]), Number(iso![2]), Number(iso![3])];
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+const normalizeName = (name: string) =>
+  name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+/** Identity used to skip patients that are already registered (re-imports). */
+export function importIdentity(name: string, dateOfBirth: string | null, age: number | null): string {
+  return dateOfBirth ? `${normalizeName(name)}|${dateOfBirth}` : `${normalizeName(name)}|idade:${age ?? '?'}`;
+}
+
 export function parseCSV(text: string): { headers: string[]; rows: string[][] } {
   const first = text.slice(0, 2000).split(/\r?\n/)[0] ?? '';
   const delimiter = (first.match(/;/g)?.length ?? 0) > (first.match(/,/g)?.length ?? 0) ? ';' : ',';
@@ -43,8 +76,15 @@ export function ageFromBirthdate(value: string, today: string): number | null {
   return age >= 0 && age <= 130 ? age : null;
 }
 
-export function preparePatientImport(rows: string[][], mapping: ImportTarget[], userId: string, today: string) {
+export function preparePatientImport(
+  rows: string[][],
+  mapping: ImportTarget[],
+  userId: string,
+  today: string,
+  existing: Set<string> = new Set(),
+) {
   const records: ImportedPatient[] = [], rejected: ImportRejection[] = [];
+  const seen = new Set(existing);
   rows.forEach((row, index) => {
     const field = (target: ImportTarget) => (row[mapping.indexOf(target)] ?? '').trim();
     const name = field('name'), ageValue = field('age'), birthdate = field('birthdate');
@@ -55,8 +95,11 @@ export function preparePatientImport(rows: string[][], mapping: ImportTarget[], 
     else if (age === null || !Number.isInteger(age) || age < 0 || age > 130 || (ageValue !== '' && !/^\d+$/.test(ageValue))) reason = 'Idade ou data de nascimento ausente ou inválida';
     else if (birthdate && (ageFromBirthdate(birthdate, today) === null || (ageValue && ageFromBirthdate(birthdate, today) !== age))) reason = 'Data de nascimento inválida ou incompatível com a idade';
     else if (field('email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field('email'))) reason = 'Email inválido';
+    const dateOfBirth = birthdate ? isoFromBirthdate(birthdate) : null;
+    if (!reason && seen.has(importIdentity(name, dateOfBirth, age))) reason = 'Paciente já cadastrado (mesmo nome e nascimento/idade)';
     if (reason) { rejected.push({ row: index + 2, reason }); return; }
-    records.push({ id: crypto.randomUUID(), user_id: userId, name, age: age!, last_visit: null, status: 'novo', phone: field('phone') || null, email: field('email') || null, profession: field('profession') || '' });
+    seen.add(importIdentity(name, dateOfBirth, age));
+    records.push({ id: crypto.randomUUID(), user_id: userId, name, age: age!, date_of_birth: dateOfBirth, last_visit: null, status: 'novo', phone: field('phone') || null, email: field('email') || null, profession: field('profession') || '' });
   });
   return { records, rejected };
 }

@@ -33,6 +33,7 @@ interface KBDoc {
 interface SourceDetail extends KBDoc {
   source_text: string | null;
   supersedes_document_id: string | null;
+  has_successor?: boolean;
 }
 const date = (value: string) => new Date(value).toLocaleString('pt-BR');
 function statusLabel(doc: KBDoc) {
@@ -101,7 +102,13 @@ export default function KnowledgeBasePage() {
         .eq('user_id', user!.id)
         .single();
       if (error || !data) throw new Error('Não foi possível carregar o texto original.');
-      return data as unknown as SourceDetail;
+      // A version with a successor is superseded: it cannot be approved or
+      // indexed again (two versions of one protocol would reach the assistant).
+      const { count } = await supabase
+        .from('knowledge_documents')
+        .select('id', { count: 'exact', head: true })
+        .eq('supersedes_document_id', selectedId!);
+      return { ...(data as unknown as SourceDetail), has_successor: (count ?? 0) > 0 };
     },
   });
   const refresh = async () => {
@@ -191,6 +198,32 @@ export default function KnowledgeBasePage() {
       });
     } catch (error) {
       setOperationError(await functionErrorMessage(error, 'A indexação falhou. O original foi preservado.'));
+    } finally {
+      setBusyId(null);
+      await refresh();
+    }
+  };
+  const removeSource = async (doc: SourceDetail) => {
+    if (
+      busyId ||
+      !window.confirm(
+        `Excluir "${doc.title}" definitivamente? O texto e o índice desta versão serão apagados e os compartilhamentos revogados.`,
+      )
+    )
+      return;
+    setBusyId(doc.id);
+    setOperationError('');
+    try {
+      const rpc = supabase.rpc as unknown as (
+        name: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ error: unknown }>;
+      const { error } = await rpc('delete_knowledge_source', { p_document_id: doc.id });
+      if (error) throw error;
+      toast({ title: 'Fonte excluída' });
+      setSelectedId(null);
+    } catch (error) {
+      setOperationError(await functionErrorMessage(error, 'Não foi possível excluir a fonte.'));
     } finally {
       setBusyId(null);
       await refresh();
@@ -459,7 +492,12 @@ export default function KnowledgeBasePage() {
                     <Plus className="w-4 h-4 mr-2" />
                     Nova versão
                   </Button>
-                  {source.data.source_text &&
+                  {source.data.has_successor ? (
+                    <p className="text-sm text-muted-foreground self-center">
+                      Esta versão foi substituída por uma mais recente e não é mais usada pelo assistente.
+                    </p>
+                  ) : (
+                    source.data.source_text &&
                     (source.data.review_status !== 'approved' ? (
                       <Button disabled={!!busyId} onClick={() => index(source.data!, true)}>
                         {busyId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Revisei o original · aprovar e
@@ -476,7 +514,18 @@ export default function KnowledgeBasePage() {
                           Retirar das referências
                         </Button>
                       </>
-                    ))}
+                    ))
+                  )}
+                  {!source.data.has_successor && (
+                    <Button
+                      variant="ghost"
+                      className="text-destructive"
+                      disabled={!!busyId}
+                      onClick={() => removeSource(source.data!)}
+                    >
+                      Excluir fonte
+                    </Button>
+                  )}
                 </div>
               </>
             )

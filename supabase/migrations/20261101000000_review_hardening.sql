@@ -421,3 +421,12 @@ begin
   return new;
 end;
 $function$;
+
+------------------------------------------------------------------------------
+-- 13. Patient consent to audio recording and the consultation modality
+--     (presencial / online), confirmed by the doctor before capture and kept
+--     with the record (LGPD art. 11; CFM 2.314/2022 for teleconsultations).
+------------------------------------------------------------------------------
+ALTER TABLE public.consultations ADD COLUMN IF NOT EXISTS recording_consent jsonb;
+COMMENT ON COLUMN public.consultations.recording_consent IS
+  'Doctor-confirmed patient consent to recording: {"mode":"presencial"|"online","consentedAt":ISO-8601}. Null when nothing was recorded.';

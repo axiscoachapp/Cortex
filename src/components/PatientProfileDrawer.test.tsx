@@ -11,6 +11,9 @@ vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('@/components/PatientFiles', () => ({ PatientFiles: () => null }));
 vi.mock('@/components/PrescriptionList', () => ({ PrescriptionList: () => null }));
 vi.mock('@/components/UsageMeter', () => ({ UsageMeter: () => null }));
+vi.mock('@/hooks/useUserSettings', () => ({
+  useUserSettings: () => ({ prescriber: { doctorName: '', crmNumber: '', crmUf: '', professionalAddress: '' } }),
+}));
 vi.mock('@/lib/printDoc', () => ({ printSoap: vi.fn(), printDossier: vi.fn(), escapeHtml: (value: string) => value }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: () => {
   const query = {

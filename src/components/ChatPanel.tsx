@@ -394,7 +394,11 @@ export function ChatPanel({
   // Clicking record asks presencial vs. online first — online additionally
   // captures the computer/tab audio so the patient's side is recorded too.
   const handleStartRecording = () => setModeDialogOpen(true);
-  const handleModeSelected = (mode: ConsultationMode) => {
+  // Consent + modality of the recording in progress; stored on its draft and,
+  // when saved, on the consultation (LGPD art. 11; CFM 2.314/2022).
+  const recordingConsentRef = useRef<ConsultationDraft['recordingConsent']>(undefined);
+  const handleModeSelected = (mode: ConsultationMode, consent: { consentedAt: string }) => {
+    recordingConsentRef.current = { mode, consentedAt: consent.consentedAt };
     resetCopilot();
     recording.start(mode);
   };
@@ -928,6 +932,7 @@ export function ChatPanel({
       patientId: patient.id,
       chiefComplaint,
       appointmentId,
+      recordingConsent: recordingConsentRef.current,
       audioStoragePath: null,
       audioMimeType: mimeType,
       status: 'processing',
@@ -1439,7 +1444,17 @@ export function ChatPanel({
             </Badge>
           </div>
           <Button variant="outline" size="sm" className="ml-auto" asChild>
-            <Link to={'/trabalho?patient=' + patient.id}>Consulta manual</Link>
+            <Link
+              to={
+                '/trabalho?patient=' +
+                patient.id +
+                '&new=1' +
+                (appointmentId ? '&appointment=' + appointmentId : '') +
+                (chiefComplaint ? '&complaint=' + encodeURIComponent(chiefComplaint) : '')
+              }
+            >
+              Consulta manual
+            </Link>
           </Button>
         </div>
       </header>

@@ -23,8 +23,14 @@ export function ClinicalWorkEditor({
   onSaved,
   onClose,
   onExitGuardChange,
+  appointmentId,
+  initialTitle,
 }: {
   item?: Item;
+  /** Agenda appointment this new manual encounter belongs to (completed on approval). */
+  appointmentId?: string;
+  /** Chief complaint carried over from the consultation screen. */
+  initialTitle?: string;
   patientId: string;
   userId: string;
   onSaved: () => void;
@@ -32,10 +38,12 @@ export function ClinicalWorkEditor({
   onExitGuardChange?: (guard: () => boolean) => void;
 }) {
   const [kind, setKind] = useState<WorkKind>((item?.kind as WorkKind) ?? 'draft');
-  const [title, setTitle] = useState(item?.title ?? 'Consulta manual');
+  const [title, setTitle] = useState(item?.title ?? (initialTitle?.trim() || 'Consulta manual'));
   const [content, setContent] = useState(item?.content ?? '');
   const [details, setDetails] = useState<Record<string, string>>(
-    item ? detailsOf(item) : { date: clinicDate(), state: 'active' },
+    item
+      ? detailsOf(item)
+      : { date: clinicDate(), state: 'active', ...(appointmentId ? { appointmentId } : {}) },
   );
   const [due, setDue] = useState(item?.due_date ?? '');
   const [saved, setSaved] = useState<Item | undefined>(item);

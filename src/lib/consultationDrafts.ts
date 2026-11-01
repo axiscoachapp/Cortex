@@ -4,6 +4,8 @@ export interface ConsultationDraft {
   id: string;
   patientId: string;
   appointmentId?: string | null;
+  /** Patient consent to recording, confirmed by the doctor before capture. */
+  recordingConsent?: { mode: 'presencial' | 'online'; consentedAt: string };
   chiefComplaint: string;
   audioStoragePath: string | null;
   audioMimeType: string;

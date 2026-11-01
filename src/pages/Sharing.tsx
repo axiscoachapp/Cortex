@@ -84,7 +84,10 @@ export default function SharingPage() {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [clinicName, setClinicName] = useState('Haddad Nicola');
+  const [clinicName, setClinicName] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [newDoctor, setNewDoctor] = useState({ name: '', email: '', crm: '', crmUf: '' });
+  const [provisioned, setProvisioned] = useState<{ email: string; temporaryPassword: string } | null>(null);
   const [email, setEmail] = useState('');
   const [patients, setPatients] = useState<{ id: string; name: string }[]>([]);
   const [patientSearch, setPatientSearch] = useState('');
@@ -124,10 +127,9 @@ export default function SharingPage() {
       if (!result || ![result.memberships, result.members, result.received, result.granted].every(Array.isArray))
         throw new Error('A resposta de permissões não pôde ser validada. Tente novamente.');
       setOverview(result);
-      setError('');
+      setLoadError('');
     } catch (err) {
-      setOverview(empty);
-      setError(await functionErrorMessage(err, 'Não foi possível carregar os compartilhamentos.'));
+      setLoadError(await functionErrorMessage(err, 'Não foi possível carregar os compartilhamentos.'));
     } finally {
       overviewRequest.current = false;
       setLoading(false);
@@ -135,12 +137,8 @@ export default function SharingPage() {
   }, []);
   useEffect(() => {
     void refresh();
-    const timer = window.setInterval(() => void refresh(), 5000);
-    const focus = () => {
-      setLoading(true);
-      setOverview(empty);
-      void refresh();
-    };
+    const timer = window.setInterval(() => void refresh(), 30_000);
+    const focus = () => void refresh();
     window.addEventListener('focus', focus);
     return () => {
       clearInterval(timer);
@@ -218,12 +216,10 @@ export default function SharingPage() {
   useEffect(() => {
     if (!selected) return;
     void loadChart(selected, limit);
-    const timer = window.setInterval(() => void loadChart(selected, limit, true), 5000);
-    const focus = () => {
-      setChart(null);
-      void loadChart(selected, limit);
-      void refresh();
-    };
+    // Access is rechecked periodically; the open chart is kept on screen and
+    // only replaced when the authorization actually changed.
+    const timer = window.setInterval(() => void loadChart(selected, limit, true), 30_000);
+    const focus = () => void loadChart(selected, limit, true);
     window.addEventListener('focus', focus);
     return () => {
       clearInterval(timer);
@@ -291,8 +287,7 @@ export default function SharingPage() {
       setNotice('Contribuição registrada com autoria. Correções devem ser feitas por um novo adendo.');
       await loadChart(id, limit);
     } catch (err) {
-      if (editorPatient.current === id)
-        setEntryError(await functionErrorMessage(err, 'A contribuição não foi salva.'));
+      if (editorPatient.current === id) setEntryError(await functionErrorMessage(err, 'A contribuição não foi salva.'));
     } finally {
       setBusy(false);
     }
@@ -343,9 +338,9 @@ export default function SharingPage() {
             autoria são preservados após o desligamento de um médico.
           </p>
         </div>
-        {error && (
+        {(error || loadError) && (
           <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-destructive">
-            {error}
+            {error || loadError}
           </p>
         )}
         {notice && (
@@ -402,29 +397,35 @@ export default function SharingPage() {
                 {active ? active.name : 'Vincular equipe médica'}
               </h2>
               {!active ? (
-                <form
-                  className="flex flex-wrap items-end gap-3"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void run(
-                      () => sharingRpc('create_clinic', { p_name: clinicName }),
-                      'Clínica criada. Convide os médicos com contas individuais.',
-                    );
-                  }}
-                >
-                  <div className="space-y-1 flex-1 min-w-48">
-                    <Label htmlFor="clinic-name">Nome da clínica</Label>
-                    <Input
-                      id="clinic-name"
-                      value={clinicName}
-                      onChange={(e) => setClinicName(e.target.value)}
-                      minLength={2}
-                      maxLength={120}
-                      required
-                    />
-                  </div>
-                  <Button disabled={busy}>Criar equipe</Button>
-                </form>
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Somente o administrador cria a equipe da clínica. Se a sua conta foi criada pelo administrador, você
+                    já faz parte dela — não crie outra.
+                  </p>
+                  <form
+                    className="flex flex-wrap items-end gap-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void run(
+                        () => sharingRpc('create_clinic', { p_name: clinicName }),
+                        'Clínica criada. Convide os médicos com contas individuais.',
+                      );
+                    }}
+                  >
+                    <div className="space-y-1 flex-1 min-w-48">
+                      <Label htmlFor="clinic-name">Nome da clínica</Label>
+                      <Input
+                        id="clinic-name"
+                        value={clinicName}
+                        onChange={(e) => setClinicName(e.target.value)}
+                        minLength={2}
+                        maxLength={120}
+                        required
+                      />
+                    </div>
+                    <Button disabled={busy || clinicName.trim().length < 2}>Criar equipe</Button>
+                  </form>
+                </>
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">
@@ -476,6 +477,82 @@ export default function SharingPage() {
                   </ul>
                   {admin && (
                     <form
+                      className="rounded-lg border p-4 space-y-3"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        setProvisioned(null);
+                        void run(async () => {
+                          const { data, error: invokeError } = await supabase.functions.invoke('create-clinic-doctor', {
+                            body: newDoctor,
+                          });
+                          if (invokeError) throw invokeError;
+                          setProvisioned({ email: data.email, temporaryPassword: data.temporaryPassword });
+                          setNewDoctor({ name: '', email: '', crm: '', crmUf: '' });
+                        }, 'Conta criada. Entregue a senha temporária ao médico pessoalmente.');
+                      }}
+                    >
+                      <h3 className="font-medium text-sm">Criar conta de médico</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Novas contas são criadas pelo administrador (o cadastro público está desativado). O médico
+                        define a própria senha no primeiro acesso.
+                      </p>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor="new-doctor-name">Nome completo</Label>
+                          <Input
+                            id="new-doctor-name"
+                            value={newDoctor.name}
+                            onChange={(e) => setNewDoctor({ ...newDoctor, name: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="new-doctor-email">E-mail</Label>
+                          <Input
+                            id="new-doctor-email"
+                            type="email"
+                            value={newDoctor.email}
+                            onChange={(e) => setNewDoctor({ ...newDoctor, email: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="new-doctor-crm">CRM</Label>
+                          <Input
+                            id="new-doctor-crm"
+                            value={newDoctor.crm}
+                            onChange={(e) => setNewDoctor({ ...newDoctor, crm: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="new-doctor-uf">UF do CRM</Label>
+                          <Input
+                            id="new-doctor-uf"
+                            maxLength={2}
+                            value={newDoctor.crmUf}
+                            onChange={(e) => setNewDoctor({ ...newDoctor, crmUf: e.target.value.toUpperCase() })}
+                          />
+                        </div>
+                      </div>
+                      <Button disabled={busy}>Criar conta</Button>
+                      {provisioned && (
+                        <div
+                          role="status"
+                          className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm space-y-1"
+                        >
+                          <p>
+                            Conta criada para <strong>{provisioned.email}</strong>. Senha temporária (aparece só agora):
+                          </p>
+                          <p className="font-mono text-base select-all">{provisioned.temporaryPassword}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Entregue pessoalmente, não por e-mail. O médico precisará trocá-la no primeiro acesso.
+                          </p>
+                        </div>
+                      )}
+                    </form>
+                  )}
+                  {admin && (
+                    <form
                       className="flex flex-wrap items-end gap-3"
                       onSubmit={(event) => {
                         event.preventDefault();
@@ -486,7 +563,7 @@ export default function SharingPage() {
                       }}
                     >
                       <div className="flex-1 space-y-1 min-w-48">
-                        <Label htmlFor="doctor-email">Email da conta do médico</Label>
+                        <Label htmlFor="doctor-email">Convidar uma conta que já existe (e-mail)</Label>
                         <Input
                           id="doctor-email"
                           type="email"
@@ -498,6 +575,27 @@ export default function SharingPage() {
                       <Button disabled={busy}>Disponibilizar convite</Button>
                     </form>
                   )}
+                  <div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                      disabled={busy}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            'Sair desta clínica? Os compartilhamentos com você e feitos por você nesta clínica serão revogados. Seus pacientes continuam na sua conta.',
+                          )
+                        )
+                          void run(
+                            () => sharingRpc('leave_clinic', { p_clinic_id: active.clinic_id }),
+                            'Você saiu da clínica.',
+                          );
+                      }}
+                    >
+                      Sair da clínica
+                    </Button>
+                  </div>
                 </>
               )}
             </section>

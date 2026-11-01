@@ -62,19 +62,6 @@ describe('Auth page', () => {
     expect(screen.getByRole('button', { name: /mostrar senha/i })).not.toHaveAttribute('tabindex', '-1');
   });
 
-  it('explains email confirmation when signup does not create a session', async () => {
-    renderAuth();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('tab', { name: /criar conta/i }));
-    await user.type(screen.getByLabelText('Email'), 'review@example.invalid');
-    await user.type(screen.getByLabelText('Senha'), 'test-password');
-    await user.click(screen.getByRole('button', { name: /criar conta grátis/i }));
-    expect(await screen.findByRole('status')).toHaveTextContent(/confirme seu email/i);
-    await user.click(screen.getByRole('button',{name:'Reenviar confirmação'}));
-    expect(authMocks.resendConfirmation).toHaveBeenCalledWith('review@example.invalid');
-    expect(await screen.findByRole('status')).toHaveTextContent(/novo link/i);
-  });
-
   it('lets a user request password recovery without disclosing account existence', async () => {
     renderAuth();
     const user = userEvent.setup();
@@ -100,8 +87,9 @@ describe('Auth page', () => {
     expect(screen.getByRole('button', { name: /entrar/i })).toBeInTheDocument();
   });
 
-  it('renders the sign-up tab', () => {
+  it('does not offer public sign-up (accounts are created by the clinic admin)', () => {
     renderAuth();
-    expect(screen.getByRole('tab', { name: /criar conta/i })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /criar conta/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/criadas pelo administrador da clínica/i)).toBeInTheDocument();
   });
 });

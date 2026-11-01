@@ -154,7 +154,7 @@ serve(async (req) => {
       .maybeSingle();
     const { data: draft } = await supabase
       .from('consultation_drafts')
-      .select('id,audio_storage_path,appointment_id')
+      .select('id,audio_storage_path,appointment_id,content')
       .eq('id', draftId)
       .eq('patient_id', patientId)
       .eq('user_id', userId)
@@ -299,6 +299,11 @@ serve(async (req) => {
           patient_id: patientId,
           user_id: userId,
           appointment_id: draft.appointment_id ?? null,
+          // Consent to recording, confirmed by the doctor before capture (null for manual notes).
+          recording_consent: (() => {
+            const consent = (draft.content as { recordingConsent?: unknown } | null)?.recordingConsent;
+            return consent && typeof consent === 'object' ? consent : null;
+          })(),
           chief_complaint: chiefComplaint,
           transcription,
           soap_note: soapNote,

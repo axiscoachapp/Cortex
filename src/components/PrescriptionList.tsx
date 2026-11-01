@@ -33,7 +33,8 @@ const STATUS_META: Record<PrescriptionRow['status'], { label: string; cls: strin
   revoked:   { label: 'Revogada',       cls: 'bg-red-100 text-red-700' },
 };
 
-const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL ?? 'https://conhcwuwtrkerpbblzgu.supabase.co'}/functions/v1/validate-prescription`;
+// No hardcoded fallback: the backend URL is validated at startup (environment.ts).
+const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-prescription`;
 
 export function PrescriptionList({ patientId }: { patientId: string }) {
   const { toast } = useToast();

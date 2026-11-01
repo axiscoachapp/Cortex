@@ -8,6 +8,7 @@ import { Brain } from "lucide-react";
 import { AppErrorBoundary, RecoveryScreen } from '@/components/AppErrorBoundary';
 import { UnsavedChangesRouteGuard } from '@/hooks/useUnsavedChanges';
 import { SessionAssurance } from '@/components/SessionAssurance';
+import { PasswordChangeGate } from '@/components/PasswordChangeGate';
 
 // Critical routes — keep eager.
 const Index = lazy(() => import("./pages/Index"));
@@ -15,6 +16,7 @@ import Auth from "./pages/Auth";
 
 // Heavy / rarely visited routes — lazy load.
 const About = lazy(() => import("./pages/About"));
+const PrivacyNotice = lazy(() => import('./pages/PrivacyNotice'));
 const PatientManagement = lazy(() => import("./pages/PatientManagement"));
 const CalendarPage = lazy(() => import("./pages/Calendar"));
 const GoogleOAuthCallback = lazy(() => import("./pages/GoogleOAuthCallback"));
@@ -57,13 +59,25 @@ function ProtectedRoute() {
   const location = useLocation();
   if (loading) return <RouteFallback />;
   if (!user) return <Navigate to={`/auth?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
-  return <><UnsavedChangesRouteGuard />{location.pathname==='/seguranca'?<Outlet key={user.id}/>:<SessionAssurance key={user.id}><Outlet key={user.id}/></SessionAssurance>}</>;
+  return (
+    <PasswordChangeGate>
+      <UnsavedChangesRouteGuard />
+      {location.pathname === '/seguranca' ? (
+        <Outlet key={user.id} />
+      ) : (
+        <SessionAssurance key={user.id}>
+          <Outlet key={user.id} />
+        </SessionAssurance>
+      )}
+    </PasswordChangeGate>
+  );
 }
 
 const router = createBrowserRouter([
   { errorElement: <RecoveryScreen />, children: [
   { path: '/auth', element: <Auth /> },
   { path: '/sobre', element: <About /> },
+  { path: '/aviso-de-privacidade', element: <PrivacyNotice /> },
   { element: <ProtectedRoute />, children: [
     { path: '/', element: <Index /> },
     { path: '/gerenciar-pacientes', element: <PatientManagement /> },

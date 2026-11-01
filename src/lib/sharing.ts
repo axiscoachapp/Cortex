@@ -21,7 +21,7 @@ export class SharingError extends Error {
   constructor(message: string, readonly code?: string) { super(message); }
 }
 type SharingRpcName = 'sharing_overview' | 'get_shared_patient_chart' | 'check_shared_patient_access' | 'patient_sharing_audit'
-  | 'create_clinic' | 'invite_clinic_doctor' | 'respond_clinic_invitation' | 'offboard_clinic_doctor'
+  | 'create_clinic' | 'invite_clinic_doctor' | 'respond_clinic_invitation' | 'offboard_clinic_doctor' | 'leave_clinic'
   | 'grant_patient_share' | 'revoke_patient_share' | 'append_shared_chart_entry'
   | 'protocol_sharing_overview' | 'grant_protocol_share' | 'revoke_protocol_share' | 'get_shared_protocol' | 'check_shared_protocol_access';
 

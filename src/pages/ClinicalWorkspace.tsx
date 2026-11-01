@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus } from 'lucide-react';
@@ -54,6 +54,9 @@ export default function ClinicalWorkspacePage() {
   const { user } = useAuth();
   const [params] = useSearchParams();
   const patientId = params.get('patient');
+  // From the consultation screen: the agenda appointment and chief complaint.
+  const appointmentParam = params.get('appointment') ?? undefined;
+  const complaintParam = params.get('complaint') ?? undefined;
   const client = useQueryClient();
   const [editing, setEditing] = useState<Item | undefined>();
   const [editorOpen, setEditorOpen] = useState(false);
@@ -208,6 +211,15 @@ export default function ClinicalWorkspacePage() {
       return results;
     },
   });
+  // Arriving from "Consulta manual" (?new=1) opens the editor directly.
+  const autoOpened = useRef<string | null>(null);
+  useEffect(() => {
+    if (params.get('new') !== '1' || !patient.data || !patientId || autoOpened.current === patientId) return;
+    autoOpened.current = patientId;
+    setEditing(undefined);
+    setEditorVersion((value) => value + 1);
+    setEditorOpen(true);
+  }, [params, patient.data, patientId]);
   const refresh = () => {
     void client.invalidateQueries({ queryKey: ['clinical-work'] });
     void client.invalidateQueries({ queryKey: ['workspace-history'] });
@@ -350,6 +362,8 @@ export default function ClinicalWorkspacePage() {
                 <ClinicalWorkEditor
                   key={patientId + '/' + (editing?.id ?? 'new') + '/' + editorVersion}
                   item={editing}
+                  appointmentId={editing ? undefined : appointmentParam}
+                  initialTitle={editing ? undefined : complaintParam}
                   patientId={patientId}
                   userId={user.id}
                   onSaved={refresh}

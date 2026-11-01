@@ -60,6 +60,15 @@ function ingredientTokens(s: string | null | undefined): string[] {
     .filter(t => t.length >= 4);
 }
 
+/** Drug name without dose/form, safe to use as a quoted PostgREST filter value. */
+function catalogTerm(name: string): string {
+  return name
+    .replace(/\s\d.*$/, '')
+    .replace(/["\\%_(),]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function DocumentComposerModal({
   open, onOpenChange, patient, onGenerate, isGenerating,
 }: DocumentComposerModalProps) {
@@ -101,12 +110,14 @@ export function DocumentComposerModal({
     let cancelled = false;
     (async () => {
       for (const { name, i } of unresolved.slice(0, 10)) {
-        const term = name.trim().split(/\s+/)[0];
+        // Match the whole drug name (dose/units stripped), not just its first
+        // word: "Ácido fólico" must not ground to another "ácido ..." product.
+        const term = catalogTerm(name);
         if (term.length < 4) continue;
         const { data } = await supabase
           .from('medication_catalog')
           .select('active_ingredient, is_antimicrobial')
-          .or(`product_name.ilike.${term}%,active_ingredient.ilike.${term}%`)
+          .or(`product_name.ilike."${term}%",active_ingredient.ilike."${term}%"`)
           .limit(1);
         if (cancelled) return;
         const hit = data?.[0];
@@ -128,10 +139,12 @@ export function DocumentComposerModal({
     if (q.length < 3) { setHits([]); setSearching(false); return; }
     setSearching(true);
     searchTimer.current = setTimeout(async () => {
+      // Quoted values: commas and parentheses no longer break the filter.
+      const safe = q.replace(/["\\%_]/g, '');
       const { data, error } = await supabase
         .from('medication_catalog')
         .select('id, product_name, active_ingredient, therapeutic_class, is_antimicrobial')
-        .or(`product_name.ilike.%${q}%,active_ingredient.ilike.%${q}%`)
+        .or(`product_name.ilike."%${safe}%",active_ingredient.ilike."%${safe}%"`)
         .limit(8);
       if (cancelled) return;
       setCatalogError(!!error);

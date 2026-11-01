@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Stethoscope, MonitorSpeaker, Mic, Info, AlertTriangle } from 'lucide-react';
 import {
   Dialog,
@@ -11,17 +12,25 @@ import { ConsultationMode, supportsSystemAudio } from '@/hooks/useRecording';
 interface RecordingModeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (mode: ConsultationMode) => void;
+  /** Called only after the doctor confirms the patient's consent to recording. */
+  onSelect: (mode: ConsultationMode, consent: { consentedAt: string }) => void;
 }
 
 export function RecordingModeDialog({ open, onOpenChange, onSelect }: RecordingModeDialogProps) {
   const systemAudioAvailable = supportsSystemAudio();
+  // Recording a consultation requires the patient's informed consent
+  // (LGPD art. 11; CFM 2.314/2022 for teleconsultations). It is asked every time.
+  const [consented, setConsented] = useState(false);
+  useEffect(() => {
+    if (open) setConsented(false);
+  }, [open]);
 
   const choose = (mode: ConsultationMode) => {
     // Close first so the dialog isn't blocking the browser's share picker,
     // which must open while the click's user activation is still valid.
+    if (!consented) return;
     onOpenChange(false);
-    onSelect(mode);
+    onSelect(mode, { consentedAt: new Date().toISOString() });
   };
 
   return (
@@ -35,12 +44,25 @@ export function RecordingModeDialog({ open, onOpenChange, onSelect }: RecordingM
         </DialogHeader>
 
         <div className="p-4 space-y-3">
+          <label className="flex items-start gap-2 rounded-lg border border-border/70 bg-muted/30 p-3 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={consented}
+              onChange={(e) => setConsented(e.target.checked)}
+            />
+            <span>
+              Informei o paciente e ele <strong>consentiu com a gravação</strong> desta consulta. O consentimento fica
+              registrado na consulta.
+            </span>
+          </label>
           {/* Presencial */}
           <button
             type="button"
             onClick={() => choose('presencial')}
+            disabled={!consented}
             className={cn(
-              'w-full text-left rounded-xl border border-border/70 bg-white p-4',
+              'w-full text-left rounded-xl border border-border/70 bg-white p-4 disabled:opacity-50 disabled:cursor-not-allowed',
               'hover:border-medical-blue/50 hover:bg-medical-blue-light/30 hover:shadow-md',
               'focus:outline-none focus:ring-2 focus:ring-medical-blue/30 transition-all group',
             )}
@@ -66,10 +88,10 @@ export function RecordingModeDialog({ open, onOpenChange, onSelect }: RecordingM
           <button
             type="button"
             onClick={() => choose('online')}
-            disabled={!systemAudioAvailable}
+            disabled={!systemAudioAvailable || !consented}
             className={cn(
               'w-full text-left rounded-xl border border-border/70 bg-white p-4 transition-all group',
-              systemAudioAvailable
+              systemAudioAvailable && consented
                 ? 'hover:border-medical-blue/50 hover:bg-medical-blue-light/30 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-medical-blue/30'
                 : 'opacity-60 cursor-not-allowed',
             )}

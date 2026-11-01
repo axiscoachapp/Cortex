@@ -8,7 +8,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { clinicDate } from '@/lib/dates';
+import { fetchAllRows } from '@/lib/pagination';
 import {
+  decodeCsvBytes,
+  importIdentity,
   parseCSV,
   preparePatientImport,
   type ImportTarget,
@@ -84,7 +87,7 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
     setFileError('');
     try {
       if (file.size > 5 * 1024 * 1024) throw new Error('O CSV excede 5 MB. Divida o arquivo e tente novamente.');
-      const text = await file.text();
+      const text = decodeCsvBytes(await file.arrayBuffer());
       const { headers: h, rows: r } = parseCSV(text);
       if (h.length === 0 || r.length === 0) {
         toast({
@@ -116,12 +119,23 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
     mapping.filter((target) => target !== 'skip').length ===
       new Set(mapping.filter((target) => target !== 'skip')).size;
 
+  // Patients already registered are skipped, so re-importing a file does not
+  // create duplicates.
+  const existingIdentities = async () => {
+    const identities = new Set<string>();
+    const rows = await fetchAllRows((from, to) =>
+      supabase.from('patients').select('name,date_of_birth,age').order('id').range(from, to),
+    );
+    for (const row of rows) identities.add(importIdentity(row.name, row.date_of_birth, row.age));
+    return identities;
+  };
+
   const handleImport = async (retry = false) => {
     if (importing || (!retry && !canImport)) return;
     setImporting(true);
     const prepared = retry
       ? { records: pendingRecords.current, rejected: result?.rejected ?? [] }
-      : preparePatientImport(rows, mapping, userId, clinicDate());
+      : preparePatientImport(rows, mapping, userId, clinicDate(), await existingIdentities());
     const failed: ImportedPatient[] = [];
     let ok = retry ? (result?.ok ?? 0) : 0;
     try {

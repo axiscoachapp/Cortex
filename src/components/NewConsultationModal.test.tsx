@@ -1,7 +1,31 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { NewConsultationModal } from './NewConsultationModal';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { NewConsultationModal as Modal } from './NewConsultationModal';
+
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    from: () => {
+      const query = {
+        select: () => query,
+        is: () => query,
+        ilike: () => query,
+        order: () => query,
+        limit: async () => ({ data: [], error: null }),
+      };
+      return query;
+    },
+  },
+}));
+// The patient search uses React Query.
+function NewConsultationModal(props: React.ComponentProps<typeof Modal>) {
+  return (
+    <QueryClientProvider client={new QueryClient()}>
+      <Modal {...props} />
+    </QueryClientProvider>
+  );
+}
 
 describe('New consultation submission', () => {
   it.each([['', null], ['0', 0], ['42', 42]])('preserves age %s without inventing a newborn', async (age, expected) => {

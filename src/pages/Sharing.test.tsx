@@ -145,7 +145,7 @@ describe('selective sharing workspace', () => {
     let poll!: () => void;
     const originalInterval = window.setInterval.bind(window);
     vi.spyOn(window, 'setInterval').mockImplementation((callback, timeout, ...args) => {
-      if (timeout !== 5000) return originalInterval(callback, timeout, ...args);
+      if (timeout !== 30_000) return originalInterval(callback, timeout, ...args);
       poll = callback as () => void;
       return originalInterval(() => {}, 1_000_000);
     });
@@ -171,7 +171,7 @@ describe('selective sharing workspace', () => {
     let poll!: () => void;
     const originalInterval = window.setInterval.bind(window);
     vi.spyOn(window, 'setInterval').mockImplementation((callback, timeout, ...args) => {
-      if (timeout !== 5000) return originalInterval(callback, timeout, ...args);
+      if (timeout !== 30_000) return originalInterval(callback, timeout, ...args);
       poll = callback as () => void;
       return originalInterval(() => {}, 1_000_000);
     });
@@ -187,7 +187,7 @@ describe('selective sharing workspace', () => {
     let rejectCheck!: (reason: Error) => void;
     const originalInterval = window.setInterval.bind(window);
     vi.spyOn(window, 'setInterval').mockImplementation((callback, timeout, ...args) => {
-      if (timeout !== 5000) return originalInterval(callback, timeout, ...args);
+      if (timeout !== 30_000) return originalInterval(callback, timeout, ...args);
       poll = callback as () => void;
       return originalInterval(() => {}, 1_000_000);
     });

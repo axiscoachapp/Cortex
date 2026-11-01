@@ -220,11 +220,11 @@ const Auth = () => {
             </form>
           ) : (
             <Tabs defaultValue="login">
-              <TabsList className="grid grid-cols-2 w-full">
+              <TabsList className="grid grid-cols-1 w-full">
                 <TabsTrigger value="login">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Criar conta</TabsTrigger>
               </TabsList>
-              {['login', 'signup'].map((mode) => (
+              {/* Public sign-up is disabled: the clinic admin creates each doctor's account. */}
+              {['login'].map((mode) => (
                 <TabsContent key={mode} value={mode} className="mt-6">
                   <form onSubmit={mode === 'login' ? handleSignIn : handleSignUp} className="space-y-4">
                     <div className="space-y-2">
@@ -289,8 +289,16 @@ const Auth = () => {
               ))}
             </Tabs>
           )}
+          {!recovering && (
+            <p className="text-center text-xs text-muted-foreground">
+              Não tem conta? As contas são criadas pelo administrador da clínica.
+            </p>
+          )}
           <Link to="/sobre" className="block text-center text-sm text-primary underline underline-offset-4">
             Sobre o ambiente clínico
+          </Link>
+          <Link to="/aviso-de-privacidade" className="block text-center text-xs text-muted-foreground underline underline-offset-4">
+            Aviso de privacidade
           </Link>
           {import.meta.env.DEV && (
             <button
