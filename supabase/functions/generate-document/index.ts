@@ -40,7 +40,7 @@ Use EXATAMENTE este formato markdown (os títulos em negrito como estão):
 [data ou intervalo de retorno mencionado no plano]
 
 **Sinais de alerta — procure atendimento se:**
-[2-4 sinais de alarme relevantes para o diagnóstico — em linguagem simples]
+[somente sinais de alerta que constam no plano/orientações do SOAP, em linguagem simples; se o SOAP não traz nenhum, escreva "Em caso de piora ou dúvida, procure atendimento."]
 
 Regras:
 - Use linguagem simples, empática e direta.

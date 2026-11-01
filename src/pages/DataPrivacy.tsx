@@ -30,7 +30,10 @@ export default function DataPrivacy() {
   const [exportError, setExportError] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const deleteConfirmed = confirmText.trim().toUpperCase() === 'EXCLUIR';
+  const [deletePassword, setDeletePassword] = useState('');
+  const [retentionAcknowledged, setRetentionAcknowledged] = useState(false);
+  const deleteConfirmed =
+    confirmText.trim().toUpperCase() === 'EXCLUIR' && retentionAcknowledged && deletePassword.length > 0;
 
   const handleExport = async () => {
     if (!user?.id || exporting || deleting) return;
@@ -105,7 +108,15 @@ export default function DataPrivacy() {
     setDeleting(true);
     setDeleteError('');
     try {
-      const { data, error } = await supabase.functions.invoke('delete-user-data', {});
+      // Step-up: re-enter the password so a left-open session cannot delete the account.
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: user?.email ?? '',
+        password: deletePassword,
+      });
+      if (reauthError) throw new Error('Senha incorreta. A conta não foi excluída.');
+      const { data, error } = await supabase.functions.invoke('delete-user-data', {
+        body: { retentionAcknowledged: true },
+      });
       if (error) {
         const body = await functionErrorBody(error);
         throw new Error(
@@ -229,6 +240,8 @@ export default function DataPrivacy() {
                 setDeleteDialogOpen(next);
                 if (!next) {
                   setConfirmText('');
+                  setDeletePassword('');
+                  setRetentionAcknowledged(false);
                   setDeleteError('');
                 }
               }
@@ -266,6 +279,11 @@ export default function DataPrivacy() {
                       <li>Sua conta de acesso ({user?.email})</li>
                     </ul>
                     <p className="font-medium text-destructive">Esta ação não pode ser desfeita.</p>
+                    <p className="text-sm">
+                      Prontuários médicos devem ser guardados por no mínimo 20 anos (CFM 1.821/2007; Lei 13.787/2018).
+                      Antes de excluir, exporte seus dados acima e guarde a cópia em local seguro: a guarda passa a ser
+                      sua responsabilidade.
+                    </p>
                   </div>
                 </AlertDialogDescription>
               </AlertDialogHeader>
@@ -280,6 +298,28 @@ export default function DataPrivacy() {
                   onChange={(e) => setConfirmText(e.target.value)}
                   placeholder="EXCLUIR"
                   autoComplete="off"
+                  className="w-full h-10 px-3 rounded-lg text-sm border border-border bg-background focus:outline-none focus:ring-2 focus:ring-destructive/30"
+                />
+              </div>
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={retentionAcknowledged}
+                  onChange={(e) => setRetentionAcknowledged(e.target.checked)}
+                />
+                <span>Exportei meus prontuários e assumo a obrigação legal de guardá-los.</span>
+              </label>
+              <div className="space-y-1.5">
+                <label htmlFor="delete-password" className="text-sm text-foreground/80">
+                  Confirme sua senha:
+                </label>
+                <input
+                  id="delete-password"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  autoComplete="current-password"
                   className="w-full h-10 px-3 rounded-lg text-sm border border-border bg-background focus:outline-none focus:ring-2 focus:ring-destructive/30"
                 />
               </div>

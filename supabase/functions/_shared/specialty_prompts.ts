@@ -18,14 +18,14 @@ Se a transcrição claramente NÃO representa uma consulta médica:
 → Não invente conteúdo clínico para preencher lacunas.
 
 HIPÓTESES DIAGNÓSTICAS (differential_diagnoses):
-Liste as 2-3 principais hipóteses diagnósticas levantadas ou sugeridas pela consulta.
-Cada item: "Hipótese — razão em 1 linha". Retorne [] se a consulta não gerou dados suficientes.
-NUNCA invente hipóteses não sustentadas pela transcrição.
+Liste apenas hipóteses diagnósticas que o MÉDICO levantou ou discutiu explicitamente na consulta (máximo 3).
+Cada item: "Hipótese — razão em 1 linha". Retorne [] se o médico não formulou hipóteses.
+NUNCA proponha hipóteses próprias nem invente hipóteses não sustentadas pela transcrição.
 
 ALERTAS DE INTERAÇÃO MEDICAMENTOSA (drug_interaction_alerts):
 Somente se o médico mencionou novos medicamentos E o paciente já usa medicamentos no histórico:
-verifique interações clinicamente relevantes e descreva brevemente cada uma.
-Retorne [] se não há novos medicamentos ou se não há interações relevantes conhecidas.
+verifique interações clinicamente relevantes e descreva brevemente cada uma, como alerta para conferência.
+Retorne [] se não há novos medicamentos ou se não há interações relevantes conhecidas. Uma lista vazia NÃO significa ausência de interação.
 
 AVALIAÇÃO DE QUALIDADE (transcription_quality):
    a) INTELIGIBILIDADE — sem partes marcadas como [inaudível]
@@ -140,14 +140,14 @@ const GINECOLOGIA = `Você é um médico ginecologista/obstetra gerando document
 ESTRUTURA DO SOAP — GINECOLOGIA / OBSTETRÍCIA:
 **S (Subjetivo):** Queixa principal.
 Se consulta ginecológica: ciclo menstrual (DUM, duração, regularidade, dismenorreia, fluxo), sinumorragia, corrimento, sintomas climatéricos, contracepção em uso, vida sexual, rastreio preventivo (última colpocitologia/mamografia).
-Se consulta obstétrica: fórmula obstétrica (G/P/A/C), DUM, DPP, IG, movimento fetal, queixas gestacionais (náuseas, dor, sangramento, contração, edema), pré-natal anterior.
+Se consulta obstétrica: fórmula obstétrica (G/P/A/C), DUM, DPP e IG SOMENTE como ditas pelo médico (NUNCA calcule IG ou DPP a partir da DUM ou de datas citadas), movimento fetal, queixas gestacionais (náuseas, dor, sangramento, contração, edema), pré-natal anterior.
 
 **O (Objetivo):**
 Se gestante: AU (em cm), BCF (bpm), apresentação fetal, tônus uterino, dinâmica uterina se mencionada. SatO2, PA, peso, edema.
 Se ginecológica: exame físico abdominal, exame especular e/ou toque vaginal se realizados e mencionados.
 Sinais vitais relevantes.
 
-**A (Avaliação):** Hipóteses diagnósticas, IG confirmada (se gestante), rastreio de complicações.
+**A (Avaliação):** Hipóteses diagnósticas formuladas pelo médico, IG somente se o médico a declarou (nunca calcule), rastreio de complicações.
 **P (Plano):** Prescrições, suplementações (ácido fólico, ferro), exames solicitados (US, laboratoriais), encaminhamentos, orientações, retorno (próxima consulta pré-natal ou ginecológica).
 ${BASE_RULES}`;
 

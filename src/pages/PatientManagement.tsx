@@ -19,7 +19,18 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Brain, Plus, Pencil, Trash2, ArrowLeft, Upload } from 'lucide-react';
+import { Brain, Plus, Pencil, Trash2, ArrowLeft, Upload, Archive, RotateCcw } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { functionErrorMessage } from '@/lib/functionErrors';
 import { ImportPatientsModal } from '@/components/ImportPatientsModal';
 import { useToast } from '@/hooks/use-toast';
 import { Patient } from '@/types/patient';
@@ -38,6 +49,12 @@ const PatientManagement = () => {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    patient: Patient;
+    kind: 'archive' | 'restore' | 'delete';
+  } | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -53,11 +70,15 @@ const PatientManagement = () => {
     isError,
     refetch,
   } = useQuery<Patient[]>({
-    queryKey: ['patients', user?.id, 'all'],
+    queryKey: ['patients', user?.id, 'all', showArchived ? 'archived' : 'active'],
     queryFn: async () => {
-      const data = await fetchAllRows((from, to) =>
-        supabase.from('patients').select('*').order('name').order('id').range(from, to),
-      );
+      const data = await fetchAllRows((from, to) => {
+        const query = supabase.from('patients').select('*');
+        return (showArchived ? query.not('archived_at', 'is', null) : query.is('archived_at', null))
+          .order('name')
+          .order('id')
+          .range(from, to);
+      });
       return data.map(mapPatientRow);
     },
     enabled: !!user,
@@ -130,20 +151,35 @@ const PatientManagement = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este paciente?')) return;
-
+  // Charts with clinical records must be retained (CFM 1.821/2007; Lei 13.787/2018):
+  // the everyday action is "Arquivar", which hides the patient and can be undone.
+  const runPendingAction = async () => {
+    if (!pendingAction || actionBusy) return;
+    const { patient, kind } = pendingAction;
+    setActionBusy(true);
     try {
-      const { data, error } = await supabase.functions.invoke('delete-patient', { body: { patientId: id } });
-      if (error || data?.success !== true) throw error ?? new Error('Exclusão incompleta');
-      toast({ title: 'Paciente excluído com sucesso!' });
+      if (kind === 'delete') {
+        const { data, error } = await supabase.functions.invoke('delete-patient', { body: { patientId: patient.id } });
+        if (error || data?.success !== true) throw error ?? new Error('Exclusão incompleta');
+        toast({ title: 'Paciente excluído definitivamente' });
+      } else {
+        const { error } = await supabase
+          .from('patients')
+          .update({ archived_at: kind === 'archive' ? new Date().toISOString() : null })
+          .eq('id', patient.id);
+        if (error) throw error;
+        toast({ title: kind === 'archive' ? 'Paciente arquivado' : 'Paciente restaurado' });
+      }
+      setPendingAction(null);
       queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
-    } catch {
+    } catch (error) {
       toast({
-        title: 'Exclusão incompleta',
-        description: 'Tente excluir novamente para concluir a remoção dos dados e arquivos.',
+        title: kind === 'delete' ? 'Não foi possível excluir' : 'Não foi possível atualizar o paciente',
+        description: await functionErrorMessage(error, 'Tente novamente.'),
         variant: 'destructive',
       });
+    } finally {
+      setActionBusy(false);
     }
   };
 
@@ -328,8 +364,21 @@ const PatientManagement = () => {
                 setSearch(event.target.value);
                 setPage(0);
               }}
-              className="mb-4"
+              className="mb-3"
             />
+            <div className="flex justify-end mb-3">
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs"
+                onClick={() => {
+                  setShowArchived((value) => !value);
+                  setPage(0);
+                }}
+              >
+                {showArchived ? 'Voltar aos pacientes ativos' : 'Ver pacientes arquivados'}
+              </Button>
+            </div>
             {loading ? (
               <p className="text-center py-8 text-muted-foreground">Carregando...</p>
             ) : isError ? (
@@ -341,7 +390,11 @@ const PatientManagement = () => {
               </div>
             ) : filtered.length === 0 ? (
               <p className="text-center py-8 text-muted-foreground">
-                {search ? 'Nenhum paciente corresponde à busca' : 'Nenhum paciente cadastrado'}
+                {search
+                  ? 'Nenhum paciente corresponde à busca'
+                  : showArchived
+                    ? 'Nenhum paciente arquivado'
+                    : 'Nenhum paciente cadastrado'}
               </p>
             ) : (
               <>
@@ -381,7 +434,7 @@ const PatientManagement = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-0.5 shrink-0">
+                      <div className="flex gap-2 shrink-0">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -391,15 +444,38 @@ const PatientManagement = () => {
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          aria-label="Excluir paciente"
-                          onClick={() => handleDelete(patient.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
+                        {showArchived ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10"
+                              aria-label={`Restaurar ${patient.name}`}
+                              onClick={() => setPendingAction({ patient, kind: 'restore' })}
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10"
+                              aria-label={`Excluir definitivamente ${patient.name}`}
+                              onClick={() => setPendingAction({ patient, kind: 'delete' })}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10"
+                            aria-label={`Arquivar ${patient.name}`}
+                            onClick={() => setPendingAction({ patient, kind: 'archive' })}
+                          >
+                            <Archive className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -447,14 +523,38 @@ const PatientManagement = () => {
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label="Excluir paciente"
-                              onClick={() => handleDelete(patient.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            {showArchived ? (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9"
+                                  aria-label={`Restaurar ${patient.name}`}
+                                  onClick={() => setPendingAction({ patient, kind: 'restore' })}
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9"
+                                  aria-label={`Excluir definitivamente ${patient.name}`}
+                                  onClick={() => setPendingAction({ patient, kind: 'delete' })}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9"
+                                aria-label={`Arquivar ${patient.name}`}
+                                onClick={() => setPendingAction({ patient, kind: 'archive' })}
+                              >
+                                <Archive className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -491,6 +591,46 @@ const PatientManagement = () => {
       </main>
 
       {user && <ImportPatientsModal open={importOpen} onOpenChange={setImportOpen} userId={user.id} />}
+
+      <AlertDialog open={!!pendingAction} onOpenChange={(open) => !open && !actionBusy && setPendingAction(null)}>
+        <AlertDialogContent className="max-w-[calc(100vw-16px)] sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAction?.kind === 'archive'
+                ? `Arquivar ${pendingAction.patient.name}?`
+                : pendingAction?.kind === 'restore'
+                  ? `Restaurar ${pendingAction?.patient.name}?`
+                  : `Excluir ${pendingAction?.patient.name} definitivamente?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAction?.kind === 'archive'
+                ? 'O paciente sai das listas e da agenda, mas o prontuário é mantido (guarda obrigatória de 20 anos). Você pode restaurá-lo a qualquer momento em "Ver pacientes arquivados".'
+                : pendingAction?.kind === 'restore'
+                  ? 'O paciente volta a aparecer nas listas.'
+                  : 'Use apenas para cadastros feitos por engano, sem consultas, documentos ou arquivos. Prontuários com registros clínicos não podem ser excluídos.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionBusy}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={actionBusy}
+              className={pendingAction?.kind === 'delete' ? 'bg-destructive hover:bg-destructive/90' : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                void runPendingAction();
+              }}
+            >
+              {actionBusy
+                ? 'Aguarde…'
+                : pendingAction?.kind === 'archive'
+                  ? 'Arquivar'
+                  : pendingAction?.kind === 'restore'
+                    ? 'Restaurar'
+                    : 'Excluir definitivamente'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -19,6 +19,8 @@ vi.mock('@/integrations/supabase/client', () => ({
     from: () => {
       const query = {
         select: () => query,
+        is: () => query,
+        not: () => query,
         order: () => query,
         update: (value: unknown) => {
           mocks.update(value);

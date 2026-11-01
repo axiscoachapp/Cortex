@@ -39,7 +39,7 @@ FORMATO (quando for uma consulta médica):
 [PACIENTE] <fala>
 - Nova linha a cada mudança de falante.
 - Preserve terminologia médica e nomes de medicamentos exatamente como pronunciados.
-- Se não distinguir o falante, use [MÉDICO].
+- Se não distinguir o falante, use [FALANTE NÃO IDENTIFICADO] (nunca atribua ao médico uma fala de origem incerta).
 
 QUANDO O ÁUDIO NÃO É UMA CONSULTA MÉDICA:
 - Transcreva mesmo assim o que foi realmente dito, usando [FALANTE] como rótulo.
@@ -194,7 +194,9 @@ serve(async (req) => {
           systemInstruction:
             'Você é um transcritor de áudio de máxima fidelidade. Você transcreve EXCLUSIVAMENTE o que foi realmente dito, palavra por palavra. Você NUNCA inventa, completa ou imagina falas. Quando o áudio não é uma consulta médica, você transcreve o conteúdo real como ele é.',
           temperature: 0.1,
-          maxOutputTokens: 8000,
+          // ~150-250 tokens per minute of dialogue: 32k covers 2h+ consultations
+          // (8k truncated anything longer than ~40 min, failing every retry).
+          maxOutputTokens: 32768,
           thinkingBudget: 0,
         },
       );
@@ -233,16 +235,59 @@ serve(async (req) => {
           ? buildCustomTemplatePrompt(templateContent)
           : getSpecialtyPrompt(userSpecialty);
       assertGeminiTextBudget(draftParts, instruction);
-      const draftReservation = await checkQuota(supabase, userId, 100);
-      const { text: draftRaw, usage: draftUsage } = await callGemini(GEMINI_API_KEY, draftParts, {
-        systemInstruction: instruction,
-        temperature: 0.3,
-        maxOutputTokens: 2000,
-        thinkingBudget: 512,
-        responseMimeType: 'application/json',
-        responseSchema: DRAFT_SCHEMA,
-      });
-      await recordUsage(supabase, userId, creditsFromUsage(draftUsage), draftReservation.reservationId);
+      // The transcription is already paid for. If drafting fails (quota, provider
+      // error, truncated JSON), return the transcript so the doctor can still
+      // review, write or regenerate the note, instead of losing it.
+      let draftRaw: string;
+      try {
+        const draftReservation = await checkQuota(supabase, userId, 100);
+        const drafted = await callGemini(GEMINI_API_KEY, draftParts, {
+          systemInstruction: instruction,
+          temperature: 0.3,
+          maxOutputTokens: 6000,
+          thinkingBudget: 512,
+          responseMimeType: 'application/json',
+          responseSchema: DRAFT_SCHEMA,
+        });
+        draftRaw = drafted.text;
+        await recordUsage(supabase, userId, creditsFromUsage(drafted.usage), draftReservation.reservationId);
+      } catch (draftFailure) {
+        const reason =
+          draftFailure instanceof QuotaExceededError
+            ? 'Limite diário de IA atingido: o rascunho não foi gerado.'
+            : 'Não foi possível gerar o rascunho automaticamente.';
+        const fallback = {
+          transcription,
+          soapDraft: '',
+          whatsappDraft: '',
+          clarifications: [
+            `${reason} A transcrição foi preservada: escreva a evolução no campo acima ou adicione uma observação e use "Gerar com observações".`,
+          ],
+          transcriptionQuality: 'partial' as const,
+          differentialDiagnoses: [],
+          drugInteractionAlerts: [],
+          originalComments: consultationComments ?? [],
+          audioMimeType: mimeType,
+        };
+        await supabase
+          .from('consultation_drafts')
+          .update({ content: fallback, status: 'review', updated_at: new Date().toISOString() })
+          .eq('id', draftId)
+          .eq('user_id', userId);
+        return new Response(
+          JSON.stringify({
+            transcription,
+            soapNote: '',
+            whatsappMessage: '',
+            clarifications: fallback.clarifications,
+            transcriptionQuality: 'partial',
+            differentialDiagnoses: [],
+            drugInteractionAlerts: [],
+            draftFailed: true,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
 
       let soapNote = '';
       let whatsappMessage = '';

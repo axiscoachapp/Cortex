@@ -884,6 +884,7 @@ export type Database = {
         Row: {
           age: number | null
           ai_insights: Json | null
+          archived_at: string | null
           allergies: string[] | null
           clinical_notes: string | null
           created_at: string
@@ -908,6 +909,7 @@ export type Database = {
         Insert: {
           age?: number | null
           ai_insights?: Json | null
+          archived_at?: string | null
           allergies?: string[] | null
           clinical_notes?: string | null
           created_at?: string
@@ -932,6 +934,7 @@ export type Database = {
         Update: {
           age?: number | null
           ai_insights?: Json | null
+          archived_at?: string | null
           allergies?: string[] | null
           clinical_notes?: string | null
           created_at?: string

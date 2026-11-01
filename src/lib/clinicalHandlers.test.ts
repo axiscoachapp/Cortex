@@ -8,6 +8,7 @@ import * as storage from '../../supabase/functions/_shared/storage';
 import * as dates from '../../supabase/functions/_shared/clinicDate';
 import * as patientAge from '../../supabase/functions/_shared/patientAge';
 import * as layout from '../../supabase/functions/_shared/documentLayout';
+import * as regulated from '../../supabase/functions/_shared/regulatedMedications';
 
 type Row = Record<string, unknown>;
 const user = '11111111-1111-4111-8111-111111111111';
@@ -107,6 +108,7 @@ function handler(name: string, db: ReturnType<typeof database>, generation = vi.
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const dependencies: Record<string, unknown> = {
+    '../_shared/regulatedMedications.ts': regulated,
     '../_shared/documentLayout.ts': layout,
     '../_shared/patientAge.ts': patientAge,
     '../_shared/gemini.ts': {
@@ -511,7 +513,23 @@ describe('clinical edge handler regressions', () => {
         ],
       }),
     }));
-    const result = await handler('process-comment', db, vi.fn(), network)({ patientId: patient, comment: 'alergia' });
+    // Step 1: extraction only proposes changes; nothing reaches the chart.
+    const extract = await handler('process-comment', db, vi.fn(), network)({ patientId: patient, comment: 'alergia' });
+    expect(extract.status).toBe(200);
+    const proposal = await extract.json();
+    expect(proposal.applied).toBe(false);
+    expect(proposal.proposal.allergies).toEqual(['Penicilina']);
+    expect(db.rpc).not.toHaveBeenCalledWith('apply_clinical_comment', expect.anything());
+    expect(db.tables.patients).toEqual([original]);
+
+    // Step 2: applying the physician-approved subset reports a concurrent edit.
+    const result = await handler('process-comment', db, vi.fn(), network)({
+      patientId: patient,
+      comment: 'alergia',
+      mode: 'apply',
+      expectedRevision: 3,
+      approved: { allergies: ['Penicilina'], addendum: 'Adendo' },
+    });
     expect(result.status).toBe(409);
     expect(db.tables.patients).toEqual([original]);
     expect(db.tables.consultations[0].soap_note).toBe('Original SOAP');

@@ -39,7 +39,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
     enabled: open && term.length >= 2,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from('patients').select('*').ilike('name', `%${term}%`).order('name').limit(30);
+      const { data, error } = await supabase.from('patients').select('*').is('archived_at', null).ilike('name', `%${term}%`).order('name').limit(30);
       if (error) throw error;
       return (data ?? []).map(mapPatientRow);
     },

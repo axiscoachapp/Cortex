@@ -1,10 +1,12 @@
 /**
  * Digital prescription generator (Phase 1 — unsigned).
  *
- * Builds the prescription PDF with the mandatory content of CFM Res. 2.299/2021
- * art. 2º (doctor name/CRM/UF/address, patient identification, date-time,
- * medication list) plus the validation QR code and patient access code, stores
- * it in the private `prescriptions` bucket, and records the row.
+ * Builds the prescription PDF (doctor name/CRM/UF/address, patient name and
+ * age, date-time, medication list) plus a QR code that opens the original
+ * document on the clinic's server, stores it in the private `prescriptions`
+ * bucket, and records the row. Until ICP-Brasil signing exists the document
+ * states that it is valid only with the physician's handwritten signature and
+ * stamp, and it does not claim ITI validation.
  *
  * Signing (PAdES via the doctor's cloud PSC certificate) is Phase 1b: the PDF
  * carries a visible "assinatura digital pendente" notice until the signing
@@ -20,6 +22,7 @@ import { toDataURL } from "https://esm.sh/qrcode@1.5.3";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { currentPatientAge } from "../_shared/patientAge.ts";
+import { antimicrobialsIn, controlledSubstancesIn, toWinAnsi } from "../_shared/regulatedMedications.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -133,6 +136,24 @@ serve(async (req) => {
       throw new Error('Revise nome, dose e instruções de todos os medicamentos.');
     }
     const meds = !isReceita ? [] : rawMeds;
+    if (isReceita && meds.some((m: Medication) => !m.dosage?.trim() || !m.instructions?.trim())) {
+      throw new RequestError('Informe a dose e a posologia (como tomar) de todos os medicamentos.', 422);
+    }
+    if (isReceita) {
+      const controlled = meds.flatMap((m: Medication) => controlledSubstancesIn(m.name));
+      if (controlled.length)
+        throw new RequestError(
+          `Medicamento sujeito a controle especial (Portaria SVS/MS 344/98): ${[...new Set(controlled)].join(', ')}. ` +
+            'Emita em receituário de controle especial ou notificação de receita, conforme a lista do medicamento.',
+          422,
+        );
+      const antimicrobials = meds.flatMap((m: Medication) => antimicrobialsIn(m.name));
+      if (antimicrobials.length && docType !== 'receita_antimicrobiano')
+        throw new RequestError(
+          `Antimicrobiano (${[...new Set(antimicrobials)].join(', ')}) exige a "Receita — antimicrobiano" (RDC 471/2021: 2 vias, validade de 10 dias).`,
+          422,
+        );
+    }
 
     if (isReceita && meds.length === 0) {
       return new Response(
@@ -173,6 +194,8 @@ serve(async (req) => {
     const expiresAt = new Date(now.getTime() + VALIDITY[docType] * 86_400_000);
     const validationUrl =
       `${Deno.env.get('SUPABASE_URL')}/functions/v1/validate-prescription?id=${prescriptionId}`;
+    // The QR carries the access code so scanning it opens the original document.
+    const qrUrl = `${validationUrl}&code=${code}`;
 
     // ── Build the PDF ─────────────────────────────────────────────────────────
     const pdf = await PDFDocument.create();
@@ -188,11 +211,11 @@ serve(async (req) => {
 
     const writer = createPaginatedWriter({
       page: firstPage, width, top: height - margin, bottom: 190, margin,
-      regular: helv, bold: helvBold, ink, continuation: `Continuação — ${patient.name}`,
+      regular: helv, bold: helvBold, ink, continuation: toWinAnsi(`Continuação — ${patient.name}`),
       addPage: () => pdf.addPage([width, height]),
       draw: (target, value, options) => target.drawText(value, options),
     });
-    const text = writer.text;
+    const text: typeof writer.text = (value, options) => writer.text(toWinAnsi(value), options);
     const down = writer.down;
 
     // Header — prescriber
@@ -233,7 +256,7 @@ serve(async (req) => {
 
     if (isAtestado && atestado) {
       // Atestado body
-      const daysLabel = atestado.days === 1 ? '1 (um) dia' : `${atestado.days} dias`;
+      const daysLabel = atestado.days === 1 ? '1 (um) dia' : `${atestado.days.toLocaleString('pt-BR')} ${atestado.days < 1 ? 'dia' : 'dias'}`;
       wrapText(
         `Atesto, para os devidos fins, que o(a) paciente ${patient.name} foi atendido(a) nesta data, ` +
         `necessitando de afastamento de suas atividades por ${daysLabel} a partir desta data.`,
@@ -279,7 +302,7 @@ serve(async (req) => {
     // QR code (left) + validation info (right of it)
     let qrDrawn = false;
     try {
-      const qrDataUrl: string = await toDataURL(validationUrl, { margin: 0, width: 220 });
+      const qrDataUrl: string = await toDataURL(qrUrl, { margin: 0, width: 220 });
       const qrPng = await pdf.embedPng(qrDataUrl);
       writer.page.drawImage(qrPng, { x: margin, y: writer.y - 92, width: 92, height: 92 });
       qrDrawn = true;
@@ -289,16 +312,28 @@ serve(async (req) => {
     const valLabel = isAtestado ? 'Validação do atestado' : isExames ? 'Validação da solicitação' : 'Validação da receita';
     text(valLabel, { x: infoX, size: 9.5, bold: true }); down(13);
     text(`Código de acesso do paciente: ${code}`, { x: infoX, size: 10.5, bold: true, color: blue }); down(13);
-    text('Valide em validar.iti.gov.br ou aponte a câmera para o QR code.', { x: infoX, size: 8.5, color: mut }); down(11);
+    text('Aponte a câmera para o QR code para ver o documento original.', { x: infoX, size: 8.5, color: mut }); down(11);
     text(validationUrl.replace('https://', ''), { x: infoX, size: 7, color: mut }); down(20);
 
     // Signature status notice — replaced by the PAdES signature block in Phase 1b.
     // The QR occupies y=58..150; keep the notice below its lower edge.
     writer.footer(bodyPage, 42);
-    text('Documento gerado eletronicamente pelo Cortex. Assinatura digital ICP-Brasil pendente —', { size: 8, color: mut }); down(10);
-    text('até a assinatura, este documento não substitui a receita assinada.', { size: 8, color: mut });
+    text('Documento sem assinatura digital ICP-Brasil: válido somente com assinatura e carimbo do médico.', { size: 8, color: mut }); down(10);
+    text('Gerado pelo Cortex.', { size: 8, color: mut });
     }
 
+    if (docType === 'receita_antimicrobiano') {
+      const originals = pdf.getPages();
+      const source = await PDFDocument.load(await pdf.save());
+      const copies = await pdf.copyPages(source, originals.map((_, index) => index));
+      const label = (page: typeof originals[number], value: string) =>
+        page.drawText(value, { x: width - margin - helvBold.widthOfTextAtSize(value, 8.5), y: height - 30, size: 8.5, font: helvBold, color: mut });
+      originals.forEach((page) => label(page, '1ª via — paciente'));
+      copies.forEach((page) => {
+        pdf.addPage(page);
+        label(page, '2ª via — retenção da farmácia');
+      });
+    }
     const pdfBytes = await pdf.save();
     const pdfSha256 = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(pdfBytes).buffer))]
       .map(byte => byte.toString(16).padStart(2, '0')).join('');

@@ -20,6 +20,30 @@ serve(async (req) => {
     const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {
       global: { fetch: fetchWithDeadline },
     });
+    const body = await readJsonObject(req).catch(() => ({}) as Record<string, unknown>);
+    const { data: pending } = await admin
+      .from('account_deletion_requests')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    // A deletion already in progress may be retried; a new one needs step-up.
+    if (!pending) {
+      if (body.retentionAcknowledged !== true)
+        throw new RequestError(
+          'Confirme que exportou seus prontuários e que conhece a obrigação de guardá-los por 20 anos.',
+          400,
+        );
+      // Irreversible: require a sign-in within the last 10 minutes, so a stolen
+      // or left-open session cannot destroy the account on its own.
+      const { data: authUser, error: authUserError } = await admin.auth.admin.getUserById(userId);
+      if (authUserError) throw new Error('Não foi possível confirmar a identidade');
+      const lastSignIn = authUser.user?.last_sign_in_at ? Date.parse(authUser.user.last_sign_in_at) : 0;
+      if (!lastSignIn || Date.now() - lastSignIn > 10 * 60_000)
+        return new Response(
+          JSON.stringify({ error: 'Por segurança, confirme sua senha antes de excluir a conta.', reauthRequired: true }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+    }
     await requireSafeDeletion(admin, userId);
     // Persistent intent blocks new writes; failed cleanup can be retried safely.
     const { error: lockError } = await admin.from('account_deletion_requests').upsert({ user_id: userId });

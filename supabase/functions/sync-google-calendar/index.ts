@@ -138,7 +138,8 @@ serve(async (req) => {
     const eventBody = {
       summary: dbAppt!.title,
       status: dbAppt.status === 'cancelado' ? 'cancelled' : 'confirmed',
-      description: dbAppt!.notes ?? '',
+      // Internal clinical notes stay in Cortex; they are not copied to Google.
+      description: 'Detalhes no Cortex.',
       start: { dateTime: dbAppt!.start_time, timeZone: 'America/Sao_Paulo' },
       end: { dateTime: dbAppt!.end_time, timeZone: 'America/Sao_Paulo' },
     };

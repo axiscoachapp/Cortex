@@ -54,7 +54,11 @@ function database(seed: Record<string, Row[]> = {}, failedTable?: string) {
         if (patch)
           rows.forEach((row) => {
             Object.assign(row, patch);
-            if (table === 'consultations' || table === 'patients') row.revision = Number(row.revision ?? 0) + 1;
+            // Mirrors record_clinical_revision: a pre_briefing-only (cache) update
+            // is not a clinical change and does not create a revision.
+            const cacheOnly = Object.keys(patch).every((key) => key === 'pre_briefing' || key === 'updated_at');
+            if ((table === 'consultations' || table === 'patients') && !cacheOnly)
+              row.revision = Number(row.revision ?? 0) + 1;
           });
         return {
           data: table === failedTable ? null : structuredClone(rows),
@@ -356,7 +360,7 @@ describe('prebriefing source fingerprint', () => {
       expect(db.tables.consultations[0].pre_briefing).toMatchObject({
         _source: {
           patientRevision,
-          consultationRevision: consultationRevision + 1,
+          consultationRevision,
           clinicDate: clinicDates.clinicDate(new Date(now)),
         },
       });
@@ -368,7 +372,7 @@ describe('prebriefing source fingerprint', () => {
     expect((await handler.run({ patientId: patient })).status).toBe(200);
     expect(handler.network).toHaveBeenCalledOnce();
   });
-  it('reuses the generated result after its cache write increments the consultation revision', async () => {
+  it('reuses the generated result: its cache write does not change the consultation revision', async () => {
     const { handler, db } = setup();
     db.tables.consultations[0].pre_briefing = null;
     expect((await handler.run({ patientId: patient })).status).toBe(200);

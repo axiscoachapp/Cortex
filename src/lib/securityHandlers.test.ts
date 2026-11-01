@@ -54,7 +54,10 @@ function fakeDatabase(seed: Record<string, Row[]> = {}, maximumRows = Infinity) 
     auth: {
       admin: {
         deleteUser,
-        getUserById: async () => ({ data: { user: { id: user, email: 'doctor@example.invalid' } }, error: null }),
+        getUserById: vi.fn(async () => ({
+          data: { user: { id: user, email: 'doctor@example.invalid', last_sign_in_at: new Date().toISOString() } },
+          error: null,
+        })),
       },
     },
     rpc: vi.fn(async () => ({ data: true as unknown, error: null as unknown })),
@@ -80,7 +83,7 @@ function fakeDatabase(seed: Record<string, Row[]> = {}, maximumRows = Infinity) 
             Object.assign(row, patch);
             updates.push(patch!);
           });
-        return { data: rows, error: null };
+        return { data: rows, error: null, count: rows.length };
       };
       const query = {
         select: (_columns?: string) => query,
@@ -367,7 +370,9 @@ describe('security endpoint regressions', () => {
   it('retains account metadata when storage cleanup cannot complete', async () => {
     const db = fakeDatabase();
     db.list.mockResolvedValue({ data: [], error: { message: 'offline' } });
-    const response = await loadHandler('delete-user-data', db)(new Request('https://edge.invalid', { method: 'POST' }));
+    const response = await loadHandler('delete-user-data', db)(
+      new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }),
+    );
     expect(response.status).toBe(503);
     expect(db.deleteUser).not.toHaveBeenCalled();
     expect(db.tables.account_deletion_requests).toEqual([{ user_id: user }]);
@@ -380,7 +385,12 @@ describe('security endpoint regressions', () => {
       const response = await loadHandler(
         name,
         db,
-      )(new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ patientId: patient }) }));
+      )(
+        new Request('https://edge.invalid', {
+          method: 'POST',
+          body: JSON.stringify({ patientId: patient, retentionAcknowledged: true }),
+        }),
+      );
       expect(response.status).toBe(409);
       expect(db.list).not.toHaveBeenCalled();
       expect(db.remove).not.toHaveBeenCalled();
@@ -388,6 +398,44 @@ describe('security endpoint regressions', () => {
       expect(db.updates).toEqual([]);
     },
   );
+  it('keeps a chart with clinical records (20-year retention): delete-patient asks to archive instead', async () => {
+    const db = fakeDatabase({
+      patients: [{ id: patient, user_id: user, deletion_requested_at: null }],
+      consultations: [{ id: 'visit', user_id: user, patient_id: patient }],
+    });
+    const response = await loadHandler('delete-patient', db)(
+      new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ patientId: patient }) }),
+    );
+    expect(response.status).toBe(409);
+    expect((await response.json()).retentionRequired).toBe(true);
+    expect(db.remove).not.toHaveBeenCalled();
+    expect(db.updates).toEqual([]);
+    expect(db.tables.patients).toHaveLength(1);
+  });
+  it('refuses account deletion without the retention acknowledgment', async () => {
+    const db = fakeDatabase();
+    const response = await loadHandler('delete-user-data', db)(
+      new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({}) }),
+    );
+    expect(response.status).toBe(400);
+    expect(db.deleteUser).not.toHaveBeenCalled();
+    expect(db.remove).not.toHaveBeenCalled();
+  });
+  it('requires a recent sign-in (step-up) before deleting the account', async () => {
+    const db = fakeDatabase();
+    const stale = new Date(Date.now() - 60 * 60_000).toISOString();
+    (db.auth.admin.getUserById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: user, email: 'doctor@example.invalid', last_sign_in_at: stale } },
+      error: null,
+    });
+    const response = await loadHandler('delete-user-data', db)(
+      new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }),
+    );
+    expect(response.status).toBe(403);
+    expect((await response.json()).reauthRequired).toBe(true);
+    expect(db.deleteUser).not.toHaveBeenCalled();
+    expect(db.remove).not.toHaveBeenCalled();
+  });
   it('rejects an invalid OAuth transaction before contacting Google', async () => {
     const db = fakeDatabase();
     const network = vi.fn(async () => {
@@ -486,7 +534,9 @@ describe('security endpoint regressions', () => {
     const db = fakeDatabase({
       provider_upload_leases: [{ id: 'pending', user_id: user, patient_id: patient, created_at: '2026-01-01' }],
     });
-    const response = await loadHandler('delete-user-data', db)(new Request('https://edge.invalid', { method: 'POST' }));
+    const response = await loadHandler('delete-user-data', db)(
+      new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }),
+    );
     expect(response.status).toBe(503);
     expect(db.list).not.toHaveBeenCalled();
     expect(db.deleteUser).not.toHaveBeenCalled();

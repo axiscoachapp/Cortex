@@ -87,7 +87,7 @@ export default function ClinicalWorkspacePage() {
     queryKey: ['workspace-directory', user?.id, search],
     enabled: !!user,
     queryFn: async () => {
-      let q = supabase.from('patients').select('id,name').eq('user_id', user!.id).order('name').order('id').limit(50);
+      let q = supabase.from('patients').select('id,name').eq('user_id', user!.id).is('archived_at', null).order('name').order('id').limit(50);
       if (search.trim()) q = q.ilike('name', `%${search.trim().replace(/[%_,()]/g, '')}%`);
       const { data, error } = await q;
       if (error) throw error;

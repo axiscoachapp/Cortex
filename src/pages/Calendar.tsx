@@ -163,7 +163,7 @@ export default function CalendarPage() {
     queryFn: async () => {
       if (!user?.id) return [];
       const data = await fetchAllRows((from, to) =>
-        supabase.from('patients').select('*').order('name').order('id').range(from, to),
+        supabase.from('patients').select('*').is('archived_at', null).order('name').order('id').range(from, to),
       );
       return data.map(mapPatientRow);
     },

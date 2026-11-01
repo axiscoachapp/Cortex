@@ -109,6 +109,17 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
+    // Enforce the doctor's opt-out server-side: the client setting can be
+    // unknown (loading/failed), and audio must never reach the provider then.
+    const { data: settings, error: settingsError } = await supabase
+      .from('user_settings')
+      .select('live_copilot_enabled')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (settingsError) throw new RequestError('Não foi possível verificar as configurações do copiloto.', 503);
+    if (settings && settings.live_copilot_enabled === false)
+      throw new RequestError('O copiloto ao vivo está desativado nas suas configurações.', 403);
+
     // Sanitize the incoming state — it round-trips through the client, so cap
     // sizes rather than trusting it verbatim.
     let prev: CopilotState | null = null;

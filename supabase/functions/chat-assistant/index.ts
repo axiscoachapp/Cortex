@@ -92,7 +92,7 @@ function condense(text: string, max = 600): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' });
 }
 
 serve(async (req) => {
@@ -305,7 +305,14 @@ Alergias: ${allergies}`;
       }
     };
     try {
-      const queryEmbedding = await embedText(GEMINI_API_KEY, userMessage, 'RETRIEVAL_QUERY');
+      // Embedding is best-effort: a provider timeout (rethrown as RequestError
+      // by observeProviderOperation) must not fail the whole answer.
+      let queryEmbedding: number[] = [];
+      try {
+        queryEmbedding = await embedText(GEMINI_API_KEY, userMessage, 'RETRIEVAL_QUERY');
+      } catch {
+        queryEmbedding = [];
+      }
       if (queryEmbedding.length > 0) {
         const { data: matches, error: knowledgeError } = await supabase.rpc('match_knowledge', {
           p_user_id: userId,

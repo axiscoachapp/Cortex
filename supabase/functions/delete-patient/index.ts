@@ -24,6 +24,20 @@ serve(async req=>{
       .eq('id',patientId).eq('user_id',userId).maybeSingle();
     if(readError) throw new Error('Não foi possível verificar o paciente');
     if(!patient) return new Response(JSON.stringify({success:true}),{headers:{...corsHeaders,'Content-Type':'application/json'}});
+    // Medical records must be kept for at least 20 years (CFM 1.821/2007 art. 8;
+    // Lei 13.787/2018 art. 6). A chart with clinical content is archived instead;
+    // permanent deletion is only for charts registered by mistake.
+    if(!patient.deletion_requested_at) {
+      const counts=await Promise.all(['consultations','prescriptions','patient_files'].map(table=>
+        db.from(table).select('id',{count:'exact',head:true}).eq('user_id',userId).eq('patient_id',patientId)));
+      if(counts.some(result=>result.error)) throw new Error('Não foi possível verificar o prontuário');
+      if(counts.some(result=>(result.count ?? 0)>0)) {
+        return new Response(JSON.stringify({
+          error:'Este prontuário tem consultas, documentos ou arquivos e deve ser mantido por no mínimo 20 anos (CFM 1.821/2007; Lei 13.787/2018). Arquive o paciente em vez de excluir.',
+          retentionRequired:true,
+        }),{status:409,headers:{...corsHeaders,'Content-Type':'application/json'}});
+      }
+    }
     await requireSafeDeletion(db,userId,patientId);
     if(!patient.deletion_requested_at) {
       const {error}=await db.from('patients').update({deletion_requested_at:new Date().toISOString()})

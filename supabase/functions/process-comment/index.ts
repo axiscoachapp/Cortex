@@ -123,6 +123,144 @@ function norm(s: string): string {
   return (s ?? '').trim().toLowerCase();
 }
 
+interface ApprovedChanges {
+  allergies: string[];
+  medicationsAdd: Array<{ name: string; dosage: string }>;
+  medicationsRemove: string[];
+  diagnoses: Array<{ code: string; description: string }>;
+  addendum: string;
+  longTermNote: string;
+}
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+const MAX_ITEMS = 30;
+const MAX_TEXT = 300;
+function stringList(value: unknown, field: string): string[] {
+  if (value === undefined || value === null) return [];
+  if (
+    !Array.isArray(value) ||
+    value.length > MAX_ITEMS ||
+    value.some((v) => typeof v !== 'string' || v.length > MAX_TEXT)
+  )
+    throw new RequestError(`Alteração inválida: ${field}`, 400);
+  return (value as string[]).map((v) => v.trim()).filter(Boolean);
+}
+function objectList<K extends string>(value: unknown, keys: K[], field: string): Array<Record<K, string>> {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > MAX_ITEMS) throw new RequestError(`Alteração inválida: ${field}`, 400);
+  return value.map((item) => {
+    if (!item || typeof item !== 'object') throw new RequestError(`Alteração inválida: ${field}`, 400);
+    const out = {} as Record<K, string>;
+    for (const key of keys) {
+      const v = (item as Record<string, unknown>)[key] ?? '';
+      if (typeof v !== 'string' || v.length > MAX_TEXT) throw new RequestError(`Alteração inválida: ${field}`, 400);
+      out[key] = v.trim();
+    }
+    return out;
+  });
+}
+function longText(value: unknown, field: string): string {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string' || value.length > 4000) throw new RequestError(`Alteração inválida: ${field}`, 400);
+  return value.trim();
+}
+
+function medName(m: StoredMedication): string {
+  return typeof m === 'string' ? m : (m.name ?? '');
+}
+
+/**
+ * Apply only what the physician explicitly approved. Returns the patient patch
+ * and a human-readable record of what changed. No AI output reaches this
+ * function without passing through the review card first.
+ */
+function buildPatch(
+  patient: { allergies: unknown; medications: unknown; diagnoses: unknown; clinical_notes: string | null },
+  approved: ApprovedChanges,
+  now: Date,
+) {
+  const existingAllergies: string[] = Array.isArray(patient.allergies) ? (patient.allergies as string[]) : [];
+  const existingMeds: StoredMedication[] = Array.isArray(patient.medications)
+    ? (patient.medications as StoredMedication[])
+    : [];
+  const existingDiag: StoredDiagnosis[] = Array.isArray(patient.diagnoses)
+    ? (patient.diagnoses as StoredDiagnosis[])
+    : [];
+  const patch: {
+    allergies?: string[];
+    medications?: StoredMedication[];
+    diagnoses?: StoredDiagnosis[];
+    clinical_notes?: string;
+  } = {};
+  const applied = {
+    allergies: [] as string[],
+    medicationsAdded: [] as string[],
+    medicationsRemoved: [] as string[],
+    diagnoses: [] as string[],
+  };
+
+  const existingAllergyKeys = new Set(existingAllergies.map(norm));
+  const newAllergies = approved.allergies.filter((a) => !existingAllergyKeys.has(norm(a)));
+  if (newAllergies.length) {
+    patch.allergies = [...existingAllergies, ...newAllergies];
+    applied.allergies = newAllergies;
+  }
+
+  if (approved.medicationsAdd.length || approved.medicationsRemove.length) {
+    const removeKeys = new Set(approved.medicationsRemove.map(norm));
+    const kept = existingMeds.filter((m) => !removeKeys.has(norm(medName(m))));
+    const removed = existingMeds.filter((m) => removeKeys.has(norm(medName(m)))).map(medName);
+    const merged = [...kept];
+    const added: string[] = [];
+    for (const med of approved.medicationsAdd.filter((m) => m.name)) {
+      const index = merged.findIndex((old) => norm(medName(old)) === norm(med.name));
+      if (index >= 0) {
+        const old = merged[index];
+        if (typeof old === 'object' && old.dosage === med.dosage) continue;
+        merged[index] = { ...(typeof old === 'object' ? old : {}), ...med };
+      } else merged.push({ ...med, instructions: '' });
+      added.push(`${med.name}${med.dosage ? ` ${med.dosage}` : ''}`.trim());
+    }
+    if (added.length || removed.length) {
+      patch.medications = merged;
+      applied.medicationsAdded = added;
+      applied.medicationsRemoved = removed;
+    }
+  }
+
+  const existingDiagKeys = new Set(existingDiag.map((d) => norm(typeof d === 'string' ? d : (d.description ?? ''))));
+  const newDiag = approved.diagnoses.filter((d) => d.description && !existingDiagKeys.has(norm(d.description)));
+  if (newDiag.length) {
+    patch.diagnoses = [...existingDiag, ...newDiag];
+    applied.diagnoses = newDiag.map((d) => `${d.code ? `${d.code} ` : ''}${d.description}`.trim());
+  }
+
+  if (approved.longTermNote) {
+    const stamp = now.toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: 'America/Sao_Paulo',
+    });
+    const entry = `[${stamp}] ${approved.longTermNote}`;
+    patch.clinical_notes = patient.clinical_notes ? `${patient.clinical_notes}\n${entry}` : entry;
+  }
+  return { patch, applied };
+}
+
+function summarize(applied: ReturnType<typeof buildPatch>['applied'], addendum: boolean, note: boolean): string {
+  const parts: string[] = [];
+  if (applied.allergies.length) parts.push(`Alergias adicionadas: ${applied.allergies.join(', ')}`);
+  if (applied.medicationsAdded.length)
+    parts.push(`Medicações adicionadas/alteradas: ${applied.medicationsAdded.join(', ')}`);
+  if (applied.medicationsRemoved.length) parts.push(`Medicações suspensas: ${applied.medicationsRemoved.join(', ')}`);
+  if (applied.diagnoses.length) parts.push(`Diagnósticos adicionados: ${applied.diagnoses.join('; ')}`);
+  if (addendum) parts.push('Adendo salvo na consulta de hoje');
+  if (note) parts.push('Anotação adicionada ao prontuário');
+  return parts.length ? parts.join(' · ') : 'Nada foi alterado.';
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -130,17 +268,13 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { patientId, comment } = await readJsonObject(req);
+    const body = await readJsonObject(req);
+    const { patientId, comment } = body;
+    const mode = body.mode === 'apply' ? 'apply' : 'extract';
 
     if (typeof patientId !== 'string' || typeof comment !== 'string' || !comment.trim() || comment.length > 32000) {
-      return new Response(JSON.stringify({ error: 'patientId e comment são obrigatórios' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ error: 'patientId e comment são obrigatórios' }, 400);
     }
-
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
@@ -167,14 +301,82 @@ serve(async (req) => {
         .maybeSingle(),
     ]);
 
-    if (!patient) {
-      return new Response(JSON.stringify({ error: 'Paciente não encontrado' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    if (!patient) return json({ error: 'Paciente não encontrado' }, 404);
+    const hasConsultToday = !!todayConsult?.id;
+
+    const applyChanges = async (approved: ApprovedChanges, expectedRevision: number) => {
+      if (expectedRevision !== patient.revision)
+        return json(
+          { error: 'O prontuário foi alterado em outra janela. Revise as alterações novamente antes de aplicar.' },
+          409,
+        );
+      const { patch, applied } = buildPatch(patient, approved, now);
+      const appliedAddendum = !!(approved.addendum && hasConsultToday);
+      if (!Object.keys(patch).length && !appliedAddendum) return json({ summary: 'Nada foi alterado.', applied: true });
+      const hhmm = now.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'America/Sao_Paulo',
       });
+      const { error: applyError } = await supabase.rpc('apply_clinical_comment', {
+        p_user_id: userId,
+        p_patient_id: patientId,
+        p_expected_revision: patient.revision,
+        p_patient_patch: patch,
+        p_consultation_id: appliedAddendum ? todayConsult!.id : null,
+        p_expected_consultation_revision: appliedAddendum ? todayConsult!.revision : null,
+        p_addendum: appliedAddendum ? `**Adendo [${hhmm}]:** ${approved.addendum}` : null,
+      });
+      if (applyError) {
+        if (applyError.code === '40001')
+          return json(
+            { error: 'O prontuário foi alterado em outra janela. Revise as alterações novamente antes de aplicar.' },
+            409,
+          );
+        throw applyError;
+      }
+      return json({
+        summary: summarize(applied, appliedAddendum, !!approved.longTermNote),
+        applied: true,
+        appliedProfile: applied,
+        appliedAddendum,
+      });
+    };
+
+    // The doctor's own words, saved verbatim (no AI involved).
+    const saveVerbatim = (reason: string) =>
+      applyChanges(
+        {
+          allergies: [],
+          medicationsAdd: [],
+          medicationsRemove: [],
+          diagnoses: [],
+          addendum: '',
+          longTermNote: comment.trim(),
+        },
+        patient.revision,
+      ).then(async (response) => {
+        if (!response.ok) return response;
+        return json({ summary: reason, applied: true });
+      });
+
+    // ── Step 2: apply exactly what the physician approved (no AI call) ──────
+    if (mode === 'apply') {
+      const raw = (body.approved ?? {}) as Record<string, unknown>;
+      const approved: ApprovedChanges = {
+        allergies: stringList(raw.allergies, 'alergias'),
+        medicationsAdd: objectList(raw.medicationsAdd, ['name', 'dosage'], 'medicações'),
+        medicationsRemove: stringList(raw.medicationsRemove, 'suspensões'),
+        diagnoses: objectList(raw.diagnoses, ['code', 'description'], 'diagnósticos'),
+        addendum: longText(raw.addendum, 'adendo'),
+        longTermNote: longText(raw.longTermNote, 'anotação'),
+      };
+      if (typeof body.expectedRevision !== 'number') throw new RequestError('Revisão do prontuário ausente', 400);
+      return await applyChanges(approved, body.expectedRevision);
     }
 
-    const hasConsultToday = !!todayConsult?.id;
+    // ── Step 1: extract a PROPOSAL. Nothing is written to the chart here. ────
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     const existingAllergies: string[] = Array.isArray(patient?.allergies) ? patient!.allergies : [];
     const existingMeds: StoredMedication[] = Array.isArray(patient?.medications) ? patient!.medications : [];
     const existingDiag: StoredDiagnosis[] = Array.isArray(patient?.diagnoses) ? patient!.diagnoses : [];
@@ -196,9 +398,13 @@ Comentário do médico:
     assertGeminiTextBudget([{ text: prompt }], SYSTEM);
     let reservation: { reservationId: string };
     try {
+      if (!GEMINI_API_KEY) throw new RequestError('IA indisponível', 503);
       reservation = await checkQuota(supabase, userId, 100);
     } catch (err) {
       if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      // AI switched off or not configured: the doctor's note is still saved.
+      if (err instanceof RequestError && err.status === 503)
+        return await saveVerbatim('IA indisponível no momento: o comentário foi salvo como anotação no prontuário.');
       throw err;
     }
 
@@ -222,188 +428,50 @@ Comentário do médico:
       throw new Error(`Falha no provedor de IA (${res.status}). Tente novamente.`);
     }
 
-    const json = await res.json();
-    const rawText = requireCompleteModelText(json);
-    await recordUsage(supabase, userId, creditsFromUsage(json.usageMetadata), reservation.reservationId);
+    const modelJson = await res.json();
+    const rawText = requireCompleteModelText(modelJson);
+    await recordUsage(supabase, userId, creditsFromUsage(modelJson.usageMetadata), reservation.reservationId);
     const parsed = parseModelObject<CommentExtraction>(rawText, COMMENT_SCHEMA);
 
-    const allergiesAdd: string[] = Array.isArray(parsed.allergies_add) ? parsed.allergies_add : [];
-    const medsAdd: Array<{ name: string; dosage: string }> = Array.isArray(parsed.medications_add)
-      ? parsed.medications_add
-      : [];
-    const medsRemove: string[] = Array.isArray(parsed.medications_remove) ? parsed.medications_remove : [];
-    const diagnosesAdd: Array<{ code: string; description: string }> = Array.isArray(parsed.diagnoses_add)
-      ? parsed.diagnoses_add
-      : [];
-    const addendumText: string = (parsed.consultation_addendum ?? '').trim();
-    const longTermNote: string = (parsed.long_term_note ?? '').trim();
-    const aiSummary: string = (parsed.summary ?? '').trim();
-
-    // ── Server-side merge & apply ────────────────────────────────────────────
-    const patientUpdates: {
-      allergies?: string[];
-      medications?: StoredMedication[];
-      diagnoses?: StoredDiagnosis[];
-      clinical_notes?: string;
-    } = {};
-    const appliedProfile: {
-      allergies: string[];
-      medicationsAdded: string[];
-      medicationsRemoved: string[];
-      diagnoses: string[];
-    } = {
-      allergies: [],
-      medicationsAdded: [],
-      medicationsRemoved: [],
-      diagnoses: [],
-    };
-
-    // Allergies
-    if (allergiesAdd.length > 0) {
-      const existingLower = new Set(existingAllergies.map(norm));
-      const newOnes = allergiesAdd.filter((a) => a.trim() && !existingLower.has(norm(a)));
-      if (newOnes.length > 0) {
-        patientUpdates.allergies = [...existingAllergies, ...newOnes];
-        appliedProfile.allergies = newOnes;
-      }
-    }
-
-    // Medications (add + remove)
-    if (medsAdd.length > 0 || medsRemove.length > 0) {
-      const removeLower = new Set(medsRemove.map(norm));
-      const filtered = existingMeds.filter((m) => {
-        const name = typeof m === 'string' ? m : m.name;
-        return name ? !removeLower.has(norm(name)) : true;
-      });
-      const actuallyRemoved = existingMeds
-        .filter((m) => {
-          const name = typeof m === 'string' ? m : m.name;
-          return name && removeLower.has(norm(name));
-        })
-        .map((m) => (typeof m === 'string' ? m : m.name));
-
-      const newMeds = medsAdd
+    // Only propose genuinely new items (dedupe against the current chart).
+    const allergyKeys = new Set(existingAllergies.map(norm));
+    const medKeys = new Map(existingMeds.map((m) => [norm(medName(m)), m]));
+    const diagKeys = new Set(existingDiag.map((d) => norm(typeof d === 'string' ? d : (d.description ?? ''))));
+    const proposal = {
+      allergies: (parsed.allergies_add ?? []).map((a) => a.trim()).filter((a) => a && !allergyKeys.has(norm(a))),
+      medicationsAdd: (parsed.medications_add ?? [])
         .filter((m) => m.name?.trim())
         .filter((m) => {
-          const old = filtered.find(
-            (existing) => norm(typeof existing === 'string' ? existing : existing.name) === norm(m.name),
-          );
-          return !old || typeof old === 'string' || old.dosage !== m.dosage;
-        });
+          const old = medKeys.get(norm(m.name));
+          return !old || typeof old === 'string' || (old.dosage ?? '') !== (m.dosage ?? '');
+        })
+        .map((m) => ({ name: m.name.trim(), dosage: (m.dosage ?? '').trim() })),
+      medicationsRemove: (parsed.medications_remove ?? [])
+        .map((name) => existingMeds.find((m) => norm(medName(m)) === norm(name)))
+        .filter((m): m is StoredMedication => !!m)
+        .map(medName),
+      diagnoses: (parsed.diagnoses_add ?? [])
+        .filter((d) => d.description?.trim() && !diagKeys.has(norm(d.description)))
+        .map((d) => ({ code: (d.code ?? '').trim(), description: d.description.trim() })),
+      addendum: hasConsultToday ? (parsed.consultation_addendum ?? '').trim() : '',
+      longTermNote: (parsed.long_term_note ?? '').trim(),
+      summary: (parsed.summary ?? '').trim(),
+    };
+    const hasStructured =
+      proposal.allergies.length ||
+      proposal.medicationsAdd.length ||
+      proposal.medicationsRemove.length ||
+      proposal.diagnoses.length ||
+      proposal.addendum ||
+      proposal.longTermNote;
+    if (!hasStructured)
+      return await saveVerbatim('Salvo como anotação no prontuário (sem dados estruturados para revisar).');
 
-      if (newMeds.length > 0 || actuallyRemoved.length > 0) {
-        const merged = [...filtered];
-        for (const med of newMeds) {
-          const index = merged.findIndex((old) => norm(typeof old === 'string' ? old : old.name) === norm(med.name));
-          if (index >= 0) merged[index] = { ...(typeof merged[index] === 'object' ? merged[index] : {}), ...med };
-          else merged.push({ ...med, instructions: '' });
-        }
-        patientUpdates.medications = merged;
-        appliedProfile.medicationsAdded = newMeds.map((m) => `${m.name}${m.dosage ? ` ${m.dosage}` : ''}`.trim());
-        appliedProfile.medicationsRemoved = actuallyRemoved;
-      }
-    }
-
-    // Diagnoses
-    if (diagnosesAdd.length > 0) {
-      const existingDescs = new Set(existingDiag.map((d) => norm(typeof d === 'string' ? d : (d.description ?? ''))));
-      const newDiag = diagnosesAdd.filter((d) => d.description?.trim() && !existingDescs.has(norm(d.description)));
-      if (newDiag.length > 0) {
-        patientUpdates.diagnoses = [...existingDiag, ...newDiag];
-        appliedProfile.diagnoses = newDiag.map((d) => `${d.code ? `${d.code} ` : ''}${d.description}`.trim());
-      }
-    }
-
-    // Long-term note → clinical_notes
-    let appliedLongTermNote = false;
-    if (longTermNote) {
-      const stamp = now.toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      const entry = `[${stamp}] ${longTermNote}`;
-      patientUpdates.clinical_notes = patient?.clinical_notes ? `${patient.clinical_notes}\n${entry}` : entry;
-      appliedLongTermNote = true;
-    }
-
-    const appliedAddendum = !!(addendumText && hasConsultToday);
-    const nothingApplied = Object.keys(patientUpdates).length === 0 && !appliedAddendum;
-    if (nothingApplied) {
-      const stamp = now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-      const entry = `[${stamp}] ${comment.trim()}`;
-      patientUpdates.clinical_notes = patient.clinical_notes ? `${patient.clinical_notes}\n${entry}` : entry;
-      appliedLongTermNote = true;
-    }
-    const hhmm = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-    const { error: applyError } = await supabase.rpc('apply_clinical_comment', {
-      p_user_id: userId,
-      p_patient_id: patientId,
-      p_expected_revision: patient.revision,
-      p_patient_patch: patientUpdates,
-      p_consultation_id: appliedAddendum ? todayConsult.id : null,
-      p_expected_consultation_revision: appliedAddendum ? todayConsult.revision : null,
-      p_addendum: appliedAddendum ? `**Adendo [${hhmm}]:** ${addendumText}` : null,
-    });
-    if (applyError) {
-      if (applyError.code === '40001')
-        return new Response(
-          JSON.stringify({
-            error:
-              'O prontuário foi alterado em outra janela. Recarregue e revise o comentário antes de tentar novamente.',
-          }),
-          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      throw applyError;
-    }
-
-    // ── Build user-facing summary ────────────────────────────────────────────
-    const summaryParts: string[] = [];
-    if (appliedProfile.allergies.length)
-      summaryParts.push(
-        `Alergia${appliedProfile.allergies.length > 1 ? 's' : ''} adicionada${appliedProfile.allergies.length > 1 ? 's' : ''}: ${appliedProfile.allergies.join(', ')}`,
-      );
-    if (appliedProfile.medicationsAdded.length)
-      summaryParts.push(
-        `Medicação${appliedProfile.medicationsAdded.length > 1 ? 'ões' : ''} adicionada${appliedProfile.medicationsAdded.length > 1 ? 's' : ''}: ${appliedProfile.medicationsAdded.join(', ')}`,
-      );
-    if (appliedProfile.medicationsRemoved.length)
-      summaryParts.push(
-        `Medicação${appliedProfile.medicationsRemoved.length > 1 ? 'ões' : ''} suspensa${appliedProfile.medicationsRemoved.length > 1 ? 's' : ''}: ${appliedProfile.medicationsRemoved.join(', ')}`,
-      );
-    if (appliedProfile.diagnoses.length)
-      summaryParts.push(
-        `Diagnóstico${appliedProfile.diagnoses.length > 1 ? 's' : ''} adicionado${appliedProfile.diagnoses.length > 1 ? 's' : ''}: ${appliedProfile.diagnoses.join('; ')}`,
-      );
-    if (appliedAddendum) summaryParts.push('Adendo salvo na consulta de hoje');
-    if (appliedLongTermNote && !nothingApplied) summaryParts.push('Anotação adicionada ao prontuário');
-    if (nothingApplied) summaryParts.push('Salvo como anotação no prontuário (sem dados estruturados extraídos)');
-
-    const summary = summaryParts.length > 0 ? summaryParts.join(' · ') : aiSummary || 'Nada a atualizar.';
-
-    return new Response(
-      JSON.stringify({
-        summary,
-        appliedProfile,
-        appliedAddendum,
-        appliedLongTermNote,
-        hasConsultToday,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    return json({ applied: false, proposal, expectedRevision: patient.revision, hasConsultToday });
   } catch (error) {
-    if (error instanceof RequestError)
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: error.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (error instanceof RequestError) return json({ error: error.message }, error.status);
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('process-comment failed');
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro ao processar comentário' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    return json({ error: error instanceof Error ? error.message : 'Erro ao processar comentário' }, 500);
   }
 });

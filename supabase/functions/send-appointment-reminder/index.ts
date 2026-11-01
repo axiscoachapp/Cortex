@@ -57,7 +57,8 @@ serve(async (req) => {
     // Fetch appointment + patient
     const { data: appt, error: apptError } = await supabase
       .from('appointments')
-      .select('id, patient_id, start_time, type, notes, status')
+      // Internal notes ("Observações") are never sent to patients.
+      .select('id, patient_id, start_time, type, status')
       .eq('id', appointmentId)
       .eq('user_id', userId)
       .single();
@@ -100,7 +101,6 @@ Lembrando da sua consulta agendada:
 
 📅 *${dateStr}*
 🏥 Tipo: ${typeLabel}
-${appt.notes ? `📝 Obs: ${appt.notes}\n` : ''}
 Em caso de necessidade, entre em contato para reagendamento.
 
 Até breve! 💙`;
@@ -145,7 +145,6 @@ Até breve! 💙`;
     <div style="background: #EFF6FF; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
       <p style="margin: 0 0 8px; font-weight: 600; color: #1D4ED8;">📅 ${escapeHtml(dateStr)}</p>
       <p style="margin: 0; color: #374151;">Tipo: <strong>${escapeHtml(typeLabel)}</strong></p>
-      ${appt.notes ? `<p style="margin: 8px 0 0; color: #374151;">Observações: ${escapeHtml(appt.notes)}</p>` : ''}
     </div>
     <p style="color: #6B7280; font-size: 14px; margin: 0;">Em caso de necessidade de reagendamento, entre em contato com seu médico.</p>
     <hr style="border: 0; border-top: 1px solid #E5E7EB; margin: 24px 0;">
@@ -164,7 +163,7 @@ Até breve! 💙`;
         body: JSON.stringify({
           from: 'Cortex <noreply@resend.dev>',
           to: [patientEmail],
-          subject: `Lembrete: Sua consulta está agendada — ${new Date(appt.start_time).toLocaleDateString('pt-BR')}`,
+          subject: `Lembrete: Sua consulta está agendada — ${new Date(appt.start_time).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`,
           html,
         }),
       });

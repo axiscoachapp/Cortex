@@ -583,6 +583,7 @@ export function AppointmentModal({
                 placeholder="Motivo, observações pré-consulta..."
                 className="min-h-[80px] resize-none"
               />
+              <p className="text-xs text-muted-foreground">Uso interno: não é enviado ao paciente nem ao Google Agenda.</p>
             </div>
 
             {/* Reminder buttons (edit only, existing patient only) */}

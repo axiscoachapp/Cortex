@@ -43,6 +43,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ConsultationReviewModal } from '@/components/ConsultationReviewModal';
 import { DocumentPreviewModal } from '@/components/DocumentPreviewModal';
 import { ProfileUpdateCard, MergedProfile } from '@/components/ProfileUpdateCard';
+import { CommentProposalCard } from '@/components/CommentProposalCard';
 import { ProfileUpdates } from '@/types/patient';
 import { printSoap } from '@/lib/printDoc';
 import { UsageMeter, UsageOverBanner } from '@/components/UsageMeter';
@@ -436,6 +437,30 @@ export function ChatPanel({
         throw error;
       }
 
+      // AI-extracted changes come back as a proposal: the doctor must review
+      // them in a card before anything is written to the chart.
+      if (data?.applied === false && data.proposal) {
+        if (isCurrentPatient(patient.id))
+          onMessagesChange((prev) => [
+            ...prev,
+            {
+              id: `proposal-${Date.now()}`,
+              type: 'comment-proposal',
+              title: 'Revisar alterações do comentário',
+              content: text,
+              timestamp: new Date(),
+              commentProposal: {
+                patientId: patient.id,
+                comment: text,
+                proposal: data.proposal,
+                expectedRevision: data.expectedRevision,
+              },
+            },
+          ]);
+        queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
+        return;
+      }
+
       const summary: string = data?.summary ?? 'Comentário processado.';
       const appliedAddendum: boolean = !!data?.appliedAddendum;
 
@@ -768,10 +793,10 @@ export function ChatPanel({
           ? 'Atestado gerado'
           : payload.docType === 'solicitacao_exames'
             ? 'Solicitação de exames gerada'
-            : 'Receita digital gerada';
+            : 'Receita gerada';
       toast({
         title: docLabel,
-        description: `Código de acesso do paciente: ${data?.accessCode}. Assinatura ICP-Brasil será habilitada com o provedor de assinatura.`,
+        description: `Imprima, assine e carimbe (ainda sem assinatura digital ICP-Brasil). Código de acesso do paciente: ${data?.accessCode}.`,
       });
       queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patient.id] });
     } catch (err: unknown) {
@@ -1653,7 +1678,21 @@ export function ChatPanel({
                 )}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                {message.type === 'profile-update' ? (
+                {message.type === 'comment-proposal' && message.commentProposal ? (
+                  <CommentProposalCard
+                    {...message.commentProposal}
+                    onApplied={(summary) => {
+                      for (const key of [
+                        ['patients', userId],
+                        ['patient-detail'],
+                        ['patient-clinical-notes'],
+                        ['patient-consultations'],
+                      ])
+                        queryClient.invalidateQueries({ queryKey: key });
+                      toast({ title: 'Prontuário atualizado', description: summary });
+                    }}
+                  />
+                ) : message.type === 'profile-update' ? (
                   <ProfileUpdateCard
                     initial={message.profileUpdates!}
                     existing={{

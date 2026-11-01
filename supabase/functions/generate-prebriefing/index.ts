@@ -122,7 +122,7 @@ serve(async (req) => {
     // ── Build lean prompt: only send A+P sections (~60% fewer input tokens) ──
     const apSection = extractAssessmentAndPlan(last.soap_note ?? '');
     const daysSince = Math.floor((Date.now() - new Date(last.created_at).getTime()) / 86400000);
-    const lastDate = new Date(last.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const lastDate = new Date(last.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' });
 
     const diagnoses = patientRow.diagnoses?.map(d => typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`).join('; ') || 'Não informado';
     const meds = patientRow.medications?.map(m => typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`).join(', ') || 'Nenhum';
@@ -188,9 +188,9 @@ ${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consulta
     if (!briefing.returnInfo.trim()) throw new Error('Resumo pré-consulta incompleto. Tente novamente.');
 
     // ── Cache only valid results ──────────────────────────────────────────────
-    // The cache update itself advances consultation_revision. Record the
-    // resulting version so the next read can reuse it without another paid call.
-    const cachedBriefing = { ...briefing, _source: { ...source, consultationRevision: source.consultationRevision + 1 } };
+    // Cache writes no longer advance the consultation revision (see migration
+    // 20261101000000), so the cached source keeps the current revision.
+    const cachedBriefing = { ...briefing, _source: source };
     const { data: savedCache, error: cacheError } = await supabase
       .from('consultations')
       .update({ pre_briefing: cachedBriefing })

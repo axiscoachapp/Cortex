@@ -164,12 +164,19 @@ export function ConsultationReviewModal({
             </div>
           )}
 
+          {drugInteractionAlerts.length === 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              A IA não substitui a checagem de interações medicamentosas: ausência de alerta não garante ausência de
+              interação.
+            </p>
+          )}
+
           {/* Differential diagnoses */}
           {differentialDiagnoses.length > 0 && (
             <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 p-3 space-y-2">
               <div className="flex items-center gap-2">
                 <Stethoscope className="w-4 h-4 text-amber-600 shrink-0" />
-                <span className="text-sm font-semibold text-amber-700">Hipóteses Diagnósticas</span>
+                <span className="text-sm font-semibold text-amber-700">Hipóteses levantadas na consulta</span>
                 <span className="ml-auto text-[10px] text-amber-500/70 font-medium">
                   Sugestão da IA — contexto clínico
                 </span>
@@ -291,7 +298,9 @@ export function ConsultationReviewModal({
           </Button>
           <Button
             onClick={() => onConfirm(buildFinalComments(), reviewedText)}
-            disabled={isGenerating || !reviewedText.trim()}
+            // An empty draft (automatic drafting failed) can still be regenerated
+            // from the preserved transcript once the doctor adds an observation.
+            disabled={isGenerating || (!reviewedText.trim() && !(anyAnswered || extraComments.trim()))}
             className="gap-2 w-full sm:w-auto sm:min-w-[160px]"
           >
             {isGenerating

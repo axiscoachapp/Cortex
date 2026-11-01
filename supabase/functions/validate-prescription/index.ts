@@ -26,10 +26,24 @@ const corsHeaders = {
   'Referrer-Policy': 'no-referrer',
 };
 
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // A phone camera (QR scan) opens this URL in a browser: answer with a short
+  // readable page instead of raw JSON. API clients keep the JSON contract.
+  const wantsHtml = (req.headers.get('accept') ?? '').includes('text/html');
+  const reply = (status: number, body: Record<string, unknown>) => {
+    if (!wantsHtml)
+      return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const message = typeof body.error === 'string' ? body.error : 'Documento indisponível.';
+    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verificação de documento</title></head><body style="font-family:system-ui,sans-serif;max-width:32rem;margin:3rem auto;padding:0 1rem;color:#222"><h1 style="font-size:1.25rem">Verificação de documento médico</h1><p>${escapeHtml(message)}</p><p style="color:#666;font-size:.875rem">Em caso de dúvida, entre em contato com o médico emissor.</p></body></html>`;
+    return new Response(html, { status, headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' } });
+  };
 
   try {
     const url = new URL(req.url);
@@ -38,10 +52,7 @@ serve(async (req) => {
     const format = url.searchParams.get('_format') ?? '';
 
     if (!id) {
-      return new Response(
-        JSON.stringify({ error: 'id é obrigatório' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+      return reply(400, { error: 'Documento não informado.' });
     }
 
     const supabase = createClient(
@@ -58,27 +69,26 @@ serve(async (req) => {
 
     // Same response for not-found and wrong code — no enumeration oracle.
     if (!rx || !code || code.toUpperCase() !== rx.secret_code.toUpperCase()) {
-      return new Response(
-        JSON.stringify({ error: 'Receita não encontrada ou código incorreto' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+      return reply(404, { error: 'Documento não encontrado ou código de acesso incorreto.' });
     }
 
     if (rx.status === 'revoked') {
-      return new Response(
-        JSON.stringify({ error: 'Receita revogada pelo emissor', status: 'revoked' }),
-        { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+      return reply(410, { error: 'Este documento foi revogado pelo médico emissor e não é mais válido.', status: 'revoked' });
     }
 
     if (!rx.issuance_verified_at || !Number.isFinite(Date.parse(rx.issuance_verified_at))) {
       return new Response(JSON.stringify({status:'unverified',error:'Documento antigo sem emissão verificada. Solicite a reemissão ao prescritor.'}),
         {status:409,headers:{...corsHeaders,'Content-Type':'application/json'}});
     }
-    const expired = !Number.isFinite(Date.parse(rx.expires_at)) || Date.parse(rx.expires_at) <= Date.now();
+    // Only prescriptions have a dispensing window. Sick notes and exam
+    // requests stay verifiable (they used to report "expirada" after 90 days).
+    const expires = typeof rx.doc_type !== 'string' || rx.doc_type.startsWith('receita');
+    const expired = expires && (!Number.isFinite(Date.parse(rx.expires_at)) || Date.parse(rx.expires_at) <= Date.now());
     if (expired) {
-      return new Response(JSON.stringify({ error: 'Receita expirada', validaAte: rx.expires_at }),
-        { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return reply(410, {
+        error: `Receita fora do prazo de validade (até ${new Date(rx.expires_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}).`,
+        validaAte: rx.expires_at,
+      });
     }
     // Reject unsafe historic metadata as well as malformed current rows.
     const storagePath = assertPrescriptionPath(rx.storage_path, rx.user_id, rx.id);

@@ -52,9 +52,22 @@ export interface ProfileUpdates {
   allergies: string[];
 }
 
+/** Changes the AI extracted from a doctor's comment, pending physician review. */
+export interface CommentProposal {
+  allergies: string[];
+  medicationsAdd: Array<{ name: string; dosage: string }>;
+  medicationsRemove: string[];
+  diagnoses: Array<{ code: string; description: string }>;
+  addendum: string;
+  longTermNote: string;
+  summary: string;
+}
+
 export interface ChatMessage {
   id: string;
-  type: 'soap' | 'whatsapp' | 'system' | 'user' | 'assistant' | 'profile-update';
+  type: 'soap' | 'whatsapp' | 'system' | 'user' | 'assistant' | 'profile-update' | 'comment-proposal';
+  /** For 'comment-proposal' messages. */
+  commentProposal?: { patientId: string; comment: string; proposal: CommentProposal; expectedRevision: number };
   title: string;
   content: string;
   timestamp: Date;
