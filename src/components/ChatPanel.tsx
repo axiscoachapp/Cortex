@@ -434,7 +434,7 @@ export function ChatPanel({
     setSavingNote(true);
     try {
       const { data, error } = await supabase.functions.invoke('process-comment', {
-        body: { patientId: patient.id, userId, comment: text },
+        body: { patientId: patient.id, comment: text, mode: 'extract' },
       });
       if (error) {
         if (await handleQuotaError(error)) return;

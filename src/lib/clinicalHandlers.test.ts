@@ -514,7 +514,11 @@ describe('clinical edge handler regressions', () => {
       }),
     }));
     // Step 1: extraction only proposes changes; nothing reaches the chart.
-    const extract = await handler('process-comment', db, vi.fn(), network)({ patientId: patient, comment: 'alergia' });
+    const extract = await handler('process-comment', db, vi.fn(), network)({
+      patientId: patient,
+      comment: 'alergia',
+      mode: 'extract',
+    });
     expect(extract.status).toBe(200);
     const proposal = await extract.json();
     expect(proposal.applied).toBe(false);

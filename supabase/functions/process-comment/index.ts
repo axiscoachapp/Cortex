@@ -270,7 +270,9 @@ serve(async (req) => {
     const { userId } = await requireUser(req);
     const body = await readJsonObject(req);
     const { patientId, comment } = body;
-    const mode = body.mode === 'apply' ? 'apply' : 'extract';
+    // Clients that predate the review card send no mode: they cannot show a
+    // proposal, so their comment is saved verbatim instead of being dropped.
+    const mode = body.mode === 'apply' ? 'apply' : body.mode === 'extract' ? 'extract' : 'legacy';
 
     if (typeof patientId !== 'string' || typeof comment !== 'string' || !comment.trim() || comment.length > 32000) {
       return json({ error: 'patientId e comment são obrigatórios' }, 400);
@@ -374,6 +376,9 @@ serve(async (req) => {
       if (typeof body.expectedRevision !== 'number') throw new RequestError('Revisão do prontuário ausente', 400);
       return await applyChanges(approved, body.expectedRevision);
     }
+
+    if (mode === 'legacy')
+      return await saveVerbatim('Comentário salvo como anotação. Atualize a página para revisar sugestões da IA.');
 
     // ── Step 1: extract a PROPOSAL. Nothing is written to the chart here. ────
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
