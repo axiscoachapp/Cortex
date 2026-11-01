@@ -26,9 +26,6 @@ const corsHeaders = {
   'Referrer-Policy': 'no-referrer',
 };
 
-const escapeHtml = (value: string) =>
-  value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -41,8 +38,14 @@ serve(async (req) => {
     if (!wantsHtml)
       return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     const message = typeof body.error === 'string' ? body.error : 'Documento indisponível.';
-    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verificação de documento</title></head><body style="font-family:system-ui,sans-serif;max-width:32rem;margin:3rem auto;padding:0 1rem;color:#222"><h1 style="font-size:1.25rem">Verificação de documento médico</h1><p>${escapeHtml(message)}</p><p style="color:#666;font-size:.875rem">Em caso de dúvida, entre em contato com o médico emissor.</p></body></html>`;
-    return new Response(html, { status, headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' } });
+    // Supabase serves Edge Function HTML as text/plain, so a phone would show raw
+    // markup: answer with short readable plain text instead.
+    const text = `Verificação de documento médico
+
+${message}
+
+Em caso de dúvida, entre em contato com o médico emissor.`;
+    return new Response(text, { status, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } });
   };
 
   try {
