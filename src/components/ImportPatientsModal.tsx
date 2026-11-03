@@ -248,7 +248,7 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
                       <p className="text-xs font-medium text-foreground truncate" title={h}>
                         {h || `Coluna ${i + 1}`}
                       </p>
-                      <p className="text-[10px] text-muted-foreground truncate">
+                      <p className="text-[0.625rem] text-muted-foreground truncate">
                         {rows
                           .slice(0, 2)
                           .map((r) => r[i])
@@ -279,7 +279,7 @@ export function ImportPatientsModal({ open, onOpenChange, userId }: ImportPatien
                 ))}
               </div>
               {!canImport && (
-                <p className="text-[11px] text-red-600 flex items-center gap-1.5">
+                <p className="text-[0.6875rem] text-red-600 flex items-center gap-1.5">
                   <X className="w-3 h-3" /> Mapeie Nome e Idade ou Data de nascimento, sem repetir campos.
                 </p>
               )}

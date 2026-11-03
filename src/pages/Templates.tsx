@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { fetchAllRows } from '@/lib/pagination';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { functionErrorBody } from '@/lib/functionErrors';
+import { ClinicalMarkdown } from '@/components/ClinicalMarkdown';
 
 export interface DocumentTemplate {
   id: string;
@@ -42,6 +43,7 @@ export default function TemplatesPage() {
   const [editDraft, setEditDraft] = useState({ name: '', description: '', content: '' });
   const [savingEdit, setSavingEdit] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<DocumentTemplate | null>(null);
 
   const {
     data: templates = [],
@@ -300,13 +302,13 @@ export default function TemplatesPage() {
                   <div className="w-9 h-9 rounded-lg bg-medical-blue-light flex items-center justify-center shrink-0">
                     <FileText className="w-4 h-4 text-medical-blue" />
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <button type="button" onClick={() => setPreview(t)} aria-label={`Pré-visualizar ${t.name}`} className="flex-1 min-w-0 text-left rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
                     <p className="text-sm font-semibold text-foreground truncate">{t.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{t.description ?? '—'}</p>
-                  </div>
+                  </button>
                   <span
                     className={cn(
-                      'text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0',
+                      'text-[0.5625rem] font-bold px-1.5 py-0.5 rounded shrink-0',
                       builtin ? 'bg-medical-blue-light text-medical-blue' : 'bg-green-100 text-green-700',
                     )}
                   >
@@ -357,13 +359,20 @@ export default function TemplatesPage() {
           </div>
         )}
 
-        <p className="text-[11px] text-muted-foreground leading-relaxed pt-2">
+        <p className="text-[0.6875rem] text-muted-foreground leading-relaxed pt-2">
           O modelo escolhido ao iniciar uma gravação substitui a estrutura SOAP padrão. Use títulos (##), itens com
           descrição e comandos condicionais entre parênteses — ex.: "(incluir apenas se mencionado explicitamente na
           transcrição. Caso contrário, omitir completamente)".
         </p>
       </main>
 
+      <Dialog open={!!preview} onOpenChange={open => { if (!open) setPreview(null); }}>
+        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{preview?.name}</DialogTitle><DialogDescription>{preview?.description || 'Pré-visualização do modelo. Nenhuma consulta é criada e nenhum crédito é consumido.'}</DialogDescription></DialogHeader>
+          <ClinicalMarkdown text={preview?.content ?? ''} />
+          <Button variant="outline" onClick={() => { if (preview) void handleDuplicate(preview); }}>Duplicar para personalizar</Button>
+        </DialogContent>
+      </Dialog>
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={closeCreate}>
         <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-lg max-h-[92vh] flex flex-col gap-0 p-0">
@@ -398,8 +407,8 @@ export default function TemplatesPage() {
                       createMode === value ? 'text-medical-blue' : 'text-muted-foreground',
                     )}
                   />
-                  <p className="text-[11px] font-semibold leading-tight">{label}</p>
-                  <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{hint}</p>
+                  <p className="text-[0.6875rem] font-semibold leading-tight">{label}</p>
+                  <p className="text-[0.5625rem] text-muted-foreground mt-0.5 leading-tight">{hint}</p>
                 </button>
               ))}
             </div>

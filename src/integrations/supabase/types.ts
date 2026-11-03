@@ -399,6 +399,7 @@ export type Database = {
           id: string
           patient_id: string | null
           pre_briefing: Json | null
+          recording_consent: Json | null
           revision: number
           soap_note: string | null
           transcription: string | null
@@ -413,6 +414,7 @@ export type Database = {
           id?: string
           patient_id?: string | null
           pre_briefing?: Json | null
+          recording_consent?: Json | null
           revision?: number
           soap_note?: string | null
           transcription?: string | null
@@ -427,6 +429,7 @@ export type Database = {
           id?: string
           patient_id?: string | null
           pre_briefing?: Json | null
+          recording_consent?: Json | null
           revision?: number
           soap_note?: string | null
           transcription?: string | null
@@ -750,6 +753,50 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_chat_turns: {
+        Row: {
+          created_at: string
+          id: string
+          patient_id: string
+          question: string
+          response: Json | null
+          status: string
+          updated_at: string
+          usage_receipt: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          patient_id: string
+          question: string
+          response?: Json | null
+          status?: string
+          updated_at?: string
+          usage_receipt?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          patient_id?: string
+          question?: string
+          response?: Json | null
+          status?: string
+          updated_at?: string
+          usage_receipt?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_chat_turns_patient_id_user_id_fkey"
+            columns: ["patient_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       patient_files: {
         Row: {
           ai_profile_proposal: string | null
@@ -884,14 +931,16 @@ export type Database = {
         Row: {
           age: number | null
           ai_insights: Json | null
-          archived_at: string | null
           allergies: string[] | null
+          archived_at: string | null
           clinical_notes: string | null
+          cpf: string | null
           created_at: string
           date_of_birth: string | null
           deletion_requested_at: string | null
           diagnoses: Json | null
           email: string | null
+          health_insurance: string | null
           id: string
           last_visit: string | null
           medical_history: string | null
@@ -901,6 +950,7 @@ export type Database = {
           photo_url: string | null
           profession: string | null
           revision: number
+          sex: string | null
           social_anamnesis: string | null
           status: string
           updated_at: string
@@ -909,14 +959,16 @@ export type Database = {
         Insert: {
           age?: number | null
           ai_insights?: Json | null
-          archived_at?: string | null
           allergies?: string[] | null
+          archived_at?: string | null
           clinical_notes?: string | null
+          cpf?: string | null
           created_at?: string
           date_of_birth?: string | null
           deletion_requested_at?: string | null
           diagnoses?: Json | null
           email?: string | null
+          health_insurance?: string | null
           id?: string
           last_visit?: string | null
           medical_history?: string | null
@@ -926,6 +978,7 @@ export type Database = {
           photo_url?: string | null
           profession?: string | null
           revision?: number
+          sex?: string | null
           social_anamnesis?: string | null
           status: string
           updated_at?: string
@@ -934,14 +987,16 @@ export type Database = {
         Update: {
           age?: number | null
           ai_insights?: Json | null
-          archived_at?: string | null
           allergies?: string[] | null
+          archived_at?: string | null
           clinical_notes?: string | null
+          cpf?: string | null
           created_at?: string
           date_of_birth?: string | null
           deletion_requested_at?: string | null
           diagnoses?: Json | null
           email?: string | null
+          health_insurance?: string | null
           id?: string
           last_visit?: string | null
           medical_history?: string | null
@@ -951,6 +1006,7 @@ export type Database = {
           photo_url?: string | null
           profession?: string | null
           revision?: number
+          sex?: string | null
           social_anamnesis?: string | null
           status?: string
           updated_at?: string
@@ -1480,6 +1536,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      assert_chat_patient: {
+        Args: { p_patient: string; p_user: string }
+        Returns: undefined
+      }
       assert_deletion_scope: {
         Args: { p_patient_id?: string; p_user_id: string }
         Returns: boolean
@@ -1509,7 +1569,20 @@ export type Database = {
         Args: { p_document_id: string; p_user_id: string }
         Returns: Json
       }
+      begin_patient_chat_turn: {
+        Args: {
+          p_patient_id: string
+          p_question: string
+          p_turn_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       build_data_export_manifest: { Args: { p_user_id: string }; Returns: Json }
+      chat_response_for_actor: {
+        Args: { p_actor: string; p_export?: boolean; p_response: Json }
+        Returns: Json
+      }
       check_export_file: {
         Args: {
           p_bucket: string
@@ -1567,6 +1640,10 @@ export type Database = {
         }
         Returns: string
       }
+      delete_knowledge_source: {
+        Args: { p_document_id: string }
+        Returns: boolean
+      }
       finalize_manual_encounter: {
         Args: { p_item_id: string; p_revision: number }
         Returns: string
@@ -1588,6 +1665,17 @@ export type Database = {
           p_document_id: string
           p_failed?: boolean
           p_index_revision: number
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      finish_patient_chat_turn: {
+        Args: {
+          p_patient_id: string
+          p_response: Json
+          p_retryable?: boolean
+          p_turn_id: string
+          p_usage_receipt?: Json
           p_user_id: string
         }
         Returns: boolean
@@ -1627,6 +1715,11 @@ export type Database = {
         Returns: boolean
       }
       is_canonical_storage_path: { Args: { p_path: string }; Returns: boolean }
+      leave_clinic: { Args: { p_clinic_id: string }; Returns: boolean }
+      list_patient_chat_turns: {
+        Args: { p_before?: string; p_limit?: number; p_patient_id: string }
+        Returns: Json
+      }
       match_knowledge: {
         Args: {
           match_count?: number
@@ -1656,9 +1749,9 @@ export type Database = {
         Args: { p_document_id?: string; p_limit?: number; p_search?: string }
         Returns: Json
       }
-      record_usage: {
-        Args: { p_credits: number; p_user_id: string }
-        Returns: number
+      protocol_sources_allowed: {
+        Args: { p_actor_user_id: string; p_sources: Json }
+        Returns: boolean
       }
       reserve_usage: {
         Args: { p_credits: number; p_reservation_id: string; p_user_id: string }
@@ -1730,6 +1823,7 @@ export type Database = {
         Returns: boolean
       }
       update_user_settings: { Args: { p_patch: Json }; Returns: undefined }
+      valid_patient_cpf: { Args: { value: string }; Returns: boolean }
       validate_security_boundaries: {
         Args: never
         Returns: {

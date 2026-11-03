@@ -1,4 +1,5 @@
 import type { TablesInsert } from '@/integrations/supabase/types';
+import { validatePatientRegistration } from '@/lib/patientRegistration';
 
 export type ImportTarget = 'name' | 'age' | 'birthdate' | 'phone' | 'email' | 'profession' | 'skip';
 export type ImportedPatient = TablesInsert<'patients'> & { id: string; name: string; age: number };
@@ -95,6 +96,7 @@ export function preparePatientImport(
     else if (age === null || !Number.isInteger(age) || age < 0 || age > 130 || (ageValue !== '' && !/^\d+$/.test(ageValue))) reason = 'Idade ou data de nascimento ausente ou inválida';
     else if (birthdate && (ageFromBirthdate(birthdate, today) === null || (ageValue && ageFromBirthdate(birthdate, today) !== age))) reason = 'Data de nascimento inválida ou incompatível com a idade';
     else if (field('email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field('email'))) reason = 'Email inválido';
+    if (!reason) reason = validatePatientRegistration({name,age,profession:field('profession'),phone:field('phone'),email:field('email')}) ?? '';
     const dateOfBirth = birthdate ? isoFromBirthdate(birthdate) : null;
     if (!reason && seen.has(importIdentity(name, dateOfBirth, age))) reason = 'Paciente já cadastrado (mesmo nome e nascimento/idade)';
     if (reason) { rejected.push({ row: index + 2, reason }); return; }

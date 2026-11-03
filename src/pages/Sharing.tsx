@@ -640,7 +640,7 @@ export default function SharingPage() {
                       onChange={(e) => setPatientId(e.target.value)}
                       required
                     >
-                      <option value="">Selecione um dos 50 resultados</option>
+                      <option value="">{patients.length ? `Selecione um dos ${patients.length} pacientes encontrados` : 'Nenhum paciente encontrado'}</option>
                       {patients.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}

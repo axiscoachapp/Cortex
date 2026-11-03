@@ -229,7 +229,7 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
               <Upload className="w-4 h-4 text-medical-blue" />
             </div>
             <p className="text-sm font-medium text-foreground">Clique ou arraste arquivos aqui</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[0.6875rem] text-muted-foreground mt-0.5">
               PDF, JPG, PNG, WebP, HEIC · até 25 MB cada
             </p>
           </>
@@ -271,7 +271,7 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
                 <p className="text-sm font-medium text-foreground truncate" title={f.file_name}>
                   {f.file_name}
                 </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-2">
+                <p className="text-[0.6875rem] text-muted-foreground mt-0.5 flex items-center gap-2">
                   <span>{formatDate(f.created_at)}</span>
                   {f.size_bytes !== null && <span>· {humanSize(f.size_bytes)}</span>}
                   {f.tag && <span>· {f.tag}</span>}
@@ -279,7 +279,7 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
                 {f.ai_review_status === 'rejected' && <p className="text-xs text-muted-foreground mt-1">Análise rejeitada; consulte o documento original.</p>}
                 {f.ai_summary && f.ai_review_status !== 'rejected' && (
                   <p
-                    className="text-[11px] text-muted-foreground/80 mt-1 whitespace-pre-wrap line-clamp-3"
+                    className="text-[0.6875rem] text-muted-foreground/80 mt-1 whitespace-pre-wrap line-clamp-3"
                     title={f.ai_summary}
                   >
                     Análise automática — confira no documento original: {f.ai_summary}

@@ -370,7 +370,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
               {patient.phone && (
                 <a
                   href={`tel:${patient.phone}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-medical-blue-light text-medical-blue-dark hover:bg-medical-blue/15 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.6875rem] font-medium bg-medical-blue-light text-medical-blue-dark hover:bg-medical-blue/15 transition-colors"
                 >
                   <Phone className="w-3 h-3" />
                   {patient.phone}
@@ -379,7 +379,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
               {patient.email && (
                 <a
                   href={`mailto:${patient.email}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-secondary/60 hover:bg-secondary transition-colors text-foreground/80"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.6875rem] font-medium bg-secondary/60 hover:bg-secondary transition-colors text-foreground/80"
                 >
                   <Mail className="w-3 h-3" />
                   {patient.email}
@@ -513,12 +513,12 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                     </div>
                     <h3 className="font-semibold text-foreground">Anotações do Médico</h3>
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{noteEntries.length}</span>
+                  <span className="text-[0.625rem] text-muted-foreground">{noteEntries.length}</span>
                 </div>
                 <div className="pl-10 space-y-1.5 max-h-[260px] overflow-y-auto scrollbar-thin pr-1">
                   {noteEntries.map((n, i) => (
                     <div key={i} className="px-3 py-2 rounded-lg bg-secondary/40 border border-border/40">
-                      {n.stamp && <p className="text-[10px] text-muted-foreground font-mono mb-0.5">{n.stamp}</p>}
+                      {n.stamp && <p className="text-[0.625rem] text-muted-foreground font-mono mb-0.5">{n.stamp}</p>}
                       <p className="text-sm text-foreground/85 leading-snug whitespace-pre-wrap">{n.body}</p>
                     </div>
                   ))}
@@ -676,13 +676,13 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                               {c.soap_note && (
                                 <div>
                                   <div className="flex items-center justify-between mb-2">
-                                    <h5 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <h5 className="text-[0.6875rem] font-semibold text-muted-foreground uppercase tracking-wider">
                                       Evolução SOAP
                                     </h5>
                                     <Button
                                       size="sm"
                                       variant="ghost"
-                                      className="h-6 px-2 text-[11px] gap-1"
+                                      className="h-6 px-2 text-[0.6875rem] gap-1"
                                       onClick={() =>
                                         printSoap(c.soap_note!, patient, c.chief_complaint ?? undefined, {
                                           consultationDate: c.created_at,
@@ -698,7 +698,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                               )}
                               {c.whatsapp_message && (
                                 <div>
-                                  <div className="flex items-center gap-1.5 mb-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                  <div className="flex items-center gap-1.5 mb-2 text-[0.6875rem] font-semibold text-muted-foreground uppercase tracking-wider">
                                     <MessageCircle className="w-3 h-3" />
                                     Mensagem ao paciente
                                   </div>
@@ -709,7 +709,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                               )}
                               {c.transcription && (
                                 <details className="text-sm">
-                                  <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground select-none">
+                                  <summary className="cursor-pointer text-[0.6875rem] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground select-none">
                                     Transcrição completa
                                   </summary>
                                   <div className="mt-2 p-3 rounded-lg bg-secondary/40 border border-border/40 text-xs leading-relaxed whitespace-pre-wrap text-foreground/80 max-h-[260px] overflow-y-auto scrollbar-thin">
@@ -854,7 +854,7 @@ function Stat({
 }) {
   return (
     <div className="px-3 py-2 rounded-lg bg-secondary/40 border border-border/40">
-      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+      <div className="flex items-center gap-1.5 text-[0.625rem] text-muted-foreground uppercase tracking-wider font-medium">
         <Icon className="w-3 h-3" />
         {label}
       </div>

@@ -36,7 +36,7 @@ export function LiveCopilotCard({
           <Sparkles className="w-3 h-3 text-violet-700" />
         </div>
         <span className="text-xs font-semibold text-violet-800 flex-1">Copiloto ao vivo</span>
-        <span className="text-[10px] text-violet-600/70 font-medium flex items-center gap-1">
+        <span className="text-[0.625rem] text-violet-600/70 font-medium flex items-center gap-1">
           {isRefreshing ? (
             <><Loader2 className="w-2.5 h-2.5 animate-spin" />analisando…</>
           ) : secondsSinceUpdate === null ? (
@@ -49,7 +49,7 @@ export function LiveCopilotCard({
 
       <div className="px-3 py-2.5 space-y-3">
         {!hasContent ? (
-          <p className="text-[11px] text-violet-700/60 leading-relaxed py-1">
+          <p className="text-[0.6875rem] text-violet-700/60 leading-relaxed py-1">
             O copiloto resume a consulta e sugere perguntas a cada ~30&nbsp;segundos.
             A evolução clínica final continua sendo gerada da gravação completa.
           </p>
@@ -59,7 +59,7 @@ export function LiveCopilotCard({
             {state!.alertas.length > 0 && (
               <Section icon={AlertTriangle} tone="red" label="Alertas">
                 {state!.alertas.map((a, i) => (
-                  <li key={i} className="text-[11px] text-red-800/90 flex items-start gap-1.5 leading-snug">
+                  <li key={i} className="text-[0.6875rem] text-red-800/90 flex items-start gap-1.5 leading-snug">
                     <span className="mt-1 w-1 h-1 rounded-full bg-red-400 shrink-0" />
                     {a}
                   </li>
@@ -71,7 +71,7 @@ export function LiveCopilotCard({
             {state!.resumo.length > 0 && (
               <Section icon={Sparkles} tone="violet" label="Resumo até agora">
                 {state!.resumo.map((r, i) => (
-                  <li key={i} className="text-[11px] text-violet-900/85 flex items-start gap-1.5 leading-snug">
+                  <li key={i} className="text-[0.6875rem] text-violet-900/85 flex items-start gap-1.5 leading-snug">
                     <span className="mt-1 w-1 h-1 rounded-full bg-violet-400 shrink-0" />
                     {r}
                   </li>
@@ -83,7 +83,7 @@ export function LiveCopilotCard({
             {state!.nao_explorado.length > 0 && (
               <Section icon={CircleHelp} tone="amber" label="Não explorado">
                 {state!.nao_explorado.map((n, i) => (
-                  <li key={i} className="text-[11px] text-amber-800/90 flex items-start gap-1.5 leading-snug">
+                  <li key={i} className="text-[0.6875rem] text-amber-800/90 flex items-start gap-1.5 leading-snug">
                     <span className="mt-1 w-1 h-1 rounded-full bg-amber-400 shrink-0" />
                     {n}
                   </li>
@@ -96,7 +96,7 @@ export function LiveCopilotCard({
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5">
                   <MessageSquarePlus className="w-3 h-3 text-violet-600" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-violet-600">
+                  <span className="text-[0.625rem] font-bold uppercase tracking-wider text-violet-600">
                     Sugestões de perguntas
                   </span>
                 </div>
@@ -106,7 +106,7 @@ export function LiveCopilotCard({
                       key={i}
                       className="group flex items-start gap-2 rounded-md bg-white/70 border border-violet-200/60 px-2.5 py-1.5"
                     >
-                      <span className="flex-1 text-[11px] text-violet-900/85 leading-snug">"{s}"</span>
+                      <span className="flex-1 text-[0.6875rem] text-violet-900/85 leading-snug">"{s}"</span>
                       <button
                         type="button"
                         onClick={() => onDismissSuggestion(s)}
@@ -148,7 +148,7 @@ function Section({
     <div className="space-y-1">
       <div className="flex items-center gap-1.5">
         <Icon className={cn('w-3 h-3', toneStyles[tone])} />
-        <span className={cn('text-[10px] font-bold uppercase tracking-wider', toneStyles[tone])}>{label}</span>
+        <span className={cn('text-[0.625rem] font-bold uppercase tracking-wider', toneStyles[tone])}>{label}</span>
       </div>
       <ul className="space-y-0.5 pl-0.5">{children}</ul>
     </div>

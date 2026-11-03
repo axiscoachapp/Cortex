@@ -151,7 +151,7 @@ export function ConsultationReviewModal({
               <div className="flex items-center gap-2">
                 <Pill className="w-4 h-4 text-red-600 shrink-0" />
                 <span className="text-sm font-semibold text-red-700">Alertas de Interação Medicamentosa</span>
-                <span className="ml-auto text-[10px] text-red-500/70 font-medium">Sugestão da IA — verificar</span>
+                <span className="ml-auto text-[0.625rem] text-red-500/70 font-medium">Sugestão da IA — verificar</span>
               </div>
               <ul className="space-y-1.5">
                 {drugInteractionAlerts.map((alert, i) => (
@@ -165,7 +165,7 @@ export function ConsultationReviewModal({
           )}
 
           {drugInteractionAlerts.length === 0 && (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[0.6875rem] text-muted-foreground">
               A IA não substitui a checagem de interações medicamentosas: ausência de alerta não garante ausência de
               interação.
             </p>
@@ -177,7 +177,7 @@ export function ConsultationReviewModal({
               <div className="flex items-center gap-2">
                 <Stethoscope className="w-4 h-4 text-amber-600 shrink-0" />
                 <span className="text-sm font-semibold text-amber-700">Hipóteses levantadas na consulta</span>
-                <span className="ml-auto text-[10px] text-amber-500/70 font-medium">
+                <span className="ml-auto text-[0.625rem] text-amber-500/70 font-medium">
                   Sugestão da IA — contexto clínico
                 </span>
               </div>

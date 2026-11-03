@@ -97,11 +97,11 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
 
       {/* Today's agenda */}
       <div className="px-4 pb-1.5 flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+        <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-widest">
           Agenda de hoje
         </span>
         {todayApts.length > 0 && (
-          <span className="text-[10px] font-medium text-medical-blue bg-medical-blue-light rounded-full px-1.5 py-0.5">
+          <span className="text-[0.625rem] font-medium text-medical-blue bg-medical-blue-light rounded-full px-1.5 py-0.5">
             {todayApts.length}
           </span>
         )}
@@ -121,7 +121,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
           <div className="py-8 px-3 text-center">
             <CalendarX className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
             <p className="text-xs text-muted-foreground">Nenhuma consulta hoje</p>
-            <button onClick={() => go('/agenda')} className="mt-2 text-[11px] font-medium text-medical-blue hover:underline">
+            <button onClick={() => go('/agenda')} className="mt-2 text-[0.6875rem] font-medium text-medical-blue hover:underline">
               Agendar consulta
             </button>
           </div>
@@ -147,7 +147,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="text-center shrink-0 w-9">
-                      <p className={cn('text-[11px] font-bold', isSelected ? 'text-medical-blue' : 'text-foreground/80')}>
+                      <p className={cn('text-[0.6875rem] font-bold', isSelected ? 'text-medical-blue' : 'text-foreground/80')}>
                         {formatTime(apt.start_time)}
                       </p>
                     </div>
@@ -156,7 +156,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
                       <p className={cn('text-sm font-medium truncate leading-tight', isSelected ? 'text-medical-blue' : 'text-foreground')}>
                         {label}
                       </p>
-                      <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                      <p className="text-[0.625rem] text-muted-foreground leading-tight mt-0.5">
                         {typeLabels[apt.type] ?? apt.type} · {({agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelado',realizado:'Realizado'} as Record<string,string>)[apt.status] ?? apt.status}
                       </p>
                     </div>

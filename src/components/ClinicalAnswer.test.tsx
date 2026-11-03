@@ -39,6 +39,16 @@ function setup() {
   return client;
 }
 describe('cached protocol-derived answers', () => {
+  it('renders clinical Markdown and source excerpts without executing HTML or loading images', () => {
+    const { container } = render(<QueryClientProvider client={new QueryClient()}>
+      <ClinicalAnswer userId="doctor" message={{ ...message, content: '**Revisão:**\n\n- Texto clínico\n\n<img src="https://example.invalid/track" onerror="alert(1)">', sources: [{id:'visit',type:'consultation',label:'Consulta',date:'2026-11-03',excerpt:'**S (Subjetivo):** relato'}] }} />
+    </QueryClientProvider>);
+    expect(container.querySelector('strong')).toHaveTextContent('Revisão:');
+    expect(container.querySelector('li')).toHaveTextContent('Texto clínico');
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('script')).toBeNull();
+    expect(screen.getByText('S (Subjetivo):').tagName).toBe('STRONG');
+  });
   it('checks a protocol once when several cited excerpts use the same authorization', async () => {
     const client = new QueryClient();
     render(

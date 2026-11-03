@@ -2,6 +2,7 @@ import { useQueries } from '@tanstack/react-query';
 import { sharingRpc } from '@/lib/sharing';
 import { useSessionHidden } from '@/contexts/SessionVisibility';
 import type { ChatMessage } from '@/types/patient';
+import { ClinicalMarkdown } from '@/components/ClinicalMarkdown';
 
 /** Protocol-derived replies remain authorization-sensitive after delivery.
  * Per-source query keys deduplicate checks across replies; failed or pending
@@ -67,12 +68,11 @@ export function ClinicalAnswer({ message, userId }: { message: ChatMessage; user
     );
   return (
     <>
-      <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{message.content}</p>
+      {message.safety?.status === 'verification_required' && <p role="status" className="mb-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950">Verificação farmacológica necessária · sem consumo de IA</p>}
+      <ClinicalMarkdown text={message.content} />
       {message.coverage && (
         <p className="text-xs text-muted-foreground mt-3 border-t pt-2">
-          Contexto recuperado: {message.coverage.consultationsRetrieved ?? 0} de{' '}
-          {message.coverage.consultationsTotal ?? '?'} consultas e {message.coverage.documentsRetrieved ?? 0} de{' '}
-          {message.coverage.documentsTotal ?? '?'} documentos. A busca usa trechos selecionados; ausência neste contexto
+          Contexto recuperado: {message.coverage.consultationsRetrieved ?? 0} consultas{message.coverage.consultationsTotal == null ? ' (total não informado)' : ` de ${message.coverage.consultationsTotal}`} e {message.coverage.documentsRetrieved ?? 0} documentos{message.coverage.documentsTotal == null ? ' (total não informado)' : ` de ${message.coverage.documentsTotal}`}. A busca usa trechos selecionados; ausência neste contexto
           não comprova ausência no prontuário.
         </p>
       )}
@@ -93,10 +93,7 @@ export function ClinicalAnswer({ message, userId }: { message: ChatMessage; user
                 {source.reviewStatus === 'pending' && (
                   <p className="text-amber-800">Análise de documento ainda não revisada pelo médico.</p>
                 )}
-                <p className="whitespace-pre-wrap mt-1">
-                  {source.excerpt}
-                  {source.truncated ? ' […]' : ''}
-                </p>
+                <ClinicalMarkdown className="mt-1 text-xs" text={source.excerpt + (source.truncated ? ' […]' : '')} />
               </li>
             ))}
           </ul>

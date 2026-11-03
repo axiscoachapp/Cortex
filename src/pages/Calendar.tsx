@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { MOBILE_BREAKPOINT } from '@/lib/interfaceScale';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar as BigCalendar, dateFnsLocalizer, View, SlotInfo } from 'react-big-calendar';
 import {
@@ -102,9 +103,9 @@ export default function CalendarPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT);
   const [view, setView] = useState<View>(() =>
-    typeof window !== 'undefined' && window.innerWidth < 768 ? 'day' : 'week',
+    typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT ? 'day' : 'week',
   );
   const [date, setDate] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);
@@ -116,10 +117,9 @@ export default function CalendarPage() {
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT-1}px)`);
     const handler = (e: MediaQueryListEvent) => {
       setIsMobile(e.matches);
-      setView(e.matches ? 'day' : 'week');
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
@@ -378,12 +378,15 @@ export default function CalendarPage() {
         </div>
       </header>
       <div className="container mx-auto px-4 pt-3 flex flex-wrap items-center gap-3 text-xs">
-        <Link className="text-primary underline underline-offset-4" to="/trabalho">
+        <Link className="text-primary underline underline-offset-4" to="/trabalho?queue=scheduling">
           Lista de espera e confirmações
         </Link>
         <span className="text-muted-foreground">
           Acompanhamentos manuais; um registro não envia mensagens nem reserva horários.
         </span>
+        <div role="group" aria-label="Visualização da agenda" className="ml-auto flex gap-1">
+          {([{value:'day',label:'Dia'},{value:'week',label:'Semana'},{value:'month',label:'Mês'}] as const).map(option => <Button key={option.value} variant={view===option.value?'default':'outline'} size="sm" aria-pressed={view===option.value} onClick={()=>setView(option.value)}>{option.label}</Button>)}
+        </div>
       </div>
 
       {patientsError && (

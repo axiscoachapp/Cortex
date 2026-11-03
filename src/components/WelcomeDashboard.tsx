@@ -276,7 +276,7 @@ export function WelcomeDashboard({
                 <Icon className={cn('w-3.5 h-3.5 md:w-4 md:h-4', color)} />
               </div>
               <p className="text-xl md:text-2xl font-bold text-foreground leading-none">{value}</p>
-              <p className="text-[11px] md:text-xs text-muted-foreground mt-1">{label}</p>
+              <p className="text-[0.6875rem] md:text-xs text-muted-foreground mt-1">{label}</p>
             </div>
           ))}
         </div>
@@ -287,7 +287,7 @@ export function WelcomeDashboard({
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
               <Bell className="w-4 h-4 text-medical-blue" />
               Lembretes Pendentes
-              <span className="ml-1 text-[10px] font-medium bg-blue-100 text-blue-700 rounded-full px-2 py-0.5">
+              <span className="ml-1 text-[0.625rem] font-medium bg-blue-100 text-blue-700 rounded-full px-2 py-0.5">
                 {pendingReminderApts.length}
               </span>
             </h2>
@@ -406,7 +406,7 @@ export function WelcomeDashboard({
                   >
                     <div className="text-center shrink-0 w-12">
                       <p className="text-xs font-bold text-medical-blue">{formatTime(apt.start_time)}</p>
-                      <p className="text-[10px] text-muted-foreground">{formatTime(apt.end_time)}</p>
+                      <p className="text-[0.625rem] text-muted-foreground">{formatTime(apt.end_time)}</p>
                     </div>
                     <div className={cn('w-1 h-8 rounded-full shrink-0', statusColor[apt.status] ?? 'bg-slate-300')} />
                     <div className="flex-1 min-w-0">
@@ -419,7 +419,7 @@ export function WelcomeDashboard({
                     <div className="flex items-center gap-2 shrink-0">
                       <span
                         className={cn(
-                          'text-[10px] font-medium px-2 py-0.5 rounded-full',
+                          'text-[0.625rem] font-medium px-2 py-0.5 rounded-full',
                           apt.status === 'confirmado'
                             ? 'bg-green-100 text-green-700'
                             : apt.status === 'cancelado'
@@ -482,8 +482,8 @@ export function WelcomeDashboard({
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] text-muted-foreground">{relativeDate(patient.lastVisit)}</span>
-                      <Badge variant={patient.status} className="text-[9px] h-4 px-1.5">
+                      <span className="text-[0.625rem] text-muted-foreground">{relativeDate(patient.lastVisit)}</span>
+                      <Badge variant={patient.status} className="text-[0.5625rem] h-4 px-1.5">
                         {patient.status === 'retorno'
                           ? 'Retorno'
                           : patient.status === 'novo'
@@ -507,7 +507,7 @@ export function WelcomeDashboard({
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
               <Stethoscope className="w-4 h-4 text-amber-500" />
               Retornos Pendentes
-              <span className="ml-1 text-[10px] font-medium bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">
+              <span className="ml-1 text-[0.625rem] font-medium bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">
                 {pendingReturns}
               </span>
             </h2>
@@ -531,12 +531,12 @@ export function WelcomeDashboard({
                       daysSince > 60 ? 'border-amber-200/70' : 'border-border/50',
                     )}
                   >
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold text-amber-700 bg-amber-100">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[0.6875rem] font-bold text-amber-700 bg-amber-100">
                       {initials}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-foreground truncate leading-tight">{patient.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{relativeDate(patient.lastVisit)}</p>
+                      <p className="text-[0.625rem] text-muted-foreground">{relativeDate(patient.lastVisit)}</p>
                     </div>
                     <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-amber-500 transition-colors shrink-0" />
                   </button>
@@ -549,7 +549,7 @@ export function WelcomeDashboard({
         <div className="pb-4 pt-2">
           <Link
             to="/privacidade"
-            className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-muted-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground hover:text-muted-foreground transition-colors"
           >
             <Shield className="w-3 h-3" />
             Privacidade & Dados (LGPD)

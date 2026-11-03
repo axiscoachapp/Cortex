@@ -9,6 +9,7 @@ import { AppErrorBoundary, RecoveryScreen } from '@/components/AppErrorBoundary'
 import { UnsavedChangesRouteGuard } from '@/hooks/useUnsavedChanges';
 import { SessionAssurance } from '@/components/SessionAssurance';
 import { PasswordChangeGate } from '@/components/PasswordChangeGate';
+import { MobileSubpageNavigation } from '@/components/MobileSubpageNavigation';
 
 // Critical routes — keep eager.
 const Index = lazy(() => import("./pages/Index"));
@@ -59,14 +60,15 @@ function ProtectedRoute() {
   const location = useLocation();
   if (loading) return <RouteFallback />;
   if (!user) return <Navigate to={`/auth?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
+  const page=<><div className={location.pathname==='/'?undefined:'clinic-subpage-shell'}><Outlet key={user.id}/></div><MobileSubpageNavigation/></>;
   return (
     <PasswordChangeGate>
       <UnsavedChangesRouteGuard />
       {location.pathname === '/seguranca' ? (
-        <Outlet key={user.id} />
+        page
       ) : (
         <SessionAssurance key={user.id}>
-          <Outlet key={user.id} />
+          {page}
         </SessionAssurance>
       )}
     </PasswordChangeGate>

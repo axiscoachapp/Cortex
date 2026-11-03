@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Sparkles, Check, ChevronRight, X, BadgeCheck, Users, FileStack, Mic,
+  Sparkles, Check, ChevronRight, X, BadgeCheck, Users, FileStack, FileText,
 } from 'lucide-react';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { cn } from '@/lib/utils';
@@ -28,8 +28,8 @@ export function OnboardingCard({ patientCount, hasConsultation, userId, onNewCon
       hint: 'Importe de outro prontuário via CSV', action: () => navigate('/gerenciar-pacientes') },
     { key: 'template', done: false, label: 'Explorar modelos de documento', icon: FileStack,
       hint: 'Personalize a estrutura das evoluções', action: () => navigate('/modelos'), optional: true },
-    { key: 'consult', done: hasConsultation, label: 'Gravar sua primeira consulta', icon: Mic,
-      hint: 'Selecione um paciente e grave', action: onNewConsultation },
+    { key: 'consult', done: hasConsultation, label: 'Registrar sua primeira consulta', icon: FileText,
+      hint: 'Registro manual ou gravação, conforme sua escolha', action: onNewConsultation },
   ], [prescriberComplete, patientCount, hasConsultation, navigate, onNewConsultation]);
 
   const required = steps.filter(s => !s.optional);
@@ -49,7 +49,7 @@ export function OnboardingCard({ patientCount, hasConsultation, userId, onNewCon
           </div>
           <div>
             <h3 className="text-sm font-bold text-foreground">Bem-vindo ao Cortex</h3>
-            <p className="text-[11px] text-muted-foreground">{doneCount} de {required.length} passos concluídos</p>
+            <p className="text-[0.6875rem] text-muted-foreground">{doneCount} de {required.length} passos obrigatórios concluídos · 1 opcional</p>
           </div>
         </div>
         <button onClick={dismiss} className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/60" title="Dispensar">
@@ -76,9 +76,9 @@ export function OnboardingCard({ patientCount, hasConsultation, userId, onNewCon
             </div>
             <div className="flex-1 min-w-0">
               <p className={cn('text-xs font-medium', done ? 'text-muted-foreground line-through' : 'text-foreground')}>
-                {label}{optional && <span className="text-[9px] text-muted-foreground font-normal"> · opcional</span>}
+                {label}{optional && <span className="text-[0.5625rem] text-muted-foreground font-normal"> · opcional</span>}
               </p>
-              {!done && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+              {!done && <p className="text-[0.625rem] text-muted-foreground">{hint}</p>}
             </div>
             {!done && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
           </button>

@@ -122,7 +122,7 @@ export function ProfileUpdateCard({
           <ClipboardCheck className="w-3.5 h-3.5 text-medical-blue" />
         </div>
         <span className="text-sm font-semibold text-medical-blue flex-1">Atualização do Perfil Clínico</span>
-        <span className="text-[10px] font-medium text-medical-blue/60 bg-medical-blue-light px-2 py-0.5 rounded-full">
+        <span className="text-[0.625rem] font-medium text-medical-blue/60 bg-medical-blue-light px-2 py-0.5 rounded-full">
           Sugestão da IA — revise antes de aceitar
         </span>
       </div>
@@ -362,7 +362,7 @@ function Section({
   if (!visible) return null;
   return (
     <div className="space-y-1.5">
-      <p className={cn('text-[10px] font-bold uppercase tracking-wider', {
+      <p className={cn('text-[0.625rem] font-bold uppercase tracking-wider', {
         'text-amber-600': color === 'amber',
         'text-blue-600':  color === 'blue',
         'text-red-600':   color === 'red',

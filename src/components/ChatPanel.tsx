@@ -98,6 +98,12 @@ interface ChatPanelProps {
   preBriefing: PreBriefing | null;
   briefingLoading: boolean;
   briefingError?: boolean;
+  briefingRequested?: boolean;
+  conversationLoading?: boolean;
+  conversationError?: boolean;
+  onRetryConversation?: () => void;
+  onLoadOlderMessages?: () => void;
+  loadingOlderMessages?: boolean;
   onRetryBriefing?: () => void;
   userId: string;
   /** Called after a consultation is successfully saved so the parent can
@@ -116,6 +122,12 @@ export function ChatPanel({
   preBriefing,
   briefingLoading,
   briefingError = false,
+  briefingRequested = false,
+  conversationLoading = false,
+  conversationError = false,
+  onRetryConversation,
+  onLoadOlderMessages,
+  loadingOlderMessages = false,
   onRetryBriefing,
   userId,
   onConsultationSaved,
@@ -144,6 +156,7 @@ export function ChatPanel({
   const localAudioRef = useRef(new Map<string, { blob: Blob; mimeType: string }>());
   const [isGeneratingFinal, setIsGeneratingFinal] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const retryTurn = useRef<{patientId:string;text:string;id:string;timestamp:Date} | null>(null);
   const [inputMode, setInputMode] = useState<'question' | 'comment'>('question');
   const [savingNote, setSavingNote] = useState(false);
   const [consultationComments, setConsultationComments] = useState<string[]>([]);
@@ -164,7 +177,12 @@ export function ChatPanel({
   // Pre-consult question checklist (from history + chief complaint).
   const [checklistQuestions, setChecklistQuestions] = useState<string[]>([]);
   const [checklistLoading, setChecklistLoading] = useState(false);
+  const [checklistError, setChecklistError] = useState('');
   const checklistCacheRef = useRef<Map<string, string[]>>(new Map());
+  const checklistRequestsRef = useRef(new Set<string>());
+  const checklistSourceKey = patient ? `${patient.id}/${patient.revision ?? 0}/${chiefComplaint}` : '';
+  const checklistSourceRef = useRef(checklistSourceKey);
+  checklistSourceRef.current = checklistSourceKey;
 
   // Document attachment from the chat (upload + AI review).
   const [attachingFile, setAttachingFile] = useState(false);
@@ -615,16 +633,13 @@ export function ChatPanel({
     copilotLastUpdateAt === null ? null : Math.max(0, Math.floor((copilotNow - copilotLastUpdateAt) / 1000));
 
   // ── Pre-consult question checklist ──────────────────────────────────────────
-  async function runChecklist(force = false) {
-    if (!patient) return;
-    const requestedId = patient.id;
-    const cached = checklistCacheRef.current.get(requestedId);
-    if (cached && !force) {
-      setChecklistQuestions(cached);
-      setChecklistLoading(false);
-      return;
-    }
+  async function runChecklist() {
+    if (!patient || checklistRequestsRef.current.has(checklistSourceKey)) return;
+    const sourceKey = checklistSourceKey;
+    const isCurrentSource = () => mountedRef.current && checklistSourceRef.current === sourceKey;
     setChecklistLoading(true);
+    setChecklistError('');
+    checklistRequestsRef.current.add(sourceKey);
     try {
       const { data, error } = await supabase.functions.invoke('suggest-questions', {
         body: {
@@ -641,26 +656,32 @@ export function ChatPanel({
           },
         },
       });
-      if (error) return; // non-critical helper — stay silent
-      if (activePatientIdRef.current !== requestedId) return;
-      const qs: string[] = Array.isArray(data?.questions) ? data.questions : [];
-      checklistCacheRef.current.set(requestedId, qs);
-      setChecklistQuestions(qs);
+      if (error) {
+        const message = await functionErrorMessage(error, 'Não foi possível gerar o roteiro. Tente novamente.');
+        if (isCurrentSource()) setChecklistError(message);
+        return;
+      }
+      const qs: string[] = Array.isArray(data?.questions) ? data.questions.filter((q: unknown): q is string => typeof q === 'string' && !!q.trim()).slice(0, 20) : [];
+      checklistCacheRef.current.set(sourceKey, qs);
+      if (isCurrentSource()) {
+        setChecklistQuestions(qs);
+        if (!qs.length) setChecklistError('Nenhuma pergunta foi gerada. Tente novamente.');
+      }
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
     } catch {
-      /* non-critical */
+      if (isCurrentSource()) setChecklistError('Não foi possível gerar o roteiro. Tente novamente.');
     } finally {
-      if (activePatientIdRef.current === requestedId) setChecklistLoading(false);
+      checklistRequestsRef.current.delete(sourceKey);
+      if (isCurrentSource()) setChecklistLoading(false);
     }
   }
 
-  // Generate the checklist when a patient's consult opens (cached per patient).
+  // Opening a chart only restores local results; generation is an explicit action.
   useEffect(() => {
-    setChecklistQuestions([]);
-    setChecklistLoading(false);
-    if (patient) runChecklist(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patient?.id]);
+    setChecklistQuestions(checklistCacheRef.current.get(checklistSourceKey) ?? []);
+    setChecklistLoading(checklistRequestsRef.current.has(checklistSourceKey));
+    setChecklistError('');
+  }, [checklistSourceKey]);
 
   // ── Attach document from chat: upload → AI review → connect to record ───────
   const handleAttachSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1067,22 +1088,26 @@ export function ChatPanel({
   const handleSendMessage = async () => {
     if (!patient || !inputValue.trim() || isChatLoading) return;
     const text = inputValue.trim();
+    const prior = retryTurn.current;
+    const turn = prior?.patientId === patient.id && prior.text === text ? prior : {patientId:patient.id,text,id:crypto.randomUUID(),timestamp:new Date()};
+    retryTurn.current = turn;
     setInputValue('');
 
     const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
+      id: turn.id + '/user',
       type: 'user',
       title: 'Você',
       content: text,
-      timestamp: new Date(),
+      timestamp: turn.timestamp,
     };
-    onMessagesChange((prev) => [...prev, userMsg]);
+    onMessagesChange((prev) => prev.some(message => message.id===userMsg.id) ? prev : [...prev, userMsg]);
     setIsChatLoading(true);
 
     try {
       const { data, error } = await supabase.functions.invoke('chat-assistant', {
         body: {
           patientId: patient?.id ?? null,
+          conversationId: turn.id,
           userId,
           patientContext: patient
             ? {
@@ -1109,24 +1134,36 @@ export function ChatPanel({
         },
       });
       if (error) {
-        if (await handleQuotaError(error)) return;
+        if (await handleQuotaError(error)) {
+          queryClient.invalidateQueries({queryKey:['patient-conversation',userId,turn.patientId]});
+          if (isCurrentPatient(turn.patientId)) setInputValue(current=>current||text);
+          return;
+        }
+        const failure = await functionErrorBody(error);
+        if (failure?.conversationRetry === 'new_request_required' && retryTurn.current?.id === turn.id) retryTurn.current = null;
         throw error;
       }
+      if (!data || typeof data.message !== 'string' || !Array.isArray(data.sources)) throw new Error('Resposta inválida');
+      if (retryTurn.current?.id === turn.id) retryTurn.current = null;
+      queryClient.invalidateQueries({queryKey:['patient-conversation',userId,turn.patientId]});
       if (!isCurrentPatient(patient.id)) return;
       onMessagesChange((prev) => [
         ...prev,
         {
-          id: `assistant-${Date.now()}`,
+          id: turn.id + '/assistant',
           type: 'assistant',
           title: 'Assistente Clínico',
           content: data.message,
           timestamp: new Date(),
           sources: Array.isArray(data.sources) ? data.sources : [],
           coverage: data.coverage,
+          safety: data.safety,
         },
       ]);
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
     } catch {
+      queryClient.invalidateQueries({queryKey:['patient-conversation',userId,turn.patientId]});
+      if (isCurrentPatient(turn.patientId)) setInputValue(current => current || text);
       toast({ title: 'Erro ao consultar IA', description: 'Tente novamente.', variant: 'destructive' });
     } finally {
       if (isCurrentPatient(patient.id)) setIsChatLoading(false);
@@ -1423,11 +1460,11 @@ export function ChatPanel({
         )}
       {/* Header */}
       <header className="sticky top-0 z-10 px-4 md:px-6 py-3 md:py-4 border-b border-border/50 bg-card/95 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {patient.photoUrl ? (
             <img src={patient.photoUrl} alt={patient.name} className="w-10 h-10 rounded-full object-cover" />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-medical-blue-light flex items-center justify-center">
+            <div className="w-10 h-10 shrink-0 rounded-full bg-medical-blue-light flex items-center justify-center">
               <span className="text-medical-blue font-semibold text-sm">
                 {patient.name
                   .split(' ')
@@ -1437,13 +1474,14 @@ export function ChatPanel({
               </span>
             </div>
           )}
-          <div>
-            <h1 className="font-semibold text-foreground">{patient.name}</h1>
-            <Badge variant="atendimento" className="mt-1">
-              Em atendimento
+          <div className="min-w-0 flex-1">
+            <h1 className="text-sm sm:text-base font-semibold text-foreground break-words">{patient.name}</h1>
+            <Badge variant={patient.status} className="mt-1">
+              {({retorno:'Retorno',seguimento:'Seguimento',novo:'Novo',atendimento:'Em atendimento'})[patient.status]}
             </Badge>
           </div>
-          <Button variant="outline" size="sm" className="ml-auto" asChild>
+          <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto sm:ml-auto">
+          <Button variant="outline" size="sm" className="text-xs whitespace-normal h-auto min-h-8 py-1.5 px-2" asChild>
             <Link
               to={
                 '/trabalho?patient=' +
@@ -1456,6 +1494,10 @@ export function ChatPanel({
               Consulta manual
             </Link>
           </Button>
+          <Button variant="outline" size="sm" onClick={() => handleOpenComposer()} className="text-xs whitespace-normal h-auto min-h-8 py-1.5 px-2 gap-1.5">
+            <FileSignature className="hidden sm:block w-4 h-4 shrink-0" />Receita / atestado
+          </Button>
+          </div>
         </div>
       </header>
 
@@ -1550,6 +1592,9 @@ export function ChatPanel({
           </div>
         )}
 
+        {conversationLoading && <p role="status" className="text-sm text-muted-foreground">Recuperando conversa salva…</p>}
+        {conversationError && <div role="alert" className="text-sm text-destructive">Não foi possível recuperar a conversa salva. As mensagens não foram apagadas. <button type="button" className="underline" onClick={onRetryConversation}>Tentar novamente</button></div>}
+        {onLoadOlderMessages && <Button variant="outline" size="sm" disabled={loadingOlderMessages} onClick={onLoadOlderMessages}>Carregar mensagens anteriores</Button>}
         {/* Pre-consultation Briefing */}
         {showBriefing && (
           <div className="alert-briefing rounded-lg py-3 px-4 animate-fade-in-up">
@@ -1605,7 +1650,7 @@ export function ChatPanel({
                         <div className="mt-3 pt-3 border-t border-border/30 space-y-2 text-xs text-foreground/80">
                           {activeBriefing.details.lastConsultationDate && (
                             <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[0.625rem]">
                                 Última Consulta
                               </span>
                               <span>{activeBriefing.details.lastConsultationDate}</span>
@@ -1613,7 +1658,7 @@ export function ChatPanel({
                           )}
                           {activeBriefing.details.mainComplaint && (
                             <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[0.625rem]">
                                 Queixa Principal
                               </span>
                               <span>{activeBriefing.details.mainComplaint}</span>
@@ -1621,7 +1666,7 @@ export function ChatPanel({
                           )}
                           {activeBriefing.details.previousConduct && (
                             <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[0.625rem]">
                                 Conduta Anterior
                               </span>
                               <span>{activeBriefing.details.previousConduct}</span>
@@ -1629,7 +1674,7 @@ export function ChatPanel({
                           )}
                           {activeBriefing.details.evolution && (
                             <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[10px]">
+                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[0.625rem]">
                                 Evolução
                               </span>
                               <span>{activeBriefing.details.evolution}</span>
@@ -1648,7 +1693,10 @@ export function ChatPanel({
                       </Button>
                     </>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Primeira consulta com este paciente.</p>
+                    <div className="space-y-2 text-xs text-muted-foreground">
+                      <p>{briefingRequested ? 'Nenhuma consulta anterior disponível para resumir.' : 'Prontuário aberto para visualização. O resumo com IA é opcional e só será solicitado pelo botão abaixo.'}</p>
+                      {!briefingRequested && onRetryBriefing && <Button variant="outline" size="sm" onClick={onRetryBriefing}>Gerar resumo com IA</Button>}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1667,9 +1715,11 @@ export function ChatPanel({
 
         {/* Pre-consult question checklist — from history + chief complaint */}
         <QuestionChecklistCard
+          key={checklistSourceKey}
           questions={checklistQuestions}
           isLoading={checklistLoading}
-          onRefresh={() => runChecklist(true)}
+          error={checklistError}
+          onRefresh={() => void runChecklist()}
         />
 
         {/* Messages */}
@@ -1729,7 +1779,7 @@ export function ChatPanel({
                       <Brain className="w-4 h-4 text-primary" />
                     </div>
                     <div className="flex-1 max-w-[88%] md:max-w-[85%] rounded-2xl rounded-tl-sm bg-muted/60 px-4 py-3">
-                      <p className="text-[11px] font-semibold text-muted-foreground mb-1">{message.title}</p>
+                      <p className="text-[0.6875rem] font-semibold text-muted-foreground mb-1">{message.title}</p>
                       <ClinicalAnswer message={message} userId={userId} />
                     </div>
                   </div>
@@ -2001,7 +2051,7 @@ export function ChatPanel({
                       {isPaused ? 'Gravação pausada' : `Gravando... ${formatTimer(recordingSeconds)}`}
                     </span>
                     {recording.mode === 'online' && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 shrink-0">
+                      <span className="inline-flex items-center gap-1 text-[0.625rem] font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 shrink-0">
                         <MonitorSpeaker className="w-3 h-3" />
                         Teleconsulta
                       </span>
@@ -2029,7 +2079,7 @@ export function ChatPanel({
                     )}
                   </Button>
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-snug">
+                <p className="text-[0.6875rem] text-muted-foreground leading-snug">
                   Use o modo <span className="font-semibold text-foreground/80">Comentário</span> abaixo para adicionar
                   notas que ajudarão a IA a transcrever melhor.
                 </p>
@@ -2049,14 +2099,14 @@ export function ChatPanel({
 
         <div className="input-command-center p-3">
           {/* Mode toggle */}
-          <div className="flex items-center gap-1 mb-2.5">
-            <div className="inline-flex p-0.5 rounded-lg bg-muted/60 border border-border/40">
+          <div className="flex flex-wrap items-center gap-2 mb-2.5">
+            <div className="inline-flex min-w-0 p-0.5 rounded-lg bg-muted/60 border border-border/40">
               <button
                 type="button"
                 aria-pressed={inputMode === 'question'}
                 onClick={() => setInputMode('question')}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                  'flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-all',
                   inputMode === 'question'
                     ? 'bg-medical-blue text-white shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
@@ -2070,7 +2120,7 @@ export function ChatPanel({
                 aria-pressed={inputMode === 'comment'}
                 onClick={() => setInputMode('comment')}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                  'flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-all',
                   inputMode === 'comment'
                     ? 'bg-amber-800 text-white shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
@@ -2080,7 +2130,7 @@ export function ChatPanel({
                 Comentário
               </button>
             </div>
-            <span className="text-[10px] text-muted-foreground ml-2 hidden md:inline flex-1 min-w-0 truncate">
+            <span className="text-[0.625rem] text-muted-foreground ml-2 hidden md:inline flex-1 min-w-0 truncate">
               {inputMode === 'question'
                 ? 'pergunte sobre o histórico, conduta, interações…'
                 : isRecording
@@ -2090,7 +2140,7 @@ export function ChatPanel({
             <UsageMeter variant="inline" className="ml-auto shrink-0" />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] sm:flex items-center gap-2">
             <input
               ref={attachInputRef}
               type="file"
@@ -2109,7 +2159,7 @@ export function ChatPanel({
             >
               {attachingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
             </Button>
-            <div className="flex-1 min-w-0 relative">
+            <div className="col-span-3 order-first sm:order-none flex-1 min-w-0 relative">
               <input
                 type="text"
                 aria-label={
@@ -2139,7 +2189,7 @@ export function ChatPanel({
               variant="ghost"
               size="icon"
               className={cn(
-                'h-9 w-9',
+                'h-9 w-9 justify-self-end',
                 inputMode === 'question'
                   ? 'text-muted-foreground hover:text-medical-blue'
                   : 'text-muted-foreground hover:text-amber-600',
@@ -2154,7 +2204,7 @@ export function ChatPanel({
             <Button
               variant={isRecording ? 'destructive' : 'record'}
               size="icon-lg"
-              className="rounded-full"
+              className="rounded-full h-10 w-10 sm:h-14 sm:w-14"
               onClick={isRecording ? handleStopRecording : handleStartRecording}
               aria-label={isRecording ? 'Finalizar gravação da consulta' : 'Iniciar gravação da consulta'}
               disabled={
@@ -2172,7 +2222,7 @@ export function ChatPanel({
             </Button>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground text-center">
+        <p className="text-[0.625rem] sm:text-xs text-muted-foreground text-center">
           {isProcessing
             ? 'Processando consulta, aguarde...'
             : isChatLoading

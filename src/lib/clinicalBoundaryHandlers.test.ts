@@ -6,6 +6,8 @@ import * as gemini from '../../supabase/functions/_shared/gemini';
 import * as http from '../../supabase/functions/_shared/http';
 import * as modelInput from '../../supabase/functions/_shared/modelInput';
 import * as clinicDates from '../../supabase/functions/_shared/clinicDate';
+import * as questionSafety from '../../supabase/functions/_shared/clinicalQuestionSafety';
+import * as quota from '../../supabase/functions/_shared/quota';
 
 type Row = Record<string, unknown>;
 const user = '11111111-1111-4111-8111-111111111111';
@@ -92,9 +94,10 @@ function database(seed: Record<string, Row[]> = {}, failedTable?: string) {
   };
 }
 
-function loadHandler(name: string, db = database()) {
+function loadHandler(name: string, db = database(), environment: (key: string) => string | undefined = () => 'synthetic') {
   const reserve = vi.fn(async () => ({ reservationId: 'reservation' }));
   const settle = vi.fn(async () => {});
+  const admit = vi.fn(async () => ({userId:user,operation:'ai' as const}));
   const generate = vi.fn(async (_key?: string, _parts?: unknown, _options?: unknown) => ({
     text: '{}',
     usage: { promptTokenCount: 10 },
@@ -119,12 +122,15 @@ function loadHandler(name: string, db = database()) {
     '../_shared/http.ts': { ...http, fetchWithDeadline: network },
     '../_shared/modelInput.ts': modelInput,
     '../_shared/clinicDate.ts': clinicDates,
+    '../_shared/clinicalQuestionSafety.ts': questionSafety,
     '../_shared/auth.ts': { requireUser: async () => ({ userId: user }), AuthError: class extends Error {} },
     '../_shared/quota.ts': {
+      ...quota,
       checkQuota: reserve,
+      reserveAdmittedCredits: reserve,
+      admitOperation: admit,
       recordUsage: settle,
       creditsFromUsage: () => 1,
-      QuotaExceededError: class extends Error {},
     },
   };
   const require = (id: string) => {
@@ -138,9 +144,10 @@ function loadHandler(name: string, db = database()) {
     if (id in dependencies) return dependencies[id];
     throw new Error(`Unexpected dependency ${id}`);
   };
-  new Function('require', 'exports', 'Deno', compiled)(require, {}, { env: { get: () => 'synthetic' } });
+  new Function('require', 'exports', 'Deno', compiled)(require, {}, { env: { get: environment } });
   return {
     reserve,
+    admit,
     settle,
     generate,
     embed,
@@ -295,6 +302,95 @@ describe('clinical result failures remain failures', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(briefing);
     expect(db.tables.consultations[0].pre_briefing).toMatchObject(briefing);
+  });
+});
+
+describe('medication safety evidence boundary', () => {
+  it('does not reopen an ambiguous credit reservation with another charge',async()=>{
+    const db=database({patients:[patientRow]});
+    db.rpc.mockImplementation(async name=>({data:name==='begin_patient_chat_turn'?{state:'started'}:name==='retrieve_patient_context'?{consultations:[],documents:[],coverage:{}}:true,error:null}));
+    const handler=loadHandler('chat-assistant',db);handler.reserve.mockRejectedValueOnce(new Error('Synthetic lost reservation response'));
+    await handler.run({patientId:patient,conversationId:'33333333-3333-4333-8333-333333333333',userMessage:'Qual foi a conduta anterior?'});
+    expect(db.rpc).toHaveBeenCalledWith('finish_patient_chat_turn',expect.objectContaining({p_retryable:false,p_response:null}));
+    expect(handler.generate).not.toHaveBeenCalled();
+  });
+  it('recovers a generated answer and retries only idempotent settlement after an accounting failure', async () => {
+    const db=database({patients:[patientRow]});
+    let saved:Row|undefined;let receipt:unknown;
+    db.rpc.mockImplementation(async (name,args) => {
+      const input=args as Row;
+      if(name==='begin_patient_chat_turn')return {data:saved?{state:'complete',response:saved,usageReceipt:receipt}:{state:'started'},error:null};
+      if(name==='retrieve_patient_context')return {data:{consultations:[],documents:[],coverage:{}},error:null};
+      if(name==='finish_patient_chat_turn'){if(input.p_response){saved=input.p_response as Row;receipt=input.p_usage_receipt;}return {data:true,error:null};}
+      return {data:[],error:null};
+    });
+    const handler=loadHandler('chat-assistant',db);
+    handler.generate.mockResolvedValue({text:'Resposta preservada antes do acerto de consumo',usage:{promptTokenCount:10}});
+    handler.settle.mockRejectedValueOnce(new Error('Synthetic settlement outage'));
+    const body={patientId:patient,conversationId:'33333333-3333-4333-8333-333333333333',userMessage:'Qual foi a conduta anterior?'};
+    expect((await handler.run(body)).status).toBe(500);
+    const recovered=await handler.run(body);
+    expect(recovered.status).toBe(200);
+    expect((await recovered.json()).message).toContain('Resposta preservada');
+    expect(handler.generate).toHaveBeenCalledOnce();expect(handler.reserve).toHaveBeenCalledOnce();expect(handler.settle).toHaveBeenCalledTimes(2);
+  });
+  it('returns a rate-limited response without disguising it as a server error',async()=>{
+    const handler=loadHandler('chat-assistant');handler.admit.mockRejectedValueOnce(new quota.OperationRateError(30,30));
+    const response=await handler.run({userMessage:'Há interação medicamentosa?'});
+    expect(response.status).toBe(429);expect((await response.json()).rateLimited).toBe(true);expect(handler.reserve).not.toHaveBeenCalled();
+  });
+  it('marks a claimed turn as failed when quota is denied, allowing an explicit retry', async () => {
+    const db=database({patients:[patientRow]});
+    db.rpc.mockImplementation(async name=>({data:name==='begin_patient_chat_turn'?{state:'started'}:name==='retrieve_patient_context'?{consultations:[],documents:[],coverage:{}}:true,error:null}));
+    const handler=loadHandler('chat-assistant',db);
+    handler.reserve.mockRejectedValueOnce(new quota.QuotaExceededError(0,0));
+    const conversationId='33333333-3333-4333-8333-333333333333';
+    const response=await handler.run({patientId:patient,conversationId,userMessage:'Qual foi a conduta anterior?'});
+    expect(response.status).toBe(429);
+    expect(db.rpc).toHaveBeenCalledWith('finish_patient_chat_turn',expect.objectContaining({p_user_id:user,p_patient_id:patient,p_turn_id:conversationId,p_response:null,p_retryable:true}));
+    expect(handler.generate).not.toHaveBeenCalled();
+  });
+  it('reuses a completed persisted turn without another paid call', async () => {
+    const db = database({ patients: [patientRow] });
+    db.rpc.mockResolvedValue({ data: { state: 'complete', response: { message: 'Resposta preservada', sources: [], credits: 0 } }, error: null });
+    const handler = loadHandler('chat-assistant', db);
+    const response = await handler.run({ patientId: patient, conversationId: '33333333-3333-4333-8333-333333333333', userMessage: 'Qual foi a conduta anterior?' });
+    expect(response.status).toBe(200);
+    expect((await response.json()).message).toBe('Resposta preservada');
+    expect(handler.reserve).not.toHaveBeenCalled();
+    expect(handler.generate).not.toHaveBeenCalled();
+  });
+  it.each([null, patient])('does not infer interaction safety from chart excerpts (patient=%s)', async (patientId) => {
+    const db = database({ patients: [patientRow] });
+    const handler = loadHandler('chat-assistant', db, (key) => key === 'GEMINI_API_KEY' ? undefined : 'synthetic');
+    const response = await handler.run({ patientId, userMessage: 'Há interação entre paroxetina e propranolol?' });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      credits: 0,
+      sources: [],
+      safety: { status: 'verification_required', topic: 'medication' },
+    });
+    expect(handler.reserve).not.toHaveBeenCalled();
+    expect(handler.generate).not.toHaveBeenCalled();
+    expect(handler.embed).not.toHaveBeenCalled();
+    expect(handler.admit).toHaveBeenCalledOnce();
+  });
+  it('guards an indirect medication follow-up without generating another answer', async () => {
+    const handler = loadHandler('chat-assistant');
+    const response = await handler.run({
+      userMessage: 'Pode manter os dois?',
+      chatHistory: [{ type: 'user', content: 'Paroxetina e propranolol juntos têm interação?' }],
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).safety?.status).toBe('verification_required');
+    expect(handler.generate).not.toHaveBeenCalled();
+  });
+  it('does not bypass patient ownership for a guarded question', async () => {
+    const handler = loadHandler('chat-assistant', database({ patients: [{ ...patientRow, user_id: 'other' }] }));
+    const response = await handler.run({ patientId: patient, userMessage: 'Posso associar os medicamentos?' });
+    expect(response.status).toBe(404);
+    expect(handler.reserve).not.toHaveBeenCalled();
+    expect(handler.generate).not.toHaveBeenCalled();
   });
 });
 

@@ -6,6 +6,7 @@
 
 @layer base {
   :root {
+    font-size: 150%;
     --background: 42 33% 98%;
     --foreground: 38 9% 22%;
 
@@ -276,3 +277,9 @@
 ::selection { background: #e8d39e; color: #393833; }
 
 body:has([data-session-locked]) [role="dialog"], body:has([data-session-locked]) [data-radix-popper-content-wrapper] { visibility: hidden; }
+
+@media (max-width: 1919px) {
+  .clinic-subpage-shell { height: calc(100dvh - 4rem - env(safe-area-inset-bottom)); overflow-y: auto; }
+  .clinic-subpage-shell > .min-h-screen { min-height: 100%; }
+  .clinic-subpage-shell > .h-\[100dvh\] { height: 100%; }
+}

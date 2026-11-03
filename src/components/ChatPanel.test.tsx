@@ -54,7 +54,6 @@ vi.mock('@/lib/consultationDrafts', () => ({
   saveConsultationDraft: mocks.saveDraft,
 }));
 vi.mock('@/components/UsageMeter', () => ({ UsageMeter: () => null, UsageOverBanner: () => null }));
-vi.mock('@/components/QuestionChecklistCard', () => ({ QuestionChecklistCard: () => null }));
 vi.mock('@/components/LiveCopilotCard', () => ({ LiveCopilotCard: () => null }));
 vi.mock('@/components/ConsultationReviewModal', () => ({
   ConsultationReviewModal: ({
@@ -110,6 +109,23 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('patient-scoped asynchronous clinical work', () => {
+  it('generates questions only on request and clears checks for another patient with the same questions', async () => {
+    mocks.invoke.mockResolvedValue({ data: { questions: ['Como está seu sono?'] }, error: null });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const props = { messages: [], onMessagesChange: vi.fn(), chiefComplaint: '', preBriefing: null, briefingLoading: false, userId: 'doctor' };
+    const chart = (id: string) => <QueryClientProvider client={client}><ChatPanel {...props} patient={patient(id)} /></QueryClientProvider>;
+    const { rerender } = render(chart('A'));
+    await act(async () => {});
+    expect(mocks.invoke).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Gerar roteiro com IA' }));
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Como está seu sono?' }));
+    expect(screen.getByText('1/1')).toBeInTheDocument();
+    rerender(chart('B'));
+    fireEvent.click(screen.getByRole('button', { name: 'Gerar roteiro com IA' }));
+    expect(await screen.findByRole('checkbox', { name: 'Como está seu sono?' })).not.toBeChecked();
+    expect(screen.getByText('0/1')).toBeInTheDocument();
+    expect(mocks.invoke).toHaveBeenCalledTimes(2);
+  });
   it('does not resend protocol-derived assistant replies in automatic chat history', async () => {
     mocks.invoke.mockResolvedValue({ data: { message: 'Resposta atual', questions: [], sources: [] }, error: null });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

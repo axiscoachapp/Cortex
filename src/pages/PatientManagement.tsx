@@ -37,6 +37,8 @@ import { Patient } from '@/types/patient';
 import { ageFromBirthdate } from '@/lib/patientImport';
 import { clinicDate, formatDateOnly } from '@/lib/dates';
 import { fetchAllRows } from '@/lib/pagination';
+import { PatientAdministrativeFields } from '@/components/PatientAdministrativeFields';
+import { validatePatientRegistration, validatePatientChanges, normalizeCpf, administrativeValues } from '@/lib/patientRegistration';
 
 const PatientManagement = () => {
   const navigate = useNavigate();
@@ -62,6 +64,7 @@ const PatientManagement = () => {
     profession: '',
     last_visit: '',
     status: 'novo' as Patient['status'],
+    ...administrativeValues(),
   });
 
   const {
@@ -88,12 +91,14 @@ const PatientManagement = () => {
     e.preventDefault();
 
     if (saving) return;
+    const registration={...formData,age:formData.date_of_birth?ageFromBirthdate(formData.date_of_birth,clinicDate()):formData.age === '' ? null : Number(formData.age)};
+    const registrationError = editingPatient ? validatePatientChanges(registration,{...baseline,age:editingPatient.age}) : validatePatientRegistration(registration);
+    if (registrationError) { toast({title:registrationError,variant:'destructive'}); return; }
     if (
-      !formData.name.trim() ||
-      (!formData.date_of_birth &&
+      ((!editingPatient || formData.age !== baseline.age) && !formData.date_of_birth &&
         formData.age !== '' &&
         (!Number.isInteger(Number(formData.age)) || Number(formData.age) < 0 || Number(formData.age) > 130)) ||
-      (formData.date_of_birth && ageFromBirthdate(formData.date_of_birth, clinicDate()) === null)
+      ((!editingPatient || formData.date_of_birth !== baseline.date_of_birth) && formData.date_of_birth && ageFromBirthdate(formData.date_of_birth, clinicDate()) === null)
     ) {
       toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
       return;
@@ -110,15 +115,27 @@ const PatientManagement = () => {
             : Number(formData.age),
         date_of_birth: formData.date_of_birth || null,
         profession: formData.profession,
+        phone: formData.phone.trim() || null,
+        email: formData.email.trim() || null,
+        cpf: normalizeCpf(formData.cpf) || null,
+        sex: formData.sex || null,
+        health_insurance: formData.healthInsurance.trim() || null,
         last_visit: formData.last_visit || null,
         status: formData.status,
         user_id: user?.id,
       };
 
       if (editingPatient) {
+        const columns={name:'name',age:'age',date_of_birth:'date_of_birth',profession:'profession',last_visit:'last_visit',status:'status',phone:'phone',email:'email',cpf:'cpf',sex:'sex',healthInsurance:'health_insurance'} as const;
+        const patch:Partial<typeof patientData>={};
+        for(const key of Object.keys(formData) as (keyof typeof formData)[]) {
+          if(formData[key]!==baseline[key])Object.assign(patch,{[columns[key]]:patientData[columns[key]]});
+        }
+        if(formData.date_of_birth!==baseline.date_of_birth)patch.age=patientData.age;
+        if(!Object.keys(patch).length){setDialogOpen(false);return;}
         const { data: updated, error } = await supabase
           .from('patients')
-          .update(patientData)
+          .update(patch)
           .eq('id', editingPatient.id)
           .eq('revision', editingPatient.revision ?? 0)
           .select('id')
@@ -192,6 +209,7 @@ const PatientManagement = () => {
       profession: patient.profession,
       last_visit: patient.lastVisit ?? '',
       status: patient.status,
+      ...administrativeValues(patient),
     });
     setDialogOpen(true);
   };
@@ -204,6 +222,7 @@ const PatientManagement = () => {
       profession: '',
       last_visit: '',
       status: 'novo',
+      ...administrativeValues(),
     });
     setEditingPatient(null);
   };
@@ -216,8 +235,9 @@ const PatientManagement = () => {
         profession: editingPatient.profession,
         last_visit: editingPatient.lastVisit ?? '',
         status: editingPatient.status,
+        ...administrativeValues(editingPatient),
       }
-    : { name: '', age: '', date_of_birth: '', profession: '', last_visit: '', status: 'novo' };
+    : { name: '', age: '', date_of_birth: '', profession: '', last_visit: '', status: 'novo', ...administrativeValues() };
   const dirty = JSON.stringify(formData) !== JSON.stringify(baseline);
   const canClose = useUnsavedChanges(dialogOpen && dirty);
   const setDialog = (open: boolean) => {
@@ -279,7 +299,7 @@ const PatientManagement = () => {
                       Revise os dados do paciente antes de salvar.
                     </DialogDescription>
                   </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
+                  <form noValidate onSubmit={handleSubmit} className="space-y-4">
                     <div>
                       <Label htmlFor="name">Nome *</Label>
                       <Input
@@ -321,6 +341,7 @@ const PatientManagement = () => {
                       />
                     </div>
                     <div>
+                      <PatientAdministrativeFields value={formData} onChange={patch=>setFormData(previous=>({...previous,...patch}))} />
                       <Label htmlFor="last_visit">Última visita concluída (se conhecida)</Label>
                       <Input
                         id="last_visit"
@@ -426,10 +447,10 @@ const PatientManagement = () => {
                           {patient.profession ? ` · ${patient.profession}` : ''}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] capitalize font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                          <span className="text-[0.625rem] capitalize font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                             {patient.status}
                           </span>
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-[0.625rem] text-muted-foreground">
                             {patient.lastVisit ? formatDateOnly(patient.lastVisit) : 'Sem consulta concluída'}
                           </span>
                         </div>

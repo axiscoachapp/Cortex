@@ -1,11 +1,13 @@
 import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
+import { INTERFACE_SCALE } from './src/lib/interfaceScale';
 
 export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
+    screens: Object.fromEntries(Object.entries({sm:640,md:768,lg:1024,xl:1280,'2xl':1536}).map(([key,value])=>[key,`${value*INTERFACE_SCALE}px`])),
     container: {
       center: true,
       padding: "2rem",

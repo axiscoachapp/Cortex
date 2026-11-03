@@ -12,6 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { ageFromBirthdate } from '@/lib/patientImport';
 import { clinicDate } from '@/lib/dates';
 import { Patient } from '@/types/patient';
+import { PatientAdministrativeFields } from '@/components/PatientAdministrativeFields';
+import { validatePatientRegistration, normalizeCpf, administrativeValues } from '@/lib/patientRegistration';
 
 interface NewPatientData {
   name: string;
@@ -19,6 +21,10 @@ interface NewPatientData {
   dateOfBirth?: string;
   profession: string;
   phone?: string;
+  email?: string;
+  cpf?: string;
+  sex?: string;
+  healthInsurance?: string;
 }
 
 interface NewConsultationModalProps {
@@ -52,13 +58,13 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
   const [newPatientAge, setNewPatientAge] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [newPatientProfession, setNewPatientProfession] = useState('');
-  const [newPatientPhone, setNewPatientPhone] = useState('');
+  const [administrative, setAdministrative] = useState(administrativeValues());
   const [chiefComplaint, setChiefComplaint] = useState('');
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const resetForm = () => {
     setIsNewPatient(false); setSelectedPatientId(''); setSearch(''); setNewPatientName('');
-    setNewPatientAge(''); setDateOfBirth(''); setNewPatientProfession(''); setNewPatientPhone('');
+    setNewPatientAge(''); setDateOfBirth(''); setNewPatientProfession('');setAdministrative(administrativeValues());
     setChiefComplaint(''); setSubmitError('');
   };
 
@@ -74,7 +80,8 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
           age: dateOfBirth ? ageFromBirthdate(dateOfBirth, clinicDate()) : newPatientAge === '' ? null : Number(newPatientAge),
           dateOfBirth: dateOfBirth || undefined,
           profession: newPatientProfession.trim(),
-          phone: newPatientPhone.trim() || undefined,
+          ...administrative,
+          cpf: normalizeCpf(administrative.cpf) || undefined,
         }, chiefComplaint.trim());
       } else {
         await onStartConsultation(selectedPatientId, undefined, chiefComplaint.trim());
@@ -89,8 +96,9 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
   };
 
   const validAge = newPatientAge === '' || (Number.isInteger(Number(newPatientAge)) && Number(newPatientAge) >= 0 && Number(newPatientAge) <= 130);
-  const isValid = !!chiefComplaint.trim() && (isNewPatient ? !!newPatientName.trim() && (dateOfBirth ? ageFromBirthdate(dateOfBirth, clinicDate()) !== null : validAge) : !!selectedPatientId);
-  const canClose = useUnsavedChanges(open && (!!chiefComplaint.trim() || !!newPatientName.trim() || !!dateOfBirth || !!newPatientAge || !!newPatientPhone || !!newPatientProfession));
+  const registrationError=validatePatientRegistration({name:newPatientName,age:dateOfBirth?ageFromBirthdate(dateOfBirth,clinicDate()):newPatientAge===''?null:Number(newPatientAge),profession:newPatientProfession,...administrative});
+  const isValid = !!chiefComplaint.trim() && (isNewPatient ? !registrationError && (dateOfBirth ? ageFromBirthdate(dateOfBirth, clinicDate()) !== null : validAge) : !!selectedPatientId);
+  const canClose = useUnsavedChanges(open && (!!chiefComplaint.trim() || !!newPatientName.trim() || !!dateOfBirth || !!newPatientAge || Object.values(administrative).some(Boolean) || !!newPatientProfession));
   const close = (next: boolean) => {
     if (saving) return;
     if (!canClose(next)) return;
@@ -221,16 +229,8 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-patient-phone">Telefone / WhatsApp <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-                <Input
-                  id="new-patient-phone"
-                  type="tel"
-                  value={newPatientPhone}
-                  onChange={(e) => setNewPatientPhone(e.target.value)}
-                  placeholder="Ex: (11) 99999-9999"
-                />
-              </div>
+              <PatientAdministrativeFields prefix="new-patient" value={administrative} onChange={patch=>setAdministrative(previous=>({...previous,...patch}))} />
+              {registrationError && newPatientName && <p role="alert" className="text-sm text-destructive">{registrationError}</p>}
             </div>
           )}
 

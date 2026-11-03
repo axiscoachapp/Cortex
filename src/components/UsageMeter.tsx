@@ -46,7 +46,7 @@ export function UsageMeter({ variant = 'pill', className }: UsageMeterProps) {
       <p className="text-muted-foreground">
         {Math.round(used)} de {limit} créditos hoje ({percent}%)
       </p>
-      <div className="pt-1 mt-1 border-t border-border/60 space-y-0.5 text-[11px] text-muted-foreground">
+      <div className="pt-1 mt-1 border-t border-border/60 space-y-0.5 text-[0.6875rem] text-muted-foreground">
         <p>1 crédito ≈ US$ 0,001 de custo Gemini</p>
         <p>Equivalente: US$ {usdSpent} de US$ {usdCap}</p>
         <p>Reseta em ~{resetsInHours}h (00:00 UTC)</p>
@@ -62,7 +62,7 @@ export function UsageMeter({ variant = 'pill', className }: UsageMeterProps) {
             <button
               type="button"
               className={cn(
-                'inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors',
+                'inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[0.6875rem] font-medium border transition-colors',
                 style.ring, style.text, className,
               )}
             >
@@ -93,10 +93,10 @@ export function UsageMeter({ variant = 'pill', className }: UsageMeterProps) {
             <Gauge className={cn('w-3.5 h-3.5 shrink-0', style.text)} />
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline justify-between gap-2 mb-1">
-                <span className={cn('text-[10px] font-semibold uppercase tracking-wider', style.text)}>
+                <span className={cn('text-[0.625rem] font-semibold uppercase tracking-wider', style.text)}>
                   Limite diário
                 </span>
-                <span className={cn('text-[10px] tabular-nums font-medium', style.text)}>
+                <span className={cn('text-[0.625rem] tabular-nums font-medium', style.text)}>
                   {Math.round(used)}/{limit}
                 </span>
               </div>
@@ -107,7 +107,7 @@ export function UsageMeter({ variant = 'pill', className }: UsageMeterProps) {
                 />
               </div>
             </div>
-            <span className={cn('text-[10px] font-semibold tabular-nums shrink-0', style.text)}>
+            <span className={cn('text-[0.625rem] font-semibold tabular-nums shrink-0', style.text)}>
               {percent}%
             </span>
           </button>

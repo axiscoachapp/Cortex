@@ -256,8 +256,8 @@ export function DocumentComposerModal({
                 )}
               >
                 <Icon className={cn('w-3.5 h-3.5 mb-1', docType === value ? 'text-medical-blue' : 'text-muted-foreground')} />
-                <p className="text-[11px] font-semibold text-foreground leading-tight">{label}</p>
-                <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{hint}</p>
+                <p className="text-[0.6875rem] font-semibold text-foreground leading-tight">{label}</p>
+                <p className="text-[0.5625rem] text-muted-foreground mt-0.5 leading-tight">{hint}</p>
               </button>
             ))}
           </div>
@@ -269,14 +269,14 @@ export function DocumentComposerModal({
           )}
 
           {isReceita && hasAntimicrobial && docType === 'receita_simples' && (
-            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
+            <p className="text-[0.6875rem] text-amber-700 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               Há antimicrobiano selecionado — considere o tipo "Antimicrobiano" (retenção, 10 dias).
             </p>
           )}
 
           {isReceita && duplicatedIngredients.length > 0 && (
-            <p className="text-[11px] text-red-700 bg-red-50 border border-red-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
+            <p className="text-[0.6875rem] text-red-700 bg-red-50 border border-red-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
                 <b>Princípio ativo duplicado</b> em mais de um medicamento selecionado:{' '}
@@ -297,7 +297,7 @@ export function DocumentComposerModal({
                   className="min-h-[120px] text-sm"
                 />
                 {examList.length > 0 && (
-                  <p className="text-[10px] text-muted-foreground">{examList.length} exame{examList.length > 1 ? 's' : ''}</p>
+                  <p className="text-[0.625rem] text-muted-foreground">{examList.length} exame{examList.length > 1 ? 's' : ''}</p>
                 )}
               </div>
               <div className="space-y-1">
@@ -353,11 +353,11 @@ export function DocumentComposerModal({
                         <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
                           {h.product_name}
                           {h.is_antimicrobial && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">ANTIMICROBIANO</span>
+                            <span className="text-[0.5625rem] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">ANTIMICROBIANO</span>
                           )}
                         </p>
                         {h.active_ingredient && (
-                          <p className="text-[10px] text-muted-foreground">{h.active_ingredient}</p>
+                          <p className="text-[0.625rem] text-muted-foreground">{h.active_ingredient}</p>
                         )}
                       </button>
                     ))}
@@ -387,7 +387,7 @@ export function DocumentComposerModal({
                       />
                       <label htmlFor={`rx-medication-${i}`} className="text-xs font-semibold text-foreground flex-1 cursor-pointer">{m.name}</label>
                       {m.antimicrobial && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">ATM</span>
+                        <span className="text-[0.5625rem] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">ATM</span>
                       )}
                       {m.fromCatalog && (
                         <button

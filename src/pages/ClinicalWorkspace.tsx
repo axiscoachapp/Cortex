@@ -10,6 +10,7 @@ import { BrandLockup } from '@/components/BrandLockup';
 import { formatDateOnly } from '@/lib/dates';
 import { WORK_KINDS, WorkKind } from '@/lib/clinicalWorkspace';
 import { ClinicalWorkEditor } from '@/components/ClinicalWorkEditor';
+import { ClinicalMarkdown } from '@/components/ClinicalMarkdown';
 import type { Tables, Json } from '@/integrations/supabase/types';
 
 type Item = Tables<'clinical_work_items'>;
@@ -54,6 +55,7 @@ export default function ClinicalWorkspacePage() {
   const { user } = useAuth();
   const [params] = useSearchParams();
   const patientId = params.get('patient');
+  const schedulingQueue = params.get('queue') === 'scheduling';
   // From the consultation screen: the agenda appointment and chief complaint.
   const appointmentParam = params.get('appointment') ?? undefined;
   const complaintParam = params.get('complaint') ?? undefined;
@@ -112,7 +114,7 @@ export default function ClinicalWorkspacePage() {
     },
   });
   const work = useQuery({
-    queryKey: ['clinical-work', user?.id, patientId, limit],
+    queryKey: ['clinical-work', user?.id, patientId, limit, schedulingQueue],
     enabled: !!user,
     queryFn: async () => {
       let q = supabase
@@ -124,6 +126,7 @@ export default function ClinicalWorkspacePage() {
         .limit(limit);
       if (patientId) q = q.eq('patient_id', patientId);
       else q = q.in('status', ['open', 'draft']);
+      if (schedulingQueue) q = q.eq('kind', 'task').in('details->>workflow', ['waitlist', 'confirmation']);
       const { data, error } = await q;
       if (error) throw error;
       return data;
@@ -251,7 +254,7 @@ export default function ClinicalWorkspacePage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs text-primary uppercase tracking-widest">Continuidade do cuidado</p>
-            <h1 className="font-serif text-3xl mt-2">{patient.data?.name ?? 'Trabalho pendente'}</h1>
+            <h1 className="font-serif text-3xl mt-2">{patient.data?.name ?? (schedulingQueue ? 'Lista de espera e confirmações' : 'Trabalho pendente')}</h1>
           </div>
           {patient.data && (
             <Button onClick={() => openEditor()}>
@@ -291,7 +294,7 @@ export default function ClinicalWorkspacePage() {
                 </ul>
               )}
               <p className="text-xs text-muted-foreground">
-                Até 50 resultados. Refine a busca para localizar outros pacientes.
+                {patients.data?.length ?? 0} pacientes encontrados{patients.data?.length === 50 ? ' (limite de 50; refine a busca)' : ''}.
               </p>
             </div>
             <div className="rounded-xl border bg-card p-4 space-y-3">
@@ -435,7 +438,7 @@ export default function ClinicalWorkspacePage() {
                       )}
                     </div>
                   </div>
-                  <p className="text-sm mt-3 whitespace-pre-wrap line-clamp-4">{item.content}</p>
+                  <ClinicalMarkdown className="mt-3 line-clamp-4" text={item.content} />
                   {workCompare === item.id && (
                     <div className="border-t pt-3 mt-3 space-y-2">
                       {priorWork.isError ? (
@@ -533,7 +536,7 @@ export default function ClinicalWorkspacePage() {
                       Comparar revisões
                     </Button>
                   </div>
-                  <p className="text-sm whitespace-pre-wrap mt-4 leading-relaxed">{c.soap_note}</p>
+                  <ClinicalMarkdown className="mt-4" text={c.soap_note ?? ''} />
                   {compare === c.id && (
                     <div className="border-t mt-4 pt-4 space-y-3">
                       <p className="text-xs text-muted-foreground">

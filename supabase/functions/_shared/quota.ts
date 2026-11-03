@@ -72,6 +72,28 @@ export function creditsFromUsage(value: unknown): number {
 
 export interface QuotaReservation { used: number; limit: number; reservationId: string }
 
+/** Rate admission is independent of paid inference and its kill switch. */
+export async function admitOperation(supabase: SupabaseClient, userId: string, operation: 'ai' | 'communication' = 'ai'): Promise<{ userId: string; operation: 'ai' | 'communication' }> {
+  if (!userId) throw new Error('Operação sem usuário autenticado');
+  const {data:admission,error}=await supabase.rpc('admit_operation',{p_user_id:userId,p_operation:operation});
+  if(error || !admission || typeof admission.allowed!=='boolean' || !Number.isFinite(Number(admission.used)) || !Number.isFinite(Number(admission.limit))) throw new Error('Controle de operações indisponível. Tente novamente.');
+  if(!admission.allowed) throw new OperationRateError(Number(admission.used),Number(admission.limit));
+  return { userId, operation };
+}
+
+/** Reserve paid work only after its separate rate admission. */
+export async function reserveAdmittedCredits(supabase: SupabaseClient, admission: {userId:string;operation:'ai'|'communication'}, estimatedCredits: number): Promise<QuotaReservation> {
+  const { userId, operation } = admission;
+  if (!userId || !Number.isFinite(estimatedCredits) || estimatedCredits < 0) throw new Error('Reserva de consumo inválida');
+  if (operation === 'ai') assertAiEnabled();
+  const reservationId = crypto.randomUUID();
+  const {data,error} = await supabase.rpc('reserve_usage', {p_user_id:userId,p_credits:Math.max(25,estimatedCredits),p_reservation_id:reservationId});
+  if(error || !data || typeof data.allowed!=='boolean' || !Number.isFinite(Number(data.used)) || !Number.isFinite(Number(data.limit))) throw new Error('Controle de consumo indisponível. Tente novamente mais tarde.');
+  const used=Number(data.used);const limit=Number(data.limit);
+  if(!data.allowed)throw new QuotaExceededError(used,limit);
+  return {used,limit,reservationId};
+}
+
 /**
  * Throws QuotaExceededError if the user has already exceeded their daily limit,
  * OR if the (current + estimated) would exceed it. Call this BEFORE invoking
@@ -92,19 +114,7 @@ export async function checkQuota(
   }
   if (!Number.isFinite(estimatedCredits) || estimatedCredits < 0) throw new Error('Estimativa de consumo inválida');
   if(operation==='ai') assertAiEnabled();
-  const {data:admission,error:admissionError}=await supabase.rpc('admit_operation',{p_user_id:userId,p_operation:operation});
-  if(admissionError || !admission || typeof admission.allowed!=='boolean' || !Number.isFinite(Number(admission.used)) || !Number.isFinite(Number(admission.limit))) throw new Error('Controle de operações indisponível. Tente novamente.');
-  if(!admission.allowed) throw new OperationRateError(Number(admission.used),Number(admission.limit));
-  const reservationId = crypto.randomUUID();
-  const {data, error} = await supabase.rpc('reserve_usage', {
-    p_user_id: userId, p_credits: Math.max(25, estimatedCredits), p_reservation_id: reservationId,
-  });
-  if (error || !data || typeof data.allowed !== 'boolean' || !Number.isFinite(Number(data.used)) || !Number.isFinite(Number(data.limit))) {
-    throw new Error('Controle de consumo indisponível. Tente novamente mais tarde.');
-  }
-  const used = Number(data.used); const limit = Number(data.limit);
-  if (!data.allowed) throw new QuotaExceededError(used, limit);
-  return {used, limit, reservationId};
+  return reserveAdmittedCredits(supabase,await admitOperation(supabase,userId,operation),estimatedCredits);
 }
 
 /**

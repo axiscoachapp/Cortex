@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { ClinicalMarkdown } from '@/components/ClinicalMarkdown';
 
 interface SoapSection {
   letter: string;
@@ -37,13 +38,7 @@ export function SoapNoteView({ text }: { text: string }) {
 
   if (!sections) {
     return (
-      <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
-        {text.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
-          part.startsWith('**') && part.endsWith('**')
-            ? <strong key={i}>{part.slice(2, -2)}</strong>
-            : part,
-        )}
-      </div>
+      <ClinicalMarkdown text={text} />
     );
   }
 
@@ -54,11 +49,11 @@ export function SoapNoteView({ text }: { text: string }) {
           key={letter}
           className={cn('rounded-lg border px-3.5 py-3', sectionStyles[letter] ?? 'bg-muted/30 border-border')}
         >
-          <p className={cn('text-[10px] font-bold uppercase tracking-wider mb-1.5', labelStyles[letter] ?? 'text-foreground/60')}>
+          <p className={cn('text-[0.625rem] font-bold uppercase tracking-wider mb-1.5', labelStyles[letter] ?? 'text-foreground/60')}>
             {title}
           </p>
           {content
-            ? <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/85">{content}</p>
+            ? <ClinicalMarkdown text={content} />
             : <p className="text-sm italic text-muted-foreground">Não relatado na consulta.</p>
           }
         </div>

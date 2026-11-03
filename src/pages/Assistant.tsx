@@ -13,7 +13,7 @@ import { functionErrorBody } from '@/lib/functionErrors';
 import { ClinicalAnswer } from '@/components/ClinicalAnswer';
 import type { ChatMessage } from '@/types/patient';
 
-interface Msg { id: string; role: 'user' | 'assistant'; content: string; sources?:ChatMessage['sources'];coverage?:ChatMessage['coverage'] }
+interface Msg { id: string; role: 'user' | 'assistant'; content: string; sources?:ChatMessage['sources'];coverage?:ChatMessage['coverage'];safety?:ChatMessage['safety'] }
 
 const CHIPS = [
   { label: 'Suporte clínico', icon: Stethoscope, prompt: 'Preciso de apoio para o raciocínio clínico de um caso: ' },
@@ -65,7 +65,7 @@ export default function AssistantPage() {
         }
         throw error;
       }
-      setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: data.message,sources:Array.isArray(data.sources)?data.sources:[],coverage:data.coverage }]);
+      setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: data.message,sources:Array.isArray(data.sources)?data.sources:[],coverage:data.coverage,safety:data.safety }]);
       queryClient.invalidateQueries({ queryKey: ['usage-daily', user.id] });
     } catch {
       setRequestError('Não foi possível consultar o assistente. Sua pergunta foi mantida.');
@@ -151,7 +151,7 @@ export default function AssistantPage() {
                         ? 'bg-medical-blue text-white rounded-2xl rounded-tr-sm'
                         : 'bg-white border border-border/60 rounded-2xl rounded-tl-sm text-foreground/90',
                     )}>
-                      {m.role==='assistant'?<ClinicalAnswer userId={user?.id??''} message={{id:m.id,type:'assistant',title:'Assistente',content:m.content,timestamp:new Date(0),sources:m.sources,coverage:m.coverage}}/>:m.content}
+                      {m.role==='assistant'?<ClinicalAnswer userId={user?.id??''} message={{id:m.id,type:'assistant',title:'Assistente',content:m.content,timestamp:new Date(0),sources:m.sources,coverage:m.coverage,safety:m.safety}}/>:m.content}
                     </div>
                   </div>
                 ))}

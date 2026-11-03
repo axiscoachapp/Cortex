@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, BookOpen, Plus, Loader2, FileText, Search, RotateCw, Archive } from 'lucide-react';
@@ -15,6 +15,7 @@ import { fetchAllRows } from '@/lib/pagination';
 import { functionErrorBody, functionErrorMessage } from '@/lib/functionErrors';
 import { createKnowledgeSource, reviewKnowledgeSource } from '@/lib/knowledge';
 import { ProtocolShareControls, SharedProtocolsPanel } from '@/components/ProtocolSharing';
+import { extractKnowledgeFile } from '@/lib/knowledgeFile';
 
 interface KBDoc {
   id: string;
@@ -66,6 +67,22 @@ export default function KnowledgeBasePage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [operationError, setOperationError] = useState('');
   const [draftError, setDraftError] = useState('');
+  const [importing, setImporting] = useState(false);
+  const importController = useRef<AbortController | null>(null);
+  useEffect(()=>()=>{importController.current?.abort();},[]);
+  const importFile = async(file:File) => {
+    if(content.trim() && !window.confirm('Substituir o texto atual pelo conteúdo do arquivo?'))return;
+    importController.current?.abort();
+    const controller=new AbortController();importController.current=controller;
+    setImporting(true);setDraftError('');
+    try {
+      const text=await extractKnowledgeFile(file,controller.signal);
+      if(controller.signal.aborted)return;
+      setContent(text);setTitle(previous=>previous||file.name.replace(/\.[^.]+$/,''));
+    } catch(error) {
+      if(!controller.signal.aborted)setDraftError(error instanceof Error ? error.message : 'Não foi possível ler o arquivo.');
+    } finally {if(importController.current===controller)setImporting(false);}
+  };
   const guardDraft = useUnsavedChanges(
     addOpen && !!(title.trim() || content.trim() || reference.trim() || version.trim()),
   );
@@ -122,6 +139,7 @@ export default function KnowledgeBasePage() {
   const closeAdd = (next: boolean) => {
     if (saving || !guardDraft(next)) return;
     if (!next) {
+      importController.current?.abort();setImporting(false);
       setTitle('');
       setContent('');
       setReference('');
@@ -389,10 +407,17 @@ export default function KnowledgeBasePage() {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="knowledge-file">Importar texto de PDF, TXT ou Markdown</Label>
+              <Input id="knowledge-file" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" disabled={saving || importing} onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file)void importFile(file);}} />
+              <p className="text-xs text-muted-foreground">Leitura local, sem consumo de IA. PDF com texto selecionável: até 10 MB, 60 páginas e 60.000 caracteres. Revise o texto extraído; salvar não aprova nem indexa a fonte.</p>
+              {importing && <p role="status" className="text-sm">Extraindo texto do arquivo…</p>}
+            </div>
             <div className="space-y-1">
               <Label htmlFor="knowledge-content">Texto original do protocolo</Label>
               <Textarea
                 id="knowledge-content"
+                disabled={importing}
                 rows={12}
                 maxLength={60000}
                 value={content}
@@ -413,7 +438,7 @@ export default function KnowledgeBasePage() {
             <Button variant="outline" disabled={saving} onClick={() => closeAdd(false)}>
               Cancelar
             </Button>
-            <Button disabled={saving} onClick={create}>
+            <Button disabled={saving || importing} onClick={create}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar original para revisão
             </Button>
           </div>

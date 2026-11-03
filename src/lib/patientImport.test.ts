@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { ageFromBirthdate, parseCSV, preparePatientImport } from './patientImport';
 
 describe('Patient import validation', () => {
+  it('rejects malformed contacts per row before an atomic import batch',()=>{
+    const result=preparePatientImport([['Ana','30','12'],['Bia','40','11999999999']],['name','age','phone'],'doctor','2026-11-03');
+    expect(result.records.map(record=>record.name)).toEqual(['Bia']);
+    expect(result.rejected).toEqual([{row:2,reason:expect.stringMatching(/telefone/)}]);
+  });
   it('rejects impossible calendar dates and calculates age by birthday', () => {
     expect(ageFromBirthdate('31/02/2000', '2026-10-27')).toBeNull();
     expect(ageFromBirthdate('28/10/2000', '2026-10-27')).toBe(25);

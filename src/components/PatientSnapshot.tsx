@@ -18,6 +18,7 @@ interface PatientSnapshotProps {
   /** Optional callback — passed to the dossier drawer's "Perguntar à IA" button. */
   onAskAI?: () => void;
   onWorkStateChange?: (busy: boolean) => void;
+  profileRequest?: number;
 }
 
 function formatMedicationDuration(startedAt: string): string {
@@ -41,7 +42,7 @@ function SectionHeader({ icon: Icon, label, action }: {
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2">
         <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
+        <span className="text-[0.6875rem] font-semibold text-muted-foreground uppercase tracking-widest">
           {label}
         </span>
       </div>
@@ -50,8 +51,9 @@ function SectionHeader({ icon: Icon, label, action }: {
   );
 }
 
-export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: PatientSnapshotProps) {
+export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRequest = 0 }: PatientSnapshotProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(()=>{if(profileRequest>0)setDrawerOpen(true);},[profileRequest]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
@@ -152,7 +154,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
     <aside className="w-full h-full flex flex-col overflow-hidden bg-[hsl(215_40%_98%)]">
       {/* Header */}
       <div className="px-5 pt-5 pb-4 border-b border-border/50 bg-white/60">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+        <p className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-widest mb-3">
           Perfil Ativo
         </p>
         <div className="flex items-center gap-3">
@@ -186,7 +188,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
             <div className="space-y-1.5">
               {patient.diagnoses.map((d, i) => (
                 <div key={i} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-white/80 border border-border/40 shadow-[0_1px_3px_hsl(0_0%_0%/0.04)]">
-                  <span className="font-mono text-[11px] text-medical-blue font-semibold shrink-0 mt-px">{d.code}</span>
+                  <span className="font-mono text-[0.6875rem] text-medical-blue font-semibold shrink-0 mt-px">{d.code}</span>
                   <span className="text-xs text-foreground/75 leading-snug">{d.description}</span>
                 </div>
               ))}
@@ -202,7 +204,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
             action={
               <button
                 onClick={handleGeneratePrescription}
-                className="flex items-center gap-1 text-[10px] text-medical-blue hover:text-medical-blue-dark transition-colors font-medium"
+                className="flex items-center gap-1 text-[0.625rem] text-medical-blue hover:text-medical-blue-dark transition-colors font-medium"
               >
                 <Printer className="w-3 h-3" />
                 Imprimir lista
@@ -220,12 +222,12 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
                     <div className="flex items-baseline justify-between gap-1">
                       <span className="text-xs font-medium text-foreground truncate">{m.name}</span>
                       {m.startedAt && (
-                        <span className="text-[10px] text-muted-foreground shrink-0">
+                        <span className="text-[0.625rem] text-muted-foreground shrink-0">
                           {formatMedicationDuration(m.startedAt)}
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{m.dosage}
+                    <p className="text-[0.6875rem] text-muted-foreground mt-0.5">{m.dosage}
                       {m.instructions ? ` · ${m.instructions}` : ''}</p>
                   </div>
                 </div>
@@ -248,7 +250,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
             <div className="space-y-1">
               {patient.allergies.map((a, i) => (
                 <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/8 border border-destructive/20">
-                  <span className="text-[10px]">⚠️</span>
+                  <span className="text-[0.625rem]">⚠️</span>
                   <span className="text-xs font-medium text-destructive">Alergia a {a}</span>
                 </div>
               ))}
@@ -263,14 +265,14 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
               icon={StickyNote}
               label="Anotações do Médico"
               action={
-                <span className="text-[10px] text-muted-foreground">{noteEntries.length}</span>
+                <span className="text-[0.625rem] text-muted-foreground">{noteEntries.length}</span>
               }
             />
             <div className="space-y-1.5 max-h-[220px] overflow-y-auto scrollbar-thin pr-1">
               {noteEntries.map((n, i) => (
                 <div key={i} className="px-3 py-2 rounded-lg bg-white/80 border border-border/40">
                   {n.stamp && (
-                    <p className="text-[10px] text-muted-foreground font-mono mb-0.5">
+                    <p className="text-[0.625rem] text-muted-foreground font-mono mb-0.5">
                       {n.stamp}
                     </p>
                   )}

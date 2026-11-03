@@ -91,7 +91,7 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
       <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
         <FileSignature className="w-4 h-4 text-medical-blue" />
         Receitas & Atestados
-        <span className="text-[10px] text-muted-foreground font-normal">{rows.length}</span>
+        <span className="text-[0.625rem] text-muted-foreground font-normal">{rows.length}</span>
       </h3>
       <div className="space-y-1.5">
         {rows.slice(0, visibleCount).map(rx => {
@@ -105,13 +105,13 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
             <div key={rx.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border/60 bg-card">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-foreground">{TYPE_LABELS[rx.doc_type]}</p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-[0.625rem] text-muted-foreground">
                   {new Date(rx.created_at).toLocaleDateString('pt-BR')} · código {rx.secret_code}
                   {expired && rx.status !== 'revoked' ? ' · expirada' : ''}
                 </p>
-                {!trusted && rx.status !== 'revoked' && <p className="text-[10px] text-amber-800">Emissão anterior não verificada. Reemita para permitir a validação pública.</p>}
+                {!trusted && rx.status !== 'revoked' && <p className="text-[0.625rem] text-amber-800">Emissão anterior não verificada. Reemita para permitir a validação pública.</p>}
               </div>
-              <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0', meta.cls)}>
+              <span className={cn('text-[0.5625rem] font-bold px-1.5 py-0.5 rounded shrink-0', meta.cls)}>
                 {trusted && expired && rx.status !== 'revoked' ? 'Expirada' : meta.label}
               </span>
               <div className="flex items-center gap-0.5 shrink-0">

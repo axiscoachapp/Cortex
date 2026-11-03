@@ -15,6 +15,9 @@ export interface Patient {
   medicalHistory?: string;
   phone?: string;
   email?: string;
+  cpf?: string;
+  sex?: string;
+  healthInsurance?: string;
 }
 
 export interface Diagnosis {
@@ -98,4 +101,5 @@ export interface ChatMessage {
     documentsRetrieved?: number;
     limited?: boolean;
   };
+  safety?: { status: 'verification_required' | 'not_assessed'; topic?: 'medication' };
 }

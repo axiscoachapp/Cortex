@@ -76,7 +76,7 @@ export function RecordingModeDialog({ open, onOpenChange, onSelect }: RecordingM
                 <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                   Paciente no consultório. Grava pelo microfone do dispositivo.
                 </p>
-                <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-medium text-muted-foreground">
+                <span className="inline-flex items-center gap-1 mt-2 text-[0.625rem] font-medium text-muted-foreground">
                   <Mic className="w-3 h-3" />
                   Microfone
                 </span>
@@ -107,12 +107,12 @@ export function RecordingModeDialog({ open, onOpenChange, onSelect }: RecordingM
                   computador, para capturar as duas vozes.
                 </p>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 text-[0.625rem] font-medium text-muted-foreground">
                     <Mic className="w-3 h-3" />
                     Microfone
                   </span>
-                  <span className="text-[10px] text-muted-foreground">+</span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                  <span className="text-[0.625rem] text-muted-foreground">+</span>
+                  <span className="inline-flex items-center gap-1 text-[0.625rem] font-medium text-muted-foreground">
                     <MonitorSpeaker className="w-3 h-3" />
                     Áudio do computador
                   </span>
@@ -124,7 +124,7 @@ export function RecordingModeDialog({ open, onOpenChange, onSelect }: RecordingM
           {systemAudioAvailable ? (
             <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200/60 px-3 py-2">
               <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-amber-800 leading-relaxed">
+              <p className="text-[0.6875rem] text-amber-800 leading-relaxed">
                 Na teleconsulta o navegador pedirá para escolher a aba da chamada — selecione a aba
                 e <strong>marque "Compartilhar áudio da guia"</strong>. Sem essa opção a voz do
                 paciente não é gravada.
@@ -133,7 +133,7 @@ export function RecordingModeDialog({ open, onOpenChange, onSelect }: RecordingM
           ) : (
             <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200/60 px-3 py-2">
               <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-red-800 leading-relaxed">
+              <p className="text-[0.6875rem] text-red-800 leading-relaxed">
                 Este navegador não permite capturar o áudio do computador. Para teleconsultas, use o
                 Google Chrome ou o Microsoft Edge.
               </p>

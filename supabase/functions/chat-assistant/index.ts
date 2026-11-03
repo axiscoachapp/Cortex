@@ -1,7 +1,8 @@
 import { fetchWithDeadline, readJsonObject, RequestError } from '../_shared/http.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
-import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
+import { reserveAdmittedCredits, admitOperation, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
+import { requiresMedicationVerification, MEDICATION_VERIFICATION_REPLY } from '../_shared/clinicalQuestionSafety.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 import { embedText, callGemini } from '../_shared/gemini.ts';
 import {
@@ -32,9 +33,10 @@ Quando houver um bloco de "Base de Conhecimento do Médico", use os trechos como
 
 Você também pode ajudar com:
 - Diagnóstico diferencial
-- Interações medicamentosas
 - Diretrizes clínicas e protocolos
 - Interpretação de sintomas e achados
+
+O Cortex não possui uma base farmacológica validada conectada. Não confirme nem descarte interações, contraindicações ou segurança de dose/associação. Não recomende iniciar, suspender, substituir ou alterar doses. Se a pergunta exigir essa avaliação, informe a necessidade de verificação farmacológica atualizada e revisão médica. Nem o prontuário, uma resposta anterior da IA, conhecimento geral do modelo ou um trecho de protocolo constituem essa verificação. Ausência de um risco nos trechos não demonstra segurança.
 
 Se não souber a resposta com segurança, diga claramente que não sabe. Nunca invente informações clínicas nem invente registros de consultas anteriores — se não estiverem no contexto recuperado, explicite a limitação da busca.`;
 interface ConsultationContext {
@@ -100,6 +102,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let activeTurn: { patientId: string; id: string; fail: () => PromiseLike<unknown> } | null = null;
+  let paidStarted = false;
   try {
     const { userId } = await requireUser(req);
 
@@ -107,6 +111,8 @@ serve(async (req) => {
     const { chatHistory, userMessage } = body;
     const patientId = optionalText(body.patientId, 'patientId');
     const patientContext = readPatientContext(body.patientContext);
+    const conversationId = optionalText(body.conversationId, 'conversationId');
+    if (conversationId && (!patientId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(conversationId))) throw new RequestError('Identificador de conversa inválido.');
     if (chatHistory != null && !Array.isArray(chatHistory)) throw new RequestError('Histórico da conversa inválido.');
 
     if (!userMessage || typeof userMessage !== 'string') {
@@ -122,10 +128,39 @@ serve(async (req) => {
       });
     }
 
+    const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+    if (patientId) {
+        const { data: owned, error } = await supabase.from('patients').select('id')
+          .eq('id', patientId).eq('user_id', userId).is('deletion_requested_at', null).maybeSingle();
+        if (error) throw new RequestError('Não foi possível verificar o acesso ao paciente.', 503);
+        if (!owned) throw new RequestError('Paciente não encontrado.', 404);
+    }
+    const admission = await admitOperation(supabase, userId);
+    if (conversationId && patientId) {
+      const { data: turn, error } = await supabase.rpc('begin_patient_chat_turn', {p_user_id:userId,p_patient_id:patientId,p_turn_id:conversationId,p_question:userMessage});
+      if (error || !turn || !['started','complete','pending','failed'].includes(turn.state)) throw new RequestError('Não foi possível preservar a pergunta. Tente novamente.',503);
+      if (turn.state==='complete') {
+        if (turn.usageReceipt) await recordUsage(supabase,userId,Number(turn.usageReceipt.credits),turn.usageReceipt.reservationId);
+        return new Response(JSON.stringify(turn.response), {headers:{...corsHeaders,'Content-Type':'application/json'}});
+      }
+      if (turn.state==='pending') throw new RequestError('Esta pergunta já está em processamento. Reabra o prontuário para recuperar a resposta.',409);
+      if (turn.state==='failed') return new Response(JSON.stringify({error:'A solicitação anterior foi interrompida. Reenviar será uma nova solicitação de IA.',conversationRetry:'new_request_required'}),{status:409,headers:{...corsHeaders,'Content-Type':'application/json'}});
+      activeTurn={patientId,id:conversationId,fail:()=>supabase.rpc('finish_patient_chat_turn',{p_user_id:userId,p_patient_id:patientId,p_turn_id:conversationId,p_response:null,p_retryable:!paidStarted})};
+    }
+    const preserveReply = async (response: Record<string, unknown>, usageReceipt?: {reservationId:string;credits:number}) => {
+      if (!activeTurn) return;
+      const {error,data}=await supabase.rpc('finish_patient_chat_turn',{p_user_id:userId,p_patient_id:activeTurn.patientId,p_turn_id:activeTurn.id,p_response:response,p_usage_receipt:usageReceipt??null});
+      if(error || data!==true)throw new RequestError('Não foi possível confirmar o salvamento da resposta. Reabra o prontuário antes de reenviar a pergunta.',503);
+      activeTurn=null;
+    };
+    if (requiresMedicationVerification(userMessage, chatHistory)) {
+      await preserveReply(MEDICATION_VERIFICATION_REPLY);
+      return new Response(JSON.stringify(MEDICATION_VERIFICATION_REPLY), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
-
-    const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
     // ── Pull patient row + recent consultations + attached docs when patientId ──
     let patientRow: PatientContext | null = null;
@@ -273,10 +308,13 @@ Alergias: ${allergies}`;
     const basePrompt = `${patientSummary}${historySummary}${docsSummary}${conversationBlock}Médico: ${userMessage}`;
     assertPromptSize(basePrompt, CHAT_SYSTEM, 24000);
     let reservationId: string;
+    // Reservation transport failures are ambiguous; do not charge a new
+    // reservation automatically for the same logical question.
+    paidStarted = true;
     try {
-      ({ reservationId } = await checkQuota(supabase, userId, 100));
+      ({ reservationId } = await reserveAdmittedCredits(supabase, admission, 100));
     } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
+      if (err instanceof QuotaExceededError) { paidStarted = false; throw err; }
       throw err;
     }
 
@@ -390,12 +428,12 @@ Alergias: ${allergies}`;
     });
 
     const credits = creditsFromUsage(usage);
-    await recordUsage(supabase, userId, credits, reservationId);
-    await authorizeSources();
+    try { await authorizeSources(); }
+    catch (error) { await recordUsage(supabase,userId,credits,reservationId); throw error; }
 
-    return new Response(
-      JSON.stringify({
+    const response = {
         message: reply,
+        safety: { status: 'not_assessed' },
         credits,
         coverage,
         sources: [
@@ -418,10 +456,18 @@ Alergias: ${allergies}`;
           })),
           ...knowledgeSources,
         ],
-      }),
+      };
+    try { await preserveReply(response,{reservationId,credits}); }
+    finally { await recordUsage(supabase, userId, credits, reservationId); }
+    return new Response(
+      JSON.stringify(response),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
+    if (activeTurn) {
+      try { await activeTurn.fail(); } catch { /* The preserved pending turn remains visible for recovery. */ }
+    }
+    if (error instanceof QuotaExceededError) return quotaResponse(error, corsHeaders);
     if (error instanceof RequestError)
       return new Response(JSON.stringify({ error: error.message }), {
         status: error.status,

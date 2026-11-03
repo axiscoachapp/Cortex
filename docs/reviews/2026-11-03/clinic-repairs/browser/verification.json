@@ -1,0 +1,29 @@
+{
+  "checks": [
+    "150% default interface scale",
+    "read-only chart opening",
+    "document action discoverability",
+    "explicit summary generation",
+    "durable conversation recovery without model replay",
+    "mobile profile action",
+    "template preview and mobile subpage navigation",
+    "controlled calendar month view across resize",
+    "scheduling queue destination",
+    "real PDF worker extraction with explicit review",
+    "responsive chart 390",
+    "responsive chart 768",
+    "responsive chart 820",
+    "responsive chart 1280",
+    "responsive chart 1920"
+  ],
+  "metrics": {
+    "briefings": 1,
+    "checklists": 5,
+    "chat": 1,
+    "newSources": 0,
+    "patientWrites": 0
+  },
+  "browser": "isolated Chromium/Edge",
+  "data": "synthetic only",
+  "errors": []
+}
