@@ -1,0 +1,224 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "d5b3f9c8b0bdecc3ca2c16f05a6f8bf5b2f8e3aa",
+  "migrations": 69,
+  "sqlSuites": [
+    "supabase/tests/digital-signature.test.sql",
+    "supabase/tests/reference-catalogs.test.sql",
+    "supabase/tests/document-snippets.test.sql"
+  ],
+  "sqlSourceDigest": "7f5b6bdc3c42109f77623dd53bf077b261f65b80fc8e31afd1e108356ebf6d8b",
+  "helperSha256": "8b49a9f6dca5317493192964363374950115754b6c17432171a6d53c31b07e68",
+  "regulatedSourceSha256": "28570186fd94213960cbaa20caebfbf7380b5e130dbabbc741c0ec1278d84ddb",
+  "ownSources": [
+    {
+      "path": "scripts/test-signature-delta-review.mjs",
+      "sha256": "75d4e30ecbccb218cd9e80668805f240f5cf3b07b2bf41ad750f7933c432d120"
+    },
+    {
+      "path": "supabase/tests/prototypes/signature-late-failure.sql",
+      "sha256": "da0dcb6498e7157b8ea5b3dc47a25d71f66f9ad7ad27bf25df8aadc64d124cc6"
+    }
+  ],
+  "detectorPriorBaseline": "7f699c4ddc08bdaab24d939c877a053c06a96637",
+  "detectorProbes": [
+    {
+      "input": "Clonazepam​SOS 2 mg",
+      "prior": [],
+      "current": [
+        {
+          "substance": "clonazepam",
+          "list": "B1",
+          "form": "notificacao_b"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Amoxicilina​VO 500 mg",
+      "prior": [],
+      "current": [],
+      "antimicrobials": [
+        "amoxicilina"
+      ]
+    },
+    {
+      "input": "Clonaze­pam​SOS",
+      "prior": [],
+      "current": [
+        {
+          "substance": "clonazepam",
+          "list": "B1",
+          "form": "notificacao_b"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Rivo­tril​SOS",
+      "prior": [],
+      "current": [
+        {
+          "substance": "clonazepam",
+          "list": "B1",
+          "form": "notificacao_b"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Ácido​val­proico​VO",
+      "prior": [],
+      "current": [
+        {
+          "substance": "acido valproico",
+          "list": "C1",
+          "form": "receita_controle_especial"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Cipro­floxacina​500mg",
+      "prior": [],
+      "current": [],
+      "antimicrobials": [
+        "ciprofloxacino"
+      ]
+    },
+    {
+      "input": "Tramadol 1​50 mg",
+      "prior": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "current": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Tramadol 150​.0 mg",
+      "prior": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "current": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "receita_controle_especial",
+          "note": "até 100 mg por unidade (adendo da lista A2)"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Tramadol 150.​0 mg",
+      "prior": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "current": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "receita_controle_especial",
+          "note": "até 100 mg por unidade (adendo da lista A2)"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Tramadol 150​,0 mg",
+      "prior": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "current": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "receita_controle_especial",
+          "note": "até 100 mg por unidade (adendo da lista A2)"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Tramadol 150.0 mg",
+      "prior": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "current": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Clonazepamsos",
+      "prior": [],
+      "current": [],
+      "antimicrobials": []
+    },
+    {
+      "input": "Clona zepam",
+      "prior": [],
+      "current": [],
+      "antimicrobials": []
+    }
+  ],
+  "lateFailure": [
+    {
+      "cleanup": true,
+      "refusal": null,
+      "attempts": 2,
+      "destination": "ambiguous",
+      "resulting_state": "failed"
+    },
+    {
+      "cleanup": false,
+      "refusal": "22023",
+      "attempts": 2,
+      "destination": "stored",
+      "resulting_state": "stored"
+    }
+  ],
+  "signatureConcurrencyPassed": true,
+  "fullSqlMatrixRun": false,
+  "reviewResolved": false,
+  "ownedInternalNetwork": true,
+  "publishedPorts": false,
+  "cleanupVerified": true
+}

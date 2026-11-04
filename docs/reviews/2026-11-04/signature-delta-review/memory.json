@@ -1,0 +1,74 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "d5b3f9c8b0bdecc3ca2c16f05a6f8bf5b2f8e3aa",
+  "reviewResolved": false,
+  "realDatabaseIntegration": false,
+  "externalCalls": false,
+  "ownSource": {
+    "path": "scripts/test-signature-flow-review.mjs",
+    "sha256": "12dc3e00abb7ef0bf644574aee9aeb5d9e1889a63e797554ae55116a66ecc830"
+  },
+  "sources": [
+    {
+      "path": "src/lib/signatureFlow.test.ts",
+      "sha256": "8594bd3289db778f0b3cc7060c2a765c2d50b5b43c89ecc0c4b451810132fef2"
+    },
+    {
+      "path": "src/test/syntheticPki.ts",
+      "sha256": "43d94efe73d4f3d78702642d0c54ca0dae4ca06c79446410e329dc88d4b824fa"
+    },
+    {
+      "path": "supabase/functions/_shared/pades.ts",
+      "sha256": "e38a176e9883410624277b6d0345bc0c9d8b979135f3a7384aaef3b4c5171125"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "sha256": "127570625b19e72403f207fad14494565260e01f90874161fed68645083f5772"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureFlow.ts",
+      "sha256": "b3c4623beeabe30ba47ce7b86635b9330e7c918e9fd719d3b0290a5f15cc4e85"
+    }
+  ],
+  "positive": "completed",
+  "lateAnswer": {
+    "secondResult": {
+      "status": "failed",
+      "code": "psc_rejected"
+    },
+    "before": {
+      "state": "failed",
+      "attempt": 2,
+      "cleanup": false,
+      "objects": 0
+    },
+    "firstResult": {
+      "status": "in_progress"
+    },
+    "after": {
+      "state": "failed",
+      "attempt": 2,
+      "cleanup": false,
+      "objects": 1,
+      "audit": 0
+    }
+  },
+  "reasonByteRange": {
+    "interrupted": "40001",
+    "stored": {
+      "state": "stored",
+      "objects": 1,
+      "pscCalls": 1
+    },
+    "resumed": {
+      "status": "cancelled",
+      "code": "stored_object_invalid"
+    },
+    "removed": {
+      "state": "cancelled",
+      "objects": 0,
+      "pscCalls": 1,
+      "audit": 0
+    }
+  }
+}

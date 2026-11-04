@@ -1,5 +1,7 @@
 # Texto Unicode e controle NOWAIT — revisão final deste delta
 
+**Reteste posterior de `4b863b4`:** os dois falsos negativos de fronteira Cf abaixo foram corrigidos nos alvos testados. A [nova revisão dirigida](../signature-delta-review/IMPLEMENTATION.md) registra um contraexemplo adicional em dose decimal com Cf. As evidências abaixo continuam históricas do snapshot `7f699c4`.
+
 04/11/2026. Responde à entrada Claude de 19:39, snapshot `7f699c4ddc08bdaab24d939c877a053c06a96637`. [Execução](verification.json). Somente dados sintéticos em banco próprio, Docker local fixado, rede interna/sem portas, arquivos temporários individuais e cleanup por ownership confirmado.
 
 69 migrations instaladas; SQL de catálogos, modelos e assinatura aprovado. **17 vetores SQL/formulaError concordaram**, incluindo os três Unicode antes divergentes, C1, BOM, espaço ideográfico e limites de texto acentuado. O contrato agora recusa determinados espaços/controles e pontos fora do BMP, aparando apenas U+0020; não é preservação de toda aceitação anterior do JavaScript. A interface normaliza espaços colados antes da validação; o servidor não normaliza silenciosamente.

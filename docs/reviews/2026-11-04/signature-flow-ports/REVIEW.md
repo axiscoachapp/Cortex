@@ -1,5 +1,7 @@
 # Revisão do módulo de portas de assinatura
 
+**Reteste posterior de `813ebc7`:** os alvos originais receberam correções; a [revisão dirigida do delta](../signature-delta-review/IMPLEMENTATION.md) registra reproduções adicionais de falha antiga em `ambiguous`, upload após limpeza e leitura de `/ByteRange` no motivo. Este documento conserva os achados do snapshot inicial; não é o estado final do delta.
+
 04/11/2026. Artefato `e17d5bf`: `_shared/signatureFlow.ts` e os novos verificadores de `pades.ts`, comparados com o contrato SQL de `20261105100000`. Revisão independente, somente leitura, com reproduções de material sintético em memória; **não foi ensaio de integração do fluxo com banco/Storage/PSC**. Conferi os ramos relevantes no módulo e SQL. Revisão externa dispensada pelo usuário/contexto não interativo.
 
 ## Achados antes dos handlers
