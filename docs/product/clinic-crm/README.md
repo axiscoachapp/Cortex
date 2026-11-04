@@ -42,6 +42,8 @@ A [retificação de vínculos administrativos](CONTACT_LINK_CORRECTIONS.md) tem 
 
 Sua primeira proteção histórica foi implementada: [reservas CRM mantêm o beneficiário original](../../reviews/2026-11-03/appointment-identity/IMPLEMENTATION.md), tanto no banco quanto no modal médico. O ciclo de revogação/reativação de vínculos e seu editor continuam pendentes.
 
+Também foi protegida a [confirmação de vínculos durante o agendamento](../../reviews/2026-11-03/link-confirmation/IMPLEMENTATION.md): novas reservas preservam a relação e a autoria anteriores, sem usar a confirmação como edição do vínculo.
+
 As três migrations foram ensaiadas apenas em banco descartável; nenhuma alteração foi aplicada ao Supabase hospedado. WhatsApp oficial, financeiro, fiscal, métricas e piloto seguem no backlog. Não houve mensagens, emissão de notas ou importação PersonalMed.
 
 As decisões sobre quantidade de números, divisão da equipe, horários, SLAs e regras de cobrança ficam registradas como perguntas de refinamento. Elas não impedem construir primeiro a fundação com dados sintéticos.

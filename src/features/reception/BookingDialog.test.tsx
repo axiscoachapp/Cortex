@@ -1,0 +1,127 @@
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BookingDialog } from './BookingDialog';
+import { confirmSessionExit } from '@/hooks/useUnsavedChanges';
+
+const mocks = vi.hoisted(() => ({ contact: vi.fn(), patients: vi.fn(), link: vi.fn(), book: vi.fn(), close: vi.fn() }));
+const patient = { id: 'patient-a', name: 'Paciente sintético A', dateOfBirth: null };
+const otherPatient = { id: 'patient-b', name: 'Paciente sintético B', dateOfBirth: null };
+const snapshot = { id: 'contact', clinicId: 'clinic', name: 'Contato sintético', phone: '', beneficiaries: [{ ...patient, doctorId: 'doctor', relationship: 'guardian' }] };
+vi.mock('./accessContext', () => ({ useClinicAccess: () => ({ actorId: 'staff', clinic: { id: 'clinic' }, doctors: [{ id: 'doctor', name: 'Médico sintético' }] }) }));
+vi.mock('./api', () => ({ receptionApi: { contact: mocks.contact, patients: mocks.patients, linkPatient: mocks.link, book: mocks.book } }));
+vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
+vi.mock('./ContactSearch', () => ({ ContactSearch: ({ onSelect }: { onSelect: (contact: typeof snapshot) => void }) => <button onClick={() => onSelect(snapshot)}>Selecionar contato sintético</button> }));
+function mount() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><BookingDialog onClose={mocks.close} day="2099-11-03" /></QueryClientProvider>);
+  fireEvent.click(screen.getByRole('button', { name: 'Selecionar contato sintético' }));
+  return client;
+}
+const relationship = () => screen.getByLabelText('Relação do contato com o paciente');
+const confirm = () => fireEvent.click(screen.getByRole('checkbox', { name: /Conferi o paciente/ }));
+describe('reception booking relationship confirmation', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mocks.contact.mockResolvedValue(snapshot);
+    mocks.patients.mockResolvedValue([patient, otherPatient]);
+    mocks.link.mockResolvedValue(true);
+    mocks.book.mockResolvedValue('booking');
+  });
+  it('preserves and locks the relationship of a linked patient when found through search', async () => {
+    mount();
+    await screen.findByRole('button', { name: patient.name });
+    fireEvent.change(screen.getByLabelText('Buscar outro paciente na agenda deste médico'), { target: { value: 'Paciente' } });
+    await screen.findByRole('button', { name: otherPatient.name });
+    const results = screen.getAllByRole('button', { name: patient.name });
+    fireEvent.click(results.at(-1)!);
+    expect(relationship()).toHaveValue('guardian');
+    expect(relationship()).toBeDisabled();
+    confirm();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar agendamento' }));
+    await waitFor(() => expect(mocks.close).toHaveBeenCalledOnce());
+    expect(mocks.link).toHaveBeenCalledWith('contact', 'doctor', patient.id, 'guardian');
+  });
+  it('keeps the confirmed relationship fixed after a link succeeds but the slot fails', async () => {
+    mocks.book.mockRejectedValue(new Error('Horário ocupado'));
+    mount();
+    await screen.findByRole('button', { name: patient.name });
+    fireEvent.change(screen.getByLabelText('Buscar outro paciente na agenda deste médico'), { target: { value: 'Outro' } });
+    fireEvent.click(await screen.findByRole('button', { name: otherPatient.name }));
+    expect(relationship()).toBeEnabled();
+    fireEvent.change(relationship(), { target: { value: 'family' } });
+    confirm();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar agendamento' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Horário ocupado');
+    expect(relationship()).toHaveValue('family');
+    expect(relationship()).toBeDisabled();
+    fireEvent.click(screen.getAllByRole('button', { name: otherPatient.name })[0]);
+    expect(relationship()).toHaveValue('family');
+    expect(relationship()).toBeDisabled();
+    expect(mocks.close).not.toHaveBeenCalled();
+  });
+  it('resets the relationship when switching between new and existing patients', async () => {
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: patient.name }));
+    expect(relationship()).toBeDisabled();
+    fireEvent.click(screen.getByRole('radio', { name: 'Primeiro cadastro com este médico' }));
+    expect(relationship()).toHaveValue('self');
+    expect(relationship()).toBeEnabled();
+    fireEvent.click(screen.getByRole('radio', { name: 'Paciente já cadastrado com este médico' }));
+    fireEvent.click(screen.getByRole('button', { name: patient.name }));
+    expect(relationship()).toHaveValue('guardian');
+    expect(relationship()).toBeDisabled();
+  });
+  it('preserves the selected relationship when a background refetch changes the link', async () => {
+    const client = mount();
+    fireEvent.click(await screen.findByRole('button', { name: patient.name }));
+    mocks.contact.mockResolvedValue({ ...snapshot, beneficiaries: [{ ...snapshot.beneficiaries[0], relationship: 'family' }] });
+    await act(async () => { await client.invalidateQueries({ queryKey: ['reception'] }); });
+    expect(relationship()).toHaveValue('guardian');
+    mocks.link.mockRejectedValue(new Error('Confira o cadastro antes de reservar.'));
+    confirm();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar agendamento' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Confira o cadastro');
+    expect(mocks.book).not.toHaveBeenCalled();
+  });
+  it('blocks session exit until the in-flight confirmation finishes', async () => {
+    let finish: (value: boolean) => void;
+    mocks.link.mockReturnValue(new Promise<boolean>((resolve) => { finish = resolve; }));
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: patient.name }));
+    confirm();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar agendamento' }));
+    await screen.findByRole('button', { name: 'Confirmando…' });
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    expect(confirmSessionExit()).toBe(false);
+    await act(async () => { finish!(true); });
+    await waitFor(() => expect(mocks.close).toHaveBeenCalledOnce());
+    alert.mockRestore();
+  });
+  it('keeps a successful link when an older contact refetch resolves after a slot failure', async () => {
+    let finishLink!: (value: boolean) => void;
+    let finishRead!: (value: typeof snapshot) => void;
+    mocks.link.mockReturnValue(new Promise<boolean>((resolve) => { finishLink = resolve; }));
+    mocks.book.mockRejectedValue(new Error('Horário ocupado'));
+    const client = mount();
+    await screen.findByRole('button', { name: patient.name });
+    fireEvent.change(screen.getByLabelText('Buscar outro paciente na agenda deste médico'), { target: { value: 'Outro' } });
+    fireEvent.click(await screen.findByRole('button', { name: otherPatient.name }));
+    fireEvent.change(relationship(), { target: { value: 'family' } });
+    confirm();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar agendamento' }));
+    await waitFor(() => expect(mocks.link).toHaveBeenCalledOnce());
+    mocks.contact.mockReturnValue(new Promise<typeof snapshot>((resolve) => { finishRead = resolve; }));
+    let refresh!: Promise<void>;
+    act(() => { refresh = client.invalidateQueries({ queryKey: ['reception', 'staff', 'contact', 'contact'] }); });
+    await waitFor(() => expect(mocks.contact).toHaveBeenCalledTimes(2));
+    await act(async () => { finishLink(true); });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Horário ocupado');
+    await act(async () => { finishRead(snapshot); await refresh; });
+    const cached = client.getQueryData<typeof snapshot>(['reception', 'staff', 'contact', 'contact']);
+    expect(cached?.beneficiaries.some((p) => p.id === otherPatient.id)).toBe(true);
+    fireEvent.click(screen.getAllByRole('button', { name: otherPatient.name })[0]);
+    expect(relationship()).toHaveValue('family');
+    expect(relationship()).toBeDisabled();
+  });
+});

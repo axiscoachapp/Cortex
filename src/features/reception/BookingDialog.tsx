@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useClinicAccess } from './accessContext';
@@ -44,6 +44,7 @@ export function BookingDialog({
   const [name, setName] = useState('');
   const [birth, setBirth] = useState('');
   const [relationship, setRelationship] = useState<'self' | 'guardian' | 'family' | 'other'>('self');
+  const [relationshipLocked, setRelationshipLocked] = useState(false);
   const [type, setType] = useState<BookingDetails['type']>('retorno');
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -52,6 +53,7 @@ export function BookingDialog({
   const guard = useUnsavedChanges(
     touched,
     'Há um agendamento não confirmado. Deseja sair e descartar o preenchimento?',
+    { blocking: busy },
   );
   const snapshot = useQuery({
     queryKey: ['reception', access?.actorId, 'contact', contact?.id],
@@ -71,7 +73,7 @@ export function BookingDialog({
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (busy || !confirmed || !contact || !doctor || !access?.clinic) return;
+    if (busy || !confirmed || !contact || !doctor || !access?.clinic || !snapshot.data || snapshot.isFetching || snapshot.isError) return;
     setBusy(true);
     setError(null);
     try {
@@ -89,7 +91,22 @@ export function BookingDialog({
         Object.assign(details, { beneficiaryName: name.trim(), dateOfBirth: birth || null, relationship });
       if (new Date(details.endTime) <= new Date(details.startTime))
         throw new Error('O término deve ser depois do início.');
-      if (mode === 'existing') await receptionApi.linkPatient(contact.id, doctor, patient!.id, relationship);
+      if (mode === 'existing') {
+        await receptionApi.linkPatient(contact.id, doctor, patient!.id, relationship);
+        // This confirmation may have committed even if the subsequent slot fails.
+        setRelationshipLocked(true);
+        await client.cancelQueries({ queryKey: ['reception', access.actorId, 'contact', contact.id], exact: true });
+        client.setQueryData<NonNullable<typeof snapshot.data>>(
+          ['reception', access.actorId, 'contact', contact.id],
+          (current) => current && ({
+            ...current,
+            beneficiaries: [
+              ...current.beneficiaries.filter((p) => p.id !== patient!.id || p.doctorId !== doctor),
+              { ...patient!, doctorId: doctor, relationship },
+            ],
+          }),
+        );
+      }
       await receptionApi.book(access.clinic.id, details, request(details));
       await client.invalidateQueries({ queryKey: ['reception'] });
       await client.invalidateQueries({ queryKey: ['appointments'] });
@@ -102,7 +119,11 @@ export function BookingDialog({
     }
   }
   const selectPatient = (value: typeof patient) => {
+    if (value && (!snapshot.data || snapshot.isFetching || snapshot.isError)) return;
+    const link = snapshot.data?.beneficiaries.find((p) => p.id === value?.id && p.doctorId === doctor);
     setPatient(value);
+    setRelationship(link?.relationship ?? 'self');
+    setRelationshipLocked(!!link);
     edited();
   };
   return (
@@ -115,6 +136,9 @@ export function BookingDialog({
       <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Confirmar agendamento</DialogTitle>
+          <DialogDescription>
+            Confira o paciente, a relação do contato e o horário antes de reservar.
+          </DialogDescription>
         </DialogHeader>
         <p className="text-xs text-muted-foreground">
           A reserva será feita após sua conferência. Todos os horários usam o fuso de São Paulo.
@@ -145,7 +169,7 @@ export function BookingDialog({
                 value={doctor}
                 onChange={(e) => {
                   setDoctor(e.target.value);
-                  setPatient(null);
+                  selectPatient(null);
                   setSearch('');
                   edited();
                 }}
@@ -179,6 +203,7 @@ export function BookingDialog({
                       checked={mode === 'existing'}
                       onChange={() => {
                         setMode('existing');
+                        selectPatient(null);
                         edited();
                       }}
                     />
@@ -191,6 +216,7 @@ export function BookingDialog({
                       checked={mode === 'new'}
                       onChange={() => {
                         setMode('new');
+                        selectPatient(null);
                         setType('novo');
                         edited();
                       }}
@@ -207,10 +233,8 @@ export function BookingDialog({
                           type="button"
                           key={p.id}
                           aria-pressed={patient?.id === p.id}
-                          onClick={() => {
-                            selectPatient(p);
-                            setRelationship(p.relationship);
-                          }}
+                          disabled={snapshot.isFetching || snapshot.isError}
+                          onClick={() => selectPatient(p)}
                           className={`block text-left rounded-lg border p-3 w-full text-sm ${patient?.id === p.id ? 'border-primary bg-primary/5' : ''}`}
                         >
                           {p.name}
@@ -238,6 +262,7 @@ export function BookingDialog({
                         key={p.id}
                         type="button"
                         aria-pressed={patient?.id === p.id}
+                        disabled={!snapshot.data || snapshot.isFetching || snapshot.isError}
                         className={`block text-left rounded-lg border p-3 w-full text-sm ${patient?.id === p.id ? 'border-primary bg-primary/5' : ''}`}
                         onClick={() => selectPatient(p)}
                       >
@@ -295,6 +320,8 @@ export function BookingDialog({
                   <Label htmlFor={field + 'relationship'}>Relação do contato com o paciente</Label>
                   <select
                     id={field + 'relationship'}
+                    disabled={relationshipLocked}
+                    aria-describedby={relationshipLocked ? field + 'relationship-hint' : undefined}
                     className="block w-full border rounded-md p-2 text-sm bg-background"
                     value={relationship}
                     onChange={(e) => {
@@ -307,6 +334,11 @@ export function BookingDialog({
                     <option value="family">Familiar</option>
                     <option value="other">Outra relação confirmada</option>
                   </select>
+                  {relationshipLocked && (
+                    <p id={field + 'relationship-hint'} className="text-xs text-muted-foreground mt-1">
+                      Relação já confirmada. Este agendamento preserva o vínculo registrado.
+                    </p>
+                  )}
                 </div>
               </>
             )}
@@ -398,7 +430,7 @@ export function BookingDialog({
             <Button
               type="submit"
               disabled={
-                busy || !confirmed || !contact || !doctor || snapshot.isError || (mode === 'existing' && !patient)
+                busy || !confirmed || !contact || !doctor || !snapshot.data || snapshot.isFetching || snapshot.isError || (mode === 'existing' && !patient)
               }
             >
               {busy ? 'Confirmando…' : 'Confirmar agendamento'}

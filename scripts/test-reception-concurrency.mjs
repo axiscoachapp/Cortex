@@ -123,6 +123,13 @@ export async function testReceptionConcurrency(container) {
   await contest(booking('13:00'), booking('13:00'), '40001', true);
   assert.equal(sync(`select count(*) from public.appointments where clinic_id='${clinic}'`), '2');
   assert.equal(sync(`select count(*) from public.patients where user_id='${admin}'`), '2');
+  const confirmationPatient = 'd2000000-0000-4000-8000-000000000009';
+  sync(`insert into public.patients(id,user_id,name,status) values('${confirmationPatient}','${admin}','Synthetic link race','novo');`);
+  const confirmation = (relation) => `select public.reception_link_patient('${contact}','${admin}','${confirmationPatient}','${relation}')`;
+  await contest(confirmation('guardian'), confirmation('family'), '22023');
+  await contest(confirmation('guardian'), confirmation('guardian'), null);
+  assert.equal(sync(`select relationship||'|'||confirmed_by from public.patient_contact_links where contact_id='${contact}' and patient_id='${confirmationPatient}'`), 'guardian|' + staffA);
+  assert.equal(sync(`select count(*) from public.reception_audit where resource_id='${contact}' and action='beneficiary_confirmed' and details->>'patientId'='${confirmationPatient}'`), '1');
   const doctor = 'd1000000-0000-4000-8000-000000000004';
   sync(`insert into auth.users(id,email) values('${doctor}','race-doctor@example.invalid');
    begin;${claims(admin)}select public.invite_clinic_doctor('${clinic}','race-doctor@example.invalid');commit;
@@ -171,6 +178,6 @@ export async function testReceptionConcurrency(container) {
     'Contact correction was overwritten',
   );
   process.stdout.write(
-    'Passed reception concurrency: claim, booking, repeatable-read booking, no orphan stubs, route/revoke, route/draft, contact correction\n',
+    'Passed reception concurrency: claim, booking, repeatable-read booking, no orphan stubs, link confirmation, route/revoke, route/draft, contact correction\n',
   );
 }

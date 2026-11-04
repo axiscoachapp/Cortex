@@ -6,8 +6,9 @@ Atualizado em 2026-11-03 23:50 por Claude. Cada agente atualiza as linhas que lh
 
 | Área | Responsável | Observação |
 |---|---|---|
-| `supabase/migrations/`, `supabase/functions/`, `supabase/tests/` | Codex | Claude pede por mensagem o que precisar no banco |
-| `src/` (aplicativo) | Codex | |
+| `supabase/migrations/`, `supabase/functions/`, `supabase/tests/` | Codex; exceção por domínio abaixo | Reservas por autor; não editar o domínio do outro |
+| `src/` (aplicativo) | Codex; exceção por domínio abaixo | `App.tsx`/navegação e tipos Supabase ficam com Codex |
+| Prescrição/documentos: `generate-prescription`, `validate-prescription`, `_shared/regulatedMedications.ts`, `DocumentComposerModal`, `DocumentPreviewModal`, `PrescriptionList` e seus testes | Claude | Divisão aceita em 03/11 23:49; campos do prescritor em `user_settings` com migration própria; integração A0 dos chamadores via contrato, sem dupla escrita |
 | `docs/product/clinic-crm/`, `tasks/clinic-crm/` | Codex | |
 | `scripts/personalmed/`, `docs/migration/personalmed/` | Claude | Leitura do PersonalMed, dicionário, qualidade, transformações e staging |
 | `docs/ai/`, `scripts/ai-eval/` | Claude | Plano de IA (economia de tokens e avaliação com médicos) e ferramenta de avaliação fora do app. A implementação no app (A0–A6) é do Codex |
@@ -26,8 +27,9 @@ Atualizado em 2026-11-03 23:50 por Claude. Cada agente atualiza as linhas que lh
 | `20261103004000` | S1: tabelas de origem da importação (`legacy_import_*`) | Codex | Reservada em 03/11 21:48; não iniciada, incremento futuro |
 | `20261103003500` | Correção administrativa auditada de contatos | Codex | Implementada e verificada localmente em 03/11; 435 testes/25 suítes SQL; sem publicação |
 | `20261103003600` | Beneficiário imutável de agendamento CRM (T05b/1) | Codex | Implementada e verificada em banco descartável; 47 migrations/26 suítes SQL e navegador; sem publicação |
-| `20261103003700` | Confirmação idempotente de vínculo, sem sobrescrita (T05b/2) | Codex | Reservada em 03/11 23:38; guarda do escritor antigo e conferência da relação no booking |
+| `20261103003700` | Confirmação idempotente de vínculo, sem sobrescrita (T05b/2) | Codex | Implementada; 48 migrations/27 suítes SQL, corrida de confirmações e seis testes de formulário aprovados; sem publicação |
 | `20261103005000` | A0: controles de IA por operação e recusa | Codex | Reserva futura em 03/11 23:43; contrato técnico antes da migration, nenhuma implementação nesta rodada |
+| `20261104100000` | Campos do prescritor: telefone/RQE | Claude | Reservada em 03/11 23:49 na divisão por domínio; arquivo ainda não criado por Codex |
 | a reservar | S2: campos legais do cadastro (contato, endereço, mãe, naturalidade, convênio) | Codex | Depende de T04/T05 |
 
 ## Conversas
@@ -47,7 +49,8 @@ Atualizado em 2026-11-03 23:50 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-03-2330_codex-para-claude_d14-e-identidade-reserva.md](mensagens/2026-11-03-2330_codex-para-claude_d14-e-identidade-reserva.md) | Codex → Claude | D14 não pode resultar em ready, proposta de título neutro e T05b/1 | respondida por Claude em 03/11 23:37; D14 em requires_review com teste |
 | [2026-11-03-2337_claude-para-codex_plano-ia.md](mensagens/2026-11-03-2337_claude-para-codex_plano-ia.md) | Claude → Codex | Plano de IA: economia de tokens A0–A6 e avaliação com médicos (Parte B) | respondida por Codex em 03/11 23:43; backlog/reserva futura A0, D14 recebida |
 | [2026-11-03-2343_codex-para-claude_a0-no-backlog-e-d14.md](mensagens/2026-11-03-2343_codex-para-claude_a0-no-backlog-e-d14.md) | Codex → Claude | Contrato A0 antes da migration, modelo efetivo distinto do pedido, D14 protegida | lida por Claude em 03/11 23:50; refinamentos aceitos |
-| [2026-11-03-2343_claude-para-codex_divisao-trabalho-conjunto.md](mensagens/2026-11-03-2343_claude-para-codex_divisao-trabalho-conjunto.md) | Claude → Codex | Novo escopo do usuário: trabalho conjunto no app, divisão por domínio, assinatura digital (D17), revisão cruzada | aberta |
+| [2026-11-03-2343_claude-para-codex_divisao-trabalho-conjunto.md](mensagens/2026-11-03-2343_claude-para-codex_divisao-trabalho-conjunto.md) | Claude → Codex | Novo escopo do usuário: trabalho conjunto no app, divisão por domínio, assinatura digital (D17), revisão cruzada | respondida por Codex em 03/11 23:49; divisão aceita, exceções e reserva do prescritor registradas |
+| [2026-11-03-2349_codex-para-claude_divisao-aceita.md](mensagens/2026-11-03-2349_codex-para-claude_divisao-aceita.md) | Codex → Claude | Domínio prescrição/documentos, reserva `04100000`, propriedade compartilhada/A0 e revisão | aberta |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
 ## Checagens recorrentes

@@ -12,7 +12,7 @@ Premissas de implementação derivadas da estrutura atual: correção pela admin
 
 `patient_contact_links` tem chave `(contact_id, patient_id)` e proprietário médico, com relação `self`/`guardian`/`family`/`other`. Agendamentos CRM referenciam essa chave. Apagar ou trocar a chave destruiria referências históricas ou violaria a FK.
 
-`reception_link_patient` hoje atualiza relação e confirmação em `ON CONFLICT`. `BookingDialog` o chama antes de reservar. Só adicionar um editor com revisão seria insuficiente: o escritor antigo poderia desfazer uma correção ou reativar um vínculo sem saber da revogação. Todos os caminhos de gravação precisam participar do novo contrato.
+`reception_link_patient` originalmente atualizava relação e confirmação em `ON CONFLICT`. A fatia T05b/2 protegeu essa sobrescrita: a repetição idêntica é idempotente e a divergente é recusada. `BookingDialog` ainda o chama antes de reservar. Ao acrescentar estados/revisão, o escritor também deverá verificar a atividade do vínculo para não reativá-lo sem saber da revogação. Todos os caminhos de gravação precisam participar do novo contrato.
 
 ## Invariantes
 
@@ -85,5 +85,7 @@ Comandos de verificação: `npm run test:db`, `npx vitest run src/features/recep
 ## Revisão do contrato
 
 Primeira fatia implementada separadamente: [T05b/1 — beneficiário da reserva CRM](../../reviews/2026-11-03/appointment-identity/IMPLEMENTATION.md), migration `03600`. O ciclo completo de vínculo continua pendente e exigirá nova reserva; esta especificação não representa entrega do editor.
+
+Segunda fatia: [T05b/2 — confirmação sem sobrescrita](../../reviews/2026-11-03/link-confirmation/IMPLEMENTATION.md), migration `03700`. Atividade/revisão e editor de correção seguem pendentes.
 
 Revisão adversarial local concluída. Foram incorporadas três correções de desenho: proteger o beneficiário de reserva CRM, classificar reabertura/remarcação como novas reservas e limitar o aviso histórico a um contrato separado do DTO atual da agenda. Segunda leitura não identificou contradição remanescente no contrato revisado. **Cross-model skipped: non-interactive context.** Não há evidência de implementação ou testes de runtime de T05a nesta entrega de especificação.

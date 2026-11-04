@@ -56,6 +56,7 @@ Alvos futuros abaixo são sugestões de planejamento; os alvos implementados for
   - Aceite: relação/revogação/reativação por revisão; nenhuma confirmação antiga reativa implicitamente; novas reservas/reaberturas/remarcações exigem vínculo ativo; histórico e encerramento clínico preservados; paciente de CRM não é remapeado.
   - Verificar: atores/MFA, duas conexões reais, FK histórica, regra de órfãos e formatos estritos de leitura. Migration precisa de reserva prévia no ESTADO.
   - **T05b/1 concluída:** beneficiário imutável de reserva CRM, guarda contra escrita direta/privilegiada e orientação no modal médico; layout sem overflow a 150%. [Evidências](../../docs/reviews/2026-11-03/appointment-identity/IMPLEMENTATION.md). Revogação/reativação e editor de vínculo seguem pendentes; não considerar T05b inteira entregue.
+  - **T05b/2 concluída:** confirmação idêntica preserva relação/autor/data e não duplica auditoria; divergência recusada e formulário preservado na busca/falha parcial/refetch. [Evidências](../../docs/reviews/2026-11-03/link-confirmation/IMPLEMENTATION.md). O ciclo completo continua pendente.
 
 - [x] **T06 — Criar atendimento na fila e assumir sem disputa.** Dep.: T04.
   - Aceite: entrada manual tem estado/origem; assumir é atômico e auditado; uma responsabilidade atual por caso.
@@ -174,3 +175,9 @@ Alvos futuros abaixo são sugestões de planejamento; os alvos implementados for
   - Alvos: `scripts/clinic-crm-browser.mjs`, `scripts/fixtures/clinic-crm-api.mjs`, `docs/runbooks/clinic-crm-launch.md`, `docs/product/clinic-crm/PILOT_REPORT.md` (4).
 
 **Checkpoint final:** aceite operacional da clínica e reconciliação fiscal. Nenhum checkbox futuro deve ser marcado só por tela pronta, código gerado ou teste que simula autorização de fornecedor.
+
+## Fundação de IA coordenada com Claude
+
+- [ ] **T26 — A0: contrato e controles independentes de provedor.** Plano de origem: `docs/ai/PLANO_IA_EFICIENCIA_E_AVALIACAO.md` (Claude). Reserva futura `05000`; sem migration implementada.
+  - Primeiro definir entradas/saídas por tarefa, modelo pedido/efetivo, medição versus estimativa, desligamento/orçamento e verificação de recusa no servidor/worker. Sem texto clínico em logs, sem ampliar leitura da recepção nem inferir identidade entre médicos.
+  - Verificar: recusa/desligamento concorrentes com chamada/retry, metadados ausentes, exportação/exclusão, posse/compartilhamento explícito e proveniência. D13/D15/D16 e escolha com os médicos continuam pendentes; não trocar modelo/provedor, habilitar uso real, disparar avaliação externa ou iniciar síntese A1 por esta tarefa de contrato.

@@ -324,7 +324,12 @@ export async function startReceptionFixture() {
             .filter((p) => p.name.toLowerCase().includes(input.p_search.toLowerCase()))
             .map(({ id, name, dateOfBirth }) => ({ id, name, dateOfBirth })),
         );
-      if (rpc === 'reception_link_patient') return send(true);
+      if (rpc === 'reception_link_patient') {
+        const link = contact?.beneficiaries.find((p) => p.id === input.p_patient && p.doctorId === input.p_doctor);
+        if (link && link.relationship !== input.p_relationship)
+          return error('22023', 'Este vínculo já foi confirmado com outra relação. Confira o cadastro antes de reservar.');
+        return send(true);
+      }
       if (rpc === 'reception_appointments')
         return send({
           items: appointments.filter(

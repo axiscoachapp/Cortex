@@ -97,7 +97,19 @@ try {
   const dialog = a.getByRole('dialog');
   const confirm = dialog.getByRole('button', { name: 'Confirmar agendamento', exact: true });
   await expect(confirm).toBeDisabled();
-  await dialog.getByRole('button', { name: /^Paciente Sintético/ }).click();
+  await dialog.getByLabel('Buscar outro paciente na agenda deste médico').fill('Paciente');
+  await expect(dialog.getByRole('button', { name: /^Paciente Sintético/ })).toHaveCount(2);
+  await dialog.getByRole('button', { name: /^Paciente Sintético/ }).last().click();
+  await expect(dialog.getByLabel('Relação do contato com o paciente')).toHaveValue('guardian');
+  await expect(dialog.getByLabel('Relação do contato com o paciente')).toBeDisabled();
+  await expect(dialog.getByText('Relação já confirmada. Este agendamento preserva o vínculo registrado.')).toBeVisible();
+  for (const width of [390, 768, 1280, 1920]) {
+    await a.setViewportSize({ width, height: 1000 });
+    if (await dialog.evaluate((element) => element.scrollWidth > element.clientWidth + 1))
+      throw new Error('Booking dialog overflow at ' + width);
+    await a.screenshot({ path: resolve(artifacts, 'link-confirmation-' + width + '.png'), fullPage: true, animations: 'disabled' });
+  }
+  checks.push('linked patient chosen through search keeps guardian relation fixed at 150% for four widths');
   await expect(confirm).toBeDisabled();
   await dialog.getByRole('checkbox', { name: /Conferi o paciente/ }).check();
   await expect(confirm).toBeEnabled();
@@ -114,6 +126,8 @@ try {
   await dialog.getByRole('checkbox', { name: /Conferi o paciente/ }).check();
   await dialog.getByRole('button', { name: 'Confirmar agendamento', exact: true }).click();
   await expect(dialog.getByText('Horário ocupado ou bloqueado. Escolha outro intervalo.')).toBeVisible();
+  await expect(dialog.getByLabel('Relação do contato com o paciente')).toHaveValue('guardian');
+  await expect(dialog.getByLabel('Relação do contato com o paciente')).toBeDisabled();
   await a.keyboard.press('Escape');
   checks.push('occupied slot preserves form and shows actionable conflict');
   await a.getByRole('button', { name: 'Remarcar', exact: true }).click();
