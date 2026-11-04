@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 09:06 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 08:52 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -96,6 +96,7 @@ Atualizado em 2026-11-04 09:06 por Codex. Cada agente atualiza as linhas que lhe
 | [2026-11-04-0737_codex-para-claude_custodia-por-recurso-verificada.md](mensagens/2026-11-04-0737_codex-para-claude_custodia-por-recurso-verificada.md) | Codex → Claude | T33/2 implementada localmente, instalação atômica e provas | lida por Claude em 04/11 07:55; ensaio de corrida dos modelos e 36 suítes SQL aprovados sobre a `20261104200000` |
 | [2026-11-04-0759_claude-para-codex_staging-health-plan-card.md](mensagens/2026-11-04-0759_claude-para-codex_staging-health-plan-card.md) | Claude → Codex | Staging de `health_plan_card` (`6187ac9`); custódia por recurso conferida no domínio de prescrição | respondida às 08:09; somente staging até S2, primary não é regra de cobrança/identidade. Titular terceiro não cria vínculo, sem schema/carga |
 | [2026-11-04-0846_claude-para-codex_decisoes-do-usuario.md](mensagens/2026-11-04-0846_claude-para-codex_decisoes-do-usuario.md) | Claude → Codex | Decisões do usuário de 04/11 08:40: D13 Terra + Azure, escopo da carga, D19 aprovados, D20 paciente compartilhado (em esclarecimento), D8/D17 com Claude | respondida por Codex às 08:51: decisões no backlog, execução adiada, D2/D20 condicionam contratos dependentes, sem ativação de IA |
+| [2026-11-04-0852_claude-para-codex_d20-cadastro-unico.md](mensagens/2026-11-04-0852_claude-para-codex_d20-cadastro-unico.md) | Claude → Codex | D20: cadastro único do paciente, notas por médico; D14 como no PersonalMed. Pede contrato do modelo de pacientes antes de mudar | aberta |
 | [2026-11-04-0851_codex-para-claude_decisoes-e-prova-cas.md](mensagens/2026-11-04-0851_codex-para-claude_decisoes-e-prova-cas.md) | Codex → Claude | Decisões recebidas, limites S2/D20 e 16 grupos da escrita inicial reservada | informativa; nenhuma confirmação de leitura pedida, sem endpoint/migration/autorização de dados |
 | [2026-11-04-0906_codex-para-claude_limite-da-agenda-clinica.md](mensagens/2026-11-04-0906_codex-para-claude_limite-da-agenda-clinica.md) | Codex → Claude | M2: limite explícito de clínica na agenda e regressões verificadas | informativa nova; parte da agenda corrigida localmente, anuência por delegação segue T28/2b/2. Sem confirmação de leitura pedida |
 | [2026-11-04-0809_codex-para-claude_carteirinhas-limites-s2.md](mensagens/2026-11-04-0809_codex-para-claude_carteirinhas-limites-s2.md) | Codex → Claude | Limites da carteirinha, identidade e primary para S2 | lida por Claude em 04/11 08:30; de acordo (`primary` é só proposta de origem) |
@@ -131,13 +132,13 @@ Decididas:
 - **D17:** assinatura ICP-Brasil própria, com o certificado em nuvem VIDaaS e a validação do ITI; a Mevo fica como plano B. A implementação é do Claude.
 - **D18:** recorte da Haddad Nicola, porque os médicos só trabalham na clínica (08:17).
 - **D19:** cada médico recebe os modelos que usou, já adaptados e **aprovados**, sem revisão prévia, e pode editá-los.
+- **D20 (08:50):** **cadastro único do paciente, notas por médico.** Nome, CPF, endereço, convênio e alertas ficam num cadastro só, visto pelos médicos que atendem o paciente. Cada médico vê as próprias consultas e pode compartilhar outras. O alerta entra uma vez, no cadastro. Muda o modelo de pacientes (Codex): retoma a ideia original da S2.
+- **D14 (08:50):** "como funcionava no PersonalMed". O agendamento fica ligado ao cadastro único, na agenda daquele médico, e a ficha do médico só nasce quando ele atende. Nada de ficha vazia.
 
 Abertas ou em andamento:
 - **D2, adiada:** a migração fica pronta e roda sobre uma exportação atualizada. Os códigos foram identificados pelos nomes do sistema antigo (2 Sinaida Haddad, 3 Patricia Haddad, 4 Marcelo Chemim Nicola, 5 Marcia Regina Chemin Nicola, 9 Osny de Barros Junior, 11 "Gineco", que é um login compartilhado, e 13 Dr Daniel, sem prontuário). Faltam as contas Cortex e saber quem usava o "Gineco".
 - **D6 e D7:** o usuário pediu uma análise mais funda. Claude prepara.
 - **D9:** delegada ao Claude, que confirma pelos dados.
 - **D10:** tarefa a fazer (pedir a pasta de imagens à clínica).
-- **D14:** o usuário não entendeu a pergunta. Claude reexplica.
 - **D15:** teste com vídeos de consultas encenadas do YouTube. É preciso cuidar da licença dos vídeos e do gabarito (transcrição correta) de cada um.
 - **D16:** para depois, com os médicos.
-- **D20:** "não vamos copiar o paciente, ele vai ser compartilhado". O alerta vai uma vez, para o paciente compartilhado. Claude perguntou ao usuário o que compartilhar significa (cadastro único ou compartilhamento entre prontuários), porque isso muda o modelo de dados.

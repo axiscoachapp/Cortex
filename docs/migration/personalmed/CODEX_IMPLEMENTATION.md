@@ -643,8 +643,9 @@ Navegador: 390, 768, 1280 e 1920 px na escala de 150%, como já está definido.
 | D8 | Controlados no Cortex | **Decidida:** liberar. Vale para a Receita de Controle Especial (listas C1 e C5). As listas A e B continuam em notificação de receita de talão numerado, que o software não emite. |
 | D9 | Confirmar inferências | **Delegada ao Claude:** confirmar pelos próprios dados. |
 | D10 | Pasta externa de imagens (172) | **Tarefa a fazer:** pedir à clínica. |
+| D14 | Agendamento com médico que não tem ficha do paciente (9.900) | **Decidida (08:50):** "como funcionava no PersonalMed". O agendamento fica ligado ao cadastro único do paciente, na agenda daquele médico, e a ficha (as notas) do médico só nasce quando ele atende. Nada de ficha vazia. |
 | D19 | Quem recebe os modelos da clínica | **Decidida:** cada médico recebe os modelos que usou em 2025–2026, já adaptados ao formato do Cortex, como **aprovados** (sem revisão prévia) e editáveis. |
-| D20 | Alerta "Atenção" de pessoa com mais de um médico | **Resposta do usuário:** "não vamos copiar o paciente, ele vai ser compartilhado". O alerta vai uma vez, para o paciente compartilhado. O modelo de compartilhamento (cadastro único ou compartilhamento entre prontuários) está em esclarecimento. |
+| D20 | Alerta "Atenção" de pessoa com mais de um médico | **Decidida (08:50):** **cadastro único do paciente, notas por médico.** Nome, CPF, endereço, convênio e alertas ficam num cadastro só, visto pelos médicos que atendem o paciente. Cada médico vê as próprias consultas e pode compartilhar outras. O alerta entra uma vez, no cadastro, sem cópias. |
 | D11 | Hospedagem e região | **Decidida em 03/11:** Supabase em sa-east-1 (São Paulo), projeto novo só da clínica, plano Pro com backup diário (opção B, sem PITR). O de teste em us-west-2 não recebe dados reais. Antes da carga real: `pg_dump` completo e reavaliar o PITR durante a migração. |
 
 ---
