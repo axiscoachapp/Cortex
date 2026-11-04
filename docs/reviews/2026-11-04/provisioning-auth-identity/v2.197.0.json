@@ -34,7 +34,7 @@
   "sources": [
     {
       "path": "scripts/test-initial-password-auth.mjs",
-      "sha256": "f0f265a45b9da54ad6e8ec3af842423b60b0238dca77b98e0f46b765442d3c00"
+      "sha256": "7e7834e89d47eb3504a8b6993d03d6d982ad42ffbf32e1ae8752cee8c0795dbe"
     },
     {
       "path": "scripts/test-provisioning-auth-identity.mjs",

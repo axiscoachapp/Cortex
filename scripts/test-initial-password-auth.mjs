@@ -12,12 +12,14 @@ const bindingMode = process.argv.includes('--binding');
 const linkMode = process.argv.includes('--link');
 const setupMode = process.argv.includes('--setup-cas');
 const identityMode = process.argv.includes('--provision-identity');
-assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding', '--link', '--setup-cas','--provision-identity'].includes(arg)), 'Unknown lab option');
-assert.ok([bindingMode, linkMode, setupMode,identityMode].filter(Boolean).length <= 1, 'Choose one credential lab');
-assert.ok(!(cleanupCheck && (process.argv.includes('--all') || bindingMode || linkMode || setupMode || identityMode)), 'Choose normal lab or cleanup diagnostic');
+const intentMode = process.argv.includes('--provision-intent');
+assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding', '--link', '--setup-cas','--provision-identity','--provision-intent'].includes(arg)), 'Unknown lab option');
+assert.ok([bindingMode, linkMode, setupMode,identityMode,intentMode].filter(Boolean).length <= 1, 'Choose one credential lab');
+assert.ok(!(cleanupCheck && (process.argv.includes('--all') || bindingMode || linkMode || setupMode || identityMode || intentMode)), 'Choose normal lab or cleanup diagnostic');
 const identityPaths = ['scripts/test-initial-password-auth.mjs','scripts/test-provisioning-auth-identity.mjs','supabase/tests/prototypes/provisioning-auth-identity.sql'];
 const identityHash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
-const identitySources = identityMode ? identityPaths.map(path => ({path,sha256:identityHash(path)})) : [];
+const intentPaths = ['scripts/test-initial-password-auth.mjs','scripts/test-provisioning-human-intent.mjs','supabase/tests/prototypes/provisioning-human-intent.sql','supabase/tests/prototypes/provisioning-auth-identity.sql'];
+const identitySources = (identityMode ? identityPaths : intentMode ? intentPaths : []).map(path => ({path,sha256:identityHash(path)}));
 const postgresImage = 'pgvector/pgvector:pg16';
 const restImage = 'public.ecr.aws/supabase/postgrest:v16.5';
 function required(result, stage) {
@@ -151,7 +153,7 @@ for (const { version, fault } of runs) {
       Object.keys(authEnv).flatMap(key => ['--env', key]), [], authEnv);
     const auth = 'http://' + names.auth + ':9999';
     await ready(auth + '/health', 'Auth');
-    if (!identityMode) sql(readFileSync('supabase/tests/prototypes/initial-password-auth.sql', 'utf8'));
+    if (!identityMode && !intentMode) sql(readFileSync('supabase/tests/prototypes/initial-password-auth.sql', 'utf8'));
     const restartAuth = async extraEnv => {
       required(docker(['rm', '--force', names.auth]), 'owned Auth restart');
       const nextEnv = { ...authEnv, ...extraEnv };
@@ -174,8 +176,9 @@ for (const { version, fault } of runs) {
       return transport({ url: base + path, method, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         ...(body ? { body: JSON.stringify(body) } : {}) });
     };
-    if (bindingMode || linkMode || setupMode || identityMode) {
-      const exercise = identityMode ? (await import('./test-provisioning-auth-identity.mjs')).exerciseProvisioningAuthIdentity
+    if (bindingMode || linkMode || setupMode || identityMode || intentMode) {
+      const exercise = intentMode ? (await import('./test-provisioning-human-intent.mjs')).exerciseProvisioningHumanIntent
+        : identityMode ? (await import('./test-provisioning-auth-identity.mjs')).exerciseProvisioningAuthIdentity
         : bindingMode ? (await import('./test-credential-binding.mjs')).exerciseCredentialBinding
         : setupMode ? (await import('./test-initial-setup-cas.mjs')).exerciseInitialSetupCas
         : (await import('./test-single-use-setup.mjs')).exerciseSingleUseSetup;
@@ -368,7 +371,7 @@ for (const { version, fault } of runs) {
   }
   if (failure === expectedFault) { process.stdout.write(JSON.stringify({ syntheticOnly: true, diagnostic: fault, cleanupVerified: true }) + '\n'); continue; }
   if (failure) throw failure;
-  if (identityMode) {
+  if (identityMode || intentMode) {
     for (const source of identitySources) assert.equal(identityHash(source.path),source.sha256,'Identity lab source changed during execution');
     report.sources = identitySources;
     report.postgresImage = postgresImage; report.restImage = restImage;
@@ -377,7 +380,7 @@ for (const { version, fault } of runs) {
   report.cleanupVerified = true;
   report.localDockerEndpoint = dockerEndpoint.startsWith('npipe:') ? 'verified local named pipe' : 'verified local Unix socket';
   report.network = 'owned internal network, no published ports or external route';
-  const artifacts = resolve('docs/reviews/2026-11-04/' + (identityMode ? 'provisioning-auth-identity' : setupMode ? 'initial-setup-cas' : linkMode ? 'single-use-setup' : bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
+  const artifacts = resolve('docs/reviews/2026-11-04/' + (intentMode ? 'provisioning-human-intent' : identityMode ? 'provisioning-auth-identity' : setupMode ? 'initial-setup-cas' : linkMode ? 'single-use-setup' : bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
   mkdirSync(artifacts, { recursive: true });
   writeFileSync(resolve(artifacts, version + '.json'), JSON.stringify(report, null, 2) + '\n');
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');

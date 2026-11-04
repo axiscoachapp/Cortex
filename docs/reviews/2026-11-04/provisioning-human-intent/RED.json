@@ -1,0 +1,34 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "redOnly": true,
+  "authVersion": "v2.197.0",
+  "nativeTotpAal2": true,
+  "nativeBirthReceipt": true,
+  "nativeLogoutStatus": 204,
+  "remainingNativeSessionCount": 0,
+  "observed": "Revoked native session accepted by cached-context candidate",
+  "confirmationPersisted": false,
+  "expected": "42501 denial",
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "7e7834e89d47eb3504a8b6993d03d6d982ad42ffbf32e1ae8752cee8c0795dbe"
+    },
+    {
+      "path": "scripts/test-provisioning-human-intent.mjs",
+      "sha256": "e2493b9d255f4e3cf075037d69f030504727af6b4d97334c82ad16995a0fc0fd"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-human-intent.sql",
+      "sha256": "08e9f86d2cbc1b03c258a713bbdf7e7b3cb742ef3c2b42734c275d4bceb23d76"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-auth-identity.sql",
+      "sha256": "dc1e5690b14126912bfee987d8f3078454477e46cee13f193abaa26b3023f7de"
+    }
+  ],
+  "cleanupVerified": true,
+  "cleanupEvidence": "No cortex.test.run labelled containers or networks remain after finally",
+  "productionChanged": false
+}

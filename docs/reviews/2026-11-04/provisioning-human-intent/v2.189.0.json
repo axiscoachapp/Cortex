@@ -1,0 +1,57 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.189.0",
+  "checks": [
+    "Native AAL1 bearer context cannot reserve an intent even after account MFA enrollment",
+    "Native logout after verified AAL2 context and Auth birth defeats cached context and an established RR snapshot",
+    "Real TOTP/AAL2 confirmation and exact replay preserve identity and original deadline without another Auth write",
+    "A different actor or absent native session cannot reuse verified context parameters",
+    "Existing operation cannot change planned identity or bind itself to a new genuine session",
+    "Valid human context does not confirm an identity without its native birth receipt",
+    "Owned expired-deadline fixture refuses confirmation and replay without extending the old deadline",
+    "Owned native not_after expiry fixture defeats a still-unexpired captured bearer context",
+    "Current fixture membership loss or native account reclassification refuses completion without deleting the created identity",
+    "Held membership mutation refuses NOWAIT and an old RR snapshot cannot confirm after a committed role change",
+    "Native logout actually waits for the short confirmation transaction; history remains but replay after logout fails",
+    "Observed in-flight Auth birth after membership revocation preserves the identity but refuses administrative confirmation",
+    "Observed in-flight Auth birth after native logout preserves the identity but refuses administrative confirmation",
+    "Observed in-flight Auth birth after real bearer expiry preserves the identity but refuses administrative confirmation",
+    "Real factor verification on the same native session cannot silently rebind the original intent",
+    "Native removal of the supporting factor refuses the old intent while another genuine verified factor remains",
+    "Intent records and private authorizers are not exposed to clients or the Data API"
+  ],
+  "prototypeIsProductionFix": false,
+  "humanIntentLabProofPassed": true,
+  "productionAuthorizationImplemented": false,
+  "notCovered": [
+    "production clinic/custody integration",
+    "all privileged writers and membership ABA",
+    "credential setup and recovery",
+    "app APIs/UI and data authorization"
+  ],
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "7e7834e89d47eb3504a8b6993d03d6d982ad42ffbf32e1ae8752cee8c0795dbe"
+    },
+    {
+      "path": "scripts/test-provisioning-human-intent.mjs",
+      "sha256": "be012edbf62e05aaa6b4cd29c4dd82f5a9222e8842907c249fb39b85762b884c"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-human-intent.sql",
+      "sha256": "6a4cf35e203cf9d45218265953103fd858b70be4c1daad7c94a8af27e468938d"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-auth-identity.sql",
+      "sha256": "dc1e5690b14126912bfee987d8f3078454477e46cee13f193abaa26b3023f7de"
+    }
+  ],
+  "postgresImage": "pgvector/pgvector:pg16",
+  "restImage": "public.ecr.aws/supabase/postgrest:v16.5",
+  "authImage": "public.ecr.aws/supabase/gotrue:v2.189.0",
+  "cleanupVerified": true,
+  "localDockerEndpoint": "verified local named pipe",
+  "network": "owned internal network, no published ports or external route"
+}

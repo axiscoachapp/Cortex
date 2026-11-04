@@ -1,0 +1,33 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "redOnly": true,
+  "authVersion": "v2.197.0",
+  "nativeTotpAal2": true,
+  "nativeFactorSwitchSameSession": true,
+  "nativeCurrentFactorChanged": true,
+  "factorRemovalBeforeCounterexample": false,
+  "observed": "Old intent accepted after native MFA verified a second factor on the same session",
+  "confirmationPersisted": false,
+  "expected": "42501 original-factor binding denial",
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "7e7834e89d47eb3504a8b6993d03d6d982ad42ffbf32e1ae8752cee8c0795dbe"
+    },
+    {
+      "path": "scripts/test-provisioning-human-intent.mjs",
+      "sha256": "81a84c568a6b214901c3c03e47206001052b62cd2ead7b908b399f90d03dc1a4"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-human-intent.sql",
+      "sha256": "b6b01ea7951cc57963a4ff091953ecfc316ab9c2bf9f266e8a0c99a770dfe100"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-auth-identity.sql",
+      "sha256": "dc1e5690b14126912bfee987d8f3078454477e46cee13f193abaa26b3023f7de"
+    }
+  ],
+  "cleanupVerified": true,
+  "productionChanged": false
+}
