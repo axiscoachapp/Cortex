@@ -198,6 +198,16 @@ export async function startReceptionFixture() {
               beneficiaries: contact.beneficiaries.filter((p) => permitted(p.doctorId)),
             })
           : error('42501', 'Contact missing');
+      if (rpc === 'reception_contact_edit')
+        return actor === ids.admin && contact
+          ? send({ id: contact.id, name: contact.name, phone: contact.phone, revision: contact.revision ?? 1 })
+          : error('42501', 'Administrator required');
+      if (rpc === 'reception_update_contact') {
+        if (actor !== ids.admin || !contact) return error('42501', 'Administrator required');
+        if (input.p_revision !== (contact.revision ?? 1)) return error('40001', 'Contact changed');
+        Object.assign(contact, { name: input.p_name, phone: input.p_phone, revision: (contact.revision ?? 1) + 1 });
+        return send(contact.revision);
+      }
       if (rpc === 'reception_create_contact') {
         if (requests.has(input.p_request)) return send(requests.get(input.p_request));
         const id = randomUUID();

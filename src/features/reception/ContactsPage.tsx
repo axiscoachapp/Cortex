@@ -8,6 +8,7 @@ import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
 import { NewCaseDialog, type ContactOption } from './NewCaseDialog';
 import { ReceptionNotice } from './ReceptionNotice';
+import { ContactCorrectionDialog } from './ContactCorrectionDialog';
 
 export default function ContactsPage() {
   const access = useClinicAccess();
@@ -15,6 +16,7 @@ export default function ContactsPage() {
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState<ContactOption>();
+  const [editing, setEditing] = useState<string | null>(null);
   const contacts = useInfiniteQuery({
     queryKey: ['reception', access?.actorId, 'contacts', access?.clinic?.id, search],
     initialPageParam: null as string | null,
@@ -59,16 +61,23 @@ export default function ContactsPage() {
             <article key={contact.id} className="rounded-xl border bg-card p-4 space-y-2 min-w-0">
               <h2 className="font-medium break-words">{contact.name}</h2>
               <p className="text-sm text-muted-foreground break-words">{contact.phone || 'Sem telefone cadastrado'}</p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelected(contact);
-                  setCreating(true);
-                }}
-              >
-                Abrir atendimento
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelected(contact);
+                    setCreating(true);
+                  }}
+                >
+                  Abrir atendimento
+                </Button>
+                {access?.admin && (
+                  <Button size="sm" variant="ghost" onClick={() => setEditing(contact.id)}>
+                    Corrigir contato
+                  </Button>
+                )}
+              </div>
             </article>
           ))}
       </div>
@@ -90,6 +99,7 @@ export default function ContactsPage() {
           }}
         />
       )}
+      {editing && <ContactCorrectionDialog contactId={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }

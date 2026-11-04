@@ -157,7 +157,20 @@ export async function testReceptionConcurrency(container) {
     '0',
     'Routed case accepted a draft under an old scope',
   );
+  await contest(
+    `select public.reception_update_contact('${contact}',1,'Concurrent correction winner','41999990000')`,
+    `select public.reception_update_contact('${contact}',1,'Stale correction loser','41999990000')`,
+    '40001',
+    false,
+    admin,
+    admin,
+  );
+  assert.equal(
+    sync(`select name from public.clinic_contacts where id='${contact}'`),
+    'Concurrent correction winner',
+    'Contact correction was overwritten',
+  );
   process.stdout.write(
-    'Passed reception concurrency: claim, booking, repeatable-read booking, no orphan stubs, route/revoke, route/draft\n',
+    'Passed reception concurrency: claim, booking, repeatable-read booking, no orphan stubs, route/revoke, route/draft, contact correction\n',
   );
 }

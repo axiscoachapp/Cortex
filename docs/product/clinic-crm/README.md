@@ -36,6 +36,8 @@ Para notas fiscais, a recomendação inicial é homologar um integrador fiscal c
 
 Fundação local implementada: contas dedicadas, delegação de agendas, contatos, fila manual, rascunhos por secretária e agenda com confirmação humana. Prontuários permanecem privados. Veja o [relatório do incremento](../../reviews/2026-11-03/reception-foundation/IMPLEMENTATION.md) para evidências, decisões e limites.
 
+Incremento seguinte: [correção auditada de nome/telefone de contato pela administração](../../reviews/2026-11-03/contact-corrections/IMPLEMENTATION.md), com confirmação, revisão concorrente e preservação do legado bruto. Retificação de vínculos continua no backlog.
+
 As três migrations foram ensaiadas apenas em banco descartável; nenhuma alteração foi aplicada ao Supabase hospedado. WhatsApp oficial, financeiro, fiscal, métricas e piloto seguem no backlog. Não houve mensagens, emissão de notas ou importação PersonalMed.
 
 As decisões sobre quantidade de números, divisão da equipe, horários, SLAs e regras de cobrança ficam registradas como perguntas de refinamento. Elas não impedem construir primeiro a fundação com dados sintéticos.

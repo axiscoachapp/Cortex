@@ -191,31 +191,40 @@ export type Database = {
           clinic_id: string
           created_at: string
           created_by: string
+          creation_payload_hash: string
           id: string
           name: string
           phone: string
           phone_normalized: string | null
           request_id: string
+          revision: number
+          updated_at: string
         }
         Insert: {
           clinic_id: string
           created_at?: string
           created_by: string
+          creation_payload_hash: string
           id?: string
           name: string
           phone?: string
           phone_normalized?: string | null
           request_id: string
+          revision?: number
+          updated_at?: string
         }
         Update: {
           clinic_id?: string
           created_at?: string
           created_by?: string
+          creation_payload_hash?: string
           id?: string
           name?: string
           phone?: string
           phone_normalized?: string | null
           request_id?: string
+          revision?: number
+          updated_at?: string
         }
         Relationships: [
           {
@@ -2296,10 +2305,12 @@ export type Database = {
         Returns: number
       }
       reception_contact: { Args: { p_contact: string }; Returns: Json }
+      reception_contact_admin: { Args: { p_clinic: string }; Returns: boolean }
       reception_contact_allowed: {
         Args: { p_contact: string }
         Returns: boolean
       }
+      reception_contact_edit: { Args: { p_contact: string }; Returns: Json }
       reception_contacts: {
         Args: { p_before?: string; p_clinic: string; p_search?: string }
         Returns: Json
@@ -2364,6 +2375,15 @@ export type Database = {
           p_case: string
           p_revision: number
           p_value: Json
+        }
+        Returns: number
+      }
+      reception_update_contact: {
+        Args: {
+          p_contact: string
+          p_name: string
+          p_phone: string
+          p_revision: number
         }
         Returns: number
       }

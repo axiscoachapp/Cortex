@@ -58,6 +58,10 @@ export const contactPageSchema = z
   .strict();
 export const patientSchema = z.object({ id, name: z.string(), dateOfBirth: z.string().nullable() }).strict();
 export type PatientOption = z.infer<typeof patientSchema>;
+export const contactEditSchema = z
+  .object({ id, name: z.string(), phone: z.string(), revision: z.number().int().positive() })
+  .strict();
+export type ContactEdit = z.infer<typeof contactEditSchema>;
 export const contactSchema = z
   .object({
     id,

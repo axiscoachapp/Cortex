@@ -11,7 +11,9 @@ await new Promise((ready) => probe.listen(0, '127.0.0.1', ready));
 const port = probe.address().port;
 await new Promise((done) => probe.close(done));
 const origin = `http://127.0.0.1:${port}`;
-const artifacts = resolve('docs/reviews/2026-11-03/reception-foundation/browser');
+const artifacts = resolve(
+  process.env.CORTEX_BROWSER_ARTIFACTS || 'docs/reviews/2026-11-03/reception-foundation/browser',
+);
 await mkdir(artifacts, { recursive: true });
 const app = spawn(
   process.execPath,
@@ -202,6 +204,47 @@ try {
   await admin.getByRole('button', { name: 'Remover bloqueio' }).click();
   await expect(admin.getByRole('button', { name: 'Remover bloqueio' })).not.toBeVisible();
   checks.push('administrator creates and removes an administrative schedule block');
+  await b.goto(origin + '/recepcao/contatos');
+  await expect(b.getByRole('heading', { name: 'Contatos da recepção' })).toBeVisible();
+  await expect(b.getByRole('button', { name: 'Corrigir contato', exact: true })).toHaveCount(0);
+  await admin.goto(origin + '/recepcao/contatos');
+  const admin2 = await account('admin', '/recepcao/contatos');
+  const familyCard = (page) =>
+    page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'Família Exemplo', exact: true }) });
+  await familyCard(admin).getByRole('button', { name: 'Corrigir contato' }).click();
+  await familyCard(admin2).getByRole('button', { name: 'Corrigir contato' }).click();
+  await admin2.getByLabel('Nome do contato').fill('Família Exemplo Corrigida');
+  await admin2.getByLabel('Telefone do contato').fill('41999990003');
+  await expect(admin2.getByRole('button', { name: 'Salvar correção' })).toBeDisabled();
+  await admin2.getByRole('checkbox', { name: /Conferi a identidade/ }).check();
+  await admin2.getByRole('button', { name: 'Salvar correção' }).click();
+  await expect(admin2.getByRole('heading', { name: 'Família Exemplo Corrigida', exact: true })).toBeVisible();
+  await admin.getByLabel('Nome do contato').fill('Correção de outra aba');
+  await admin.getByRole('checkbox', { name: /Conferi a identidade/ }).check();
+  await admin.getByRole('button', { name: 'Salvar correção' }).click();
+  await expect(admin.getByRole('dialog').getByRole('alert')).toContainText('Os dados mudaram em outra tela');
+  await expect(admin.getByLabel('Nome do contato')).toHaveValue('Correção de outra aba');
+  await admin.getByRole('button', { name: 'Recuperar cadastro do servidor' }).click();
+  await expect(admin.getByLabel('Nome do contato')).toHaveValue('Família Exemplo Corrigida');
+  await admin.getByRole('button', { name: 'Voltar', exact: true }).click();
+  await expect(admin.getByRole('heading', { name: 'Família Exemplo Corrigida', exact: true })).toBeVisible();
+  if (api.appointments[0].patientName !== 'Paciente Sintético')
+    throw new Error('Contact correction changed patient identity');
+  checks.push('admin-only contact correction, two-session CAS conflict, explicit recovery, patient identity preserved');
+  for (const width of [390, 768, 1280, 1920]) {
+    await admin.setViewportSize({ width, height: 1000 });
+    await admin
+      .getByRole('article')
+      .filter({ has: admin.getByRole('heading', { name: 'Família Exemplo Corrigida', exact: true }) })
+      .getByRole('button', { name: 'Corrigir contato' })
+      .click();
+    await expect(admin.getByLabel('Nome do contato')).toHaveValue('Família Exemplo Corrigida');
+    if (await admin.getByRole('dialog').evaluate((element) => element.scrollWidth > element.clientWidth + 1))
+      throw new Error('Contact editor overflow at ' + width);
+    await admin.screenshot({ path: resolve(artifacts, 'contact-correction-' + width + '.png'), fullPage: true,animations:'disabled' });
+    await admin.getByRole('button', { name: 'Voltar', exact: true }).click();
+  }
+  checks.push('contact editor responsive at 150% for 390/768/1280/1920 px');
   const staffReads = api.metrics.clinicalReads.filter((r) => r.actor !== ids.admin);
   if (staffReads.length || api.metrics.externalCalls.length || api.metrics.unknown.length || errors.length)
     throw new Error(JSON.stringify({ staffReads, metrics: api.metrics, errors }));

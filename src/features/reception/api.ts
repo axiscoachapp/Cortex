@@ -5,6 +5,7 @@ import {
   queuePageSchema,
   contactPageSchema,
   contactSchema,
+  contactEditSchema,
   caseSchema,
   patientSchema,
   appointmentsSchema,
@@ -30,6 +31,8 @@ type RpcName =
   | 'reception_queue'
   | 'reception_case'
   | 'reception_contact'
+  | 'reception_contact_edit'
+  | 'reception_update_contact'
   | 'reception_update_case'
   | 'reception_add_note'
   | 'reception_save_draft'
@@ -69,6 +72,9 @@ export const receptionApi = {
   contacts: (clinic: string, search = '', before: string | null = null) =>
     rpc('reception_contacts', { p_clinic: clinic, p_search: search, p_before: before }, contactPageSchema),
   contact: (id: string) => rpc('reception_contact', { p_contact: id }, contactSchema),
+  contactEdit: (id: string) => rpc('reception_contact_edit', { p_contact: id }, contactEditSchema),
+  updateContact: (id: string, expected: number, name: string, phone: string) =>
+    rpc('reception_update_contact', { p_contact: id, p_revision: expected, p_name: name, p_phone: phone }, revision),
   createContact: (clinic: string, name: string, phone: string, request: string) =>
     rpc('reception_create_contact', { p_clinic: clinic, p_name: name, p_phone: phone, p_request: request }, uuid),
   patients: (clinic: string, doctor: string, search: string) =>

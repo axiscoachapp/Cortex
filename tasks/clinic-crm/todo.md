@@ -40,6 +40,16 @@ Alvos futuros abaixo são sugestões de planejamento; os alvos implementados for
   - Verificar: telefone reciclado, dois médicos, menor atendido por responsável e tentativa de vincular prontuário alheio.
   - Alvos: `migration:contact_patient_links`, `supabase/tests/contact-links.test.sql`, `src/features/reception/BeneficiaryPicker.tsx`, `src/features/reception/BeneficiaryPicker.test.tsx` (4).
 
+- [x] **T04a — Corrigir nome/telefone do contato pela administração.** Dep.: T04.
+  - Aceite: confirmação humana, validação no servidor, revisão contra sobrescrita, legado bruto preservado, auditoria sem copiar valores pessoais, paciente independente e retry da criação preservado.
+  - Verificar: SQL de papéis/MFA/revogação/legado, duas conexões concorrentes, editor preservado em conflito/refetch e navegador a 150%.
+  - Alvos reais: `20261103003500_reception_contact_corrections.sql`, `reception-contact-corrections.test.sql`, `ContactCorrectionDialog.tsx`, `ContactCorrectionDialog.test.tsx`, `ContactsPage.tsx`.
+  - [Evidências e limites](../../docs/reviews/2026-11-03/contact-corrections/IMPLEMENTATION.md).
+
+- [ ] **T05a — Especificar retificação de vínculo administrativo.** Dep.: T05.
+  - Aceite de desenho: correção de relação/beneficiário exige escopo, ator e revisão; registros anteriores da agenda continuam íntegros; nenhuma fusão de prontuários nem concessão clínica implícita.
+  - Verificar antes de implementar: relações familiares, contato reciclado, paciente com dois médicos, vínculo usado por agendamento histórico e revogação de escopo. S2 e carga real permanecem separadas.
+
 - [x] **T06 — Criar atendimento na fila e assumir sem disputa.** Dep.: T04.
   - Aceite: entrada manual tem estado/origem; assumir é atômico e auditado; uma responsabilidade atual por caso.
   - Verificar: duas sessões tentando assumir o mesmo caso, idempotência e revisão antiga.
