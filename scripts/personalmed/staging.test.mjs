@@ -148,3 +148,75 @@ describe('synthetic staging batch', () => {
     }
   });
 });
+
+describe('synthetic templates (S3)', () => {
+  const tpl = (model, table = 'Us05') => find('template', `table:${table}|model:${model}`);
+
+  it('stages every template as imported_unreviewed for document_snippets', () => {
+    const all = of('template');
+    expect(all).toHaveLength(9);
+    for (const e of all) {
+      expect(e.targetTable).toBe('document_snippets');
+      expect(e.payload).toMatchObject({ review_status: 'imported_unreviewed', source: 'personalmed' });
+      expect(e.payload.source_ref).toBe(e.sourceRecordId.replace(/^table:(\w+)\|model:(\d+)$/, '$1:$2'));
+      expect(e.payload.name.length).toBeLessThanOrEqual(120);
+    }
+  });
+
+  it('turns a clinic prescription into Cortex items without losing the text', () => {
+    const e = tpl(1);
+    expect(e.mappingStatus).toBe('ready');
+    expect(e.sourceDoctorId).toBeNull();
+    expect(e.payload.scope).toBe('clinic');
+    expect(e.payload.items).toEqual([
+      { name: 'Nitrofurantoína 100 mg', dosage: '1 caixa', instructions: 'Uso oral\nTomar 1 cápsula de 6 em 6 horas por 5 dias.' },
+      { name: 'Fenazopiridina 200 mg', dosage: '6 comprimidos', instructions: 'Uso oral\nTomar 1 comprimido de 8 em 8 horas se ardor.' },
+    ]);
+    expect(e.payload.header).toEqual(['@nome']);
+    expect(e.payload.footer).toEqual(['Curitiba, @extenso']);
+    expect(e.payload.body).toContain('Fenazopiridina 200 mg ______ 6 comprimidos');
+    expect(e.payload.regulated.antimicrobial).toEqual(['nitrofurantoina']);
+  });
+
+  it('counts usage per doctor inside the window, only when every fixed line matches', () => {
+    expect(tpl(1).payload.usage).toEqual({ since: '2025-01-01', uses: 2, by_doctor: { 'user:3': 1, 'user:5': 1 }, last_used: '2026-05-02' });
+    // The edited quantity (2 frascos) is not a use; the exact one is.
+    expect(tpl(2).payload.usage).toMatchObject({ uses: 1, by_doctor: { 'user:5': 1 } });
+    expect(tpl(3).payload.usage).toMatchObject({ uses: 0, by_doctor: {}, last_used: null });
+    // Usage holds counts and dates only.
+    expect(JSON.stringify(of('template').map((e) => e.payload.usage))).not.toMatch(/SINTÉTICA|Tomar/);
+  });
+
+  it('keeps a doctor-owned template with that doctor and flags unsupported merge fields', () => {
+    const e = tpl(2);
+    expect(e).toMatchObject({ sourceDoctorId: 'user:5', mappingStatus: 'ready', issues: ['template_merge_field_unsupported'] });
+    expect(e.payload).toMatchObject({ scope: 'doctor', unsupported_merge_fields: ['@sangue'] });
+  });
+
+  it('sends what Cortex cannot take yet to review, and rejects only empty templates', () => {
+    expect(tpl(3)).toMatchObject({ mappingStatus: 'requires_review', issues: ['template_items_not_found'] });
+    expect(tpl(4)).toMatchObject({ mappingStatus: 'requires_review', issues: ['template_controlled_substance'] });
+    expect(tpl(5)).toMatchObject({ mappingStatus: 'requires_review', issues: ['template_items_over_limit'] });
+    expect(tpl(5).payload.items).toHaveLength(16);
+    expect(tpl(6)).toMatchObject({ mappingStatus: 'requires_review', issues: ['template_kind_not_supported_yet'] });
+    expect(tpl(6).payload.kind).toBe('texto');
+    expect(tpl(1, 'Pedtxt').payload.kind).toBe('pedido_exame');
+    expect(tpl(7)).toMatchObject({ mappingStatus: 'rejected', issues: ['template_empty'] });
+    expect(tpl(8)).toMatchObject({ mappingStatus: 'ready', issues: ['template_name_truncated', 'template_rtf_table'] });
+  });
+
+  it('only marks ready the templates that fit the document_snippets item rules', () => {
+    for (const e of of('template').filter((x) => x.mappingStatus === 'ready')) {
+      expect(e.payload.kind).toBe('receita');
+      expect(e.payload.items.length).toBeGreaterThanOrEqual(1);
+      expect(e.payload.items.length).toBeLessThanOrEqual(15);
+      for (const i of e.payload.items) {
+        expect(Object.keys(i).sort()).toEqual(['dosage', 'instructions', 'name']);
+        expect(i.name.trim().length).toBeGreaterThan(0);
+        expect(i.name.length).toBeLessThanOrEqual(200);
+        expect(i.dosage.length).toBeLessThanOrEqual(200);
+        expect(i.instructions.length).toBeLessThanOrEqual(1000);
+      }
+    }
+  });
+});

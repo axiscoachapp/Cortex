@@ -45,6 +45,10 @@
     "schedule_block.ndjson": {
       "sha256": "d842cb45564511a138e3890d92cec1e5c4c40748c80c4669b8f121550e06a239",
       "lines": 1
+    },
+    "template.ndjson": {
+      "sha256": "ef3699a66ab9f47053861e5a54baa8ba69986cc08a9fc0a039b7c29f2fe21de8",
+      "lines": 9
     }
   },
   "counts": {
@@ -143,6 +147,17 @@
       "byDoctor": {
         "user:3": 1
       }
+    },
+    "template": {
+      "total": 9,
+      "byStatus": {
+        "requires_review": 5,
+        "ready": 3,
+        "rejected": 1
+      },
+      "byDoctor": {
+        "user:5": 1
+      }
     }
   },
   "issues": {
@@ -166,6 +181,14 @@
     "sex_missing": 1,
     "status_no_show_target_required": 1,
     "status_unknown_past": 1,
+    "template_controlled_substance": 1,
+    "template_empty": 1,
+    "template_items_not_found": 1,
+    "template_items_over_limit": 1,
+    "template_kind_not_supported_yet": 2,
+    "template_merge_field_unsupported": 1,
+    "template_name_truncated": 1,
+    "template_rtf_table": 1,
     "uf_inferred_from_cep": 2
   }
 }

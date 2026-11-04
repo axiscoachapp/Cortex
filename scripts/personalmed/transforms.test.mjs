@@ -21,6 +21,9 @@ import {
   normalizePhone,
   normalizeUf,
   parseTemplateItems,
+  templateChunks,
+  templateKind,
+  templateUsage,
   registrationPhones,
   splitHistory,
   targetId,
@@ -277,5 +280,26 @@ describe('agenda', () => {
       { id: 'f', doctor: 5, start: at('09:00'), end: at('09:20'), status: 'agendado' },
     ];
     expect([...findOverlaps(list)].sort()).toEqual(['b', 'c']);
+  });
+});
+
+describe('template recognition', () => {
+  it('maps ModelType to a kind', () => {
+    expect([1, 2, 3, 4].map(templateKind)).toEqual(['receita', 'texto', 'pedido_exame', 'texto']);
+  });
+
+  it('needs enough fixed text to recognise a template', () => {
+    expect(templateChunks('@nome\nCuritiba, @extenso')).toEqual([]);
+    expect(templateChunks('@nome\n- Medicamento sintético ______ 1 caixa\nTomar 1 comprimido ao dia.')).toEqual([
+      'medicamento sintetico 1 caixa',
+      'tomar 1 comprimido ao dia',
+    ]);
+  });
+
+  it('counts uses by doctor since a date, ignoring edited copies', () => {
+    const templates = [{ key: 'Us05:1', chunks: templateChunks('- Medicamento sintético ______ 1 caixa\nTomar 1 comprimido ao dia.') }];
+    const doc = (user, date, qty = '1 caixa') => ({ user, date, text: `PESSOA SINTÉTICA\n- Medicamento sintético ______ ${qty}\nTomar 1 comprimido ao dia.` });
+    const usage = templateUsage(templates, [doc(3, '2025-02-01'), doc(3, '2026-01-10'), doc(5, '2025-06-01'), doc(5, '2024-12-31'), doc(5, '2026-02-01', '2 caixas'), { user: 3, date: null, text: '' }], { since: '2025-01-01' });
+    expect(usage.get('Us05:1')).toEqual({ uses: 3, byDoctor: { 'user:3': 2, 'user:5': 1 }, lastUsed: '2026-01-10' });
   });
 });

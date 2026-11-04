@@ -18,12 +18,15 @@ import {
   legacyDate,
   mapAppointmentStatus,
   mapSex,
+  mergeFieldsOf,
   normalizeCep,
   normalizeCity,
   normalizeEmail,
   normalizePhone,
   normalizeUf,
+  parseTemplateItems,
   registrationPhones,
+  templateKind,
   wallClockToUtc,
 } from './transforms.mjs';
 
@@ -379,6 +382,87 @@ export function buildChartClinical(ctx, chart, input) {
 }
 
 /** Write one NDJSON file per entity plus manifest.json. Deterministic order. */
+/**
+ * One legacy document template (Us05/Gintxt/Pedtxt row) -> `template`
+ * envelope for document_snippets (S3). Every template arrives as
+ * imported_unreviewed: the doctor reviews it before any use. Prescription
+ * templates carry Cortex items; the whole text stays in `body`, so nothing is
+ * lost. Usage counts come from templateUsage() and hold no document text.
+ *
+ * @param ctx   { sourceInstance, batchId, usageSince }
+ * @param t     { table, modelNumber, user, modelType, name, text, rtfTable }
+ *              `text` is plain text (RTF already converted); `user` is null
+ *              for the clinic-wide library.
+ * @param usage { uses, byDoctor, lastUsed } or undefined
+ * @param regulated { antimicrobial: string[], controlled: string[] } found in the text
+ */
+export function buildTemplate(ctx, t, usage, regulated = { antimicrobial: [], controlled: [] }) {
+  const kind = templateKind(t.modelType);
+  const body = text(t.text);
+  const issues = [];
+  let name = text(t.name).replace(/\s+/g, ' ');
+  if (!name) {
+    name = `Modelo ${t.table} ${t.modelNumber}`;
+    issues.push('template_name_missing');
+  }
+  if (name.length > 120) {
+    name = name.slice(0, 120).trim();
+    issues.push('template_name_truncated');
+  }
+  const merge = mergeFieldsOf(body);
+  if (merge.unsupported.length) issues.push('template_merge_field_unsupported');
+  if (t.rtfTable) issues.push('template_rtf_table');
+  if (regulated.controlled.length) issues.push('template_controlled_substance');
+
+  let items = [];
+  let header = [];
+  let footer = [];
+  if (!body) issues.push('template_empty');
+  else if (kind !== 'receita') issues.push('template_kind_not_supported_yet');
+  else {
+    const parsed = parseTemplateItems(body);
+    if (parsed.kind === 'free_text') issues.push('template_items_not_found');
+    else {
+      header = parsed.header;
+      footer = parsed.footer;
+      // Legacy "quantity" (after the ____ line) is what the doctor prints next
+      // to the drug; the route heading ("Uso oral") opens the instructions.
+      items = parsed.items.map((i) => ({ name: i.name, dosage: i.quantity, instructions: [i.route, i.instructions].filter(Boolean).join('\n') }));
+      if (items.length > 15) issues.push('template_items_over_limit');
+      if (items.some((i) => i.name.length > 200 || i.dosage.length > 200 || i.instructions.length > 1000)) issues.push('template_item_too_long');
+    }
+  }
+  const blocking = ['template_kind_not_supported_yet', 'template_items_not_found', 'template_items_over_limit', 'template_item_too_long', 'template_controlled_substance'];
+  const status = !body ? 'rejected' : issues.some((i) => blocking.includes(i)) ? 'requires_review' : 'ready';
+
+  return envelope({
+    sourceInstance: ctx.sourceInstance,
+    batchId: ctx.batchId,
+    sourceEntity: 'template',
+    key: { table: t.table, model: t.modelNumber },
+    doctor: t.user ?? null,
+    targetTable: 'document_snippets',
+    payload: {
+      kind,
+      name,
+      items,
+      body,
+      header,
+      footer,
+      scope: t.user ? 'doctor' : 'clinic',
+      review_status: 'imported_unreviewed',
+      source: 'personalmed',
+      source_ref: `${t.table}:${t.modelNumber}`,
+      merge_fields: merge.fields,
+      unsupported_merge_fields: merge.unsupported,
+      regulated: { antimicrobial: regulated.antimicrobial, controlled: regulated.controlled },
+      usage: { since: ctx.usageSince, uses: usage?.uses ?? 0, by_doctor: usage?.byDoctor ?? {}, last_used: usage?.lastUsed ?? null },
+    },
+    issues,
+    status,
+  });
+}
+
 export function writeBatch(dir, envelopes, meta) {
   mkdirSync(dir, { recursive: true });
   const byEntity = new Map();

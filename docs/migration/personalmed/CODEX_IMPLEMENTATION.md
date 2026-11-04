@@ -344,7 +344,28 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
 11. `medical_history`
 12. `legacy_alert`
 13. `file`
-14. `template`
+14. `template`: modelo de documento para `document_snippets` (S3), especificado abaixo.
+
+**Entidade `template`** (04/11/2026). Implementação: `buildTemplate` em `staging.mjs` e `templateKind`, `templateChunks` e `templateUsage` em `transforms.mjs`. Exemplos sintéticos em `fixtures/synthetic-batch/template.ndjson`.
+- **Chave e destino:**
+  - `sourceRecordId` é `table:<Us05|Gintxt|Pedtxt>|model:<ModelNumber>`, e `targetTable` é `document_snippets`;
+  - `sourceDoctorId` é o `UserNumber` dono ou `null`. Hoje 1.090 dos 1.091 modelos de `Us05` são da clínica toda.
+- **Payload:**
+  - `kind`, pelo `ModelType`: 1 é `receita`, 3 é `pedido_exame` e os demais são `texto`;
+  - `name`, limitado a 120 caracteres;
+  - `items`, que só existem em receita: `{name, dosage, instructions}`. `dosage` recebe a quantidade escrita depois do `____`, e `instructions` recebe o cabeçalho de via ("Uso oral") mais as linhas seguintes;
+  - `body`, com o texto inteiro, para não perder nada, mais `header` e `footer`;
+  - `scope` (`clinic` ou `doctor`), `review_status: imported_unreviewed`, `source: personalmed` e `source_ref` (`Us05:123`);
+  - `merge_fields` e `unsupported_merge_fields`;
+  - `regulated`, com as substâncias antimicrobianas e controladas encontradas;
+  - `usage`: `{since, uses, by_doctor, last_used}`, só contagens e datas. Um documento emitido conta como uso quando todas as linhas fixas do modelo aparecem nele; modelo com menos de 40 caracteres fixos não é reconhecido.
+- **Situação:**
+  - `ready`: receita com 1 a 15 itens dentro dos limites da tabela;
+  - `requires_review`: `template_kind_not_supported_yet` (texto e pedido de exame, enquanto o Cortex só aceita receita), `template_items_not_found` (receita em texto livre), `template_items_over_limit`, `template_item_too_long` e `template_controlled_substance` (depende da D8);
+  - `rejected`: `template_empty`;
+  - não bloqueiam: `template_merge_field_unsupported`, `template_rtf_table` (a tabela do RTF vira texto), `template_name_truncated` e `template_name_missing`.
+- **Uso no Cortex:** todo modelo entra como `imported_unreviewed` e só preenche receita depois que o médico o salva. Quem recebe os modelos da clínica depende da D19.
+- **Fora deste contrato:** o carregador, a importação e a carga real, que continuam separados e sem autorização.
 
 ---
 
@@ -580,6 +601,7 @@ Navegador: 390, 768, 1280 e 1920 px na escala de 150%, como já está definido.
 | D3 | Agendamentos passados | Futuros mais os atendidos desde 2025. Os demais ficam no arquivo. |
 | D4 | DDD 41 automático para Curitiba e região | Sim, com código de problema e confirmação na recepção. |
 | D5 | Modelos: todos ou só os usados | Todos, com os 291 usados em 2025–2026 revisados primeiro. |
+| D19 | Quem recebe os modelos da clínica (1.090 sem médico dono), já que a biblioteca do Cortex é de cada médico | **Proposta:** cada médico recebe, como "a revisar", os modelos que ele usou em 2025–2026 (`usage.by_doctor`). Os demais ficam no staging e entram a pedido. Alternativas: todos os modelos para todos os médicos, ou esperar uma biblioteca compartilhada da clínica. |
 | D6 | QP/HDA como consulta ou como histórico | Consulta da primeira visita. |
 | D7 | Alertas "Atenção" | Revisão pelo médico (S6). Nada vai direto para o prontuário ou para a recepção. |
 | D8 | Controlados no Cortex | Fase 2, depois de confirmação jurídica. Até lá, receituário próprio. |

@@ -124,3 +124,42 @@ export const agenda = [
   appt({ user: 3, date: '2026-09-15', startMinutes: 13 * 60, duration: 240, slotType: 'B' }),
   appt({ user: 3, date: '2025-09-15', startMinutes: 13 * 60, duration: 240, slotType: 'B' }),
 ];
+
+// Document templates (Us05/Gintxt/Pedtxt): invented texts that exercise the
+// rules of buildTemplate. Drug names are generic; nothing comes from the export.
+export const USAGE_SINCE = '2025-01-01';
+const tpl = (over) => ({ table: 'Us05', modelNumber: 0, user: null, modelType: 1, name: '', text: '', rtfTable: false, ...over });
+export const templates = [
+  // Clinic-wide prescription with route heading, two items and the date footer.
+  tpl({
+    modelNumber: 1,
+    name: 'ITU SINTETICA',
+    text: '@nome\n\nUso oral\n- Nitrofurantoína 100 mg ______ 1 caixa\nTomar 1 cápsula de 6 em 6 horas por 5 dias.\n- Fenazopiridina 200 mg ______ 6 comprimidos\nTomar 1 comprimido de 8 em 8 horas se ardor.\n\nCuritiba, @extenso',
+  }),
+  // A doctor's own template with an unsupported merge field.
+  tpl({ modelNumber: 2, user: 5, name: 'Orientação sintética', text: '@nome\n- Medicamento sintético A ______ 1 frasco\nAplicar à noite.\nTipo sanguíneo: @sangue' }),
+  // Prescription written as free text: nothing to turn into items.
+  tpl({ modelNumber: 3, name: 'Texto livre sintético', text: '@nome\nManter a medicação de uso contínuo e retornar em 30 dias.' }),
+  // Controlled substance (D8: phase 2).
+  tpl({ modelNumber: 4, name: 'Controlado sintético', text: '- Clonazepam 2 mg ______ 1 caixa\nTomar 1 comprimido à noite.' }),
+  // Sixteen items: over the Cortex limit of 15.
+  tpl({ modelNumber: 5, name: 'Lista longa sintética', text: Array.from({ length: 16 }, (_, i) => `- Item sintético ${i + 1} ______ 1 unidade`).join('\n') }),
+  // Text and exam-request templates: kinds Cortex does not take yet.
+  tpl({ modelNumber: 6, modelType: 2, name: 'Atestado sintético', text: 'Atesto que @nome esteve em consulta nesta data.\n\nCuritiba, @extenso' }),
+  tpl({ table: 'Pedtxt', modelNumber: 1, modelType: 3, name: 'Exames sintéticos', text: '@nome\nHemograma completo\nGlicemia de jejum' }),
+  // Empty template and a name longer than 120 characters with an RTF table.
+  tpl({ modelNumber: 7, name: 'Vazio sintético', text: '   ' }),
+  tpl({ modelNumber: 8, name: `Nome sintético ${'muito '.repeat(25)}longo`, rtfTable: true, text: '- Medicamento sintético B ______ 1 tubo\nAplicar 2 vezes ao dia.' }),
+];
+
+// Issued documents used only to count template usage (counts leave, text does not).
+export const issuedDocuments = [
+  { user: 3, date: '2026-03-10', text: 'PACIENTE SINTÉTICA\nUso oral\n- Nitrofurantoína 100 mg ______ 1 caixa\nTomar 1 cápsula de 6 em 6 horas por 5 dias.\n- Fenazopiridina 200 mg ______ 6 comprimidos\nTomar 1 comprimido de 8 em 8 horas se ardor.\nCuritiba, 10 de março de 2026' },
+  // The same clinic template issued by another doctor.
+  { user: 5, date: '2026-05-02', text: 'OUTRA PACIENTE SINTÉTICA\nUso oral\n- Nitrofurantoína 100 mg ______ 1 caixa\nTomar 1 cápsula de 6 em 6 horas por 5 dias.\n- Fenazopiridina 200 mg ______ 6 comprimidos\nTomar 1 comprimido de 8 em 8 horas se ardor.\nCuritiba, 2 de maio de 2026' },
+  // Before the usage window: not counted.
+  { user: 3, date: '2024-12-30', text: 'PACIENTE SINTÉTICA\n- Nitrofurantoína 100 mg ______ 1 caixa\nTomar 1 cápsula de 6 em 6 horas por 5 dias.\n- Fenazopiridina 200 mg ______ 6 comprimidos\nTomar 1 comprimido de 8 em 8 horas se ardor.' },
+  { user: 5, date: '2026-06-01', text: 'PACIENTE SINTÉTICA\n- Medicamento sintético A ______ 1 frasco\nAplicar à noite.\nTipo sanguíneo: O+' },
+  // Edited quantity: one fixed line differs, so the template is not counted.
+  { user: 3, date: '2026-07-01', text: 'PACIENTE SINTÉTICA\n- Medicamento sintético A ______ 2 frascos\nAplicar à noite.\nTipo sanguíneo: A+' },
+];

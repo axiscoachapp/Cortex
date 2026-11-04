@@ -400,6 +400,52 @@ export function parseTemplateItems(templateText) {
   return { kind: 'items', header, items: items.map((i) => ({ ...i, instructions: i.instructions.join('\n') })), footer };
 }
 
+/** Template kind by PersonalMed ModelType: 1 prescription, 3 exam request, others text. */
+export function templateKind(modelType) {
+  return modelType === 1 ? 'receita' : modelType === 3 ? 'pedido_exame' : 'texto';
+}
+
+/**
+ * Fixed text of a template, line by line between merge fields, folded. A
+ * document "uses" the template when every chunk appears in it, so one edited
+ * dose does not hide the whole template. Too little fixed text (< 40
+ * characters) cannot be recognised and returns [].
+ */
+export function templateChunks(templateText) {
+  const chunks = String(templateText ?? '')
+    .split(MERGE_FIELD)
+    .flatMap((s) => s.split(/\n+/))
+    .map(fold)
+    .filter((s) => s.length >= 8);
+  return chunks.join('').length >= 40 ? chunks : [];
+}
+
+/**
+ * Who used each template since a date, from issued documents.
+ * @param templates [{ key, chunks }]
+ * @param issued    [{ user, date: 'YYYY-MM-DD', text }] (text is folded inside)
+ * @returns Map key -> { uses, byDoctor: { 'user:N': count }, lastUsed }
+ * Counts only: no document text leaves this function.
+ */
+export function templateUsage(templates, issued, { since }) {
+  const usage = new Map();
+  const candidates = templates.filter((t) => t.chunks.length);
+  for (const doc of issued) {
+    if (!doc.date || doc.date < since) continue;
+    const textFolded = fold(doc.text);
+    for (const t of candidates) {
+      if (!t.chunks.every((ch) => textFolded.includes(ch))) continue;
+      const u = usage.get(t.key) ?? { uses: 0, byDoctor: {}, lastUsed: null };
+      u.uses += 1;
+      const doctor = `user:${doc.user}`;
+      u.byDoctor[doctor] = (u.byDoctor[doctor] ?? 0) + 1;
+      if (!u.lastUsed || doc.date > u.lastUsed) u.lastUsed = doc.date;
+      usage.set(t.key, u);
+    }
+  }
+  return usage;
+}
+
 // ---------------------------------------------------------------------------
 // Agenda
 
