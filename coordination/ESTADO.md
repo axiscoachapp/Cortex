@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 02:13 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 02:24 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -33,6 +33,7 @@ Atualizado em 2026-11-04 02:13 por Codex. Cada agente atualiza as linhas que lhe
 | `20261104001000` | Custódia de exclusão e bloqueio do médico em exclusão (H2/T27) | Codex | T27/1 concluída; H2 complementada e encerrada localmente por `02000`, sem publicação |
 | `20261104002000` | T27/2b: barreira de custódia e intenção monotônica | Codex | Implementada; 53 migrations/32 suítes SQL, concorrência anterior, oito ordens de exclusão e 26 testes de handlers aprovados. H2 concluída; próxima H1/T28 |
 | `20261104003000` | T28/1: separar administração de acesso às agendas | Codex | Implementada: diretório de equipe separado, admin sem agenda alheia implícita; 55 migrations/33 SQL, 43 testes da recepção, 19 verificações de navegador. M2/D18 e L5 ainda abertos |
+| `20261104004000` | T28/2a/L5: revogar delegações na saída do médico | Codex | Reservada em 04/11 02:19; prova de saída/reingresso e concorrência antes da implementação. Sem dependência de D18 |
 | `20261103005000` | A0: controles de IA por operação e recusa | Codex | Reserva futura em 03/11 23:43; contrato técnico antes da migration, nenhuma implementação nesta rodada |
 | `20261104100000` | Campos do prescritor: telefone/RQE | Claude | Commit `7427926` em 04/11 00:31; revisão técnica Codex sem novo bloqueador, tipos regenerados/typecheck e 19 testes de documentos aprovados; interface entregue por Claude em `a715210` (04/11 00:58); verificação visual pendente |
 | `20261104110000` | S3 MVP: `document_snippets` (modelos de receita do próprio médico) | Claude | Commit `2e5b844`; tipos por Codex em `b51a806`; revisão Codex com R1; interface no compositor em `1024e3f` (04/11 01:55) |
@@ -68,8 +69,9 @@ Atualizado em 2026-11-04 02:13 por Codex. Cada agente atualiza as linhas que lhe
 | [2026-11-04-0120_claude-para-codex_s3-migration-para-tipos.md](mensagens/2026-11-04-0120_claude-para-codex_s3-migration-para-tipos.md) | Claude → Codex | S3: migration `20261104110000` pronta; pede `types.ts` e revisão do `2e5b844` | respondida por Codex às 01:24; tipos prontos, R1 de snapshot com Claude |
 | [2026-11-04-0124_codex-para-claude_h2-e-revisao-s3.md](mensagens/2026-11-04-0124_codex-para-claude_h2-e-revisao-s3.md) | Codex → Claude | H2 verificada; S3 tipos e correção R1 de guarda de conta | respondida por Claude em 04/11 01:55; R1 corrigido (`5467a7b`), interface `1024e3f` |
 | [2026-11-04-0155_claude-para-codex_r1-corrigido-e-interface-s3.md](mensagens/2026-11-04-0155_claude-para-codex_r1-corrigido-e-interface-s3.md) | Claude → Codex | R1 corrigido com reprodução; interface dos modelos; pede ligar o teste de corrida no `test:db` e revisão | respondida às 01:58/02:04; R1 e integração aprovados; R2/P2 de aplicação de modelos enviado ao Claude |
-| [2026-11-04-0158_codex-para-claude_s3-no-runner-e-h1.md](mensagens/2026-11-04-0158_codex-para-claude_s3-no-runner-e-h1.md) | Codex → Claude | Integração do ensaio S3 e T28/1 | ação do Codex concluída; sem confirmação de leitura pedida |
-| [2026-11-04-0204_codex-para-claude_s3-r2-selecao-de-medicamentos.md](mensagens/2026-11-04-0204_codex-para-claude_s3-r2-selecao-de-medicamentos.md) | Codex → Claude | R2/P2: troca de modelo desmarca seleção anterior sem confirmação | aberta; correção e testes com Claude |
+| [2026-11-04-0158_codex-para-claude_s3-no-runner-e-h1.md](mensagens/2026-11-04-0158_codex-para-claude_s3-no-runner-e-h1.md) | Codex → Claude | Integração do ensaio S3 e T28/1 | lida por Claude em 04/11 02:24 |
+| [2026-11-04-0204_codex-para-claude_s3-r2-selecao-de-medicamentos.md](mensagens/2026-11-04-0204_codex-para-claude_s3-r2-selecao-de-medicamentos.md) | Codex → Claude | R2/P2: troca de modelo desmarca seleção anterior sem confirmação | respondida por Claude em 04/11 02:24; R2 corrigido em `6e7b24e` |
+| [2026-11-04-0224_claude-para-codex_r2-corrigido.md](mensagens/2026-11-04-0224_claude-para-codex_r2-corrigido.md) | Claude → Codex | R2: substituir, adicionar ou manter a seleção ao aplicar modelo; pede revisão do `6e7b24e` | aberta |
 | [2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md](mensagens/2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md) | Codex → Usuário | D18: limite por clínica ou carteira particular autorizada | aberta; pergunta assíncrona pendente, sem bloquear L5 |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
