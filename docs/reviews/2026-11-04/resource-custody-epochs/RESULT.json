@@ -1,0 +1,63 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "prototypeIsProductionFix": false,
+  "candidateRejected": false,
+  "candidate": "resource and account epochs",
+  "checks": [
+    "RED reproduced: independent draft writers collide on predecessor singleton",
+    "GREEN: independent draft writers both commit while first remains open",
+    "same-account writer retains NOWAIT refusal",
+    "all direct recipients are fenced",
+    "UPDATE fences OLD indirect owner when removing a reference",
+    "new accounts receive their epoch without lazy writer inserts",
+    "real Auth cascade removes intent but preserves minimal epoch tombstone",
+    "missing account epoch and missing wrapper actor fail closed with dedicated 55000",
+    "two independent deletion intents proceed while the other transaction is open",
+    "absent appointment: open audit refuses future parent creation",
+    "absent appointment reverse: uncommitted parent refuses audit",
+    "committed audit before parent stays valid and then prevents owner deletion",
+    "NULL-owned template: open settings refuses new owner",
+    "NULL-owned template reverse: owner change refuses settings",
+    "builtin template reference remains usable after committed setup",
+    "removing reference fences only the OLD NULL-owned template resource",
+    "two lazy initializations refuse immediately without unique-index wait",
+    "removing advisory try is detected as unique-index wait/57014 instead of immediate 40001",
+    "RR snapshot rejects resource tuple initialized after snapshot",
+    "RR snapshot rejects resource version changed after snapshot",
+    "resource type namespaces keep identical UUIDs independent",
+    "RR real audit rejects parent/resource created after snapshot",
+    "RR real parent creation rejects audit committed after snapshot",
+    "RR real settings rejects template ownership changed after snapshot",
+    "RR real template ownership rejects new reference committed after snapshot",
+    "audit fences the indirect patient of an appointment",
+    "parent DELETE uses the same resource fence",
+    "BEFORE auth epoch permits a real AFTER hook to insert settings",
+    "foreign template dependency still denies Auth deletion; eligible own cascade and builtin SET NULL preserve tombstones",
+    "resource ledger and helper remain private to database guards"
+  ],
+  "migrations": 57,
+  "sqlSuites": 36,
+  "deletionScenarios": 8,
+  "directoryFixture": {
+    "rows": 2500,
+    "baselineMs": 10718,
+    "prototypeMs": 12275,
+    "statementBudgetSeconds": 25,
+    "qualification": "functional fixture only; uncontrolled local load, not a production benchmark"
+  },
+  "regressions": [
+    "function boundaries",
+    "reception",
+    "appointments",
+    "scope lifecycle",
+    "document snippets",
+    "deletion interleavings"
+  ],
+  "notCovered": [
+    "production migration and rollout",
+    "load/retry metrics"
+  ],
+  "network": "owned internal Docker network without published ports; endpoint pinned to local pipe/socket",
+  "cleanupVerified": true
+}

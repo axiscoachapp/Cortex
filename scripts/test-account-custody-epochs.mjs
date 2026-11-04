@@ -11,7 +11,12 @@ import { testFunctionBoundaryRegressions } from './test-function-boundaries.mjs'
 
 // No hosted/existing DB target. All imported test helpers inherit this process's
 // pinned, verified LOCAL Docker endpoint. Never read .env or clinical fixtures.
-assert.equal(process.argv.length, 2, 'This lab takes no target/options');
+const upgradeMode = process.argv.includes('--upgrade');
+const resourceMode = process.argv.includes('--resources') || upgradeMode;
+const targeted = process.argv.includes('--targeted');
+assert.ok(process.argv.slice(2).every(arg => ['--resources', '--upgrade', '--targeted'].includes(arg)), 'This lab takes no external target');
+assert.ok(!targeted || upgradeMode, 'Targeted CI mode requires the actual migration');
+const scopedMigration = '20261104200000_reception_scoped_custody.sql';
 assert.ok(!process.env.DOCKER_HOST, 'Lab refuses inherited Docker host overrides');
 const raw = args => spawnSync('docker', args, { encoding: 'utf8', windowsHide: true, timeout: 30000 });
 const required = r => { assert.equal(r.status, 0, r.stderr || r.error?.message); return r.stdout.trim(); };
@@ -33,12 +38,18 @@ function session() {
   child.stdout.on('data', data => { output += data; }); child.stderr.on('data', data => { errors += data; });
   child.stdin.on('error', () => {});
   const done = new Promise((resolve, reject) => { child.once('error', reject); child.once('close', status => resolve({ status, stdout: output, stderr: errors })); });
+  let completed;
+  done.then(value => { completed = value; }, () => {});
   done.catch(() => {}); children.push({ child, done });
   let ended = false;
   return {
     send: source => child.stdin.write(bounds + source + '\n'),
     held: async () => {
-      for (let n = 0; n < 50; n++) { if (output.includes('EPOCH_HELD')) return; await new Promise(r => setTimeout(r, 50)); }
+      for (let n = 0; n < 100; n++) {
+        if (output.includes('EPOCH_HELD')) return;
+        if (completed) throw new Error('Owned epoch holder failed: ' + completed.stderr);
+        await new Promise(r => setTimeout(r, 50));
+      }
       throw new Error('Owned epoch holder not ready');
     },
     end: async source => {
@@ -171,18 +182,28 @@ try {
   for (let n = 0; n < 60; n++) { if (docker(['exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres']).status === 0) { ready = true; break; } await new Promise(r => setTimeout(r, 200)); }
   assert.ok(ready, 'Owned database not ready');
   sql(readFileSync('supabase/tests/bootstrap.sql', 'utf8'));
-  const migrations = readdirSync('supabase/migrations').filter(n => n.endsWith('.sql')).sort();
+  const migrations = readdirSync('supabase/migrations').filter(n => n.endsWith('.sql') && n !== scopedMigration).sort();
   for (const name of migrations) sql(readFileSync('supabase/migrations/' + name, 'utf8'));
   sql(`insert into auth.users(id,email) values ${accounts.map((id, n) => `('${id}','account-epoch-${n}@example.invalid')`).join(',')};
     insert into public.patients(id,user_id,name,status) values ${patients.map((id, n) => `('${id}','${accounts[n]}','Synthetic epoch patient ${n}','novo')`).join(',')};`);
   await compareIndependent(true);
-  const baselineStarted = performance.now();
   // The directory fixture intentionally inserts 2,500 rows in one statement;
   // use a separate explicit functional-test budget, not the 5s race deadline.
-  sql("set statement_timeout='25s';" + readFileSync('supabase/tests/reception-directory.test.sql', 'utf8'));
-  const baselineDirectoryMs = Math.round(performance.now() - baselineStarted);
-  sql(readFileSync('supabase/tests/prototypes/account-custody-epochs.sql', 'utf8'));
-  assert.equal(sql('select count(*) from cortex_private.account_custody_epochs'), '4', 'Existing account fill failed');
+  let baselineDirectoryMs = null;
+  if (!targeted) {
+    const baselineStarted = performance.now();
+    sql("set statement_timeout='25s';" + readFileSync('supabase/tests/reception-directory.test.sql', 'utf8'));
+    baselineDirectoryMs = Math.round(performance.now() - baselineStarted);
+  }
+  if (upgradeMode) {
+    const { exerciseCustodyUpgrade } = await import('./test-custody-upgrade.mjs');
+    checks.push(...await exerciseCustodyUpgrade({ sql, result, session, required, accounts, patients,
+      migration: readFileSync('supabase/migrations/' + scopedMigration, 'utf8') }));
+  } else {
+    sql(readFileSync('supabase/tests/prototypes/account-custody-epochs.sql', 'utf8'));
+    if (resourceMode) sql(readFileSync('supabase/tests/prototypes/resource-custody-epochs.sql', 'utf8'));
+  }
+  assert.equal(sql(`select count(*) from cortex_private.account_custody_epochs where user_id=any(array[${accounts.map(id => `'${id}'::uuid`).join(',')}])`), '4', 'Existing account fill failed');
   await compareIndependent(false);
   await refuseOverlap('same-account writer retains NOWAIT refusal', draft(0), `select cortex_private.touch_custody_epoch(array['${accounts[0]}'::uuid]);`);
   sql(`insert into public.clinics(id,name,created_by) values('${clinic}','Synthetic account epochs','${accounts[2]}');
@@ -215,10 +236,17 @@ try {
     required(await independentIntent.end('rollback;'));
   } finally { await independentIntent.end('rollback;'); }
   checks.push('two independent deletion intents proceed while the other transaction is open');
-  await changedParentRace(false);
-  await changedParentRace(true);
-  await absentParentCounterexamples();
-  const tests = readdirSync('supabase/tests').filter(n => n.endsWith('.test.sql')).sort();
+  if (resourceMode) {
+    const { exerciseResourceCustody } = await import('./test-resource-custody-epochs.mjs');
+    checks.push(...await exerciseResourceCustody({ sql, result, session, required, accounts, patients, clinic }));
+  } else {
+    await changedParentRace(false);
+    await changedParentRace(true);
+    await absentParentCounterexamples();
+  }
+  // CI runs these existing suites in test-database first; targeted mode adds
+  // the new upgrade/resource proofs without repeating all historical races.
+  const tests = targeted ? [] : readdirSync('supabase/tests').filter(n => n.endsWith('.test.sql')).sort();
   const sqlDurationMs = {};
   for (const name of tests) {
     const started = performance.now();
@@ -226,18 +254,24 @@ try {
     sqlDurationMs[name] = Math.round(performance.now() - started);
     process.stdout.write('Passed ' + name + '\n');
   }
-  testFunctionBoundaryRegressions(container);
-  await testReceptionConcurrency(container);
-  await testReceptionAppointmentConcurrency(container);
-  await testReceptionScopeLifecycle(container);
-  await testDocumentSnippetsConcurrency(container);
-  const deletion = await testReceptionDeletionConcurrency(container);
-  report = { syntheticOnly: true, labOnly: true, prototypeIsProductionFix: false, candidateRejected: true, checks,
-    migrations: migrations.length, sqlSuites: tests.length, deletionScenarios: deletion.length,
-    directoryFixture: { rows: 2500, baselineMs: baselineDirectoryMs, prototypeMs: sqlDurationMs['reception-directory.test.sql'],
+  let deletion = [];
+  if (!targeted) {
+    testFunctionBoundaryRegressions(container);
+    await testReceptionConcurrency(container);
+    await testReceptionAppointmentConcurrency(container);
+    await testReceptionScopeLifecycle(container);
+    await testDocumentSnippetsConcurrency(container);
+    deletion = await testReceptionDeletionConcurrency(container);
+  }
+  report = { syntheticOnly: true, labOnly: true, prototypeIsProductionFix: false, candidateRejected: !resourceMode,
+    candidate: resourceMode ? 'resource and account epochs' : 'rejected account-only epochs', checks,
+    installedMigration: upgradeMode ? scopedMigration : null,
+    migrations: migrations.length + (upgradeMode ? 1 : 0), sqlSuites: tests.length, deletionScenarios: deletion.length,
+    directoryFixture: targeted ? null : { rows: 2500, baselineMs: baselineDirectoryMs, prototypeMs: sqlDurationMs['reception-directory.test.sql'],
       statementBudgetSeconds: 25, qualification: 'functional fixture only; uncontrolled local load, not a production benchmark' },
-    regressions: ['function boundaries', 'reception', 'appointments', 'scope lifecycle', 'document snippets', 'deletion interleavings'],
-    notCovered: ['resource fence for absent/NULL-owned parents', 'production migration and rollout', 'load/retry metrics'],
+    regressions: targeted ? ['targeted upgrade and resource regressions; existing suites run by test:db first']
+      : ['function boundaries', 'reception', 'appointments', 'scope lifecycle', 'document snippets', 'deletion interleavings'],
+    notCovered: [...(resourceMode ? [] : ['resource fence for absent/NULL-owned parents']), ...(upgradeMode ? [] : ['production migration']), 'hosted rollout', 'load/retry metrics'],
     network: 'owned internal Docker network without published ports; endpoint pinned to local pipe/socket' };
 } catch (error) { failure = error; }
 finally {
@@ -260,6 +294,7 @@ finally {
 }
 if (failure) throw failure;
 report.cleanupVerified = true;
-mkdirSync('docs/reviews/2026-11-04/account-custody-epochs', { recursive: true });
-writeFileSync('docs/reviews/2026-11-04/account-custody-epochs/RESULT.json', JSON.stringify(report, null, 2) + '\n');
+const artifactPath = 'docs/reviews/2026-11-04/' + (upgradeMode ? 'custody-upgrade' : resourceMode ? 'resource-custody-epochs' : 'account-custody-epochs');
+mkdirSync(artifactPath, { recursive: true });
+writeFileSync(artifactPath + (targeted ? '/TARGETED.json' : '/RESULT.json'), JSON.stringify(report, null, 2) + '\n');
 process.stdout.write(JSON.stringify(report, null, 2) + '\n');

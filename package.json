@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
-    "test:db": "node scripts/test-database.mjs",
+    "test:db": "node scripts/test-database.mjs && npm run test:db:custody",
+    "test:db:custody": "node scripts/test-account-custody-epochs.mjs --upgrade --targeted",
     "typecheck:edge": "node scripts/check-edge-functions.mjs",
     "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },

@@ -1,6 +1,8 @@
 # T33 — proposta de barreira de custódia por conta
 
-Estado: contrato de laboratório, sem migration de produção. A linha singleton atual pode recusar escritores de contas independentes com `40001`. **A alternativa somente por conta é insuficiente:** referências a compromisso ainda inexistente e a modelo com dono nulo exigem proteção também por recurso, ou outra regra explícita que preserve esses fluxos. Não promover o protótipo atual.
+Estado: etapa histórica de laboratório T33/1, sem aprovação do candidato somente por conta. A linha singleton do predecessor pode recusar escritores de contas independentes com `40001`. **A alternativa somente por conta é insuficiente:** referências a compromisso ainda inexistente e a modelo com dono nulo exigem proteção também por recurso, ou outra regra explícita que preserve esses fluxos. Não promover esse protótipo.
+
+Sucessor implementado localmente: [barreira por recurso e conta](RESOURCE_CUSTODY_EPOCH_CONTRACT.md), migration `20261104200000`. Este documento e o SQL somente por conta registram a etapa rejeitada; não substituem o sucessor. Sem aplicação hospedada.
 
 ## Invariantes
 
