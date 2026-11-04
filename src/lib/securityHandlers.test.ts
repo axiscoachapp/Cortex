@@ -41,6 +41,10 @@ function fakeDatabase(seed: Record<string, Row[]> = {}, maximumRows = Infinity) 
   const remove = vi.fn(async () => ({ data: [], error: null as unknown }));
   const list = vi.fn(async () => ({ data: [], error: null as unknown }));
   const deleteUser = vi.fn(async () => ({ data: null, error: null }));
+  const createUser = vi.fn(async (_input: Row) => ({
+    data: { user: { id: '99999999-9999-4999-8999-999999999999' } },
+    error: null,
+  }));
   return {
     tables,
     updates,
@@ -54,13 +58,14 @@ function fakeDatabase(seed: Record<string, Row[]> = {}, maximumRows = Infinity) 
     auth: {
       admin: {
         deleteUser,
+        createUser,
         getUserById: vi.fn(async () => ({
           data: { user: { id: user, email: 'doctor@example.invalid', last_sign_in_at: new Date().toISOString() } },
           error: null,
         })),
       },
     },
-    rpc: vi.fn(async () => ({ data: true as unknown, error: null as unknown })),
+    rpc: vi.fn(async (_name: string) => ({ data: true as unknown, error: null as unknown })),
     from(table: string) {
       reads.push(table);
       const filters: Array<(row: Row) => boolean> = [];
@@ -93,6 +98,10 @@ function fakeDatabase(seed: Record<string, Row[]> = {}, maximumRows = Infinity) 
         },
         is: (field: string, value: unknown) => {
           filters.push((row) => (row[field] ?? null) === value);
+          return query;
+        },
+        in: (field: string, values: unknown[]) => {
+          filters.push((row) => values.includes(row[field]));
           return query;
         },
         order: (column: string) => {
@@ -136,7 +145,7 @@ function fakeDatabase(seed: Record<string, Row[]> = {}, maximumRows = Infinity) 
 function loadHandler(
   name: string,
   db: ReturnType<typeof fakeDatabase>,
-  fetchStub = vi.fn(async () => {
+  fetchStub: (...args: unknown[]) => Promise<Response> = vi.fn(async () => {
     throw new Error('Unexpected network request');
   }),
 ) {
@@ -167,6 +176,7 @@ function loadHandler(
     GOOGLE_CLIENT_ID: 'client',
     GOOGLE_CLIENT_SECRET: 'synthetic',
     ALLOWED_ORIGIN: 'https://cortex.example',
+    RESEND_API_KEY: 'synthetic-resend-key',
   };
   const require = (id: string) => {
     if (id.includes('/http/server.ts'))
@@ -189,6 +199,104 @@ function loadHandler(
 }
 
 describe('security endpoint regressions', () => {
+  it('creates reception identities only for an admin and agendas of that clinic', async () => {
+    const body = { name: 'Secretária Exemplo', email: 'secretaria@example.invalid', doctorIds: [user] };
+    const request = () => new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify(body) });
+    const absent = fakeDatabase();
+    expect((await loadHandler('create-clinic-receptionist', absent)(request())).status).toBe(403);
+    expect(absent.auth.admin.createUser).not.toHaveBeenCalled();
+    const db = fakeDatabase({
+      clinic_members: [{ user_id: user, clinic_id: patient, role: 'admin', status: 'active' }],
+    });
+    const response = await loadHandler('create-clinic-receptionist', db)(request());
+    expect(response.status).toBe(200);
+    const created = await response.json();
+    expect(created.temporaryPassword).toHaveLength(36);
+    expect(db.auth.admin.createUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        app_metadata: { account_type: 'reception' },
+        user_metadata: { full_name: body.name, must_change_password: true },
+      }),
+    );
+    expect(db.rpc).toHaveBeenCalledWith('provision_clinic_receptionist', {
+      p_actor: user,
+      p_user: '99999999-9999-4999-8999-999999999999',
+      p_name: body.name,
+      p_doctors: [user],
+    });
+  });
+  it('rejects a foreign agenda before creating a reception login', async () => {
+    const db = fakeDatabase({
+      clinic_members: [{ user_id: user, clinic_id: patient, role: 'admin', status: 'active' }],
+    });
+    const response = await loadHandler(
+      'create-clinic-receptionist',
+      db,
+    )(
+      new Request('https://edge.invalid', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Secretária Exemplo', email: 'secretaria@example.invalid', doctorIds: [rxId] }),
+      }),
+    );
+    expect(response.status).toBe(403);
+    expect(db.auth.admin.createUser).not.toHaveBeenCalled();
+  });
+  it('does not reveal temporary credentials if provisioning cannot be confirmed', async () => {
+    const db = fakeDatabase({
+      clinic_members: [{ user_id: user, clinic_id: patient, role: 'admin', status: 'active' }],
+    });
+    db.rpc.mockResolvedValueOnce({ data: null, error: { code: '42501' } });
+    const response = await loadHandler(
+      'create-clinic-receptionist',
+      db,
+    )(
+      new Request('https://edge.invalid', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Secretária Exemplo', email: 'secretaria@example.invalid', doctorIds: [user] }),
+      }),
+    );
+    expect(response.status).toBe(503);
+    expect(await response.text()).not.toContain('temporaryPassword');
+    expect(db.deleteUser).toHaveBeenCalledWith('99999999-9999-4999-8999-999999999999');
+  });
+  it('does not mark a rescheduled appointment as reminded after an old email completes', async () => {
+    const db = fakeDatabase({
+      appointments: [
+        {
+          id: 'appointment',
+          user_id: user,
+          patient_id: patient,
+          status: 'agendado',
+          start_time: '2099-01-01T12:00:00Z',
+          type: 'retorno',
+          revision: 1,
+          reminder_sent: false,
+        },
+      ],
+      patients: [{ id: patient, user_id: user, name: 'Exemplo', email: 'synthetic@example.invalid' }],
+    });
+    db.rpc.mockImplementation(async (name: string) => ({
+      data: ['admit_operation', 'reserve_usage'].includes(name) ? { allowed: true, used: 0, limit: 1500 } : true,
+      error: null,
+    }));
+    const provider = vi.fn(async () => {
+      Object.assign(db.tables.appointments[0], { start_time: '2099-01-02T12:00:00Z', revision: 2 });
+      return new Response(JSON.stringify({ id: 'synthetic-email' }), { status: 200 });
+    });
+    const response = await loadHandler(
+      'send-appointment-reminder',
+      db,
+      provider,
+    )(
+      new Request('https://edge.invalid', {
+        method: 'POST',
+        body: JSON.stringify({ appointmentId: 'appointment', type: 'email' }),
+      }),
+    );
+    expect(provider).toHaveBeenCalledOnce();
+    expect(db.tables.appointments[0].reminder_sent).toBe(false);
+    expect(response.status).toBe(409);
+  });
   it('returns the complete SQL snapshot without repaginating mutable tables under the API row cap', async () => {
     const rows = Array.from({ length: 251 }, (_, i) => ({ id: String(i).padStart(4, '0'), user_id: user }));
     const db = fakeDatabase({ patients: rows, user_integration_status: [] }, 100);
@@ -370,18 +478,19 @@ describe('security endpoint regressions', () => {
   it('retains account metadata when storage cleanup cannot complete', async () => {
     const db = fakeDatabase();
     db.list.mockResolvedValue({ data: [], error: { message: 'offline' } });
-    const response = await loadHandler('delete-user-data', db)(
-      new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }),
-    );
+    const response = await loadHandler(
+      'delete-user-data',
+      db,
+    )(new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }));
     expect(response.status).toBe(503);
     expect(db.deleteUser).not.toHaveBeenCalled();
     expect(db.tables.account_deletion_requests).toEqual([{ user_id: user }]);
   });
-  it.each(['delete-user-data', 'delete-patient'])(
-    'blocks %s before storage or metadata changes when legacy relations cross owners',
-    async (name) => {
+  it.each(['delete-user-data', 'delete-patient'].flatMap((name) => ['P4090', 'P4092'].map((code) => ({ name, code }))))(
+    'blocks $name before storage or metadata changes for custody conflict $code',
+    async ({ name, code }) => {
       const db = fakeDatabase({ patients: [{ id: patient, user_id: user, deletion_requested_at: null }] });
-      db.rpc.mockResolvedValue({ data: null, error: { code: 'P4090', message: 'Legacy ownership conflict' } });
+      db.rpc.mockResolvedValue({ data: null, error: { code, message: 'Unresolved custody' } });
       const response = await loadHandler(
         name,
         db,
@@ -403,9 +512,10 @@ describe('security endpoint regressions', () => {
       patients: [{ id: patient, user_id: user, deletion_requested_at: null }],
       consultations: [{ id: 'visit', user_id: user, patient_id: patient }],
     });
-    const response = await loadHandler('delete-patient', db)(
-      new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ patientId: patient }) }),
-    );
+    const response = await loadHandler(
+      'delete-patient',
+      db,
+    )(new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ patientId: patient }) }));
     expect(response.status).toBe(409);
     expect((await response.json()).retentionRequired).toBe(true);
     expect(db.remove).not.toHaveBeenCalled();
@@ -414,9 +524,10 @@ describe('security endpoint regressions', () => {
   });
   it('refuses account deletion without the retention acknowledgment', async () => {
     const db = fakeDatabase();
-    const response = await loadHandler('delete-user-data', db)(
-      new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({}) }),
-    );
+    const response = await loadHandler(
+      'delete-user-data',
+      db,
+    )(new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({}) }));
     expect(response.status).toBe(400);
     expect(db.deleteUser).not.toHaveBeenCalled();
     expect(db.remove).not.toHaveBeenCalled();
@@ -428,9 +539,10 @@ describe('security endpoint regressions', () => {
       data: { user: { id: user, email: 'doctor@example.invalid', last_sign_in_at: stale } },
       error: null,
     });
-    const response = await loadHandler('delete-user-data', db)(
-      new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }),
-    );
+    const response = await loadHandler(
+      'delete-user-data',
+      db,
+    )(new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }));
     expect(response.status).toBe(403);
     expect((await response.json()).reauthRequired).toBe(true);
     expect(db.deleteUser).not.toHaveBeenCalled();
@@ -534,9 +646,10 @@ describe('security endpoint regressions', () => {
     const db = fakeDatabase({
       provider_upload_leases: [{ id: 'pending', user_id: user, patient_id: patient, created_at: '2026-01-01' }],
     });
-    const response = await loadHandler('delete-user-data', db)(
-      new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }),
-    );
+    const response = await loadHandler(
+      'delete-user-data',
+      db,
+    )(new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }));
     expect(response.status).toBe(503);
     expect(db.list).not.toHaveBeenCalled();
     expect(db.deleteUser).not.toHaveBeenCalled();

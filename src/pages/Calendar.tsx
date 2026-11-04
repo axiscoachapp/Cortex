@@ -42,6 +42,7 @@ const localizer = dateFnsLocalizer({
 function mapRow(row: Tables<'appointments'>): Appointment {
   return {
     id: row.id,
+    revision: row.revision,
     userId: row.user_id,
     patientId: row.patient_id,
     title: row.title,

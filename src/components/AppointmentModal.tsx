@@ -87,8 +87,9 @@ export function AppointmentModal({
   const [sendingEmail, setSendingEmail] = useState(false);
   const [loadingWa, setLoadingWa] = useState(false);
   const [waLinks, setWaLinks] = useState<Record<string, string>>({});
-  const activeAppointmentId = useRef(appointment?.id);
-  activeAppointmentId.current = appointment?.id;
+  const appointmentKey=appointment?`${appointment.id}/${appointment.revision??1}`:'';
+  const activeAppointmentId = useRef(appointmentKey);
+  activeAppointmentId.current = appointmentKey;
 
   // New patient inline fields
   const [newName, setNewName] = useState('');
@@ -241,8 +242,10 @@ export function AppointmentModal({
       let savedId = appointment?.id;
 
       if (isEdit) {
-        const { error } = await supabase.from('appointments').update(payload).eq('id', appointment!.id);
+        const { data:updated,error } = await supabase.from('appointments').update(payload).eq('id', appointment!.id)
+          .eq('user_id',userId).eq('revision',appointment!.revision??1).select('id').maybeSingle();
         if (error) throw error;
+        if(!updated)throw new Error('O agendamento mudou em outra tela. Atualize a agenda antes de salvar.');
       } else {
         const { data, error } = await supabase.from('appointments').insert([payload]).select().single();
         if (error) throw error;
@@ -281,10 +284,10 @@ export function AppointmentModal({
       });
       onSaved();
       onOpenChange(false);
-    } catch {
+    } catch (error) {
       toast({
         title: 'Erro ao salvar',
-        description: 'Os dados foram mantidos. Tente novamente.',
+        description: error instanceof Error?error.message:'Os dados foram mantidos. Atualize a agenda e tente novamente.',
         variant: 'destructive',
       });
     } finally {
@@ -296,25 +299,26 @@ export function AppointmentModal({
     if (!appointment || deleting || saving) return;
     if (
       !window.confirm(
-        `Excluir a consulta "${appointment.title}" de ${format(appointment.startTime, 'dd/MM/yyyy HH:mm')}? Esta ação não pode ser desfeita.`,
+        `Cancelar a consulta "${appointment.title}" de ${format(appointment.startTime, 'dd/MM/yyyy HH:mm')}? O histórico será preservado.`,
       )
     )
       return;
     setDeleting(true);
     try {
-      if (googleConnected && appointment.googleEventId) {
-        const { error: syncError } = await supabase.functions.invoke('sync-google-calendar', {
-          body: { action: 'delete', appointment: { id: appointment.id, google_event_id: appointment.googleEventId } },
-        });
-        if (syncError) throw syncError;
-      }
-      const { error } = await supabase.from('appointments').delete().eq('id', appointment.id);
+      const {data:cancelled,error} = await supabase.from('appointments').update({status:'cancelado'}).eq('id',appointment.id)
+        .eq('user_id',userId).eq('revision',appointment.revision??1).select('id').maybeSingle();
       if (error) throw error;
-      toast({ title: 'Consulta excluída' });
+      if(!cancelled)throw new Error('O agendamento mudou em outra tela. Atualize antes de cancelar.');
+      let syncPending=false;
+      if(googleConnected&&appointment.googleEventId) {
+        try {const {error:syncError}=await supabase.functions.invoke('sync-google-calendar',{body:{action:'update',appointment:{id:appointment.id}}});syncPending=!!syncError;}
+        catch {syncPending=true;}
+      }
+      toast({title:'Agendamento cancelado',description:syncPending?'Cancelamento registrado no Cortex; sincronização externa pendente.':undefined});
       onSaved();
       onOpenChange(false);
-    } catch {
-      toast({ title: 'Erro ao excluir', variant: 'destructive' });
+    } catch (error) {
+      toast({title:'Não foi possível cancelar',description:error instanceof Error?error.message:'Atualize a agenda antes de tentar novamente.',variant:'destructive'});
     } finally {
       setDeleting(false);
     }
@@ -325,7 +329,7 @@ export function AppointmentModal({
     setSendingEmail(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-appointment-reminder', {
-        body: { appointmentId: appointment.id, type: 'email', userId },
+        body: { appointmentId: appointment.id, type: 'email', userId,expectedRevision:appointment.revision??1 },
       });
       if (error || data?.success !== true) throw error ?? new Error('Envio não confirmado');
       toast({ title: 'Lembrete enviado por email!' });
@@ -339,11 +343,11 @@ export function AppointmentModal({
 
   const handleWhatsAppReminder = async () => {
     if (!appointment || !canRemindAppointment(status, appointment.startTime)) return;
-    const requestedId = appointment.id;
+    const requestedId = appointmentKey;
     setLoadingWa(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-appointment-reminder', {
-        body: { appointmentId: appointment.id, type: 'whatsapp', userId },
+        body: { appointmentId: appointment.id, type: 'whatsapp', userId,expectedRevision:appointment.revision??1 },
       });
       if (error) throw error;
       if (typeof data?.waLink !== 'string') throw new Error('Link ausente');
@@ -623,11 +627,11 @@ export function AppointmentModal({
                 </Button>
               </div>
             )}
-            {appointment && canRemindAppointment(status, appointment.startTime) && waLinks[appointment.id] && (
+            {appointment && canRemindAppointment(status, appointment.startTime) && waLinks[appointmentKey] && (
               <div role="status" className="text-xs space-y-1">
                 <p>Link pronto. O lembrete só será enviado quando você confirmar no WhatsApp.</p>
                 <a
-                  href={waLinks[appointment.id]}
+                  href={waLinks[appointmentKey]}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-medical-blue underline"
@@ -650,7 +654,7 @@ export function AppointmentModal({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  aria-label="Excluir agendamento"
+                  aria-label="Cancelar agendamento"
                   className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={handleDelete}
                   disabled={deleting}

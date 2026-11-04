@@ -3,17 +3,22 @@ import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
 
-function load(factors: Array<{status:string}>=[]) {
-  const getUser=vi.fn(async()=>({data:{user:{id:'doctor',factors}},error:null as unknown}));
+function load(factors: Array<{status:string}>=[], appMetadata: Record<string, unknown> = {}) {
+  const getUser=vi.fn(async()=>({data:{user:{id:'doctor',factors,app_metadata:appMetadata}},error:null as unknown}));
   const source=readFileSync(new URL('../../supabase/functions/_shared/auth.ts',import.meta.url),'utf8');
   const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   const exports:Record<string,unknown>={};
   const require=(id:string)=>id.includes('@supabase/supabase-js')?{createClient:()=>({auth:{getUser}})}:{fetchWithDeadline:vi.fn()};
   new Function('require','exports','Deno',compiled)(require,exports,{env:{get:()=> 'synthetic'}});
-  return {getUser,requireUser:exports.requireUser as (request:Request)=>Promise<{userId:string}>};
+  return {getUser,requireUser:exports.requireUser as (request:Request, options?:{allowReception?:boolean})=>Promise<{userId:string}>};
 }
 const request=(claims:object)=>new Request('https://edge.invalid',{headers:{Authorization:`Bearer e30.${btoa(JSON.stringify(claims))}.synthetic-signature`}});
 describe('authenticated Edge MFA assurance',()=>{
+  it('blocks a dedicated reception account from clinical Edge functions', async () => {
+    const { requireUser } = load([], { account_type: 'reception' });
+    await expect(requireUser(request({sub:'doctor',aal:'aal1'}))).rejects.toMatchObject({status:403});
+    await expect(requireUser(request({sub:'doctor',aal:'aal1'}), {allowReception:true})).resolves.toEqual({userId:'doctor'});
+  });
   it('requires aal2 for an enrolled user after Auth validates identity',async()=>{
     const {getUser,requireUser}=load([{status:'verified'}]);
     await expect(requireUser(request({sub:'doctor',aal:'aal1'}))).rejects.toMatchObject({status:403});
@@ -30,7 +35,7 @@ describe('authenticated Edge MFA assurance',()=>{
   });
   it('never treats self-asserted aal2 as valid when Auth rejects the token',async()=>{
     const {getUser,requireUser}=load([{status:'verified'}]);
-    getUser.mockResolvedValue({data:{user:{id:'doctor',factors:[]}},error:new Error('invalid signature')});
+    getUser.mockResolvedValue({data:{user:{id:'doctor',factors:[],app_metadata:{}}},error:new Error('invalid signature')});
     await expect(requireUser(request({sub:'doctor',aal:'aal2'}))).rejects.toMatchObject({status:401});
   });
 });

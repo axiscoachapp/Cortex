@@ -8,11 +8,18 @@ import type { Appointment, Patient } from '@/types/patient';
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
   remove: vi.fn().mockResolvedValue({ error: null }),
+  update: vi.fn(),
+  eq: vi.fn(),
+  saved: vi.fn(),
 }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: () => ({ delete: () => ({ eq: mocks.remove }) }),
+    from: () => {
+      const query={update:mocks.update,eq:mocks.eq,select:()=>query,maybeSingle:mocks.saved};
+      mocks.update.mockReturnValue(query);mocks.eq.mockReturnValue(query);
+      return query;
+    },
     functions: { invoke: mocks.invoke },
   },
 }));
@@ -27,6 +34,7 @@ const appointment: Appointment = {
   status: 'agendado',
   type: 'retorno',
   reminderSent: false,
+  revision: 3,
   googleEventId: 'event-a',
 };
 
@@ -63,6 +71,7 @@ function renderAppointment(withPatient = false) {
 describe('Appointment removal and unsaved changes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.saved.mockResolvedValue({data:{id:'appointment-a'},error:null});
   });
   it('offers an explicit WhatsApp link after a blocked popup without claiming delivery', async () => {
     mocks.invoke.mockResolvedValue({ data: { waLink: 'https://wa.me/5511999999999?text=teste' }, error: null });
@@ -76,16 +85,16 @@ describe('Appointment removal and unsaved changes', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/só será enviado quando/i);
   });
 
-  it('does not delete an appointment when the confirmation is declined', async () => {
+  it('does not cancel an appointment when the confirmation is declined', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderAppointment();
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir agendamento' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar agendamento' }));
     expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('Consulta de teste'));
     expect(mocks.invoke).not.toHaveBeenCalled();
-    expect(mocks.remove).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 
-  it('retains the local appointment until Google confirms deletion', async () => {
+  it('cancels the exact local revision while retaining the row before Google synchronization', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     let finishSync: (result: { error: null }) => void;
     mocks.invoke.mockImplementation(
@@ -95,11 +104,18 @@ describe('Appointment removal and unsaved changes', () => {
         }),
     );
     renderAppointment();
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir agendamento' }));
-    expect(mocks.invoke).toHaveBeenCalledWith('sync-google-calendar', expect.any(Object));
-    expect(mocks.remove).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar agendamento' }));
+    await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledWith('sync-google-calendar',expect.objectContaining({body:expect.objectContaining({action:'update'})})));
+    expect(mocks.update).toHaveBeenCalledWith({status:'cancelado'});
+    expect(mocks.eq).toHaveBeenCalledWith('revision',3);
     finishSync!({ error: null });
-    await waitFor(() => expect(mocks.remove).toHaveBeenCalledWith('id', 'appointment-a'));
+    expect(mocks.remove).not.toHaveBeenCalled();
+  });
+
+  it('does not synchronize a stale local cancellation over a receptionist reschedule',async()=>{
+    vi.spyOn(window,'confirm').mockReturnValue(true);mocks.saved.mockResolvedValue({data:null,error:null});renderAppointment();
+    await userEvent.click(screen.getByRole('button',{name:'Cancelar agendamento'}));
+    await waitFor(()=>expect(mocks.saved).toHaveBeenCalled());expect(mocks.invoke).not.toHaveBeenCalled();
   });
 
   it('keeps an edited appointment open if discard is declined', async () => {

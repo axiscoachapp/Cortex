@@ -11,7 +11,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { fetchWithDeadline } from './http.ts';
 
 export class AuthError extends Error {
-  constructor(message = "Não autorizado", public status = 401) {
+  constructor(message = "Não autorizado", public status = 401, public mfaRequired = false) {
     super(message);
     this.name = "AuthError";
   }
@@ -22,7 +22,7 @@ export class AuthError extends Error {
  * Throws AuthError (401) when the header is missing or the token is invalid —
  * the public anon key resolves to no user and is rejected too.
  */
-export async function requireUser(req: Request): Promise<{ userId: string }> {
+export async function requireUser(req: Request, options: { allowReception?: boolean } = {}): Promise<{ userId: string }> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) throw new AuthError();
 
@@ -45,7 +45,13 @@ export async function requireUser(req: Request): Promise<{ userId: string }> {
     if (!claims || typeof claims !== 'object' || Array.isArray(claims) || claims.sub !== user.id) throw new Error();
   } catch { throw new AuthError('Sessão inválida'); }
   if (user.factors?.some(factor => factor.status === 'verified') && claims.aal !== 'aal2') {
-    throw new AuthError('Confirme o segundo fator para continuar.', 403);
+    throw new AuthError('Confirme o segundo fator para continuar.', 403, true);
+  }
+
+  // app_metadata is managed by Auth administrators, unlike editable user_metadata.
+  // Reception has its own scoped RPCs and cannot enter service-role clinical handlers.
+  if (user.app_metadata?.account_type === 'reception' && !options.allowReception) {
+    throw new AuthError('Esta operação é restrita ao ambiente médico.', 403);
   }
 
   return { userId: user.id };
@@ -54,7 +60,7 @@ export async function requireUser(req: Request): Promise<{ userId: string }> {
 /** 401 response the generic catch block can return for AuthError. */
 export function authResponse(err: AuthError, corsHeaders: Record<string, string>): Response {
   return new Response(
-    JSON.stringify({ error: err.message, ...(err.status === 403 ? { mfaRequired: true } : {}) }),
+    JSON.stringify({ error: err.message, ...(err.mfaRequired ? { mfaRequired: true } : {}) }),
     { status: err.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 }

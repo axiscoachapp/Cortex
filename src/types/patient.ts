@@ -35,6 +35,7 @@ export interface Medication {
 
 export interface Appointment {
   id: string;
+  revision?: number;
   userId: string;
   patientId: string | null;
   title: string;

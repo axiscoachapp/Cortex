@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
+import { testReceptionConcurrency } from './test-reception-concurrency.mjs';
 
 // Every run owns a newly named disposable database. Never reset a linked project.
 const container = process.env.CORTEX_TEST_DB_CONTAINER || `cortex-test-${randomUUID().slice(0,8)}`;
@@ -16,7 +17,7 @@ try {
   if (ownsContainer) run(['run','--detach','--rm','--name',container,'--env','POSTGRES_HOST_AUTH_METHOD=trust','pgvector/pgvector:pg16']);
   let ready = false;
   for (let attempt = 0; attempt < 60; attempt++) {
-    if (spawnSync('docker',['exec',container,'pg_isready','-U','postgres'],{stdio:'ignore'}).status === 0) { ready = true; break; }
+    if (spawnSync('docker',['exec',container,'pg_isready','-h','127.0.0.1','-U','postgres'],{stdio:'ignore'}).status === 0) { ready = true; break; }
     await new Promise(resolveWait => setTimeout(resolveWait,500));
   }
   if (!ready) throw new Error('Disposable PostgreSQL did not become ready');
@@ -27,6 +28,7 @@ try {
   for (const name of readdirSync('supabase/tests').filter(name=>name.endsWith('.test.sql')).sort()) {
     sql(readFileSync(resolve('supabase/tests',name),'utf8')); process.stdout.write(`Passed ${name}\n`);
   }
+  await testReceptionConcurrency(container);
 } finally {
   if (ownsContainer) run(['stop',container]);
 }

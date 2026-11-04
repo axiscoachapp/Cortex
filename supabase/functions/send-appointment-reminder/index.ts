@@ -40,7 +40,7 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
-    const { appointmentId, type } = await readJsonObject(req);
+    const { appointmentId, type,expectedRevision } = await readJsonObject(req);
 
     if (typeof appointmentId !== 'string' || !appointmentId || !['email','whatsapp'].includes(type)) {
       return new Response(
@@ -58,7 +58,7 @@ serve(async (req) => {
     const { data: appt, error: apptError } = await supabase
       .from('appointments')
       // Internal notes ("Observações") are never sent to patients.
-      .select('id, patient_id, start_time, type, status')
+      .select('id, patient_id, start_time, type, status, revision')
       .eq('id', appointmentId)
       .eq('user_id', userId)
       .single();
@@ -69,6 +69,8 @@ serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+    if(expectedRevision!==undefined&&expectedRevision!==appt.revision)throw new RequestError('O agendamento mudou. Atualize a agenda antes de enviar.',409);
+    const reminderSnapshot={revision:appt.revision,start:appt.start_time,status:appt.status};
 
     if (!canRemindAppointment(appt.status, appt.start_time)) throw new RequestError('Lembretes estão disponíveis apenas para agendamentos futuros agendados ou confirmados.', 409);
 
@@ -174,13 +176,15 @@ Até breve! 💙`;
 
       // Mark reminder as sent
       await recordUsage(supabase, userId, REMINDER_COST, quota.reservationId);
-      const {error: updateError} = await supabase
+      const {data:marked,error:updateError} = await supabase
         .from('appointments')
         .update({ reminder_sent: true })
         .eq('id', appointmentId)
-        .eq('user_id', userId);
+        .eq('user_id', userId).eq('revision',reminderSnapshot.revision)
+        .eq('start_time',reminderSnapshot.start).eq('status',reminderSnapshot.status).select('id').maybeSingle();
 
       if (updateError) throw new Error('Email enviado, mas não foi possível atualizar o agendamento');
+      if(!marked)throw new RequestError('O e-mail foi processado para um horário anterior. O agendamento mudou; confira a agenda antes de enviar outro lembrete.',409);
 
       return new Response(
         JSON.stringify({ success: true }),

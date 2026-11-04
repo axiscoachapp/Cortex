@@ -5,7 +5,10 @@ insert into public.patients(id,user_id,name,age,last_visit,status,phone,email,cl
  from generate_series(1,250)n;
 insert into public.patients(user_id,name,age,last_visit,status) values('c0000000-0000-4000-8000-000000000002','Foreign private patient',null,null,'novo');
 insert into public.appointments(user_id,patient_id,title,start_time,end_time,status)
- select 'c0000000-0000-4000-8000-000000000001',id,'Synthetic appointment',now(),now()+interval '30 minutes','agendado' from public.patients where user_id='c0000000-0000-4000-8000-000000000001';
+ select 'c0000000-0000-4000-8000-000000000001',id,'Synthetic appointment',
+  (date_trunc('day',now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo')+(row_number() over(order by id)-1)*interval '5 minutes',
+  (date_trunc('day',now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo')+(row_number() over(order by id)-1)*interval '5 minutes'+interval '4 minutes','agendado'
+ from public.patients where user_id='c0000000-0000-4000-8000-000000000001';
 set local role authenticated;
 select set_config('request.jwt.claim.sub','c0000000-0000-4000-8000-000000000001',true);
 do $$ declare result jsonb; begin
