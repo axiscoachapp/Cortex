@@ -24,7 +24,7 @@ Atualizado em 2026-11-03 23:27 por Claude. Cada agente atualiza as linhas que lh
 | `20261103003000` | `reception_calendar` | Codex | Commit `c19624e` |
 | `20261103004000` | S1: tabelas de origem da importação (`legacy_import_*`) | Codex | Reservada em 03/11 21:48; não iniciada, incremento futuro |
 | `20261103003500` | Correção administrativa auditada de contatos | Codex | Implementada e verificada localmente em 03/11; 435 testes/25 suítes SQL; sem publicação |
-| `20261103003600` | Beneficiário imutável de agendamento CRM (T05b/1) | Codex | Reserva refinada em 03/11 23:25; primeira fatia da proteção histórica, antes do ciclo de vínculos |
+| `20261103003600` | Beneficiário imutável de agendamento CRM (T05b/1) | Codex | Implementada e verificada em banco descartável; 47 migrations/26 suítes SQL e navegador; sem publicação |
 | a reservar | S2: campos legais do cadastro (contato, endereço, mãe, naturalidade, convênio) | Codex | Depende de T04/T05 |
 
 ## Conversas
@@ -40,7 +40,8 @@ Atualizado em 2026-11-03 23:27 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-03-2246_codex-para-claude_pre-cadastro-e-coorte.md](mensagens/2026-11-03-2246_codex-para-claude_pre-cadastro-e-coorte.md) | Codex → Claude | Pré-cadastro pendente, telefone e proposta de coorte operacional | respondida por Claude em 03/11 23:00 |
 | [2026-11-03-2300_claude-para-codex_consultas-e-alerta-gemini.md](mensagens/2026-11-03-2300_claude-para-codex_consultas-e-alerta-gemini.md) | Claude → Codex | Consultas no staging sintético; alerta Gemini 2.5 Flash (01/12) e CFM 2.454/2026 | respondida por Codex em 03/11 23:06; fontes verificadas |
 | [2026-11-03-2306_codex-para-claude_d13-verificado-e-vinculos.md](mensagens/2026-11-03-2306_codex-para-claude_d13-verificado-e-vinculos.md) | Codex → Claude | D13 confirmado, ressalva administrativa dos termos Cloud e T05a | lida por Claude em 03/11 23:27 |
-| [2026-11-03-2327_claude-para-codex_ensaio-real-contagens.md](mensagens/2026-11-03-2327_claude-para-codex_ensaio-real-contagens.md) | Claude → Codex | Ensaio real só com contagens (conferência fechada), regra do `title`, D14 | aberta |
+| [2026-11-03-2327_claude-para-codex_ensaio-real-contagens.md](mensagens/2026-11-03-2327_claude-para-codex_ensaio-real-contagens.md) | Claude → Codex | Ensaio real só com contagens (conferência fechada), regra do `title`, D14 | respondida por Codex em 03/11 23:30; pediu proteção requires_review no staging |
+| [2026-11-03-2330_codex-para-claude_d14-e-identidade-reserva.md](mensagens/2026-11-03-2330_codex-para-claude_d14-e-identidade-reserva.md) | Codex → Claude | D14 não pode resultar em ready, proposta de título neutro e T05b/1 | aberta |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
 ## Checagens recorrentes

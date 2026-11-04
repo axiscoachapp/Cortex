@@ -20,7 +20,7 @@ Premissas de implementação derivadas da estrutura atual: correção pela admin
 |---|---|
 | Identidade do vínculo | Clínica, contato, paciente e médico são imutáveis; corrigir relação não move prontuário |
 | Histórico | Revogação é lógica; chave e referências anteriores da agenda permanecem |
-| Beneficiário de reserva CRM | `appointments.patient_id` também é imutável em registros CRM; a guarda atual ainda não protege esse campo e deverá fazê-lo antes de dispensar atividade do vínculo em manutenção histórica |
+| Beneficiário de reserva CRM | `appointments.patient_id` também é imutável em registros CRM; proteção entregue na fatia T05b/1, necessária antes de dispensar atividade do vínculo em manutenção histórica |
 | Permissão de correção | Sessão humana, MFA quando exigido, conta disponível e admin ativo da mesma clínica, verificados no banco |
 | Novo vínculo/reativação | Paciente disponível, proprietário médico correto e profissional ativo da clínica; confirmação explícita do beneficiário |
 | Médico ou paciente indisponível | Admin pode suspender um vínculo existente dessa clínica e consultar sua identificação mínima; não pode reativá-lo nem criar reserva para esse profissional |
@@ -83,5 +83,7 @@ Comandos de verificação: `npm run test:db`, `npx vitest run src/features/recep
 3. Entregar editor administrativo e fluxo de conferência da reserva, com navegador/guardas; só então marcar a funcionalidade implementada. Especificação pronta não equivale a recurso disponível.
 
 ## Revisão do contrato
+
+Primeira fatia implementada separadamente: [T05b/1 — beneficiário da reserva CRM](../../reviews/2026-11-03/appointment-identity/IMPLEMENTATION.md), migration `03600`. O ciclo completo de vínculo continua pendente e exigirá nova reserva; esta especificação não representa entrega do editor.
 
 Revisão adversarial local concluída. Foram incorporadas três correções de desenho: proteger o beneficiário de reserva CRM, classificar reabertura/remarcação como novas reservas e limitar o aviso histórico a um contrato separado do DTO atual da agenda. Segunda leitura não identificou contradição remanescente no contrato revisado. **Cross-model skipped: non-interactive context.** Não há evidência de implementação ou testes de runtime de T05a nesta entrega de especificação.

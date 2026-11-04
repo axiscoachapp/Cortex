@@ -71,6 +71,7 @@ export function AppointmentModal({
   onSaved,
 }: AppointmentModalProps) {
   const isEdit = !!appointment;
+  const patientLocked = appointment?.receptionManaged === true;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -97,7 +98,7 @@ export function AppointmentModal({
   const [newPhone, setNewPhone] = useState('');
   const [initialForm, setInitialForm] = useState('');
 
-  const isNewPatient = patientId === NEW_PATIENT;
+  const isNewPatient = !patientLocked && patientId === NEW_PATIENT;
 
   useEffect(() => {
     if (!open) return;
@@ -203,7 +204,7 @@ export function AppointmentModal({
     setSaving(true);
     try {
       // Create new patient inline if needed
-      let resolvedPatientId: string | null = patientId || null;
+      let resolvedPatientId: string | null = patientLocked ? appointment!.patientId : patientId || null;
       if (isNewPatient) {
         const { data: newPatient, error: patientError } = await supabase
           .from('patients')
@@ -400,8 +401,8 @@ export function AppointmentModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSave} className="space-y-4 mt-2">
-          <fieldset disabled={saving || deleting} className="space-y-4">
+        <form onSubmit={handleSave} className="min-w-0 space-y-4 mt-2">
+          <fieldset disabled={saving || deleting} className="min-w-0 space-y-4">
             {/* Patient */}
             <div className="space-y-1.5">
               <Label htmlFor="appointment-patient">Paciente</Label>
@@ -410,9 +411,9 @@ export function AppointmentModal({
                   Cadastro de pacientes indisponível. Recarregue a lista antes de salvar.
                 </p>
               )}
-              <Select disabled={patientLookupUnavailable} value={patientId} onValueChange={setPatientId}>
-                <SelectTrigger id="appointment-patient">
-                  <SelectValue placeholder="Selecionar paciente..." />
+              <Select disabled={patientLookupUnavailable || patientLocked} value={patientId} onValueChange={setPatientId}>
+                <SelectTrigger id="appointment-patient" aria-describedby={patientLocked ? 'appointment-patient-guidance' : undefined}>
+                  <SelectValue placeholder={patientLocked ? 'Paciente original indisponível' : 'Selecionar paciente...'} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NEW_PATIENT}>
@@ -429,6 +430,11 @@ export function AppointmentModal({
                   ))}
                 </SelectContent>
               </Select>
+              {patientLocked && (
+                <p id="appointment-patient-guidance" className="text-xs text-muted-foreground">
+                  Reserva criada pela recepção. Para trocar o paciente, cancele este agendamento e faça uma nova reserva na recepção.
+                </p>
+              )}
 
               {/* Inline new patient form */}
               {isNewPatient && (
@@ -448,7 +454,7 @@ export function AppointmentModal({
                       placeholder="Nome completo"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="appointment-new-age" className="text-xs">
                         Idade (opcional)
@@ -493,7 +499,7 @@ export function AppointmentModal({
             </div>
 
             {/* Type + Status */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="appointment-type">Tipo</Label>
                 <Select value={type} onValueChange={(value: Appointment['type']) => setType(value)}>
@@ -535,10 +541,10 @@ export function AppointmentModal({
                     id="appointment-date"
                     type="button"
                     variant="outline"
-                    className={cn('w-full justify-start text-left font-normal', !date && 'text-muted-foreground')}
+                    className={cn('h-auto min-h-10 w-full justify-start whitespace-normal text-left font-normal', !date && 'text-muted-foreground')}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "d 'de' MMMM 'de' yyyy", { locale: ptBR }) : 'Selecionar data'}
+                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                    <span className="min-w-0">{date ? format(date, "d 'de' MMMM 'de' yyyy", { locale: ptBR }) : 'Selecionar data'}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -554,7 +560,7 @@ export function AppointmentModal({
             </div>
 
             {/* Times */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="appointment-start">Início</Label>
                 <Input
@@ -592,7 +598,7 @@ export function AppointmentModal({
 
             {/* Reminder buttons (edit only, existing patient only) */}
             {isEdit && selectedPatient && (
-              <div className="flex gap-2 pt-1">
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
                 <Button
                   type="button"
                   variant="outline"
@@ -648,7 +654,7 @@ export function AppointmentModal({
             )}
 
             {/* Actions */}
-            <div className="flex gap-2 pt-2">
+            <div className="flex flex-wrap justify-end gap-2 pt-2">
               {isEdit && (
                 <Button
                   type="button"

@@ -55,6 +55,7 @@ Alvos futuros abaixo são sugestões de planejamento; os alvos implementados for
   - Fatias: SQL/guardas de todos os escritores; concorrência e contratos mínimos; editor admin e integração com reserva/modal médico. Seguir o contrato T05a, sem retificação de identidade clínica ou carga real.
   - Aceite: relação/revogação/reativação por revisão; nenhuma confirmação antiga reativa implicitamente; novas reservas/reaberturas/remarcações exigem vínculo ativo; histórico e encerramento clínico preservados; paciente de CRM não é remapeado.
   - Verificar: atores/MFA, duas conexões reais, FK histórica, regra de órfãos e formatos estritos de leitura. Migration precisa de reserva prévia no ESTADO.
+  - **T05b/1 concluída:** beneficiário imutável de reserva CRM, guarda contra escrita direta/privilegiada e orientação no modal médico; layout sem overflow a 150%. [Evidências](../../docs/reviews/2026-11-03/appointment-identity/IMPLEMENTATION.md). Revogação/reativação e editor de vínculo seguem pendentes; não considerar T05b inteira entregue.
 
 - [x] **T06 — Criar atendimento na fila e assumir sem disputa.** Dep.: T04.
   - Aceite: entrada manual tem estado/origem; assumir é atômico e auditado; uma responsabilidade atual por caso.

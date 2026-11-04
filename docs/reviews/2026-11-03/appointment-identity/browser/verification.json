@@ -1,0 +1,22 @@
+{
+  "checks": [
+    "CRM patient fixed, explanatory copy and 150% layout at 390",
+    "CRM patient fixed, explanatory copy and 150% layout at 768",
+    "CRM patient fixed, explanatory copy and 150% layout at 1280",
+    "CRM patient fixed, explanatory copy and 150% layout at 1920",
+    "saving clinical notes keeps the original CRM patient and uses the current revision",
+    "cancellation keeps historical beneficiary",
+    "clinical-only appointment keeps its existing patient selector"
+  ],
+  "errors": [],
+  "metrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 2
+  },
+  "data": "synthetic only",
+  "browser": "isolated Chromium/Edge"
+}

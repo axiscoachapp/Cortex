@@ -38,7 +38,7 @@ const appointment: Appointment = {
   googleEventId: 'event-a',
 };
 
-function renderAppointment(withPatient = false) {
+function renderAppointment(withPatient = false, receptionManaged = false) {
   const onOpenChange = vi.fn();
   const patient: Patient = {
     id: 'patient',
@@ -57,7 +57,7 @@ function renderAppointment(withPatient = false) {
       <AppointmentModal
         open
         onOpenChange={onOpenChange}
-        appointment={withPatient ? { ...appointment, patientId: patient.id } : appointment}
+        appointment={{ ...appointment, patientId: withPatient ? patient.id : null, receptionManaged }}
         patients={withPatient ? [patient] : []}
         userId="doctor"
         googleConnected
@@ -125,6 +125,24 @@ describe('Appointment removal and unsaved changes', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
     expect(screen.getByLabelText('Observações')).toHaveValue('Novo detalhe');
+  });
+
+  it('keeps the receptionist-confirmed patient fixed and saves edits for that patient', async () => {
+    mocks.invoke.mockResolvedValue({ data: { success: true }, error: null });
+    renderAppointment(true, true);
+    expect(screen.getByRole('combobox', { name: 'Paciente' })).toBeDisabled();
+    expect(screen.getByText(/Para trocar o paciente, cancele este agendamento/)).toBeVisible();
+    await userEvent.type(screen.getByLabelText('Observações'), 'Detalhe sintético');
+    await userEvent.click(screen.getByRole('button', { name: 'Atualizar' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({
+      patient_id: 'patient', notes: 'Detalhe sintético',
+    })));
+  });
+
+  it('keeps the patient selector available for appointments without reception context', () => {
+    renderAppointment(true);
+    expect(screen.getByRole('combobox', { name: 'Paciente' })).toBeEnabled();
+    expect(screen.queryByText(/Para trocar o paciente, cancele este agendamento/)).not.toBeInTheDocument();
   });
 });
 

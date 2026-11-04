@@ -45,6 +45,7 @@ function mapRow(row: Tables<'appointments'>): Appointment {
     revision: row.revision,
     userId: row.user_id,
     patientId: row.patient_id,
+    receptionManaged: row.clinic_id != null,
     title: row.title,
     startTime: new Date(row.start_time),
     endTime: new Date(row.end_time),

@@ -38,6 +38,8 @@ export interface Appointment {
   revision?: number;
   userId: string;
   patientId: string | null;
+  /** Internal calendar projection; reception DTOs keep their existing shape. */
+  receptionManaged?: boolean;
   title: string;
   startTime: Date;
   endTime: Date;
