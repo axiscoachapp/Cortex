@@ -417,10 +417,12 @@ serve(async (req) => {
       throw error;
     }
 
-    // Short-lived preview URL for the doctor's browser.
+    // Short-lived preview URL for the doctor's browser, opened right away. A
+    // signed URL is a bearer link that survives logout or a password change,
+    // so keep it as short as the validation link (5 min).
     const { data: signed } = await supabase.storage
       .from('prescriptions')
-      .createSignedUrl(storagePath, 3600);
+      .createSignedUrl(storagePath, 300);
 
     return new Response(
       JSON.stringify({

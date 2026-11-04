@@ -19,15 +19,17 @@ afterEach(() => vi.useRealTimers());
 function database(seed: Record<string, Row[]>) {
   const tables = structuredClone(seed);
   const upload = vi.fn(async () => ({ error: null as unknown }));
+  const signedUrl = vi.fn(async (_path: string, _seconds: number) => ({ data: { signedUrl: 'https://example.invalid/document' }, error: null }));
   const db = {
     tables,
     upload,
+    signedUrl,
     drawnText: [] as string[],
     storage: {
       from: () => ({
         upload,
         remove: async () => ({ error: null }),
-        createSignedUrl: async () => ({ data: { signedUrl: 'https://example.invalid/document' }, error: null }),
+        createSignedUrl: signedUrl,
       }),
     },
     from(table: string) {
@@ -176,6 +178,8 @@ describe('prescription document content', () => {
       patient: { cpf: '52998224725', sex: 'feminino', age: 36 },
       template_version: 'cortex-clinical-document-v2',
     });
+    // The preview link is a bearer URL: it must expire quickly (5 min).
+    expect(db.signedUrl).toHaveBeenCalledWith(expect.stringMatching(/^rx\//), 300);
   });
 
   it('omits the optional lines when there is no phone, RQE or valid CPF', async () => {
