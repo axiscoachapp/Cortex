@@ -7,6 +7,24 @@ import type { Patient } from '@/types/patient';
 const settings = vi.hoisted(() => ({ value: { prescriber: { professionalPhone: '' }, isLoading: false } }));
 vi.mock('@/hooks/useUserSettings', () => ({ useUserSettings: () => settings.value }));
 vi.mock('@/hooks/useUnsavedChanges', () => ({ useUnsavedChanges: () => () => true }));
+vi.mock('@/hooks/useDocumentSnippets', () => ({
+  useDocumentSnippets: () => ({
+    snippets: [
+      {
+        id: 'snippet-uti',
+        name: 'Infecção urinária',
+        revision: 1,
+        items: [{ name: 'Nitrofurantoína 100 mg', dosage: '1 cápsula', instructions: 'de 6 em 6 horas por 5 dias' }],
+      },
+    ],
+    isLoading: false,
+    isError: false,
+    retry: () => {},
+    saveSnippet: async () => ({ id: 'x', revision: 1 }),
+    archiveSnippet: async () => {},
+    isSaving: false,
+  }),
+}));
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: () => {
@@ -48,6 +66,30 @@ describe('Antimicrobial prescription requirements (RDC 471/2021)', () => {
     settings.value = { prescriber: { professionalPhone: '(41) 3000-0000' }, isLoading: false };
     await openAntimicrobial(person({ sex: 'feminino' }));
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('fills the prescription from a template, keeps earlier items unchecked and suggests the antimicrobial type', async () => {
+    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000' }, isLoading: false };
+    const onGenerate = vi.fn(async () => {});
+    const user = userEvent.setup();
+    render(
+      <DocumentComposerModal
+        open
+        onOpenChange={() => {}}
+        patient={person({ sex: 'feminino', medications: [{ name: 'Medicamento sintético', dosage: '1', instructions: 'x' }] })}
+        onGenerate={onGenerate}
+        isGenerating={false}
+      />,
+    );
+    await user.selectOptions(screen.getByLabelText('Modelos de receita'), 'snippet-uti');
+    expect(screen.getByRole('button', { name: /Antimicrobiano/ })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: /Gerar/ }));
+    expect(onGenerate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        docType: 'receita_antimicrobiano',
+        medications: [{ name: 'Nitrofurantoína 100 mg', dosage: '1 cápsula', instructions: 'de 6 em 6 horas por 5 dias' }],
+      }),
+    );
   });
 
   it('does not blame the phone while settings are still loading', async () => {

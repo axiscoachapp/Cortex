@@ -15,6 +15,9 @@ import { validateCertificateDays } from '../../supabase/functions/_shared/docume
 import { currentPatientAge } from '../../supabase/functions/_shared/patientAge';
 import { Patient, Medication } from '@/types/patient';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { antimicrobialsIn } from '../../supabase/functions/_shared/regulatedMedications';
+import { PrescriptionTemplatePicker } from '@/components/PrescriptionTemplatePicker';
+import type { SnippetItem } from '@/lib/documentSnippets';
 
 /** Sex values that satisfy RDC 471/2021; 'nao_informado' does not. */
 const PRINTABLE_SEX = new Set(['feminino', 'masculino', 'intersexo']);
@@ -177,6 +180,20 @@ export function DocumentComposerModal({
     if (hit.is_antimicrobial && docType === 'receita_simples') {
       setDocType('receita_antimicrobiano');
     }
+  };
+
+  // A template fills the prescription: its items arrive checked and the current
+  // ones stay in the list unchecked, so nothing typed is lost.
+  const applySnippet = (items: SnippetItem[]) => {
+    const added = items.map(item => ({
+      name: item.name,
+      dosage: item.dosage,
+      instructions: item.instructions,
+      checked: true,
+      antimicrobial: antimicrobialsIn(item.name).length > 0,
+    }));
+    setMeds(prev => [...prev.map(m => ({ ...m, checked: false })), ...added]);
+    if (added.some(m => m.antimicrobial) && docType === 'receita_simples') setDocType('receita_antimicrobiano');
   };
 
   const selectedMeds = useMemo(() => meds.filter(m => m.checked), [meds]);
@@ -352,6 +369,12 @@ export function DocumentComposerModal({
             </div>
           ) : (
             <>
+              <PrescriptionTemplatePicker
+                selected={selectedMeds}
+                onApply={applySnippet}
+                disabled={isGenerating}
+              />
+
               {/* Catalog search */}
               <div className="space-y-1 relative">
                 <label className="text-xs font-medium text-foreground/80 flex items-center gap-1.5">
