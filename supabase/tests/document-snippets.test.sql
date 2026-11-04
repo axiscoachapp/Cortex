@@ -19,6 +19,9 @@ do $$ begin
   assert not has_table_privilege('anon','public.document_snippets','select'), 'anon can read templates';
   assert pg_get_functiondef('public.document_snippet_writer()'::regprocedure) ~ 'assert_clinical_actor\(\)', 'writer lost the clinical-actor guard';
   assert pg_get_functiondef('public.document_snippet_writer()'::regprocedure) ~ 'assert_session_assurance\(\)', 'writer lost the session guard';
+  -- R1: the epoch touch must come after the advisory lock and before the marker check.
+  assert pg_get_functiondef('public.document_snippet_writer()'::regprocedure)
+    ~ 'pg_advisory_xact_lock.*touch_custody_epoch\(\).*account_deletion_requests', 'writer lost the custody epoch order';
 end $$;
 
 set local role authenticated;
