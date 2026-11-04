@@ -55,6 +55,52 @@ export const plans = {
   105: [{ carrier: 'Particular', isPrivate: true }, { carrier: 'PLANO SINTÉTICO B', card: '', isPrivate: false }],
 };
 
+/** Activity flags: the whole universe is staged; the first reception cohort is decided later (D12). */
+export const cohortFlags = {
+  101: { active: true, futureAppointment: true },
+  102: { active: true, futureAppointment: true },
+  103: { active: true },
+  104: {},
+  105: {},
+};
+
+/** Clinical content per chart `${PCod}|${UserNumber}` (invented text). */
+export const clinical = {
+  '101|3': {
+    encounters: [
+      {
+        day: '2026-07-10',
+        evolutions: [{ text: 'Paciente sintética refere bem-estar.', weight: 62.5, height: 165, pressure: '110/70' }],
+        documents: [{ type: 1, text: 'Uso interno\n- PRODUTO A 10mg ____ 1 caixa\nTome 1 cp ao dia.' }],
+        cids: [{ code: 'Z01.4', description: 'Exame ginecológico' }, { code: 'N95.9', description: 'Transtorno NE da menopausa' }],
+        prenatal: [],
+        appointmentKey: { user: 3, date: '2026-07-10', start: 480 },
+      },
+      { day: '2024-03-10', evolutions: [{ text: 'Retorno sintético.', weight: 10060 }], documents: [], cids: [{ code: 'B37.9', description: 'Candidíase NE' }], prenatal: [] },
+    ],
+    historyText: 'Antecedentes sintéticos: G1P1.\n10/03/2024 Retorno com exames normais.\n15/05/2025 Paciente sintética sem queixas.\n15/05/2025 Acrescentado no mesmo dia.',
+    pages: [
+      { title: 'QP/HDA', kind: 'qp_hda', text: 'Queixa sintética de cólica.' },
+      { title: 'Antecedentes', kind: 'history', text: 'Antecedente sintético sem relevância.' },
+    ],
+    pregnancies: [],
+    firstVisit: '2015-03-02',
+    lastVisit: '2026-07-10',
+  },
+  '101|5': { encounters: [], historyText: 'Texto corrido sintético sem datas.', pages: [], pregnancies: [], firstVisit: '2021-08-16', lastVisit: '2026-05-04' },
+  '102|3': {
+    encounters: [{ day: '2026-06-01', evolutions: [], documents: [], cids: [{ code: 'Z34.0', description: 'Supervisão de primeira gravidez normal' }], prenatal: [{ ig: 20, weight: 64, pressure: '110/70', au: 20, bcf: '140', mf: 1, edema: 0 }] }],
+    historyText: '',
+    pages: [],
+    pregnancies: [
+      { number: 2, dum: '2026-01-15', dpp: '2026-10-22', dppSource: 'DUM' },
+      { number: 1, dum: '2019-01-01', dpp: '2019-10-08', dppSource: 'USG' },
+    ],
+    firstVisit: '2019-02-11',
+    lastVisit: '2026-06-01',
+  },
+};
+
 const appt = (over) => ({ user: 3, date: EXPORT_DATE, startMinutes: 9 * 60, duration: 20, slotType: 'C', estado: '-', pcod: null, preCadastro: null, typeLabel: 'CONS', ...over });
 
 export const agenda = [

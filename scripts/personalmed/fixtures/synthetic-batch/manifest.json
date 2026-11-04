@@ -14,17 +14,33 @@
       "sha256": "367ab11a55643ecae79a838ef558383a0b2e218ad29898e5859cb7656f9d640c",
       "lines": 6
     },
+    "consultation.ndjson": {
+      "sha256": "cee7845824385354a6c7e23e2011996cd9a774bf2b533c2c8ea55977732ec144",
+      "lines": 6
+    },
     "contact.ndjson": {
-      "sha256": "b1d5d6d515e719663de13e7777fe77ccc7a1b185e82ad1d0c5730df49649c858",
+      "sha256": "c29982215445c8b26d2cb758c1d3af22758be61c8880773f175d536578d68061",
       "lines": 6
     },
     "contact_chart_link.ndjson": {
       "sha256": "b35cb47eca49532007edd9a7054962a02bbfe6167ed2d9efa323be845e2a706d",
       "lines": 6
     },
+    "diagnosis_set.ndjson": {
+      "sha256": "30670b131df968e8344cf442f57f5b974d8f7653e2ecba5c075e720a60482ee5",
+      "lines": 1
+    },
+    "medical_history.ndjson": {
+      "sha256": "ba9716ff1c626894bffa295ab8864261b8eeff65c6e55faa977fc9a97e26198b",
+      "lines": 1
+    },
     "person.ndjson": {
-      "sha256": "81d0e91daff7757787ccfdebf3c769f057b82aca84ed1da2649e03c62c84fb05",
+      "sha256": "fa50822b5a4e91c9dd9c9835cf161df77d07c9e53037f4cba319e9814d93fc59",
       "lines": 5
+    },
+    "pregnancy_item.ndjson": {
+      "sha256": "af907ab3ca5577a7be48390c8693d0a245333edcb9e22bf0614e2611a7ec35ec",
+      "lines": 1
     },
     "schedule_block.ndjson": {
       "sha256": "d842cb45564511a138e3890d92cec1e5c4c40748c80c4669b8f121550e06a239",
@@ -56,6 +72,16 @@
         "user:9": 1
       }
     },
+    "consultation": {
+      "total": 6,
+      "byStatus": {
+        "ready": 6
+      },
+      "byDoctor": {
+        "user:3": 5,
+        "user:5": 1
+      }
+    },
     "contact": {
       "total": 6,
       "byStatus": {
@@ -75,12 +101,39 @@
         "user:9": 1
       }
     },
+    "diagnosis_set": {
+      "total": 1,
+      "byStatus": {
+        "ready": 1
+      },
+      "byDoctor": {
+        "user:3": 1
+      }
+    },
+    "medical_history": {
+      "total": 1,
+      "byStatus": {
+        "ready": 1
+      },
+      "byDoctor": {
+        "user:3": 1
+      }
+    },
     "person": {
       "total": 5,
       "byStatus": {
         "ready": 5
       },
       "byDoctor": {}
+    },
+    "pregnancy_item": {
+      "total": 1,
+      "byStatus": {
+        "ready": 1
+      },
+      "byDoctor": {
+        "user:3": 1
+      }
     },
     "schedule_block": {
       "total": 1,
@@ -104,6 +157,7 @@
     "date_sentinel": 1,
     "doctor_map_pending": 6,
     "email_field_reused": 2,
+    "history_no_dates": 1,
     "phone_ddd_assumed_41": 8,
     "phone_ninth_digit_added": 2,
     "phone_no_ddd_outside_41": 2,

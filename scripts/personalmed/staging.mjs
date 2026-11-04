@@ -38,8 +38,11 @@ const text = (v) => (typeof v === 'string' ? v.trim() : v == null ? '' : String(
  * @param p   Clini_01 row with ISO dates
  * @param charts [{ user, firstVisit, lastVisit, hasConsultations }]
  * @param plans  [{ carrier, card, isPrivate }] from Clini_05 + Carrier
+ * @param flags  { active, futureAppointment }: the whole universe stays in
+ *               staging; the first reception cohort is chosen later (D12).
  */
-export function buildPerson(ctx, p, charts, plans = []) {
+export function buildPerson(ctx, p, charts, plans = [], flags = {}) {
+  const cohort = { active: Boolean(flags.active), futureAppointment: Boolean(flags.futureAppointment) };
   const base = { sourceInstance: ctx.sourceInstance, batchId: ctx.batchId };
   const name = cleanName(p.Name);
   const birth = legacyDate(p.BirthDate, { max: ctx.exportDate });
@@ -75,6 +78,7 @@ export function buildPerson(ctx, p, charts, plans = []) {
       phones: phones.map(({ raw, normalized, kind }) => ({ raw, normalized, kind })),
       email: email.email,
       healthPlan: plan ? { carrier: plan.carrier, card: plan.card || null, accommodation: email.accommodation } : null,
+      cohort,
     },
     issues: [...name.issues, ...birth.issues, ...sex.issues, ...cpf.issues, ...email.issues, ...addressIssues, ...phoneIssues],
   });
@@ -84,7 +88,7 @@ export function buildPerson(ctx, p, charts, plans = []) {
     sourceEntity: 'contact',
     key: { pcod: p.PCod },
     targetTable: 'clinic_contacts',
-    payload: { name: name.name, phone: bestPhone?.raw ?? phones[0]?.raw ?? '', phone_normalized: bestPhone?.normalized ?? null, origin: 'personalmed_registration' },
+    payload: { name: name.name, phone: bestPhone?.raw ?? phones[0]?.raw ?? '', phone_normalized: bestPhone?.normalized ?? null, origin: 'personalmed_registration', cohort },
     issues: phoneIssues,
     status: name.name ? undefined : 'rejected',
   });
@@ -210,6 +214,153 @@ export function buildAgenda(ctx, rows, chartIds) {
       a.mappingStatus = 'rejected';
     }
     out.push(a);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Clinical content per chart
+
+const SECTION = (title, body) => (body && body.trim() ? `### ${title}\n\n${body.trim()}` : null);
+const DOC_TYPE = { 1: 'Receita', 2: 'Texto', 3: 'Solicitação de exames' };
+const num = (v) => (typeof v === 'number' && Number.isFinite(v) && v !== 0 ? v : null);
+
+/** Vital signs as text; values outside plausible ranges keep their original form. */
+export function vitalsText(v) {
+  const out = [];
+  const w = num(v.weight);
+  if (w != null) out.push(w >= 25 && w <= 250 ? `Peso: ${w} kg` : `Peso (valor original): ${w}`);
+  const h = num(v.height);
+  if (h != null) out.push(h >= 100 && h <= 220 ? `Altura: ${h} cm` : h >= 1 && h <= 2.2 ? `Altura: ${h} m` : `Altura (valor original): ${h}`);
+  const p = text(v.pressure);
+  if (p) {
+    const m = p.match(/^(\d{1,3})\s*[/x]\s*(\d{1,3})$/);
+    out.push(m && +m[1] >= 60 && +m[1] <= 260 && +m[2] >= 30 && +m[2] <= 160 && +m[1] > +m[2] ? `PA: ${m[1]}/${m[2]} mmHg` : `PA (valor original): ${p}`);
+  }
+  const fc = num(v.fc);
+  if (fc != null) out.push(fc >= 30 && fc <= 220 ? `FC: ${fc} bpm` : `FC (valor original): ${fc}`);
+  const t = num(v.temperature);
+  if (t != null && t >= 34 && t <= 42) out.push(`Temperatura: ${t} °C`);
+  return out.join(' · ');
+}
+
+function prenatalText(p) {
+  const out = [];
+  if (num(p.ig) != null) out.push(`IG: ${p.ig} semanas`);
+  if (num(p.weight) != null) out.push(`Peso: ${p.weight} kg`);
+  if (text(p.pressure)) out.push(`PA: ${text(p.pressure)}`);
+  if (num(p.au) != null) out.push(`AU: ${p.au} cm`);
+  if (text(p.bcf)) out.push(`BCF: ${text(p.bcf)} bpm`);
+  if (num(p.mf) != null) out.push(`MF: ${p.mf}`);
+  if (p.edema != null) out.push(`Edema: ${p.edema ? `${p.edema}+` : 'ausente'}`);
+  return out.join(' · ');
+}
+
+/**
+ * One chart's clinical history -> consultations (one per day), medical
+ * history, non-Z diagnoses and open pregnancies.
+ *
+ * input: {
+ *   encounters: Map(day -> { evolutions: [{text, weight, height, fc, pressure, temperature}],
+ *     documents: [{type, text}], cids: [{code, description}], prenatal: [{ig, weight, pressure, au, bcf, mf, edema}],
+ *     appointmentKey: {user, date, start} | null, appointmentStart: iso | null }),
+ *   history: { entries, issues } from splitHistory, or null,
+ *   pages: [{ title, text, kind: 'qp_hda' | 'history' }],
+ *   pregnancies: [{ number, dum, dpp, dppSource }],
+ *   firstVisit, lastVisit
+ * }
+ */
+export function buildChartClinical(ctx, chart, input) {
+  const base = { sourceInstance: ctx.sourceInstance, batchId: ctx.batchId };
+  const { pcod, user, patientTargetId } = chart;
+  const stamp = `[Importado do PersonalMed em ${ctx.importDate}]`;
+  const out = [];
+  const historyIssues = input.history?.issues ?? [];
+  const dated = new Map();
+  let undated = null;
+  for (const e of input.history?.entries ?? []) {
+    if (!e.date) undated = undated ? `${undated}\n\n${e.text}` : e.text;
+    else dated.set(e.date, dated.has(e.date) ? `${dated.get(e.date)}\n\n${e.text}` : e.text);
+  }
+  const days = [...new Set([...(input.encounters?.keys() ?? []), ...dated.keys()])].sort();
+  for (const day of days) {
+    const enc = input.encounters?.get(day);
+    const sections = [
+      SECTION('Evolução', (enc?.evolutions ?? []).map((v) => v.text).filter(Boolean).join('\n\n')),
+      SECTION('Sinais vitais', (enc?.evolutions ?? []).map(vitalsText).filter(Boolean).join('\n')),
+      SECTION('Pré-natal', (enc?.prenatal ?? []).map(prenatalText).filter(Boolean).join('\n')),
+      SECTION('CID registrado', [...new Map((enc?.cids ?? []).map((c) => [c.code, c])).values()].map((c) => `${c.code} ${c.description ?? ''}`.trim()).join('\n')),
+      SECTION('Documentos emitidos', (enc?.documents ?? []).map((d) => `**${DOC_TYPE[d.type] ?? 'Documento'}**\n\n${d.text}`).join('\n\n---\n\n')),
+      SECTION('Histórico corrido', dated.get(day)),
+    ].filter(Boolean);
+    const onlyHistory = !enc;
+    out.push(
+      envelope({
+        ...base,
+        sourceEntity: 'consultation',
+        key: { pcod, user, day },
+        doctor: user,
+        targetTable: 'consultations',
+        payload: {
+          patientTargetId,
+          ownerLegacyDoctor: user,
+          created_at: enc?.appointmentStart ?? wallClockToUtc(day, 12 * 60),
+          chief_complaint: onlyHistory ? 'Anotação do histórico (PersonalMed)' : 'Consulta (PersonalMed)',
+          soap_note: [stamp, ...sections].join('\n\n'),
+          appointmentSourceRecordId: enc?.appointmentKey ? `user:${enc.appointmentKey.user}|date:${enc.appointmentKey.date}|start:${enc.appointmentKey.start}` : null,
+        },
+        issues: dated.has(day) ? historyIssues : [],
+      }),
+    );
+  }
+  const anchor = legacyDate(input.lastVisit, { max: ctx.exportDate }).date ?? legacyDate(input.firstVisit, { max: ctx.exportDate }).date ?? ctx.exportDate;
+  if (undated) {
+    out.push(
+      envelope({
+        ...base,
+        sourceEntity: 'consultation',
+        key: { pcod, user, day: 'historico' },
+        doctor: user,
+        targetTable: 'consultations',
+        payload: { patientTargetId, ownerLegacyDoctor: user, created_at: wallClockToUtc(anchor, 12 * 60), chief_complaint: 'Histórico PersonalMed (texto corrido)', soap_note: `${stamp}\n\n${undated}`, appointmentSourceRecordId: null },
+        issues: historyIssues,
+      }),
+    );
+  }
+  for (const page of input.pages ?? []) {
+    if (page.kind !== 'qp_hda' || !text(page.text)) continue;
+    const first = legacyDate(input.firstVisit, { max: ctx.exportDate }).date ?? anchor;
+    out.push(
+      envelope({
+        ...base,
+        sourceEntity: 'consultation',
+        key: { pcod, user, page: 'qp-hda' },
+        doctor: user,
+        targetTable: 'consultations',
+        payload: { patientTargetId, ownerLegacyDoctor: user, created_at: wallClockToUtc(first, 12 * 60), chief_complaint: 'Primeira consulta: QP/HDA (PersonalMed)', soap_note: `${stamp}\n\n${text(page.text)}`, appointmentSourceRecordId: null },
+      }),
+    );
+  }
+  const historySections = (input.pages ?? []).filter((pg) => pg.kind === 'history' && text(pg.text)).map((pg) => `## ${pg.title}\n\n${text(pg.text)}`);
+  if (historySections.length) {
+    out.push(envelope({ ...base, sourceEntity: 'medical_history', key: { pcod, user }, doctor: user, targetTable: 'patients.medical_history', payload: { patientTargetId, text: `${stamp}\n\n${historySections.join('\n\n')}` } }));
+  }
+  const diagnoses = [...new Map([...(input.encounters?.values() ?? [])].flatMap((e) => e.cids ?? []).filter((c) => c.code && !/^z/i.test(c.code)).map((c) => [c.code.toUpperCase(), { code: c.code.toUpperCase(), description: text(c.description) }])).values()].sort((a, b) => (a.code < b.code ? -1 : 1));
+  if (diagnoses.length) out.push(envelope({ ...base, sourceEntity: 'diagnosis_set', key: { pcod, user }, doctor: user, targetTable: 'patients.diagnoses', payload: { patientTargetId, diagnoses } }));
+  const horizon = new Date(Date.parse(ctx.exportDate) + 300 * 864e5).toISOString().slice(0, 10);
+  for (const g of input.pregnancies ?? []) {
+    const dpp = legacyDate(g.dpp).date;
+    if (!dpp || dpp < ctx.exportDate || dpp > horizon) continue;
+    out.push(
+      envelope({
+        ...base,
+        sourceEntity: 'pregnancy_item',
+        key: { pcod, user, gestation: g.number },
+        doctor: user,
+        targetTable: 'clinical_work_items',
+        payload: { patientTargetId, kind: 'pregnancy', status: 'open', details: { date: dpp, source: g.dppSource === 'USG' ? 'USG' : 'DUM' } },
+      }),
+    );
   }
   return out;
 }

@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-03 22:41 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-03 23:00 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -36,7 +36,8 @@ Atualizado em 2026-11-03 22:41 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-03-2213_claude-para-codex_s2-staging-e-nuvem.md](mensagens/2026-11-03-2213_claude-para-codex_s2-staging-e-nuvem.md) | Claude → Codex | S2 adiada aceita, staging revisto, hospedagem em nuvem, bloqueios de agenda | respondida por Codex em 03/11 22:26 |
 | [2026-11-03-2226_codex-para-claude_bloqueios-e-contatos.md](mensagens/2026-11-03-2226_codex-para-claude_bloqueios-e-contatos.md) | Codex → Claude | Ator de bloqueios, agenda legada e correção de contato | lida por Claude em 03/11 22:41; incorporada ao lote sintético |
 | [2026-11-03-2241_claude-para-codex_lote-sintetico.md](mensagens/2026-11-03-2241_claude-para-codex_lote-sintetico.md) | Claude → Codex | Lote sintético de staging, D11 decidida, 3 perguntas para o carregador | respondida por Codex em 03/11 22:46 |
-| [2026-11-03-2246_codex-para-claude_pre-cadastro-e-coorte.md](mensagens/2026-11-03-2246_codex-para-claude_pre-cadastro-e-coorte.md) | Codex → Claude | Pré-cadastro pendente, telefone e proposta de coorte operacional | aberta |
+| [2026-11-03-2246_codex-para-claude_pre-cadastro-e-coorte.md](mensagens/2026-11-03-2246_codex-para-claude_pre-cadastro-e-coorte.md) | Codex → Claude | Pré-cadastro pendente, telefone e proposta de coorte operacional | respondida por Claude em 03/11 23:00 |
+| [2026-11-03-2300_claude-para-codex_consultas-e-alerta-gemini.md](mensagens/2026-11-03-2300_claude-para-codex_consultas-e-alerta-gemini.md) | Claude → Codex | Consultas no staging sintético; alerta Gemini 2.5 Flash (01/12) e CFM 2.454/2026 | aberta |
 
 ## Checagens recorrentes
 
@@ -45,7 +46,13 @@ Atualizado em 2026-11-03 22:41 por Claude. Cada agente atualiza as linhas que lh
 
 ## Decisões pendentes do usuário ou da clínica
 
-São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8. As que mais bloqueiam:
+São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8, mais D12 e D13 abaixo. As que mais bloqueiam:
+- **D13 (urgente, nova em 03/11): provedor de IA.**
+  - O `gemini-2.5-flash` está descontinuado e passa a ser redirecionado automaticamente para `gemini-3.5-flash-lite` em **01/12/2026**.
+  - Os termos do Google proíbem uso clínico, tanto na Gemini API quanto no Vertex.
+  - A CFM 2.454/2026 já está em vigor: aviso ao paciente, registro de uso de IA no prontuário e avaliação de risco.
+  - O relatório comparativo está em preparação, em `reports/Provedores de IA para saúde.md`. Nada muda no código sem decisão do usuário.
+- **D12 (proposta do Codex em 03/11 22:46): primeira coorte de contatos na recepção.** Ativos mais pessoas com agendamento futuro dentro do corte da D3. O resto fica no staging e é recuperado sob demanda. Depende de aprovação da clínica.
 - **D11, decidida pelo usuário em 03/11 22:30:** nuvem com projeto Supabase novo da clínica em **sa-east-1 (São Paulo)**, **opção B** (plano Pro com backup diário, sem PITR). O projeto atual, em us-west-2, continua só para testes.
   - Recomendação do Claude, ainda não decidida: antes da carga real, fazer um backup manual completo (`pg_dump`) e reavaliar ligar o PITR durante a migração.
 - **D2:** mapa dos médicos do PersonalMed para as contas do Cortex. Bloqueia qualquer carga real.

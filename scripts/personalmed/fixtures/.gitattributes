@@ -1,0 +1,2 @@
+# Synthetic staging batch: keep LF so manifest SHA-256 values stay valid on every OS.
+* text eol=lf

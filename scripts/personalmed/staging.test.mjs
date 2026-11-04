@@ -86,6 +86,49 @@ describe('synthetic staging batch', () => {
     expect(wallClockToUtc('2025-01-15', 600)).toBe('2025-01-15T13:00:00.000Z');
   });
 
+  it('keeps the whole universe with cohort flags for the reception (D12)', () => {
+    expect(find('person', 'pcod:101').payload.cohort).toEqual({ active: true, futureAppointment: true });
+    expect(find('contact', 'pcod:104').payload.cohort).toEqual({ active: false, futureAppointment: false });
+  });
+
+  it('builds one consultation per day, merging structured data and the running history', () => {
+    const ofChart = of('consultation').filter((c) => c.sourceRecordId.startsWith('pcod:101|user:3|'));
+    expect(ofChart.map((c) => c.sourceRecordId).sort()).toEqual(['pcod:101|user:3|day:2024-03-10', 'pcod:101|user:3|day:2025-05-15', 'pcod:101|user:3|day:2026-07-10', 'pcod:101|user:3|page:qp-hda']);
+    const mixed = find('consultation', 'pcod:101|user:3|day:2024-03-10').payload.soap_note;
+    expect(mixed).toContain('### Evolução');
+    expect(mixed).toContain('### Histórico corrido');
+    expect(mixed).toContain('Antecedentes sintéticos: G1P1.'); // text before the first date is kept
+    expect(mixed).toContain('Peso (valor original): 10060');
+    const historyOnly = find('consultation', 'pcod:101|user:3|day:2025-05-15').payload;
+    expect(historyOnly.chief_complaint).toBe('Anotação do histórico (PersonalMed)');
+    expect(historyOnly.soap_note).toContain('Acrescentado no mesmo dia.');
+  });
+
+  it('dates a consultation by its attended appointment and points to it', () => {
+    const c = find('consultation', 'pcod:101|user:3|day:2026-07-10').payload;
+    expect(c.created_at).toBe('2026-07-10T11:00:00.000Z');
+    expect(c.appointmentSourceRecordId).toBe('user:3|date:2026-07-10|start:480');
+    expect(c.soap_note.startsWith('[Importado do PersonalMed em 2026-11-03]')).toBe(true);
+    expect(c.soap_note).toContain('**Receita**');
+  });
+
+  it('keeps an undated history as one consultation at the last visit', () => {
+    expect(find('consultation', 'pcod:101|user:5|day:historico').payload).toMatchObject({ chief_complaint: 'Histórico PersonalMed (texto corrido)', created_at: '2026-05-04T15:00:00.000Z' });
+  });
+
+  it('imports only non-Z diagnoses, history pages and pregnancies still in course', () => {
+    expect(find('diagnosis_set', 'pcod:101|user:3').payload.diagnoses).toEqual([
+      { code: 'B37.9', description: 'Candidíase NE' },
+      { code: 'N95.9', description: 'Transtorno NE da menopausa' },
+    ]);
+    expect(find('diagnosis_set', 'pcod:102|user:3')).toBeUndefined();
+    expect(find('medical_history', 'pcod:101|user:3').payload.text).toContain('## Antecedentes');
+    const pregnancies = of('pregnancy_item');
+    expect(pregnancies).toHaveLength(1);
+    expect(pregnancies[0].payload).toMatchObject({ kind: 'pregnancy', status: 'open', details: { date: '2026-10-22', source: 'DUM' } });
+    expect(find('consultation', 'pcod:102|user:3|day:2026-06-01').payload.soap_note).toContain('IG: 20 semanas');
+  });
+
   it('writes NDJSON files and a manifest with counts and hashes', () => {
     const dir = mkdtempSync(join(tmpdir(), 'pm-batch-'));
     try {
