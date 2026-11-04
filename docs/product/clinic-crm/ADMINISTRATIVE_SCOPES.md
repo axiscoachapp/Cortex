@@ -39,3 +39,11 @@ Provar com SQL real: saída voluntária e administrativa, reconvite/recusa/aceit
 D18 foi respondida em 04/11 08:17: médicos trabalham somente na Haddad Nicola. Isso não atribui uma clínica aos compromissos antigos. `20261104210000_reception_clinic_calendar.sql` limita leitura e alteração pela recepção ao `clinic_id` explícito, preservando o próprio médico em sua agenda `NULL`. Vínculo de paciente/contato e auditoria não atribuem origem. Horários ocultos continuam sujeitos a conflito, sem identificação na agenda administrativa.
 
 [Contrato e limites](CLINIC_CALENDAR_BOUNDARY.md) e [provas locais](../../reviews/2026-11-04/clinic-calendar-boundary/IMPLEMENTATION.md): RED anterior, 59 migrations/37 SQL e regressões concorrentes aprovados, sem publicação. Anuência por médico continua em T28/2b/2; este incremento não encerra M2, não muda a busca de pacientes nem autoriza atribuição/importação automática do legado. D20/D14 já decididas têm [proposta própria de cadastro único](SINGLE_PATIENT_REGISTRATION_CONTRACT.md), sem alteração do schema atual.
+
+## T28/2b/2a — Inativação da recepção encerra delegações
+
+Inativar uma conta em `clinic_staff_members`, inclusive por escritor privilegiado direto, deve remover suas delegações daquela clínica. Alterar depois apenas `active=true` não restaura escopos. Uma nova concessão explícita pelas capacidades atuais continua possível; isso não comprova a anuência médica ainda pendente em T28/2b/2b.
+
+Não aceitar INSERT/UPDATE de escopo para uma conta de recepção inativa, inclusive por service role. Validar depois da barreira de custódia, como o médico ativo já é validado. A transição de inativação toca o epoch da conta antes de remover escopos, sem locks bloqueantes novos; corrida com concessão ou escrita autorizada deve serializar ou recusar a transação inteira, nunca deixar acesso latente para reativação.
+
+Preservar prontuários, vínculos, compromissos, notas e casos encerrados. A liberação existente devolve trabalho aberto à equipe sem alterar sua identidade clínica. Auditar remoção com ID da atendente e quantidade, sem valores pessoais. Limpeza de instalação só remove escopos de contas objetivamente inativas; não presume consentimento ou revoga em massa as contas ativas.

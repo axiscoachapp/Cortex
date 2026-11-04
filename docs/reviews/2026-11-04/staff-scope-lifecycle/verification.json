@@ -1,0 +1,180 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "defec30e41236b642c8bea37d0b6d0047203277e",
+  "localSqlOverlays": [
+    {
+      "path": "supabase/migrations/20261104210000_reception_clinic_calendar.sql",
+      "sha256": "5991f161fd4cbec58835112b5f34f310316663a290e49a8f8ebfb964f227b54b"
+    },
+    {
+      "path": "supabase/tests/reception-clinic-boundary.test.sql",
+      "sha256": "8a9abedc9c6c9ed078e803aa3403c3d1d885b1a29d8a48fdf7f49f2bdabb425f"
+    },
+    {
+      "path": "supabase/migrations/20261104220000_reception_staff_scope_lifecycle.sql",
+      "sha256": "789e9046d50ce32adfc590a0dee98870556963429b4f85608ce7fb41df949ee5"
+    },
+    {
+      "path": "supabase/tests/reception-staff-lifecycle.test.sql",
+      "sha256": "b25753559b0966af63105e6c2f147543eeeed2d4cea83d9f2e72a7a6d7eec171"
+    }
+  ],
+  "bulkFixtureTimings": {
+    "beforeMigrationMs": 15193,
+    "afterMigrationMs": 18354
+  },
+  "migration": "20261104220000_reception_staff_scope_lifecycle.sql",
+  "migrations": 61,
+  "sqlSuites": 39,
+  "checks": [
+    "RED: direct inactivity leaves delegations on the predecessor",
+    "GREEN: inactivity removes all scopes; flag-only reactivation cannot restore them",
+    "privileged INSERT and UPDATE cannot delegate to inactive reception accounts",
+    "migration cleanup removes objectively inactive grants with minimum audit and preserves active historical grants",
+    "inherited RR snapshot is refused before DDL/data; fresh installation with default RR selects RC and cleans committed inactive grants",
+    "history, private charts, beneficiary and appointment identity are preserved; open assignments released once",
+    "fresh explicit grant restores operational access; historical active grants are not inferred as consent",
+    "all SQL, function-boundary and reception/appointment/doctor/staff/snippet concurrency regressions pass"
+  ],
+  "staffRaces": 20,
+  "staffRaceResults": [
+    {
+      "writer": "raw",
+      "isolation": "read committed",
+      "order": "grant-held",
+      "refused": "40001",
+      "blocked": false
+    },
+    {
+      "writer": "raw",
+      "isolation": "read committed",
+      "order": "deactivate-held",
+      "refused": "40001",
+      "blocked": false
+    },
+    {
+      "writer": "raw",
+      "isolation": "read committed",
+      "order": "grant-committed",
+      "refused": null,
+      "blocked": false
+    },
+    {
+      "writer": "raw",
+      "isolation": "read committed",
+      "order": "deactivate-committed",
+      "refused": "42501",
+      "blocked": false
+    },
+    {
+      "writer": "raw",
+      "isolation": "repeatable read",
+      "order": "grant-held",
+      "refused": "40001",
+      "blocked": false
+    },
+    {
+      "writer": "raw",
+      "isolation": "repeatable read",
+      "order": "deactivate-held",
+      "refused": "40001",
+      "blocked": false
+    },
+    {
+      "writer": "raw",
+      "isolation": "repeatable read",
+      "order": "grant-committed",
+      "refused": "40001",
+      "blocked": false
+    },
+    {
+      "writer": "raw",
+      "isolation": "repeatable read",
+      "order": "deactivate-committed",
+      "refused": "40001",
+      "blocked": false
+    },
+    {
+      "writer": "rpc",
+      "isolation": "read committed",
+      "order": "grant-held",
+      "refused": null,
+      "blocked": true
+    },
+    {
+      "writer": "rpc",
+      "isolation": "read committed",
+      "order": "deactivate-held",
+      "refused": null,
+      "blocked": true
+    },
+    {
+      "writer": "rpc",
+      "isolation": "read committed",
+      "order": "grant-committed",
+      "refused": null,
+      "blocked": false
+    },
+    {
+      "writer": "rpc",
+      "isolation": "read committed",
+      "order": "deactivate-committed",
+      "refused": null,
+      "blocked": false
+    },
+    {
+      "writer": "rpc",
+      "isolation": "repeatable read",
+      "order": "grant-held",
+      "refused": "40001",
+      "blocked": true
+    },
+    {
+      "writer": "rpc",
+      "isolation": "repeatable read",
+      "order": "deactivate-held",
+      "refused": "40001",
+      "blocked": true
+    },
+    {
+      "writer": "rpc",
+      "isolation": "repeatable read",
+      "order": "grant-committed",
+      "refused": "40001",
+      "blocked": false
+    },
+    {
+      "writer": "rpc",
+      "isolation": "repeatable read",
+      "order": "deactivate-committed",
+      "refused": "40001",
+      "blocked": false
+    },
+    {
+      "isolation": "read committed",
+      "order": "writer-held",
+      "refused": null,
+      "blocked": true
+    },
+    {
+      "isolation": "read committed",
+      "order": "deactivate-held",
+      "refused": "42501",
+      "blocked": true
+    },
+    {
+      "isolation": "repeatable read",
+      "order": "writer-held",
+      "refused": "40001",
+      "blocked": true
+    },
+    {
+      "isolation": "repeatable read",
+      "order": "deactivate-held",
+      "refused": "40001",
+      "blocked": true
+    }
+  ],
+  "network": "verified local Docker, owned internal network without published ports",
+  "cleanupVerified": true
+}

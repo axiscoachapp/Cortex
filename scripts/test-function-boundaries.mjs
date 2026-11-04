@@ -4,8 +4,7 @@ import { readFileSync } from 'node:fs';
 
 // Called only with the disposable database owned by test-database.mjs. Every
 // fault is transaction-local; a failed psql connection rolls it back on exit.
-export function testFunctionBoundaryRegressions(container) {
-  const suite = readFileSync('supabase/tests/reception-function-boundaries.test.sql', 'utf8');
+export function testFunctionBoundaryRegressions(container, suite = readFileSync('supabase/tests/reception-function-boundaries.test.sql', 'utf8')) {
   const sql = source => spawnSync('docker', ['exec', '-i', container, 'psql', '-U', 'postgres',
     '-qAt', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose'], {
     input: "set statement_timeout='15s';set lock_timeout='5s';\n" + source,

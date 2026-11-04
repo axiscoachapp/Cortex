@@ -6,6 +6,7 @@ import { testReceptionConcurrency } from './test-reception-concurrency.mjs';
 import { runReceptionDeletionRegression } from './test-reception-deletion-concurrency.mjs';
 import { testDocumentSnippetsConcurrency } from './test-document-snippets-concurrency.mjs';
 import { testReceptionScopeLifecycle } from './test-reception-scope-lifecycle.mjs';
+import { testReceptionStaffLifecycle } from './test-reception-staff-lifecycle.mjs';
 import { testReceptionAppointmentConcurrency } from './test-reception-appointment-concurrency.mjs';
 import { testFunctionBoundaryRegressions } from './test-function-boundaries.mjs';
 
@@ -37,6 +38,7 @@ try {
   await testReceptionConcurrency(container);
   await testReceptionAppointmentConcurrency(container);
   await testReceptionScopeLifecycle(container);
+  await testReceptionStaffLifecycle(container);
   await testDocumentSnippetsConcurrency(container);
 } finally {
   if (ownsContainer) run(['stop',container]);
