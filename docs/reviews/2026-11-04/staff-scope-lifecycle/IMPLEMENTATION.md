@@ -30,6 +30,8 @@ Uma execução pegou um teste D8 criado pelo trabalho paralelo após a enumeraç
 
 Verificação final: **61 migrations/39 suítes SQL**, sete falhas de fronteira com rollback, regressões de fila/agenda/vínculo/contato, dez corridas de agenda/conclusão, 20 interleavings anteriores de médico e **20 novos de recepção**, duas corridas de modelos e limpeza confirmada. A fixture de 2.500 contatos levou 15,2 s antes e 18,4 s depois nesta execução; ambas ultrapassam o limite antigo de dez segundos. As medidas são de preparação sintética, sem atribuir causalidade ou aprovar desempenho de produção. Sintaxe e eslint dos quatro scripts aprovados. Nenhum componente/tipo/RPC público da recepção alterado; frontend/build não foram reexecutados por esta correção SQL.
 
+`npm run test:db:custody` também aprovado com 61 migrations: 37 grupos dirigidos de instalação real/recurso/conta e cleanup, sem repetir as suítes SQL nesse modo. Compatibilidade do upgrade do CI preservada; resultado em `docs/reviews/2026-11-04/custody-upgrade/TARGETED.json`.
+
 ## Próximo incremento
 
 T28/2b/2b precisa do contrato e backend de anuência por médico/delegação, com identidade/revisão da solicitação, aprovação/revogação, concorrência e UI posterior. Escopo ativo preexistente não prova consentimento. T34/cadastro único, T31/credencial inicial e publicação permanecem separados. Nenhuma carga, envio, mudança de campo legal ou compartilhamento clínico por este incremento.
