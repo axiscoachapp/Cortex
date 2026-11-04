@@ -1,0 +1,33 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.197.0",
+  "postgresImage": "pgvector/pgvector:pg16",
+  "restImage": "public.ecr.aws/supabase/postgrest:v16.5",
+  "checks": [
+    "owner RLS alone exposes the synthetic row before rotation; live pending-state guard denies it",
+    "user metadata clearing and direct app_metadata update cannot clear trusted pending state",
+    "same and weak passwords do not clear trusted state",
+    "fault after other-session deletion rolls back password, pending flag and sessions together",
+    "after native password update old signed JWT still reads owner-only RLS; both pre-rotation JWTs fail prototype guard",
+    "only current refreshed session acquires a usable signed clear-state claim; other session refresh is revoked",
+    "new password login remains recoverable; initial password cannot sign in",
+    "REJECTED epoch-only extension: a temporary-password login paused after password verification creates its session after rotation; refresh passes live-state, claim, session and created_at cutoff guards",
+    "REJECTED candidate: native hash re-encryption at login clears pending state without changing the initial password; refresh and another initial-password login can read the guarded row"
+  ],
+  "oldJwtStillWithinExpiry": true,
+  "prototypeIsProductionFix": false,
+  "candidateRejected": true,
+  "notCovered": [
+    "application RPC/RLS/storage/Edge integration",
+    "existing accounts/backfill",
+    "MFA and recovery protocol",
+    "two concurrent password updates",
+    "password response lost after commit",
+    "privileged Auth admin password reset",
+    "hosted Auth version/configuration"
+  ],
+  "cleanupVerified": true,
+  "localDockerEndpoint": "verified local named pipe",
+  "network": "owned internal network, no published ports or external route"
+}

@@ -1,0 +1,38 @@
+{
+  "syntheticOnly": true,
+  "verifiedAt": "2026-11-04T05:12:19-03:00",
+  "scope": "T31/3a native Auth/Data API laboratory; candidate rejection, not a production password fix",
+  "authVersions": ["v2.197.0", "v2.189.0"],
+  "groupsPerVersion": 9,
+  "totalGroups": 18,
+  "commands": [
+    { "command": "node --check scripts/test-initial-password-auth.mjs", "exitCode": 0 },
+    { "command": "node scripts/test-initial-password-auth.mjs --check-cleanup", "exitCode": 0, "diagnostics": ["failure after container create", "invalid asynchronous response rejected before caller await"], "cleanupVerified": true },
+    { "command": "node scripts/test-initial-password-auth.mjs --all", "exitCode": 0, "reports": ["v2.197.0.json", "v2.189.0.json"], "cleanupVerified": true },
+    { "command": "npx eslint scripts/test-initial-password-auth.mjs", "exitCode": 0, "errors": 0, "warnings": 0 },
+    { "command": "DOCKER_HOST override refusal diagnostic", "expectedRefusalObservedBeforeResourceCreation": true },
+    { "command": "npx vitest run src/lib/prescriptionDocuments.test.ts --maxWorkers=1 --pool=threads", "exitCode": 0, "tests": 5, "reviewedCommit": "d14f0e4" }
+  ],
+  "rejectedCandidates": [
+    "Clearing pending state on encrypted_password representation change: native login re-encryption clears it without rotating the initial password",
+    "Global clear state plus refreshed clear claim, live session and created_at cutoff: an in-flight initial-password login issues its session after rotation and passes the cutoff after refresh"
+  ],
+  "isolation": {
+    "dockerEndpoint": "Verified local pipe/socket, explicitly pinned for every daemon command; remote DOCKER_HOST override refused",
+    "resources": "Four owned containers and an internal network per version; no published ports or external route",
+    "inputs": "Cached fixed images with pull=never; no external DB target or real credential accepted",
+    "secretHandling": "Synthetic ephemeral values in memory/env and HTTP stdin, not request/secret values in argv or persisted reports",
+    "cleanup": "Ownership labels checked, create/start tracked separately, all removals attempted, original errors retained, child rejection/parse/stdin failures handled, report emitted only after cleanup"
+  },
+  "review": {
+    "localCycles": 3,
+    "findings": "Unsafe Auth assumptions refuted by native experiments; Docker target, argv, cleanup ordering, resource creation and async rejection findings corrected",
+    "interruption": "One review turn interrupted by platform after infrastructure findings; later review limited to local orchestration completed",
+    "lastCycle": "Lifecycle findings corrected and exercised by cleanup diagnostics; no fourth review cycle",
+    "externalCrossModel": "Skipped: non-interactive heartbeat and prior user preference for local verification"
+  },
+  "notProven": ["production integration", "existing accounts/backfill", "two concurrent password updates", "response lost after commit", "real MFA/recovery", "privileged reset", "hosted Auth version/configuration"],
+  "productionMigrationsOrCodeChanged": false,
+  "personalmedSchemaLoaderOrDataChanged": false,
+  "pushDeployOrHostedMutation": false
+}

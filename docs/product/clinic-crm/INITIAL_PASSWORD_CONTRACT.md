@@ -1,6 +1,6 @@
 # T31 — contrato de segurança da credencial inicial (proposta técnica)
 
-Estado em 04/11/2026: requisitos para o próximo incremento; **não implementado**. A correção independente do gate visual de MFA é T31/2. O fluxo de senha no servidor será T31/3, mantendo Supabase Auth e os domínios atuais. Nenhuma migration reservada por este documento.
+Estado em 04/11/2026: **fluxo de produção não implementado**. T31/3a acrescentou laboratório descartável com Auth/Data API reais e rejeitou duas estratégias insuficientes; evidências em [initial-password-auth](../../reviews/2026-11-04/initial-password-auth/IMPLEMENTATION.md). T31/2 de MFA visual foi entregue em `a12a561`. T31/3b deve provar a vinculação confiável da autenticação à sessão antes de integrar o fluxo, mantendo Supabase Auth e os domínios atuais. Nenhuma migration reservada por este documento.
 
 ## Falha atual e fronteira
 
@@ -18,6 +18,19 @@ O usuário pode editar `user_metadata`; a autorização deve usar estado confiá
 6. Falha parcial/timeout entre Auth e estado do aplicativo permanece fechada e recuperável. Retry não sobrescreve a senha novamente por inferência, nem libera uma operação sem confirmação. Duas trocas concorrentes não podem confirmar estados incompatíveis.
 7. Recovery legítimo e MFA continuam utilizáveis com os privilégios mínimos necessários. Provar ausência de dead-end se senha mudar mas a resposta/atualização do estado se perder. Nenhum envio de e-mail real é autorizado por este contrato.
 8. Política de contas existentes exige fatos confiáveis: um `must_change_password=false` editável não prova rotação anterior. Não marcar todas como seguras por inferência; identificar o recorte e a remediação antes da publicação. A migração do PersonalMed não participa desta decisão.
+
+## Integração de documentos e exceção explícita
+
+Revisão do Claude de 04/11 04:42 incorporada: estender as guardas existentes `session_assurance_ok()`, `assert_session_assurance()` e `requireUser()`, preservando suas assinaturas. RLS de `user_settings`/`document_snippets`/`prescriptions` e RPCs de configurações/modelos devem herdar a barreira. `generate-prescription` usa service-role e precisa da verificação dentro de `requireUser()`, pois RLS sozinha não o protege. Nenhuma dessas operações precisa de exceção antes da troca.
+
+`validate-prescription` permanece fora deste bloqueio de sessão: é a validação pública por código de acesso usada por paciente/farmácia, sem conta do médico. Isso não autoriza pesquisa de pacientes, novos dados públicos nem ampliação do endpoint. URLs já assinadas são capacidades de portador e não são invalidadas pelo estado do JWT; esse resíduo precisa ser declarado. Claude reduziu a prévia gerada para 300 s em `d14f0e4`, revisado com cinco testes de documentos aprovados pelo Codex.
+
+## Estratégias rejeitadas pela prova nativa
+
+- **Mudança de `encrypted_password` → liberar pendência:** rejeitada. O Auth pode recifrar a representação durante login sem trocar a senha. A trigger candidata liberou a conta; refresh e outro login com a senha inicial leram a linha protegida no laboratório. Não usar igualdade/diferença de hash como confirmação suficiente. O [caminho oficial do Auth](https://github.com/supabase/auth/blob/v2.197.0/internal/api/token.go) distingue explicitamente recifragem de troca.
+- **Estado global livre + claim livre + sessão existente, acrescentando `session.created_at >= credential_rotated_at`:** insuficiente. Um login pausado depois de validar a senha antiga criou a sessão após a troca; seu refresh passou também pela regra de data. Isso foi reproduzido em duas versões, com espera observada em banco. Pedir novo login após a troca continua útil ao usuário, mas o servidor não pode inferir que uma sessão mais recente usou a senha mais recente.
+
+As provas não escolhem uma solução definitiva. O próximo contrato técnico precisa vincular a verificação da credencial ao estado confiável de cada sessão, incluindo login em andamento, refresh e confirmação real da troca. Permanecem por provar recuperação/MFA, resposta perdida após commit e duas trocas concorrentes. Nenhum dos protótipos rejeitados entra em migration de produção.
 
 ## Provas e divisão
 
