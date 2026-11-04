@@ -1,0 +1,35 @@
+{
+  "syntheticOnly": true,
+  "redOnly": true,
+  "sourceBaseline": "58f989183a9cd04daaf7be5a5911e0f56aa3d081",
+  "overlays": [
+    {
+      "path": "supabase/tests/reception-delegation-decisions.test.sql",
+      "sha256": "746c4f9666813a43a92bc8938eea1ea3e22603ee7cbc845724057aec4bcef170"
+    },
+    {
+      "path": "scripts/test-reception-delegation-decisions.mjs",
+      "sha256": "c1b025c2347f3ed13e43075cbf6ffe49a6ebe3a317d326de90862a42b60340ce"
+    },
+    {
+      "path": "scripts/test-reception-delegation-request-concurrency.mjs",
+      "sha256": "c64e0fa786ccd3150419e80be8d984fb3dafc95632569e1b7117dc77ef1638bb"
+    },
+    {
+      "path": "scripts/test-reception-delegation-decision-concurrency.mjs",
+      "sha256": "4a99e2317c59665e1264b68054cdb606a9657e30e8a029619d45df819360d813"
+    }
+  ],
+  "migrations": 62,
+  "sqlSuites": 0,
+  "deletionScenarios": 0,
+  "requestRaces": [],
+  "decisionRaces": [],
+  "checks": [
+    "RED: predecessor cannot decide a real private delegation request"
+  ],
+  "publicConsentGate": false,
+  "approvalEnabled": false,
+  "network": "verified local Docker; owned internal network; no published ports",
+  "cleanupVerified": true
+}

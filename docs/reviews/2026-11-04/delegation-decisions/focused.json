@@ -1,0 +1,137 @@
+{
+  "syntheticOnly": true,
+  "redOnly": false,
+  "focused": true,
+  "sourceBaseline": "8b5f3b660c268a6837fdbb44c0debd9f517e7eee",
+  "overlays": [
+    {
+      "path": "supabase/tests/reception-delegation-decisions.test.sql",
+      "sha256": "746c4f9666813a43a92bc8938eea1ea3e22603ee7cbc845724057aec4bcef170"
+    },
+    {
+      "path": "supabase/migrations/20261104240000_reception_delegation_decisions.sql",
+      "sha256": "fe4707f4a9ccde4e8c414e48ef74f13c1596f6d18e73be9dd2f71ca3d219cc4f"
+    },
+    {
+      "path": "scripts/test-reception-delegation-decisions.mjs",
+      "sha256": "f2a61491cb9ebc33445fe63f2eab20baf85855c4533539040feabb255c4327cc"
+    },
+    {
+      "path": "scripts/test-reception-delegation-request-concurrency.mjs",
+      "sha256": "c64e0fa786ccd3150419e80be8d984fb3dafc95632569e1b7117dc77ef1638bb"
+    },
+    {
+      "path": "scripts/test-reception-delegation-decision-concurrency.mjs",
+      "sha256": "0fa434ccec2bdfb14e283f113ac57ebf2db9ecb132b7a40efa39ca7132897e68"
+    }
+  ],
+  "helperSources": [
+    {
+      "path": "scripts/test-function-boundaries.mjs",
+      "source": "HEAD",
+      "sha256": "77b4964fbaec6f90430356432893ee5d13f066f0b4babc7ba20c829000af4707"
+    },
+    {
+      "path": "scripts/test-reception-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "45453fb3000a8f8421ee31ea84c39ced66a79a9400ad27dd3b27113cc00becb9"
+    },
+    {
+      "path": "scripts/test-reception-appointment-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "04072b4738d9b6b51b81067237e663e501ef4cb698698cf886c877846badbc61"
+    },
+    {
+      "path": "scripts/test-reception-scope-lifecycle.mjs",
+      "source": "HEAD",
+      "sha256": "52d9c7cc1554ce0d522dc500ecbbd54660aed4355f97232c1ab6494e131f695c"
+    },
+    {
+      "path": "scripts/test-reception-staff-lifecycle.mjs",
+      "source": "HEAD",
+      "sha256": "691950be032d835de2d97d54442bf7d4bcfa816d479f41d5a2c6e49b190825fa"
+    },
+    {
+      "path": "scripts/test-document-snippets-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "87ae8ad9e400f9b628f97424e2e17aeb0e6590769483952e8c8f2fa360d99a0e"
+    },
+    {
+      "path": "scripts/test-reception-deletion-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "3957f3693f30d0e8b1c0a8d396ed8741e224258c5aef5718c4b82c3ee4772010"
+    },
+    {
+      "path": "scripts/test-reception-delegation-request-concurrency.mjs",
+      "source": "overlay",
+      "sha256": "c64e0fa786ccd3150419e80be8d984fb3dafc95632569e1b7117dc77ef1638bb"
+    },
+    {
+      "path": "scripts/test-reception-delegation-decision-concurrency.mjs",
+      "source": "overlay",
+      "sha256": "0fa434ccec2bdfb14e283f113ac57ebf2db9ecb132b7a40efa39ca7132897e68"
+    }
+  ],
+  "omittedRegressions": [
+    "function-boundary fault injections",
+    "reception concurrency",
+    "appointment concurrency",
+    "doctor scope lifecycle concurrency",
+    "staff lifecycle concurrency",
+    "document snippet concurrency",
+    "deletion concurrency"
+  ],
+  "notCovered": [
+    "hosted rollout",
+    "new authenticated consent API/UI",
+    "general legacy grant cutover"
+  ],
+  "migrations": 63,
+  "sqlSuites": 41,
+  "deletionScenarios": 0,
+  "requestRaces": [
+    "read committed: staff inactivity held first refuses a new request without a latent row",
+    "read committed: held request refuses inverse staff lifecycle; retry closes once and old operation cannot reopen it",
+    "read committed: doctor inactivity held first refuses a new request without a latent row",
+    "read committed: held request refuses inverse doctor lifecycle; retry closes once and old operation cannot reopen it",
+    "repeatable read: staff inactivity held first refuses a new request without a latent row",
+    "repeatable read: held request refuses inverse staff lifecycle; retry closes once and old operation cannot reopen it",
+    "repeatable read: doctor inactivity held first refuses a new request without a latent row",
+    "repeatable read: held request refuses inverse doctor lifecycle; retry closes once and old operation cannot reopen it",
+    "read committed: cancellation truly waits for lifecycle and stale CAS cannot overwrite its terminal event",
+    "read committed: committed human cancellation remains unchanged after lifecycle retry",
+    "repeatable read: cancellation truly waits for lifecycle and stale CAS cannot overwrite its terminal event",
+    "repeatable read: committed human cancellation remains unchanged after lifecycle retry",
+    "read committed: administrator role removal fences a concurrent request independently of inactivity",
+    "read committed: administrator membership removal fences a concurrent request independently of inactivity",
+    "repeatable read: administrator role removal fences a concurrent request independently of inactivity",
+    "repeatable read: administrator membership removal fences a concurrent request independently of inactivity"
+  ],
+  "decisionRaces": [
+    "read committed: staff inactivity held first prevents approval and rejoin cannot restore request",
+    "read committed: approval held first serializes staff lifecycle and ends effective grant once",
+    "read committed: doctor inactivity held first prevents approval and rejoin cannot restore request",
+    "read committed: approval held first serializes doctor lifecycle and ends effective grant once",
+    "read committed: two decisions yield one approval, no contradictory terminal decision",
+    "read committed: scope-row-first DELETE versus request-first revocation refuses inverse account lock without deadlock",
+    "read committed: snapshot cannot bypass physician denial through legacy NULL grant",
+    "repeatable read: staff inactivity held first prevents approval and rejoin cannot restore request",
+    "repeatable read: approval held first serializes staff lifecycle and ends effective grant once",
+    "repeatable read: doctor inactivity held first prevents approval and rejoin cannot restore request",
+    "repeatable read: approval held first serializes doctor lifecycle and ends effective grant once",
+    "repeatable read: two decisions yield one approval, no contradictory terminal decision",
+    "repeatable read: scope-row-first DELETE versus request-first revocation refuses inverse account lock without deadlock",
+    "repeatable read: snapshot cannot bypass physician denial through legacy NULL grant"
+  ],
+  "checks": [
+    "RED: predecessor cannot decide a real private delegation request",
+    "busy installation rolls back without a decision function",
+    "established RR snapshot refuses installation before schema changes",
+    "private decisions, bound grants, withdrawal, replay, lifecycle and custody SQL pass"
+  ],
+  "publicConsentGate": false,
+  "approvalEnabled": true,
+  "network": "verified local Docker; owned internal network; no published ports",
+  "cleanupVerified": true,
+  "generatedTypesSha256": "5c777ed92bf996908246356d1c09bd3e049c2db609fdfae94aa6d7362884579f"
+}

@@ -1783,16 +1783,19 @@ export type Database = {
       staff_doctor_scopes: {
         Row: {
           clinic_id: string
+          delegation_request_id: string | null
           doctor_user_id: string
           staff_user_id: string
         }
         Insert: {
           clinic_id: string
+          delegation_request_id?: string | null
           doctor_user_id: string
           staff_user_id: string
         }
         Update: {
           clinic_id?: string
+          delegation_request_id?: string | null
           doctor_user_id?: string
           staff_user_id?: string
         }

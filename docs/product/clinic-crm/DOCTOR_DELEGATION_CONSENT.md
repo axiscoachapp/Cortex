@@ -1,6 +1,6 @@
 # T28/2b/2b — anuência médica para delegação à recepção
 
-04/11/2026. Contrato proposto para o próximo backend, **sem schema, RPC, tela ou proteção nova de produção nesta etapa**. D18 limita a operação à clínica; prontuários continuam privados. [Contexto e correções anteriores](ADMINISTRATIVE_SCOPES.md), [agenda da clínica](CLINIC_CALENDAR_BOUNDARY.md) e [cadastro único](SINGLE_PATIENT_REGISTRATION_CONTRACT.md) permanecem válidos.
+04/11/2026. Contrato da integração completa. A fundação privada `04230000` e a [ponte de decisão/concessão `04240000`](../../reviews/2026-11-04/delegation-decisions/IMPLEMENTATION.md) implementam parte do banco localmente; **corte geral dos grants legados, RPCs autenticadas e interface continuam pendentes, M2 aberta**. Nenhuma publicação. D18 limita a operação à clínica; prontuários continuam privados. [Contexto e correções anteriores](ADMINISTRATIVE_SCOPES.md), [agenda da clínica](CLINIC_CALENDAR_BOUNDARY.md) e [cadastro único](SINGLE_PATIENT_REGISTRATION_CONTRACT.md) permanecem válidos.
 
 ## 1. Limite e comportamento
 
@@ -30,7 +30,7 @@ Um pedido tem UUID novo do servidor e identidade imutável `(clinicId, staffUser
 
 ## 3. Operações propostas
 
-Nomes abaixo são propostas, não funções disponíveis. Toda entrada é validada e a sessão humana/MFA, identidade clínica ou administrativa, clínica ativa aplicável e conta disponível são verificadas **antes** de retornar recurso, revisão ou resultado anterior. `actorId`, médico decisor, datas, origem e estado autorizado são derivados pelo servidor; cliente não os escolhe.
+As interfaces públicas abaixo são propostas; helpers privados de pedido/decisão/cancelamento/revogação já existem, sem EXECUTE para clientes/service role. Toda entrada é validada e a sessão humana/MFA, identidade clínica ou administrativa, clínica ativa aplicável e conta disponível são verificadas **antes** de retornar recurso, revisão ou resultado anterior. `actorId`, médico decisor, datas, origem e estado autorizado são derivados pelo servidor; cliente não os escolhe.
 
 | Operação | Entrada | Resultado e autorização |
 |---|---|---|

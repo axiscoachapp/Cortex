@@ -1,0 +1,10 @@
+{
+  "syntheticOnly": true,
+  "actualRunnerSha256": "b1da5d3d1f3a965a1d324d3aad3106f56a9bfcb3b1e122b3a6ea6ff9f5dc0b3a",
+  "checks": [
+    "RED: post-write tracking leaks the partially created helper",
+    "GREEN: planned path is removed after actual partial-write ENOSPC"
+  ],
+  "cleanupVerified": true,
+  "databaseCreated": false
+}
