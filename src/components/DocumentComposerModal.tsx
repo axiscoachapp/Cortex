@@ -15,7 +15,7 @@ import { validateCertificateDays } from '../../supabase/functions/_shared/docume
 import { currentPatientAge } from '../../supabase/functions/_shared/patientAge';
 import { Patient, Medication } from '@/types/patient';
 import { useUserSettings } from '@/hooks/useUserSettings';
-import { antimicrobialsIn } from '../../supabase/functions/_shared/regulatedMedications';
+import { antimicrobialsIn, controlledSubstancesIn } from '../../supabase/functions/_shared/regulatedMedications';
 import { PrescriptionTemplatePicker, type ApplyMode } from '@/components/PrescriptionTemplatePicker';
 import type { SnippetItem } from '@/lib/documentSnippets';
 
@@ -200,7 +200,12 @@ export function DocumentComposerModal({
   };
 
   const selectedMeds = useMemo(() => meds.filter(m => m.checked), [meds]);
-  const hasAntimicrobial = selectedMeds.some(m => m.antimicrobial);
+  // Same substance lists as generate-prescription (brands and spellings
+  // included), plus the catalog's ingredient when the item came from it. The
+  // server stays authoritative; these only warn before the round trip.
+  const regulatedNames = (m: ComposerMed) => [m.name, m.ingredient ?? ''].filter(Boolean);
+  const hasAntimicrobial = selectedMeds.some(m => m.antimicrobial || regulatedNames(m).some(n => antimicrobialsIn(n).length > 0));
+  const controlledSelected = [...new Set(selectedMeds.flatMap(m => regulatedNames(m).flatMap(controlledSubstancesIn)))];
   const isAtestado = docType === 'atestado';
   const isExames = docType === 'solicitacao_exames';
   const isReceita = !isAtestado && !isExames;
@@ -304,6 +309,16 @@ export function DocumentComposerModal({
           {(isReceita && selectedMeds.length > 15 || isExames && examList.length > 20) && (
             <p role="alert" className="text-sm text-red-800 bg-red-50 rounded-lg p-3">
               Divida a seleção em documentos de até 15 medicamentos ou 20 exames. Nenhum item será omitido.
+            </p>
+          )}
+
+          {isReceita && controlledSelected.length > 0 && (
+            <p role="alert" className="text-[0.6875rem] text-red-800 bg-red-50 border border-red-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>
+                Medicamento sujeito a controle especial ({controlledSelected.join(', ')}). Ele não pode sair neste receituário: use o
+                receituário de controle especial ou a notificação de receita (Portaria 344/98).
+              </span>
             </p>
           )}
 

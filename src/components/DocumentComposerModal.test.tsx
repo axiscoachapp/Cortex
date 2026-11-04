@@ -172,3 +172,34 @@ describe('Composer while generating (R3)', () => {
     });
   });
 });
+
+describe('Regulated drug warnings before generating', () => {
+  it('warns about a controlled drug known only by its brand', async () => {
+    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000' }, isLoading: false };
+    render(
+      <DocumentComposerModal
+        open
+        onOpenChange={() => {}}
+        patient={person({ sex: 'feminino', medications: [{ name: 'Rivotril 2mg', dosage: '1 comprimido', instructions: 'à noite' }] })}
+        onGenerate={async () => {}}
+        isGenerating={false}
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Medicamento sujeito a controle especial (clonazepam)');
+  });
+
+  it('suggests the antimicrobial type for a brand typed by hand', async () => {
+    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000' }, isLoading: false };
+    render(
+      <DocumentComposerModal
+        open
+        onOpenChange={() => {}}
+        patient={person({ sex: 'feminino', medications: [{ name: 'Bactrim F', dosage: '1 comprimido', instructions: '12/12 h' }] })}
+        onGenerate={async () => {}}
+        isGenerating={false}
+      />,
+    );
+    expect(screen.getByText(/Há antimicrobiano selecionado/)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
