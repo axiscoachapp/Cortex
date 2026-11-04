@@ -10,7 +10,7 @@ Pedido do usuário em 04/11/2026: seguir com a proposta de catálogos próprios,
 | Exames com código TUSS | ANS, Terminologia Unificada da Saúde Suplementar | **Pronto**: busca no pedido de exames, com o código impresso |
 | CID-10 | DATASUS | **Pronto**: sugestões no CID do atestado e da RCE |
 | Apresentações dos medicamentos | Lista CMED (Anvisa), sem os preços | Leitor pronto e conferido |
-| Nome genérico oficial (DCB) | Anvisa | Leitor pronto e conferido |
+| Nome genérico oficial (DCB) | Anvisa | **Pronto** nos componentes das fórmulas manipuladas |
 | Favoritos de cada médico | Modelos do PersonalMed (743 receitas e 51 pedidos de exame) e os do próprio Cortex | Depois dos catálogos |
 
 **Fora do escopo:**
@@ -96,4 +96,5 @@ Na receita de controle especial, os componentes saem antes da linha "Quantidade"
 **Próximos passos:**
 1. ~~Tela no compositor~~: pronta. O botão "Adicionar fórmula manipulada" abre linhas de componente (até 12), excipiente, forma (com sugestões) e quanto manipular. A validação é a mesma do servidor antes de adicionar, e o item aparece na lista com o selo MANIPULADO e o resumo dos componentes. Testes em `src/components/DocumentComposerModal.test.tsx`.
 2. ~~Modelos~~: prontos. A migration `20261105110000` aceita `formula` nos itens; "Salvar como modelo" guarda a fórmula, e aplicar um modelo a recoloca na receita, com os avisos de controlado e antimicrobiano. Uma fórmula guardada que não passa mais nas regras é descartada na leitura, nunca adivinhada.
-3. Busca de nomes da DCB nos componentes, quando a lista DCB estiver no banco.
+3. ~~Busca de nomes da DCB nos componentes~~: pronta (`DcbInput`). A partir de 3 letras, o nome do componente sugere as denominações oficiais; o texto livre continua valendo.
+4. Apresentações da CMED: escolher a apresentação depois de achar o produto. **A decidir:** o texto da CMED é abreviado ("50 MG COM CT BL AL PLAS TRANS X 30") e não serve para imprimir como está. Proposta: usar a apresentação só para preencher a concentração e sugerir a unidade, sem imprimi-la.

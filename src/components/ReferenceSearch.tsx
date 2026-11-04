@@ -63,6 +63,39 @@ async function searchCid(q: string): Promise<CidHit[]> {
   return (data ?? []).map((r) => ({ code: String(r.code), description: String(r.description) }));
 }
 
+async function searchDcb(q: string): Promise<string[]> {
+  const { data, error } = await catalog.from('dcb_catalog').select('name').ilike('name', `%${q}%`).order('name').limit(8);
+  if (error) throw error;
+  return [...new Set((data ?? []).map((r) => String(r.name)))];
+}
+
+/** Component name with suggestions from the official DCB list; free text accepted. */
+export function DcbInput({ ariaLabel, value, onChange, placeholder, disabled }: {
+  ariaLabel: string; value: string; onChange: (value: string) => void; placeholder?: string; disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const { hits } = useDebouncedSearch(value, 3, searchDcb);
+  const exact = hits.some((h) => h.toLowerCase() === value.trim().toLowerCase());
+  return (
+    <div className="relative">
+      <Input aria-label={ariaLabel} value={value} disabled={disabled} maxLength={120} placeholder={placeholder} autoComplete="off"
+        className="h-8 text-xs" onChange={(e) => { onChange(e.target.value); setOpen(true); }} onBlur={() => setTimeout(() => setOpen(false), 150)} />
+      {open && hits.length > 0 && !exact && (
+        <div role="listbox" aria-label="Nomes da DCB" className="absolute z-30 left-0 right-0 top-full mt-1 rounded-lg border border-border bg-white shadow-lg max-h-48 overflow-y-auto scrollbar-thin">
+          {hits.map((name) => (
+            <button key={name} type="button" role="option" aria-selected={false}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { onChange(name); setOpen(false); }}
+              className="w-full text-left px-3 py-1.5 text-xs hover:bg-medical-blue-light/40 border-b border-border/30 last:border-0">
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** "Hemograma… (TUSS 40304361)": the line the exam request prints. */
 export const examLine = (hit: ExamHit) => `${hit.name} (TUSS ${hit.code})`;
 

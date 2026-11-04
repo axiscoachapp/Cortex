@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { CidInput, ExamSearch, examLine } from './ReferenceSearch';
+import { CidInput, DcbInput, ExamSearch, examLine } from './ReferenceSearch';
 
 // Synthetic catalog rows; the client records each query it receives.
 const db = vi.hoisted(() => ({
@@ -11,6 +11,7 @@ const db = vi.hoisted(() => ({
   rows: {
     exam_catalog: [{ code: '40304361', name: 'Exame laboratorial sintético' }],
     cid10_catalog: [{ code: 'N76.0', description: 'Diagnóstico sintético' }, { code: 'N76.1', description: 'Outro diagnóstico sintético' }],
+    dcb_catalog: [{ name: 'substância sintética' }, { name: 'substância sintética micronizada' }],
   } as Record<string, Array<Record<string, string>>>,
 }));
 vi.mock('@/integrations/supabase/client', () => ({
@@ -80,5 +81,22 @@ describe('CID-10 field', () => {
     render(<Field />);
     await userEvent.setup().type(screen.getByLabelText('CID'), 'Z00');
     expect(screen.getByLabelText('CID')).toHaveValue('Z00');
+  });
+});
+
+describe('DCB names for formula components', () => {
+  function Field() {
+    const [value, setValue] = useState('');
+    return <DcbInput ariaLabel="Componente 1" value={value} onChange={setValue} />;
+  }
+  it('suggests official names and fills the chosen one, keeping free text possible', async () => {
+    db.calls = []; db.fail = false;
+    render(<Field />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Componente 1'), 'subst');
+    await user.click(await screen.findByRole('option', { name: 'substância sintética micronizada' }));
+    expect(screen.getByLabelText('Componente 1')).toHaveValue('substância sintética micronizada');
+    expect(db.calls.at(-1)).toMatchObject({ table: 'dcb_catalog' });
+    expect(db.calls.some((c) => c.ops.some(([op, args]) => op === 'ilike' && args[1] === '%subst%'))).toBe(true);
   });
 });

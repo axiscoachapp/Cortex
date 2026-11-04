@@ -20,7 +20,7 @@ import {
   type CompoundedFormula,
 } from '../../supabase/functions/_shared/regulatedMedications';
 import { PrescriptionTemplatePicker, type ApplyMode } from '@/components/PrescriptionTemplatePicker';
-import { CidInput, ExamSearch, examLine } from '@/components/ReferenceSearch';
+import { CidInput, DcbInput, ExamSearch, examLine } from '@/components/ReferenceSearch';
 import type { SnippetItem } from '@/lib/documentSnippets';
 
 /** Sex values that satisfy RDC 471/2021; 'nao_informado' does not. */
@@ -575,8 +575,8 @@ export function DocumentComposerModal({
                     onChange={e => setFormulaDraft({ ...formulaDraft, name: e.target.value })} placeholder="Nome da fórmula (opcional)" />
                   {formulaDraft.components.map((c, k) => (
                     <div key={k} className="grid grid-cols-[1fr_96px_28px] gap-1.5">
-                      <Input aria-label={`Componente ${k + 1}`} className="h-8 text-xs" value={c.substance} maxLength={120}
-                        onChange={e => setFormulaDraft({ ...formulaDraft, components: formulaDraft.components.map((x, j) => j === k ? { ...x, substance: e.target.value } : x) })}
+                      <DcbInput ariaLabel={`Componente ${k + 1}`} value={c.substance}
+                        onChange={value => setFormulaDraft(d => d && { ...d, components: d.components.map((x, j) => j === k ? { ...x, substance: value } : x) })}
                         placeholder="Substância (nome genérico)" />
                       <Input aria-label={`Quantidade do componente ${k + 1}`} className="h-8 text-xs" value={c.amount} maxLength={40}
                         onChange={e => setFormulaDraft({ ...formulaDraft, components: formulaDraft.components.map((x, j) => j === k ? { ...x, amount: e.target.value } : x) })}
