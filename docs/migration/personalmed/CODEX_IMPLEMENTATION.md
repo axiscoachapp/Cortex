@@ -519,12 +519,15 @@ A ideia original era o cadastro legal ficar na pessoa, não em cada prontuário.
 - **Tipos e serviços:** "consulta + citologia oncótica", inserção de DIU, preventivo, retorno. Duração padrão por médico: 20 minutos na ginecologia e 15 na urologia. Encaixe com o catálogo de serviços (T16) quando existir.
 - **Importação:**
   - `T` → `realizado`; `C` → `cancelado`; `F` → `faltou`;
-  - `A` e `E` no passado → `realizado`, com o código original em `notes`;
-  - `-` no passado: não importar, ou importar como desconhecido (decisão D3);
-  - `-` no futuro → `agendado`.
+  - `E` no passado → `realizado` (o atendimento começou e não foi fechado);
+  - `A` no passado → `realizado`, com a nota "chegada registrada, atendimento não marcado" e o código `status_arrival_only`;
+  - `-` no passado → `faltou`, com a nota "sem registro de comparecimento" (D3 decidida: todos os agendamentos; D9 confirmou que `-` no passado se comporta como `F`);
+  - `-` no futuro → `agendado`;
+  - linha do passado sem paciente e sem nome de pré-cadastro → rejeitada (`appointment_empty_slot`);
+  - agendamento com médico sem ficha do paciente (D14) → ligado ao cadastro único (D20); fica em revisão até o contrato do modelo de pacientes.
   - Inserir com `google_sync_status = 'idle'` e sem lembretes.
   - Os 27 agendamentos sobrepostos vão para a lista de rejeições. Os horários não são deslocados.
-  - Os 358 bloqueios futuros vão para `reception_schedule_blocks`, se o Codex concordar.
+  - Os bloqueios futuros vão para `reception_schedule_blocks`, se o Codex concordar: 358 do tipo `B` (bloqueio) e 184 do tipo `P` (bloqueio curto, D9).
 - **Aceite:**
   - importar não enfileira sincronização com o Google nem mensagens;
   - os agendamentos futuros conferem com a exportação final;
@@ -591,7 +594,7 @@ Os valores são da exportação de 24/08/2026 e devem ser recalculados na export
 | Carteiras de convênio | 62.204 linhas de `Clini_05`: 29.518 carteirinhas e 32.686 registros "Particular". Ensaio de 04/11 sem diferença. Das carteirinhas, 13.963 estão vencidas e 3.895 não têm número. |
 | Arquivos | 48 embutidos (172 dependem da pasta externa) |
 | Modelos | 1.123: 743 receitas, 329 textos e 51 pedidos de exame. Ensaio de 04/11 08:55, sem diferença: 617 receitas `ready`, que entram aprovadas (D19); 126 receitas fora do formato (106 em texto livre, 39 com controlado à espera do tipo controle especial da D8, 3 com mais de 15 itens); 3 com campo automático trocado por `____`; 380 textos e pedidos em revisão até o Cortex aceitar esses tipos. Usados desde 2025: 375. Receitas usadas por médico (tamanho da lista da D19): 5 → 179; 2 → 153; 3 → 132; 4 → 73; 11 → 8; 9 → 1 |
-| Agendamentos | Dependem de D3. Futuros na exportação: 2.954; atendidos desde 2025: 19.675; total: 273.794 |
+| Agendamentos | 273.794, todos importados (D3). Ensaio de 04/11 09:35: 262.342 `ready`; 10.536 em revisão (9.900 sem ficha do médico, D14/D20, mais 636 pré-cadastros futuros); 916 rejeitados (889 horários vazios e 27 sobreposições). Bloqueios futuros: 542 (358 `B` e 184 `P`) |
 | Caracteres de texto | Total antes e depois da conversão RTF, por tabela (o script já calcula) |
 
 ---
@@ -641,7 +644,7 @@ Navegador: 390, 768, 1280 e 1920 px na escala de 150%, como já está definido.
 | D6 | QP/HDA como consulta ou como histórico | **Em avaliação:** o usuário pediu uma análise mais funda. |
 | D7 | Alertas "Atenção" | **Em avaliação:** o usuário pediu uma revisão. |
 | D8 | Controlados no Cortex | **Decidida:** liberar. Vale para a Receita de Controle Especial (listas C1 e C5). As listas A e B continuam em notificação de receita de talão numerado, que o software não emite. |
-| D9 | Confirmar inferências | **Delegada ao Claude:** confirmar pelos próprios dados. |
+| D9 | Confirmar inferências | **Confirmada pelos dados em 04/11** (`scripts/personalmed/agenda-states.mjs` e `data-quality.mjs`): FAX = CPF (98% dos CPFs válidos estão no FAX); e-mail = acomodação (cerca de 7.650 cadastros); `T` = atendido (100% com chegada e início do atendimento); `C` = cancelado e `F` = falta (0% de chegada); `A` = chegou, atendimento não marcado (100% de chegada, 0,1% de início); `E` = em atendimento, não finalizado (100% e 100%); `-` = agendado no futuro e sem registro de comparecimento no passado (0% de chegada, como `F`); horário `P` = bloqueio curto (nunca recebe agendamento; 15 min, às 7–8 h e 17 h). |
 | D10 | Pasta externa de imagens (172) | **Tarefa a fazer:** pedir à clínica. |
 | D14 | Agendamento com médico que não tem ficha do paciente (9.900) | **Decidida (08:50):** "como funcionava no PersonalMed". O agendamento fica ligado ao cadastro único do paciente, na agenda daquele médico, e a ficha (as notas) do médico só nasce quando ele atende. Nada de ficha vazia. |
 | D19 | Quem recebe os modelos da clínica | **Decidida:** cada médico recebe os modelos que usou em 2025–2026, já adaptados ao formato do Cortex, como **aprovados** (sem revisão prévia) e editáveis. |

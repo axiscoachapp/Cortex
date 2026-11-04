@@ -150,7 +150,9 @@ export function buildAgenda(ctx, rows, chartIds) {
     const key = { user: r.user, date: r.date, start: r.startMinutes };
     const start = wallClockToUtc(r.date, r.startMinutes);
     const end = wallClockToUtc(r.date, r.startMinutes + (r.duration > 0 ? r.duration : 15));
-    if (r.slotType === 'B') {
+    // B (long block) and P (short block: never booked, 15 min at 7-8h and 17h;
+    // D9) are not appointments.
+    if (r.slotType === 'B' || r.slotType === 'P') {
       if (r.date <= ctx.exportDate) continue; // past blocks are not imported
       // Legacy blocks have no author: origin stays apart from the future executor.
       out.push(
@@ -160,9 +162,27 @@ export function buildAgenda(ctx, rows, chartIds) {
           key,
           doctor: r.user,
           targetTable: 'reception_schedule_blocks',
-          payload: { ownerLegacyDoctor: r.user, start_time: start, end_time: end, legacyAuthor: null, executor: null },
+          payload: { ownerLegacyDoctor: r.user, start_time: start, end_time: end, legacyAuthor: null, executor: null, legacyType: r.slotType },
           issues: ['block_executor_contract_pending'],
           status: 'requires_review',
+        }),
+      );
+      continue;
+    }
+    // A past row with neither patient nor pre-registered name is an empty slot
+    // (889 in the 24/08/2026 export), not a booking.
+    if (r.pcod == null && !r.preCadastro?.name && r.date <= ctx.exportDate) {
+      // Straight to the output: an empty slot must not take part in the overlap check.
+      out.push(
+        envelope({
+          ...base,
+          sourceEntity: 'appointment',
+          key,
+          doctor: r.user,
+          targetTable: 'appointments',
+          payload: { ownerLegacyDoctor: r.user, start_time: start, end_time: end, status: null },
+          issues: ['appointment_empty_slot'],
+          status: 'rejected',
         }),
       );
       continue;

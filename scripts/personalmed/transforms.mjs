@@ -519,8 +519,16 @@ export function mapAppointmentStatus(estado, date, { exportDate }) {
   if (s === 'T') return { status: 'realizado', note: null, issues: [] };
   if (s === 'C') return { status: 'cancelado', note: null, issues: [] };
   if (s === 'F') return { status: 'faltou', note: null, issues: ['status_no_show_target_required'] };
-  if (s === 'A' || s === 'E') return future ? { status: 'agendado', note: `PersonalMed: ${s}`, issues: [] } : { status: 'realizado', note: `PersonalMed: ${s}`, issues: ['status_inferred'] };
-  if (s === '-') return future ? { status: 'agendado', note: null, issues: [] } : { status: null, note: null, issues: ['status_unknown_past'] };
+  // D9, confirmed on the 24/08/2026 export (scripts/personalmed/agenda-states.mjs):
+  // E = care started and never closed (100% arrival and start of care);
+  // A = arrived, care never marked (100% arrival, 0.1% start of care);
+  // "-" in the past = nothing recorded (0% arrival, like F); in the future = booked.
+  if (s === 'E') return future ? { status: 'agendado', note: 'PersonalMed: E', issues: [] } : { status: 'realizado', note: 'PersonalMed: E (em atendimento, não finalizado)', issues: [] };
+  if (s === 'A') return future ? { status: 'agendado', note: 'PersonalMed: A', issues: [] } : { status: 'realizado', note: 'PersonalMed: A (chegada registrada, atendimento não marcado)', issues: ['status_arrival_only'] };
+  if (s === '-')
+    return future
+      ? { status: 'agendado', note: null, issues: [] }
+      : { status: 'faltou', note: 'PersonalMed: sem registro de comparecimento', issues: ['status_no_attendance_recorded', 'status_no_show_target_required'] };
   return { status: null, note: `PersonalMed: ${s}`, issues: ['status_unknown_code'] };
 }
 

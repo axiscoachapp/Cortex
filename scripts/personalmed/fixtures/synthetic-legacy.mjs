@@ -134,6 +134,10 @@ export const agenda = [
   // Future block for doctor 3 and a past one (ignored).
   appt({ user: 3, date: '2026-09-15', startMinutes: 13 * 60, duration: 240, slotType: 'B' }),
   appt({ user: 3, date: '2025-09-15', startMinutes: 13 * 60, duration: 240, slotType: 'B' }),
+  // Short block P (D9: never booked), future: becomes a schedule block.
+  appt({ user: 5, date: '2026-09-10', startMinutes: 7 * 60, duration: 15, slotType: 'P' }),
+  // Empty past slot: no patient and no pre-registered name.
+  appt({ user: 3, date: '2025-05-05', startMinutes: 10 * 60, estado: 'C' }),
 ];
 
 // Document templates (Us05/Gintxt/Pedtxt): invented texts that exercise the

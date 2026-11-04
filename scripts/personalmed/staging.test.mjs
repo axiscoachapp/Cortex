@@ -56,13 +56,17 @@ describe('synthetic staging batch', () => {
     expect(of('chart').every((c) => c.issues.includes('doctor_map_pending'))).toBe(true);
   });
 
-  it('rejects overlapping and status-less past appointments, without moving times', () => {
+  it('rejects overlapping appointments without moving times; a past "-" becomes a no-show (D3, D9)', () => {
     const second = find('appointment', 'user:3|date:2026-09-01|start:550');
     expect(second.mappingStatus).toBe('rejected');
     expect(second.issues).toContain('appointment_overlap');
     expect(second.payload.start_time).toBe('2026-09-01T12:10:00.000Z');
     expect(find('appointment', 'user:3|date:2026-09-01|start:540').mappingStatus).toBe('ready');
-    expect(find('appointment', 'user:5|date:2024-09-09|start:660')).toMatchObject({ mappingStatus: 'rejected', issues: ['status_unknown_past'] });
+    expect(find('appointment', 'user:5|date:2024-09-09|start:660')).toMatchObject({
+      mappingStatus: 'ready',
+      issues: ['status_no_attendance_recorded', 'status_no_show_target_required'],
+      payload: { status: 'faltou', notes: 'PersonalMed: sem registro de comparecimento' },
+    });
   });
 
   it('turns a future pre-registration into a provisional contact for review', () => {
@@ -80,8 +84,9 @@ describe('synthetic staging batch', () => {
 
   it('keeps future blocks in staging with no executor and drops past ones', () => {
     const blocks = of('schedule_block');
-    expect(blocks).toHaveLength(1);
-    expect(blocks[0]).toMatchObject({ mappingStatus: 'requires_review', payload: { legacyAuthor: null, executor: null }, issues: ['block_executor_contract_pending'] });
+    // The future B block and the future P block; the past B block is dropped.
+    expect(blocks.map((b) => b.payload.legacyType).sort()).toEqual(['B', 'P']);
+    for (const b of blocks) expect(b).toMatchObject({ mappingStatus: 'requires_review', payload: { legacyAuthor: null, executor: null }, issues: ['block_executor_contract_pending'] });
   });
 
   it('maps statuses and converts São Paulo wall-clock times, including daylight saving', () => {
@@ -139,7 +144,7 @@ describe('synthetic staging batch', () => {
     try {
       const m = writeBatch(dir, envelopes, { synthetic: true });
       expect(m.counts.chart.total).toBe(6);
-      expect(m.counts.appointment.byStatus).toEqual({ ready: 6, rejected: 2, requires_review: 2 });
+      expect(m.counts.appointment.byStatus).toEqual({ ready: 7, rejected: 2, requires_review: 2 });
       const lines = readFileSync(join(dir, 'chart.ndjson'), 'utf8').trim().split('\n');
       expect(lines).toHaveLength(6);
       expect(m.files['chart.ndjson'].sha256).toMatch(/^[0-9a-f]{64}$/);
@@ -269,5 +274,15 @@ describe('synthetic health-plan cards (staging only)', () => {
     expect(second.issues).toEqual(['card_duplicated', 'card_number_missing', 'carrier_disabled']);
     expect([first.sourceRecordId, second.sourceRecordId]).toEqual(['pcod:105|carrier:12|card:sem-numero|n:1', 'pcod:105|carrier:12|card:sem-numero|n:2']);
     expect(cards(105).some((e) => e.payload.primary)).toBe(false);
+  });
+});
+
+describe('agenda codes confirmed on the data (D9)', () => {
+  it('turns a future P slot into a schedule block, like B', () => {
+    expect(find('schedule_block', 'user:5|date:2026-09-10|start:420').payload).toMatchObject({ legacyType: 'P', ownerLegacyDoctor: 5 });
+  });
+
+  it('rejects an empty past slot instead of importing a booking without anyone', () => {
+    expect(find('appointment', 'user:3|date:2025-05-05|start:600')).toMatchObject({ mappingStatus: 'rejected', issues: ['appointment_empty_slot'] });
   });
 });

@@ -7,8 +7,8 @@
   "transformVersion": "pm-v1",
   "files": {
     "appointment.ndjson": {
-      "sha256": "3e8fad840d09abb909e20e6d38d749ee90f08f5b5b3235a38b4311d958ffed72",
-      "lines": 10
+      "sha256": "3c46e3cc2bc323e281be55778d22b9e2ad0d4398c430026884d58fdc0a0b933a",
+      "lines": 11
     },
     "chart.ndjson": {
       "sha256": "367ab11a55643ecae79a838ef558383a0b2e218ad29898e5859cb7656f9d640c",
@@ -51,8 +51,8 @@
       "lines": 1
     },
     "schedule_block.ndjson": {
-      "sha256": "d842cb45564511a138e3890d92cec1e5c4c40748c80c4669b8f121550e06a239",
-      "lines": 1
+      "sha256": "ada9f2c9f34c51451bd7093d8bd3d613e9dd44585b2216ef8e8eabb7d2c28169",
+      "lines": 2
     },
     "template.ndjson": {
       "sha256": "1dbefd651cb1db492a4d9efadb2b168c75180a7f8aa5c0870b8ce269e0afee1a",
@@ -61,14 +61,14 @@
   },
   "counts": {
     "appointment": {
-      "total": 10,
+      "total": 11,
       "byStatus": {
         "requires_review": 2,
-        "ready": 6,
-        "rejected": 2
+        "rejected": 2,
+        "ready": 7
       },
       "byDoctor": {
-        "user:3": 6,
+        "user:3": 7,
         "user:5": 3,
         "user:9": 1
       }
@@ -167,12 +167,13 @@
       }
     },
     "schedule_block": {
-      "total": 1,
+      "total": 2,
       "byStatus": {
-        "requires_review": 1
+        "requires_review": 2
       },
       "byDoctor": {
-        "user:3": 1
+        "user:3": 1,
+        "user:5": 1
       }
     },
     "template": {
@@ -194,9 +195,10 @@
     "alert_multiple_doctors": 1,
     "alert_no_chart": 1,
     "appointment_chart_missing": 1,
+    "appointment_empty_slot": 1,
     "appointment_overlap": 1,
     "appointment_without_patient": 1,
-    "block_executor_contract_pending": 1,
+    "block_executor_contract_pending": 2,
     "card_duplicated": 1,
     "card_expired": 1,
     "card_number_missing": 2,
@@ -214,8 +216,8 @@
     "phone_no_ddd_outside_41": 2,
     "precadastro_unconfirmed": 1,
     "sex_missing": 1,
-    "status_no_show_target_required": 1,
-    "status_unknown_past": 1,
+    "status_no_attendance_recorded": 1,
+    "status_no_show_target_required": 2,
     "template_controlled_substance": 1,
     "template_empty": 1,
     "template_items_not_found": 1,

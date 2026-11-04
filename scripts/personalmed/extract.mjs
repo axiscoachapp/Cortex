@@ -82,7 +82,8 @@ for (const r of rows(px('age03'), ['UserNumber', 'Data', 'Inicio', 'Duracao', 'T
   const m = minutes(r.Inicio);
   if (!d || m == null) continue;
   slot.set(`${r.UserNumber}|${d}|${m}`, { duration: r.Duracao ?? 0, tipo: str(r.Tipo) });
-  if (str(r.Tipo) === 'B') blocks.push({ user: r.UserNumber, date: d, startMinutes: m, duration: r.Duracao ?? 0, slotType: 'B' });
+  // B and P are blocks (D9: P is a short block that is never booked).
+  if (str(r.Tipo) === 'B' || str(r.Tipo) === 'P') blocks.push({ user: r.UserNumber, date: d, startMinutes: m, duration: r.Duracao ?? 0, slotType: str(r.Tipo) });
 }
 const agendaRows = [...blocks];
 const attendedStart = new Map(); // `${pcod}|${user}|${date}` -> minutes (earliest)

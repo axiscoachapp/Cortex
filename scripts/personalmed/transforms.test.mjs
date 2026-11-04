@@ -265,8 +265,11 @@ describe('agenda', () => {
     expect(mapAppointmentStatus('T', '2025-01-10', { exportDate }).status).toBe('realizado');
     expect(mapAppointmentStatus('C', '2025-01-10', { exportDate }).status).toBe('cancelado');
     expect(mapAppointmentStatus('F', '2025-01-10', { exportDate })).toMatchObject({ status: 'faltou', issues: ['status_no_show_target_required'] });
-    expect(mapAppointmentStatus('A', '2025-01-10', { exportDate })).toMatchObject({ status: 'realizado', note: 'PersonalMed: A' });
-    expect(mapAppointmentStatus('', '2025-01-10', { exportDate })).toMatchObject({ status: null, issues: ['status_unknown_past'] });
+    // D9, confirmed by the data: A arrived, E started care, '-' in the past has no attendance.
+    expect(mapAppointmentStatus('A', '2025-01-10', { exportDate })).toMatchObject({ status: 'realizado', issues: ['status_arrival_only'] });
+    expect(mapAppointmentStatus('E', '2025-01-10', { exportDate })).toMatchObject({ status: 'realizado', issues: [] });
+    expect(mapAppointmentStatus('A', '2026-09-01', { exportDate }).status).toBe('agendado');
+    expect(mapAppointmentStatus('', '2025-01-10', { exportDate })).toMatchObject({ status: 'faltou', issues: ['status_no_attendance_recorded', 'status_no_show_target_required'] });
     expect(mapAppointmentStatus('', '2026-09-01', { exportDate }).status).toBe('agendado');
   });
 
