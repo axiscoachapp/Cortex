@@ -21,6 +21,7 @@ export async function startClinicFixture() {
     if(url.pathname==='/auth/v1/token')return send({access_token:token,refresh_token:'synthetic-refresh',expires_in:86400,expires_at:Math.floor(Date.now()/1000)+86400,token_type:'bearer',user});
     if(url.pathname==='/auth/v1/user')return send(user);
     if(url.pathname==='/auth/v1/logout')return send({});
+    if(url.pathname==='/rest/v1/rpc/clinic_access')return send({kind:'clinical',active:false,admin:false,actorId:uid,clinic:null,doctors:[],staff:[]});
     if(url.pathname==='/rest/v1/rpc/workspace_directory')return send({patients,counts:{total:patients.length,new:0,returns:1}});
     if(url.pathname==='/rest/v1/rpc/list_patient_chat_turns')return send(input.p_patient_id===patientId?turns:[]);
     if(url.pathname==='/rest/v1/rpc/get_integration_status')return send({google_connected:false});

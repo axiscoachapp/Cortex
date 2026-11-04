@@ -32,8 +32,10 @@ Para notas fiscais, a recomendação inicial é homologar um integrador fiscal c
 | [Plano de implementação](../../../tasks/clinic-crm/plan.md) | Dependências, entregas e estimativa consolidada |
 | [Backlog verificável](../../../tasks/clinic-crm/todo.md) | Tarefas pequenas com critérios de aceite e verificação |
 
-## Estado desta entrega
+## Estado da implementação — 03/11/2026
 
-Pesquisa e planejamento concluídos. As capacidades descritas são propostas; não estão implementadas por estes documentos. Não foram feitas migrações, alterações de permissões, contratações, emissão de notas, envios de WhatsApp ou chamadas a pacientes. A homologação da NFS-e e a implantação de WhatsApp real dependem dos dados e acessos da clínica.
+Fundação local implementada: contas dedicadas, delegação de agendas, contatos, fila manual, rascunhos por secretária e agenda com confirmação humana. Prontuários permanecem privados. Veja o [relatório do incremento](../../reviews/2026-11-03/reception-foundation/IMPLEMENTATION.md) para evidências, decisões e limites.
+
+As três migrations foram ensaiadas apenas em banco descartável; nenhuma alteração foi aplicada ao Supabase hospedado. WhatsApp oficial, financeiro, fiscal, métricas e piloto seguem no backlog. Não houve mensagens, emissão de notas ou importação PersonalMed.
 
 As decisões sobre quantidade de números, divisão da equipe, horários, SLAs e regras de cobrança ficam registradas como perguntas de refinamento. Elas não impedem construir primeiro a fundação com dados sintéticos.

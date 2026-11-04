@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useClinicAccess } from '@/features/reception/accessContext';
 import { useQuery } from '@tanstack/react-query';
 import {
   Plus, CalendarDays, Sparkles, FileStack, BookOpen, Users, ChevronRight, CalendarX, ClipboardList, Share2,
@@ -55,6 +56,7 @@ const NAV_ITEMS = [
 ];
 
 export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId, onHome, onNavigate }: PatientSidebarProps) {
+  const clinicAccess=useClinicAccess();
   const navigate = useNavigate();
   const go = onNavigate ?? navigate;
 
@@ -171,7 +173,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
 
       {/* Navigation rail */}
       <nav className="px-2 py-2 border-t border-border/50 bg-white/60 space-y-0.5">
-        {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+        {[...(clinicAccess?.admin?[{to:'/recepcao',icon:Users,label:'Recepção'}]:[]),...NAV_ITEMS].map(({ to, icon: Icon, label }) => (
           <button
             key={to}
             onClick={() => go(to)}

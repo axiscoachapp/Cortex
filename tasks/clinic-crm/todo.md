@@ -1,8 +1,10 @@
 # Backlog verificável: CRM da clínica
 
-Data: 03/11/2026. [Plano](plan.md), [especificação](../../docs/product/clinic-crm/PRODUCT_SPEC.md) e [handoff PersonalMed](../../docs/product/clinic-crm/DATABASE_HANDOFF.md). Caixas abertas significam trabalho futuro; nenhum módulo novo está implementado por este planejamento.
+Data: 03/11/2026. [Plano](plan.md), [especificação](../../docs/product/clinic-crm/PRODUCT_SPEC.md) e [handoff PersonalMed](../../docs/product/clinic-crm/DATABASE_HANDOFF.md). Caixas marcadas significam implementação local verificada, sem implantação ou dados reais. [Evidências e limites](../../docs/reviews/2026-11-03/reception-foundation/IMPLEMENTATION.md).
 
-Arquivos abaixo são locais prováveis, ainda não criados. Cada tarefa tem até cinco alvos e deve deixar um caminho testável. Se um alvo crescer para mais de uma sessão, dividir a tarefa antes de implementar. Numeração de migrations será combinada com o executor da migração; `migration:...` é um rótulo, não um nome para criar agora.
+T01–T07 e T09–T11 implementados nos três arquivos `20261103*_reception_*.sql`, quatro suítes SQL e `src/features/reception`. T08 tem sugestão por pedido/vínculo; regras por serviço ficam pendentes. T00 recebeu referência agregada do Claude, mas operação/corte permanecem abertos. T24 já tem bloqueio preventivo de exclusão e liberação de responsabilidade; o ciclo completo continua pendente. Alvos abaixo eram estimativas, consolidadas nesses arquivos durante a execução.
+
+Alvos futuros abaixo são sugestões de planejamento; os alvos implementados foram consolidados conforme o relatório do incremento. Cada tarefa deve deixar um caminho testável. `migration:...` é um rótulo de escopo; as migrations reais da recepção já têm numeração `20261103` e estão listadas no handoff para coordenação com Claude.
 
 ## Fundação e primeira recepção
 
@@ -11,39 +13,39 @@ Arquivos abaixo são locais prováveis, ainda não criados. Cada tarefa tem até
   - Verificar: revisar casos sintéticos de família, paciente de dois médicos e primeira consulta; dúvidas restantes têm responsável e bloqueiam somente tarefas dependentes.
   - Alvos: `DATABASE_HANDOFF.md`, `PRODUCT_SPEC.md`, `plan.md` (3 documentos).
 
-- [ ] **T01 — Autorizar um papel de recepção sem ampliar acesso clínico.** Dep.: T00 para papéis; pode usar dados sintéticos enquanto o legado é estudado.
+- [x] **T01 — Autorizar um papel de recepção sem ampliar acesso clínico.** Dep.: T00 para papéis; pode usar dados sintéticos enquanto o legado é estudado.
   - Aceite: membro de recepção tem capacidades explícitas; convites/aceite de compartilhamento clínico recusam conta não clínica; sessão e desligamento revogam acesso.
   - Verificar: SQL de médico, recepção, gestor, inativo e estranho; tentativas diretas às RPCs de compartilhamento e fontes.
   - Alvos: `migration:reception_roles`, `supabase/tests/reception-access.test.sql`, `src/lib/clinicCapabilities.ts`, `src/lib/clinicCapabilities.test.ts` (4).
 
-- [ ] **T02 — Delegar agenda e fila por profissional.** Dep.: T01.
+- [x] **T02 — Delegar agenda e fila por profissional.** Dep.: T01.
   - Aceite: gestor delega/revoga escopo; relação entre clínica, atendente e médico é validada; revogação vale para requisição seguinte.
   - Verificar: SQL de delegação cruzada/forjada e conta inativa, incluindo médico fora da clínica.
   - Alvos: `migration:staff_scopes`, `supabase/tests/staff-scopes.test.sql`, `src/features/reception/api.ts`, `src/features/reception/contracts.ts` (4).
 
-- [ ] **T03 — Entrar na área correta e configurar a equipe.** Dep.: T01–T02.
+- [x] **T03 — Entrar na área correta e configurar a equipe.** Dep.: T01–T02.
   - Aceite: recepção chega ao seu ambiente; gestor altera escopos permitidos; nenhuma rota clínica vaza dados por navegação direta.
   - Verificar: testes de sessão/rota e navegador com perfis separados; erro de permissão distinto de lista vazia.
   - Alvos: `src/App.tsx`, `src/features/reception/ReceptionShell.tsx`, `src/features/reception/TeamSettings.tsx`, `src/features/reception/ReceptionShell.test.tsx`, `src/components/MobileSubpageNavigation.tsx` (5).
 
 **Checkpoint A:** comprovar autorização no banco/API antes de preencher a tela com dados reais.
 
-- [ ] **T04 — Criar e buscar contatos administrativos.** Dep.: T02.
+- [x] **T04 — Criar e buscar contatos administrativos.** Dep.: T02.
   - Aceite: contato não cria prontuário automaticamente; canal guarda original e normalização; busca paginada retorna somente campos autorizados.
   - Verificar: família com telefone comum, ausência de DDD, número alterado e milhares de registros sintéticos; RLS entre clínicas.
   - Alvos: `migration:clinic_contacts`, `supabase/tests/clinic-contacts.test.sql`, `src/features/reception/contacts.ts`, `src/features/reception/ContactSearch.tsx`, `src/features/reception/ContactSearch.test.tsx` (5).
 
-- [ ] **T05 — Confirmar beneficiário e vincular prontuário existente.** Dep.: T04; importação real depende do mapa T00.
+- [x] **T05 — Confirmar beneficiário e vincular prontuário existente.** Dep.: T04; importação real depende do mapa T00.
   - Aceite: contato/responsável pode ligar vários pacientes; vínculo não cria compartilhamento clínico; ambiguidade exige confirmação.
   - Verificar: telefone reciclado, dois médicos, menor atendido por responsável e tentativa de vincular prontuário alheio.
   - Alvos: `migration:contact_patient_links`, `supabase/tests/contact-links.test.sql`, `src/features/reception/BeneficiaryPicker.tsx`, `src/features/reception/BeneficiaryPicker.test.tsx` (4).
 
-- [ ] **T06 — Criar atendimento na fila e assumir sem disputa.** Dep.: T04.
+- [x] **T06 — Criar atendimento na fila e assumir sem disputa.** Dep.: T04.
   - Aceite: entrada manual tem estado/origem; assumir é atômico e auditado; uma responsabilidade atual por caso.
   - Verificar: duas sessões tentando assumir o mesmo caso, idempotência e revisão antiga.
   - Alvos: `migration:reception_cases`, `supabase/tests/reception-cases.test.sql`, `src/features/reception/cases.ts`, `src/features/reception/CaseQueue.tsx`, `src/features/reception/CaseQueue.test.tsx` (5).
 
-- [ ] **T07 — Atender, transferir e recuperar o trabalho.** Dep.: T06.
+- [x] **T07 — Atender, transferir e recuperar o trabalho.** Dep.: T06.
   - Aceite: transições e transferências têm histórico; rascunho é por ator/caso; nova demanda não fica oculta após encerramento.
   - Verificar: sair/voltar, concorrência, troca de usuário, atendente desligado e destinatário sem escopo.
   - Alvos: `migration:case_transitions`, `supabase/tests/case-transitions.test.sql`, `src/features/reception/CaseWorkspace.tsx`, `src/features/reception/CaseWorkspace.test.tsx`, `src/features/reception/CaseContext.tsx` (5).
@@ -57,17 +59,17 @@ Arquivos abaixo são locais prováveis, ainda não criados. Cada tarefa tem até
 
 ## Agenda humana
 
-- [ ] **T09 — Ler agenda mínima dos médicos delegados.** Dep.: T02, T05.
+- [x] **T09 — Ler agenda mínima dos médicos delegados.** Dep.: T02, T05.
   - Aceite: visão por profissionais autorizados e período; sem campos clínicos em títulos/notas retornados; bloqueios/durações distinguem disponibilidade de reserva.
   - Verificar: tentativas de ler outro médico/clínica, período extenso e estado de falha.
   - Alvos: `migration:delegated_calendar_read`, `supabase/tests/delegated-calendar.test.sql`, `src/features/reception/calendar.ts`, `src/features/reception/ReceptionCalendar.tsx`, `src/features/reception/ReceptionCalendar.test.tsx` (5).
 
-- [ ] **T10 — Reservar horário com confirmação humana.** Dep.: T09.
+- [x] **T10 — Reservar horário com confirmação humana.** Dep.: T09.
   - Aceite: ator/escopo/vínculo verificados no servidor; conflitos simultâneos recusados; exceção só com permissão e motivo.
   - Verificar: duas transações no mesmo intervalo, paciente incorreto, duração inválida, retry e tentativa de agendamento por webhook/modelo.
   - Alvos: `migration:delegated_calendar_write`, `supabase/tests/scheduling-concurrency.test.sql`, `src/features/reception/BookingReview.tsx`, `src/features/reception/BookingReview.test.tsx`, `src/features/reception/calendar.ts` (5).
 
-- [ ] **T11 — Remarcar, registrar chegada e tratar cancelamento.** Dep.: T10.
+- [x] **T11 — Remarcar, registrar chegada e tratar cancelamento.** Dep.: T10.
   - Aceite: alterações humanas auditadas; lembrete antigo invalidado; presença e status do prontuário não são confundidos.
   - Verificar: remarcação concorrente, cancelamento com mensagem pendente, revogação de escopo e Google indisponível.
   - Alvos: `migration:appointment_events`, `supabase/tests/appointment-events.test.sql`, `src/features/reception/ReceptionCalendar.tsx`, `src/features/reception/calendar.test.ts`, `supabase/functions/send-appointment-reminder/index.ts` (5).

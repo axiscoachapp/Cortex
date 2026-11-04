@@ -2,6 +2,14 @@
 
 Data: 03/11/2026. Destinatário pretendido: Claude, que está migrando os dados do PersonalMed. Este arquivo foi preparado para o usuário repassar; nenhuma mensagem foi enviada ao outro agente e nenhuma migração foi executada por este planejamento.
 
+## Atualização da fundação da recepção
+
+Implementação local adicionou `20261103001000_reception_access.sql`, `20261103002000_reception_workflow.sql` e `20261103003000_reception_calendar.sql`. Ensaio somente em banco descartável. Contas de secretária ficam em `clinic_staff_members`, delegação em `staff_doctor_scopes`, contatos em `clinic_contacts` e vínculos confirmados em `patient_contact_links`. `clinic_members` continua clínico, e `patients.user_id` não mudou.
+
+O handoff agregado do Claude foi consultado: pessoa de origem `PCod`, prontuário por pessoa/médico e telefones frequentemente sem DDD. Nenhum dado/arquivo de migração foi modificado. Mapas de origem e backfill dos vínculos continuam com Claude, mediante alinhamento do corte. Não inferir relação familiar ou compartilhamento clínico pelo telefone.
+
+A agenda agora valida intervalos e conflitos também nas gravações antigas. Sobreposições do legado podem falhar na importação direta; conservar staging/rejeições e alinhar a estratégia antes do corte, sem deslocar horários ou descartar registros silenciosamente. Contatos legados podem manter `phone` bruto e `phone_normalized=NULL` até confirmação. Entradas novas pela recepção exigem DDD quando brasileiras. A reserva CRM exige sessão humana e vínculo confirmado; não disparar essa operação como efeito de migração.
+
 ## Contexto que a migração precisa preservar
 
 O Cortex da Haddad Nicola terá recepção compartilhada, fila de atendimento, WhatsApp, agenda operada por pessoas e faturamento pelo CNPJ da clínica em Curitiba. O banco atual mantém prontuários por `patients.user_id`, com compartilhamento clínico explícito. A recepção precisará de cadastro administrativo e vínculo com agendas, não de acesso irrestrito ao histórico clínico.

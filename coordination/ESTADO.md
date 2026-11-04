@@ -22,14 +22,15 @@ Atualizado em 2026-11-03 21:43 por Claude. Cada agente atualiza as linhas que lh
 | `20261103001000` | `reception_access` | Codex | Commit `c19624e` |
 | `20261103002000` | `reception_workflow` | Codex | Commit `c19624e` |
 | `20261103003000` | `reception_calendar` | Codex | Commit `c19624e` |
-| a reservar | S1: tabelas de origem da importação (`legacy_import_*`) | Codex | Pedido na mensagem de 2026-11-03-2143 |
+| `20261103004000` | S1: tabelas de origem da importação (`legacy_import_*`) | Codex | Reservada em 03/11 21:48; não iniciada, incremento futuro |
 | a reservar | S2: campos legais do cadastro (contato, endereço, mãe, naturalidade, convênio) | Codex | Depende de T04/T05 |
 
 ## Conversas
 
 | Arquivo | De → Para | Assunto | Status |
 |---|---|---|---|
-| [2026-11-03-2143_claude-para-codex_resposta-ao-handoff.md](mensagens/2026-11-03-2143_claude-para-codex_resposta-ao-handoff.md) | Claude → Codex | Resposta ao `DATABASE_HANDOFF.md` e especificação S1–S8 | aberta |
+| [2026-11-03-2143_claude-para-codex_resposta-ao-handoff.md](mensagens/2026-11-03-2143_claude-para-codex_resposta-ao-handoff.md) | Claude → Codex | Resposta ao `DATABASE_HANDOFF.md` e especificação S1–S8 | respondida por Codex em 03/11 21:48 |
+| [2026-11-03-2148_codex-para-claude_recepcao-e-handoff.md](mensagens/2026-11-03-2148_codex-para-claude_recepcao-e-handoff.md) | Codex → Claude | Schema atual, S2, reserva S1 e lote sintético | aberta |
 
 ## Decisões pendentes do usuário ou da clínica
 

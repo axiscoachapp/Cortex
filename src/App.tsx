@@ -10,6 +10,7 @@ import { UnsavedChangesRouteGuard } from '@/hooks/useUnsavedChanges';
 import { SessionAssurance } from '@/components/SessionAssurance';
 import { PasswordChangeGate } from '@/components/PasswordChangeGate';
 import { MobileSubpageNavigation } from '@/components/MobileSubpageNavigation';
+import { ClinicAccessGate } from '@/features/reception/ClinicAccessGate';
 
 // Critical routes — keep eager.
 const Index = lazy(() => import("./pages/Index"));
@@ -29,6 +30,11 @@ const SharingPage = lazy(() => import('./pages/Sharing'));
 const ClinicalWorkspacePage = lazy(() => import('./pages/ClinicalWorkspace'));
 const AccountSecurityPage = lazy(() => import('./pages/AccountSecurity'));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const ReceptionLayout = lazy(() => import('./features/reception/ReceptionLayout'));
+const ReceptionQueue = lazy(() => import('./features/reception/ReceptionQueue'));
+const ReceptionCalendar = lazy(() => import('./features/reception/ReceptionCalendar'));
+const ReceptionContacts = lazy(() => import('./features/reception/ContactsPage'));
+const ReceptionTeam = lazy(() => import('./features/reception/TeamSettings'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -68,7 +74,7 @@ function ProtectedRoute() {
         page
       ) : (
         <SessionAssurance key={user.id}>
-          {page}
+          <ClinicAccessGate>{page}</ClinicAccessGate>
         </SessionAssurance>
       )}
     </PasswordChangeGate>
@@ -82,6 +88,12 @@ const router = createBrowserRouter([
   { path: '/aviso-de-privacidade', element: <PrivacyNotice /> },
   { element: <ProtectedRoute />, children: [
     { path: '/', element: <Index /> },
+    { path: '/recepcao', element: <ReceptionLayout />, children: [
+      { index: true, element: <ReceptionQueue /> },
+      { path: 'agenda', element: <ReceptionCalendar /> },
+      { path: 'contatos', element: <ReceptionContacts /> },
+      { path: 'equipe', element: <ReceptionTeam /> },
+    ] },
     { path: '/gerenciar-pacientes', element: <PatientManagement /> },
     { path: '/agenda', element: <CalendarPage /> },
     { path: '/google-oauth-callback', element: <GoogleOAuthCallback /> },

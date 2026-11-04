@@ -1,6 +1,8 @@
 # Especificação: recepção e CRM da clínica
 
-Estado: proposta para refinamento e implementação incremental. Data: 03/11/2026. Não representa funcionalidades já disponíveis. Decisões confirmadas e documentos relacionados: [índice](README.md).
+Estado: especificação do conjunto, com fundação local de recepção/agenda implementada em 03/11/2026. Recursos futuros permanecem propostas. O [relatório do incremento](../../reviews/2026-11-03/reception-foundation/IMPLEMENTATION.md) distingue código verificado, limites e implantação pendente. Documentos relacionados: [índice](README.md).
+
+Identidade implementada: `clinic_members` preserva `admin`/`doctor`; secretárias usam contas exclusivas em `clinic_staff_members` e delegações em `staff_doctor_scopes`. Rotas atuais: `/recepcao?case=UUID`, `/recepcao/agenda`, `/recepcao/contatos` e `/recepcao/equipe`. Compartilhamento clínico continua explícito entre médicos. As demais rotas/integrações abaixo pertencem ao roadmap.
 
 ## Objetivo e premissas
 

@@ -1,0 +1,29 @@
+{
+  "checks": [
+    "reception redirects before clinical readers, including direct clinical URL",
+    "two browser sessions cannot claim the same revision",
+    "server draft survives reload, is private per actor, and posted note clears it",
+    "explicit beneficiary and human reservation confirmation",
+    "occupied slot preserves form and shows actionable conflict",
+    "human reschedule, check-in/undo, confirm, retained cancellation",
+    "partial contact/case failure retries without duplicate contact",
+    "150% responsive reception and calendar 390",
+    "150% responsive reception and calendar 768",
+    "150% responsive reception and calendar 1280",
+    "150% responsive reception and calendar 1920",
+    "administrator creates dedicated account and delegates agendas",
+    "offboarding takes effect in another active session",
+    "administrator creates and removes an administrative schedule block"
+  ],
+  "errors": [],
+  "metrics": {
+    "clinicalReads": [],
+    "externalCalls": [],
+    "unknown": [],
+    "bookings": 1,
+    "contacts": 1,
+    "caseWrites": 1
+  },
+  "browser": "isolated headless Edge/Chromium",
+  "data": "synthetic loopback only; database authorization separately verified"
+}

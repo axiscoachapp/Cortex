@@ -1,6 +1,6 @@
 # Plano de implementação: operação da clínica
 
-Data: 03/11/2026. Base inspecionada: `9b2adaf`. Escopo autorizado nesta etapa: pesquisa e plano da expansão do Cortex da Haddad Nicola. Não iniciar integrações reais ou migrações apenas com este documento.
+Data: 03/11/2026. Base do planejamento: `9b2adaf`. Autorização posterior: implementar recepção, permissões, fila e agenda humana, preservando prontuários privados e deixando PersonalMed com Claude. Integrações reais e implantação continuam separadas. [Resultado local](../../docs/reviews/2026-11-03/reception-foundation/IMPLEMENTATION.md).
 
 Especificação: [PRODUCT_SPEC.md](../../docs/product/clinic-crm/PRODUCT_SPEC.md). Pesquisa: [MARKET_RESEARCH.md](../../docs/product/clinic-crm/MARKET_RESEARCH.md). Fiscal: [FISCAL_FEASIBILITY.md](../../docs/product/clinic-crm/FISCAL_FEASIBILITY.md). Interface com o trabalho do Claude: [DATABASE_HANDOFF.md](../../docs/product/clinic-crm/DATABASE_HANDOFF.md). Tarefas executáveis: [todo.md](todo.md).
 
@@ -20,6 +20,7 @@ Secretárias trabalham em fila e agenda compartilhadas dentro dos seus escopos, 
 6. Adaptadores oficiais para WhatsApp e NFS-e; mensagens/notas com idempotência e reconciliação. APIs não podem controlar a autorização do produto.
 7. Financeiro mínimo precede emissão fiscal: serviços, cobranças e pagamentos não compartilham um único status.
 8. Staging PersonalMed separado; alinhar mapa de IDs e propriedade antes de backfill dos vínculos administrativos.
+9. Implementado: identidades dedicadas em `clinic_staff_members` e delegações em `staff_doctor_scopes`, sem ampliar `clinic_members` para aceitar secretárias. Essa separação protege verificações clínicas antigas.
 
 ## Sequência e dependências
 
