@@ -1,6 +1,6 @@
 # T28/2b/1 — limite da agenda administrativa da clínica
 
-04/11/2026. D18: os médicos trabalham somente na Haddad Nicola. Este incremento restringe a agenda da recepção à origem administrativa explícita; não implementa ainda a anuência por médico de T28/2b/2 nem altera o modelo de pacientes em esclarecimento na D20.
+04/11/2026. D18: os médicos trabalham somente na Haddad Nicola. Este incremento restringe a agenda da recepção à origem administrativa explícita; não implementa ainda a anuência por médico de T28/2b/2 nem altera o modelo de pacientes. D20/D14 já decididas têm [contrato próprio em proposta](SINGLE_PATIENT_REGISTRATION_CONTRACT.md).
 
 ## Regra
 

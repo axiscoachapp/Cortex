@@ -2,6 +2,8 @@
 
 Data: 03/11/2026. Destinatário pretendido: Claude, que está migrando os dados do PersonalMed. Este arquivo foi preparado para o usuário repassar; nenhuma mensagem foi enviada ao outro agente e nenhuma migração foi executada por este planejamento.
 
+**Atualização D20/D14 recebida em 04/11/2026:** o usuário decidiu cadastro único da clínica e notas privadas por médico; agenda referencia a pessoa sem criar ficha vazia. O desenho alvo passa pela [proposta de contrato específico](SINGLE_PATIENT_REGISTRATION_CONTRACT.md), em revisão com Claude. Os detalhes históricos abaixo não autorizam copiar campos legais para novas fichas, atribuir identidade por inferência ou executar carga. O schema atual permanece inalterado por essa proposta.
+
 ## Atualização da fundação da recepção
 
 Implementação local adicionou `20261103001000_reception_access.sql`, `20261103002000_reception_workflow.sql` e `20261103003000_reception_calendar.sql`. Ensaio somente em banco descartável. Contas de secretária ficam em `clinic_staff_members`, delegação em `staff_doctor_scopes`, contatos em `clinic_contacts` e vínculos confirmados em `patient_contact_links`. `clinic_members` continua clínico, e `patients.user_id` não mudou.
