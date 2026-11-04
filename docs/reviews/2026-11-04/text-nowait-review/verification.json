@@ -1,0 +1,148 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "7f699c4ddc08bdaab24d939c877a053c06a96637",
+  "beforeDetectionBaseline": "c89492f20d4f6ac7719700940529acd7f5e9d401",
+  "migrations": 69,
+  "sqlSuites": [
+    "supabase/tests/reference-catalogs.test.sql",
+    "supabase/tests/document-snippets.test.sql",
+    "supabase/tests/digital-signature.test.sql"
+  ],
+  "sqlSourceDigest": "f02ef3c67a7e71d2a5a1499d5d8c3784fe2900501ee3515a5e80af92bb6319d9",
+  "signatureHelperSha256": "ec5e077df4a85134db1a230f7aa6e65e1fd6549e4de50ceff0a6e5619a2ce555",
+  "regulatedSourceSha256": "3b55b257830e037e770172e443b0ebe5c99e2e269f34517a7dea213cfa106ef8",
+  "probes": [
+    {
+      "id": "empty",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "null",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "number",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "array",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "components-object",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "components-string",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "component-null",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "component-array",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "valid",
+      "expected": true,
+      "actual": "true",
+      "agrees": true
+    },
+    {
+      "id": "nbsp-only",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "astral-length",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "unicode-trim-limit",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "c1",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "bom",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "ideographic-space",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "accent120",
+      "expected": true,
+      "actual": "true",
+      "agrees": true
+    },
+    {
+      "id": "accent121",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    }
+  ],
+  "detectionRegressions": [
+    {
+      "id": "controlled-boundary",
+      "baselineDetected": [
+        "clonazepam"
+      ],
+      "currentDetected": []
+    },
+    {
+      "id": "antimicrobial-boundary",
+      "baselineDetected": [
+        "amoxicilina"
+      ],
+      "currentDetected": []
+    }
+  ],
+  "formulaWithMissedControlledSubstanceAccepted": true,
+  "signatureConcurrencyPassed": true,
+  "reviewResolved": false,
+  "ownedInternalNetwork": true,
+  "publishedPorts": false,
+  "cleanupVerified": true,
+  "nowaitMutationControlPassed": true,
+  "unitTests": {
+    "files": 4,
+    "passed": 80,
+    "skipped": 1,
+    "total": 81
+  },
+  "signatureFlowReview": "Read-only code/SQL comparison and synthetic in-memory reproductions; three unresolved findings, no real-DB flow integration"
+}

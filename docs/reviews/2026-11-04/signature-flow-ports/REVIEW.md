@@ -1,0 +1,13 @@
+# Revisão do módulo de portas de assinatura
+
+04/11/2026. Artefato `e17d5bf`: `_shared/signatureFlow.ts` e os novos verificadores de `pades.ts`, comparados com o contrato SQL de `20261105100000`. Revisão independente, somente leitura, com reproduções de material sintético em memória; **não foi ensaio de integração do fluxo com banco/Storage/PSC**. Conferi os ramos relevantes no módulo e SQL. Revisão externa dispensada pelo usuário/contexto não interativo.
+
+## Achados antes dos handlers
+
+1. **P2 — stored revogado não chega à conclusão/limpeza.** Após quatro 40001 na conclusão, revogar a sessão e retomar. O catch P4031 chama advance('stored'), mas o SQL nesse ramo só cancela reserved/prepared/psc_requested/ambiguous. Retorna stored intacto; o módulo responde in_progress e mantém objeto sem cleanup. A retomada deve alcançar a decisão de signature_complete ou equivalente sem depender de novo token PSC.
+2. **P2 — callback de tentativa antiga altera tentativa humana nova.** A aguarda PSC; B faz humanRetry e upload; o timeout tardio de A marca a operação de B ambiguous; stored de B recebe 22023, deixando objeto sem cleanup_pending. O SQL não faz CAS por psc_attempts. A tentativa/versão esperada precisa acompanhar e ser conferida atomicamente nos avanços, inclusive a marcação de ambiguous. Comparar antes em outro RPC não fecha a corrida. A reprodução em memória usou o módulo real/fakeDb e as transições foram comparadas com o SQL; integração real ainda necessária.
+3. **P2 — CMS com SignerIdentifier incorreto é aceito.** Alterar somente o serial de SignerInfo.sid em material sintético ainda retorna null de verifyPadesArtifact. O código usa prepared.certificate sem validar que o SID identifica o certificado incorporado. O ramo de objeto já existente pode aceitar CMS inválido. Validar SID/estrutura/algoritmos ou exigir igualdade com o CMS canônico reconstruído; adicionar a mutação ao teste. Não é assinatura forjada demonstrada, mas falso positivo de validade/interoperabilidade.
+
+Os quatro arquivos unitários dirigidos tiveram 80 testes aprovados e um ignorado; os três casos não estavam cobertos. Nenhum arquivo do Claude foi corrigido pelo Codex. [Mensagem ao dono](../../../../coordination/mensagens/2026-11-04-1942_codex-para-claude_revisao-texto-e-ports.md).
+
+**Sem aceite como fronteira pronta.** Handlers devem derivar identidade de autenticação validada/MFA e tratar humanRetry como ação humana autorizada, não prova fornecida pelo body. Nenhum endpoint real, PSC pago, certificado, envio, deploy ou dado de paciente foi usado/autorizado por esta revisão. Corrigir e provar os casos antes de integrar; alterações de contrato SQL/tipos devem ser coordenadas.
