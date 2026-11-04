@@ -44,7 +44,7 @@
     "resource ledger and helper remain private to database guards"
   ],
   "installedMigration": "20261104200000_reception_scoped_custody.sql",
-  "migrations": 61,
+  "migrations": 62,
   "sqlSuites": 0,
   "deletionScenarios": 0,
   "directoryFixture": null,

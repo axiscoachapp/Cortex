@@ -1,0 +1,21 @@
+{
+  "syntheticOnly": true,
+  "redOnly": true,
+  "sourceBaseline": "e2d91a52555b06bdc6b23ed334d2fd37c4b23e8d",
+  "overlays": [
+    {
+      "path": "supabase/tests/reception-delegation-requests.test.sql",
+      "sha256": "6837d25fec999c2a27dd1067fb23c7e0d809ef60f6b66d247cd8113ba3772c8e"
+    }
+  ],
+  "migrations": 61,
+  "sqlSuites": 0,
+  "deletionScenarios": 0,
+  "checks": [
+    "RED: predecessor cannot persist a private delegation request"
+  ],
+  "publicConsentGate": false,
+  "approvalEnabled": false,
+  "network": "verified local Docker; owned internal network; no published ports",
+  "cleanupVerified": true
+}

@@ -1,0 +1,55 @@
+{
+  "syntheticOnly": true,
+  "redOnly": false,
+  "sourceBaseline": "c50be8f34ee8a8c76681e854ad51159122531103",
+  "overlays": [
+    {
+      "path": "supabase/tests/reception-delegation-requests.test.sql",
+      "sha256": "7408ed558b1a98913090d47a6f5d75ddf96b9ca0587b921b0b8dbb0b984fa270"
+    },
+    {
+      "path": "supabase/migrations/20261104230000_reception_delegation_requests.sql",
+      "sha256": "5c608613823e49a77e43999d104c248d136c84ac597b5ef0d388d0167ccfd6f4"
+    },
+    {
+      "path": "scripts/test-reception-delegation-requests.mjs",
+      "sha256": "6ff9a84ff8c398388a131fcd9e59a8a1689e4e62d5c0911e2693d346e61525c0"
+    },
+    {
+      "path": "scripts/test-reception-delegation-request-concurrency.mjs",
+      "sha256": "c64e0fa786ccd3150419e80be8d984fb3dafc95632569e1b7117dc77ef1638bb"
+    }
+  ],
+  "migrations": 62,
+  "sqlSuites": 40,
+  "deletionScenarios": 8,
+  "requestRaces": [
+    "read committed: staff inactivity held first refuses a new request without a latent row",
+    "read committed: held request refuses inverse staff lifecycle; retry closes once and old operation cannot reopen it",
+    "read committed: doctor inactivity held first refuses a new request without a latent row",
+    "read committed: held request refuses inverse doctor lifecycle; retry closes once and old operation cannot reopen it",
+    "repeatable read: staff inactivity held first refuses a new request without a latent row",
+    "repeatable read: held request refuses inverse staff lifecycle; retry closes once and old operation cannot reopen it",
+    "repeatable read: doctor inactivity held first refuses a new request without a latent row",
+    "repeatable read: held request refuses inverse doctor lifecycle; retry closes once and old operation cannot reopen it",
+    "read committed: cancellation truly waits for lifecycle and stale CAS cannot overwrite its terminal event",
+    "read committed: committed human cancellation remains unchanged after lifecycle retry",
+    "repeatable read: cancellation truly waits for lifecycle and stale CAS cannot overwrite its terminal event",
+    "repeatable read: committed human cancellation remains unchanged after lifecycle retry",
+    "read committed: administrator role removal fences a concurrent request independently of inactivity",
+    "read committed: administrator membership removal fences a concurrent request independently of inactivity",
+    "repeatable read: administrator role removal fences a concurrent request independently of inactivity",
+    "repeatable read: administrator membership removal fences a concurrent request independently of inactivity"
+  ],
+  "checks": [
+    "RED: predecessor cannot persist a private delegation request",
+    "busy installation rolls back without a request table",
+    "established RR snapshot refuses installation before schema changes",
+    "private requests, cancellation, replay, lifecycle, no approval and custody SQL pass",
+    "function-boundary fault injections and existing reception/appointment/lifecycle/snippet/deletion races pass"
+  ],
+  "publicConsentGate": false,
+  "approvalEnabled": false,
+  "network": "verified local Docker; owned internal network; no published ports",
+  "cleanupVerified": true
+}
