@@ -15,16 +15,18 @@ const upgradeMode = process.argv.includes('--upgrade');
 const resourceMode = process.argv.includes('--resources') || upgradeMode;
 const targeted = process.argv.includes('--targeted');
 const overlayPrefix = '--migration-overlay=';
+const sourceOptions = process.argv.slice(2).filter(arg => arg.startsWith('--source='));
+assert.ok(sourceOptions.length <= 1 && sourceOptions.every(arg => /^--source=[0-9a-f]{40}$/.test(arg)), 'Invalid SQL source snapshot');
 const overlayNames = process.argv.slice(2).filter(arg => arg.startsWith(overlayPrefix)).map(arg => arg.slice(overlayPrefix.length));
 assert.ok(overlayNames.every(name => /^\d{14}_[a-z0-9_]+\.sql$/.test(name)) && new Set(overlayNames).size === overlayNames.length, 'Invalid migration overlay filename');
-assert.ok(process.argv.slice(2).every(arg => ['--resources', '--upgrade', '--targeted'].includes(arg) || arg.startsWith(overlayPrefix)), 'This lab takes no external target');
+assert.ok(process.argv.slice(2).every(arg => ['--resources', '--upgrade', '--targeted'].includes(arg) || arg.startsWith(overlayPrefix) || arg.startsWith('--source=')), 'This lab takes no external target');
 assert.ok(!targeted || upgradeMode, 'Targeted CI mode requires the actual migration');
 const scopedMigration = '20261104200000_reception_scoped_custody.sql';
 const git = args => {
   const r = spawnSync('git', args, { encoding: 'utf8', windowsHide: true, timeout: 30000, maxBuffer: 16 * 1024 * 1024 });
   assert.equal(r.status, 0, r.stderr || r.error?.message); return r.stdout.trim();
 };
-const sourceBaseline = git(['rev-parse', 'HEAD']); assert.match(sourceBaseline, /^[0-9a-f]{40}$/);
+const sourceBaseline = git(['rev-parse', sourceOptions[0]?.slice(9) ?? 'HEAD']); assert.match(sourceBaseline, /^[0-9a-f]{40}$/);
 // Ignore unfinished SQL from other agents. Only an explicitly named local
 // migration may overlay immutable HEAD; no external database/path is accepted.
 const sqlPaths = git(['ls-tree', '-r', '--name-only', sourceBaseline, '--', 'supabase/migrations', 'supabase/tests']).split('\n').filter(path => path.endsWith('.sql'));

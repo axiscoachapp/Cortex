@@ -35,4 +35,6 @@ Comandos:
 
 `../custody-upgrade/TARGETED.json`: **38 grupos/67 migrations** na ordem real, com a nova migration como overlay explícito e a mesma baseline, cleanup verificado. Os dois scripts novos passaram sintaxe/lint. As alterações paralelas que Claude iniciou depois do snapshot em `digital_signature.sql`/`test-signature-concurrency.mjs` ficaram fora destes ensaios e não foram modificadas ou adicionadas ao commit do Codex.
 
+Reteste posterior dirigido em `focused.json`, baseline `a9b2d2f` com D17 `4f7932d`: **67 migrations/45 SQL**, duas instalações, 16 pedidos/14 decisões/nove arrays e assinatura com NOWAIT explícito aprovados, cleanup confirmado. Sete famílias omitidas estão explícitas; não reapresentar a rodada completa anterior como execução delas nessa versão. A revisão de 16:46 ainda identificou FK implícita da conta/123, encaminhada ao Claude, sem aceite de integração D17.
+
 Não houve mudança de app/Edge, geração de tipos, novo ensaio de navegador ou nova execução de testes unitários/build nesta rodada. A cobertura runtime desta alteração de banco é SQL/concorrência. D17 congelado entra somente como regressão adicional: o achado de inversão 123/tupla encaminhado ao Claude às 15:59 não está coberto pela suíte atual e não foi aprovado por este GREEN. Domínio do Claude/três helpers T33, PersonalMed e SaaS preservados.

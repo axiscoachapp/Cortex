@@ -4,12 +4,14 @@ import assert from 'node:assert/strict';
 // Called only by test-database.mjs after it builds a disposable synthetic database.
 export async function testReceptionConcurrency(container) {
   const sync = (source) => {
+    const started = Date.now();
     const result = spawnSync(
       'docker',
       ['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'],
-      { input: source, encoding: 'utf8', windowsHide: true, timeout: 15000 },
+      { input: "set statement_timeout='10s';set lock_timeout='5s';" + source, encoding: 'utf8', windowsHide: true, timeout: 30000 },
     );
-    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.status, 0, JSON.stringify({ elapsedMs: Date.now() - started,
+      processError: result.error?.code, signal: result.signal, stderr: result.stderr }));
     return result.stdout.trim();
   };
   const admin = 'd1000000-0000-4000-8000-000000000001';
