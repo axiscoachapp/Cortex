@@ -87,6 +87,86 @@ export function controlledSubstancesIn(name: string): string[] {
   return matches(name, CONTROLLED);
 }
 
+/**
+ * Portaria SVS/MS 344/98, Annex I (list in force: RDC 1.023/2026). Review on
+ * every list update. Only C1 and C5, plus the dose "adendos" below, may go on
+ * the Receita de Controle Especial (art. 55); the others need a numbered
+ * notification printed from the health authority's numbering (art. 35).
+ */
+const LIST: Record<string, 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3' | 'C5'> = {
+  morfina: 'A1', metadona: 'A1', fentanil: 'A1', petidina: 'A1', meperidina: 'A1', oxicodona: 'A1', hidromorfona: 'A1',
+  tapentadol: 'A1', buprenorfina: 'A1',
+  codeina: 'A2', tramadol: 'A2', nalbufina: 'A2',
+  metilfenidato: 'A3', lisdexanfetamina: 'A3', anfetamina: 'A3', dexanfetamina: 'A3',
+  alprazolam: 'B1', bromazepam: 'B1', clonazepam: 'B1', diazepam: 'B1', lorazepam: 'B1', midazolam: 'B1', nitrazepam: 'B1',
+  flunitrazepam: 'B1', clobazam: 'B1', cloxazolam: 'B1', zolpidem: 'B1', zopiclona: 'B1', eszopiclona: 'B1', fenobarbital: 'B1',
+  sibutramina: 'B2', anfepramona: 'B2', femproporex: 'B2', mazindol: 'B2',
+  isotretinoina: 'C2', acitretina: 'C2',
+  talidomida: 'C3',
+  testosterona: 'C5', nandrolona: 'C5', oxandrolona: 'C5', estanozolol: 'C5', metandrostenolona: 'C5', mesterolona: 'C5',
+};
+
+export type ControlledForm =
+  | 'receita_controle_especial'
+  | 'notificacao_a'
+  | 'notificacao_b'
+  | 'notificacao_b2'
+  | 'notificacao_especial_retinoides'
+  | 'notificacao_talidomida'
+  | 'uso_hospitalar';
+
+export interface ControlledFinding {
+  substance: string;
+  list: 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3' | 'C5';
+  form: ControlledForm;
+  note?: string;
+}
+
+/** Highest "N mg" in the item text; null when no dose is written. */
+function maxMg(name: string): number | null {
+  const doses = [...normalize(name).replace(/,/g, '.').matchAll(/(\d+(?:\.\d+)?)\s*mg\b/g)].map((m) => Number(m[1]));
+  return doses.length ? Math.max(...doses) : null;
+}
+
+/**
+ * Which controlled substances an item has and which form each one needs.
+ * Dose adendos: codeine and tramadol up to 100 mg per unit (A2, adendos 2/3)
+ * and phenobarbital (B1, adendo) go on the Receita de Controle Especial.
+ * Misoprostol (C1) is restricted to registered hospitals.
+ */
+export function controlledFindings(name: string): ControlledFinding[] {
+  return [...new Set(controlledSubstancesIn(name))].map((substance): ControlledFinding => {
+    const list = LIST[substance] ?? 'C1';
+    if (substance === 'misoprostol') return { substance, list, form: 'uso_hospitalar', note: 'uso restrito a hospitais cadastrados' };
+    if (substance === 'codeina' || substance === 'tramadol') {
+      const mg = maxMg(name);
+      return mg != null && mg <= 100
+        ? { substance, list, form: 'receita_controle_especial', note: 'até 100 mg por unidade (adendo da lista A2)' }
+        : { substance, list, form: 'notificacao_a', note: mg == null ? 'informe a dose: até 100 mg por unidade vai em receita de controle especial' : 'acima de 100 mg por unidade' };
+    }
+    if (substance === 'fenobarbital') return { substance, list, form: 'receita_controle_especial', note: 'adendo da lista B1' };
+    const form: ControlledForm =
+      list === 'C1' || list === 'C5' ? 'receita_controle_especial'
+        : list === 'A1' || list === 'A2' || list === 'A3' ? 'notificacao_a'
+        : list === 'B1' ? 'notificacao_b'
+        : list === 'B2' ? 'notificacao_b2'
+        : list === 'C2' ? 'notificacao_especial_retinoides'
+        : 'notificacao_talidomida';
+    return { substance, list, form };
+  });
+}
+
+/** Plain-language name of each form, for refusal messages. */
+export const FORM_LABEL: Record<ControlledForm, string> = {
+  receita_controle_especial: 'Receita de Controle Especial',
+  notificacao_a: 'Notificação de Receita A (amarela, talão numerado)',
+  notificacao_b: 'Notificação de Receita B (azul, talão numerado)',
+  notificacao_b2: 'Notificação de Receita B2 (azul, talão numerado)',
+  notificacao_especial_retinoides: 'Notificação de Receita Especial para retinoides (talão numerado)',
+  notificacao_talidomida: 'Notificação de Receita de Talidomida',
+  uso_hospitalar: 'uso restrito a hospitais cadastrados; não pode ser prescrito em consultório',
+};
+
 export function antimicrobialsIn(name: string): string[] {
   return matches(name, ANTIMICROBIALS);
 }

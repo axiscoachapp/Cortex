@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   antimicrobialsIn,
+  controlledFindings,
   controlledSubstancesIn,
   toWinAnsi,
 } from '../../supabase/functions/_shared/regulatedMedications';
@@ -44,5 +45,29 @@ describe('toWinAnsi', () => {
     expect(toWinAnsi('Se febre ≥ 38 °C → retornar')).toBe('Se febre >= 38 °C -> retornar');
     expect(toWinAnsi('Wiśniewska')).toBe('Wisniewska');
     expect(toWinAnsi('β-hCG')).toBe('beta-hCG');
+  });
+});
+
+describe('controlled substances by Portaria 344 list (D8)', () => {
+  const forms = (name: string) => controlledFindings(name).map((f) => `${f.substance}:${f.list}:${f.form}`);
+  it('sends C1 and C5 to the Receita de Controle Especial', () => {
+    expect(forms('Sertralina 50 mg')).toEqual(['sertralina:C1:receita_controle_especial']);
+    expect(forms('Pregabalina 75 mg')).toEqual(['pregabalina:C1:receita_controle_especial']);
+    expect(forms('Cipionato de testosterona 200 mg/ml')).toEqual(['testosterona:C5:receita_controle_especial']);
+  });
+  it('applies the dose adendos for codeine and tramadol and the phenobarbital adendo', () => {
+    expect(forms('Tylex 30mg')).toEqual(['codeina:A2:receita_controle_especial']);
+    expect(forms('Tramadol 50 mg')).toEqual(['tramadol:A2:receita_controle_especial']);
+    expect(forms('Tramadol')).toEqual(['tramadol:A2:notificacao_a']);
+    expect(forms('Codeína 120 mg')).toEqual(['codeina:A2:notificacao_a']);
+    expect(forms('Fenobarbital 100 mg')).toEqual(['fenobarbital:B1:receita_controle_especial']);
+  });
+  it('keeps notification-only lists and hospital-only misoprostol out of the RCE', () => {
+    expect(forms('Rivotril 2mg')).toEqual(['clonazepam:B1:notificacao_b']);
+    expect(forms('Ritalina 10 mg')).toEqual(['metilfenidato:A3:notificacao_a']);
+    expect(forms('Roacutan 20 mg')).toEqual(['isotretinoina:C2:notificacao_especial_retinoides']);
+    expect(forms('Sibutramina 15 mg')).toEqual(['sibutramina:B2:notificacao_b2']);
+    expect(forms('Cytotec 200 mcg')).toEqual(['misoprostol:C1:uso_hospitalar']);
+    expect(forms('Dipirona 500 mg')).toEqual([]);
   });
 });
