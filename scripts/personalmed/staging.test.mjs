@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { syntheticBatch } from './make-synthetic-batch.mjs';
-import { writeBatch } from './staging.mjs';
+import { buildLegacyAlert, writeBatch } from './staging.mjs';
 import { wallClockToUtc } from './transforms.mjs';
 
 const { envelopes } = syntheticBatch();
@@ -114,10 +114,12 @@ describe('synthetic staging batch', () => {
     expect(historyOnly.soap_note).toContain('Acrescentado no mesmo dia.');
   });
 
-  it('dates a consultation by its attended appointment and points to it', () => {
+  it('dates a consultation by its attended appointment and names that appointment only as a candidate', () => {
     const c = find('consultation', 'pcod:101|user:3|day:2026-07-10').payload;
     expect(c.created_at).toBe('2026-07-10T11:00:00.000Z');
-    expect(c.appointmentSourceRecordId).toBe('user:3|date:2026-07-10|start:480');
+    // Same doctor, patient and day is not proof: no link field, only a candidate.
+    expect(c.appointmentSourceRecordId).toBeUndefined();
+    expect(c.appointmentCandidate).toEqual({ sourceRecordId: 'user:3|date:2026-07-10|start:480', rule: 'same_doctor_patient_day', proof: 'candidate_only' });
     expect(c.soap_note.startsWith('[Importado do PersonalMed em 2026-11-03]')).toBe(true);
     expect(c.soap_note).toContain('**Receita**');
   });
@@ -250,6 +252,15 @@ describe('synthetic "Atenção" alerts (S6)', () => {
     expect(alert(105)).toMatchObject({ mappingStatus: 'ready', issues: [] });
     expect(alert(103)).toBeUndefined();
     expect(of('legacy_alert')).toHaveLength(5);
+  });
+
+  it('flags an alert whose recipients include a shared login (D2)', () => {
+    const ctx = { sourceInstance: 'pm-test', batchId: 'b' };
+    const one = buildLegacyAlert(ctx, { pcod: 900, text: 'Alergia a dipirona' }, [{ user: 11, patientTargetId: 't11' }]);
+    expect(one).toMatchObject({ mappingStatus: 'requires_review', sourceDoctorId: 'user:11' });
+    expect(one.issues).toContain('owner_shared_login');
+    const two = buildLegacyAlert(ctx, { pcod: 901, text: 'Alergia a dipirona' }, [{ user: 3, patientTargetId: 't3' }, { user: 11, patientTargetId: 't11' }]);
+    expect(two.issues).toEqual(expect.arrayContaining(['alert_multiple_doctors', 'owner_shared_login']));
   });
 });
 

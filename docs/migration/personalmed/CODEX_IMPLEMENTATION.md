@@ -320,6 +320,8 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
 - `sourceRecordId` usa a chave da §2.1 sempre no mesmo formato: `campo:valor` unidos por `|`. Dias usam `YYYY-MM-DD`.
 - `targetId` é UUIDv5 sob um namespace fixo da migração, gerado a partir de `sourceInstance + sourceEntity + sourceRecordId`. Reprocessar gera os mesmos IDs.
 - `mappingStatus` pode ser `ready`, `requires_review` (vai para a lista de pendências, sem carga automática) ou `rejected` (com o motivo em `issues`).
+- **Login compartilhado (D2, 04/11):** todo registro cujo dono no legado é o código 11 ("Gineco") recebe `owner_shared_login` e fica `requires_review`, a menos que já seja `rejected`. Isso vale para prontuário, vínculo, consulta, histórico, diagnóstico, agenda e bloqueio, e também para alerta com esse código entre os destinatários. Nenhuma conta é escolhida por inferência. Implementação: `SHARED_LOGINS` e `envelope` em `transforms.mjs`; aceito pelo Codex na mensagem `2026-11-04-1015`.
+- **Consulta e agendamento:** mesmo médico, mesma pessoa e mesmo dia é só candidato, não prova. A consulta leva `appointmentCandidate: {sourceRecordId, rule: same_doctor_patient_day, proof: candidate_only}` e nenhum vínculo `appointment_clinical_links` é criado por essa regra (contrato T34 §3).
 - **Valores brutos não entram no banco.** Ficam no arquivo cifrado e no staging. No banco ficam só o mapa e os códigos de problema (S1), o que atende ao pedido de "área restrita" sem duplicar dado pessoal.
 - Para cada lote há um `manifest.json` com contagens por entidade e por médico, SHA-256 de cada arquivo, a versão da transformação e a lista de códigos de problema.
 - **Lote real cifrado** (`scripts/personalmed/secure-staging.mjs`):
@@ -363,7 +365,7 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
   - `status: pending_review` e `visibility: doctor_only`.
 - **Situação:**
   - `ready` quando a pessoa tem um único prontuário: o alerta vai só para aquele médico;
-  - `requires_review` com `alert_multiple_doctors` (depende da D20) ou `alert_no_chart`.
+  - `requires_review` com `alert_multiple_doctors` (depende da D20), `alert_no_chart` ou `owner_shared_login`.
 - **Códigos que não bloqueiam:** `alert_clinical_and_admin` e `alert_mentions_death`. Nada vai para a recepção diretamente (D7): uma nota administrativa só existe se o médico decidir criá-la.
 
 **Entidade `template`** (04/11/2026). Implementação: `buildTemplate` em `staging.mjs` e `templateKind`, `templateChunks` e `templateUsage` em `transforms.mjs`. Exemplos sintéticos em `fixtures/synthetic-batch/template.ndjson`. É o formato de staging, **não** uma linha pronta de `document_snippets`. O MVP da tabela exige dono individual e só guarda receita com itens; ver S3.
@@ -590,11 +592,12 @@ Os valores são da exportação de 24/08/2026 e devem ser recalculados na export
 | Diagnósticos fora do Z | 4.721 linhas em 2.353 prontuários |
 | Gestações em curso | 97 (recalcular) |
 | Itens de histórico pessoal | 4.571 páginas `Me` mais 668 de contracepção e climatério |
-| Alertas herdados | 5.277. Ensaio de 04/11 sem diferença: 4.702 com um único médico (`ready`); 575 de pessoas com mais de um médico (D20); 96 misturam conteúdo clínico e administrativo; 15 citam óbito |
+| Alertas herdados | 5.277. Ensaio de 04/11 sem diferença: 4.702 com um único médico; 575 de pessoas com mais de um médico (D20); 96 misturam conteúdo clínico e administrativo; 15 citam óbito. Ensaio de 04/11 10:26, com o login compartilhado: 4.598 `ready` e 679 em revisão (183 têm o código 11 entre os destinatários, 104 deles como único médico) |
 | Carteiras de convênio | 62.204 linhas de `Clini_05`: 29.518 carteirinhas e 32.686 registros "Particular". Ensaio de 04/11 sem diferença. Das carteirinhas, 13.963 estão vencidas e 3.895 não têm número. |
 | Arquivos | 48 embutidos (172 dependem da pasta externa) |
 | Modelos | 1.123: 743 receitas, 329 textos e 51 pedidos de exame. Ensaio de 04/11 08:55, sem diferença: 617 receitas `ready`, que entram aprovadas (D19); 126 receitas fora do formato (106 em texto livre, 39 com controlado à espera do tipo controle especial da D8, 3 com mais de 15 itens); 3 com campo automático trocado por `____`; 380 textos e pedidos em revisão até o Cortex aceitar esses tipos. Usados desde 2025: 375. Receitas usadas por médico (tamanho da lista da D19): 5 → 179; 2 → 153; 3 → 132; 4 → 73; 11 → 8; 9 → 1 |
-| Agendamentos | 273.794, todos importados (D3). Ensaio de 04/11 09:35: 262.342 `ready`; 10.536 em revisão (9.900 sem ficha do médico, D14/D20, mais 636 pré-cadastros futuros); 916 rejeitados (889 horários vazios e 27 sobreposições). Bloqueios futuros: 542 (358 `B` e 184 `P`) |
+| Agendamentos | 273.794, todos importados (D3). Ensaio de 04/11 09:35: 262.342 `ready`; 10.536 em revisão (9.900 sem ficha do médico, D14/D20, mais 636 pré-cadastros futuros); 916 rejeitados (889 horários vazios e 27 sobreposições). Ensaio de 04/11 10:26, com o login compartilhado: 260.135 `ready`, 12.743 em revisão e 916 rejeitados; 3.126 agendamentos são do código 11. Bloqueios futuros: 542 (358 `B` e 184 `P`; 5 do código 11) |
+| Login compartilhado (código 11) | Ensaio de 04/11 10:26, todos em revisão: 731 prontuários e 731 vínculos, 993 consultas, 268 históricos, 27 conjuntos de diagnóstico, 3.126 agendamentos, 5 bloqueios e 183 alertas |
 | Caracteres de texto | Total antes e depois da conversão RTF, por tabela (o script já calcula) |
 
 ---

@@ -63,6 +63,20 @@ describe('identifiers', () => {
     expect(e.mappingStatus).toBe('ready');
     expect(envelope({ sourceInstance: 'x', sourceEntity: 'consultation', key: { pcod: 1 }, batchId: 'b', targetTable: 'consultations', payload: {}, issues: ['history_date_out_of_order'] }).mappingStatus).toBe('requires_review');
   });
+
+  it('sends everything owned by a shared login (D2, code 11) to review and never makes it ready', () => {
+    const base = { sourceInstance: 'x', batchId: 'b', payload: {} };
+    for (const sourceEntity of ['chart', 'consultation', 'appointment', 'template']) {
+      const e = envelope({ ...base, sourceEntity, key: { pcod: 1, user: 11 }, doctor: 11, targetTable: 't' });
+      expect(e).toMatchObject({ mappingStatus: 'requires_review', sourceDoctorId: 'user:11' });
+      expect(e.issues).toContain('owner_shared_login');
+    }
+    // An explicit ready status does not win; a rejection still does.
+    expect(envelope({ ...base, sourceEntity: 'consultation', key: { pcod: 1 }, doctor: '11', targetTable: 't', status: 'ready' }).mappingStatus).toBe('requires_review');
+    expect(envelope({ ...base, sourceEntity: 'appointment', key: { pcod: 1 }, doctor: 11, targetTable: 't', status: 'rejected' }).mappingStatus).toBe('rejected');
+    // Personal logins are untouched.
+    expect(envelope({ ...base, sourceEntity: 'chart', key: { pcod: 1 }, doctor: 3, targetTable: 't' }).issues).not.toContain('owner_shared_login');
+  });
 });
 
 describe('CPF', () => {

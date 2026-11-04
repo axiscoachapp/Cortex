@@ -37,9 +37,20 @@ export function targetId(sourceInstance, sourceEntity, recordId) {
   return uuidv5(`personalmed|${sourceInstance}|${sourceEntity}|${recordId}`);
 }
 
+/**
+ * Legacy logins shared by several people (D2): 11 = "Gineco"
+ * (scripts/personalmed/doctors.mjs). Nothing owned by them gets an owner by
+ * inference; every such record, and its children, waits for review.
+ */
+export const SHARED_LOGINS = new Set([11]);
+
 /** One staging line (envelope of §3). */
 export function envelope({ sourceInstance, sourceEntity, key, doctor = null, batchId, targetTable, payload, issues = [], status }) {
   const recordId = sourceRecordId(key);
+  if (doctor != null && SHARED_LOGINS.has(Number(doctor))) {
+    issues = [...issues, 'owner_shared_login'];
+    if (status !== 'rejected') status = 'requires_review';
+  }
   return {
     sourceSystem: 'personalmed',
     sourceInstance,
@@ -58,7 +69,7 @@ export function envelope({ sourceInstance, sourceEntity, key, doctor = null, bat
 
 /** Issues that send a record to human review instead of automatic load. */
 // appointment_chart_missing: the doctor has no chart for that patient (D14, clinic decision pending).
-export const REVIEW_ISSUES = new Set(['history_date_out_of_order', 'name_invalid', 'appointment_overlap', 'appointment_chart_missing']);
+export const REVIEW_ISSUES = new Set(['history_date_out_of_order', 'name_invalid', 'appointment_overlap', 'appointment_chart_missing', 'owner_shared_login']);
 
 // ---------------------------------------------------------------------------
 // Shared reference data

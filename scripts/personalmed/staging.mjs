@@ -28,6 +28,7 @@ import {
   normalizeUf,
   parseTemplateItems,
   registrationPhones,
+  SHARED_LOGINS,
   templateKind,
   wallClockToUtc,
 } from './transforms.mjs';
@@ -337,7 +338,14 @@ export function buildChartClinical(ctx, chart, input) {
           created_at: enc?.appointmentStart ?? wallClockToUtc(day, 12 * 60),
           chief_complaint: onlyHistory ? 'Anotação do histórico (PersonalMed)' : 'Consulta (PersonalMed)',
           soap_note: [stamp, ...sections].join('\n\n'),
-          appointmentSourceRecordId: enc?.appointmentKey ? `user:${enc.appointmentKey.user}|date:${enc.appointmentKey.date}|start:${enc.appointmentKey.start}` : null,
+          // Same doctor, patient and day is a CANDIDATE, not proof of which
+          // appointment produced this consultation (no relational key in the
+          // legacy). The loader must not create an appointment link from it
+          // without a source key or a recorded human confirmation (contract
+          // T34 §3, Codex 04/11 10:15).
+          appointmentCandidate: enc?.appointmentKey
+            ? { sourceRecordId: `user:${enc.appointmentKey.user}|date:${enc.appointmentKey.date}|start:${enc.appointmentKey.start}`, rule: 'same_doctor_patient_day', proof: 'candidate_only' }
+            : null,
         },
         // Only the day whose typed date broke the chronological order needs review.
         issues: dated.get(day)?.outOfOrder ? ['history_date_out_of_order'] : [],
@@ -479,6 +487,8 @@ export function buildLegacyAlert(ctx, alert, charts) {
   if (categories.includes('obito')) issues.push('alert_mentions_death');
   if (!charts.length) issues.push('alert_no_chart');
   if (charts.length > 1) issues.push('alert_multiple_doctors');
+  // A recipient that is a shared login (D2) has no known owner yet.
+  if (charts.some((c) => SHARED_LOGINS.has(Number(c.user)))) issues.push('owner_shared_login');
   const status = charts.length === 1 ? 'ready' : 'requires_review';
   return envelope({
     sourceInstance: ctx.sourceInstance,
