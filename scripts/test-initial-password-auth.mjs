@@ -10,9 +10,10 @@ const versions = process.argv.includes('--all') ? ['v2.197.0', 'v2.189.0'] : ['v
 const cleanupCheck = process.argv.includes('--check-cleanup');
 const bindingMode = process.argv.includes('--binding');
 const linkMode = process.argv.includes('--link');
-assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding', '--link'].includes(arg)), 'Unknown lab option');
-assert.ok(!(bindingMode && linkMode), 'Choose one credential lab');
-assert.ok(!(cleanupCheck && (process.argv.includes('--all') || bindingMode || linkMode)), 'Choose normal lab or cleanup diagnostic');
+const setupMode = process.argv.includes('--setup-cas');
+assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding', '--link', '--setup-cas'].includes(arg)), 'Unknown lab option');
+assert.ok([bindingMode, linkMode, setupMode].filter(Boolean).length <= 1, 'Choose one credential lab');
+assert.ok(!(cleanupCheck && (process.argv.includes('--all') || bindingMode || linkMode || setupMode)), 'Choose normal lab or cleanup diagnostic');
 const postgresImage = 'pgvector/pgvector:pg16';
 const restImage = 'public.ecr.aws/supabase/postgrest:v16.5';
 function required(result, stage) {
@@ -60,7 +61,8 @@ for (const { version, fault } of runs) {
   })();
   syntheticSecrets.push(adminJwt);
   const sql = source => {
-    const result = docker(['exec', '-i', names.db, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'], source);
+    const result = docker(['exec', '-i', names.db, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1',
+      ...(setupMode ? ['-v', 'VERBOSITY=verbose'] : [])], source);
     if (result.status !== 0) {
       let detail = result.stderr.split('\n').find(line => line.startsWith('ERROR:')) || 'SQL process failed';
       for (const secret of syntheticSecrets) detail = detail.replaceAll(secret, '[synthetic-secret]');
@@ -158,6 +160,7 @@ for (const { version, fault } of runs) {
       await restartAuth(hookEnv);
     }
     if (linkMode) sql(readFileSync('supabase/tests/prototypes/single-use-setup.sql', 'utf8'));
+    if (setupMode) sql(readFileSync('supabase/tests/prototypes/initial-setup-cas.sql', 'utf8'));
     const restEnv = { PGRST_DB_URI: `postgres://authenticator@${names.db}:5432/postgres`, PGRST_DB_ANON_ROLE: 'anon',
       PGRST_DB_SCHEMAS: 'public', PGRST_JWT_SECRET: jwtSecret, PGRST_JWT_AUD: 'authenticated' };
     start(names.rest, restImage, Object.keys(restEnv).flatMap(key => ['--env', key]), [], restEnv);
@@ -167,8 +170,9 @@ for (const { version, fault } of runs) {
       return transport({ url: base + path, method, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         ...(body ? { body: JSON.stringify(body) } : {}) });
     };
-    if (bindingMode || linkMode) {
+    if (bindingMode || linkMode || setupMode) {
       const exercise = bindingMode ? (await import('./test-credential-binding.mjs')).exerciseCredentialBinding
+        : setupMode ? (await import('./test-initial-setup-cas.mjs')).exerciseInitialSetupCas
         : (await import('./test-single-use-setup.mjs')).exerciseSingleUseSetup;
       report = await exercise({ auth, rest, adminJwt, version, call, sql, asyncHttp, restartAuth: extra => restartAuth({ ...(bindingMode ? hookEnv : {}), ...extra }),
         pause, syntheticSecrets, holderSession: () => {
@@ -362,7 +366,7 @@ for (const { version, fault } of runs) {
   report.cleanupVerified = true;
   report.localDockerEndpoint = dockerEndpoint.startsWith('npipe:') ? 'verified local named pipe' : 'verified local Unix socket';
   report.network = 'owned internal network, no published ports or external route';
-  const artifacts = resolve('docs/reviews/2026-11-04/' + (linkMode ? 'single-use-setup' : bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
+  const artifacts = resolve('docs/reviews/2026-11-04/' + (setupMode ? 'initial-setup-cas' : linkMode ? 'single-use-setup' : bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
   mkdirSync(artifacts, { recursive: true });
   writeFileSync(resolve(artifacts, version + '.json'), JSON.stringify(report, null, 2) + '\n');
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');

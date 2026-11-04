@@ -53,6 +53,8 @@ O [Custom Access Token Hook](https://supabase.com/docs/guides/auth/auth-hooks/cu
 
 ## Próximo incremento
 
+Revalidação em 04/11 08:44, durante T31/3b/2b: duas execuções falharam ao observar a barreira de contenção de refresh/senha (uma paralela e outra sequencial). Uma execução posterior completou os 24 grupos nas duas versões e a limpeza. Acrescentado diagnóstico de status/código e locks por PID/categoria, sem queries, payloads ou credenciais; a exigência da espera não foi removida. A causa da intermitência ainda não foi determinada. O candidato permanece experimental, sem aprovação de produção; uma aprovação futura exige esclarecer essa observação, além dos limites abaixo.
+
 Antes de escolher implementação, comparar a proposta do Claude de **provisionar sem senha temporária e entregar link de uso único**. Provar consumo concorrente, sessões emitidas, conclusão administrativa serializada, pendência confiável e Data API negando os JWTs anteriores. Prazo curto de JWT e signOut isolado não bastam.
 
 Este candidato acopla o app a tabelas/eventos internos do Auth e bloqueia recifragem isolada de contas concluídas: mudança de chaves/representação exige procedimento explícito, com recuperação/rotação. PKCE verificado antes da troca ainda precisa de ensaio e política de revogação; propósito de reparação impede leitura direta, mas não resolve sozinho todas as capacidades de redefinição do provedor. Integração RLS/RPC/storage/Edge, contas existentes/backfill e reset administrativo não foram entregues. **T31/L2 permanece aberta.**

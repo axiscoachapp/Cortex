@@ -1,0 +1,17 @@
+# T31/3b/2b — prova da escrita inicial no Auth
+
+Estado: laboratório sintético, sem migration, endpoint ou liberação de dados no aplicativo. Esta etapa trata somente a reserva/concorrência e a confirmação da escrita da senha. Conclusão da autorização, sessões tardias, PKCE/MFA/recuperação e contas existentes permanecem obrigatórias antes da integração.
+
+Uma conta é criada pelo Auth sem senha fornecida pelo Cortex (o Auth gera sua própria credencial aleatória interna). Link de recovery é gerado localmente sem envio. Uma reserva privada usa usuário, sessão existente pertencente ao usuário sem `not_after` vencido, UUID da operação e revisão/CAS; os estados são `pending`, `applying` e `password_set`. Usuário/sessão devem vir da autenticação validada pelo servidor, nunca do body como identidade confiável. Autenticidade/expiração do JWT e MFA precisam de validação antes dessas chamadas privadas; este protótipo não implementa o endpoint nem revalida essa autorização na confirmação. Nenhum estado libera dados.
+
+O servidor reserva a operação antes do único pedido nativo Admin que combina senha, `app_metadata.setup_operation_id` e a revisão específica da reserva. Uma trigger imediata registra só o XID da escrita de senha na transação ativa, sem senha, token ou cópia de hash. Uma constraint deferred exige operação/revisão reservadas e o XID real da escrita, relendo a metadata final; confirma `password_set` na mesma transação nativa. Metadata isolada não pode persistir como confirmação nem preparar uma autorização posterior sem escrita da senha. A ordem relativa das duas atualizações do Auth não deve definir o resultado.
+
+Enquanto uma reserva ainda não chegou à escrita do Auth, uma nova revisão pode substituí-la. O worker antigo que reaparecer não pode sobrescrever a senha vencedora. Depois de `password_set`, novas tentativas de escrita são recusadas, inclusive replay da mesma operação. Retry recebe decisão de reconciliação sem repetir a mutação. Não usar lease/data de sessão, “última senha vence”, resposta HTTP, booleano do cliente ou diferença de hash como prova suficiente.
+
+Reutilizar o UUID A após A→B→A não recicla a autorização anterior: a revisão da reserva também deve acompanhar a metadata e diverge da revisão do worker antigo. A sessão original é revogada pelo password write nativo; retry com ela falha. A reconciliação ensaiada usa acesso privado do servidor ou nova autenticação com a senha escolhida, sem repetir a escrita. Não alegar retomada transparente com JWT antigo.
+
+Aceite local: metadata maliciosa/isolada, sessão de outra conta, duas reservas, duas chamadas nativas da mesma operação, operação substituída, erro após a escrita antes do commit, resposta perdida após commit e senha rejeitada. Demonstrar senha vencedora por login nativo, rollback de senha/sessões/estado e preservação da sessão pessoal em replay recusado. Não promover esse SQL a produção nem confundir `password_set` com permissão de prontuário.
+
+Base de API a conferir no ensaio: [Admin user update](https://github.com/supabase/auth/blob/v2.197.0/internal/api/admin.go) e [persistência do usuário](https://github.com/supabase/auth/blob/v2.197.0/internal/models/user.go). O protocolo proposto depende da transação nativa, que será testada em duas versões reais.
+
+O ensaio usa a ordem real de atualização das duas versões nativas. A independência da ordem inversa decorre, por enquanto, da leitura da constraint; não alegar que essa inversão foi reproduzida. A ordem inversa e a conclusão autorizativa devem ganhar prova própria antes da integração.

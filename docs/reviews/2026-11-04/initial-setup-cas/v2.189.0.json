@@ -1,0 +1,30 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.189.0",
+  "checks": [
+    "unreserved native password writes and editable metadata do not confirm setup; an unrelated session cannot reserve it",
+    "CAS retry cannot mutate twice; metadata-only and wrong reservation revision roll back without password, marker or session loss",
+    "expired native session is refused and two observed reservations cannot claim the same state concurrently",
+    "A-to-B-to-A operation ID reuse cannot revive the old reservation revision or its password write",
+    "weak password and failure after native password write roll back password, caller revocation and private confirmation",
+    "discarded response leaves durable password_set; fresh password login reconciles while old session and duplicate mutation are refused, without data authorization",
+    "two concurrent native writes for one operation commit only the winner and roll back the delayed duplicate",
+    "superseded in-flight native worker cannot overwrite the later reserved password"
+  ],
+  "prototypeIsProductionFix": false,
+  "dataAuthorizationImplemented": false,
+  "notCovered": [
+    "final setup authorization and session-generation fence",
+    "reversed metadata/password SQL ordering",
+    "late recovery/PKCE verification and exchange",
+    "MFA and forgotten-password recovery",
+    "crypto maintenance between mutation and completion",
+    "existing accounts and privileged reset policy",
+    "app RLS/RPC/storage/Edge/frontend integration",
+    "hosted configuration/version"
+  ],
+  "cleanupVerified": true,
+  "localDockerEndpoint": "verified local named pipe",
+  "network": "owned internal network, no published ports or external route"
+}

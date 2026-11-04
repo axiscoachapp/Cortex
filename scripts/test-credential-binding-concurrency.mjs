@@ -97,13 +97,24 @@ export async function exerciseBindingConcurrency({ auth, adminJwt, call, sql, as
   assert.ok(refreshWaiting, 'Native refresh did not reach hook while holding session');
   const nextPassword = password();
   const rotating = passwordRequest(writer, nextPassword);
+  let completedRotation;
+  rotating.then(response => { completedRotation = { status: response.status, code: response.body?.error_code ?? null }; }, () => {});
   let blockedWriter = false;
   for (let n = 0; n < 30; n++) {
     if (sql(`select exists(select 1 from pg_stat_activity a where pg_blocking_pids(a.pid) &&
       array(select pid from pg_locks where locktype='advisory' and objid=736320 and not granted))`) === 't') { blockedWriter = true; break; }
+    if (completedRotation) break;
     await pause();
   }
-  assert.ok(blockedWriter, 'Password writer did not wait for native refresh session row');
+  if (!blockedWriter) {
+    const diagnostic = JSON.parse(sql(`select coalesce(json_agg(json_build_object('pid',pid,'state',state,'wait',wait_event,
+      'blockedBy',pg_blocking_pids(pid),'stage',case when query ilike '%bind_access_token%' then 'hook'
+      when query ~* 'delete.*(sessions|refresh_tokens)' then 'revoke' when query ~* 'update.*users' then 'user_update' else 'other' end)), '[]')
+      from pg_stat_activity where usename='supabase_auth_admin' and state<>'idle'`));
+    holder.stdin.end('select pg_advisory_unlock(736320);\n');
+    await Promise.all([refreshRequest, rotating]);
+    assert.fail('Native refresh contention barrier missing: ' + JSON.stringify({ completedRotation, diagnostic }));
+  }
   holder.stdin.end('select pg_advisory_unlock(736320);\n');
   let timer;
   const resultsAfterRelease = await Promise.race([Promise.all([refreshRequest, rotating]), new Promise((_, reject) => {
