@@ -153,6 +153,25 @@ Nenhuma transação ou lock SQL fica aberto durante chamadas de rede.
    - **Revogação entre a reserva e a conclusão:** a operação vira `cancelled_by_revocation`, o arquivo assinado é apagado e nada é publicado. A revogação vence sempre.
    - **Edição ou exclusão do documento durante a operação:** a conclusão falha, a operação vira `cancelled` e o arquivo é apagado.
 
+### Correções da revisão do Codex de 04/11 14:15
+
+1. **Uma permissão por chamada ao PSC:**
+   - uma operação em `psc_requested` nunca recebe outra permissão, nem com `humanRetry`; quem chamou a marca como `ambiguous`, e só uma nova ação do médico retoma;
+   - o trigger só deixa `psc_attempts` crescer em um, a partir de `prepared` ou `ambiguous`.
+2. **Relógio depois dos locks:** reserva, avanço e conclusão adquirem as barreiras e as linhas (sessão → operação → prescrição) antes de ler o status e o prazo da sessão com `clock_timestamp()`.
+3. **Pais conferidos depois das barreiras** (`signature_document`): cerca `prescription:<id>`, depois `patient:` e `consultation:`, e só então recusa a intenção de exclusão do paciente. Vale para a reserva e para os passos `prepared`, `psc_requested`, `stored` e a conclusão.
+4. **Conta cercada antes dos segredos:** `signature_lock` toca o epoch da conta (T33) antes de ler a intenção de exclusão. Um snapshot RR antigo falha com 40001, também na leitura do token e no consumo do verificador.
+
+**Descoberta para reconciliação:** `signature_pending_work(limite)` (só serviço) lista os candidatos a remover e as operações paradas há mais de 15 minutos. **A execução da reconciliação ainda não existe.** Ela vai ficar na função do Edge, com estas regras:
+- confere o hash do objeto existente antes de qualquer ação;
+- nunca remove o arquivo de uma operação concluída;
+- nunca repete uma chamada ao PSC sozinha.
+
+**Provas:**
+- `supabase/tests/digital-signature.test.sql`, numa conexão;
+- `scripts/test-signature-concurrency.mjs`, em duas conexões reais;
+- `--before-fix` reproduz os quatro achados contra `6636629`.
+
 ## Segurança
 
 O ponto principal é a guarda do token: enquanto vale, a sessão é a "caneta" do médico.

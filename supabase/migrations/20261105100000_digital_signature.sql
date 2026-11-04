@@ -144,6 +144,11 @@ begin
   raise exception 'Terminal signature operation' using errcode='22023';end if;
  if new.cleanup_pending and new.state not in ('failed','cancelled','cancelled_by_revocation') then
   raise exception 'Only an abandoned operation has cleanup' using errcode='22023';end if;
+ if new.psc_attempts<>old.psc_attempts and not (new.state='psc_requested' and old.state in ('prepared','ambiguous')
+  and new.psc_attempts=old.psc_attempts+1) then
+  raise exception 'A PSC attempt is authorized only once, from prepared or by a human retry' using errcode='22023';end if;
+ if new.state='psc_requested' and old.state='psc_requested' and new.psc_attempts=old.psc_attempts and new is distinct from old then
+  raise exception 'An attempt in flight cannot change' using errcode='22023';end if;
  new.updated_at:=clock_timestamp();
  return new;
 end $$;
@@ -345,12 +350,31 @@ create function cortex_private.signature_lock(p_user uuid) returns void
 language plpgsql volatile security definer set search_path='' as $$
 begin
  if p_user is null then raise exception 'Missing signature account' using errcode='42501';end if;
- -- One serialization point per doctor for every signature state change, taken
- -- first, so counter, session, operation and custody never lock in another order.
+ -- One serialization point per doctor for every signature state change.
  perform pg_advisory_xact_lock(hashtextextended('signature:'||p_user::text,125));
+ -- T33 barrier before reading intent: an older RR snapshot or a concurrent
+ -- deletion intent fails here (40001) instead of reading a stale "no intent".
+ perform cortex_private.touch_custody_epoch(array[p_user]);
  if not exists(select 1 from auth.users where id=p_user) or public.is_reception_account(p_user)
   or exists(select 1 from public.account_deletion_requests where user_id=p_user) then
   raise exception 'Signature account unavailable' using errcode='42501';end if;
+end $$;
+
+-- Authoritative check of the document's parents, after their T33 barriers:
+-- prescription identity first, then its patient and consultation. Never
+-- blocks (the touches are NOWAIT); a confirmed deletion intent refuses.
+create function cortex_private.signature_document(p_user uuid,p_prescription uuid) returns public.prescriptions
+language plpgsql volatile security definer set search_path='' as $$
+declare r public.prescriptions;deleting timestamptz;
+begin
+ if p_prescription is null then raise exception 'Documento indisponível.' using errcode='42501';end if;
+ perform cortex_private.touch_custody_resources(array['prescription:'||p_prescription::text]);
+ select * into r from public.prescriptions where id=p_prescription;
+ if not found or r.user_id<>p_user then raise exception 'Documento indisponível.' using errcode='42501';end if;
+ perform cortex_private.touch_custody_resources(array['patient:'||r.patient_id::text,'consultation:'||r.consultation_id::text]);
+ select deletion_requested_at into deleting from public.patients where id=r.patient_id and user_id=r.user_id;
+ if not found or deleting is not null then raise exception 'Documento indisponível.' using errcode='42501';end if;
+ return r;
 end $$;
 
 create function cortex_private.signature_session_usable(s cortex_private.signature_sessions) returns boolean
@@ -436,10 +460,13 @@ begin
    raise exception 'Signature operation mismatch' using errcode='22023';end if;
   return to_jsonb(o)-'staged_path';
  end if;
+ -- Barriers (NOWAIT) before row locks; row locks in the order session, prescription.
+ perform cortex_private.signature_document(p_user,p_prescription);
  select * into s from cortex_private.signature_sessions where user_id=p_user and status='active' for update;
- if not found or not cortex_private.signature_session_usable(s) then
-  raise exception 'Sessão de assinatura encerrada. Abra uma nova no aplicativo do certificado.' using errcode='P4031';end if;
  select * into r from public.prescriptions where id=p_prescription for share;
+ -- Every check after the locks, with the current clock.
+ if s.id is null or not cortex_private.signature_session_usable(s) then
+  raise exception 'Sessão de assinatura encerrada. Abra uma nova no aplicativo do certificado.' using errcode='P4031';end if;
  if not found or r.user_id<>p_user then raise exception 'Documento indisponível.' using errcode='42501';end if;
  if r.status<>'generated' or r.signed_storage_path is not null then
   raise exception 'O documento não está pronto para assinar.' using errcode='P4093';end if;
@@ -463,20 +490,32 @@ begin
  return to_jsonb(o)-'staged_path';
 end $$;
 
--- One step of the state machine, with the session rechecked under the lock.
+-- One step of the state machine. Barriers first, then session, operation and
+-- prescription rows, then every check with the current clock.
 create function public.signature_advance(p_user uuid,p_operation uuid,p_to text,p_data jsonb default '{}'::jsonb) returns jsonb
 language plpgsql volatile security definer set search_path='' as $$
 declare o cortex_private.signature_operations;s cortex_private.signature_sessions;
 begin
  perform cortex_private.signature_lock(p_user);
- select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user for update;
+ select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user;
  if not found then raise exception 'Signature operation unavailable' using errcode='42501';end if;
+ if p_to in ('prepared','psc_requested','stored') then
+  -- A document whose patient or account is going away never reaches the PSC.
+  perform cortex_private.signature_document(p_user,o.prescription_id);
+ end if;
  select * into s from cortex_private.signature_sessions where id=o.session_id for update;
- -- Revocation wins every step before the PSC answer is stored.
- if p_to in ('prepared','psc_requested','stored') and (s.generation<>o.session_generation or not cortex_private.signature_session_usable(s)) then
-  update cortex_private.signature_operations set state='cancelled_by_revocation',cleanup_pending=(p_to='stored')
-   where operation_id=p_operation returning * into o;
-  return to_jsonb(o)-'staged_path';
+ select * into o from cortex_private.signature_operations where operation_id=p_operation for update;
+ if p_to in ('prepared','psc_requested','stored') then
+  perform 1 from public.prescriptions where id=o.prescription_id for share;
+  -- Revocation or expiry wins every step before the answer is stored.
+  if s.generation<>o.session_generation or not cortex_private.signature_session_usable(s) then
+   if o.state in ('reserved','prepared','psc_requested','ambiguous') then
+    update cortex_private.signature_operations set state='cancelled_by_revocation',
+     cleanup_pending=(p_to='stored' or coalesce((p_data->>'uploaded')::boolean,false))
+     where operation_id=p_operation returning * into o;
+   end if;
+   return to_jsonb(o)-'staged_path';
+  end if;
  end if;
  if p_to='prepared' then
   if o.state='prepared' and (o.prepared_pdf_sha256,o.to_be_signed_sha256,o.policy_oid)
@@ -486,9 +525,15 @@ begin
   update cortex_private.signature_operations set state='prepared',prepared_pdf_sha256=p_data->>'preparedSha256',
    to_be_signed_sha256=p_data->>'toBeSignedSha256',policy_oid=p_data->>'policyOid' where operation_id=p_operation returning * into o;
  elsif p_to='psc_requested' then
-  -- From ambiguous only by a new explicit human action; prepared bytes are fixed.
+  -- One permission per PSC call. An attempt already in flight is never
+  -- authorized again: its caller reconciles it as ambiguous first, and only
+  -- a new explicit human action resumes from there.
+  if o.state='psc_requested' then
+   raise exception 'Tentativa já em andamento ou sem resposta: marque como sem resposta antes de repetir.' using errcode='P4093';end if;
   if o.state='ambiguous' and coalesce((p_data->>'humanRetry')::boolean,false) is not true then
    raise exception 'Tentativa sem resposta: só o médico pode repetir.' using errcode='P4093';end if;
+  if o.state not in ('prepared','ambiguous') then
+   raise exception 'Signature operation not ready for the PSC' using errcode='P4093';end if;
   if o.to_be_signed_sha256 is distinct from p_data->>'toBeSignedSha256' then
    raise exception 'Prepared signature data changed' using errcode='22023';end if;
   update cortex_private.signature_operations set state='psc_requested',psc_attempts=psc_attempts+1
@@ -507,24 +552,28 @@ begin
  return to_jsonb(o)-'staged_path';
 end $$;
 
--- Commit point. Rechecked after taking the doctor lock and the rows, in that order.
+-- Commit point. Barriers, then session, operation and prescription rows; the
+-- session's state and the clock are read only after all of them are held.
 create function public.signature_complete(p_user uuid,p_operation uuid,p_cert_serial text,p_cert_issuer text) returns jsonb
 language plpgsql volatile security definer set search_path='' as $$
 declare o cortex_private.signature_operations;s cortex_private.signature_sessions;r public.prescriptions;
 begin
  perform cortex_private.signature_lock(p_user);
- select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user for update;
+ select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user;
  if not found then raise exception 'Signature operation unavailable' using errcode='42501';end if;
  if o.state='completed' then return to_jsonb(o);end if;
- if o.state<>'stored' then raise exception 'Signature operation not ready' using errcode='P4093';end if;
+ perform cortex_private.signature_document(p_user,o.prescription_id);
  select * into s from cortex_private.signature_sessions where id=o.session_id for update;
+ select * into o from cortex_private.signature_operations where operation_id=p_operation for update;
+ select * into r from public.prescriptions where id=o.prescription_id for update;
+ if o.state='completed' then return to_jsonb(o);end if;
+ if o.state<>'stored' then raise exception 'Signature operation not ready' using errcode='P4093';end if;
  if s.generation<>o.session_generation or not cortex_private.signature_session_usable(s) then
   update cortex_private.signature_operations set state='cancelled_by_revocation',cleanup_pending=true
    where operation_id=p_operation returning * into o;
   return to_jsonb(o);
  end if;
- select * into r from public.prescriptions where id=o.prescription_id for update;
- if not found or r.user_id<>p_user or r.status<>'generated' or r.signed_storage_path is not null
+ if r.id is null or r.user_id<>p_user or r.status<>'generated' or r.signed_storage_path is not null
   or r.issuance_snapshot->>'pdf_sha256' is distinct from o.shown_pdf_sha256 then
   update cortex_private.signature_operations set state='cancelled',error_code='document_changed',cleanup_pending=true
    where operation_id=p_operation returning * into o;
@@ -540,6 +589,21 @@ begin
  update cortex_private.signature_operations set state='completed' where operation_id=p_operation returning * into o;
  return to_jsonb(o);
 end $$;
+
+-- Reconciliation discovery for the Edge (service only): abandoned candidates
+-- to remove, and operations stuck in a non-terminal state. The Edge decides
+-- with the stored object's hash; a completed operation's file is never removed.
+create function public.signature_pending_work(p_limit integer default 100) returns jsonb
+language sql volatile security definer set search_path='' as $$
+ select coalesce(jsonb_agg(w order by w->>'updatedAt'),'[]'::jsonb) from (
+  select jsonb_build_object('operationId',o.operation_id,'userId',o.user_id,'prescriptionId',o.prescription_id,'state',o.state,
+   'kind',case when o.cleanup_pending then 'remove_candidate' else 'stuck' end,
+   'candidatePath','rx/'||o.user_id::text||'/'||o.prescription_id::text||'/signed-'||o.operation_id::text||'.pdf',
+   'signedSha256',o.signed_pdf_sha256,'updatedAt',o.updated_at) w
+  from cortex_private.signature_operations o
+  where o.cleanup_pending or (o.state in ('reserved','prepared','psc_requested','stored') and o.updated_at<now()-interval '15 minutes')
+  order by o.updated_at limit least(greatest(coalesce(p_limit,100),1),500)) x;
+$$;
 
 -- After the Edge removed an abandoned candidate from Storage.
 create function public.signature_cleanup_done(p_user uuid,p_operation uuid) returns void
@@ -580,11 +644,13 @@ revoke all on function public.signature_begin_authorization(uuid,text,text,jsonb
  public.signature_activate_session(uuid,text,uuid,timestamptz,text,jsonb),public.signature_revoke_session(uuid),
  public.signature_session_token(uuid,uuid,integer),public.signature_reserve(uuid,uuid,uuid,text),
  public.signature_advance(uuid,uuid,text,jsonb),public.signature_complete(uuid,uuid,text,text),
- public.signature_cleanup_done(uuid,uuid),public.signature_expire_sessions(),public.signature_session_state(uuid) from public,anon,authenticated;
+ public.signature_cleanup_done(uuid,uuid),public.signature_expire_sessions(),public.signature_session_state(uuid),
+ public.signature_pending_work(integer) from public,anon,authenticated;
 grant execute on function public.signature_begin_authorization(uuid,text,text,jsonb),public.signature_consume_authorization(uuid,text,text),
  public.signature_activate_session(uuid,text,uuid,timestamptz,text,jsonb),public.signature_revoke_session(uuid),
  public.signature_session_token(uuid,uuid,integer),public.signature_reserve(uuid,uuid,uuid,text),
  public.signature_advance(uuid,uuid,text,jsonb),public.signature_complete(uuid,uuid,text,text),
- public.signature_cleanup_done(uuid,uuid),public.signature_expire_sessions(),public.signature_session_state(uuid) to service_role;
+ public.signature_cleanup_done(uuid,uuid),public.signature_expire_sessions(),public.signature_session_state(uuid),
+ public.signature_pending_work(integer) to service_role;
 revoke all on all functions in schema cortex_private from public,anon,authenticated,service_role;
 commit;

@@ -6,12 +6,14 @@ begin;
 insert into auth.users(id,email) values
  ('d1700000-0000-4000-8000-000000000001','signer@example.invalid'),
  ('d1700000-0000-4000-8000-000000000002','other@example.invalid'),
- ('d1700000-0000-4000-8000-000000000003','solo@example.invalid');
+ ('d1700000-0000-4000-8000-000000000003','solo@example.invalid'),
+ ('d1700000-0000-4000-8000-000000000004','leaving@example.invalid');
 insert into public.user_settings(user_id,prescriber_cpf) values
  ('d1700000-0000-4000-8000-000000000001','52998224725'),
  ('d1700000-0000-4000-8000-000000000003','11144477735');
 insert into public.patients(id,user_id,name,age,last_visit,status) values
  ('d1710000-0000-4000-8000-000000000001','d1700000-0000-4000-8000-000000000001','Paciente sintética A',30,current_date,'novo'),
+ ('d1710000-0000-4000-8000-000000000002','d1700000-0000-4000-8000-000000000001','Paciente sintética B',31,current_date,'novo'),
  ('d1710000-0000-4000-8000-000000000003','d1700000-0000-4000-8000-000000000003','Paciente sintética S',40,current_date,'novo');
 
 create function pg_temp.rx(p_id uuid,p_user uuid,p_patient uuid,p_doc text default 'receita_simples') returns void
@@ -22,6 +24,7 @@ language sql as $$
 $$;
 select pg_temp.rx(('d1720000-0000-4000-8000-00000000000'||n)::uuid,'d1700000-0000-4000-8000-000000000001','d1710000-0000-4000-8000-000000000001',
  case n when 3 then 'receita_antimicrobiano' else 'receita_simples' end) from generate_series(1,5) n;
+select pg_temp.rx(('d1720000-0000-4000-8000-00000000002'||n)::uuid,'d1700000-0000-4000-8000-000000000001','d1710000-0000-4000-8000-000000000002') from generate_series(1,2) n;
 select pg_temp.rx('d1720000-0000-4000-8000-000000000009','d1700000-0000-4000-8000-000000000003','d1710000-0000-4000-8000-000000000003');
 
 -- ACL: nothing of D17 is reachable by anon or authenticated; tables not even by service_role.
@@ -32,7 +35,7 @@ do $$ declare fn regprocedure; begin
    'Client can execute '||fn::text;
   assert has_function_privilege('service_role',fn,'execute'),'Service cannot execute '||fn::text;
  end loop;
- assert (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'signature\_%')=11,
+ assert (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'signature\_%')=12,
   'Unexpected D17 service API size';
  assert not has_table_privilege('service_role','cortex_private.signature_sessions','select'),'Sessions readable directly';
  assert not has_table_privilege('authenticated','cortex_private.prescription_signatures','select'),'Audit readable by clients';
@@ -96,6 +99,10 @@ do $$ declare d jsonb:=jsonb_build_object('preparedSha256',repeat('d',64),'toBeS
  begin perform public.signature_advance(u,op,'prepared',d||'{"toBeSignedSha256":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}');
   raise exception 'Prepared bytes changed';exception when sqlstate '22023' then null;end;
  assert public.signature_advance(u,op,'psc_requested',d)->>'psc_attempts'='1','PSC attempt not counted';
+ begin perform public.signature_advance(u,op,'psc_requested',d);
+  raise exception 'Attempt in flight authorized twice';exception when sqlstate 'P4093' then null;end;
+ begin perform public.signature_advance(u,op,'psc_requested',d||'{"humanRetry":true}');
+  raise exception 'Human retry skipped reconciliation of an attempt in flight';exception when sqlstate 'P4093' then null;end;
  assert public.signature_advance(u,op,'ambiguous')->>'state'='ambiguous','Not ambiguous';
  begin perform public.signature_reserve(u,'d1740000-0000-4000-8000-000000000003','d1720000-0000-4000-8000-000000000001',repeat('a',64));
   raise exception 'New id bypassed an unreconciled attempt';exception when sqlstate 'P4093' then null;end;
@@ -182,6 +189,32 @@ do $$ begin
  assert (select token is null and generation=2 from cortex_private.signature_sessions where id='d1730000-0000-4000-8000-000000000001'),'Revoked token kept';
 end $$;
 
+-- A confirmed patient deletion intent stops a new reservation and an existing
+-- operation before the PSC; the doctor's other patients are unaffected.
+set local role service_role;
+do $$ declare u uuid:='d1700000-0000-4000-8000-000000000001';
+ d jsonb:=jsonb_build_object('preparedSha256',repeat('d',64),'toBeSignedSha256',repeat('e',64),'policyOid','2.16.76.1.7.1.11.1.1');
+ t jsonb:=jsonb_build_object('v',1,'keyId','k1','nonce','bm9uY2U=','ciphertext','dG9rZW4=');begin
+ perform public.signature_activate_session(u,'vidaas','d1730000-0000-4000-8000-000000000004',now()+interval '8 hours',repeat('c',64),t);
+ perform public.signature_reserve(u,'d1740000-0000-4000-8000-000000000021','d1720000-0000-4000-8000-000000000021',repeat('a',64));
+ perform public.signature_advance(u,'d1740000-0000-4000-8000-000000000021','prepared',d);
+end $$;
+reset role;
+update public.patients set deletion_requested_at=now() where id='d1710000-0000-4000-8000-000000000002';
+set local role service_role;
+do $$ declare u uuid:='d1700000-0000-4000-8000-000000000001';
+ d jsonb:=jsonb_build_object('preparedSha256',repeat('d',64),'toBeSignedSha256',repeat('e',64),'policyOid','2.16.76.1.7.1.11.1.1');begin
+ begin perform public.signature_reserve(u,'d1740000-0000-4000-8000-000000000022','d1720000-0000-4000-8000-000000000022',repeat('a',64));
+  raise exception 'Reserved for a patient being deleted';exception when insufficient_privilege then null;end;
+ begin perform public.signature_advance(u,'d1740000-0000-4000-8000-000000000021','psc_requested',d);
+  raise exception 'Patient being deleted reached the PSC';exception when insufficient_privilege then null;end;
+ begin perform public.signature_complete(u,'d1740000-0000-4000-8000-000000000021','01','CN=AC Sintetica');
+  raise exception 'Completed for a patient being deleted';exception when sqlstate 'P4093' or insufficient_privilege then null;end;
+ assert public.signature_advance(u,'d1740000-0000-4000-8000-000000000021','cancelled',jsonb_build_object('code','patient_deleting'))->>'state'='cancelled',
+  'Operation of a deleting patient cannot be closed';
+end $$;
+reset role;
+
 -- Rate limit: 60 reservations per doctor per hour; the 61st suspends the session.
 set local role service_role;
 do $$ declare u uuid:='d1700000-0000-4000-8000-000000000003';op uuid;r jsonb;
@@ -197,6 +230,28 @@ do $$ declare u uuid:='d1700000-0000-4000-8000-000000000003';op uuid;r jsonb;
  assert public.signature_session_state(u)->>'active'='false','Session not suspended';
  -- A repeated operation id still answers without consuming.
  assert public.signature_reserve(u,'d1750000-0000-4000-8000-000000000001','d1720000-0000-4000-8000-000000000009',repeat('a',64))->>'state'='failed','Repeat consumed or changed';
+end $$;
+reset role;
+
+-- Account deletion intent: neither the sealed token nor the OAuth verifier leaves.
+insert into public.user_settings(user_id,prescriber_cpf) values('d1700000-0000-4000-8000-000000000004','52998224725')
+ on conflict(user_id) do update set prescriber_cpf=excluded.prescriber_cpf;
+set local role service_role;
+do $$ declare u uuid:='d1700000-0000-4000-8000-000000000004';
+ t jsonb:=jsonb_build_object('v',1,'keyId','k1','nonce','bm9uY2U=','ciphertext','dG9rZW4=');begin
+ perform public.signature_begin_authorization(u,'vidaas',repeat('3',64),t);
+ perform public.signature_activate_session(u,'vidaas','d1730000-0000-4000-8000-000000000007',now()+interval '8 hours',repeat('c',64),t);
+end $$;
+reset role;
+insert into public.account_deletion_requests(user_id) values('d1700000-0000-4000-8000-000000000004');
+set local role service_role;
+do $$ declare u uuid:='d1700000-0000-4000-8000-000000000004';begin
+ begin perform public.signature_session_token(u,'d1730000-0000-4000-8000-000000000007',1);
+  raise exception 'Token left after the deletion intent';exception when insufficient_privilege then null;end;
+ begin perform public.signature_consume_authorization(u,'vidaas',repeat('3',64));
+  raise exception 'Verifier consumed after the deletion intent';exception when insufficient_privilege then null;end;
+ assert exists(select 1 from jsonb_array_elements(public.signature_pending_work(50)) w
+  where w->>'operationId'='d1740000-0000-4000-8000-000000000013' and w->>'kind'='remove_candidate'),'Pending cleanup not discoverable';
 end $$;
 reset role;
 
