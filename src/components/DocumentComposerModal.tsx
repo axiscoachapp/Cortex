@@ -16,7 +16,7 @@ import { currentPatientAge } from '../../supabase/functions/_shared/patientAge';
 import { Patient, Medication } from '@/types/patient';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { antimicrobialsIn } from '../../supabase/functions/_shared/regulatedMedications';
-import { PrescriptionTemplatePicker } from '@/components/PrescriptionTemplatePicker';
+import { PrescriptionTemplatePicker, type ApplyMode } from '@/components/PrescriptionTemplatePicker';
 import type { SnippetItem } from '@/lib/documentSnippets';
 
 /** Sex values that satisfy RDC 471/2021; 'nao_informado' does not. */
@@ -182,9 +182,10 @@ export function DocumentComposerModal({
     }
   };
 
-  // A template fills the prescription: its items arrive checked and the current
-  // ones stay in the list unchecked, so nothing typed is lost.
-  const applySnippet = (items: SnippetItem[]) => {
+  // The template's items arrive checked. 'replace' (confirmed in the picker when
+  // something was selected) unchecks the current ones but keeps them in the
+  // list with their doses; 'add' keeps them selected. Nothing is deduplicated.
+  const applySnippet = (items: SnippetItem[], mode: ApplyMode) => {
     const added = items.map(item => ({
       name: item.name,
       dosage: item.dosage,
@@ -192,7 +193,7 @@ export function DocumentComposerModal({
       checked: true,
       antimicrobial: antimicrobialsIn(item.name).length > 0,
     }));
-    setMeds(prev => [...prev.map(m => ({ ...m, checked: false })), ...added]);
+    setMeds(prev => [...(mode === 'replace' ? prev.map(m => ({ ...m, checked: false })) : prev), ...added]);
     if (added.some(m => m.antimicrobial) && docType === 'receita_simples') setDocType('receita_antimicrobiano');
   };
 

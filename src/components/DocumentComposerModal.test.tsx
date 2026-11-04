@@ -16,6 +16,12 @@ vi.mock('@/hooks/useDocumentSnippets', () => ({
         revision: 1,
         items: [{ name: 'Nitrofurantoína 100 mg', dosage: '1 cápsula', instructions: 'de 6 em 6 horas por 5 dias' }],
       },
+      {
+        id: 'snippet-pain',
+        name: 'Dor leve',
+        revision: 1,
+        items: [{ name: 'Medicamento sintético C', dosage: '1 comprimido', instructions: 'se dor' }],
+      },
     ],
     isLoading: false,
     isError: false,
@@ -68,33 +74,65 @@ describe('Antimicrobial prescription requirements (RDC 471/2021)', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('fills the prescription from a template, keeps earlier items unchecked and suggests the antimicrobial type', async () => {
-    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000' }, isLoading: false };
-    const onGenerate = vi.fn(async () => {});
-    const user = userEvent.setup();
-    render(
-      <DocumentComposerModal
-        open
-        onOpenChange={() => {}}
-        patient={person({ sex: 'feminino', medications: [{ name: 'Medicamento sintético', dosage: '1', instructions: 'x' }] })}
-        onGenerate={onGenerate}
-        isGenerating={false}
-      />,
-    );
-    await user.selectOptions(screen.getByLabelText('Modelos de receita'), 'snippet-uti');
-    expect(screen.getByRole('button', { name: /Antimicrobiano/ })).toHaveAttribute('aria-pressed', 'true');
-    await user.click(screen.getByRole('button', { name: /Gerar/ }));
-    expect(onGenerate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        docType: 'receita_antimicrobiano',
-        medications: [{ name: 'Nitrofurantoína 100 mg', dosage: '1 cápsula', instructions: 'de 6 em 6 horas por 5 dias' }],
-      }),
-    );
-  });
-
   it('does not blame the phone while settings are still loading', async () => {
     settings.value = { prescriber: { professionalPhone: '' }, isLoading: true };
     await openAntimicrobial(person({ sex: 'masculino' }));
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+// R2: applying a template never removes a selected medication without an
+// explicit choice, and cancel keeps the selection, doses and instructions.
+describe('Prescription templates in the composer', () => {
+  const A = { name: 'Medicamento sintético A', dosage: '1', instructions: 'x' };
+  const UTI = { name: 'Nitrofurantoína 100 mg', dosage: '1 cápsula', instructions: 'de 6 em 6 horas por 5 dias' };
+  const PAIN = { name: 'Medicamento sintético C', dosage: '1 comprimido', instructions: 'se dor' };
+  function setup() {
+    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000' }, isLoading: false };
+    const onGenerate = vi.fn<(payload: unknown) => Promise<void>>(async () => {});
+    render(
+      <DocumentComposerModal open onOpenChange={() => {}} patient={person({ sex: 'feminino', medications: [A] })} onGenerate={onGenerate} isGenerating={false} />,
+    );
+    const user = userEvent.setup();
+    const choose = (id: string) => user.selectOptions(screen.getByLabelText('Modelos de receita'), id);
+    const generate = async () => {
+      await user.click(screen.getByRole('button', { name: /Gerar/ }));
+      return onGenerate.mock.calls.at(-1)?.[0];
+    };
+    return { user, choose, generate };
+  }
+
+  it('cancel keeps the selected medication in the prescription', async () => {
+    const { user, choose, generate } = setup();
+    await choose('snippet-uti');
+    expect(screen.getByRole('group', { name: 'Como aplicar o modelo' })).toHaveTextContent('Há 1 medicamento selecionado: Medicamento sintético A.');
+    await user.click(screen.getByRole('button', { name: 'Manter a seleção' }));
+    expect(await generate()).toMatchObject({ docType: 'receita_simples', medications: [A] });
+  });
+
+  it('replaces the selection only when the doctor says so, and suggests the antimicrobial type', async () => {
+    const { user, choose, generate } = setup();
+    await choose('snippet-uti');
+    await user.click(screen.getByRole('button', { name: 'Substituir a seleção' }));
+    expect(screen.getByRole('button', { name: /Antimicrobiano/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('status')).toHaveTextContent('no lugar de 1 medicamento, que ficou desmarcado na lista');
+    expect(await generate()).toMatchObject({ docType: 'receita_antimicrobiano', medications: [UTI] });
+  });
+
+  it('asks again when switching from one template to another', async () => {
+    const { user, choose, generate } = setup();
+    await choose('snippet-pain');
+    await user.click(screen.getByRole('button', { name: 'Substituir a seleção' }));
+    await choose('snippet-uti');
+    expect(screen.getByRole('group', { name: 'Como aplicar o modelo' })).toHaveTextContent('Medicamento sintético C');
+    await user.click(screen.getByRole('button', { name: 'Substituir a seleção' }));
+    expect(await generate()).toMatchObject({ medications: [UTI] });
+  });
+
+  it('can add the template beside the current selection', async () => {
+    const { user, choose, generate } = setup();
+    await choose('snippet-pain');
+    await user.click(screen.getByRole('button', { name: 'Adicionar aos selecionados' }));
+    expect(await generate()).toMatchObject({ docType: 'receita_simples', medications: [A, PAIN] });
   });
 });

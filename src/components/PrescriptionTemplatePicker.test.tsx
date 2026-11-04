@@ -33,8 +33,37 @@ describe('PrescriptionTemplatePicker', () => {
     const onApply = vi.fn();
     render(<PrescriptionTemplatePicker selected={[]} onApply={onApply} />);
     await userEvent.setup().selectOptions(screen.getByLabelText('Modelos de receita'), 'snippet-1');
-    expect(onApply).toHaveBeenCalledWith(template.items);
+    expect(onApply).toHaveBeenCalledWith(template.items, 'replace');
     expect(screen.getByRole('status')).toHaveTextContent('Modelo "Infecção urinária" aplicado. Revise antes de gerar.');
+  });
+
+  it('asks before touching a selection, and cancel keeps it', async () => {
+    const onApply = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <PrescriptionTemplatePicker
+        selected={[{ name: 'Medicamento sintético A' }, { name: 'Medicamento sintético Z' }]}
+        onApply={onApply}
+      />,
+    );
+    await user.selectOptions(screen.getByLabelText('Modelos de receita'), 'snippet-1');
+    expect(onApply).not.toHaveBeenCalled();
+    expect(screen.getByRole('group', { name: 'Como aplicar o modelo' })).toHaveTextContent(
+      'Há 2 medicamentos selecionados: Medicamento sintético A, Medicamento sintético Z. Como aplicar o modelo "Infecção urinária"?',
+    );
+    await user.click(screen.getByRole('button', { name: 'Manter a seleção' }));
+    expect(onApply).not.toHaveBeenCalled();
+    expect(screen.queryByRole('group', { name: 'Como aplicar o modelo' })).toBeNull();
+
+    await user.selectOptions(screen.getByLabelText('Modelos de receita'), 'snippet-1');
+    await user.click(screen.getByRole('button', { name: 'Substituir a seleção' }));
+    expect(onApply).toHaveBeenLastCalledWith(template.items, 'replace');
+    expect(screen.getByRole('status')).toHaveTextContent('no lugar de 2 medicamentos, que ficaram desmarcados na lista');
+
+    await user.selectOptions(screen.getByLabelText('Modelos de receita'), 'snippet-1');
+    await user.click(screen.getByRole('button', { name: 'Adicionar aos selecionados' }));
+    expect(onApply).toHaveBeenLastCalledWith(template.items, 'add');
+    expect(onApply).toHaveBeenCalledTimes(2);
   });
 
   it('saves the current selection under a name', async () => {
