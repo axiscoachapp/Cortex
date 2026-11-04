@@ -96,6 +96,25 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
   const signed = (f) => sql(`select status from public.prescriptions where id='${f.rx}'`);
   const audits = (f) => Number(sql(`select count(*) from cortex_private.prescription_signatures where prescription_id='${f.rx}'`));
   const backendPid = (s) => Number(/PID=(\d+)/.exec(s.output())?.[1]);
+  // Holders never release by the clock (Codex 04/11 17:48): the concurrent side
+  // is first seen waiting on a lock, then the holder commits explicitly.
+  const lockWaitOf = async (pid) => {
+    for (let i = 0; i < 100; i++) {
+      if (sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock') return true;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return false;
+  };
+  /** Runs `text` in a new connection and returns once it is seen waiting on a lock. */
+  const startBlocked = async (text, label) => {
+    const s = session(container);
+    s.send(`select 'PID='||pg_backend_pid();`);
+    await s.wait('PID=');
+    const pid = backendPid(s);
+    s.send(text);
+    assert.ok(await lockWaitOf(pid), `${label}: did not wait on the lock`);
+    return s;
+  };
 
   // 1. P1: two overlapping permissions for the same prepared operation.
   await check('overlapping permission (P1)', async () => {
@@ -104,11 +123,12 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     call(f, reserve(f));
     call(f, advance(f, 'prepared'));
     const a = session(container);
-    a.send(`begin;${service}select ${advance(f, 'psc_requested')} is not null;\n\\echo A_HELD\nselect pg_sleep(1);commit;`);
+    a.send(`begin;${service}select ${advance(f, 'psc_requested')} is not null;\n\\echo A_HELD`);
     await a.wait('A_HELD');
-    const b = session(container);
-    const rb = await b.finish(`begin;${service}select ${advance(f, 'psc_requested')};commit;`);
-    const ra = await a.finish('');
+    // B waits on the doctor's lock that A holds; A commits only after that.
+    const b = await startBlocked(`begin;${service}select ${advance(f, 'psc_requested')};commit;`, 'second permission');
+    const ra = await a.finish('commit;');
+    const rb = await b.finish('');
     assert.equal(ra.status, 0, ra.stderr);
     assert.notEqual(rb.status, 0, 'Second permission granted for an attempt in flight');
     assert.match(rb.stderr, /P4093/, rb.stderr);
@@ -130,13 +150,14 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     toStored(f);
     sql(`update cortex_private.signature_sessions set expires_at=now()+interval '${seconds} seconds' where id='${f.session}'`);
     const holder = session(container);
-    holder.send(`begin;select 1 from public.prescriptions where id='${f.rx}' for update;\n\\echo ROW_HELD\nselect pg_sleep(1);commit;`);
+    holder.send(`begin;select 1 from public.prescriptions where id='${f.rx}' for update;\n\\echo ROW_HELD`);
     await holder.wait('ROW_HELD');
     const startedAt = Date.now();
     const busy = docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose'],
       `${bounds}begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica');commit;`);
     const refusedIn = Date.now() - startedAt;
-    await holder.finish('');
+    const released = await holder.finish('commit;');
+    assert.equal(released.status, 0, released.stderr);
     assert.notEqual(busy.status, 0, `${label}: completed while the row was held elsewhere`);
     assert.match(busy.stderr, /40001/, busy.stderr);
     assert.doesNotMatch(busy.stderr, /40P01/, busy.stderr);
@@ -192,21 +213,11 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     const f = fixture();
     toStored(f);
     const updater = session(container);
-    updater.send(`begin;set local request.jwt.claim.role='service_role';update public.prescriptions set expires_at=expires_at where id='${f.rx}';\n\\echo UPDATER_HOLDS\nselect pg_sleep(1.5);commit;`);
+    updater.send(`begin;set local request.jwt.claim.role='service_role';update public.prescriptions set expires_at=expires_at where id='${f.rx}';\n\\echo UPDATER_HOLDS`);
     await updater.wait('UPDATER_HOLDS');
-    const signer = session(container);
-    signer.send(`select 'PID='||pg_backend_pid();`);
-    await signer.wait('PID=');
-    const pid = backendPid(signer);
-    signer.send(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`);
-    let observed = false;
-    for (let i = 0; i < 40 && !observed; i++) {
-      observed = sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock';
-      if (!observed) await new Promise((r) => setTimeout(r, 50));
-    }
-    assert.ok(observed, 'The signature did not wait on 123 behind the clinical update');
+    const signer = await startBlocked(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`, 'signature behind the clinical update');
+    const up = await updater.finish('commit;');
     const done = await signer.finish('');
-    const up = await updater.finish('');
     assert.doesNotMatch(done.stderr + up.stderr, /40P01|deadlock/i);
     assert.equal(done.status, 0, done.stderr);
     assert.equal(state(f), 'completed');
@@ -237,11 +248,12 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     call(f, reserve(f));
     call(f, advance(f, 'prepared'));
     const deleter = session(container);
-    deleter.send(`begin;set local request.jwt.claim.role='service_role';update public.patients set deletion_requested_at=now() where id='${f.patient}';\n\\echo INTENT_HELD\nselect pg_sleep(1);commit;`);
+    deleter.send(`begin;set local request.jwt.claim.role='service_role';update public.patients set deletion_requested_at=now() where id='${f.patient}';\n\\echo INTENT_HELD`);
     await deleter.wait('INTENT_HELD');
-    const writer = session(container);
-    const r = await writer.finish(`begin;${service}select ${advance(f, 'psc_requested')};commit;`);
-    await deleter.finish('');
+    const writer = await startBlocked(`begin;${service}select ${advance(f, 'psc_requested')};commit;`, 'PSC permission beside the intent');
+    const committed = await deleter.finish('commit;');
+    assert.equal(committed.status, 0, committed.stderr);
+    const r = await writer.finish('');
     assert.notEqual(r.status, 0, 'PSC permission while the patient deletion intent was in progress');
     assert.match(r.stderr, /40001|55000|42501/, r.stderr);
     assert.equal(state(f), 'prepared', 'Operation advanced beside the intent');
@@ -277,11 +289,11 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     const f = fixture();
     toStored(f);
     const revoker = session(container);
-    revoker.send(`begin;${service}select public.signature_revoke_session('${f.user}');\n\\echo REVOKED\nselect pg_sleep(0.7);commit;`);
+    revoker.send(`begin;${service}select public.signature_revoke_session('${f.user}');\n\\echo REVOKED`);
     await revoker.wait('REVOKED');
-    const completer = session(container);
-    const r = await completer.finish(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`);
-    await revoker.finish('');
+    const completer = await startBlocked(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`, 'completion behind the revocation');
+    await revoker.finish('commit;');
+    const r = await completer.finish('');
     assert.equal(r.status, 0, r.stderr);
     assert.equal(state(f), 'cancelled_by_revocation', 'Completion won over a revocation that serialized first');
     assert.equal(signed(f), 'generated');
@@ -293,11 +305,11 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     const f = fixture();
     toStored(f);
     const completer = session(container);
-    completer.send(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';\n\\echo COMPLETED\nselect pg_sleep(0.7);commit;`);
+    completer.send(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';\n\\echo COMPLETED`);
     await completer.wait('COMPLETED');
-    const revoker = session(container);
-    const r = await revoker.finish(`begin;${service}select public.signature_revoke_session('${f.user}');commit;`);
-    await completer.finish('');
+    const revoker = await startBlocked(`begin;${service}select public.signature_revoke_session('${f.user}');commit;`, 'revocation behind the completion');
+    await completer.finish('commit;');
+    const r = await revoker.finish('');
     assert.equal(r.status, 0, r.stderr);
     assert.equal(state(f), 'completed', 'A later revocation undid a completed signature');
     assert.equal(signed(f), 'signed');
@@ -308,27 +320,23 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
 
   // 7. Residual (Codex 15:26) 1: completion behind the legacy per-account
   //    clinical lock (key 123 of guard_clinical_write) until after the expiry.
-  for (const [label, seconds, hold, expect] of [['legacy-lock-expiry', 2, 4, 'cancelled_by_revocation'], ['legacy-lock-control', 120, 3, 'completed']]) {
+  for (const [label, seconds, expect] of [['legacy-lock-expiry', 2, 'cancelled_by_revocation'], ['legacy-lock-control', 120, 'completed']]) {
     await check(`clinical lock held past expiry: ${label}`, async () => {
       const f = fixture({ minutes: 5 });
       toStored(f);
       sql(`update cortex_private.signature_sessions set expires_at=now()+interval '${seconds} seconds' where id='${f.session}'`);
       const holder = session(container);
-      holder.send(`begin;select pg_advisory_xact_lock(hashtextextended('${f.user}',123));\n\\echo LEGACY_HELD\nselect pg_sleep(${hold});commit;`);
+      holder.send(`begin;select pg_advisory_xact_lock(hashtextextended('${f.user}',123));\n\\echo LEGACY_HELD`);
       await holder.wait('LEGACY_HELD');
-      const completer = session(container);
-      completer.send(`select 'PID='||pg_backend_pid();`);
-      await completer.wait('PID=');
-      const pid = backendPid(completer);
-      completer.send(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`);
-      let observed = false;
-      for (let i = 0; i < 40 && !observed; i++) {
-        observed = sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock';
-        if (!observed) await new Promise((r) => setTimeout(r, 50));
+      const completer = await startBlocked(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`, `${label}: completion`);
+      const observed = true;
+      // Expiry case: keep the lock until the session's deadline has passed, by the database clock.
+      if (expect !== 'completed') {
+        for (let i = 0; i < 100 && sql(`select now()>expires_at from cortex_private.signature_sessions where id='${f.session}'`) !== 't'; i++)
+          await new Promise((r) => setTimeout(r, 100));
       }
-      assert.ok(observed, `${label}: completion did not wait on the clinical lock`);
+      await holder.finish('commit;');
       const done = await completer.finish('');
-      await holder.finish('');
       assert.equal(done.status, 0, done.stderr);
       assert.equal(state(f), expect, `${label}: wrong outcome`);
       assert.equal(signed(f), expect === 'completed' ? 'signed' : 'generated', `${label}: prescription status`);
@@ -375,11 +383,12 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     call(f, reserve(f));
     call(f, advance(f, 'prepared'));
     const deleter = session(container);
-    deleter.send(`begin;set local request.jwt.claim.role='service_role';update public.patients set deletion_requested_at=now() where id='${f.other}';\n\\echo INTENT_HELD\nselect pg_sleep(1);commit;`);
+    deleter.send(`begin;set local request.jwt.claim.role='service_role';update public.patients set deletion_requested_at=now() where id='${f.other}';\n\\echo INTENT_HELD`);
     await deleter.wait('INTENT_HELD');
-    const writer = session(container);
-    const r = await writer.finish(`begin;${service}select ${advance(f, 'psc_requested')};commit;`);
-    await deleter.finish('');
+    const writer = await startBlocked(`begin;${service}select ${advance(f, 'psc_requested')};commit;`, 'PSC permission beside the consultation patient intent');
+    const committed = await deleter.finish('commit;');
+    assert.equal(committed.status, 0, committed.stderr);
+    const r = await writer.finish('');
     assert.notEqual(r.status, 0, 'PSC permission while the consultation patient intent was in progress');
     assert.match(r.stderr, /40001|55000|42501/, r.stderr);
     assert.equal(state(f), 'prepared');
@@ -421,21 +430,11 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
   await check('signature waits on 123 behind an account delete, then refuses', async () => {
     const f = fixture();
     const deleter = session(container);
-    deleter.send(`begin;set local request.jwt.claim.role='service_role';delete from auth.users where id='${f.user}';\n\\echo DELETED_HELD\nselect pg_sleep(1.5);commit;`);
+    deleter.send(`begin;set local request.jwt.claim.role='service_role';delete from auth.users where id='${f.user}';\n\\echo DELETED_HELD`);
     await deleter.wait('DELETED_HELD');
-    const signer = session(container);
-    signer.send(`select 'PID='||pg_backend_pid();`);
-    await signer.wait('PID=');
-    const pid = backendPid(signer);
-    signer.send(`begin;${service}select ${reserve(f)};commit;`);
-    let observed = false;
-    for (let i = 0; i < 40 && !observed; i++) {
-      observed = sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock';
-      if (!observed) await new Promise((r) => setTimeout(r, 50));
-    }
-    assert.ok(observed, 'The signature did not wait on 123 behind the account delete');
+    const signer = await startBlocked(`begin;${service}select ${reserve(f)};commit;`, 'signature behind the account delete');
+    const del = await deleter.finish('commit;');
     const done = await signer.finish('');
-    const del = await deleter.finish('');
     assert.doesNotMatch(done.stderr + del.stderr, /40P01|deadlock/i);
     assert.equal(del.status, 0, del.stderr);
     assert.notEqual(done.status, 0, 'Reserved for a deleted account');
@@ -466,11 +465,12 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     const f = fixture();
     const other = f.op.replace(/^e174/, 'e175');
     const a = session(container);
-    a.send(`begin;${service}select ${reserve(f)} is not null;\n\\echo A_RESERVED\nselect pg_sleep(0.7);commit;`);
+    a.send(`begin;${service}select ${reserve(f)} is not null;\n\\echo A_RESERVED`);
     await a.wait('A_RESERVED');
-    const b = session(container);
-    const rb = await b.finish(`begin;${service}select ${reserve(f, other)};commit;`);
-    await a.finish('');
+    const b = await startBlocked(`begin;${service}select ${reserve(f, other)};commit;`, 'second reservation');
+    const ra = await a.finish('commit;');
+    assert.equal(ra.status, 0, ra.stderr);
+    const rb = await b.finish('');
     assert.notEqual(rb.status, 0, 'Two open operations for one document');
     assert.equal(Number(sql(`select count(*) from cortex_private.signature_operations where prescription_id='${f.rx}'`)), 1);
     results.doubleReservation = (/ERROR:\s+(\w+):/.exec(rb.stderr) || [])[1];
