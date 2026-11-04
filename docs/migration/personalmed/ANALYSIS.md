@@ -2,6 +2,8 @@
 
 Status: analysis only. Nothing has been loaded into any database, local or remote. As the README says, the migration is a later task and needs explicit owner approval at each step below.
 
+Update 2026-11-03: the implementation spec in [CODEX_IMPLEMENTATION.md](CODEX_IMPLEMENTATION.md) supersedes §4 where they differ. For example, `patients` now has CPF, sex and health-plan columns, and the running history can be split by its typed dates. Registration quality and the legal requirements for prescriptions are in [CADASTRO_E_RECEITAS.md](CADASTRO_E_RECEITAS.md).
+
 Source: the Haddad Nicola clinic export dated 24/08/2026: 1,758 files, 745 MB, received as a `.rar`.
 
 Privacy: this document holds **no patient data**. It contains only schema, counts, rates, date ranges at month or year precision, and masked value shapes (`9` = digit, `a` = a run of letters). Doctors are referred to by their PersonalMed account code (`UserNumber`), never by name.
