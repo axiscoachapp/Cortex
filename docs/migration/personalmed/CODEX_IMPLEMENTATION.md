@@ -375,7 +375,7 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
   - `name`, limitado a 120 caracteres;
   - `items`, que só existem em receita: `{name, dosage, instructions}`. `dosage` recebe a quantidade escrita depois do `____`, e `instructions` recebe o cabeçalho de via ("Uso oral") mais as linhas seguintes;
   - `body`, com o texto inteiro, para não perder nada, mais `header` e `footer`;
-  - `scope` (`clinic` ou `doctor`), `review_status: imported_unreviewed`, `source: personalmed` e `source_ref` (`Us05:123`);
+  - `scope` (`clinic` ou `doctor`), `review_status` (`approved` quando o modelo cabe no formato, por decisão da D19; `imported_unreviewed` nos demais), `source: personalmed` e `source_ref` (`Us05:123`);
   - `merge_fields` e `unsupported_merge_fields`;
   - `regulated`, com as substâncias antimicrobianas e controladas encontradas;
   - `usage`: `{since, uses, by_doctor, last_used}`, só contagens e datas. Um documento emitido conta como uso quando todas as linhas fixas do modelo aparecem nele; modelo com menos de 40 caracteres fixos não é reconhecido.
@@ -384,7 +384,7 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
   - `requires_review`: `template_kind_not_supported_yet` (texto e pedido de exame, enquanto o Cortex só aceita receita), `template_items_not_found` (receita em texto livre), `template_items_over_limit`, `template_item_too_long` e `template_controlled_substance` (depende da D8);
   - `rejected`: `template_empty`;
   - não bloqueiam: `template_merge_field_unsupported`, `template_rtf_table` (a tabela do RTF vira texto), `template_name_truncated` e `template_name_missing`.
-- **Uso no Cortex:** todo modelo entra como `imported_unreviewed` e só preenche receita depois que o médico o salva. Quem recebe os modelos da clínica depende da D19.
+- **Uso no Cortex (D19, 04/11):** cada médico recebe os modelos que usou, já adaptados e **aprovados**, sem revisão prévia, e pode editá-los. Na adaptação, um campo automático (`@sangue`, `@nome`…) dentro de um medicamento vira `____` para o médico preencher, com o código `template_merge_field_blanked`, porque o Cortex não preenche campos dentro dos itens. Os modelos que não cabem no formato ficam no staging até serem adaptados.
 - **Fora deste contrato:** o carregador, a importação e a carga real, que continuam separados e sem autorização.
 
 ---

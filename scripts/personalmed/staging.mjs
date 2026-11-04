@@ -483,8 +483,8 @@ export function buildLegacyAlert(ctx, alert, charts) {
 
 /**
  * One legacy document template (Us05/Gintxt/Pedtxt row) -> `template`
- * envelope for document_snippets (S3). Every template arrives as
- * imported_unreviewed: the doctor reviews it before any use. Prescription
+ * envelope for document_snippets (S3). Loadable templates arrive approved
+ * and editable (D19, 04/11); the others stay imported_unreviewed. Prescription
  * templates carry Cortex items; the whole text stays in `body`, so nothing is
  * lost. Usage counts come from templateUsage() and hold no document text.
  *
@@ -526,7 +526,12 @@ export function buildTemplate(ctx, t, usage, regulated = { antimicrobial: [], co
       footer = parsed.footer;
       // Legacy "quantity" (after the ____ line) is what the doctor prints next
       // to the drug; the route heading ("Uso oral") opens the instructions.
-      items = parsed.items.map((i) => ({ name: i.name, dosage: i.quantity, instructions: [i.route, i.instructions].filter(Boolean).join('\n') }));
+      // D19: adapted to Cortex, which fills no automatic field inside a
+      // medication: any @field there becomes a blank for the doctor to fill.
+      const blank = (v) => v.replace(/(?<![A-Za-z0-9._%+-])@[a-z_]+/gi, '____');
+      items = parsed.items.map((i) => ({ name: blank(i.name), dosage: blank(i.quantity), instructions: blank([i.route, i.instructions].filter(Boolean).join('\n')) }));
+      if (items.some((i, n) => i.instructions !== [parsed.items[n].route, parsed.items[n].instructions].filter(Boolean).join('\n') || i.name !== parsed.items[n].name || i.dosage !== parsed.items[n].quantity))
+        issues.push('template_merge_field_blanked');
       if (items.length > 15) issues.push('template_items_over_limit');
       if (items.some((i) => i.name.length > 200 || i.dosage.length > 200 || i.instructions.length > 1000)) issues.push('template_item_too_long');
     }
@@ -549,7 +554,9 @@ export function buildTemplate(ctx, t, usage, regulated = { antimicrobial: [], co
       header,
       footer,
       scope: t.user ? 'doctor' : 'clinic',
-      review_status: 'imported_unreviewed',
+      // D19 (04/11): loadable templates arrive approved and editable, with no
+      // prior review; the others stay imported_unreviewed until adapted.
+      review_status: status === 'ready' ? 'approved' : 'imported_unreviewed',
       source: 'personalmed',
       source_ref: `${t.table}:${t.modelNumber}`,
       merge_fields: merge.fields,

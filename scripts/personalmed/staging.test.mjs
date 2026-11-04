@@ -152,12 +152,12 @@ describe('synthetic staging batch', () => {
 describe('synthetic templates (S3)', () => {
   const tpl = (model, table = 'Us05') => find('template', `table:${table}|model:${model}`);
 
-  it('stages every template as imported_unreviewed for document_snippets', () => {
+  it('stages loadable templates as approved (D19) and the rest as imported_unreviewed', () => {
     const all = of('template');
     expect(all).toHaveLength(9);
     for (const e of all) {
       expect(e.targetTable).toBe('document_snippets');
-      expect(e.payload).toMatchObject({ review_status: 'imported_unreviewed', source: 'personalmed' });
+      expect(e.payload).toMatchObject({ review_status: e.mappingStatus === 'ready' ? 'approved' : 'imported_unreviewed', source: 'personalmed' });
       expect(e.payload.source_ref).toBe(e.sourceRecordId.replace(/^table:(\w+)\|model:(\d+)$/, '$1:$2'));
       expect(e.payload.name.length).toBeLessThanOrEqual(120);
     }
@@ -187,10 +187,13 @@ describe('synthetic templates (S3)', () => {
     expect(JSON.stringify(of('template').map((e) => e.payload.usage))).not.toMatch(/SINTÉTICA|Tomar/);
   });
 
-  it('keeps a doctor-owned template with that doctor and flags unsupported merge fields', () => {
+  it('keeps a doctor-owned template with that doctor and blanks automatic fields inside items', () => {
     const e = tpl(2);
-    expect(e).toMatchObject({ sourceDoctorId: 'user:5', mappingStatus: 'ready', issues: ['template_merge_field_unsupported'] });
-    expect(e.payload).toMatchObject({ scope: 'doctor', unsupported_merge_fields: ['@sangue'] });
+    expect(e).toMatchObject({ sourceDoctorId: 'user:5', mappingStatus: 'ready', issues: ['template_merge_field_blanked', 'template_merge_field_unsupported'] });
+    expect(e.payload).toMatchObject({ scope: 'doctor', unsupported_merge_fields: ['@sangue'], review_status: 'approved' });
+    // Cortex fills no @field inside a medication: the doctor sees a blank to fill.
+    expect(e.payload.items[0].instructions).toBe('Aplicar à noite.\nTipo sanguíneo: ____');
+    expect(e.payload.body).toContain('@sangue');
   });
 
   it('sends what Cortex cannot take yet to review, and rejects only empty templates', () => {

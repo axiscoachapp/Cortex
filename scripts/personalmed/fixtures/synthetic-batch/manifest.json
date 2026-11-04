@@ -55,7 +55,7 @@
       "lines": 1
     },
     "template.ndjson": {
-      "sha256": "ef3699a66ab9f47053861e5a54baa8ba69986cc08a9fc0a039b7c29f2fe21de8",
+      "sha256": "1dbefd651cb1db492a4d9efadb2b168c75180a7f8aa5c0870b8ce269e0afee1a",
       "lines": 9
     }
   },
@@ -221,6 +221,7 @@
     "template_items_not_found": 1,
     "template_items_over_limit": 1,
     "template_kind_not_supported_yet": 2,
+    "template_merge_field_blanked": 1,
     "template_merge_field_unsupported": 1,
     "template_name_truncated": 1,
     "template_rtf_table": 1,
