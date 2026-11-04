@@ -1,6 +1,6 @@
 # T27/2 — Exclusão e criação concorrente de custódia
 
-Estado: contrato refinado por revisão local, 04/11/2026. Sem implementação no aplicativo. Complementa T27/1 (`3190f3b`); H2 continua aberta até a prova do mecanismo e da cobertura.
+Estado: implementado e verificado localmente em 04/11/2026 pela migration `20261104002000`. Complementa T27/1 (`3190f3b`); evidências em [IMPLEMENTATION.md](../../reviews/2026-11-04/deletion-barrier/IMPLEMENTATION.md). H2 concluída no código, sem publicação.
 
 ## Contrato
 
@@ -8,7 +8,7 @@ Antes de persistir uma intenção que permite limpar Storage/provedor, o banco d
 
 Uma transação concorrente pode ser recusada com erro transitório; não pode confirmar referência que faça a exclusão falhar somente depois da limpeza externa. Retries preservam identificadores de idempotência. Conta solo com agenda própria ainda deve completar sua cascata. Limpeza legítima de filhos por cascata/SET NULL exige teste próprio; não usar profundidade de trigger como autorização.
 
-## Proposta de barreira
+## Barreira implementada
 
 Uma linha de versão em schema privado, sem acesso dos clientes, compartilhada entre intenção e mutações capazes de introduzir custódia. A linha sempre existe. O acesso obtém `FOR UPDATE NOWAIT` e incrementa realmente a versão na mesma transação; nenhuma espera é introduzida nesse lock. Contenção aborta antes de efeitos externos. Não segurar transação durante chamadas de rede.
 
@@ -41,6 +41,6 @@ A linha é global para o banco da clínica neste desenho inicial. Isso sacrifica
 6. Provar ausência de acesso direto à barreira e manter os testes de permissões, custódia e agenda existentes.
 7. Tentar remover/retargetar intenção de conta ativa, limpar intenção do paciente e introduzir somente o ator do histórico compartilhado. Recusar sem apagar dados; cascatas reais e retomada devem continuar funcionando.
 
-O ensaio das quatro primeiras ordens é uma regressão dirigida; não substitui os demais itens nem a revisão de cobertura. Nenhum arquivo ou chamada externa é apagado para reproduzir a falha.
+O ensaio padrão foi ampliado para oito ordens e integra `npm run test:db`; a suíte SQL prova marcadores, cascatas, carimbos e ordem/upsert. Nenhum arquivo ou chamada externa é apagado para reproduzir a falha. O protótipo limitado de T27/2a permanece separado das migrations.
 
 Fontes primárias: [locks explícitos](https://www.postgresql.org/docs/16/explicit-locking.html), [isolamento](https://www.postgresql.org/docs/16/transaction-iso.html). A propriedade de isolamento deve ser confirmada pelo ensaio local, não só pela leitura da documentação.

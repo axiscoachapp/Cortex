@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { testReceptionConcurrency } from './test-reception-concurrency.mjs';
+import { runReceptionDeletionRegression } from './test-reception-deletion-concurrency.mjs';
 
 // Every run owns a newly named disposable database. Never reset a linked project.
 const container = process.env.CORTEX_TEST_DB_CONTAINER || `cortex-test-${randomUUID().slice(0,8)}`;
@@ -32,3 +33,4 @@ try {
 } finally {
   if (ownsContainer) run(['stop',container]);
 }
+await runReceptionDeletionRegression();

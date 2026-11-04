@@ -89,7 +89,7 @@ export async function testReceptionConcurrency(container) {
     if (expectedCode === null) assert.equal(b.code, 0, b.errors);
     else {
       assert.notEqual(b.code, 0, 'Both competing transactions committed');
-      assert.ok(b.errors.includes(expectedCode), b.errors);
+      assert.ok((Array.isArray(expectedCode)?expectedCode:[expectedCode]).some(code=>b.errors.includes(code)), b.errors);
     }
   }
   await contest(
@@ -112,7 +112,12 @@ export async function testReceptionConcurrency(container) {
     });
   const booking = (start) =>
     `select public.reception_book_appointment('${clinic}','${payload(start)}',gen_random_uuid())`;
-  await contest(booking('12:00'), booking('12:00'), '23P01');
+  // The custody barrier may reject the preliminary request before the slot lock.
+  await contest(booking('12:00'), booking('12:00'), ['23P01','40001']);
+  sync(`begin;${claims(staffB)}do $$ begin begin
+    perform public.reception_book_appointment('${clinic}','${payload('12:00')}',gen_random_uuid());
+    raise exception 'Occupied slot accepted on retry';
+    exception when sqlstate '23P01' then null;end;end $$;commit;`);
   assert.equal(sync(`select count(*) from public.appointments where clinic_id='${clinic}'`), '1');
   assert.equal(
     sync(`select count(*) from public.patients where user_id='${admin}'`),
