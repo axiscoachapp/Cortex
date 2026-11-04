@@ -60,17 +60,21 @@ serve(async (req) => {
     });
     if (createError || !created?.user)
       throw new RequestError('Não foi possível criar a conta. Use um e-mail exclusivo para a recepção.', 409);
-    const { error: provisionError } = await db.rpc('provision_clinic_receptionist', {
-      p_actor: userId,
-      p_user: created.user.id,
-      p_name: name,
-      p_doctors: doctorIds,
-    });
-    if (provisionError) {
-      // A confirmed membership has restrictive FKs, so an ambiguous RPC response cannot
-      // silently delete an already-provisioned identity or its administrative history.
-      await db.auth.admin.deleteUser(created.user.id);
-      throw new RequestError('Não foi possível confirmar a criação. Atualize a equipe antes de tentar novamente.', 503);
+    let provisionConfirmed = false;
+    try {
+      const { data, error } = await db.rpc('provision_clinic_receptionist', {
+        p_actor: userId,
+        p_user: created.user.id,
+        p_name: name,
+        p_doctors: doctorIds,
+      });
+      provisionConfirmed = !error && data === true;
+    } catch {
+      // A timeout can hide a committed membership. Reconcile before any retry
+      // or identity cleanup; neither outcome is established by a transport error.
+    }
+    if (!provisionConfirmed) {
+      throw new RequestError('Não foi possível confirmar a criação. A conta pode existir; atualize a página e confira a equipe antes de tentar novamente.', 503);
     }
     return new Response(JSON.stringify({ success: true, email, temporaryPassword }), { headers });
   } catch (error) {

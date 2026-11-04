@@ -257,8 +257,35 @@ describe('security endpoint regressions', () => {
     );
     expect(response.status).toBe(503);
     expect(await response.text()).not.toContain('temporaryPassword');
-    expect(db.deleteUser).toHaveBeenCalledWith('99999999-9999-4999-8999-999999999999');
+    expect(db.deleteUser).not.toHaveBeenCalled();
+    expect(db.rpc).toHaveBeenCalledTimes(1);
   });
+  it.each(['error-after-commit', 'timeout-after-commit', 'false-result', 'missing-result', 'non-boolean-result', 'true-with-error'])(
+    'retains the reception identity and withholds credentials after %s', async (failure) => {
+      const db = fakeDatabase({ clinic_members: [{ user_id: user, clinic_id: patient, role: 'admin', status: 'active' }] });
+      db.rpc.mockImplementationOnce(async () => {
+        if (failure.endsWith('after-commit')) {
+          db.tables.clinic_staff_members = [{ user_id: '99999999-9999-4999-8999-999999999999', clinic_id: patient, active: true }];
+          if (failure === 'timeout-after-commit') throw new Error('Synthetic transport timeout');
+          return { data: null, error: { code: '503' } };
+        }
+        if (failure === 'true-with-error') return { data: true, error: { code: '503' } };
+        return { data: failure === 'false-result' ? false : failure === 'non-boolean-result' ? { success: true } : null, error: null };
+      });
+      const response = await loadHandler('create-clinic-receptionist', db)(new Request('https://edge.invalid', {
+        method: 'POST', body: JSON.stringify({ name: 'Secretária Exemplo', email: 'secretaria@example.invalid', doctorIds: [user] }),
+      }));
+      expect(response.status).toBe(503);
+      const body = await response.json();
+      expect(Object.keys(body)).toEqual(['error']);
+      expect(body.error).toContain('A conta pode existir');
+      expect(body.error).not.toContain('Synthetic');
+      expect(db.deleteUser).not.toHaveBeenCalled();
+      expect(db.auth.admin.createUser).toHaveBeenCalledTimes(1);
+      expect(db.rpc).toHaveBeenCalledTimes(1);
+      if (failure.endsWith('after-commit')) expect(db.tables.clinic_staff_members).toHaveLength(1);
+    },
+  );
   it('does not mark a rescheduled appointment as reminded after an old email completes', async () => {
     const db = fakeDatabase({
       appointments: [

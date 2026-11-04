@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 14:20 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 14:40 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -146,7 +146,7 @@ Atualizado em 2026-11-04 14:20 por Codex. Cada agente atualiza as linhas que lhe
 ## Checagens recorrentes
 
 - **Codex:** automação `coordenar-cortex-com-claude` ativa neste chat, a cada 15 minutos, configurada e conferida em 03/11/2026 22:11. Checkpoint: [CODEX_CHECKPOINT.md](CODEX_CHECKPOINT.md). Continua trabalho local autorizado e avisa apenas sobre novidade relevante.
-- **Próximo incremento Codex:** corte geral dos writers/provisionamento legados, reconciliação e leitura operacional sobre pedido+grant de T28/2b/2b/2, com nova reserva/provas antes de APIs/UI. [Proteção transitória](../docs/reviews/2026-11-04/legacy-array-guard/IMPLEMENTATION.md) `04250000` verificada: 65 migrations/43 SQL, nove ordens novas, regressões/cleanup e 38 grupos de upgrade com fontes SQL congeladas. M2 aberta, pares nunca decididos ainda legados. Retestar D17 após correções/provas do Claude para as quatro lacunas enviadas em 14:15; três helpers continuam temporariamente com ele, tipos/App/A0 com Codex. T31/T34/T37 separados. Sem carga, dados reais, envio, hosted, publicação ou push.
+- **Próximo incremento Codex:** corte geral dos writers/provisionamento legados, reconciliação e leitura operacional sobre pedido+grant de T28/2b/2b/2, com nova reserva/provas antes de APIs/UI. [Proteção transitória](../docs/reviews/2026-11-04/legacy-array-guard/IMPLEMENTATION.md) `04250000` em `7b80155`. [Resposta incerta do provisionamento](../docs/reviews/2026-11-04/provisioning-ambiguity/IMPLEMENTATION.md) corrigida sem migration: 37 testes/2 arquivos, 65 migrations/43 SQL dirigidas, conta sem filiação clinicamente negada, casos de consentimento/cleanup, Deno offline/build/lint aprovados. Não exclui identidade, não repete RPC e só devolve credenciais com booleano true sem erro; reconciliação durável/T31 e anuência não implementadas por esse ajuste. M2 aberta. Retestar D17 após correções/provas do Claude para as quatro lacunas de 14:15; três helpers continuam com ele. SQLs dele em andamento não entraram no baseline congelado desta rodada. T31/T34/T37 separados. Sem carga, dados reais, envio, hosted, publicação ou push.
 - **Claude:** loop autorregulado de cerca de 15 minutos, ativo desde 03/11/2026 22:13. Vale só enquanto a sessão atual do Claude estiver aberta; numa sessão nova, o `CLAUDE.md` manda ler o canal ao iniciar.
 
 ## Decisões do usuário e da clínica

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TeamSettings from './TeamSettings';
@@ -50,5 +50,21 @@ describe('management directory separate from authorized agendas',()=>{
   fireEvent.click(screen.getByRole('button',{name:'Tentar novamente'}));
   await screen.findAllByText(b.name);
   expect(screen.getByLabelText('Nome da secretária')).toHaveValue('Conta sintética');
+ });
+ it('preserves the creation draft and withholds credentials when provisioning is unconfirmed',async()=>{
+  const message='Não foi possível confirmar a criação. A conta pode existir; confira a equipe.';
+  mocks.invoke.mockResolvedValue({data:null,error:{context:new Response(JSON.stringify({error:message}),{status:503})}});
+  mount();await screen.findAllByText(a.name);
+  const form=screen.getByRole('button',{name:'Criar conta com acesso restrito'}).closest('form')!;
+  fireEvent.change(screen.getByLabelText('Nome da secretária'),{target:{value:'Conta sintética'}});
+  fireEvent.change(screen.getByLabelText('E-mail exclusivo da conta'),{target:{value:'staff@example.invalid'}});
+  fireEvent.click(within(form).getByRole('checkbox',{name:a.name}));
+  fireEvent.click(screen.getByRole('button',{name:'Criar conta com acesso restrito'}));
+  expect(await screen.findByRole('alert')).toHaveTextContent(message);
+  expect(screen.getByLabelText('Nome da secretária')).toHaveValue('Conta sintética');
+  expect(screen.getByLabelText('E-mail exclusivo da conta')).toHaveValue('staff@example.invalid');
+  expect(within(form).getByRole('checkbox',{name:a.name})).toBeChecked();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(mocks.invoke).toHaveBeenCalledTimes(1);
  });
 });

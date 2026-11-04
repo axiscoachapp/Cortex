@@ -1,0 +1,160 @@
+{
+  "syntheticOnly": true,
+  "redOnly": false,
+  "focused": true,
+  "sourceBaseline": "7b8015556c4c16a678f65aa61589e687841fbd9b",
+  "overlays": [
+    {
+      "path": "supabase/tests/reception-legacy-array-guard.test.sql",
+      "sha256": "95b7a386005f62e53575086fe8b00e3e73d864c54a277d1bf8c3e8269c378620"
+    },
+    {
+      "path": "supabase/tests/reception-function-boundaries.test.sql",
+      "sha256": "2f7040cd8c73d81768fa7efc61c4c276baf94ee1ba521533ce34f4dca58827cc"
+    },
+    {
+      "path": "supabase/migrations/20261104250000_reception_legacy_array_guard.sql",
+      "sha256": "68da15a42d258695d6aa21ea8e586fc596f07da43ae8a4e170c36149f1b7a830"
+    },
+    {
+      "path": "scripts/test-reception-legacy-array-guard.mjs",
+      "sha256": "320524ef99d771ad56ccbb7e64526e71241bbf20b955e2202ecf6342b06aa454"
+    },
+    {
+      "path": "scripts/test-reception-delegation-request-concurrency.mjs",
+      "sha256": "c64e0fa786ccd3150419e80be8d984fb3dafc95632569e1b7117dc77ef1638bb"
+    },
+    {
+      "path": "scripts/test-reception-delegation-decision-concurrency.mjs",
+      "sha256": "0fa434ccec2bdfb14e283f113ac57ebf2db9ecb132b7a40efa39ca7132897e68"
+    },
+    {
+      "path": "scripts/test-reception-legacy-array-concurrency.mjs",
+      "sha256": "76b314eabdc827ff4325eb5ebfa72ce7247b28c89b92d0604f1b754c5a4ee4cd"
+    }
+  ],
+  "helperSources": [
+    {
+      "path": "scripts/test-function-boundaries.mjs",
+      "source": "HEAD",
+      "sha256": "77b4964fbaec6f90430356432893ee5d13f066f0b4babc7ba20c829000af4707"
+    },
+    {
+      "path": "scripts/test-reception-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "45453fb3000a8f8421ee31ea84c39ced66a79a9400ad27dd3b27113cc00becb9"
+    },
+    {
+      "path": "scripts/test-reception-appointment-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "04072b4738d9b6b51b81067237e663e501ef4cb698698cf886c877846badbc61"
+    },
+    {
+      "path": "scripts/test-reception-scope-lifecycle.mjs",
+      "source": "HEAD",
+      "sha256": "52d9c7cc1554ce0d522dc500ecbbd54660aed4355f97232c1ab6494e131f695c"
+    },
+    {
+      "path": "scripts/test-reception-staff-lifecycle.mjs",
+      "source": "HEAD",
+      "sha256": "691950be032d835de2d97d54442bf7d4bcfa816d479f41d5a2c6e49b190825fa"
+    },
+    {
+      "path": "scripts/test-document-snippets-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "87ae8ad9e400f9b628f97424e2e17aeb0e6590769483952e8c8f2fa360d99a0e"
+    },
+    {
+      "path": "scripts/test-reception-deletion-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "3957f3693f30d0e8b1c0a8d396ed8741e224258c5aef5718c4b82c3ee4772010"
+    },
+    {
+      "path": "scripts/test-reception-delegation-request-concurrency.mjs",
+      "source": "overlay",
+      "sha256": "c64e0fa786ccd3150419e80be8d984fb3dafc95632569e1b7117dc77ef1638bb"
+    },
+    {
+      "path": "scripts/test-reception-delegation-decision-concurrency.mjs",
+      "source": "overlay",
+      "sha256": "0fa434ccec2bdfb14e283f113ac57ebf2db9ecb132b7a40efa39ca7132897e68"
+    },
+    {
+      "path": "scripts/test-reception-legacy-array-concurrency.mjs",
+      "source": "overlay",
+      "sha256": "76b314eabdc827ff4325eb5ebfa72ce7247b28c89b92d0604f1b754c5a4ee4cd"
+    }
+  ],
+  "omittedRegressions": [
+    "function-boundary fault injections",
+    "reception concurrency",
+    "appointment concurrency",
+    "doctor scope lifecycle concurrency",
+    "staff lifecycle concurrency",
+    "document snippet concurrency",
+    "deletion concurrency"
+  ],
+  "notCovered": [
+    "hosted rollout",
+    "new authenticated consent API/UI",
+    "general legacy grant cutover"
+  ],
+  "migrations": 65,
+  "sqlSuites": 43,
+  "deletionScenarios": 0,
+  "requestRaces": [
+    "read committed: staff inactivity held first refuses a new request without a latent row",
+    "read committed: held request refuses inverse staff lifecycle; retry closes once and old operation cannot reopen it",
+    "read committed: doctor inactivity held first refuses a new request without a latent row",
+    "read committed: held request refuses inverse doctor lifecycle; retry closes once and old operation cannot reopen it",
+    "repeatable read: staff inactivity held first refuses a new request without a latent row",
+    "repeatable read: held request refuses inverse staff lifecycle; retry closes once and old operation cannot reopen it",
+    "repeatable read: doctor inactivity held first refuses a new request without a latent row",
+    "repeatable read: held request refuses inverse doctor lifecycle; retry closes once and old operation cannot reopen it",
+    "read committed: cancellation truly waits for lifecycle and stale CAS cannot overwrite its terminal event",
+    "read committed: committed human cancellation remains unchanged after lifecycle retry",
+    "repeatable read: cancellation truly waits for lifecycle and stale CAS cannot overwrite its terminal event",
+    "repeatable read: committed human cancellation remains unchanged after lifecycle retry",
+    "read committed: administrator role removal fences a concurrent request independently of inactivity",
+    "read committed: administrator membership removal fences a concurrent request independently of inactivity",
+    "repeatable read: administrator role removal fences a concurrent request independently of inactivity",
+    "repeatable read: administrator membership removal fences a concurrent request independently of inactivity"
+  ],
+  "decisionRaces": [
+    "read committed: staff inactivity held first prevents approval and rejoin cannot restore request",
+    "read committed: approval held first serializes staff lifecycle and ends effective grant once",
+    "read committed: doctor inactivity held first prevents approval and rejoin cannot restore request",
+    "read committed: approval held first serializes doctor lifecycle and ends effective grant once",
+    "read committed: two decisions yield one approval, no contradictory terminal decision",
+    "read committed: scope-row-first DELETE versus request-first revocation refuses inverse account lock without deadlock",
+    "read committed: snapshot cannot bypass physician denial through legacy NULL grant",
+    "repeatable read: staff inactivity held first prevents approval and rejoin cannot restore request",
+    "repeatable read: approval held first serializes staff lifecycle and ends effective grant once",
+    "repeatable read: doctor inactivity held first prevents approval and rejoin cannot restore request",
+    "repeatable read: approval held first serializes doctor lifecycle and ends effective grant once",
+    "repeatable read: two decisions yield one approval, no contradictory terminal decision",
+    "repeatable read: scope-row-first DELETE versus request-first revocation refuses inverse account lock without deadlock",
+    "repeatable read: snapshot cannot bypass physician denial through legacy NULL grant"
+  ],
+  "arrayRaces": [
+    "read committed: held NULL-to-bound approval refuses inverse array and stale retry preserves exact approval",
+    "read committed: array held first removes only unreviewed legacy grant; failed approval retries once and cannot then be removed by that array",
+    "read committed: approval versus explicit deactivation retains NOWAIT refusal; authorized retry ends consent",
+    "read committed: different-manager active array truly waits for deactivation; flag reactivation cannot revive approval",
+    "repeatable read: held NULL-to-bound approval refuses inverse array and stale retry preserves exact approval",
+    "repeatable read: array held first removes only unreviewed legacy grant; failed approval retries once and cannot then be removed by that array",
+    "repeatable read: approval versus explicit deactivation retains NOWAIT refusal; authorized retry ends consent",
+    "repeatable read: different-manager active array truly waits for deactivation; flag reactivation cannot revive approval",
+    "repeatable read: a pre-approval snapshot from a different manager cannot remove newly bound consent"
+  ],
+  "checks": [
+    "RED: stale legacy array removes physician-approved consent",
+    "busy installation preserves the exact predecessor function",
+    "established RR snapshot refuses installation before schema changes",
+    "stale array conflict, exact consent preservation, deactivation and privacy SQL pass"
+  ],
+  "publicConsentGate": false,
+  "globalLegacyCutover": false,
+  "network": "verified local Docker; owned internal network; no published ports",
+  "cleanupVerified": true
+}

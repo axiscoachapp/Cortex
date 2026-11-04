@@ -176,6 +176,28 @@ set local role authenticated;
 do $$ begin assert not (public.clinic_access()->>'active')::boolean, 'Inactive fixture missing'; end $$;
 select pg_temp.assert_reception_clinical_boundaries();
 reset role;
+-- Auth creation may commit while provisioning is absent or unconfirmed. The
+-- trusted reception marker must deny clinical access even without membership.
+insert into auth.users(id,email,raw_app_meta_data) values
+ ('b9100000-0000-4000-8000-000000000003','unconfirmed-reception@example.invalid','{"account_type":"reception"}');
+do $$ begin
+ assert not exists(select 1 from public.clinic_staff_members where user_id='b9100000-0000-4000-8000-000000000003'),
+  'Unconfirmed fixture unexpectedly has staff membership';
+end $$;
+set local role authenticated;
+select set_config('request.jwt.claim.sub','b9100000-0000-4000-8000-000000000003',true);
+do $$ begin
+ assert not (public.clinic_access()->>'active')::boolean, 'Unconfirmed account became active';
+ assert public.clinic_access()->'clinic'='null'::jsonb, 'Unconfirmed account gained a clinic';
+ begin
+  insert into public.patients(id,user_id,name,status)
+   values('b9200000-0000-4000-8000-000000000003',auth.uid(),'Synthetic unconfirmed write','novo');
+  raise exception 'Unconfirmed reception created a clinical chart';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select pg_temp.assert_reception_clinical_boundaries();
+reset role;
 -- Deliberately inconsistent trusted metadata fixture: a formerly clinical
 -- identity still owns valid indexed content. Provisioning forbids this state;
 -- force it only here to prove the search guard rather than an empty library.

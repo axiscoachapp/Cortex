@@ -1,0 +1,80 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "7b8015556c4c16a678f65aa61589e687841fbd9b",
+  "sources": [
+    {
+      "path": "supabase/functions/create-clinic-receptionist/index.ts",
+      "sha256": "4a23bab04db158d08376a7181f066ef1069dcbf264ef8a5f8151f01a17e9d72b"
+    },
+    {
+      "path": "src/lib/securityHandlers.test.ts",
+      "sha256": "19e628f92a7fb063a59abb51828994d4c7cdbb6544801eb5565754d800fcf7a1"
+    },
+    {
+      "path": "src/features/reception/TeamSettings.test.tsx",
+      "sha256": "99da77a8215e6f267bb5949c6f07cd8f40c0637589f755cdc6338f0e84f52312"
+    },
+    {
+      "path": "supabase/tests/reception-function-boundaries.test.sql",
+      "sha256": "2f7040cd8c73d81768fa7efc61c4c276baf94ee1ba521533ce34f4dca58827cc"
+    },
+    {
+      "path": "scripts/test-reception-legacy-array-guard.mjs",
+      "sha256": "320524ef99d771ad56ccbb7e64526e71241bbf20b955e2202ecf6342b06aa454"
+    }
+  ],
+  "red": {
+    "failed": 5,
+    "tests": 30,
+    "passed": 25
+  },
+  "unit": {
+    "passed": true,
+    "handlerBoundary": "network, Auth and database mocked",
+    "tests": 37,
+    "ui": "existing TeamSettings error path; draft retained and no credential dialog",
+    "files": 2
+  },
+  "sql": {
+    "migrations": 65,
+    "arrayRaces": 9,
+    "sha256": "098279bc22efcd2f642779ee4a0d19b7785cba72a701bdf1708d3740655fd56d",
+    "suites": 43,
+    "decisionRaces": 14,
+    "requestRaces": 16,
+    "cleanupVerified": true,
+    "report": "../legacy-array-guard/focused.json",
+    "omittedRegressions": [
+      "function-boundary fault injections",
+      "reception concurrency",
+      "appointment concurrency",
+      "doctor scope lifecycle concurrency",
+      "staff lifecycle concurrency",
+      "document snippet concurrency",
+      "deletion concurrency"
+    ]
+  },
+  "deno": {
+    "version": "2.9.6",
+    "passed": true,
+    "offline": true,
+    "cachedOnly": true
+  },
+  "buildAndTypesPassed": true,
+  "lint": {
+    "errors": 0,
+    "existingWarnings": 8
+  },
+  "freshContextReview": "static, no actionable findings; two suggested negative cases added",
+  "notCovered": [
+    "real Auth HTTP",
+    "browser runtime",
+    "hosted rollout",
+    "durable provisioning reconciliation",
+    "legacy grant cutover",
+    "initial credential protocol"
+  ],
+  "noIdentityDeletion": true,
+  "automaticRetry": false,
+  "newMigration": false
+}

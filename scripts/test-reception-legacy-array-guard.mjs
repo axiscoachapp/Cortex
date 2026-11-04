@@ -20,7 +20,7 @@ const sources = new Map(paths.map(path => [path, git(['show', sourceBaseline + '
 const bootstrap = git(['show', sourceBaseline + ':supabase/tests/bootstrap.sql']);
 const migrationPath = 'supabase/migrations/20261104250000_reception_legacy_array_guard.sql';
 const suitePath = 'supabase/tests/reception-legacy-array-guard.test.sql';
-const overlays = [suitePath, ...(!redOnly ? [migrationPath] : []), 'scripts/test-reception-legacy-array-guard.mjs',
+const overlays = [suitePath, 'supabase/tests/reception-function-boundaries.test.sql', ...(!redOnly ? [migrationPath] : []), 'scripts/test-reception-legacy-array-guard.mjs',
   'scripts/test-reception-delegation-request-concurrency.mjs', 'scripts/test-reception-delegation-decision-concurrency.mjs', 'scripts/test-reception-legacy-array-concurrency.mjs'].map(path => {
   const source = readFileSync(path, 'utf8'); sources.set(path, source);
   return { path, sha256: createHash('sha256').update(source).digest('hex') };
