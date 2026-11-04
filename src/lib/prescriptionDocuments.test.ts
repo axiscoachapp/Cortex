@@ -355,3 +355,46 @@ describe('Receita de Controle Especial (D8)', () => {
     expect(db.drawnText).toContain('1. Cipionato de testosterona 200 mg/ml — 1 ml');
   });
 });
+
+// Compounded formulas (manipulados): components printed, and each component
+// checked like any drug. Synthetic formulas only.
+describe('compounded formulas', () => {
+  const settings = () => prescriber({ professional_phone: '(41) 3000-0000' });
+  const capsules = {
+    name: 'Fórmula manipulada',
+    dosage: '1 cápsula',
+    instructions: 'à noite, por 30 dias',
+    formula: { components: [{ substance: 'Substância sintética A', amount: '100 mg' }, { substance: 'Substância sintética B', amount: '2 mg' }], vehicle: 'Excipiente q.s.p. 1 cápsula', form: 'cápsula', quantity: '30 cápsulas' },
+  };
+
+  it('prints the components, the vehicle and how much to compound', async () => {
+    const db = database({ user_settings: [settings()], patients: [person({ sex: 'feminino' })] });
+    const response = await generate(db)({ patientId, docType: 'receita_simples', medications: [capsules] });
+    expect(response.status).toBe(200);
+    for (const line of ['1. Fórmula manipulada — 1 cápsula', 'Substância sintética A 100 mg', 'Substância sintética B 2 mg', 'Excipiente q.s.p. 1 cápsula', 'Manipular 30 cápsulas (cápsula).'])
+      expect(db.drawnText).toContain(line);
+    expect(db.tables.prescriptions[0].medications[0].formula.components).toHaveLength(2);
+  });
+
+  it('refuses a malformed formula with a message the doctor can act on', async () => {
+    const db = database({ user_settings: [settings()], patients: [person()] });
+    const noAmount = await generate(db)({ patientId, docType: 'receita_simples', medications: [{ ...capsules, formula: { ...capsules.formula, components: [{ substance: 'Substância sintética A', amount: 'bastante' }] } }] });
+    expect(noAmount.status).toBe(422);
+    expect((await noAmount.json()).error).toContain('quantidade de Substância sintética A');
+    const extra = await generate(db)({ patientId, docType: 'receita_simples', medications: [{ ...capsules, formula: { ...capsules.formula, price: 1 } }] });
+    expect((await extra.json()).error).toContain('campo desconhecido');
+    expect(db.tables.prescriptions).toBeUndefined();
+  });
+
+  it('sends a compounded controlled or antimicrobial component to the right document', async () => {
+    const db = database({ user_settings: [settings()], patients: [person()] });
+    const gel = { ...capsules, name: 'Gel manipulado', formula: { components: [{ substance: 'Testosterona', amount: '1%' }], vehicle: 'Gel transdérmico q.s.p.', form: 'gel transdérmico', quantity: '60 g' } };
+    const controlled = await generate(db)({ patientId, docType: 'receita_simples', medications: [gel] });
+    expect(controlled.status).toBe(422);
+    expect((await controlled.json()).error).toMatch(/controle especial/i);
+    const ovule = { ...capsules, name: 'Óvulo manipulado', formula: { components: [{ substance: 'Metronidazol', amount: '500 mg' }], form: 'óvulo', quantity: '10 óvulos' } };
+    const antimicrobial = await generate(db)({ patientId, docType: 'receita_simples', medications: [ovule] });
+    expect(antimicrobial.status).toBe(422);
+    expect((await antimicrobial.json()).error).toMatch(/Antimicrobiano/);
+  });
+});

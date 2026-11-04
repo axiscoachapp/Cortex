@@ -3,6 +3,9 @@ import {
   antimicrobialsIn,
   controlledFindings,
   controlledSubstancesIn,
+  formulaError,
+  formulaLines,
+  formulaSubstances,
   toWinAnsi,
 } from '../../supabase/functions/_shared/regulatedMedications';
 
@@ -69,5 +72,28 @@ describe('controlled substances by Portaria 344 list (D8)', () => {
     expect(forms('Sibutramina 15 mg')).toEqual(['sibutramina:B2:notificacao_b2']);
     expect(forms('Cytotec 200 mcg')).toEqual(['misoprostol:C1:uso_hospitalar']);
     expect(forms('Dipirona 500 mg')).toEqual([]);
+  });
+});
+
+describe('compounded formula rules', () => {
+  const ok = { components: [{ substance: 'Substância sintética', amount: '100 mg' }], form: 'cápsula', quantity: '30 cápsulas' };
+  it('accepts a complete formula and lists its substances and printed lines', () => {
+    expect(formulaError(ok)).toBeNull();
+    expect(formulaSubstances(ok)).toEqual(['Substância sintética']);
+    expect(formulaLines({ ...ok, vehicle: 'Excipiente q.s.p. 1 cápsula' })).toEqual(['Substância sintética 100 mg', 'Excipiente q.s.p. 1 cápsula', 'Manipular 30 cápsulas (cápsula).']);
+  });
+  it('refuses missing or oversized parts', () => {
+    expect(formulaError(null)).toContain('inválida');
+    expect(formulaError({ ...ok, components: [] })).toContain('de 1 a 12');
+    expect(formulaError({ ...ok, components: Array.from({ length: 13 }, () => ok.components[0]) })).toContain('de 1 a 12');
+    expect(formulaError({ ...ok, components: [{ substance: '', amount: '1 mg' }] })).toContain('nome de cada componente');
+    expect(formulaError({ ...ok, quantity: 'muitas' })).toContain('quanto manipular');
+    expect(formulaError({ ...ok, form: '' })).toContain('forma farmacêutica');
+    expect(formulaError({ ...ok, vehicle: 'x'.repeat(81) })).toContain('excipiente');
+    expect(formulaError({ ...ok, components: [{ substance: 'A', amount: '1 mg', price: 2 }] })).toContain('inválido');
+  });
+  it('recognises controlled and antimicrobial components by their substance', () => {
+    expect(controlledSubstancesIn(formulaSubstances({ ...ok, components: [{ substance: 'Testosterona', amount: '1%' }] }).join(' '))).toContain('testosterona');
+    expect(antimicrobialsIn('Metronidazol')).toContain('metronidazol');
   });
 });

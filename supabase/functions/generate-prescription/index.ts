@@ -23,7 +23,7 @@ import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { currentPatientAge } from "../_shared/patientAge.ts";
 import { clinicDayBounds } from "../_shared/clinicDate.ts";
-import { antimicrobialsIn, controlledFindings, controlledSubstancesIn, FORM_LABEL, planControlledPrescription, toWinAnsi, type ControlledPlan } from "../_shared/regulatedMedications.ts";
+import { antimicrobialsIn, controlledFindings, controlledSubstancesIn, FORM_LABEL, formulaError, formulaLines, formulaSubstances, planControlledPrescription, toWinAnsi, type CompoundedFormula, type ControlledPlan } from "../_shared/regulatedMedications.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -74,7 +74,8 @@ function formatCpf(digits: string): string {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
-interface Medication { name: string; dosage?: string; instructions?: string }
+/** `formula`: a compounded formula (manipulado); its components are checked like any drug. */
+interface Medication { name: string; dosage?: string; instructions?: string; formula?: CompoundedFormula }
 
 /** Database refusals that are not the doctor's fault get an honest message:
  *  40001 is another write holding the custody barrier at the same moment,
@@ -191,6 +192,11 @@ serve(async (req) => {
       throw new Error('Revise nome, dose e instruções de todos os medicamentos.');
     }
     const meds = !isReceita ? [] : rawMeds;
+    for (const m of meds as Medication[]) {
+      if (m.formula === undefined) continue;
+      const problem = formulaError(m.formula);
+      if (problem) throw new RequestError(problem, 422);
+    }
     if (isReceita && meds.some((m: Medication) => !m.dosage?.trim() || !m.instructions?.trim())) {
       throw new RequestError('Informe a dose e a posologia (como tomar) de todos os medicamentos.', 422);
     }
@@ -215,10 +221,10 @@ serve(async (req) => {
       }
     }
     const catalogOf = (m: Medication) => catalog.get(catalogTerm(m.name).toLowerCase());
-    const controlledIn = (m: Medication) => [m.name, ...(catalogOf(m)?.ingredients ?? [])].flatMap(controlledSubstancesIn);
+    const controlledIn = (m: Medication) => [m.name, ...formulaSubstances(m.formula), ...(catalogOf(m)?.ingredients ?? [])].flatMap(controlledSubstancesIn);
     const antimicrobialIn = (m: Medication) => {
       const hit = catalogOf(m);
-      const found = [m.name, ...(hit?.ingredients ?? [])].flatMap(antimicrobialsIn);
+      const found = [m.name, ...formulaSubstances(m.formula), ...(hit?.ingredients ?? [])].flatMap(antimicrobialsIn);
       return found.length || !hit?.antimicrobial ? found : [hit.ingredients[0] ?? m.name.trim()];
     };
     // D8: the Receita de Controle Especial has its own rules; other prescriptions
@@ -226,7 +232,7 @@ serve(async (req) => {
     let controlledPlan: ControlledPlan | null = null;
     if (docType === 'receita_controle_especial') {
       const result = planControlledPrescription(
-        meds.map((m: Medication) => ({ ...m, ingredients: catalogOf(m)?.ingredients ?? [] })),
+        meds.map((m: Medication) => ({ ...m, ingredients: [...formulaSubstances(m.formula).map((x) => x.toLowerCase()), ...(catalogOf(m)?.ingredients ?? [])] })),
         body.content ?? null,
         { patientCpf, prescriberCpf: typeof settings.prescriber_cpf === 'string' ? settings.prescriber_cpf : null, prescriberPhone },
       );
@@ -235,7 +241,7 @@ serve(async (req) => {
     } else if (isReceita) {
       const controlled = meds.flatMap(controlledIn);
       if (controlled.length) {
-        const findings = meds.flatMap((m: Medication) => [m.name, ...(catalogOf(m)?.ingredients ?? []).map((i) => `${i} ${m.name}`)].flatMap(controlledFindings));
+        const findings = meds.flatMap((m: Medication) => [m.name, ...formulaSubstances(m.formula).map((x) => `${x} ${m.name}`), ...(catalogOf(m)?.ingredients ?? []).map((i) => `${i} ${m.name}`)].flatMap(controlledFindings));
         const forms = [...new Set(findings.map((f) => f.form))];
         throw new RequestError(
           `Medicamento sujeito a controle especial (Portaria SVS/MS 344/98): ${[...new Set(controlled)].join(', ')}. ` +
@@ -408,6 +414,8 @@ serve(async (req) => {
         // Concentration of the controlled substance, unless the name already shows it.
         const strength = folded(shown).replace(/\s+/g, '').includes(folded(item.concentration).replace(/\s+/g, '')) ? '' : ` ${item.concentration}`;
         text(`${i + 1}. ${shown}${strength} — ${item.dosage}`, { size: 11.5, bold: true }); down(15);
+        const itemFormula = (meds[i] as Medication).formula;
+        if (itemFormula) for (const line of formulaLines(itemFormula)) wrapText(line, { x: margin + 14, size: 10.5, max: 90 });
         text(`Quantidade: ${item.quantity} (${item.quantityText}) ${item.unit}`, { x: margin + 14, size: 10.5 }); down(14);
         wrapText(item.instructions, { x: margin + 14, size: 10, color: mut, max: 90 });
         down(9);
@@ -438,6 +446,8 @@ serve(async (req) => {
         }
         const nameLine = `${i + 1}. ${shown}${m.dosage?.trim() ? ` — ${m.dosage.trim()}` : ''}`;
         text(nameLine, { size: 11.5, bold: true }); down(15);
+        // Compounded formula: components, vehicle and the quantity to compound.
+        if (m.formula) for (const line of formulaLines(m.formula)) wrapText(line, { x: margin + 14, size: 10.5, max: 90 });
         if (m.instructions?.trim()) {
           wrapText(m.instructions, { x: margin + 14, size: 10, color: mut, max: 90 });
         }

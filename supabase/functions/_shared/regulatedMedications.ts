@@ -363,3 +363,65 @@ export function toWinAnsi(text: string): string {
   }
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// Compounded formulas (manipulados). Contract:
+// docs/prescriptions/CATALOGOS_E_MANIPULADOS.md. A formula is one prescription
+// item with its components; every component goes through the same controlled
+// and antimicrobial rules as a registered drug (a compounded testosterone gel
+// is still C5 and still needs the Receita de Controle Especial).
+
+export interface FormulaComponent { substance: string; amount: string }
+export interface CompoundedFormula {
+  components: FormulaComponent[];
+  /** Vehicle or excipient line as the doctor writes it ("Excipiente q.s.p. 1 cápsula"). */
+  vehicle?: string;
+  /** Pharmaceutical form ("cápsula", "creme vaginal"...). */
+  form: string;
+  /** Total to compound, with its unit ("30 cápsulas", "60 g"). */
+  quantity: string;
+}
+
+/** Suggestions for the composer; any other form is accepted as text. */
+export const FORMULA_FORMS = [
+  'cápsula', 'comprimido', 'sachê', 'creme', 'creme vaginal', 'gel', 'gel vaginal', 'gel transdérmico', 'pomada',
+  'loção', 'solução', 'solução oral', 'suspensão oral', 'xarope', 'óvulo', 'supositório', 'spray', 'adesivo', 'shampoo',
+] as const;
+
+const MAX_COMPONENTS = 12;
+const plain = (v: unknown, max: number) => typeof v === 'string' && v.trim().length >= 1 && v.trim().length <= max && !/[\u0000-\u001f\u007f]/.test(v);
+
+/** Error message for a formula, or null when it can be printed. */
+export function formulaError(formula: unknown): string | null {
+  const f = formula as Partial<CompoundedFormula> | null;
+  if (!f || typeof f !== 'object' || Array.isArray(f)) return 'Fórmula manipulada inválida.';
+  const keys = Object.keys(f);
+  if (keys.some((k) => !['components', 'vehicle', 'form', 'quantity'].includes(k))) return 'Fórmula manipulada com campo desconhecido.';
+  if (!Array.isArray(f.components) || f.components.length < 1 || f.components.length > MAX_COMPONENTS) {
+    return `Informe de 1 a ${MAX_COMPONENTS} componentes na fórmula manipulada.`;
+  }
+  for (const c of f.components) {
+    if (!c || typeof c !== 'object' || Object.keys(c).some((k) => k !== 'substance' && k !== 'amount')) return 'Componente da fórmula inválido.';
+    if (!plain(c.substance, 120)) return 'Informe o nome de cada componente da fórmula (até 120 caracteres).';
+    if (!plain(c.amount, 40) || !/\d/.test(c.amount)) return `Informe a quantidade de ${String(c.substance).trim()} na fórmula (ex.: 100 mg, 1%).`;
+  }
+  if (f.vehicle !== undefined && f.vehicle !== '' && !plain(f.vehicle, 80)) return 'Revise o excipiente ou veículo (até 80 caracteres).';
+  if (!plain(f.form, 40)) return 'Informe a forma farmacêutica da fórmula (ex.: cápsula, creme).';
+  if (!plain(f.quantity, 40) || !/\d/.test(String(f.quantity))) return 'Informe quanto manipular (ex.: 30 cápsulas, 60 g).';
+  return null;
+}
+
+/** Substances of a formula, for the controlled and antimicrobial checks. */
+export function formulaSubstances(formula: CompoundedFormula | undefined | null): string[] {
+  return (formula?.components ?? []).map((c) => c.substance.trim());
+}
+
+/** Printed lines of a formula, below the item's name line. */
+export function formulaLines(formula: CompoundedFormula): string[] {
+  return [
+    ...formula.components.map((c) => `${c.substance.trim()} ${c.amount.trim()}`),
+    ...(formula.vehicle?.trim() ? [formula.vehicle.trim()] : []),
+    `Manipular ${formula.quantity.trim()} (${formula.form.trim()}).`,
+  ];
+}
+
