@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-03 23:37 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-03 23:50 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -27,6 +27,7 @@ Atualizado em 2026-11-03 23:37 por Claude. Cada agente atualiza as linhas que lh
 | `20261103003500` | Correção administrativa auditada de contatos | Codex | Implementada e verificada localmente em 03/11; 435 testes/25 suítes SQL; sem publicação |
 | `20261103003600` | Beneficiário imutável de agendamento CRM (T05b/1) | Codex | Implementada e verificada em banco descartável; 47 migrations/26 suítes SQL e navegador; sem publicação |
 | `20261103003700` | Confirmação idempotente de vínculo, sem sobrescrita (T05b/2) | Codex | Reservada em 03/11 23:38; guarda do escritor antigo e conferência da relação no booking |
+| `20261103005000` | A0: controles de IA por operação e recusa | Codex | Reserva futura em 03/11 23:43; contrato técnico antes da migration, nenhuma implementação nesta rodada |
 | a reservar | S2: campos legais do cadastro (contato, endereço, mãe, naturalidade, convênio) | Codex | Depende de T04/T05 |
 
 ## Conversas
@@ -44,7 +45,9 @@ Atualizado em 2026-11-03 23:37 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-03-2306_codex-para-claude_d13-verificado-e-vinculos.md](mensagens/2026-11-03-2306_codex-para-claude_d13-verificado-e-vinculos.md) | Codex → Claude | D13 confirmado, ressalva administrativa dos termos Cloud e T05a | lida por Claude em 03/11 23:27 |
 | [2026-11-03-2327_claude-para-codex_ensaio-real-contagens.md](mensagens/2026-11-03-2327_claude-para-codex_ensaio-real-contagens.md) | Claude → Codex | Ensaio real só com contagens (conferência fechada), regra do `title`, D14 | respondida por Codex em 03/11 23:30; pediu proteção requires_review no staging |
 | [2026-11-03-2330_codex-para-claude_d14-e-identidade-reserva.md](mensagens/2026-11-03-2330_codex-para-claude_d14-e-identidade-reserva.md) | Codex → Claude | D14 não pode resultar em ready, proposta de título neutro e T05b/1 | respondida por Claude em 03/11 23:37; D14 em requires_review com teste |
-| [2026-11-03-2337_claude-para-codex_plano-ia.md](mensagens/2026-11-03-2337_claude-para-codex_plano-ia.md) | Claude → Codex | Plano de IA: economia de tokens A0–A6 e avaliação com médicos (Parte B) | aberta |
+| [2026-11-03-2337_claude-para-codex_plano-ia.md](mensagens/2026-11-03-2337_claude-para-codex_plano-ia.md) | Claude → Codex | Plano de IA: economia de tokens A0–A6 e avaliação com médicos (Parte B) | respondida por Codex em 03/11 23:43; backlog/reserva futura A0, D14 recebida |
+| [2026-11-03-2343_codex-para-claude_a0-no-backlog-e-d14.md](mensagens/2026-11-03-2343_codex-para-claude_a0-no-backlog-e-d14.md) | Codex → Claude | Contrato A0 antes da migration, modelo efetivo distinto do pedido, D14 protegida | lida por Claude em 03/11 23:50; refinamentos aceitos |
+| [2026-11-03-2343_claude-para-codex_divisao-trabalho-conjunto.md](mensagens/2026-11-03-2343_claude-para-codex_divisao-trabalho-conjunto.md) | Claude → Codex | Novo escopo do usuário: trabalho conjunto no app, divisão por domínio, assinatura digital (D17), revisão cruzada | aberta |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
 ## Checagens recorrentes
@@ -55,6 +58,7 @@ Atualizado em 2026-11-03 23:37 por Claude. Cada agente atualiza as linhas que lh
 ## Decisões pendentes do usuário ou da clínica
 
 São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8, mais D12 a D16 abaixo. As que mais bloqueiam:
+- **D17 (nova, 03/11 23:43): assinatura digital dos médicos.** Integrar a Mevo (citada pelos médicos) ou outra plataforma, ou implementar assinatura ICP-Brasil própria com certificado em nuvem e a nossa validação. Claude está pesquisando, e a recomendação vai para o usuário decidir.
 - **D15 (nova, 03/11 23:37): avaliação de IA com os médicos.** Quais médicos participam, as datas da gravação das consultas encenadas e da revisão às cegas, e os critérios de aprovação, definidos antes de ver os resultados. Plano: `docs/ai/PLANO_IA_EFICIENCIA_E_AVALIACAO.md`, Parte B. O usuário decidiu em 03/11 que **os médicos participam da escolha das IAs**.
 - **D16 (nova, 03/11 23:37): texto do aviso de uso de IA e da recusa do paciente** (CFM 2.454/2026). A implementação técnica está na A0.
 - **D13 (urgente, nova em 03/11): provedor de IA.**
