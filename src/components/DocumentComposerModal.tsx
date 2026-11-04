@@ -16,7 +16,8 @@ import { currentPatientAge } from '../../supabase/functions/_shared/patientAge';
 import { Patient, Medication } from '@/types/patient';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import {
-  antimicrobialsIn, controlledFindings, controlledSubstancesIn, planControlledPrescription,
+  antimicrobialsIn, controlledFindings, controlledSubstancesIn, FORMULA_FORMS, formulaError, formulaSubstances, planControlledPrescription,
+  type CompoundedFormula,
 } from '../../supabase/functions/_shared/regulatedMedications';
 import { PrescriptionTemplatePicker, type ApplyMode } from '@/components/PrescriptionTemplatePicker';
 import type { SnippetItem } from '@/lib/documentSnippets';
@@ -30,6 +31,8 @@ export type RxDocType = 'receita_simples' | 'receita_antimicrobiano' | 'receita_
 type PatientDocumentKind = 'nao_possui' | 'passaporte' | 'outro';
 
 interface ComposerMed extends Medication {
+  /** Compounded formula (manipulado); its components are checked like any drug. */
+  formula?: CompoundedFormula;
   checked: boolean;
   fromCatalog?: boolean;
   antimicrobial?: boolean;
@@ -43,7 +46,7 @@ interface ComposerMed extends Medication {
 }
 
 /** What the RCE adds to each medication sent to generate-prescription. */
-export type ComposerMedication = Medication & { concentration?: string; quantity?: number; unit?: string };
+export type ComposerMedication = Medication & { concentration?: string; quantity?: number; unit?: string; formula?: CompoundedFormula };
 
 /** Content of a Receita de Controle Especial (stored only in the document). */
 export interface ControlledContent {
@@ -122,6 +125,10 @@ export function DocumentComposerModal({
   const [documentValue, setDocumentValue] = useState('');
   const [rceCid, setRceCid] = useState('');
   const [justification, setJustification] = useState('');
+  // Compounded formula editor (null = closed).
+  const emptyFormula = { name: '', components: [{ substance: '', amount: '' }], vehicle: '', form: '', quantity: '' };
+  const [formulaDraft, setFormulaDraft] = useState<typeof emptyFormula | null>(null);
+  const [formulaProblem, setFormulaProblem] = useState('');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestMedications = useRef(patient.medications);
   const initialMedicationSelection = useRef<ComposerMed[]>([]);
@@ -138,6 +145,7 @@ export function DocumentComposerModal({
     setExamsText(''); setIndication('');
     setPatientAddress(''); setDocumentKind(''); setDocumentValue('');
     setRceCid(''); setJustification('');
+    setFormulaDraft(null); setFormulaProblem('');
   }, [open, patient.id]);
 
   // Ground profile meds in the catalog (best-effort name match) so the
@@ -230,11 +238,36 @@ export function DocumentComposerModal({
     if (added.some(m => m.antimicrobial) && docType === 'receita_simples') setDocType('receita_antimicrobiano');
   };
 
+  // Same rule as the server (formulaError); nothing is cut.
+  const addFormula = () => {
+    if (!formulaDraft) return;
+    const formula: CompoundedFormula = {
+      components: formulaDraft.components
+        .map(c => ({ substance: c.substance.trim(), amount: c.amount.trim() }))
+        .filter(c => c.substance || c.amount),
+      ...(formulaDraft.vehicle.trim() ? { vehicle: formulaDraft.vehicle.trim() } : {}),
+      form: formulaDraft.form.trim(),
+      quantity: formulaDraft.quantity.trim(),
+    };
+    const problem = formulaError(formula);
+    if (problem) { setFormulaProblem(problem); return; }
+    setMeds(prev => [...prev, {
+      name: formulaDraft.name.trim() || 'Fórmula manipulada',
+      dosage: '',
+      instructions: '',
+      checked: true,
+      fromCatalog: true, // removable from the list like a catalog item
+      formula,
+    }]);
+    setFormulaDraft(null);
+    setFormulaProblem('');
+  };
+
   const selectedMeds = useMemo(() => meds.filter(m => m.checked), [meds]);
   // Same substance lists as generate-prescription (brands and spellings
   // included), plus the catalog's ingredient when the item came from it. The
   // server stays authoritative; these only warn before the round trip.
-  const regulatedNames = (m: ComposerMed) => [m.name, m.ingredient ?? ''].filter(Boolean);
+  const regulatedNames = (m: ComposerMed) => [m.name, m.ingredient ?? '', ...formulaSubstances(m.formula)].filter(Boolean);
   const hasAntimicrobial = selectedMeds.some(m => m.antimicrobial || regulatedNames(m).some(n => antimicrobialsIn(n).length > 0));
   const controlledSelected = [...new Set(selectedMeds.flatMap(m => regulatedNames(m).flatMap(controlledSubstancesIn)))];
   const isAtestado = docType === 'atestado';
@@ -252,8 +285,9 @@ export function DocumentComposerModal({
   const patientCpf = (patient.cpf ?? '').replace(/\D/g, '');
   const hasPatientCpf = patientCpf.length === 11;
 
-  const controlledMedications = (): ComposerMedication[] => selectedMeds.map(({ name, dosage, instructions, concentration, quantity, unit }) => ({
+  const controlledMedications = (): ComposerMedication[] => selectedMeds.map(({ name, dosage, instructions, concentration, quantity, unit, formula }) => ({
     name, dosage, instructions,
+    ...(formula ? { formula } : {}),
     concentration: (concentration ?? '').trim(),
     quantity: Number((quantity ?? '').trim()),
     unit: (unit ?? '').trim(),
@@ -312,7 +346,7 @@ export function DocumentComposerModal({
       medications: isControlled
         ? controlledMedications()
         : isReceita
-        ? selectedMeds.map(({ name, dosage, instructions }) => ({ name, dosage, instructions }))
+        ? selectedMeds.map(({ name, dosage, instructions, formula }) => ({ name, dosage, instructions, ...(formula ? { formula } : {}) }))
         : [],
       content: isAtestado
         ? { days: validateCertificateDays(Number(days)), cid: cid.trim() || undefined, note: note.trim() || undefined }
@@ -324,7 +358,7 @@ export function DocumentComposerModal({
     });
   };
 
-  const selection = (values: ComposerMed[]) => values.map(({ name, dosage, instructions, checked, concentration, quantity, unit }) => ({ name, dosage, instructions, checked, concentration, quantity, unit }));
+  const selection = (values: ComposerMed[]) => values.map(({ name, dosage, instructions, checked, concentration, quantity, unit, formula }) => ({ name, dosage, instructions, checked, concentration, quantity, unit, formula }));
   const dirty = docType !== 'receita_simples' || !!query.trim() || days !== '1' || !!cid.trim() || !!note.trim() || !!examsText.trim() || !!indication.trim()
     || !!patientAddress.trim() || !!documentKind || !!documentValue.trim() || !!rceCid.trim() || !!justification.trim()
     || JSON.stringify(selection(meds)) !== JSON.stringify(selection(initialMedicationSelection.current));
@@ -526,6 +560,52 @@ export function DocumentComposerModal({
                 )}
               </div>
 
+              {/* Compounded formula (manipulado) */}
+              {formulaDraft ? (
+                <fieldset className="rounded-lg border border-border/70 bg-white p-3 space-y-2 m-0 min-w-0">
+                  <legend className="text-xs font-semibold text-foreground px-1">Fórmula manipulada</legend>
+                  <Input aria-label="Nome da fórmula (opcional)" className="h-8 text-xs" value={formulaDraft.name} maxLength={200}
+                    onChange={e => setFormulaDraft({ ...formulaDraft, name: e.target.value })} placeholder="Nome da fórmula (opcional)" />
+                  {formulaDraft.components.map((c, k) => (
+                    <div key={k} className="grid grid-cols-[1fr_96px_28px] gap-1.5">
+                      <Input aria-label={`Componente ${k + 1}`} className="h-8 text-xs" value={c.substance} maxLength={120}
+                        onChange={e => setFormulaDraft({ ...formulaDraft, components: formulaDraft.components.map((x, j) => j === k ? { ...x, substance: e.target.value } : x) })}
+                        placeholder="Substância (nome genérico)" />
+                      <Input aria-label={`Quantidade do componente ${k + 1}`} className="h-8 text-xs" value={c.amount} maxLength={40}
+                        onChange={e => setFormulaDraft({ ...formulaDraft, components: formulaDraft.components.map((x, j) => j === k ? { ...x, amount: e.target.value } : x) })}
+                        placeholder="100 mg" />
+                      <button type="button" aria-label={`Remover componente ${k + 1}`} disabled={formulaDraft.components.length === 1}
+                        onClick={() => setFormulaDraft({ ...formulaDraft, components: formulaDraft.components.filter((_, j) => j !== k) })}
+                        className="flex items-center justify-center rounded text-muted-foreground hover:text-red-500 disabled:opacity-30">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs" disabled={formulaDraft.components.length >= 12}
+                    onClick={() => setFormulaDraft({ ...formulaDraft, components: [...formulaDraft.components, { substance: '', amount: '' }] })}>
+                    Adicionar componente
+                  </Button>
+                  <Input aria-label="Excipiente ou veículo (opcional)" className="h-8 text-xs" value={formulaDraft.vehicle} maxLength={80}
+                    onChange={e => setFormulaDraft({ ...formulaDraft, vehicle: e.target.value })} placeholder="Excipiente q.s.p. 1 cápsula (opcional)" />
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Input aria-label="Forma farmacêutica" className="h-8 text-xs" value={formulaDraft.form} maxLength={40} list="formula-forms"
+                      onChange={e => setFormulaDraft({ ...formulaDraft, form: e.target.value })} placeholder="Forma (cápsula, creme…)" />
+                    <Input aria-label="Quanto manipular" className="h-8 text-xs" value={formulaDraft.quantity} maxLength={40}
+                      onChange={e => setFormulaDraft({ ...formulaDraft, quantity: e.target.value })} placeholder="30 cápsulas" />
+                  </div>
+                  <datalist id="formula-forms">{FORMULA_FORMS.map(f => <option key={f} value={f} />)}</datalist>
+                  {formulaProblem && <p role="alert" className="text-[0.6875rem] text-destructive">{formulaProblem}</p>}
+                  <div className="flex flex-col-reverse gap-1.5 sm:flex-row sm:justify-end">
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setFormulaDraft(null); setFormulaProblem(''); }}>Cancelar</Button>
+                    <Button type="button" size="sm" className="h-7 text-xs" onClick={addFormula}>Adicionar à receita</Button>
+                  </div>
+                </fieldset>
+              ) : (
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setFormulaDraft(emptyFormula)}>
+                  Adicionar fórmula manipulada
+                </Button>
+              )}
+
               {/* Medication list */}
               <div className="space-y-1.5">
                 {meds.length === 0 && (
@@ -550,6 +630,9 @@ export function DocumentComposerModal({
                       {m.antimicrobial && (
                         <span className="text-[0.5625rem] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">ATM</span>
                       )}
+                      {m.formula && (
+                        <span className="text-[0.5625rem] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">MANIPULADO</span>
+                      )}
                       {m.fromCatalog && (
                         <button
                           type="button"
@@ -561,6 +644,11 @@ export function DocumentComposerModal({
                         </button>
                       )}
                     </div>
+                    {m.formula && (
+                      <p className="pl-5 text-[0.6875rem] text-muted-foreground break-words">
+                        {m.formula.components.map(c => `${c.substance} ${c.amount}`).join(' + ')} · manipular {m.formula.quantity} ({m.formula.form})
+                      </p>
+                    )}
                     {m.checked && (
                       <div className="grid grid-cols-[110px_1fr] gap-1.5 pl-5">
                         <Input

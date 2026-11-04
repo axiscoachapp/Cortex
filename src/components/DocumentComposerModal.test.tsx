@@ -281,3 +281,67 @@ describe('Receita de Controle Especial (D8)', () => {
     expect(screen.getByRole('button', { name: /Gerar/ })).toBeDisabled();
   });
 });
+
+// Compounded formulas (manipulados) in the composer. Synthetic formulas only.
+describe('Compounded formulas', { timeout: 20000 }, () => {
+  function setup(medications: Patient['medications'] = []) {
+    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000', prescriberCpf: '' }, isLoading: false };
+    const onGenerate = vi.fn<(payload: unknown) => Promise<void>>(async () => {});
+    render(<DocumentComposerModal open onOpenChange={() => {}} patient={person({ sex: 'feminino', medications })} onGenerate={onGenerate} isGenerating={false} />);
+    return { user: userEvent.setup(), onGenerate };
+  }
+
+  it('builds a formula with two components and sends it with the prescription', async () => {
+    const { user, onGenerate } = setup();
+    await user.click(screen.getByRole('button', { name: 'Adicionar fórmula manipulada' }));
+    await user.type(screen.getByLabelText('Nome da fórmula (opcional)'), 'Cápsulas sintéticas');
+    await user.type(screen.getByLabelText('Componente 1'), 'Substância sintética A');
+    await user.type(screen.getByLabelText('Quantidade do componente 1'), '100 mg');
+    await user.click(screen.getByRole('button', { name: 'Adicionar componente' }));
+    await user.type(screen.getByLabelText('Componente 2'), 'Substância sintética B');
+    await user.type(screen.getByLabelText('Quantidade do componente 2'), '2 mg');
+    await user.type(screen.getByLabelText('Excipiente ou veículo (opcional)'), 'Excipiente q.s.p. 1 cápsula');
+    await user.type(screen.getByLabelText('Forma farmacêutica'), 'cápsula');
+    await user.type(screen.getByLabelText('Quanto manipular'), '30 cápsulas');
+    await user.click(screen.getByRole('button', { name: 'Adicionar à receita' }));
+    expect(screen.getByText('MANIPULADO')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Dose de Cápsulas sintéticas'), '1 cápsula');
+    await user.type(screen.getByLabelText('Posologia e instruções de Cápsulas sintéticas'), 'à noite');
+    await user.click(screen.getByRole('button', { name: /Gerar/ }));
+    expect(onGenerate.mock.calls.at(-1)?.[0]).toEqual({
+      docType: 'receita_simples',
+      medications: [{
+        name: 'Cápsulas sintéticas', dosage: '1 cápsula', instructions: 'à noite',
+        formula: {
+          components: [{ substance: 'Substância sintética A', amount: '100 mg' }, { substance: 'Substância sintética B', amount: '2 mg' }],
+          vehicle: 'Excipiente q.s.p. 1 cápsula', form: 'cápsula', quantity: '30 cápsulas',
+        },
+      }],
+      content: undefined,
+    });
+  });
+
+  it('applies the server rules before adding, and nothing is added on error', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: 'Adicionar fórmula manipulada' }));
+    await user.type(screen.getByLabelText('Componente 1'), 'Substância sintética A');
+    await user.type(screen.getByLabelText('Quantidade do componente 1'), 'bastante');
+    await user.type(screen.getByLabelText('Forma farmacêutica'), 'creme');
+    await user.type(screen.getByLabelText('Quanto manipular'), '60 g');
+    await user.click(screen.getByRole('button', { name: 'Adicionar à receita' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Informe a quantidade de Substância sintética A');
+    expect(screen.queryByText('MANIPULADO')).toBeNull();
+  });
+
+  it('treats a compounded controlled component like the registered drug', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: 'Adicionar fórmula manipulada' }));
+    await user.type(screen.getByLabelText('Componente 1'), 'Testosterona');
+    await user.type(screen.getByLabelText('Quantidade do componente 1'), '1%');
+    await user.type(screen.getByLabelText('Forma farmacêutica'), 'gel transdérmico');
+    await user.type(screen.getByLabelText('Quanto manipular'), '60 g');
+    await user.click(screen.getByRole('button', { name: 'Adicionar à receita' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Medicamento sujeito a controle especial (testosterona)');
+    expect(screen.getByRole('button', { name: 'Usar controle especial' })).toBeInTheDocument();
+  });
+});
