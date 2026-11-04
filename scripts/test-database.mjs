@@ -7,6 +7,7 @@ import { runReceptionDeletionRegression } from './test-reception-deletion-concur
 import { testDocumentSnippetsConcurrency } from './test-document-snippets-concurrency.mjs';
 import { testReceptionScopeLifecycle } from './test-reception-scope-lifecycle.mjs';
 import { testReceptionAppointmentConcurrency } from './test-reception-appointment-concurrency.mjs';
+import { testFunctionBoundaryRegressions } from './test-function-boundaries.mjs';
 
 // Every run owns a newly named disposable database. Never reset a linked project.
 const container = process.env.CORTEX_TEST_DB_CONTAINER || `cortex-test-${randomUUID().slice(0,8)}`;
@@ -32,6 +33,7 @@ try {
   for (const name of readdirSync('supabase/tests').filter(name=>name.endsWith('.test.sql')).sort()) {
     sql(readFileSync(resolve('supabase/tests',name),'utf8')); process.stdout.write(`Passed ${name}\n`);
   }
+  testFunctionBoundaryRegressions(container);
   await testReceptionConcurrency(container);
   await testReceptionAppointmentConcurrency(container);
   await testReceptionScopeLifecycle(container);

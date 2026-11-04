@@ -1,0 +1,64 @@
+{
+  "syntheticOnly": true,
+  "verifiedAt": "2026-11-04T04:05:57-03:00",
+  "environment": "Owned disposable PostgreSQL/pgvector containers; no exposed ports, hosted project, real patient data or external API calls",
+  "productionChanges": false,
+  "database": {
+    "command": "npm run test:db",
+    "exitCode": 0,
+    "migrations": 57,
+    "sqlSuites": 36,
+    "reviewedAuthenticatedDefinerSignatures": 60,
+    "anonymousCallableDefinersExcludingTriggers": 0,
+    "unreviewedAuthenticatedCallableDefinersExcludingTriggers": 0,
+    "clinicalAndAdminDenialCalls": 66,
+    "fixtureStates": ["active reception", "inactive reception"],
+    "positiveControls": ["owned live patient storage path", "approved indexed knowledge source"],
+    "knowledgeNegativeControls": ["other doctor source", "previously owned source after forced reception metadata", "service-role search targeting reception"],
+    "faultsDetected": [
+      "new authenticated definer requires review",
+      "private helper granted to authenticated",
+      "private helper granted to anon",
+      "clinical redefine loses identity guard",
+      "clinical redefine bypasses inactive reception only",
+      "shared RPC resource denial cannot masquerade as identity guard",
+      "knowledge redefine loses reception target guard"
+    ],
+    "cleanRerunAfterFaultRollback": "passed",
+    "existingConcurrencyRegressions": {
+      "receptionWorkflow": "passed",
+      "appointmentRaces": 10,
+      "scopeLifecycleRaces": 20,
+      "documentSnippetRaces": 2,
+      "deletionBarrierScenarios": 8,
+      "result": "passed"
+    }
+  },
+  "otherChecks": [
+    { "command": "node --check scripts/test-function-boundaries.mjs", "exitCode": 0 },
+    { "command": "npx eslint scripts/test-function-boundaries.mjs scripts/test-database.mjs", "exitCode": 0 },
+    { "command": "npx vitest run src/components/DocumentComposerModal.test.tsx src/components/PrescriptionTemplatePicker.test.tsx --maxWorkers=1 --pool=threads", "exitCode": 0, "files": 2, "tests": 18 }
+  ],
+  "redPhase": "Old bootstrap failed the direct anon EXECUTE default assertion after PUBLIC was revoked",
+  "review": {
+    "localAdversarialCycles": 2,
+    "firstCycleFindings": "Empty-set search contract, unrelated 42501 denials and missing storage positive control corrected",
+    "secondCycleFindings": "No further concrete issue found within declared scope; read-only review",
+    "executionFinding": "Mutation string replacement interpreted SQL dollar quotes; fixed with replacement callback and all seven faults subsequently detected",
+    "externalCrossModel": "Skipped: non-interactive heartbeat and prior user preference for local verification"
+  },
+  "prescriptionReview": {
+    "commit": "915311c",
+    "diffReportAndMobileScreenshotsInspected": true,
+    "newBlockerFound": false,
+    "browserHarnessRerunByCodex": false,
+    "browserChecksRemainAttributedToClaudeReport": 7
+  },
+  "notProven": [
+    "all possible arguments or internal instructions of every function",
+    "hosted database drift outside committed migrations",
+    "mandatory initial password change on the server",
+    "outer MFA gate recovery with an already-open document"
+  ],
+  "pushDeployOrHostedMutation": false
+}
