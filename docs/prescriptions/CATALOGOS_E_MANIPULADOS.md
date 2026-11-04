@@ -6,7 +6,7 @@ Pedido do usuário em 04/11/2026: seguir com a proposta de catálogos próprios,
 
 | Item | Fonte oficial | Estado |
 |---|---|---|
-| Fórmulas manipuladas | Não há catálogo oficial de fórmulas: são os componentes, com os nomes da DCB, mais as fórmulas que cada médico salva | **Servidor e tela prontos**; falta salvar como modelo |
+| Fórmulas manipuladas | Não há catálogo oficial de fórmulas: são os componentes, com os nomes da DCB, mais as fórmulas que cada médico salva | **Pronto**: servidor, tela e modelos (salvar e aplicar) |
 | Exames com código TUSS | ANS, Terminologia Unificada da Saúde Suplementar | **Pronto**: busca no pedido de exames, com o código impresso |
 | CID-10 | DATASUS | **Pronto**: sugestões no CID do atestado e da RCE |
 | Apresentações dos medicamentos | Lista CMED (Anvisa), sem os preços | Leitor pronto e conferido |
@@ -95,5 +95,5 @@ Na receita de controle especial, os componentes saem antes da linha "Quantidade"
 
 **Próximos passos:**
 1. ~~Tela no compositor~~: pronta. O botão "Adicionar fórmula manipulada" abre linhas de componente (até 12), excipiente, forma (com sugestões) e quanto manipular. A validação é a mesma do servidor antes de adicionar, e o item aparece na lista com o selo MANIPULADO e o resumo dos componentes. Testes em `src/components/DocumentComposerModal.test.tsx`.
-2. Modelos (`document_snippets`): aceitar `formula` nos itens. Isso pede a migration `20261105110000`, na faixa do Claude.
+2. ~~Modelos~~: prontos. A migration `20261105110000` aceita `formula` nos itens; "Salvar como modelo" guarda a fórmula, e aplicar um modelo a recoloca na receita, com os avisos de controlado e antimicrobiano. Uma fórmula guardada que não passa mais nas regras é descartada na leitura, nunca adivinhada.
 3. Busca de nomes da DCB nos componentes, quando a lista DCB estiver no banco.

@@ -40,3 +40,17 @@ describe('prescription template helpers', () => {
     expect(snippetErrorMessage({ code: 'XX000', message: 'internal detail' })).toBe('Não foi possível salvar o modelo. Tente novamente.');
   });
 });
+
+describe('compounded formulas in templates', () => {
+  const formula = { components: [{ substance: 'Substância sintética', amount: '100 mg' }], form: 'cápsula', quantity: '30 cápsulas' };
+  it('keeps a valid formula when reading and saving, and drops an invalid one when reading', () => {
+    expect(parseSnippetItems([{ name: 'Fórmula', dosage: '1 cápsula', instructions: 'à noite', formula }])).toEqual([
+      { name: 'Fórmula', dosage: '1 cápsula', instructions: 'à noite', formula },
+    ]);
+    expect(parseSnippetItems([{ name: 'Fórmula', formula: { ...formula, quantity: 'muitas' } }])).toEqual([{ name: 'Fórmula', dosage: '', instructions: '' }]);
+    expect(snippetItemsFrom([{ name: 'Fórmula', dosage: '1 cápsula', instructions: 'à noite', formula }])).toEqual([
+      { name: 'Fórmula', dosage: '1 cápsula', instructions: 'à noite', formula },
+    ]);
+    expect(snippetItemsFrom([{ name: 'Fórmula', formula: { ...formula, components: [] } }])).toBeNull();
+  });
+});

@@ -1,10 +1,14 @@
-// Prescription templates (document_snippets, migration 20261104110000):
-// pure helpers shared by the hook, the picker and their tests.
+// Prescription templates (document_snippets, migrations 20261104110000 and
+// 20261105110000 for compounded formulas): pure helpers shared by the hook,
+// the picker and their tests.
+import { formulaError, type CompoundedFormula } from '../../supabase/functions/_shared/regulatedMedications';
 
 export interface SnippetItem {
   name: string;
   dosage: string;
   instructions: string;
+  /** Compounded formula (manipulado), same shape and rules as the server. */
+  formula?: CompoundedFormula;
 }
 
 export interface DocumentSnippet {
@@ -25,15 +29,20 @@ export function parseSnippetItems(value: unknown): SnippetItem[] {
       name: row.name.trim(),
       dosage: typeof row.dosage === 'string' ? row.dosage : '',
       instructions: typeof row.instructions === 'string' ? row.instructions : '',
+      // A stored formula that no longer passes the rules is dropped, not guessed.
+      ...(row.formula !== undefined && formulaError(row.formula) === null ? { formula: row.formula as CompoundedFormula } : {}),
     }];
   });
 }
 
 /** Items to store from the composer selection; null when it cannot be a template. */
-export function snippetItemsFrom(selection: Array<{ name: string; dosage?: string; instructions?: string }>): SnippetItem[] | null {
+export function snippetItemsFrom(selection: Array<{ name: string; dosage?: string; instructions?: string; formula?: CompoundedFormula }>): SnippetItem[] | null {
   const items = selection
-    .filter((m) => m.name?.trim())
-    .map((m) => ({ name: m.name.trim(), dosage: (m.dosage ?? '').trim(), instructions: (m.instructions ?? '').trim() }));
+    .filter((m) => m.name?.trim() && (m.formula === undefined || formulaError(m.formula) === null))
+    .map((m) => ({
+      name: m.name.trim(), dosage: (m.dosage ?? '').trim(), instructions: (m.instructions ?? '').trim(),
+      ...(m.formula ? { formula: m.formula } : {}),
+    }));
   return items.length >= 1 && items.length <= 15 && items.length === selection.length ? items : null;
 }
 

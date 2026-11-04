@@ -233,7 +233,8 @@ export function DocumentComposerModal({
       dosage: item.dosage,
       instructions: item.instructions,
       checked: true,
-      antimicrobial: antimicrobialsIn(item.name).length > 0,
+      ...(item.formula ? { formula: item.formula, fromCatalog: true } : {}),
+      antimicrobial: [item.name, ...formulaSubstances(item.formula)].some(n => antimicrobialsIn(n).length > 0),
     }));
     setMeds(prev => [...(mode === 'replace' ? prev.map(m => ({ ...m, checked: false })) : prev), ...added]);
     if (added.some(m => m.antimicrobial) && docType === 'receita_simples') setDocType('receita_antimicrobiano');
