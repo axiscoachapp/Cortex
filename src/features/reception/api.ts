@@ -55,8 +55,11 @@ async function rpc<T>(name: RpcName, args: Record<string, unknown>, schema: z.Zo
   if (error) {
     if (name === 'clinic_access' && isClinicAccessTransportFailure(status, error)) throw new ClinicAccessTransportError();
     const unavailableAppointment = name === 'reception_change_appointment' && error.code === '42501' && error.message === 'Agendamento indisponível';
+    const approvedDelegation = name === 'update_reception_staff' && error.code === '40001' && error.message === 'Approved delegation requires explicit withdrawal';
     const message =
-      unavailableAppointment
+      approvedDelegation
+        ? 'A lista está desatualizada: ela não pode retirar uma delegação aprovada pelo médico. Atualize a página para conferir os acessos.'
+        : unavailableAppointment
         ? 'Agendamento indisponível. Atualize a agenda antes de tentar novamente.'
         : error.code === '40001'
           ? 'Os dados mudaram em outra tela. Atualize antes de tentar novamente.'

@@ -24,3 +24,22 @@ describe('team directory boundary',()=>{
   await expect(receptionApi.teamDoctors(clinic)).rejects.toMatchObject({code:'42501'});
  });
 });
+
+describe('legacy team array conflict',()=>{
+ beforeEach(()=>{vi.resetAllMocks();mocks.rpc.mockReturnValue({abortSignal:mocks.reply});});
+ it('explains a physician approval conflict without automatically retrying the stale list',async()=>{
+  mocks.reply.mockResolvedValue({data:null,error:{code:'40001',message:'Approved delegation requires explicit withdrawal'}});
+  await expect(receptionApi.updateStaff(doctor.id,[],true)).rejects.toMatchObject({
+   code:'40001',message:'A lista está desatualizada: ela não pode retirar uma delegação aprovada pelo médico. Atualize a página para conferir os acessos.',
+  });
+  expect(mocks.rpc).toHaveBeenCalledTimes(1);
+ });
+ it.each(['Custody changed concurrently; retry the transaction','Approved delegation requires explicit withdrawal: internal detail'])('keeps other conflicts generic (%s)',async message=>{
+  mocks.reply.mockResolvedValue({data:null,error:{code:'40001',message}});
+  await expect(receptionApi.updateStaff(doctor.id,[],true)).rejects.toMatchObject({code:'40001',message:'Os dados mudaram em outra tela. Atualize antes de tentar novamente.'});
+ });
+ it('does not reuse the team message for another RPC',async()=>{
+  mocks.reply.mockResolvedValue({data:null,error:{code:'40001',message:'Approved delegation requires explicit withdrawal'}});
+  await expect(receptionApi.teamDoctors(clinic)).rejects.toMatchObject({code:'40001',message:'Os dados mudaram em outra tela. Atualize antes de tentar novamente.'});
+ });
+});

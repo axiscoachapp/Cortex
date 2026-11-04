@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
+import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { randomUUID, createHash } from 'node:crypto';
 import { testReceptionDeletionConcurrency } from './test-reception-deletion-concurrency.mjs';
 import { testReceptionConcurrency } from './test-reception-concurrency.mjs';
 import { testReceptionAppointmentConcurrency } from './test-reception-appointment-concurrency.mjs';
@@ -14,9 +14,27 @@ import { testFunctionBoundaryRegressions } from './test-function-boundaries.mjs'
 const upgradeMode = process.argv.includes('--upgrade');
 const resourceMode = process.argv.includes('--resources') || upgradeMode;
 const targeted = process.argv.includes('--targeted');
-assert.ok(process.argv.slice(2).every(arg => ['--resources', '--upgrade', '--targeted'].includes(arg)), 'This lab takes no external target');
+const overlayPrefix = '--migration-overlay=';
+const overlayNames = process.argv.slice(2).filter(arg => arg.startsWith(overlayPrefix)).map(arg => arg.slice(overlayPrefix.length));
+assert.ok(overlayNames.every(name => /^\d{14}_[a-z0-9_]+\.sql$/.test(name)) && new Set(overlayNames).size === overlayNames.length, 'Invalid migration overlay filename');
+assert.ok(process.argv.slice(2).every(arg => ['--resources', '--upgrade', '--targeted'].includes(arg) || arg.startsWith(overlayPrefix)), 'This lab takes no external target');
 assert.ok(!targeted || upgradeMode, 'Targeted CI mode requires the actual migration');
 const scopedMigration = '20261104200000_reception_scoped_custody.sql';
+const git = args => {
+  const r = spawnSync('git', args, { encoding: 'utf8', windowsHide: true, timeout: 30000, maxBuffer: 16 * 1024 * 1024 });
+  assert.equal(r.status, 0, r.stderr || r.error?.message); return r.stdout.trim();
+};
+const sourceBaseline = git(['rev-parse', 'HEAD']); assert.match(sourceBaseline, /^[0-9a-f]{40}$/);
+// Ignore unfinished SQL from other agents. Only an explicitly named local
+// migration may overlay immutable HEAD; no external database/path is accepted.
+const sqlPaths = git(['ls-tree', '-r', '--name-only', sourceBaseline, '--', 'supabase/migrations', 'supabase/tests']).split('\n').filter(path => path.endsWith('.sql'));
+const sqlSources = new Map(sqlPaths.map(path => [path, git(['show', sourceBaseline + ':' + path])]));
+const migrationOverlays = overlayNames.map(name => {
+  const path = 'supabase/migrations/' + name, text = readFileSync(path, 'utf8'); sqlSources.set(path, text);
+  return { path, sha256: createHash('sha256').update(text).digest('hex') };
+});
+const source = path => { assert.ok(sqlSources.has(path), 'Missing frozen SQL source: ' + path); return sqlSources.get(path); };
+const sqlSourceDigest = createHash('sha256').update([...sqlSources].sort(([a], [b]) => a.localeCompare(b)).map(([path, text]) => path + '\0' + createHash('sha256').update(text).digest('hex')).join('\n')).digest('hex');
 assert.ok(!process.env.DOCKER_HOST, 'Lab refuses inherited Docker host overrides');
 const raw = args => spawnSync('docker', args, { encoding: 'utf8', windowsHide: true, timeout: 30000 });
 const required = r => { assert.equal(r.status, 0, r.stderr || r.error?.message); return r.stdout.trim(); };
@@ -181,9 +199,11 @@ try {
   let ready = false;
   for (let n = 0; n < 60; n++) { if (docker(['exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres']).status === 0) { ready = true; break; } await new Promise(r => setTimeout(r, 200)); }
   assert.ok(ready, 'Owned database not ready');
-  sql(readFileSync('supabase/tests/bootstrap.sql', 'utf8'));
-  const migrations = readdirSync('supabase/migrations').filter(n => n.endsWith('.sql') && n !== scopedMigration).sort();
-  for (const name of migrations) sql(readFileSync('supabase/migrations/' + name, 'utf8'));
+  sql(source('supabase/tests/bootstrap.sql'));
+  const migrations = [...sqlSources.keys()].filter(path => path.startsWith('supabase/migrations/') && path !== 'supabase/migrations/' + scopedMigration).map(path => path.split('/').at(-1)).sort();
+  const initialMigrations = upgradeMode ? migrations.filter(name => name < scopedMigration) : migrations;
+  const postUpgradeMigrations = upgradeMode ? migrations.filter(name => name > scopedMigration) : [];
+  for (const name of initialMigrations) sql(source('supabase/migrations/' + name));
   sql(`insert into auth.users(id,email) values ${accounts.map((id, n) => `('${id}','account-epoch-${n}@example.invalid')`).join(',')};
     insert into public.patients(id,user_id,name,status) values ${patients.map((id, n) => `('${id}','${accounts[n]}','Synthetic epoch patient ${n}','novo')`).join(',')};`);
   await compareIndependent(true);
@@ -192,16 +212,19 @@ try {
   let baselineDirectoryMs = null;
   if (!targeted) {
     const baselineStarted = performance.now();
-    sql("set statement_timeout='25s';" + readFileSync('supabase/tests/reception-directory.test.sql', 'utf8'));
+    sql("set statement_timeout='25s';" + source('supabase/tests/reception-directory.test.sql'));
     baselineDirectoryMs = Math.round(performance.now() - baselineStarted);
   }
   if (upgradeMode) {
     const { exerciseCustodyUpgrade } = await import('./test-custody-upgrade.mjs');
     checks.push(...await exerciseCustodyUpgrade({ sql, result, session, required, accounts, patients,
-      migration: readFileSync('supabase/migrations/' + scopedMigration, 'utf8') }));
+      migration: source('supabase/migrations/' + scopedMigration) }));
+    assert.equal(sql("select to_regclass('cortex_private.account_custody_epochs') is not null and to_regclass('cortex_private.custody_resource_epochs') is not null"), 't');
+    for (const name of postUpgradeMigrations) sql(source('supabase/migrations/' + name));
+    checks.push('dependent later migrations install only after the actual T33 upgrade, in version order');
   } else {
-    sql(readFileSync('supabase/tests/prototypes/account-custody-epochs.sql', 'utf8'));
-    if (resourceMode) sql(readFileSync('supabase/tests/prototypes/resource-custody-epochs.sql', 'utf8'));
+    sql(source('supabase/tests/prototypes/account-custody-epochs.sql'));
+    if (resourceMode) sql(source('supabase/tests/prototypes/resource-custody-epochs.sql'));
   }
   assert.equal(sql(`select count(*) from cortex_private.account_custody_epochs where user_id=any(array[${accounts.map(id => `'${id}'::uuid`).join(',')}])`), '4', 'Existing account fill failed');
   await compareIndependent(false);
@@ -246,17 +269,17 @@ try {
   }
   // CI runs these existing suites in test-database first; targeted mode adds
   // the new upgrade/resource proofs without repeating all historical races.
-  const tests = targeted ? [] : readdirSync('supabase/tests').filter(n => n.endsWith('.test.sql')).sort();
+  const tests = targeted ? [] : [...sqlSources.keys()].filter(path => /^supabase\/tests\/[^/]+\.test\.sql$/.test(path)).map(path => path.split('/').at(-1)).sort();
   const sqlDurationMs = {};
   for (const name of tests) {
     const started = performance.now();
-    sql("set statement_timeout='25s';" + readFileSync('supabase/tests/' + name, 'utf8'));
+    sql("set statement_timeout='25s';" + source('supabase/tests/' + name));
     sqlDurationMs[name] = Math.round(performance.now() - started);
     process.stdout.write('Passed ' + name + '\n');
   }
   let deletion = [];
   if (!targeted) {
-    testFunctionBoundaryRegressions(container);
+    testFunctionBoundaryRegressions(container, source('supabase/tests/reception-function-boundaries.test.sql'));
     await testReceptionConcurrency(container);
     await testReceptionAppointmentConcurrency(container);
     await testReceptionScopeLifecycle(container);
@@ -266,6 +289,7 @@ try {
   report = { syntheticOnly: true, labOnly: true, prototypeIsProductionFix: false, candidateRejected: !resourceMode,
     candidate: resourceMode ? 'resource and account epochs' : 'rejected account-only epochs', checks,
     installedMigration: upgradeMode ? scopedMigration : null,
+    sourceBaseline, migrationOverlays, sqlSourceDigest, initialMigrations, postUpgradeMigrations,
     migrations: migrations.length + (upgradeMode ? 1 : 0), sqlSuites: tests.length, deletionScenarios: deletion.length,
     directoryFixture: targeted ? null : { rows: 2500, baselineMs: baselineDirectoryMs, prototypeMs: sqlDurationMs['reception-directory.test.sql'],
       statementBudgetSeconds: 25, qualification: 'functional fixture only; uncontrolled local load, not a production benchmark' },
