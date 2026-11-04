@@ -4,7 +4,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   MAX_SESSION_SECONDS, PscAmbiguousError, PscRejectedError, authorizeUrl, base64url, certificateDiscovery, exchangeCode,
-  newState, openSecret, pkcePair, sealSecret, sessionBinding, signHash, type PscConfig,
+  newState, openSecret, parseKeyList, pkcePair, sealSecret, signHash, stateHash, tokenBinding, verifierBinding, type PscConfig,
 } from '../../supabase/functions/_shared/psc';
 import { AD_RB_V1_1, DER, finalizePades, preparePades, tlv, verifyRawSignature } from '../../supabase/functions/_shared/pades';
 
@@ -169,18 +169,51 @@ describe('signing a PDF through the fake PSC', () => {
   });
 });
 
-describe('sealed session token (AES-256-GCM)', () => {
-  const key = new Uint8Array(32).fill(9);
-  const binding = sessionBinding('11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222', 1);
+describe('sealed secrets (AES-256-GCM, versioned bindings)', () => {
+  const SESSION = '11111111-1111-4111-8111-111111111111';
+  const USER = '22222222-2222-4222-8222-222222222222';
+  const b64 = (fill: number) => Buffer.from(new Uint8Array(32).fill(fill)).toString('base64');
+  const keys = parseKeyList(`k2:${b64(9)},k1:${b64(8)}`);
 
-  it('opens only with the same key, session, account and generation', async () => {
-    const sealed = await sealSecret(key, 'k1', 'token-sintetico', binding);
+  it('reads the server key list: first key seals, older keys only open, malformed lists refused', () => {
+    expect(keys.current).toBe('k2');
+    expect(Object.keys(keys.keys)).toEqual(['k2', 'k1']);
+    expect(() => parseKeyList('')).toThrow('Nenhuma chave');
+    expect(() => parseKeyList(`k1:${Buffer.from(new Uint8Array(16)).toString('base64')}`)).toThrow('inválida');
+    expect(() => parseKeyList(`K 1:${b64(1)}`)).toThrow('inválida');
+    expect(() => parseKeyList(`k1:${b64(1)},k1:${b64(2)}`)).toThrow('inválida');
+  });
+
+  it('opens a token only for the same session, account and generation, with a listed key', async () => {
+    const binding = tokenBinding(SESSION, USER, 1);
+    const sealed = await sealSecret(keys, 'token-sintetico', binding);
+    expect(sealed).toMatchObject({ v: 1, keyId: 'k2' });
     expect(sealed.ciphertext).not.toContain('token-sintetico');
-    expect(await openSecret({ k1: key }, sealed, binding)).toBe('token-sintetico');
-    await expect(openSecret({ k1: key }, sealed, sessionBinding('11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222', 2))).rejects.toThrow('inválido');
-    await expect(openSecret({ k1: new Uint8Array(32).fill(8) }, sealed, binding)).rejects.toThrow('inválido');
-    await expect(openSecret({ k2: key }, sealed, binding)).rejects.toThrow('desconhecida');
+    expect(await openSecret(keys, sealed, binding)).toBe('token-sintetico');
+    await expect(openSecret(keys, sealed, tokenBinding(SESSION, USER, 2))).rejects.toThrow('inválido');
+    await expect(openSecret(parseKeyList(`k2:${b64(7)}`), sealed, binding)).rejects.toThrow('inválido');
+    await expect(openSecret(parseKeyList(`k1:${b64(8)}`), sealed, binding)).rejects.toThrow('não está mais autorizada');
+    await expect(openSecret(keys, { ...sealed, keyId: '__proto__' }, binding)).rejects.toThrow();
+    await expect(openSecret(keys, { ...sealed, v: 2 as 1 }, binding)).rejects.toThrow('formato');
     const tampered = { ...sealed, ciphertext: sealed.ciphertext.replace(/^./, (c) => (c === 'A' ? 'B' : 'A')) };
-    await expect(openSecret({ k1: key }, tampered, binding)).rejects.toThrow('inválido');
+    await expect(openSecret(keys, tampered, binding)).rejects.toThrow('inválido');
+  });
+
+  it('keeps rotation working: a secret sealed with an older listed key still opens', async () => {
+    const old = await sealSecret(parseKeyList(`k1:${b64(8)}`), 'antigo', tokenBinding(SESSION, USER, 3));
+    expect(await openSecret(keys, old, tokenBinding(SESSION, USER, 3))).toBe('antigo');
+  });
+
+  it('never opens a token as an OAuth verifier, and uses a fresh nonce every time', async () => {
+    const hash = await stateHash(newState());
+    expect(hash).toMatch(/^[0-9a-f]{64}$/);
+    const verifier = await sealSecret(keys, 'verificador', verifierBinding(hash, USER, 'vidaas'));
+    expect(await openSecret(keys, verifier, verifierBinding(hash, USER, 'vidaas'))).toBe('verificador');
+    await expect(openSecret(keys, verifier, tokenBinding(SESSION, USER, 1))).rejects.toThrow('inválido');
+    await expect(openSecret(keys, verifier, verifierBinding(hash, USER, 'birdid'))).rejects.toThrow('inválido');
+    const again = await sealSecret(keys, 'verificador', verifierBinding(hash, USER, 'vidaas'));
+    expect(again.nonce).not.toBe(verifier.nonce);
+    expect(() => tokenBinding('nao-uuid', USER, 1)).toThrow('inválido');
+    expect(() => tokenBinding(SESSION, USER, 0)).toThrow('inválido');
   });
 });

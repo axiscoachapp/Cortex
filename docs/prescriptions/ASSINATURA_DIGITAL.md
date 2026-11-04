@@ -79,13 +79,15 @@ As três são novas, no domínio do Claude. Revisão do Codex de 04/11 12:41 inc
 
 **Endpoints e destinos do PSC:** vêm só de uma lista fixa no servidor, por PSC. Nenhuma URL vinda do cliente ou do próprio PSC (redirect) recebe token.
 
-### Banco (migration reservada `20261104140000`, faixa do Claude)
+### Banco (migration reservada `20261105100000`, faixa do Claude)
+
+O número mudou de `20261104140000` para `20261105100000` porque a migration estende funções de custódia do Codex criadas em `20261104200000` e redefinidas até `20261104240000`, e precisa rodar depois delas.
 
 **Guarda do token: cifra na aplicação, sem Vault.**
 - Este é o contraponto à revisão: o Vault expõe o texto claro numa view e exigiria provar a habilitação da extensão no projeto alvo.
 - O token é cifrado na Edge Function com **AES-256-GCM**:
-  - a chave fica em `SIGNATURE_TOKEN_KEY`, um segredo das Edge Functions, como os outros, com `key_id` para rotação;
-  - o dado associado é `session_id|user_id|generation`, então um texto cifrado não serve em outra sessão nem em outra geração.
+  - as chaves ficam em `SIGNATURE_TOKEN_KEYS` (`k2:<base64>,k1:<base64>`), um segredo das Edge Functions, como os outros. A primeira cifra; as anteriores só abrem enquanto estiverem na lista, o que permite a rotação. Nenhum valor do cliente escolhe a chave;
+  - o dado associado é versionado e tem um espaço por uso: `cortex/signature-token/v1|sessão|conta|geração` para o token e `cortex/oauth-verifier/v1|hash do state|conta|PSC` para o verificador do PKCE. Um nunca abre como o outro. O nonce tem 96 bits aleatórios a cada cifra;
 - No banco ficam só o texto cifrado, o nonce e o `key_id`, numa tabela sem nenhum grant para `anon` ou `authenticated`.
 - A leitura e a gravação passam por duas funções `SECURITY DEFINER` com `search_path=''` e `EXECUTE` só para `service_role`. Elas recebem o **id da sessão** (nunca um id de segredo) e só devolvem o texto cifrado se a sessão estiver ativa e na geração pedida.
 - O token nunca vai ao navegador, ao log, a nomes, a descrições nem a DTOs.
@@ -230,12 +232,12 @@ Usam uma AC de teste e um certificado "Médica Sintética", gerados em memória 
 - [ ] Parecer jurídico sobre a Res. CFM 2.299/2021, art. 5: inscrição no CRM e diretor técnico de quem oferece a plataforma.
 - [ ] Cada médico que for assinar precisa ter o próprio CPF em Configurações, que passa a ser obrigatório para assinar: é conferido com o CPF que o PSC autoriza.
 - [ ] Um médico disponível para o teste de aceite com o certificado real.
-- [ ] Definir `SIGNATURE_TOKEN_KEY` (32 bytes aleatórios) nos segredos das Edge Functions, quando houver deploy. Quem configura é o usuário; o valor nunca entra no repositório nem em mensagens.
+- [ ] Definir `SIGNATURE_TOKEN_KEYS` (uma chave de 32 bytes aleatórios, em base64, com um id) nos segredos das Edge Functions, quando houver deploy. Quem configura é o usuário; o valor nunca entra no repositório nem em mensagens.
 
 ## Ordem de implementação
 
 1. `_shared/pades.ts` com os testes locais 1 a 4, só com material sintético. Não precisa de nada externo.
 2. `_shared/psc.ts` e o PSC falso, com o teste 5.
-3. Migration `20261104140000` (só depois do aceite do Codex a esta versão do contrato), as funções `signature-session` e `sign-document`, e os testes 6 e 7. O DDL vai para a revisão de integração e custódia do Codex antes de qualquer aplicação; nada é aplicado em banco hospedado.
+3. Migration `20261105100000` (contrato v2 aceito pelo Codex em 04/11 13:21, com as condições da mensagem), as funções `signature-session` e `sign-document`, e os testes 6 e 7. O DDL vai para a revisão de integração e custódia do Codex antes de qualquer aplicação; nada é aplicado em banco hospedado.
 4. Tela de sessão e "Gerar e assinar" no compositor.
 5. Homologação com a Valid e testes de aceite, quando a Fase 0 estiver pronta.

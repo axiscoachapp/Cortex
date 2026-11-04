@@ -173,32 +173,78 @@ export async function signHash(cfg: PscConfig, accessToken: string, p: { id: str
 }
 
 // ---------------------------------------------------------------------------
-// Session token sealing (AES-256-GCM with associated data)
+// Sealing of the session token and of the OAuth code_verifier (AES-256-GCM)
+//
+// Each use has its own versioned namespace in the associated data, so a
+// sealed token never opens as a verifier (or the reverse), nor in another
+// session, account or generation. Nonces are 96 random bits per sealing.
+// Keys come only from the server's key list (key id -> 32 bytes); nothing
+// from a client chooses a key or an environment variable.
 
-export interface SealedSecret { keyId: string; nonce: string; ciphertext: string }
+export interface SealedSecret { v: 1; keyId: string; nonce: string; ciphertext: string }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const KEY_ID = /^[a-z0-9][a-z0-9_-]{0,31}$/;
+
+/** AAD of a session token: one session, account and generation. */
+export function tokenBinding(sessionId: string, userId: string, generation: number): string {
+  if (!UUID.test(sessionId) || !UUID.test(userId) || !Number.isSafeInteger(generation) || generation < 1) throw new Error('Vínculo do token inválido.');
+  return `cortex/signature-token/v1|${sessionId.toLowerCase()}|${userId.toLowerCase()}|${generation}`;
+}
+
+/** AAD of an OAuth code_verifier: one authorization state, account and PSC. */
+export function verifierBinding(stateHash: string, userId: string, psc: string): string {
+  if (!/^[0-9a-f]{64}$/.test(stateHash) || !UUID.test(userId) || !KEY_ID.test(psc)) throw new Error('Vínculo do verificador inválido.');
+  return `cortex/oauth-verifier/v1|${stateHash}|${userId.toLowerCase()}|${psc}`;
+}
+
+/** Hex SHA-256 of an OAuth state: only this hash is stored. */
+export async function stateHash(state: string): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(state)));
+  return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 async function importKey(rawKey: Uint8Array): Promise<CryptoKey> {
-  if (rawKey.length !== 32) throw new Error('A chave de cifra do token deve ter 32 bytes.');
+  if (!(rawKey instanceof Uint8Array) || rawKey.length !== 32) throw new Error('A chave de cifra deve ter 32 bytes.');
   return crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['encrypt', 'decrypt']);
 }
 
-/** Associated data that pins a sealed token to one session, account and generation. */
-export const sessionBinding = (sessionId: string, userId: string, generation: number) => `${sessionId}|${userId}|${generation}`;
+/**
+ * Server key list from configuration, e.g. SIGNATURE_TOKEN_KEYS =
+ * "k2:<base64 32 bytes>,k1:<base64 32 bytes>". The first one seals; older ones
+ * only open, while they stay listed.
+ */
+export function parseKeyList(config: string): { current: string; keys: Record<string, Uint8Array> } {
+  const keys: Record<string, Uint8Array> = {};
+  let current = '';
+  for (const entry of config.split(',').map((e) => e.trim()).filter(Boolean)) {
+    const [id, value] = entry.split(':');
+    if (!KEY_ID.test(id ?? '') || !value || keys[id]) throw new Error('Lista de chaves de assinatura inválida.');
+    const raw = fromBase64(value);
+    if (raw.length !== 32) throw new Error('Lista de chaves de assinatura inválida.');
+    keys[id] = raw;
+    current ||= id;
+  }
+  if (!current) throw new Error('Nenhuma chave de assinatura configurada.');
+  return { current, keys };
+}
 
-export async function sealSecret(rawKey: Uint8Array, keyId: string, secret: string, binding: string): Promise<SealedSecret> {
+export async function sealSecret(keyList: { current: string; keys: Record<string, Uint8Array> }, secret: string, binding: string): Promise<SealedSecret> {
+  const rawKey = keyList.keys[keyList.current];
   const nonce = randomBytes(12);
   const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv: nonce, additionalData: new TextEncoder().encode(binding) },
     await importKey(rawKey),
     new TextEncoder().encode(secret),
   ));
-  return { keyId, nonce: base64(nonce), ciphertext: base64(ciphertext) };
+  return { v: 1, keyId: keyList.current, nonce: base64(nonce), ciphertext: base64(ciphertext) };
 }
 
-/** Throws when the key, the binding or the ciphertext do not match. */
-export async function openSecret(keys: Record<string, Uint8Array>, sealed: SealedSecret, binding: string): Promise<string> {
-  const rawKey = keys[sealed.keyId];
-  if (!rawKey) throw new Error('Chave do token desconhecida.');
+/** Throws when the version, key, binding or ciphertext do not match. */
+export async function openSecret(keyList: { keys: Record<string, Uint8Array> }, sealed: SealedSecret, binding: string): Promise<string> {
+  if (sealed?.v !== 1 || !KEY_ID.test(sealed.keyId ?? '')) throw new Error('Segredo de assinatura em formato desconhecido.');
+  const rawKey = Object.prototype.hasOwnProperty.call(keyList.keys, sealed.keyId) ? keyList.keys[sealed.keyId] : undefined;
+  if (!rawKey) throw new Error('Chave do segredo de assinatura não está mais autorizada.');
   try {
     const plain = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: fromBase64(sealed.nonce), additionalData: new TextEncoder().encode(binding) },
@@ -207,6 +253,6 @@ export async function openSecret(keys: Record<string, Uint8Array>, sealed: Seale
     );
     return new TextDecoder().decode(plain);
   } catch {
-    throw new Error('Token de assinatura inválido para esta sessão.');
+    throw new Error('Segredo de assinatura inválido para este vínculo.');
   }
 }
