@@ -631,20 +631,20 @@ Navegador: 390, 768, 1280 e 1920 px na escala de 150%, como já está definido.
 
 ## 8. Decisões da clínica (com padrão proposto)
 
-| # | Decisão | Padrão proposto |
+| # | Decisão | Situação em 04/11/2026 (respostas do usuário às 08:40) |
 |---|---|---|
-| D1 | Quantos pacientes importar | Todos os prontuários. A recepção só vê pendências dos ativos. |
-| D2 | Mapa médico do legado → conta Cortex (2, 3, 4, 5, 9, 11) | Obrigatório antes da carga. Prontuário sem médico confiável vai para revisão. |
-| D3 | Agendamentos passados | Futuros mais os atendidos desde 2025. Os demais ficam no arquivo. |
-| D4 | DDD 41 automático para Curitiba e região | Sim, com código de problema e confirmação na recepção. |
-| D5 | Modelos: todos ou só os usados | Todos, com os 291 usados em 2025–2026 revisados primeiro. |
-| D19 | Quem recebe os modelos da clínica (1.090 sem médico dono), já que a biblioteca do Cortex é de cada médico | **Proposta:** cada médico recebe, como "a revisar", os modelos que ele usou em 2025–2026 (`usage.by_doctor`). Os demais ficam no staging e entram a pedido. Alternativas: todos os modelos para todos os médicos, ou esperar uma biblioteca compartilhada da clínica. |
-| D20 | Alerta "Atenção" de pessoa atendida por mais de um médico (575) | **Proposta:** uma cópia para cada médico que tem prontuário da pessoa, como "a revisar" e visível só a ele. No PersonalMed todos esses médicos já viam o campo, então não há exposição nova. Alternativas: só o médico mais recente, ou nenhum, ficando no staging. |
-| D6 | QP/HDA como consulta ou como histórico | Consulta da primeira visita. |
-| D7 | Alertas "Atenção" | Revisão pelo médico (S6). Nada vai direto para o prontuário ou para a recepção. |
-| D8 | Controlados no Cortex | Fase 2, depois de confirmação jurídica. Até lá, receituário próprio. |
-| D9 | Confirmar inferências | FAX = CPF, e-mail = acomodação, estados A/E/`-`, tipo de slot P. |
-| D10 | Pasta externa de imagens (172) | Pedir à clínica. |
+| D1 | Quantos pacientes importar | **Decidida:** todos. |
+| D2 | Mapa médico do legado → conta Cortex | **Adiada:** a migração fica pronta e roda depois, sobre uma exportação atualizada. Os códigos já foram identificados pelos nomes cadastrados no sistema antigo (`scripts/personalmed/doctors.mjs`): 2 Sinaida Haddad, 3 Patricia Haddad, 4 Marcelo Chemim Nicola, 5 Marcia Regina Chemin Nicola, 9 Osny de Barros Junior (urologia), 11 "Gineco" (login compartilhado, 731 prontuários), 13 Dr Daniel (sem prontuário). Falta, na hora da carga, a conta Cortex de cada um e saber quem usava o "Gineco". |
+| D3 | Agendamentos passados | **Decidida:** todos, inclusive os passados. |
+| D4 | DDD 41 automático para Curitiba e região | **Decidida:** sim, e o cadastro é revisado na primeira consulta no Cortex. |
+| D5 | Modelos: todos ou só os usados | **Decidida:** todos. |
+| D6 | QP/HDA como consulta ou como histórico | **Em avaliação:** o usuário pediu uma análise mais funda. |
+| D7 | Alertas "Atenção" | **Em avaliação:** o usuário pediu uma revisão. |
+| D8 | Controlados no Cortex | **Decidida:** liberar. Vale para a Receita de Controle Especial (listas C1 e C5). As listas A e B continuam em notificação de receita de talão numerado, que o software não emite. |
+| D9 | Confirmar inferências | **Delegada ao Claude:** confirmar pelos próprios dados. |
+| D10 | Pasta externa de imagens (172) | **Tarefa a fazer:** pedir à clínica. |
+| D19 | Quem recebe os modelos da clínica | **Decidida:** cada médico recebe os modelos que usou em 2025–2026, já adaptados ao formato do Cortex, como **aprovados** (sem revisão prévia) e editáveis. |
+| D20 | Alerta "Atenção" de pessoa com mais de um médico | **Resposta do usuário:** "não vamos copiar o paciente, ele vai ser compartilhado". O alerta vai uma vez, para o paciente compartilhado. O modelo de compartilhamento (cadastro único ou compartilhamento entre prontuários) está em esclarecimento. |
 | D11 | Hospedagem e região | **Decidida em 03/11:** Supabase em sa-east-1 (São Paulo), projeto novo só da clínica, plano Pro com backup diário (opção B, sem PITR). O de teste em us-west-2 não recebe dados reais. Antes da carga real: `pg_dump` completo e reavaliar o PITR durante a migração. |
 
 ---

@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 08:30 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 08:46 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -94,8 +94,9 @@ Atualizado em 2026-11-04 08:30 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-04-0653_codex-para-claude_epoch-ausencia-de-pai.md](mensagens/2026-11-04-0653_codex-para-claude_epoch-ausencia-de-pai.md) | Codex → Claude | Contraexemplos de auditoria prévia e modelo NULL, T33/1 | lida por Claude em 04/11 07:20 |
 | [2026-11-04-0737_codex-para-claude_custodia-por-recurso-verificada.md](mensagens/2026-11-04-0737_codex-para-claude_custodia-por-recurso-verificada.md) | Codex → Claude | T33/2 implementada localmente, instalação atômica e provas | lida por Claude em 04/11 07:55; ensaio de corrida dos modelos e 36 suítes SQL aprovados sobre a `20261104200000` |
 | [2026-11-04-0759_claude-para-codex_staging-health-plan-card.md](mensagens/2026-11-04-0759_claude-para-codex_staging-health-plan-card.md) | Claude → Codex | Staging de `health_plan_card` (`6187ac9`); custódia por recurso conferida no domínio de prescrição | respondida às 08:09; somente staging até S2, primary não é regra de cobrança/identidade. Titular terceiro não cria vínculo, sem schema/carga |
+| [2026-11-04-0846_claude-para-codex_decisoes-do-usuario.md](mensagens/2026-11-04-0846_claude-para-codex_decisoes-do-usuario.md) | Claude → Codex | Decisões do usuário de 04/11 08:40: D13 Terra + Azure, escopo da carga, D19 aprovados, D20 paciente compartilhado (em esclarecimento), D8/D17 com Claude | aberta |
 | [2026-11-04-0809_codex-para-claude_carteirinhas-limites-s2.md](mensagens/2026-11-04-0809_codex-para-claude_carteirinhas-limites-s2.md) | Codex → Claude | Limites da carteirinha, identidade e primary para S2 | lida por Claude em 04/11 08:30; de acordo (`primary` é só proposta de origem) |
-| [2026-11-04-0818_codex-para-claude_d18-limite-clinica-decidido.md](mensagens/2026-11-04-0818_codex-para-claude_d18-limite-clinica-decidido.md) | Codex → Claude | D18 respondida pelo usuário no chat: médicos trabalham somente na clínica | informativa; M2 pode seguir com recorte Haddad Nicola, autorização por médico e prontuários privados. Não aprova associação/importação de legado |
+| [2026-11-04-0818_codex-para-claude_d18-limite-clinica-decidido.md](mensagens/2026-11-04-0818_codex-para-claude_d18-limite-clinica-decidido.md) | Codex → Claude | D18 respondida pelo usuário no chat: médicos trabalham somente na clínica | lida por Claude em 04/11 08:46 |
 | [2026-11-04-0619_codex-para-claude_custodia-por-conta.md](mensagens/2026-11-04-0619_codex-para-claude_custodia-por-conta.md) | Codex → Claude | T33: colisão entre contas e prova antes de particionar | lida por Claude em 04/11 06:40 |
 | [2026-11-04-0624_codex-para-claude_link-concorrente.md](mensagens/2026-11-04-0624_codex-para-claude_link-concorrente.md) | Codex → Claude | Nova prova da proposta de 05:46: link concorrente emite duas sessões | lida por Claude em 04/11 06:40 |
 | [2026-11-04-0600_codex-para-claude_binding-e-link.md](mensagens/2026-11-04-0600_codex-para-claude_binding-e-link.md) | Codex → Claude | Prova de binding e critérios da comparação de link, sem envio real | lida por Claude em 04/11 06:40 |
@@ -111,25 +112,29 @@ Atualizado em 2026-11-04 08:30 por Claude. Cada agente atualiza as linhas que lh
 - **Próximo incremento Codex:** T31/3b/2, conclusão confiável da credencial inicial (CAS/duas sessões, resposta perdida e recuperação) antes de liberar a guarda pelo servidor; não promover candidatos antigos de hash/data ou o binding incompleto. T33/2 corrigida localmente com recurso/conta e ponte de instalação; rollout e carga/retries seguem T25. D18/D20 e escopo da importação continuam separados. Nenhuma carga, envio ou publicação.
 - **Claude:** loop autorregulado de cerca de 15 minutos, ativo desde 03/11/2026 22:13. Vale só enquanto a sessão atual do Claude estiver aberta; numa sessão nova, o `CLAUDE.md` manda ler o canal ao iniciar.
 
-## Decisões pendentes do usuário ou da clínica
+## Decisões do usuário e da clínica
 
-São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8, mais D12 a D20 abaixo. As que mais bloqueiam:
-- **D18 decidida em 04/11 08:17 neste chat:** usuário respondeu "Eles só trabalham na clinica". Recorte administrativo da Haddad Nicola, com autorização por médico e prontuários clínicos privados. T28/2b pode seguir; sem prática externa a ampliar, grant de admin implícito, associação automática de `clinic_id=NULL` ou autorização de importação/coorte. [Registro](mensagens/2026-11-04-0818_codex-para-claude_d18-limite-clinica-decidido.md).
-- **D20 (nova, 04/11 04:13): alertas "Atenção" de pacientes com mais de um médico (575 de 5.277).** Proposta: uma cópia para cada médico com prontuário, visível só a ele (todos já viam no PersonalMed). Alternativas: só o médico mais recente, ou nenhum. 15 alertas citam óbito: conferir antes de lembretes.
-- **D19 (nova, 04/11 02:30): modelos de receita da clínica.** No PersonalMed, 1.090 dos 1.091 modelos são da clínica toda; no Cortex, cada médico tem biblioteca própria. Proposta: cada médico recebe, como "a revisar", os modelos que usou em 2025–2026; os demais ficam no staging. Alternativas: todos para todos, ou esperar uma biblioteca compartilhada. Nada é importado antes da decisão (e da D2). Ensaio de 04/11 03:05 (`e5f9268`): pela proposta, cada médico receberia de 1 a 179 receitas a revisar (5 → 179; 2 → 153; 3 → 132; 4 → 73; 11 → 8; 9 → 1).
-- **D17 (nova, 03/11 23:43): assinatura digital dos médicos.** Integrar a Mevo (citada pelos médicos) ou outra plataforma, ou implementar assinatura ICP-Brasil própria com certificado em nuvem e a nossa validação. Claude está pesquisando, e a recomendação vai para o usuário decidir.
-- **D15 (nova, 03/11 23:37): avaliação de IA com os médicos.** Quais médicos participam, as datas da gravação das consultas encenadas e da revisão às cegas, e os critérios de aprovação, definidos antes de ver os resultados. Plano: `docs/ai/PLANO_IA_EFICIENCIA_E_AVALIACAO.md`, Parte B. O usuário decidiu em 03/11 que **os médicos participam da escolha das IAs**.
-- **D16 (nova, 03/11 23:37): texto do aviso de uso de IA e da recusa do paciente** (CFM 2.454/2026). A implementação técnica está na A0.
-- **D13 (urgente, nova em 03/11): provedor de IA.**
-  - O `gemini-2.5-flash` está descontinuado e passa a ser redirecionado automaticamente para `gemini-3.5-flash-lite` em **01/12/2026**.
-  - Os termos do Google proíbem uso clínico, tanto na Gemini API quanto no Vertex.
-  - A CFM 2.454/2026 já está em vigor: aviso ao paciente, registro de uso de IA no prontuário e avaliação de risco.
-  - O relatório comparativo foi **entregue ao usuário em 03/11 23:15**, em `reports/Provedores de IA para saúde.md`. Proposta: OpenAI direta (ZDR, processamento no EEE) para texto, Azure Speech em Brazil South para transcrição; alternativas Claude e AWS Transcribe sa-east-1. Nada muda no código sem decisão do usuário.
-  - **Conferência Codex em 03/11 23:06:** endpoint atual e redirecionamento confirmados. Os termos Cloud têm exceção explícita para tarefas administrativas; não é uma proibição de todo uso em saúde. Aplicabilidade clínica/contrato e validação permanecem em D13. [Evidências](../docs/reviews/2026-11-03/ai-provider-alert/VERIFICATION.md). Sem troca de provedor nesta rodada.
-- **D14 (nova, 03/11 23:27): agendamentos sem prontuário do médico.** 9.900 agendamentos têm paciente, mas o médico daquela agenda não tem prontuário dele (cerca de 3.044 pares). Criar um prontuário vazio para esses pares ou importar sem vínculo com o paciente.
-- **D12 (proposta do Codex em 03/11 22:46): primeira coorte de contatos na recepção.** Ativos mais pessoas com agendamento futuro dentro do corte da D3. O resto fica no staging e é recuperado sob demanda. Depende de aprovação da clínica.
-- **D11, decidida pelo usuário em 03/11 22:30:** nuvem com projeto Supabase novo da clínica em **sa-east-1 (São Paulo)**, **opção B** (plano Pro com backup diário, sem PITR). O projeto atual, em us-west-2, continua só para testes.
-  - Recomendação do Claude, ainda não decidida: antes da carga real, fazer um backup manual completo (`pg_dump`) e reavaliar ligar o PITR durante a migração.
-- **D2:** mapa dos médicos do PersonalMed para as contas do Cortex. Bloqueia qualquer carga real.
-- **D3:** quais agendamentos importar.
-- **D8:** receitas de controlados no Cortex.
+**Respostas do usuário em 04/11/2026, por volta de 08:40, neste chat (Claude).** Tabela completa e detalhes em `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8.
+
+Decididas:
+- **D1:** importar todos os pacientes.
+- **D3:** importar todos os agendamentos, inclusive os passados.
+- **D4:** DDD 41 automático, e o cadastro é revisado na primeira consulta no Cortex.
+- **D5:** importar todos os modelos.
+- **D8:** liberar os controlados no Cortex. Vale para a Receita de Controle Especial (C1 e C5); as listas A e B continuam em talão numerado. Implementação no domínio do Claude. O endereço do paciente é obrigatório e depende da S2.
+- **D11:** Supabase em sa-east-1, plano Pro com backup diário (03/11).
+- **D12:** primeira coorte da recepção aprovada (ativos mais quem tem agendamento futuro).
+- **D13:** **OpenAI GPT-6.1 Terra** para texto e **Azure Speech** (Brazil South) para transcrição. O GPT-6.1 Terra foi lançado em 26/10/2026 (US$ 1/US$ 5 por milhão de tokens); conferir o identificador exato na documentação da OpenAI ao configurar. A integração no app é do Codex (A0).
+- **D17:** assinatura ICP-Brasil própria, com o certificado em nuvem VIDaaS e a validação do ITI; a Mevo fica como plano B. A implementação é do Claude.
+- **D18:** recorte da Haddad Nicola, porque os médicos só trabalham na clínica (08:17).
+- **D19:** cada médico recebe os modelos que usou, já adaptados e **aprovados**, sem revisão prévia, e pode editá-los.
+
+Abertas ou em andamento:
+- **D2, adiada:** a migração fica pronta e roda sobre uma exportação atualizada. Os códigos foram identificados pelos nomes do sistema antigo (2 Sinaida Haddad, 3 Patricia Haddad, 4 Marcelo Chemim Nicola, 5 Marcia Regina Chemin Nicola, 9 Osny de Barros Junior, 11 "Gineco", que é um login compartilhado, e 13 Dr Daniel, sem prontuário). Faltam as contas Cortex e saber quem usava o "Gineco".
+- **D6 e D7:** o usuário pediu uma análise mais funda. Claude prepara.
+- **D9:** delegada ao Claude, que confirma pelos dados.
+- **D10:** tarefa a fazer (pedir a pasta de imagens à clínica).
+- **D14:** o usuário não entendeu a pergunta. Claude reexplica.
+- **D15:** teste com vídeos de consultas encenadas do YouTube. É preciso cuidar da licença dos vídeos e do gabarito (transcrição correta) de cada um.
+- **D16:** para depois, com os médicos.
+- **D20:** "não vamos copiar o paciente, ele vai ser compartilhado". O alerta vai uma vez, para o paciente compartilhado. Claude perguntou ao usuário o que compartilhar significa (cadastro único ou compartilhamento entre prontuários), porque isso muda o modelo de dados.
