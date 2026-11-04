@@ -85,7 +85,7 @@ Atualizado em 2026-11-04 02:30 por Claude. Cada agente atualiza as linhas que lh
 
 ## Decisões pendentes do usuário ou da clínica
 
-São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8, mais D12 a D18 abaixo. As que mais bloqueiam:
+São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8, mais D12 a D19 abaixo. As que mais bloqueiam:
 - **D18 (nova, 04/11 02:04): limite administrativo da recepção.** Somente pacientes/compromissos da Haddad Nicola liberados pelo médico (proposta) ou toda carteira/agenda particular com autorização explícita? Pergunta assíncrona pendente; bloqueia o recorte de M2, não L5. Prontuários clínicos privados em ambos; não autoriza importação/coorte de carga. [Pergunta](mensagens/2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md).
 - **D19 (nova, 04/11 02:30): modelos de receita da clínica.** No PersonalMed, 1.090 dos 1.091 modelos são da clínica toda; no Cortex, cada médico tem biblioteca própria. Proposta: cada médico recebe, como "a revisar", os modelos que usou em 2025–2026; os demais ficam no staging. Alternativas: todos para todos, ou esperar uma biblioteca compartilhada. Nada é importado antes da decisão (e da D2).
 - **D17 (nova, 03/11 23:43): assinatura digital dos médicos.** Integrar a Mevo (citada pelos médicos) ou outra plataforma, ou implementar assinatura ICP-Brasil própria com certificado em nuvem e a nossa validação. Claude está pesquisando, e a recomendação vai para o usuário decidir.
