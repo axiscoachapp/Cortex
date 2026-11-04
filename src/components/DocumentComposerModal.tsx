@@ -271,7 +271,10 @@ export function DocumentComposerModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-4">
+          {/* R3: while a document is being generated the form is read-only, so the
+              screen cannot drift from the payload already sent. */}
+          <fieldset disabled={isGenerating} aria-busy={isGenerating} className="m-0 min-w-0 space-y-4 border-0 p-0">
           {/* Type selector */}
           <div className="grid grid-cols-2 gap-2">
             {TYPE_META.map(({ value, label, hint, icon: Icon }) => (
@@ -474,6 +477,7 @@ export function DocumentComposerModal({
               </div>
             </>
           )}
+          </fieldset>
         </div>
 
         {catalogError && <p role="alert" className="px-5 text-xs text-destructive">Não foi possível consultar o catálogo. Edite a busca para tentar novamente ou preencha o medicamento manualmente.</p>}

@@ -122,3 +122,41 @@ describe('PrescriptionTemplatePicker', () => {
     expect(retry).toHaveBeenCalled();
   });
 });
+
+describe('PrescriptionTemplatePicker while busy (R3)', () => {
+  beforeEach(() => {
+    hook.value = base();
+  });
+
+  for (const [mode, label] of [
+    ['replace', 'Substituir a seleção'],
+    ['add', 'Adicionar aos selecionados'],
+  ] as const)
+    it(`holds the pending "${mode}" choice while busy and applies it afterwards`, async () => {
+      const onApply = vi.fn();
+      const user = userEvent.setup();
+      const selected = [{ name: 'Medicamento sintético A' }];
+      const view = render(<PrescriptionTemplatePicker selected={selected} onApply={onApply} disabled={false} />);
+      await user.selectOptions(screen.getByLabelText('Modelos de receita'), 'snippet-1');
+
+      view.rerender(<PrescriptionTemplatePicker selected={selected} onApply={onApply} disabled />);
+      expect(screen.getByRole('button', { name: 'Substituir a seleção' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Adicionar aos selecionados' })).toBeDisabled();
+      await user.click(screen.getByRole('button', { name: label }));
+      expect(onApply).not.toHaveBeenCalled();
+
+      view.rerender(<PrescriptionTemplatePicker selected={selected} onApply={onApply} disabled={false} />);
+      expect(screen.getByRole('group', { name: 'Como aplicar o modelo' })).toHaveTextContent('Medicamento sintético A');
+      await user.click(screen.getByRole('button', { name: label }));
+      expect(onApply).toHaveBeenCalledTimes(1);
+      expect(onApply).toHaveBeenCalledWith(template.items, mode);
+    });
+
+  it('does not apply while a template write is in flight', async () => {
+    hook.value = { ...base(), isSaving: true };
+    const onApply = vi.fn();
+    render(<PrescriptionTemplatePicker selected={[]} onApply={onApply} />);
+    expect(screen.getByLabelText('Modelos de receita')).toBeDisabled();
+    expect(onApply).not.toHaveBeenCalled();
+  });
+});

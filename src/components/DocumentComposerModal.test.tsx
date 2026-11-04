@@ -136,3 +136,39 @@ describe('Prescription templates in the composer', () => {
     expect(await generate()).toMatchObject({ docType: 'receita_simples', medications: [A, PAIN] });
   });
 });
+
+describe('Composer while generating (R3)', () => {
+  it('locks the form during generation and keeps the pending template choice for after a failure', async () => {
+    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000' }, isLoading: false };
+    const A = { name: 'Medicamento sintético A', dosage: '1', instructions: 'x' };
+    const onGenerate = vi.fn<(payload: unknown) => Promise<void>>(async () => {});
+    const composer = (isGenerating: boolean) => (
+      <DocumentComposerModal open onOpenChange={() => {}} patient={person({ sex: 'feminino', medications: [A] })} onGenerate={onGenerate} isGenerating={isGenerating} />
+    );
+    const user = userEvent.setup();
+    const view = render(composer(false));
+    await user.selectOptions(screen.getByLabelText('Modelos de receita'), 'snippet-uti');
+
+    // Generation starts (e.g. from a second click elsewhere): nothing in the form can change.
+    view.rerender(composer(true));
+    expect(screen.getByRole('button', { name: 'Substituir a seleção' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Adicionar aos selecionados' })).toBeDisabled();
+    expect(screen.getByLabelText('Modelos de receita')).toBeDisabled();
+    for (const box of screen.getAllByRole('checkbox')) expect(box).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Antimicrobiano/ })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Substituir a seleção' }));
+
+    // The request failed: the form is back, with the same selection and the choice still open.
+    view.rerender(composer(false));
+    expect(screen.getByRole('group', { name: 'Como aplicar o modelo' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Gerar/ }));
+    expect(onGenerate.mock.calls.at(-1)?.[0]).toMatchObject({ docType: 'receita_simples', medications: [A] });
+
+    await user.click(screen.getByRole('button', { name: 'Substituir a seleção' }));
+    await user.click(screen.getByRole('button', { name: /Gerar/ }));
+    expect(onGenerate.mock.calls.at(-1)?.[0]).toMatchObject({
+      docType: 'receita_antimicrobiano',
+      medications: [{ name: 'Nitrofurantoína 100 mg', dosage: '1 cápsula', instructions: 'de 6 em 6 horas por 5 dias' }],
+    });
+  });
+});

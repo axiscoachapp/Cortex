@@ -30,7 +30,10 @@ export function PrescriptionTemplatePicker({ selected, onApply, disabled }: Pres
   const items = snippetItemsFrom(selected);
   const busy = disabled || isSaving;
 
+  // R3: never change the selection while the composer is generating or a
+  // template write is in flight. A pending choice stays open for afterwards.
   const apply = (snippet: DocumentSnippet, mode: ApplyMode) => {
+    if (busy) return;
     const removed = mode === 'replace' ? selected.length : 0;
     setPending(null);
     setApplied(snippet);
@@ -47,7 +50,7 @@ export function PrescriptionTemplatePicker({ selected, onApply, disabled }: Pres
   // the doctor decides whether it replaces the selection or joins it.
   const choose = (id: string) => {
     const snippet = snippets.find((s) => s.id === id);
-    if (!snippet) return;
+    if (!snippet || busy) return;
     if (selected.length === 0) apply(snippet, 'replace');
     else {
       setPending(snippet);
@@ -131,10 +134,10 @@ export function PrescriptionTemplatePicker({ selected, onApply, disabled }: Pres
             {selected.map((m) => m.name.trim() || 'sem nome').join(', ')}. Como aplicar o modelo "{pending.name}"?
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" onClick={() => apply(pending, 'replace')}>
+            <Button type="button" size="sm" disabled={busy} onClick={() => apply(pending, 'replace')}>
               Substituir a seleção
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => apply(pending, 'add')}>
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => apply(pending, 'add')}>
               Adicionar aos selecionados
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setPending(null)}>
