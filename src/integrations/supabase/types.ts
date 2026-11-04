@@ -186,6 +186,33 @@ export type Database = {
         }
         Relationships: []
       }
+      cid10_catalog: {
+        Row: {
+          code: string
+          description: string
+          kind: string
+          refreshed_at: string
+          sex: string | null
+          short_description: string | null
+        }
+        Insert: {
+          code: string
+          description: string
+          kind: string
+          refreshed_at?: string
+          sex?: string | null
+          short_description?: string | null
+        }
+        Update: {
+          code?: string
+          description?: string
+          kind?: string
+          refreshed_at?: string
+          sex?: string | null
+          short_description?: string | null
+        }
+        Relationships: []
+      }
       clinic_contacts: {
         Row: {
           clinic_id: string
@@ -615,6 +642,30 @@ export type Database = {
         }
         Relationships: []
       }
+      dcb_catalog: {
+        Row: {
+          cas: string | null
+          classification: string | null
+          dcb_number: number
+          name: string
+          refreshed_at: string
+        }
+        Insert: {
+          cas?: string | null
+          classification?: string | null
+          dcb_number: number
+          name: string
+          refreshed_at?: string
+        }
+        Update: {
+          cas?: string | null
+          classification?: string | null
+          dcb_number?: number
+          name?: string
+          refreshed_at?: string
+        }
+        Relationships: []
+      }
       document_snippets: {
         Row: {
           created_at: string
@@ -684,6 +735,33 @@ export type Database = {
           name?: string
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      exam_catalog: {
+        Row: {
+          code: string
+          exam_group: string
+          name: string
+          refreshed_at: string
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          code: string
+          exam_group: string
+          name: string
+          refreshed_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          code?: string
+          exam_group?: string
+          name?: string
+          refreshed_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
         }
         Relationships: []
       }
@@ -901,6 +979,54 @@ export type Database = {
           is_antimicrobial?: boolean
           product_name?: string
           regulatory_category?: string | null
+          therapeutic_class?: string | null
+        }
+        Relationships: []
+      }
+      medication_presentations: {
+        Row: {
+          eans: string[]
+          ggrem: string
+          hospital_only: boolean
+          laboratory: string | null
+          presentation: string | null
+          product: string
+          product_type: string | null
+          refreshed_at: string
+          registration: string | null
+          registration9: string | null
+          substance: string | null
+          tarja: string | null
+          therapeutic_class: string | null
+        }
+        Insert: {
+          eans?: string[]
+          ggrem: string
+          hospital_only?: boolean
+          laboratory?: string | null
+          presentation?: string | null
+          product: string
+          product_type?: string | null
+          refreshed_at?: string
+          registration?: string | null
+          registration9?: string | null
+          substance?: string | null
+          tarja?: string | null
+          therapeutic_class?: string | null
+        }
+        Update: {
+          eans?: string[]
+          ggrem?: string
+          hospital_only?: boolean
+          laboratory?: string | null
+          presentation?: string | null
+          product?: string
+          product_type?: string | null
+          refreshed_at?: string
+          registration?: string | null
+          registration9?: string | null
+          substance?: string | null
+          tarja?: string | null
           therapeutic_class?: string | null
         }
         Relationships: []
@@ -1263,6 +1389,7 @@ export type Database = {
           secret_code: string
           signature_verified_at: string | null
           signed_at: string | null
+          signed_storage_path: string | null
           status: string
           storage_path: string
           user_id: string
@@ -1281,6 +1408,7 @@ export type Database = {
           secret_code: string
           signature_verified_at?: string | null
           signed_at?: string | null
+          signed_storage_path?: string | null
           status?: string
           storage_path: string
           user_id: string
@@ -1299,6 +1427,7 @@ export type Database = {
           secret_code?: string
           signature_verified_at?: string | null
           signed_at?: string | null
+          signed_storage_path?: string | null
           status?: string
           storage_path?: string
           user_id?: string
@@ -1728,6 +1857,30 @@ export type Database = {
             referencedColumns: ["clinic_id", "user_id"]
           },
         ]
+      }
+      reference_catalog_versions: {
+        Row: {
+          refreshed_at: string
+          rows_loaded: number
+          sha256: string
+          source: string
+          source_url: string
+        }
+        Insert: {
+          refreshed_at?: string
+          rows_loaded: number
+          sha256: string
+          source: string
+          source_url: string
+        }
+        Update: {
+          refreshed_at?: string
+          rows_loaded?: number
+          sha256?: string
+          source?: string
+          source_url?: string
+        }
+        Relationships: []
       }
       shared_chart_entries: {
         Row: {
@@ -2548,11 +2701,78 @@ export type Database = {
       sharing_overview: { Args: never; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      signature_activate_session: {
+        Args: {
+          p_cert_sha256: string
+          p_expires_at: string
+          p_psc: string
+          p_session: string
+          p_token: Json
+          p_user: string
+        }
+        Returns: Json
+      }
+      signature_advance: {
+        Args: {
+          p_data?: Json
+          p_operation: string
+          p_to: string
+          p_user: string
+        }
+        Returns: Json
+      }
+      signature_begin_authorization: {
+        Args: {
+          p_psc: string
+          p_state_hash: string
+          p_user: string
+          p_verifier: Json
+        }
+        Returns: string
+      }
+      signature_cleanup_done: {
+        Args: { p_operation: string; p_user: string }
+        Returns: undefined
+      }
+      signature_complete: {
+        Args: {
+          p_cert_issuer: string
+          p_cert_serial: string
+          p_operation: string
+          p_user: string
+        }
+        Returns: Json
+      }
+      signature_consume_authorization: {
+        Args: { p_psc: string; p_state_hash: string; p_user: string }
+        Returns: Json
+      }
+      signature_expire_sessions: { Args: never; Returns: number }
+      signature_pending_work: { Args: { p_limit?: number }; Returns: Json }
+      signature_reserve: {
+        Args: {
+          p_operation: string
+          p_prescription: string
+          p_shown_sha256: string
+          p_user: string
+        }
+        Returns: Json
+      }
+      signature_revoke_session: { Args: { p_user: string }; Returns: number }
+      signature_session_state: { Args: { p_user: string }; Returns: Json }
+      signature_session_token: {
+        Args: { p_generation: number; p_session: string; p_user: string }
+        Returns: Json
+      }
       storage_parent_is_live: {
         Args: { p_bucket: string; p_name: string }
         Returns: boolean
       }
       storage_parent_is_live_before_discard: {
+        Args: { p_bucket: string; p_name: string }
+        Returns: boolean
+      }
+      storage_parent_is_live_before_signature: {
         Args: { p_bucket: string; p_name: string }
         Returns: boolean
       }
@@ -2566,6 +2786,7 @@ export type Database = {
       }
       update_user_settings: { Args: { p_patch: Json }; Returns: undefined }
       valid_patient_cpf: { Args: { value: string }; Returns: boolean }
+      valid_snippet_formula: { Args: { p_formula: Json }; Returns: boolean }
       valid_snippet_items: { Args: { p_items: Json }; Returns: boolean }
       validate_security_boundaries: {
         Args: never
