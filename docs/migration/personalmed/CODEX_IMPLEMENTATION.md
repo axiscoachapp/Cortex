@@ -578,7 +578,7 @@ Navegador: 390, 768, 1280 e 1920 px na escala de 150%, como já está definido.
 | D8 | Controlados no Cortex | Fase 2, depois de confirmação jurídica. Até lá, receituário próprio. |
 | D9 | Confirmar inferências | FAX = CPF, e-mail = acomodação, estados A/E/`-`, tipo de slot P. |
 | D10 | Pasta externa de imagens (172) | Pedir à clínica. |
-| D11 | Hospedagem e região | Nuvem: Supabase em sa-east-1 (São Paulo), plano Pro com PITR, projeto novo só da clínica. O de teste em us-west-2 não recebe dados reais. |
+| D11 | Hospedagem e região | **Decidida em 03/11:** Supabase em sa-east-1 (São Paulo), projeto novo só da clínica, plano Pro com backup diário (opção B, sem PITR). O de teste em us-west-2 não recebe dados reais. Antes da carga real: `pg_dump` completo e reavaliar o PITR durante a migração. |
 
 ---
 

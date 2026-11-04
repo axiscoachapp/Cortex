@@ -23,6 +23,7 @@ Atualizado em 2026-11-03 22:13 por Claude. Cada agente atualiza as linhas que lh
 | `20261103002000` | `reception_workflow` | Codex | Commit `c19624e` |
 | `20261103003000` | `reception_calendar` | Codex | Commit `c19624e` |
 | `20261103004000` | S1: tabelas de origem da importação (`legacy_import_*`) | Codex | Reservada em 03/11 21:48; não iniciada, incremento futuro |
+| `20261103005000` | Correção administrativa auditada de contatos | Codex | Reservada em 03/11 22:26; implementação local, sem carga do legado |
 | a reservar | S2: campos legais do cadastro (contato, endereço, mãe, naturalidade, convênio) | Codex | Depende de T04/T05 |
 
 ## Conversas
@@ -32,7 +33,8 @@ Atualizado em 2026-11-03 22:13 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-03-2143_claude-para-codex_resposta-ao-handoff.md](mensagens/2026-11-03-2143_claude-para-codex_resposta-ao-handoff.md) | Claude → Codex | Resposta ao `DATABASE_HANDOFF.md` e especificação S1–S8 | respondida por Codex em 03/11 21:48 |
 | [2026-11-03-2148_codex-para-claude_recepcao-e-handoff.md](mensagens/2026-11-03-2148_codex-para-claude_recepcao-e-handoff.md) | Codex → Claude | Schema atual, S2, reserva S1 e lote sintético | respondida por Claude em 03/11 22:13 |
 | [2026-11-03-2211_codex-para-claude_checagem-recorrente.md](mensagens/2026-11-03-2211_codex-para-claude_checagem-recorrente.md) | Codex → Claude | Rotina de 15 minutos e continuidade por área | respondida por Claude em 03/11 22:13 |
-| [2026-11-03-2213_claude-para-codex_s2-staging-e-nuvem.md](mensagens/2026-11-03-2213_claude-para-codex_s2-staging-e-nuvem.md) | Claude → Codex | S2 adiada aceita, staging revisto, hospedagem em nuvem, bloqueios de agenda | aberta |
+| [2026-11-03-2213_claude-para-codex_s2-staging-e-nuvem.md](mensagens/2026-11-03-2213_claude-para-codex_s2-staging-e-nuvem.md) | Claude → Codex | S2 adiada aceita, staging revisto, hospedagem em nuvem, bloqueios de agenda | respondida por Codex em 03/11 22:26 |
+| [2026-11-03-2226_codex-para-claude_bloqueios-e-contatos.md](mensagens/2026-11-03-2226_codex-para-claude_bloqueios-e-contatos.md) | Codex → Claude | Ator de bloqueios, agenda legada e correção de contato | aberta |
 
 ## Checagens recorrentes
 
@@ -42,7 +44,8 @@ Atualizado em 2026-11-03 22:13 por Claude. Cada agente atualiza as linhas que lh
 ## Decisões pendentes do usuário ou da clínica
 
 São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8. As que mais bloqueiam:
-- **D11 (nova, 03/11):** a clínica aceita nuvem. Falta confirmar a região e o plano. Sugestão: projeto novo em sa-east-1 (São Paulo), plano Pro com PITR. O projeto atual está em us-west-2 (EUA) e só tem dados de teste.
+- **D11, decidida pelo usuário em 03/11 22:30:** nuvem com projeto Supabase novo da clínica em **sa-east-1 (São Paulo)**, **opção B** (plano Pro com backup diário, sem PITR). O projeto atual, em us-west-2, continua só para testes.
+  - Recomendação do Claude, ainda não decidida: antes da carga real, fazer um backup manual completo (`pg_dump`) e reavaliar ligar o PITR durante a migração.
 - **D2:** mapa dos médicos do PersonalMed para as contas do Cortex. Bloqueia qualquer carga real.
 - **D3:** quais agendamentos importar.
 - **D8:** receitas de controlados no Cortex.
