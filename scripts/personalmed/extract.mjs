@@ -7,12 +7,14 @@
 // Usage:
 //   node --max-old-space-size=6144 scripts/personalmed/extract.mjs <exportDir> \
 //        [--export-date 2026-08-24] [--import-date YYYY-MM-DD] [--json <aggregates.json>]
+//        [--out <dir outside the repo>]   # writes the ENCRYPTED staging; needs PM_STAGING_KEY
 
 import { readdirSync, writeFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import { ParadoxTable, decodeText, toCalendarDate } from './paradox-reader.mjs';
 import { Mdf } from './mssql2000-reader.mjs';
 import { rtfToText } from './rtf-to-text.mjs';
+import { SecureBatchWriter, keyFromEnv } from './secure-staging.mjs';
 import { buildAgenda, buildChartClinical, buildPerson } from './staging.mjs';
 import { splitHistory, wallClockToUtc } from './transforms.mjs';
 
@@ -47,8 +49,12 @@ const lap = (label) => process.stderr.write(`${label}: ${((Date.now() - t0) / 10
 // ---------------------------------------------------------------------------
 // Aggregates (the only output)
 
+// Optional encrypted output (real patient data): only outside the repo, only with PM_STAGING_KEY.
+const writer = opt('--out') ? new SecureBatchWriter(opt('--out'), keyFromEnv()) : null;
+
 const agg = { entities: {}, issues: {}, sections: {}, chars: { historySource: 0, historyInConsultations: 0 } };
 function count(e) {
+  writer?.add(e);
   const a = (agg.entities[e.sourceEntity] ??= { total: 0, byStatus: {}, byDoctor: {} });
   a.total += 1;
   a.byStatus[e.mappingStatus] = (a.byStatus[e.mappingStatus] ?? 0) + 1;
@@ -226,6 +232,7 @@ lap('agenda envelopes');
 const expected = { person: 32882, chart: 34796, contact_chart_link: 34796, consultation: 169934 + 13010, diagnosis_set: 2353, pregnancy_item: 97 };
 const reconciliation = Object.fromEntries(Object.entries(expected).map(([k, v]) => [k, { expected: v, staged: agg.entities[k]?.total ?? 0, diff: (agg.entities[k]?.total ?? 0) - v }]));
 const out = { exportDate: EXPORT, importDate: ctx.importDate, persons, chartsWithClinicalButNoHeader: chartsWithoutHeader, reconciliation, entities: agg.entities, issues: Object.fromEntries(Object.entries(agg.issues).sort()), consultationSections: agg.sections, historyChars: agg.chars, seconds: Math.round((Date.now() - t0) / 1000) };
+if (writer) out.encryptedStaging = { dir: opt('--out'), manifest: 'manifest.json', files: Object.keys(writer.close({ sourceSystem: 'personalmed', sourceInstance: ctx.sourceInstance, batchId: ctx.batchId, exportDate: EXPORT, importDate: ctx.importDate }).files) };
 const json = JSON.stringify(out, null, 2);
 if (opt('--json')) writeFileSync(opt('--json'), json);
 console.log(json);

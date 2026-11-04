@@ -322,6 +322,13 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
 - `mappingStatus` pode ser `ready`, `requires_review` (vai para a lista de pendências, sem carga automática) ou `rejected` (com o motivo em `issues`).
 - **Valores brutos não entram no banco.** Ficam no arquivo cifrado e no staging. No banco ficam só o mapa e os códigos de problema (S1), o que atende ao pedido de "área restrita" sem duplicar dado pessoal.
 - Para cada lote há um `manifest.json` com contagens por entidade e por médico, SHA-256 de cada arquivo, a versão da transformação e a lista de códigos de problema.
+- **Lote real cifrado** (`scripts/personalmed/secure-staging.mjs`):
+  - cada entidade vai num arquivo `<entidade>.ndjson.enc`, cifrado com AES-256-GCM no formato `PMS1` + IV de 12 bytes + texto cifrado + tag de 16 bytes;
+  - a chave vem só da variável `PM_STAGING_KEY` (64 caracteres hexadecimais, gerada com `--new-key` e guardada num gerenciador de senhas);
+  - o gravador recusa gravar dentro do repositório;
+  - o `manifest.json` fica em texto claro, só com agregados e o SHA-256 do texto de cada arquivo.
+
+  O carregador lê o lote com `readEncryptedNdjson(arquivo, chave)`. Para gerar: `PM_STAGING_KEY=… node --max-old-space-size=6144 scripts/personalmed/extract.mjs <exportação> --out <pasta fora do repositório>`. Sem `--out`, o extrator só conta e não grava nada.
 
 **Entidades de staging**, em ordem de carga. A ordem foi revista com o Codex na mensagem `2026-11-03-2148`.
 1. `person`: identidade legal do legado, um registro por `PCod`. Fica só no staging até a S2 ter especificação própria.
