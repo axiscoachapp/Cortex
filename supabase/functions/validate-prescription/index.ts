@@ -52,7 +52,9 @@ Em caso de dúvida, entre em contato com o médico emissor.`;
     const url = new URL(req.url);
     const id = url.searchParams.get('id') ?? '';
     const code = url.searchParams.get('_secretCode') ?? url.searchParams.get('code') ?? '';
-    const format = url.searchParams.get('_format') ?? '';
+    // A literal "+" in the query string decodes to a space; accept both
+    // spellings of the ITI media type so the JSON branch is not missed.
+    const format = (url.searchParams.get('_format') ?? '').replace(/^application\/validador-iti json$/, 'application/validador-iti+json');
 
     if (!id) {
       return reply(400, { error: 'Documento não informado.' });

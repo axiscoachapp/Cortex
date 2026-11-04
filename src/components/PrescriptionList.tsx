@@ -100,7 +100,10 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
             ? { label: 'Reemitir documento', cls:'bg-amber-100 text-amber-700' }
             : rx.status === 'signed' && !rx.signature_verified_at
               ? {label:'Assinatura não verificada',cls:'bg-amber-100 text-amber-700'} : STATUS_META[rx.status];
-          const expired = new Date(rx.expires_at).getTime() < Date.now();
+          // Same rule as validate-prescription: only prescriptions have a
+          // dispensing window; sick notes and exam requests stay valid.
+          const expires = typeof rx.doc_type !== 'string' || rx.doc_type.startsWith('receita');
+          const expired = expires && new Date(rx.expires_at).getTime() <= Date.now();
           return (
             <div key={rx.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border/60 bg-card">
               <div className="flex-1 min-w-0">

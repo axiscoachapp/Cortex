@@ -7,6 +7,7 @@ import ts from 'typescript';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as http from '../../supabase/functions/_shared/http';
 import * as patientAge from '../../supabase/functions/_shared/patientAge';
+import * as dates from '../../supabase/functions/_shared/clinicDate';
 import * as layout from '../../supabase/functions/_shared/documentLayout';
 import * as regulated from '../../supabase/functions/_shared/regulatedMedications';
 
@@ -16,7 +17,7 @@ const patientId = '22222222-2222-4222-8222-222222222222';
 afterEach(() => vi.useRealTimers());
 
 /** Minimal in-memory client: enough of supabase-js for generate-prescription. */
-function database(seed: Record<string, Row[]>) {
+function database(seed: Record<string, Row[]>, options: { insertError?: { code: string; message: string } } = {}) {
   const tables = structuredClone(seed);
   const upload = vi.fn(async () => ({ error: null as unknown }));
   const signedUrl = vi.fn(async (_path: string, _seconds: number) => ({ data: { signedUrl: 'https://example.invalid/document' }, error: null }));
@@ -36,15 +37,17 @@ function database(seed: Record<string, Row[]>) {
       const filters: Array<(row: Row) => boolean> = [];
       let action = 'select';
       let value: Row = {};
-      const execute = () => {
+      // maybeSingle() resolves one row; awaiting the query itself resolves the list.
+      const execute = (single = true) => {
         if (action === 'insert') {
+          if (options.insertError) return { data: null, error: options.insertError };
           (tables[table] ??= []).push(value);
           return { data: value, error: null };
         }
         const rows = (tables[table] ?? []).filter((row) => filters.every((filter) => filter(row)));
         if (action === 'update') rows.forEach((row) => Object.assign(row, value));
         if (action === 'delete') tables[table] = (tables[table] ?? []).filter((row) => !rows.includes(row));
-        return { data: rows[0] ?? null, error: null };
+        return { data: (single ? (rows[0] ?? null) : rows) as Row | Row[] | null, error: null };
       };
       const query = {
         select: () => query,
@@ -52,6 +55,11 @@ function database(seed: Record<string, Row[]>) {
           filters.push((row) => row[key] === expected);
           return query;
         },
+        in: (key: string, expected: unknown[]) => {
+          filters.push((row) => expected.includes(row[key]));
+          return query;
+        },
+        limit: () => query,
         insert: (row: Row) => {
           action = 'insert';
           value = row;
@@ -67,7 +75,7 @@ function database(seed: Record<string, Row[]>) {
           return query;
         },
         maybeSingle: async () => execute(),
-        then: (resolve: (result: ReturnType<typeof execute>) => unknown) => Promise.resolve(execute()).then(resolve),
+        then: (resolve: (result: ReturnType<typeof execute>) => unknown) => Promise.resolve(execute(action !== 'select')).then(resolve),
       };
       return query;
     },
@@ -85,6 +93,7 @@ function generate(db: ReturnType<typeof database>) {
     '../_shared/regulatedMedications.ts': regulated,
     '../_shared/documentLayout.ts': layout,
     '../_shared/patientAge.ts': patientAge,
+    '../_shared/clinicDate.ts': dates,
     '../_shared/http.ts': http,
     '../_shared/auth.ts': {
       requireUser: async () => ({ userId: user }),
@@ -233,5 +242,63 @@ describe('prescription document content', () => {
     expect(db.drawnText).toContain('1ª via — paciente');
     expect(db.drawnText).toContain('2ª via — retenção da farmácia');
     expect(db.tables.prescriptions[0]).toMatchObject({ doc_type: 'receita_antimicrobiano', status: 'generated' });
+  });
+});
+
+describe('regulated drugs by brand, generic name and validity (review findings)', () => {
+  const ready = () => ({ user_settings: [prescriber({ professional_phone: '(41) 3000-0000' })], patients: [person({ sex: 'feminino' })] });
+
+  it('refuses a controlled drug known only by a catalog brand on a simple prescription', async () => {
+    const db = database({ ...ready(), medication_catalog: [{ product_name: 'MARCA SINTETICA', active_ingredient: 'CLONAZEPAM', is_antimicrobial: false }] });
+    const response = await generate(db)({ patientId, docType: 'receita_simples', medications: [{ name: 'Marca Sintetica 2 mg', dosage: '1 comprimido', instructions: 'à noite' }] });
+    expect(response.status).toBe(422);
+    expect((await response.json()).error).toMatch(/controle especial.*clonazepam/);
+    expect(db.tables.prescriptions).toBeUndefined();
+  });
+
+  it('refuses an antimicrobial flagged only in the catalog on a simple prescription', async () => {
+    const db = database({ ...ready(), medication_catalog: [{ product_name: 'OUTRA MARCA', active_ingredient: 'SUBSTANCIA SINTETICA', is_antimicrobial: true }] });
+    const response = await generate(db)({ patientId, docType: 'receita_simples', medications: [{ name: 'Outra Marca', dosage: '1 envelope', instructions: 'dose única' }] });
+    expect(response.status).toBe(422);
+    expect((await response.json()).error).toContain('Antimicrobiano (substancia sintetica)');
+  });
+
+  it('still catches a frequent brand without the catalog', async () => {
+    const db = database(ready());
+    const response = await generate(db)({ patientId, docType: 'receita_simples', medications: [{ name: 'Rivotril 2mg', dosage: '1 comprimido', instructions: 'à noite' }] });
+    expect(response.status).toBe(422);
+  });
+
+  it('prints the generic name next to a brand on an antimicrobial prescription', async () => {
+    const db = database({ ...ready(), medication_catalog: [{ product_name: 'OUTRA MARCA', active_ingredient: 'FOSFOMICINA TROMETAMOL', is_antimicrobial: true }] });
+    const response = await generate(db)({
+      patientId,
+      docType: 'receita_antimicrobiano',
+      medications: [
+        { name: 'Outra Marca 3 g', dosage: '1 envelope', instructions: 'dose única' },
+        { name: 'Nitrofurantoína 100 mg', dosage: '1 cápsula', instructions: '6/6 h' },
+      ],
+    });
+    expect(response.status).toBe(200);
+    expect(db.drawnText).toContain('1. Outra Marca 3 g (fosfomicina trometamol) — 1 envelope');
+    expect(db.drawnText).toContain('2. Nitrofurantoína 100 mg — 1 cápsula');
+  });
+
+  it('keeps a prescription valid through the whole printed day in the clinic zone', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-04T18:00:00Z')); // 15:00 in São Paulo
+    const db = database(ready());
+    const response = await generate(db)({ patientId, docType: 'receita_antimicrobiano', medications: [{ name: 'Amoxicilina 500 mg', dosage: '1 cápsula', instructions: '8/8 h' }] });
+    expect(response.status).toBe(200);
+    expect(db.tables.prescriptions[0].expires_at).toBe('2026-11-15T02:59:59.999Z');
+    expect(db.drawnText.some((t) => t.includes('Válida até 14/11/2026'))).toBe(true);
+  });
+
+  it('says another operation was in progress when the insert loses the custody barrier', async () => {
+    const db = database(ready(), { insertError: { code: '40001', message: 'Custody changed concurrently; retry the transaction' } });
+    const response = await generate(db)({ patientId, docType: 'receita_simples', medications: [simple] });
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toMatch(/Outra operação estava em andamento/);
+    expect(db.upload).not.toHaveBeenCalled();
   });
 });

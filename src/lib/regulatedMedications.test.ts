@@ -22,6 +22,18 @@ describe('regulated medication safety net', () => {
     expect(antimicrobialsIn('nitrofurantoína 100mg')).toEqual(['nitrofurantoina']);
     expect(antimicrobialsIn('Paracetamol 750 mg')).toEqual([]);
   });
+  it('maps frequent brands, Brazilian spellings and glued doses to the substance', () => {
+    expect(controlledSubstancesIn('Rivotril 2mg')).toEqual(['clonazepam']);
+    expect(controlledSubstancesIn('Tylex 30mg')).toEqual(['codeina']);
+    expect(controlledSubstancesIn('Roacutan 20 mg')).toEqual(['isotretinoina']);
+    expect(controlledSubstancesIn('Clonazepam2mg')).toEqual(['clonazepam']);
+    expect(antimicrobialsIn('Monuril 3 g')).toEqual(['fosfomicina']);
+    expect(antimicrobialsIn('Bactrim F')).toEqual(['sulfametoxazol']);
+    expect(antimicrobialsIn('Ciprofloxacina 500mg')).toEqual(['ciprofloxacino']);
+    expect(antimicrobialsIn('Amoxicilina500mg')).toEqual(['amoxicilina']);
+    expect(controlledSubstancesIn('Dipirona 500mg')).toEqual([]);
+    expect(antimicrobialsIn('Ácido fólico 5 mg')).toEqual([]);
+  });
 });
 
 describe('toWinAnsi', () => {

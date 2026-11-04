@@ -22,6 +22,7 @@ import { toDataURL } from "https://esm.sh/qrcode@1.5.3";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { currentPatientAge } from "../_shared/patientAge.ts";
+import { clinicDayBounds } from "../_shared/clinicDate.ts";
 import { antimicrobialsIn, controlledSubstancesIn, toWinAnsi } from "../_shared/regulatedMedications.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
@@ -63,6 +64,21 @@ function formatCpf(digits: string): string {
 }
 
 interface Medication { name: string; dosage?: string; instructions?: string }
+
+/** Database refusals that are not the doctor's fault get an honest message:
+ *  40001 is another write holding the custody barrier at the same moment,
+ *  55000 an account or patient deletion in progress. */
+function concurrencyError(error: { code?: string } | null): RequestError | null {
+  if (error?.code === '40001') return new RequestError('Outra operação estava em andamento no mesmo instante. Gere o documento novamente.', 409);
+  if (error?.code === '55000') return new RequestError('Há uma exclusão de conta ou de paciente em andamento. O documento não foi gerado.', 409);
+  return null;
+}
+
+/** Product name without dose or form ("Rivotril 2mg" -> "Rivotril"), safe as a
+ *  quoted PostgREST filter value (no quotes, wildcards or separators). */
+function catalogTerm(name: string): string {
+  return name.replace(/\s*\d.*$/, '').replace(/["\\%_(),*]/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 function accessCode(): string {
   // 8 chars, unambiguous alphabet (no 0/O/1/I), per ITI's 0-64 alphanumeric contract.
@@ -167,15 +183,42 @@ serve(async (req) => {
     if (isReceita && meds.some((m: Medication) => !m.dosage?.trim() || !m.instructions?.trim())) {
       throw new RequestError('Informe a dose e a posologia (como tomar) de todos os medicamentos.', 422);
     }
+    // A brand ("Rivotril", "Monuril") says nothing to the substance lists, so
+    // each name is also resolved in the Anvisa catalog by exact product name and
+    // checked by its active ingredient and antimicrobial flag. Fails closed.
+    const catalog = new Map<string, { ingredients: string[]; antimicrobial: boolean }>();
+    const terms = isReceita ? [...new Set(meds.map((m: Medication) => catalogTerm(m.name)).filter((t) => t.length >= 3))] : [];
+    if (terms.length) {
+      const { data: rows, error: catalogError } = await supabase.from('medication_catalog')
+        .select('product_name, active_ingredient, is_antimicrobial')
+        // refresh-medication-catalog stores product names in upper case.
+        .in('product_name', [...new Set(terms.map((t) => t.toUpperCase()))])
+        .limit(500);
+      if (catalogError) throw new RequestError('Não foi possível consultar a base Anvisa para conferir os medicamentos. Tente novamente.', 503);
+      for (const row of (rows ?? []) as Array<{ product_name: string; active_ingredient: string | null; is_antimicrobial: boolean }>) {
+        const key = row.product_name.trim().toLowerCase();
+        const entry = catalog.get(key) ?? { ingredients: [], antimicrobial: false };
+        if (row.active_ingredient?.trim()) entry.ingredients.push(row.active_ingredient.trim().toLowerCase());
+        entry.antimicrobial ||= row.is_antimicrobial === true;
+        catalog.set(key, entry);
+      }
+    }
+    const catalogOf = (m: Medication) => catalog.get(catalogTerm(m.name).toLowerCase());
+    const controlledIn = (m: Medication) => [m.name, ...(catalogOf(m)?.ingredients ?? [])].flatMap(controlledSubstancesIn);
+    const antimicrobialIn = (m: Medication) => {
+      const hit = catalogOf(m);
+      const found = [m.name, ...(hit?.ingredients ?? [])].flatMap(antimicrobialsIn);
+      return found.length || !hit?.antimicrobial ? found : [hit.ingredients[0] ?? m.name.trim()];
+    };
     if (isReceita) {
-      const controlled = meds.flatMap((m: Medication) => controlledSubstancesIn(m.name));
+      const controlled = meds.flatMap(controlledIn);
       if (controlled.length)
         throw new RequestError(
           `Medicamento sujeito a controle especial (Portaria SVS/MS 344/98): ${[...new Set(controlled)].join(', ')}. ` +
             'Emita em receituário de controle especial ou notificação de receita, conforme a lista do medicamento.',
           422,
         );
-      const antimicrobials = meds.flatMap((m: Medication) => antimicrobialsIn(m.name));
+      const antimicrobials = meds.flatMap(antimicrobialIn);
       if (antimicrobials.length && docType !== 'receita_antimicrobiano')
         throw new RequestError(
           `Antimicrobiano (${[...new Set(antimicrobials)].join(', ')}) exige a "Receita — antimicrobiano" (RDC 471/2021: 2 vias, validade de 10 dias).`,
@@ -219,7 +262,10 @@ serve(async (req) => {
     const prescriptionId = crypto.randomUUID();
     const code = accessCode();
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + VALIDITY[docType] * 86_400_000);
+    // Valid through the whole printed day in the clinic's zone: a pharmacy that
+    // scans on the last day at 16:00 must not be refused (it was now + N×24 h).
+    const lastDay = clinicDayBounds(new Date(now.getTime() + VALIDITY[docType] * 86_400_000));
+    const expiresAt = new Date(Date.parse(lastDay.end) - 1);
     const validationUrl =
       `${Deno.env.get('SUPABASE_URL')}/functions/v1/validate-prescription?id=${prescriptionId}`;
     // The QR carries the access code so scanning it opens the original document.
@@ -316,7 +362,15 @@ serve(async (req) => {
     } else {
       // Medications
       meds.forEach((m, i) => {
-        const nameLine = `${i + 1}. ${m.name.trim()}${m.dosage?.trim() ? ` — ${m.dosage.trim()}` : ''}`;
+        // RDC 471/2021: an antimicrobial is prescribed by its generic name
+        // (DCB). A brand keeps its name and gains the substance next to it.
+        let shown = m.name.trim();
+        if (docType === 'receita_antimicrobiano') {
+          const generic = catalogOf(m)?.ingredients[0] ?? [...new Set(antimicrobialsIn(m.name))].join(' + ');
+          const folded = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+          if (generic && !folded(shown).includes(folded(generic).split(/\s+/)[0])) shown = `${shown} (${generic})`;
+        }
+        const nameLine = `${i + 1}. ${shown}${m.dosage?.trim() ? ` — ${m.dosage.trim()}` : ''}`;
         text(nameLine, { size: 11.5, bold: true }); down(15);
         if (m.instructions?.trim()) {
           wrapText(m.instructions, { x: margin + 14, size: 10, color: mut, max: 90 });
@@ -400,7 +454,7 @@ serve(async (req) => {
       issuance_snapshot: issuanceSnapshot,
     });
     if (insErr) {
-      throw insErr;
+      throw concurrencyError(insErr) ?? insErr;
     }
     try {
       const { error: upErr } = await supabase.storage.from('prescriptions')
@@ -409,7 +463,8 @@ serve(async (req) => {
       const { data: activated, error: activationError } = await supabase.from('prescriptions')
         .update({ status: 'generated', issuance_verified_at: new Date().toISOString() })
         .eq('id', prescriptionId).eq('user_id', userId).select('id').maybeSingle();
-      if (activationError || !activated) throw new Error('O paciente foi alterado durante a geração. Gere novamente.');
+      if (activationError) throw concurrencyError(activationError) ?? new Error('Não foi possível concluir o documento. Gere novamente.');
+      if (!activated) throw new Error('O paciente foi alterado durante a geração. Gere novamente.');
     } catch (error) {
       const { error: cleanupError } = await supabase.storage.from('prescriptions').remove([storagePath]);
       // Keep the revoked metadata if removal fails so deletion can retry it.

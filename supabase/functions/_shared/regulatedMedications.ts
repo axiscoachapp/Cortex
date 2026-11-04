@@ -40,6 +40,29 @@ const ANTIMICROBIALS = [
   'clindamicina', 'gentamicina', 'linezolida', 'vancomicina', 'ceftazidima', 'cefazolina',
 ];
 
+// Common Brazilian spellings that differ from the DCB name.
+const SPELLINGS: Record<string, string> = {
+  ciprofloxacina: 'ciprofloxacino', levofloxacina: 'levofloxacino', norfloxacina: 'norfloxacino',
+  moxifloxacina: 'moxifloxacino', ofloxacina: 'ofloxacino',
+};
+
+// Frequent brand names, so a free-text item (or a catalog that was not
+// refreshed) is still caught. The server also checks the Anvisa catalog's
+// active ingredient; this list is only the fallback.
+const BRANDS: Record<string, string> = {
+  // controlled
+  rivotril: 'clonazepam', frontal: 'alprazolam', lexotan: 'bromazepam', valium: 'diazepam', dormonid: 'midazolam',
+  stilnox: 'zolpidem', tylex: 'codeina', tramal: 'tramadol', ritalina: 'metilfenidato', concerta: 'metilfenidato',
+  venvanse: 'lisdexanfetamina', roacutan: 'isotretinoina', cytotec: 'misoprostol', prozac: 'fluoxetina',
+  zoloft: 'sertralina', lexapro: 'escitalopram', wellbutrin: 'bupropiona', lyrica: 'pregabalina',
+  tegretol: 'carbamazepina', depakote: 'divalproato', seroquel: 'quetiapina', risperdal: 'risperidona',
+  // antimicrobial
+  amoxil: 'amoxicilina', clavulin: 'amoxicilina', zitromax: 'azitromicina', keflex: 'cefalexina',
+  cipro: 'ciprofloxacino', floxacin: 'norfloxacino', macrodantina: 'nitrofurantoina', monuril: 'fosfomicina',
+  flagyl: 'metronidazol', secnidal: 'secnidazol', bactrim: 'sulfametoxazol', benzetacil: 'benzilpenicilina',
+  vibramicina: 'doxiciclina', dalacin: 'clindamicina',
+};
+
 function normalize(text: string): string {
   return text
     .normalize('NFD')
@@ -48,7 +71,15 @@ function normalize(text: string): string {
 }
 
 function matches(name: string, list: string[]): string[] {
-  const value = ` ${normalize(name).replace(/[^a-z0-9]+/g, ' ')} `;
+  // "Clonazepam2mg" -> "clonazepam 2 mg": a glued dose must not hide the drug.
+  const words = normalize(name)
+    .replace(/([a-z])(\d)/g, '$1 $2')
+    .replace(/(\d)([a-z])/g, '$1 $2')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .map((w) => SPELLINGS[w] ?? BRANDS[w] ?? w);
+  const value = ` ${words.join(' ')} `;
   return list.filter((substance) => value.includes(` ${substance} `));
 }
 
