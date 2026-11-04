@@ -52,16 +52,19 @@ async function rpc<T>(name: RpcName, args: Record<string, unknown>, schema: z.Zo
   // RPC names and arguments are centralized here; all returned projections are validated.
   const { data, error } = await supabase.rpc(name as never, args as never).abortSignal(AbortSignal.timeout(20_000));
   if (error) {
+    const unavailableAppointment = name === 'reception_change_appointment' && error.code === '42501' && error.message === 'Agendamento indisponível';
     const message =
-      error.code === '40001'
-        ? 'Os dados mudaram em outra tela. Atualize antes de tentar novamente.'
-        : error.code === '23P01'
-          ? 'Horário ocupado ou bloqueado. Escolha outro intervalo.'
-          : error.code === '42501'
-            ? 'Você não tem mais permissão para esta ação. Atualize a página.'
-            : error.code === '22023'
-              ? error.message
-              : 'Não foi possível concluir a operação. Seus dados foram preservados.';
+      unavailableAppointment
+        ? 'Agendamento indisponível. Atualize a agenda antes de tentar novamente.'
+        : error.code === '40001'
+          ? 'Os dados mudaram em outra tela. Atualize antes de tentar novamente.'
+          : error.code === '23P01'
+            ? 'Horário ocupado ou bloqueado. Escolha outro intervalo.'
+            : error.code === '42501'
+              ? 'Você não tem mais permissão para esta ação. Atualize a página.'
+              : error.code === '22023'
+                ? error.message
+                : 'Não foi possível concluir a operação. Seus dados foram preservados.';
     throw new ReceptionError(message, error.code);
   }
   const parsed = schema.safeParse(data);

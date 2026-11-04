@@ -1,0 +1,222 @@
+{
+  "scope": "T29/M3/L4",
+  "data": "synthetic; owned disposable PostgreSQL only",
+  "migration": "20261104006000_reception_appointment_changes.sql",
+  "regressionExitCode": 0,
+  "migrations": 57,
+  "sqlSuites": 35,
+  "appointmentCases": [
+    {
+      "isolation": "read committed",
+      "order": "doctor-first",
+      "winnerCode": null,
+      "loserCode": "40001",
+      "calendarHeldBeforeRow": false
+    },
+    {
+      "isolation": "read committed",
+      "order": "reception-first",
+      "winnerCode": null,
+      "loserCode": null,
+      "calendarHeldBeforeRow": null
+    },
+    {
+      "isolation": "read committed",
+      "order": "two-reception",
+      "winnerCode": null,
+      "loserCode": "40001",
+      "calendarHeldBeforeRow": null
+    },
+    {
+      "isolation": "repeatable read",
+      "order": "doctor-first",
+      "winnerCode": null,
+      "loserCode": "40001",
+      "calendarHeldBeforeRow": false
+    },
+    {
+      "isolation": "repeatable read",
+      "order": "reception-first",
+      "winnerCode": null,
+      "loserCode": "40001",
+      "calendarHeldBeforeRow": null
+    },
+    {
+      "isolation": "repeatable read",
+      "order": "two-reception",
+      "winnerCode": null,
+      "loserCode": "40001",
+      "calendarHeldBeforeRow": null
+    },
+    {
+      "isolation": "read committed",
+      "completion": "manual",
+      "clinicalCode": null,
+      "receptionCode": "40001",
+      "waitedForAccount": false
+    },
+    {
+      "isolation": "read committed",
+      "completion": "metadata",
+      "clinicalCode": null,
+      "receptionCode": "40001",
+      "waitedForAccount": false
+    },
+    {
+      "isolation": "repeatable read",
+      "completion": "manual",
+      "clinicalCode": null,
+      "receptionCode": "40001",
+      "waitedForAccount": false
+    },
+    {
+      "isolation": "repeatable read",
+      "completion": "metadata",
+      "clinicalCode": null,
+      "receptionCode": "40001",
+      "waitedForAccount": false
+    }
+  ],
+  "scopeCaseCount": 20,
+  "deletionCases": [
+    {
+      "scenario": "intent-before-service-actor",
+      "unsafe": false,
+      "intentPresent": true,
+      "referencePresent": false,
+      "sqlstates": [
+        "55000"
+      ]
+    },
+    {
+      "scenario": "uncommitted-case-before-intent",
+      "unsafe": false,
+      "intentPresent": false,
+      "referencePresent": true,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "old-marker-snapshot",
+      "unsafe": false,
+      "intentPresent": false,
+      "referencePresent": true,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "old-public-writer-snapshot",
+      "unsafe": false,
+      "intentPresent": true,
+      "referencePresent": false,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "old-indirect-booking-snapshot",
+      "unsafe": false,
+      "intentPresent": true,
+      "referencePresent": false,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "old-patient-marker-snapshot",
+      "unsafe": false,
+      "intentPresent": false,
+      "referencePresent": true,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "old-public-linker-snapshot",
+      "unsafe": false,
+      "intentPresent": true,
+      "referencePresent": false,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "audit-before-future-appointment",
+      "unsafe": false,
+      "intentPresent": true,
+      "referencePresent": false,
+      "sqlstates": [
+        "40001"
+      ]
+    }
+  ],
+  "priorReceptionConcurrency": true,
+  "snippetConcurrency": true,
+  "redMissingSqlstate": "23502",
+  "redOriginal": [
+    {
+      "isolation": "read committed",
+      "order": "doctor-first",
+      "winnerCode": "40P01",
+      "loserCode": null,
+      "calendarHeldBeforeRow": true
+    }
+  ],
+  "redBlockingPrototype": [
+    {
+      "isolation": "read committed",
+      "order": "doctor-first",
+      "winnerCode": null,
+      "loserCode": "40001",
+      "calendarHeldBeforeRow": false
+    },
+    {
+      "isolation": "read committed",
+      "order": "reception-first",
+      "winnerCode": null,
+      "loserCode": null,
+      "calendarHeldBeforeRow": null
+    },
+    {
+      "isolation": "read committed",
+      "order": "two-reception",
+      "winnerCode": null,
+      "loserCode": "40001",
+      "calendarHeldBeforeRow": null
+    },
+    {
+      "isolation": "repeatable read",
+      "order": "doctor-first",
+      "winnerCode": null,
+      "loserCode": "40001",
+      "calendarHeldBeforeRow": false
+    },
+    {
+      "isolation": "repeatable read",
+      "order": "reception-first",
+      "winnerCode": null,
+      "loserCode": "40001",
+      "calendarHeldBeforeRow": null
+    },
+    {
+      "isolation": "repeatable read",
+      "order": "two-reception",
+      "winnerCode": null,
+      "loserCode": "40001",
+      "calendarHeldBeforeRow": null
+    },
+    {
+      "isolation": "read committed",
+      "completion": "manual",
+      "clinicalCode": "40P01",
+      "receptionCode": null,
+      "waitedForAccount": true
+    }
+  ],
+  "receptionTests": 48,
+  "receptionTestFiles": 10,
+  "build": "passed with synthetic loopback configuration",
+  "lint": "0 errors; 8 preexisting warnings; changed paths clean"
+}

@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 02:32 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 02:56 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -34,6 +34,7 @@ Atualizado em 2026-11-04 02:32 por Codex. Cada agente atualiza as linhas que lhe
 | `20261104002000` | T27/2b: barreira de custódia e intenção monotônica | Codex | Implementada; 53 migrations/32 suítes SQL, concorrência anterior, oito ordens de exclusão e 26 testes de handlers aprovados. H2 concluída; próxima H1/T28 |
 | `20261104003000` | T28/1: separar administração de acesso às agendas | Codex | Implementada: diretório de equipe separado, admin sem agenda alheia implícita; 55 migrations/33 SQL, 43 testes da recepção, 19 verificações de navegador. M2/D18 e L5 ainda abertos |
 | `20261104004000` | T28/2a/L5: revogar delegações na saída do médico | Codex | Implementada; 56 migrations/34 SQL, 20 interleavings, backfill sintético e regressões anteriores aprovados. M2/D18 permanece pendente |
+| `20261104006000` | T29/M3/L4: ordem de locks e agendamento indisponível | Codex | Implementada; 57 migrations/35 SQL, dez provas de agenda, regressões anteriores e 48 testes da recepção aprovados. Sem espera na aquisição da conta após linha/CAS; API/DTO e escopos preservados |
 | `20261103005000` | A0: controles de IA por operação e recusa | Codex | Reserva futura em 03/11 23:43; contrato técnico antes da migration, nenhuma implementação nesta rodada |
 | `20261104100000` | Campos do prescritor: telefone/RQE | Claude | Commit `7427926` em 04/11 00:31; revisão técnica Codex sem novo bloqueador, tipos regenerados/typecheck e 19 testes de documentos aprovados; interface entregue por Claude em `a715210` (04/11 00:58); verificação visual pendente |
 | `20261104110000` | S3 MVP: `document_snippets` (modelos de receita do próprio médico) | Claude | Commit `2e5b844`; tipos por Codex em `b51a806`; revisão Codex com R1; interface no compositor em `1024e3f` (04/11 01:55) |
@@ -76,6 +77,7 @@ Atualizado em 2026-11-04 02:32 por Codex. Cada agente atualiza as linhas que lhe
 | [2026-11-04-0230_claude-para-usuario_d19-modelos-da-clinica.md](mensagens/2026-11-04-0230_claude-para-usuario_d19-modelos-da-clinica.md) | Claude → Usuário | D19: quem recebe os 1.090 modelos de receita da clínica | aberta |
 | [2026-11-04-0229_codex-para-claude_r2-revisado-e-r3-busy.md](mensagens/2026-11-04-0229_codex-para-claude_r2-revisado-e-r3-busy.md) | Codex → Claude | R2 revisado; aplicação pendente ignora bloqueio de geração | aberta; R3/P2 reproduzido, correção/testes com Claude |
 | [2026-11-04-0232_codex-para-claude_limite-do-staging-e-l5.md](mensagens/2026-11-04-0232_codex-para-claude_limite-do-staging-e-l5.md) | Codex → Claude | Fronteira do contrato de staging, divergência documental e L5 concluída | aberta; corrigir §S3 documental no domínio do Claude, sem schema/carga |
+| [2026-11-04-0256_codex-para-claude_t29-agenda-verificada.md](mensagens/2026-11-04-0256_codex-para-claude_t29-agenda-verificada.md) | Codex → Claude | M3/L4 corrigidos; inversão contra conclusão evitada por tentativa não bloqueante | informativa; evidências novas de fechamento de T29, sem confirmação de leitura pedida |
 | [2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md](mensagens/2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md) | Codex → Usuário | D18: limite por clínica ou carteira particular autorizada | aberta; pergunta assíncrona pendente, sem bloquear L5 |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
