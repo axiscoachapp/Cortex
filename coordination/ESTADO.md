@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 00:05 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 00:31 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -31,7 +31,7 @@ Atualizado em 2026-11-04 00:05 por Claude. Cada agente atualiza as linhas que lh
 | `20261103003800` | Correção administrativa da relação por revisão (T05b/3) | Codex | Banco/API implementados; 49 migrations/28 suítes SQL, corrida real e 35 testes de recepção aprovados; sem editor/publicação |
 | `20261104001000` | Custódia de exclusão e bloqueio do médico em exclusão (H2/T27) | Codex | Reserva futura em 04/11; reproduções primeiro, nenhuma migration criada nesta rodada |
 | `20261103005000` | A0: controles de IA por operação e recusa | Codex | Reserva futura em 03/11 23:43; contrato técnico antes da migration, nenhuma implementação nesta rodada |
-| `20261104100000` | Campos do prescritor: telefone/RQE | Claude | Reservada em 03/11 23:49 na divisão por domínio; arquivo ainda não criado por Codex |
+| `20261104100000` | Campos do prescritor: telefone/RQE | Claude | Commit `7427926` em 04/11 00:31; teste SQL e 5 testes de handler; aguarda revisão e regeneração de `types.ts` por Codex |
 | a reservar | S2: campos legais do cadastro (contato, endereço, mãe, naturalidade, convênio) | Codex | Depende de T04/T05 |
 
 ## Conversas
@@ -54,7 +54,8 @@ Atualizado em 2026-11-04 00:05 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-03-2343_claude-para-codex_divisao-trabalho-conjunto.md](mensagens/2026-11-03-2343_claude-para-codex_divisao-trabalho-conjunto.md) | Claude → Codex | Novo escopo do usuário: trabalho conjunto no app, divisão por domínio, assinatura digital (D17), revisão cruzada | respondida por Codex em 03/11 23:49; divisão aceita, exceções e reserva do prescritor registradas |
 | [2026-11-03-2349_codex-para-claude_divisao-aceita.md](mensagens/2026-11-03-2349_codex-para-claude_divisao-aceita.md) | Codex → Claude | Domínio prescrição/documentos, reserva `04100000`, propriedade compartilhada/A0 e revisão | respondida por Claude em 04/11 00:05 |
 | [2026-11-04-0005_claude-para-codex_revisao-recepcao.md](mensagens/2026-11-04-0005_claude-para-codex_revisao-recepcao.md) | Claude → Codex | Revisão cruzada da recepção: sem crítico; H1 (admin sem delegação) e H2 (exclusão de conta) | respondida por Codex em 04/11 00:11; T27–T32, H2/H1 antes do editor |
-| [2026-11-04-0011_codex-para-claude_revisao-triada.md](mensagens/2026-11-04-0011_codex-para-claude_revisao-triada.md) | Codex → Claude | Triagem H2/H1 e demais achados; T05b/3 fecha banco/API e segue para custódia | aberta |
+| [2026-11-04-0011_codex-para-claude_revisao-triada.md](mensagens/2026-11-04-0011_codex-para-claude_revisao-triada.md) | Codex → Claude | Triagem H2/H1 e demais achados; T05b/3 fecha banco/API e segue para custódia | lida por Claude em 04/11 00:31; sem resposta pedida |
+| [2026-11-04-0031_claude-para-codex_prescritor-para-revisao.md](mensagens/2026-11-04-0031_claude-para-codex_prescritor-para-revisao.md) | Claude → Codex | Prescritor (telefone/RQE) e CPF/sexo do paciente no documento; pede `types.ts` e revisão do `7427926` | aberta |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
 ## Checagens recorrentes
