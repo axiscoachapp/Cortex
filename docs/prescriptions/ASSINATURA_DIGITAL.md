@@ -64,41 +64,115 @@ Funções puras, sem dependência externa: DER próprio e WebCrypto. Rodam igual
 
 ### Edge Functions
 
-As três são novas, no domínio do Claude. Todas exigem o JWT do médico e as guardas atuais (`assert_clinical_actor` e `assert_session_assurance`).
+As três são novas, no domínio do Claude. Revisão do Codex de 04/11 12:41 incorporada abaixo.
 
 | Função | Faz |
 |---|---|
-| `signature-session` | `POST start`: gera `state` e `code_verifier` (guardados no servidor por 10 min) e devolve a URL de autorização. `GET callback`: troca o código, confere o CPF, guarda o token no Vault e grava a sessão. `POST revoke`: apaga o segredo e marca `revoked_at` |
-| `sign-document` | Recebe `prescriptionId`. Confere dono, status `generated` e sessão ativa. Baixa o PDF, prepara, chama o PSC, verifica, finaliza e grava o PDF assinado. Marca `status='signed'`, `signed_at` e `signature_verified_at`, e grava a auditoria |
+| `signature-session` | `POST start` (JWT, clínico e MFA): cria um `state` de uso único e devolve a URL de autorização. `POST complete` (JWT, clínico e MFA): recebe `{code, state}` do frontend, consome o `state`, troca o código, confere o CPF e o certificado, e ativa a sessão. `POST revoke` (JWT): revoga na hora |
+| `sign-document` | `POST` (JWT, clínico e MFA), com `{prescriptionId, operationId, shownPdfSha256}`. Segue a máquina de estados abaixo |
 | `validate-prescription` (já existe) | A resposta `_format=application/validador-iti+json` passa a apontar `signatureFiles[].url` para o PDF assinado, por URL assinada de curta duração |
+
+**Callback do PSC:** o redirecionamento comum do OAuth é um GET sem o Bearer do Cortex. Por isso:
+- o PSC volta para uma rota do **frontend** (`/assinatura/retorno`), cadastrada no PSC como o único `redirect_uri`;
+- o frontend envia `{code, state}` por `POST complete`, com o JWT do médico;
+- o servidor confere que o `state` foi criado por esse mesmo médico, para esse PSC, há menos de 10 minutos e nunca foi usado (CAS em `used_at`).
+
+**Endpoints e destinos do PSC:** vêm só de uma lista fixa no servidor, por PSC. Nenhuma URL vinda do cliente ou do próprio PSC (redirect) recebe token.
 
 ### Banco (migration reservada `20261104140000`, faixa do Claude)
 
-- **`signature_sessions`:**
-  - colunas: `id`, `user_id`, `psc`, `cpf_digest` (SHA-256 do CPF devolvido; o CPF em claro não é guardado), `vault_secret_id`, `expires_at`, `revoked_at` e `created_at`;
-  - **sem leitura pelo cliente**: RLS fechada e acesso só pelas funções com service role;
-  - o cliente vê apenas uma RPC `signature_session_status()` com `{ active, expires_at, psc }`.
-- **Token no Supabase Vault** (`vault.create_secret`):
-  - nunca vai ao navegador, ao log nem ao `content` do documento;
-  - é apagado ao revogar e, quando vence, por um job.
-- **`prescription_signatures`:** auditoria só de acréscimo, com `prescription_id`, `user_id`, `psc`, `pdf_sha256_before`, `pdf_sha256_after`, `cert_serial`, `cert_subject_cpf_digest`, `policy_oid`, `signed_at` e `session_id`. Não admite update nem delete.
+**Guarda do token: cifra na aplicação, sem Vault.**
+- Este é o contraponto à revisão: o Vault expõe o texto claro numa view e exigiria provar a habilitação da extensão no projeto alvo.
+- O token é cifrado na Edge Function com **AES-256-GCM**:
+  - a chave fica em `SIGNATURE_TOKEN_KEY`, um segredo das Edge Functions, como os outros, com `key_id` para rotação;
+  - o dado associado é `session_id|user_id|generation`, então um texto cifrado não serve em outra sessão nem em outra geração.
+- No banco ficam só o texto cifrado, o nonce e o `key_id`, numa tabela sem nenhum grant para `anon` ou `authenticated`.
+- A leitura e a gravação passam por duas funções `SECURITY DEFINER` com `search_path=''` e `EXECUTE` só para `service_role`. Elas recebem o **id da sessão** (nunca um id de segredo) e só devolvem o texto cifrado se a sessão estiver ativa e na geração pedida.
+- O token nunca vai ao navegador, ao log, a nomes, a descrições nem a DTOs.
+
+**Tabelas** (todas com `user_id` → `auth.users` `ON DELETE CASCADE` e o guard de custódia de T33 nas colunas de conta):
+
+| Tabela | Conteúdo | Ciclo de vida |
+|---|---|---|
+| `signature_oauth_states` | Hash do `state`, `user_id`, `psc`, `code_verifier` cifrado (mesma chave), `expires_at` (10 min), `used_at` | Transitória: apagada ao usar ou vencer |
+| `signature_sessions` | `id`, `user_id`, `psc`, `status` (`active`, `revoked`, `expired`, `suspended`), `generation`, `expires_at` (no máximo 12 h), `cert_sha256` do certificado descoberto, `token_ciphertext`, `nonce`, `key_id`, `created_at` | O texto cifrado é apagado ao revogar ou vencer; a linha fica com o status |
+| `signature_operations` | `operation_id` (idempotência, vindo do cliente), `prescription_id`, `user_id`, `session_id`, `session_generation`, `shown_pdf_sha256`, `signing_time`, `to_be_signed_sha256`, `state`, `signed_storage_path`, `signed_pdf_sha256`, horários | Máquina de estados abaixo |
+| `prescription_signatures` | Auditoria: `prescription_id` (FK `ON DELETE CASCADE`), `operation_id`, `psc`, `pdf_sha256_before`, `pdf_sha256_after`, `cert_sha256`, `cert_serial`, `cert_issuer`, `policy_oid`, `signed_at` | Só INSERT. UPDATE é sempre recusado; DELETE direto é recusado por trigger e só passa quando a prescrição já foi apagada (cascata da exclusão de conta ou de paciente que existe hoje). Não cria bloqueio novo de exclusão |
+
+- **Sem CPF nem digest de CPF no banco:**
+  - o `authorized_identification` do PSC é comparado, na ativação, com `user_settings.prescriber_cpf`, que passa a ser obrigatório para assinar, e é descartado em seguida;
+  - a auditoria identifica o signatário pelo hash, série e emissor do certificado.
+- **Custódia (T33):**
+  - as quatro tabelas entram no inventário de exclusão (`assert_deletion_scope`) e no guard `guard_custody_reference` com as colunas de conta;
+  - `prescription_id` precisa ser acrescentado como pai indireto em `custody_reference_accounts`. Essa função é do Codex e fica como pedido.
+  - teste de exclusão nos dois sentidos, de conta e de paciente, e em RR antiga.
 - **`prescriptions`:**
-  - continua com os campos que já existem (`status`, `signed_at` e `signature_verified_at`, com a checagem `signed_prescription_verified`);
-  - acrescenta `signed_storage_path`, porque o PDF original fica preservado e o assinado é outro arquivo.
+  - acrescenta `signed_storage_path`, com check `rx/<user>/<id>/signed-<operation>.pdf`, no bucket privado e sem overwrite;
+  - o original continua em `storage_path`;
+  - quem preenche `status='signed'`, `signed_at`, `signature_verified_at` e `signed_storage_path` é **só** `cortex_private.complete_signature(operation_id, ...)`, com `EXECUTE` apenas para `service_role`, que confere a operação. Nenhuma RPC de cliente nem update genérico pode preencher esses campos.
+
+### Máquina de estados de uma assinatura
+
+Nenhuma transação ou lock SQL fica aberto durante chamadas de rede.
+
+1. **Reserva** (`reserve_signature`: transação curta, `SECURITY DEFINER`, só `service_role`, chamada pela função com o `auth.uid()` conferido):
+   - documento do próprio médico, `status='generated'` e tipo elegível na Fase 1: `receita_simples`, `atestado` ou `solicitacao_exames`;
+   - `issuance_snapshot` válido;
+   - `shown_pdf_sha256` igual ao `pdf_sha256` do snapshot;
+   - sessão `active`, dentro do prazo, e certificado da sessão igual ao esperado;
+   - limite de ritmo, com contador próprio (`pg_advisory_xact_lock` por médico, contagem de operações reservadas nos últimos 60 min, limite de 60);
+   - grava a operação `reserved` com a `generation` da sessão.
+
+   Um `operation_id` repetido devolve a operação existente e não consome outra reserva. Um índice único parcial impede duas operações abertas para o mesmo documento.
+2. **Preparação** (sem transação):
+   - baixa o original e confere o SHA-256 de novo;
+   - roda `preparePades` com o certificado da sessão e um `signing_time` fixado na operação;
+   - grava `to_be_signed_sha256` e o estado `prepared`.
+3. **PSC:**
+   - relê o estado da sessão (`active` e mesma `generation`); se mudou, a operação vira `cancelled` e não chama o PSC;
+   - grava `psc_requested` e chama o PSC.
+   - **Resposta perdida:**
+     - a operação vira `ambiguous`, e nada é repetido sozinho;
+     - repetir exige uma nova ação do médico, com o mesmo `operation_id`;
+     - como a assinatura RSA PKCS#1 v1.5 é determinística para o mesmo hash e a mesma chave, a repetição produz a mesma assinatura sobre os mesmos bytes, e não um segundo documento;
+     - cada repetição fica registrada.
+4. **Verificação e montagem** (sem transação):
+   - `verifyRawSignature` com o certificado da sessão;
+   - `finalizePades`;
+   - **conferência do artefato final**: relê o PDF assinado; o `/ByteRange` cobre tudo menos o `/Contents`; o SHA-256 da faixa é igual ao `messageDigest` assinado; o CMS relido traz o certificado esperado e a política AD-RB, e a assinatura confere.
+   - Se qualquer conferência falhar, a operação vira `failed` e nada é publicado.
+5. **Upload:** `signed-<operation>.pdf` no bucket privado, com `upsert: false`; o SHA-256 é guardado na operação (`stored`).
+6. **Conclusão** (`complete_signature`, transação curta). Confere:
+   - a operação está em `stored`;
+   - a prescrição continua `generated`, com o mesmo `pdf_sha256`;
+   - a sessão está na **mesma `generation` da reserva**.
+
+   Então marca a prescrição como `signed`, grava a auditoria e passa a operação a `completed`.
+   - **Revogação entre a reserva e a conclusão:** a operação vira `cancelled_by_revocation`, o arquivo assinado é apagado e nada é publicado. A revogação vence sempre.
+   - **Edição ou exclusão do documento durante a operação:** a conclusão falha, a operação vira `cancelled` e o arquivo é apagado.
 
 ## Segurança
 
 O ponto principal é a guarda do token: enquanto vale, a sessão é a "caneta" do médico.
 
-- **Duração:** no máximo 12 horas, revogável a qualquer momento.
-- **Vínculo com o médico:** o token fica preso ao `user_id` e ao CPF autorizado.
+- **Duração:** no máximo 12 horas.
+- **Revogação:**
+  - local e imediata: `status='revoked'` e `generation+1`, e todas as etapas conferem o status;
+  - a revogação no PSC é tentada em seguida, mas o Cortex não depende dela.
+- **Vencimento:** o prazo é conferido em cada etapa; o job de limpeza só apaga textos cifrados já inúteis.
 - **Cada assinatura:**
   - exige uma sessão autenticada do Cortex com MFA (`assert_session_assurance`);
-  - parte de um clique do médico sobre um documento dele, já gerado;
+  - parte de um clique do médico sobre um documento dele, já gerado e visto (hash do PDF mostrado);
   - nunca assina em lote nem em segundo plano.
-- **Limite de ritmo:** no máximo 60 assinaturas por hora por médico (configurável). Acima disso, a sessão é suspensa e o médico é avisado.
+- **Limite de ritmo:**
+  - 60 por hora por médico, num contador próprio da assinatura e não nos créditos de IA (`_shared/quota.ts` não é usado);
+  - a reserva acontece depois da autorização do documento e antes do PSC;
+  - acima do limite, a sessão vira `suspended` e o médico precisa abrir uma sessão nova no aplicativo do PSC.
 - **Sem arquivo A1 (.pfx):** o Cortex não aceita upload, para não guardar a chave do médico.
 - **O hash que vai ao PSC** é recalculado no servidor a partir do PDF guardado, nunca recebido do navegador.
+- **Catálogo e ACL:**
+  - as funções e tabelas novas entram no catálogo de segurança e nos testes de ACL quando os endpoints forem integrados;
+  - os módulos novos ficarem fora do harness atual não dispensa isso.
 
 **Estado em 04/11/2026:** `_shared/pades.ts` está implementado.
 - Assina só PDFs com tabela de referência clássica; por isso, desde já, o `generate-prescription` grava com `useObjectStreams: false`. PDFs antigos com xref comprimida são recusados com o pedido de gerar de novo.
@@ -110,14 +184,28 @@ O ponto principal é a guarda do token: enquanto vale, a sessão é a "caneta" d
 
 ### Locais, só com material sintético
 
-Usam uma AC de teste e um certificado "Médica Sintética", gerados para os testes e guardados em `fixtures` como dado de teste, sem valor fora deles.
+Usam uma AC de teste e um certificado "Médica Sintética", gerados em memória a cada execução e nunca gravados.
 
 1. **Atualização incremental:** os bytes originais do PDF continuam idênticos no início do arquivo assinado.
 2. **ByteRange:** cobre o arquivo inteiro menos o `/Contents`, e o `messageDigest` é igual ao SHA-256 dessa faixa.
 3. **CMS:** o SignedData relido traz os quatro atributos assinados, nenhum `signingTime`, o OID da política e o ESSCertIDv2 igual ao SHA-256 do certificado. A assinatura confere com a chave pública de teste.
 4. **DocMDP:** P=2 presente, sem `/Perms`.
-5. **PSC falso:** um servidor local sintético cobre o fluxo PKCE, o CPF divergente (recusado), a assinatura que não confere (recusada, nada gravado), o token vencido ou revogado e o limite de ritmo.
+5. **PSC falso:** um servidor local sintético cobre:
+   - o fluxo PKCE com `state` de uso único e vencido;
+   - o CPF ou certificado divergente (recusado);
+   - a assinatura que não confere (recusada, nada gravado);
+   - o token vencido ou revogado;
+   - a revogação entre cada par de etapas;
+   - a resposta perdida (`ambiguous`, sem repetição automática);
+   - o `operation_id` repetido (não consome reserva);
+   - duas assinaturas concorrentes do mesmo documento;
+   - o limite de ritmo.
 6. **Vazamento:** o token não aparece em resposta, log nem `content`.
+7. **Banco:**
+   - ACL das funções novas (só `service_role`);
+   - UPDATE e DELETE direto recusados na auditoria;
+   - exclusão de conta e de paciente em cascata, nos dois sentidos e em RR antiga;
+   - nenhum caminho de cliente preenche os campos de assinatura.
 
 ### De aceite, com certificado real (só com o médico presente)
 
@@ -131,12 +219,14 @@ Usam uma AC de teste e um certificado "Médica Sintética", gerados para os test
 - [ ] Saber quais dos 6 médicos já têm o certificado em nuvem gratuito do CFM (VIDaaS) e quais têm a carteira de médico com chip, necessária para pedi-lo (certificadodigital.cfm.org.br).
 - [ ] Cadastrar o Cortex como aplicativo na Valid (homologação do VIDaaS). Isso pede os dados da empresa e, talvez, um certificado SSL ICP-Brasil para o registro. O Cortex não cria conta em nome de ninguém.
 - [ ] Parecer jurídico sobre a Res. CFM 2.299/2021, art. 5: inscrição no CRM e diretor técnico de quem oferece a plataforma.
+- [ ] Cada médico que for assinar precisa ter o próprio CPF em Configurações, que passa a ser obrigatório para assinar: é conferido com o CPF que o PSC autoriza.
 - [ ] Um médico disponível para o teste de aceite com o certificado real.
+- [ ] Definir `SIGNATURE_TOKEN_KEY` (32 bytes aleatórios) nos segredos das Edge Functions, quando houver deploy. Quem configura é o usuário; o valor nunca entra no repositório nem em mensagens.
 
 ## Ordem de implementação
 
 1. `_shared/pades.ts` com os testes locais 1 a 4, só com material sintético. Não precisa de nada externo.
 2. `_shared/psc.ts` e o PSC falso, com o teste 5.
-3. Migration `20261104140000`, as funções `signature-session` e `sign-document`, e o teste 6. Antes da migration, pedir revisão do Codex sobre RLS, Vault e auditoria.
+3. Migration `20261104140000` (só depois do aceite do Codex a esta versão do contrato), as funções `signature-session` e `sign-document`, e os testes 6 e 7. O DDL vai para a revisão de integração e custódia do Codex antes de qualquer aplicação; nada é aplicado em banco hospedado.
 4. Tela de sessão e "Gerar e assinar" no compositor.
 5. Homologação com a Valid e testes de aceite, quando a Fase 0 estiver pronta.
