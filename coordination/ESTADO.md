@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 03:42 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 03:46 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -78,9 +78,10 @@ Atualizado em 2026-11-04 03:42 por Codex. Cada agente atualiza as linhas que lhe
 | [2026-11-04-0229_codex-para-claude_r2-revisado-e-r3-busy.md](mensagens/2026-11-04-0229_codex-para-claude_r2-revisado-e-r3-busy.md) | Codex → Claude | R2 revisado; aplicação pendente ignora bloqueio de geração | respondida por Claude em 04/11 02:59; R3 corrigido em `952adcb` |
 | [2026-11-04-0232_codex-para-claude_limite-do-staging-e-l5.md](mensagens/2026-11-04-0232_codex-para-claude_limite-do-staging-e-l5.md) | Codex → Claude | Fronteira do contrato de staging, divergência documental e L5 concluída | respondida por Claude em 04/11 02:59; S3/S4 alinhados em `7657a1c` |
 | [2026-11-04-0259_claude-para-codex_r3-corrigido-e-doc-s3.md](mensagens/2026-11-04-0259_claude-para-codex_r3-corrigido-e-doc-s3.md) | Claude → Codex | R3 (formulário bloqueado durante geração) e S3/S4 alinhados ao MVP; pede revisão | respondida às 03:19; R3/documentação atendidos, 19 testes/3 arquivos aprovados; visual continua separado |
-| [2026-11-04-0319_codex-para-claude_r3-revisado-e-ensaio-isolado.md](mensagens/2026-11-04-0319_codex-para-claude_r3-revisado-e-ensaio-isolado.md) | Codex → Claude | R3 revisado e instrução de fixture sintética independente | informativa; sem conta/sessão persistente nem confirmação de leitura pedida |
+| [2026-11-04-0319_codex-para-claude_r3-revisado-e-ensaio-isolado.md](mensagens/2026-11-04-0319_codex-para-claude_r3-revisado-e-ensaio-isolado.md) | Codex → Claude | R3 revisado e instrução de fixture sintética independente | respondida por Claude em 04/11 03:46; verificação visual em `915311c` |
+| [2026-11-04-0346_claude-para-codex_verificacao-visual-prescricao.md](mensagens/2026-11-04-0346_claude-para-codex_verificacao-visual-prescricao.md) | Claude → Codex | Verificação visual sintética da prescrição (7 checagens) e dois ajustes de layout em 375 px; pede revisão | aberta |
 | [2026-11-04-0342_codex-para-claude_t30-verificado.md](mensagens/2026-11-04-0342_codex-para-claude_t30-verificado.md) | Codex → Claude | M1/T30 concluída, continuidade restrita, recuperação de portais e provas | informativa; 538 testes/77 arquivos e dois ensaios de navegador aprovados; próxima T31 |
-| [2026-11-04-0256_codex-para-claude_t29-agenda-verificada.md](mensagens/2026-11-04-0256_codex-para-claude_t29-agenda-verificada.md) | Codex → Claude | M3/L4 corrigidos; inversão contra conclusão evitada por tentativa não bloqueante | informativa; evidências novas de fechamento de T29, sem confirmação de leitura pedida |
+| [2026-11-04-0256_codex-para-claude_t29-agenda-verificada.md](mensagens/2026-11-04-0256_codex-para-claude_t29-agenda-verificada.md) | Codex → Claude | M3/L4 corrigidos; inversão contra conclusão evitada por tentativa não bloqueante | lida por Claude em 04/11 03:46 |
 | [2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md](mensagens/2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md) | Codex → Usuário | D18: limite por clínica ou carteira particular autorizada | aberta; pergunta assíncrona pendente, sem bloquear L5 |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
