@@ -65,23 +65,47 @@ const BRANDS: Record<string, string> = {
 
 function normalize(text: string): string {
   return text
-    .replace(/\p{Cf}/gu, '') // soft hyphen, zero-width and BOM never split a name
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase();
 }
 
-function matches(name: string, list: string[]): string[] {
-  // "Clonazepam2mg" -> "clonazepam 2 mg": a glued dose must not hide the drug.
-  const words = normalize(name)
+// An invisible format character (Unicode Cf: soft hyphen, zero-width space,
+// word joiner, BOM) may sit inside a word ("Clonaze<SHY>pam") or where a
+// separator was ("Clonazepam<ZWSP>SOS"), and both can happen in one name.
+// Each one becomes MARK, which a term may cross (joined) or stop at
+// (separator), so every combination is covered in one pass.
+const MARK = '\u0001';
+const ALIASES = Object.entries({ ...BRANDS, ...SPELLINGS }); // a spelling wins over a brand, as before
+
+/** Lowercase letters and digits, single spaces, and MARK for each invisible character. */
+function prepare(text: string): string {
+  return normalize(text.replace(/\p{Cf}/gu, MARK))
+    // "Clonazepam2mg" -> "clonazepam 2 mg": a glued dose must not hide the drug.
     .replace(/([a-z])(\d)/g, '$1 $2')
     .replace(/(\d)([a-z])/g, '$1 $2')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-    .split(' ')
-    .map((w) => SPELLINGS[w] ?? BRANDS[w] ?? w);
-  const value = ` ${words.join(' ')} `;
-  return list.filter((substance) => value.includes(` ${substance} `));
+    .replace(/[^a-z0-9\u0001]+/g, ' ');
+}
+
+const termPatterns = new Map<string, RegExp>();
+/** A term (letters, digits, spaces) as whole words; MARK may join letters or stand for a separator. */
+function termPattern(term: string): RegExp {
+  let pattern = termPatterns.get(term);
+  if (!pattern) {
+    const body = term.split(' ').map((word) => [...word].join('\u0001*')).join('[ \u0001]+');
+    pattern = new RegExp(`(?:^|[ \u0001])${body}(?=$|[ \u0001])`);
+    termPatterns.set(term, pattern);
+  }
+  return pattern;
+}
+
+function matches(name: string, list: string[]): string[] {
+  const text = prepare(name);
+  const found = new Set(list.filter((substance) => termPattern(substance).test(text)));
+  for (const [alias, substance] of ALIASES) {
+    if (!found.has(substance) && list.includes(substance) && termPattern(alias).test(text)) found.add(substance);
+  }
+  return list.filter((substance) => found.has(substance));
 }
 
 export function controlledSubstancesIn(name: string): string[] {
@@ -123,9 +147,15 @@ export interface ControlledFinding {
   note?: string;
 }
 
-/** Highest "N mg" in the item text; null when no dose is written. */
+/**
+ * Highest "N mg" in the item text; null when no dose is written. An invisible
+ * character inside a number is joined, as the eye reads it ("1<ZWSP>50 mg"
+ * is 150 mg), and may stand between the number and "mg".
+ */
 function maxMg(name: string): number | null {
-  const doses = [...normalize(name).replace(/,/g, '.').matchAll(/(\d+(?:\.\d+)?)\s*mg\b/g)].map((m) => Number(m[1]));
+  const text = normalize(name.replace(/\p{Cf}/gu, MARK)).replace(/,/g, '.');
+  const doses = [...text.matchAll(/(\d(?:\u0001*\d)*(?:\.\d(?:\u0001*\d)*)?)[\s\u0001]*mg(?![a-z0-9_])/g)]
+    .map((m) => Number(m[1].replace(/\u0001/g, '')));
   return doses.length ? Math.max(...doses) : null;
 }
 

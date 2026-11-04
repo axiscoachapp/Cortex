@@ -38,6 +38,20 @@ describe('regulated medication safety net', () => {
     expect(controlledSubstancesIn('Diaz\u200bepam 10 mg')).toEqual(['diazepam']);
     expect(controlledSubstancesIn('\ufeffZolpi\u2060dem 10 mg')).toEqual(['zolpidem']);
     expect(antimicrobialsIn('Amoxi\u00adcilina 500 mg')).toEqual(['amoxicilina']);
+    // Codex 19:46: an invisible character may also stand where a separator
+    // was. Both readings count (removed and as a space).
+    expect(controlledSubstancesIn('Clonazepam\u200bSOS 2 mg')).toEqual(['clonazepam']);
+    expect(antimicrobialsIn('Amoxicilina\u200bVO 500 mg')).toEqual(['amoxicilina']);
+    expect(controlledSubstancesIn('Clonazepam\u00adSOS')).toEqual(['clonazepam']);
+    expect(controlledSubstancesIn('Sertra\u200bLina\u2060Clonazepam')).toEqual(['clonazepam', 'sertralina']);
+    // Mixed: one joins a word, the next separates (neither uniform reading finds it).
+    expect(controlledSubstancesIn('Clonaze\u00adpam\u200bSOS 2 mg')).toEqual(['clonazepam']);
+    expect(controlledSubstancesIn('Riv\u00adotril\u200bSOS')).toEqual(['clonazepam']);
+    expect(controlledSubstancesIn('\u00c1cido\u200bvalpro\u00adico 250 mg')).toEqual(['acido valproico']);
+    expect(antimicrobialsIn('Cipro\u00adfloxacina\u200b500mg')).toEqual(['ciprofloxacino']);
+    // Unchanged without invisible characters.
+    expect(controlledSubstancesIn('Clonazepamsos')).toEqual([]);
+    expect(controlledSubstancesIn('Clona zepam')).toEqual([]);
     expect(antimicrobialsIn('Monuril 3 g')).toEqual(['fosfomicina']);
     expect(antimicrobialsIn('Bactrim F')).toEqual(['sulfametoxazol']);
     expect(antimicrobialsIn('Ciprofloxacina 500mg')).toEqual(['ciprofloxacino']);
@@ -71,6 +85,10 @@ describe('controlled substances by Portaria 344 list (D8)', () => {
     expect(forms('Tramadol')).toEqual(['tramadol:A2:notificacao_a']);
     expect(forms('Codeína 120 mg')).toEqual(['codeina:A2:notificacao_a']);
     expect(forms('Fenobarbital 100 mg')).toEqual(['fenobarbital:B1:receita_controle_especial']);
+    // An invisible character inside a dose: the stricter reading wins
+    // ("1<ZWSP>50 mg" is 150 mg read joined, 50 mg read split).
+    expect(forms('Tramadol 1\u200b50 mg')).toEqual(['tramadol:A2:notificacao_a']);
+    expect(forms('Tramadol 50\u200bmg')).toEqual(['tramadol:A2:receita_controle_especial']);
   });
   it('keeps notification-only lists and hospital-only misoprostol out of the RCE', () => {
     expect(forms('Rivotril 2mg')).toEqual(['clonazepam:B1:notificacao_b']);

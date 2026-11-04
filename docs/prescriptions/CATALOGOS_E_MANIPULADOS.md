@@ -85,7 +85,11 @@ Não usam nenhuma dependência nova. Os testes em `src/lib/referenceCatalogs.tes
 
 O compositor troca os espaços colados de outros programas por espaço comum antes de conferir (`normalizeFormulaText`), para o médico não ver recusa por um NBSP invisível.
 
-**Caracteres invisíveis nos nomes:** hífen discricionário (comum ao copiar de PDF), espaço de largura zero e BOM são ignorados ao procurar substâncias controladas e antimicrobianos. "Clonaze­pam" com hífen invisível continua reconhecido.
+**Caracteres invisíveis nos nomes:** hífen discricionário (U+00AD, comum ao copiar de PDF), espaço de largura zero, U+2060 e BOM (categoria Unicode Cf) não escondem uma substância controlada nem um antimicrobiano. A busca lê o nome de dois jeitos e vale qualquer um que encontre:
+- com o caractere removido: "Clonaze" + U+00AD + "pam" é clonazepam;
+- com o caractere como separador: "Clonazepam" + U+200B + "SOS" também é clonazepam.
+
+Na dose, vale a leitura mais restritiva: "1" + U+200B + "50 mg" conta como 150 mg.
 
 **Impressão:** abaixo da linha do item ("1. Fórmula manipulada — 1 cápsula") saem, recuados:
 - cada componente com a sua quantidade;
