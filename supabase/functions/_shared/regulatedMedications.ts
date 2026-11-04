@@ -238,6 +238,25 @@ export interface ControlledPlan {
 const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
 /**
+ * The whole concentration must be one amount in mg: "30 mg", "37,5 mg",
+ * "1000 mg". Up to 2 decimals, so "1.000 mg" (thousands or decimal?) is
+ * refused instead of guessed. Returns null for anything else: solutions,
+ * associations, other units, zero.
+ */
+export function mgPerUnit(concentration: string): number | null {
+  const m = /^(\d{1,5})(?:[.,](\d{1,2}))?\s*mg$/i.exec(concentration.trim());
+  if (!m) return null;
+  const value = Number(`${m[1]}.${m[2] ?? '0'}`);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/** Some number in the text is above zero and none is written negative. */
+function hasPositiveAmount(concentration: string): boolean {
+  if (/(^|[^\w])[-−–]\s*\d/.test(concentration)) return false;
+  return [...concentration.replace(/,/g, '.').matchAll(/\d+(?:\.\d+)?/g)].some((x) => Number(x[0]) > 0);
+}
+
+/**
  * Validate a Receita de Controle Especial and prepare what is printed.
  * Returns { error } with a message the doctor can act on, or { plan }.
  */
@@ -254,18 +273,21 @@ export function planControlledPrescription(
     if (!concentration || concentration.length > 40 || !/\d/.test(concentration) || !/(mg|mcg|µg|ug|g|ml|ui|%)/i.test(concentration)) {
       return { error: `Informe a concentração de ${m.name.trim()} (ex.: 50 mg ou 200 mg/ml): é obrigatória na receita de controle especial.` };
     }
+    if (!hasPositiveAmount(concentration)) {
+      return { error: `A concentração de ${m.name.trim()} precisa de um valor maior que zero, sem sinal de menos (ex.: 50 mg).` };
+    }
     let findings = findingsOf(m);
     if (!findings.length) return { error: `${m.name.trim()} não é controlado: prescreva em receita simples ou de antimicrobiano.` };
     // Codeine and tramadol adendos: decided only by the explicit concentration
     // of the controlled substance (≤ 100 mg per unit), never by the name.
     if (findings.some((f) => f.substance === 'codeina' || f.substance === 'tramadol')) {
-      const mgs = [...concentration.toLowerCase().replace(/,/g, '.').matchAll(/(\d+(?:\.\d+)?)\s*mg\b/g)].map((x) => Number(x[1]));
-      if (mgs.length !== 1) {
-        return { error: `Informe só a concentração da substância controlada de ${m.name.trim()} em mg por unidade (ex.: 30 mg), sem a dos outros componentes.` };
+      const mg = mgPerUnit(concentration);
+      if (mg == null) {
+        return { error: `Para ${m.name.trim()}, informe só a dose da substância controlada por unidade, em mg (ex.: 30 mg ou 37,5 mg). Solução (mg/ml), associação (30 mg + 500 mg) e outras unidades ainda não são aceitas: nesses casos o Cortex não decide o formulário.` };
       }
       findings = findings.map((f) =>
         f.substance === 'codeina' || f.substance === 'tramadol'
-          ? mgs[0] <= 100
+          ? mg <= 100
             ? { ...f, form: 'receita_controle_especial', note: 'até 100 mg por unidade (adendo da lista A2)' }
             : { ...f, form: 'notificacao_a', note: 'acima de 100 mg por unidade' }
           : f,

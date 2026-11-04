@@ -51,7 +51,12 @@ Implementado em `controlledFindings()` (`supabase/functions/_shared/regulatedMed
    - o **endereço** é preenchido no compositor e guardado no snapshot do documento (`content`), sem alterar `patients`, enquanto o cadastro único (D20) não tem endereço.
 4. **Por item:**
    - **concentração da substância controlada** em campo próprio e obrigatório ("30 mg", "200 mg/ml");
-   - para codeína e tramadol, o adendo de até 100 mg por unidade é decidido **só por esse campo**, nunca pelo nome nem pela posologia. Numa associação, vale a concentração do componente controlado: um valor com dois números é recusado com essa orientação;
+   - para codeína e tramadol, o adendo de até 100 mg por unidade é decidido **só por esse campo**, nunca pelo nome nem pela posologia. O campo inteiro precisa ser um único valor positivo em mg, com até 2 casas decimais: "30 mg", "37,5 mg" (`mgPerUnit`). Todo o resto é recusado, sem ler um pedaço do texto (revisão do Codex de 04/11, 10:29):
+     - associação ("30 mg + 500 mg", "50 mg + 0,15 g"): o médico informa só a dose do componente controlado;
+     - solução ("100 mg/ml", "50 mg/5 ml") e outras unidades ("0,05 g");
+     - valor ambíguo ("1.000 mg"), zero ou negativo.
+   - **Pendente:** tramadol e codeína em solução (gotas) ainda não saem pelo Cortex. Para aceitar, é preciso um contrato próprio de apresentação e volume por dose antes de escolher o formulário;
+   - em qualquer controlado, uma concentração com zero ou sinal de menos é recusada;
    - quantidade em número e unidade, com o texto por extenso gerado automaticamente.
    - **Nada é cortado:** endereço (até 300 caracteres), CID (até 20), justificativa (até 600), número de documento (até 40) e unidade (até 40) são recusados com mensagem se passarem do limite. Tudo que é aceito sai inteiro no PDF, no `content` e no snapshot. Isso responde à revisão do Codex de 04/11, 10:15.
 5. **Limites:**

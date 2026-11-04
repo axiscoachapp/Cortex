@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { numberInWords, planControlledPrescription } from '../../supabase/functions/_shared/regulatedMedications';
+import { mgPerUnit, numberInWords, planControlledPrescription } from '../../supabase/functions/_shared/regulatedMedications';
 
 const ctx = { patientCpf: '52998224725', prescriberCpf: null, prescriberPhone: '(41) 3000-0000' };
 const address = { patientAddress: 'Rua Sintética, 100 — Centro — Curitiba/PR' };
@@ -65,7 +65,7 @@ describe('review findings on the RCE rules (Codex, 04/11 10:15)', () => {
     expect(planControlledPrescription([item('Tramal', { concentration: '50 mg', ingredients: ['cloridrato de tramadol'] })], address, ctx)).toHaveProperty('plan');
     expect(planControlledPrescription([item('Tramal', { concentration: '', ingredients: ['cloridrato de tramadol'] })], address, ctx)).toMatchObject({ error: expect.stringContaining('concentração') });
     // A combination: only the controlled substance's concentration counts.
-    expect(planControlledPrescription([item('Paracetamol + codeína', { concentration: '500 mg + 30 mg' })], address, ctx)).toMatchObject({ error: expect.stringContaining('só a concentração') });
+    expect(planControlledPrescription([item('Paracetamol + codeína', { concentration: '500 mg + 30 mg' })], address, ctx)).toMatchObject({ error: expect.stringContaining('só a dose') });
     expect(planControlledPrescription([item('Paracetamol + codeína', { concentration: '30 mg' })], address, ctx)).toHaveProperty('plan');
   });
 
@@ -79,5 +79,38 @@ describe('review findings on the RCE rules (Codex, 04/11 10:15)', () => {
     expect(planControlledPrescription([item('Sertralina 50 mg')], { ...address, patientDocument: { kind: 'outro', value: '9'.repeat(41) } }, noCpf)).toMatchObject({ error: expect.stringContaining('40') });
     const exact = `Rua ${'A'.repeat(280)}, 1 — Curitiba/PR`.slice(0, 300);
     expect(planControlledPrescription([item('Sertralina 50 mg')], { patientAddress: exact }, ctx)).toMatchObject({ plan: { patientAddress: exact } });
+  });
+});
+
+describe('codeine/tramadol concentration grammar (Codex, 04/11 10:29)', () => {
+  const tramadol = (concentration: string) => planControlledPrescription([item('Tramadol', { concentration })], address, ctx);
+
+  it('reads one positive amount in mg and nothing else', () => {
+    expect(['30 mg', '50mg', '37,5 mg', '37.5 MG', '100 mg', '1000 mg'].map(mgPerUnit)).toEqual([30, 50, 37.5, 37.5, 100, 1000]);
+    for (const bad of ['50 mg + 0,15 g', '50 mg/5 ml', '100 mg/ml', '-50 mg', '0 mg', '0,0 mg', '1.000 mg', '50 mg por comprimido', '50', 'mg', '0,05 g', '50 mg 50 mg', '']) {
+      expect(mgPerUnit(bad), bad).toBeNull();
+    }
+  });
+
+  it('keeps the positive and negative controls', () => {
+    expect(tramadol('50 mg')).toHaveProperty('plan');
+    expect(tramadol('100 mg')).toHaveProperty('plan');
+    expect(tramadol('150 mg')).toMatchObject({ error: expect.stringContaining('Notificação de Receita A') });
+    expect(tramadol('100,5 mg')).toMatchObject({ error: expect.stringContaining('Notificação de Receita A') });
+  });
+
+  it('refuses associations, solutions, other units, zero and negatives instead of reading a fragment', () => {
+    for (const bad of ['50 mg + 0,15 g', '50 mg/5 ml', '100 mg/ml', '0,05 g', '1.000 mg']) {
+      expect(tramadol(bad), bad).toMatchObject({ error: expect.stringContaining('só a dose da substância controlada') });
+    }
+    for (const bad of ['-50 mg', '0 mg', '− 50 mg']) {
+      expect(tramadol(bad), bad).toMatchObject({ error: expect.stringContaining('maior que zero') });
+    }
+  });
+
+  it('also refuses zero or negative concentrations for other controlled drugs', () => {
+    expect(planControlledPrescription([item('Sertralina', { concentration: '-50 mg' })], address, ctx)).toMatchObject({ error: expect.stringContaining('maior que zero') });
+    expect(planControlledPrescription([item('Sertralina', { concentration: '0 mg' })], address, ctx)).toMatchObject({ error: expect.stringContaining('maior que zero') });
+    expect(planControlledPrescription([item('Cipionato de testosterona', { concentration: '200 mg/ml', quantity: 1, unit: 'frasco-ampola' })], { ...address, cid: 'E29.1' }, { ...ctx, prescriberCpf: '11144477735' })).toHaveProperty('plan');
   });
 });
