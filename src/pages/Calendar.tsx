@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MOBILE_BREAKPOINT } from '@/lib/interfaceScale';
+import { isBelowMobileBreakpoint, useIsMobile } from '@/hooks/use-mobile';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar as BigCalendar, dateFnsLocalizer, View, SlotInfo } from 'react-big-calendar';
 import {
@@ -105,10 +105,10 @@ export default function CalendarPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT);
-  const [view, setView] = useState<View>(() =>
-    typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT ? 'day' : 'week',
-  );
+  // Same rule as the CSS (useIsMobile). The view is only a starting choice:
+  // resizing never overrides the view the doctor picked.
+  const isMobile = useIsMobile();
+  const [view, setView] = useState<View>(() => (isBelowMobileBreakpoint() ? 'day' : 'week'));
   const [date, setDate] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -117,15 +117,6 @@ export default function CalendarPage() {
   const [checkingGoogle, setCheckingGoogle] = useState(true);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT-1}px)`);
-    const handler = (e: MediaQueryListEvent) => {
-      setIsMobile(e.matches);
-    };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
 
   // Check Google Calendar connection — uses a SECURITY DEFINER RPC so the
   // raw OAuth token columns are never exposed to the client.

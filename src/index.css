@@ -271,8 +271,9 @@
 .rbc-toolbar > .rbc-btn-group:last-child:not(:first-child) { display: none; }
 
 /* Media queries cannot read INTERFACE_SCALE (src/lib/interfaceScale.ts, 1.35):
-   863px = 640 x 1.35 - 1 (Tailwind sm). */
-@media (max-width: 863px) {
+   below Tailwind sm = 640 x 1.35 = 864px, written as its complement so a
+   fractional (zoomed) width never falls between two rules. */
+@media not all and (min-width: 864px) {
   /* react-big-calendar.css turns the toolbar into a wrapping column below 768px,
      which put the date beside the buttons and pushed them off screen. */
   .rbc-calendar > .rbc-toolbar { flex-direction: row; flex-wrap: wrap; justify-content: center; }

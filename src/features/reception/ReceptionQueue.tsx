@@ -10,7 +10,7 @@ import { kinds, statuses } from './contracts';
 import { NewCaseDialog } from './NewCaseDialog';
 import { ReceptionNotice } from './ReceptionNotice';
 import { CaseWorkspace } from './CaseWorkspace';
-import { MOBILE_BREAKPOINT } from '@/lib/interfaceScale';
+import { isBelowMobileBreakpoint } from '@/hooks/use-mobile';
 
 export default function ReceptionQueue() {
   const access = useClinicAccess();
@@ -40,7 +40,8 @@ export default function ReceptionQueue() {
   useEffect(() => {
     if (!selected || detail.data?.id !== selected) return;
     workspace.current?.focus({ preventScroll: true });
-    if (window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`).matches) workspace.current?.scrollIntoView({ block: 'start' });
+    // Phone layout (queue above the case): bring the selected case into view.
+    if (isBelowMobileBreakpoint()) workspace.current?.scrollIntoView({ block: 'start' });
   }, [selected, detail.data?.id]);
   function change(key: string, value: string) {
     setParams((old) => {

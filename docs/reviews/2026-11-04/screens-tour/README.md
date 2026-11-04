@@ -30,3 +30,26 @@ Resultado final: 80 capturas, nenhum problema detectado e nenhum erro de página
 - Celular, modelos: o nome do modelo trunca ao lado do selo "Cortex".
 - Celular: títulos longos de página truncam ("Gerenciar Pacien…").
 - O campo de data aparece como mm/dd/aaaa só no navegador de teste, que está em inglês; no navegador em português aparece dd/mm/aaaa.
+
+## Correção do ponto de troca fracionário (revisão do Codex de 04/11, 11:48)
+
+Com 135%, o ponto de troca entre celular e computador é 768 × 1,35 = 1036,8 px. Na conta do computador ele vale 1036,8000000000002, e o `md` do Tailwind usa o mesmo número. O código de `4402143` tinha dois problemas:
+- usava `max-width: N − 1` (1035,8) e `innerWidth` inteiro, o que deixava uma faixa sem regra;
+- o hook podia ficar preso no modo celular, como na sequência 1035 → 1036 → 1280.
+
+**Correção:**
+- celular passa a ser o complemento de `(min-width: MOBILE_BREAKPOINT px)`, a mesma regra do CSS;
+- o estado vem só de `MediaQueryList.matches` e dos eventos dessa consulta (`isBelowMobileBreakpoint` e `useIsMobile` em `src/hooks/use-mobile.tsx`), usados pela agenda e pela fila da recepção;
+- a agenda não troca a visualização escolhida pelo médico ao redimensionar;
+- a regra de CSS da barra da agenda virou `not all and (min-width: 864px)`.
+
+**Provas:**
+
+| Teste | Código antigo (vermelho) | Correção (verde) |
+|---|---|---|
+| `src/hooks/use-mobile.test.tsx`: navegador simulado, com larguras fracionárias e `change` só quando a consulta muda | 3 de 4 falham: preso em celular a 1280; a 1036 vindo de 1280 não entra em celular | 4 de 4 passam |
+| `scripts/breakpoint-resize-browser.mjs`: Edge isolado e fixtures sintéticas | "Agenda in desktop mode at 1036px" | Agenda certa em 1035, 1036, 1280, 1036, 390 e 1280; "Mês" escolhido a 1035 continua a 1280; a fila rola até o caso a 1036 e não rola a 1280 |
+
+Regressão: 118 testes em 20 arquivos (`src/hooks`, `src/pages`, `src/features/reception`, `src/components/ui`) e typecheck passaram.
+
+Fica para o Codex, na área dele: `src/pages/Index.tsx` usa `max-width: DESKTOP_BREAKPOINT − 1` com `innerWidth`. Com 135% o valor é inteiro (1728), mas com zoom do navegador a largura pode ser fracionária, entre 1727 e 1728. As regras 1727 px de `index.css` acompanham o `Index.tsx` e devem mudar junto.
