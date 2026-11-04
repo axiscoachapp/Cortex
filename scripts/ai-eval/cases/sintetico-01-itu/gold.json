@@ -1,0 +1,27 @@
+{
+  "id": "sintetico-01-itu",
+  "synthetic": true,
+  "specialty": "ginecologia",
+  "approvedBy": null,
+  "note": "Roteiro inventado para demonstrar o formato. Os casos do teste real são escritos ou aprovados pelos médicos da clínica (B1).",
+  "transcript": [
+    { "speaker": "medico", "text": "Bom dia. O que trouxe você hoje?" },
+    { "speaker": "paciente", "text": "Estou com ardência para urinar há três dias e vontade de ir ao banheiro toda hora." },
+    { "speaker": "medico", "text": "Teve febre ou dor nas costas?" },
+    { "speaker": "paciente", "text": "Não tive febre. Dor nas costas também não." },
+    { "speaker": "medico", "text": "Tem alergia a algum remédio?" },
+    { "speaker": "paciente", "text": "Nego alergia. A última infecção foi em fevereiro, aliás, foi em março." },
+    { "speaker": "acompanhante", "text": "Ela tomou um antibiótico naquela vez, mas não lembro o nome." },
+    { "speaker": "medico", "text": "Vou prescrever nitrofurantoína 100 mg de seis em seis horas por cinco dias e fenazopiridina 200 mg se tiver ardência. Peço urocultura antes de começar." }
+  ],
+  "terms": [
+    { "name": "nitrofurantoína", "dose": "100 mg" },
+    { "name": "fenazopiridina", "dose": "200 mg" },
+    { "name": "urocultura" }
+  ],
+  "negations": [
+    { "cue": "não", "subject": "febre" },
+    { "cue": "nego", "subject": "alergia" }
+  ],
+  "referenceNote": "## S\nDisúria e polaciúria há 3 dias. Nega febre e dor lombar. Nega alergias. Episódio anterior em março, tratado com antibiótico não lembrado.\n\n## O\nSem dados de exame físico neste roteiro.\n\n## A\nCistite não complicada.\n\n## P\nUrocultura antes do início. Nitrofurantoína 100 mg de 6/6 h por 5 dias. Fenazopiridina 200 mg se ardência."
+}
