@@ -195,6 +195,9 @@ Origem: [revisão do Claude](../../docs/reviews/2026-11-04/claude-reception-revi
   - **T27/2b concluída**, `20261104002000`: 53 migrations/32 suítes SQL, concorrência existente, oito ordens de exclusão e 26 testes de handlers de segurança aprovados. Marcadores/upsert/carimbo final e cascatas reais sintéticas comprovados. [Evidências](../../docs/reviews/2026-11-04/deletion-barrier/IMPLEMENTATION.md). Carga/retentativas do piloto seguem em T25.
 - [ ] **T28 — H1/M2/L5: escopos administrativos e prática particular.** Priorizar após T27, antes de editor/piloto.
   - Provar admin versus médico membro sem delegação nos leitores e escritores. Separar gestão de equipe/contatos de autorização de agenda/lista de pacientes, seguindo a matriz atual. Explicitar anuência/limites de delegação; não reviver escopos antigos ao reingressar. Qualquer ampliação de política precisa de decisão explícita.
+  - [x] **T28/1, `20261104003000`:** remove acesso implícito do admin a agenda/carteira alheia, preserva gestão por diretório mínimo separado e a própria agenda. 55 migrations/33 SQL, 43 testes da recepção e 19 verificações de navegador aprovados; tipos/build/lint verificados. [Evidências](../../docs/reviews/2026-11-04/admin-scopes/IMPLEMENTATION.md).
+  - [ ] **T28/2a — L5:** revogar escopos ao sair/reingressar; próximo incremento independente.
+  - [ ] **T28/2b — M2/D18:** aguardar limite administrativo escolhido pela clínica/usuário; então anuência médica e recorte da prática particular. Não criar grant de admin nem inferir vínculo de paciente.
 - [ ] **T29 — M3/L4: concorrência e inexistência de agendamento.**
   - Provar edição médica direta contra RPC de remarcação em duas conexões, corrigir ordem de locks e responder indisponibilidade para ID inexistente; manter CAS, conflito de horário e histórico.
 - [ ] **T30 — M1: continuidade clínica em falha transitória de acesso.**

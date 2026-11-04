@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import {
   clinicAccessSchema,
+  teamDoctorsSchema,
   queuePageSchema,
   contactPageSchema,
   contactSchema,
@@ -24,6 +25,7 @@ export class ReceptionError extends Error {
 }
 type RpcName =
   | 'clinic_access'
+  | 'reception_team_doctors'
   | 'update_reception_staff'
   | 'reception_create_contact'
   | 'reception_contacts'
@@ -71,6 +73,7 @@ const uuid = z.string().uuid();
 const revision = z.number().int().positive();
 export const receptionApi = {
   access: () => rpc('clinic_access', {}, clinicAccessSchema),
+  teamDoctors: (clinic: string) => rpc('reception_team_doctors', { p_clinic: clinic }, teamDoctorsSchema),
   updateStaff: (staff: string, doctors: string[], active: boolean) =>
     rpc('update_reception_staff', { p_staff: staff, p_doctors: doctors, p_active: active }, z.boolean()),
   contacts: (clinic: string, search = '', before: string | null = null) =>

@@ -2435,6 +2435,7 @@ export type Database = {
         Args: { p_clinic: string; p_doctor?: string }
         Returns: boolean
       }
+      reception_team_doctors: { Args: { p_clinic: string }; Returns: Json }
       reception_unblock_time: {
         Args: { p_block: string; p_revision: number }
         Returns: boolean

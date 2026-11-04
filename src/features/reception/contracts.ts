@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const id = z.string().uuid();
 const doctorSchema = z.object({ id, name: z.string(), specialty: z.string().nullable() }).strict();
+export const teamDoctorsSchema = z.array(doctorSchema).max(200);
 export const clinicAccessSchema = z
   .object({
     kind: z.enum(['clinical', 'reception']),

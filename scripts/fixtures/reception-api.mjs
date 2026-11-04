@@ -12,6 +12,7 @@ export const ids = {
   case: '88888888-8888-4888-8888-888888888888',
 };
 export async function startReceptionFixture() {
+  let teamDirectoryFailure = false;
   const now = () => new Date().toISOString();
   const users = new Map(
     [
@@ -129,7 +130,7 @@ export async function startReceptionFixture() {
       if (!user) return error('42501', 'Synthetic session missing');
       const member = staff.find((s) => s.id === actor);
       const permitted = (doctor) =>
-        actor === ids.admin || (member?.active && (!doctor || member.doctorIds.includes(doctor)));
+        (actor === ids.admin && (!doctor || doctor === ids.admin)) || (member?.active && (!doctor || member.doctorIds.includes(doctor)));
       if (url.pathname === '/functions/v1/create-clinic-receptionist' && actor === ids.admin) {
         const id = randomUUID();
         staff.push({ id, name: input.name, active: true, doctorIds: input.doctorIds });
@@ -144,6 +145,9 @@ export async function startReceptionFixture() {
         return send([]);
       }
       const rpc = url.pathname.split('/').pop();
+      if (rpc === 'reception_team_doctors')
+        return actor !== ids.admin || input.p_clinic !== ids.clinic ? error('42501', 'Management scope required')
+          : teamDirectoryFailure ? error('XX000', 'Synthetic team directory failure') : send(doctors);
       if (rpc === 'clinic_access')
         return send({
           kind: member ? 'reception' : 'clinical',
@@ -426,6 +430,7 @@ export async function startReceptionFixture() {
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   return {
     origin: `http://127.0.0.1:${server.address().port}`,
+    setTeamDirectoryFailure: (failed) => { teamDirectoryFailure = failed; },
     metrics,
     cases,
     contacts,

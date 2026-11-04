@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { testReceptionConcurrency } from './test-reception-concurrency.mjs';
 import { runReceptionDeletionRegression } from './test-reception-deletion-concurrency.mjs';
+import { testDocumentSnippetsConcurrency } from './test-document-snippets-concurrency.mjs';
 
 // Every run owns a newly named disposable database. Never reset a linked project.
 const container = process.env.CORTEX_TEST_DB_CONTAINER || `cortex-test-${randomUUID().slice(0,8)}`;
@@ -30,6 +31,7 @@ try {
     sql(readFileSync(resolve('supabase/tests',name),'utf8')); process.stdout.write(`Passed ${name}\n`);
   }
   await testReceptionConcurrency(container);
+  await testDocumentSnippetsConcurrency(container);
 } finally {
   if (ownsContainer) run(['stop',container]);
 }

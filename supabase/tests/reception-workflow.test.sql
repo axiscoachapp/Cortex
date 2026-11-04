@@ -57,11 +57,27 @@ select public.reception_update_case(current_setting('test.queue_case')::uuid,3,'
 select public.reception_update_case(current_setting('test.queue_case')::uuid,4,'reopen','{}');
 select public.reception_update_case(current_setting('test.queue_case')::uuid,5,'claim','{}');
 select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000001',true);
-select public.reception_update_case(current_setting('test.queue_case')::uuid,6,'route','{"doctorId":"b1000000-0000-4000-8000-000000000002"}');
+-- Cross-doctor work uses an explicitly scoped assignee; admin is management only.
+select public.update_reception_staff('b1000000-0000-4000-8000-000000000003',array['b1000000-0000-4000-8000-000000000001'::uuid,'b1000000-0000-4000-8000-000000000002'::uuid],true);
+select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000004',true);
+select public.reception_update_case(current_setting('test.queue_case')::uuid,6,'transfer','{"assigneeId":"b1000000-0000-4000-8000-000000000003"}');
+select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000003',true);
+select public.reception_update_case(current_setting('test.queue_case')::uuid,7,'route','{"doctorId":"b1000000-0000-4000-8000-000000000002"}');
+select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000001',true);
+select public.update_reception_staff('b1000000-0000-4000-8000-000000000003',array['b1000000-0000-4000-8000-000000000001'::uuid],true);
+-- Also retain the route-time release invariant: admin may route unassigned
+-- intake to their own agenda, clearing an assignee scoped only to another doctor.
+select set_config('test.intake_route',public.reception_create_case(current_setting('test.queue_contact')::uuid,null,'Encaminhamento sintético','scheduling',gen_random_uuid())::text,true);
+select public.update_reception_staff('b1000000-0000-4000-8000-000000000004',array['b1000000-0000-4000-8000-000000000002'::uuid],true);
+select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000004',true);
+select public.reception_update_case(current_setting('test.intake_route')::uuid,1,'claim','{}');
+select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000001',true);
+select public.reception_update_case(current_setting('test.intake_route')::uuid,2,'route','{"doctorId":"b1000000-0000-4000-8000-000000000001"}');
 do $$ declare d jsonb; begin
- d:=public.reception_case(current_setting('test.queue_case')::uuid);
+ d:=public.reception_case(current_setting('test.intake_route')::uuid);
  assert d->>'assignedTo' is null and d->>'status'='new','Routing retained an assignee without the new agenda';
 end $$;
+select public.update_reception_staff('b1000000-0000-4000-8000-000000000004',array['b1000000-0000-4000-8000-000000000001'::uuid],true);
 -- Keep staff A active on another agenda: authorship must not retain an old contact.
 select public.update_reception_staff('b1000000-0000-4000-8000-000000000003',array['b1000000-0000-4000-8000-000000000001'::uuid,'b1000000-0000-4000-8000-000000000002'::uuid],true);
 select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000003',true);

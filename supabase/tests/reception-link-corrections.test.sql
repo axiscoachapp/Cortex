@@ -23,8 +23,11 @@ do $$ begin
  begin perform public.reception_update_link_relationship(current_setting('test.link_edit_contact')::uuid,'a7200000-0000-4000-8000-000000000001',1,'other');raise exception 'Non-admin physician edited relation';exception when insufficient_privilege then null;end;
 end $$;
 select set_config('request.jwt.claim.sub','a7100000-0000-4000-8000-000000000001',true);
-select public.reception_link_patient(current_setting('test.link_edit_contact')::uuid,'a7100000-0000-4000-8000-000000000004','a7200000-0000-4000-8000-000000000003','self');
 reset role;
+-- Existing administrative correction remains valid for a historical foreign
+-- link; creating that link through an undelegated admin RPC is now forbidden.
+insert into public.patient_contact_links(clinic_id,contact_id,doctor_user_id,patient_id,relationship,confirmed_by)
+ values(current_setting('test.link_edit_clinic')::uuid,current_setting('test.link_edit_contact')::uuid,'a7100000-0000-4000-8000-000000000004','a7200000-0000-4000-8000-000000000003','self','a7100000-0000-4000-8000-000000000001');
 do $$ begin
  begin
   update public.patient_contact_links set contact_id=current_setting('test.link_edit_other_contact')::uuid where contact_id=current_setting('test.link_edit_contact')::uuid;

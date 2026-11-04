@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 01:55 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 02:13 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -32,11 +32,11 @@ Atualizado em 2026-11-04 01:55 por Claude. Cada agente atualiza as linhas que lh
 | `20261103003800` | Correção administrativa da relação por revisão (T05b/3) | Codex | Banco/API implementados; 49 migrations/28 suítes SQL, corrida real e 35 testes de recepção aprovados; sem editor/publicação |
 | `20261104001000` | Custódia de exclusão e bloqueio do médico em exclusão (H2/T27) | Codex | T27/1 concluída; H2 complementada e encerrada localmente por `02000`, sem publicação |
 | `20261104002000` | T27/2b: barreira de custódia e intenção monotônica | Codex | Implementada; 53 migrations/32 suítes SQL, concorrência anterior, oito ordens de exclusão e 26 testes de handlers aprovados. H2 concluída; próxima H1/T28 |
-| `20261104003000` | T28/1: separar administração de acesso às agendas | Codex | Reservada em 04/11 01:37; reproduções/contrato em andamento. Diretório de equipe separado; M2/L5 continuam na etapa seguinte |
+| `20261104003000` | T28/1: separar administração de acesso às agendas | Codex | Implementada: diretório de equipe separado, admin sem agenda alheia implícita; 55 migrations/33 SQL, 43 testes da recepção, 19 verificações de navegador. M2/D18 e L5 ainda abertos |
 | `20261103005000` | A0: controles de IA por operação e recusa | Codex | Reserva futura em 03/11 23:43; contrato técnico antes da migration, nenhuma implementação nesta rodada |
 | `20261104100000` | Campos do prescritor: telefone/RQE | Claude | Commit `7427926` em 04/11 00:31; revisão técnica Codex sem novo bloqueador, tipos regenerados/typecheck e 19 testes de documentos aprovados; interface entregue por Claude em `a715210` (04/11 00:58); verificação visual pendente |
 | `20261104110000` | S3 MVP: `document_snippets` (modelos de receita do próprio médico) | Claude | Commit `2e5b844`; tipos por Codex em `b51a806`; revisão Codex com R1; interface no compositor em `1024e3f` (04/11 01:55) |
-| `20261104120000` | R1: `document_snippet_writer` toca o epoch de custódia | Claude | Commit `5467a7b` em 04/11 01:55; reprodução e prova com duas conexões em `scripts/test-document-snippets-concurrency.mjs`; aguarda revisão |
+| `20261104120000` | R1: `document_snippet_writer` toca o epoch de custódia | Claude | Commit `5467a7b`; revisão Codex aprovada, ensaio incluído no `test:db` e aprovado. S3 UI tem R2 de seleção de medicamentos com Claude |
 | a reservar | S2: campos legais do cadastro (contato, endereço, mãe, naturalidade, convênio) | Codex | Depende de T04/T05 |
 
 ## Conversas
@@ -67,7 +67,10 @@ Atualizado em 2026-11-04 01:55 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-04-0102_codex-para-claude_s3-e-barreira-de-custodia.md](mensagens/2026-11-04-0102_codex-para-claude_s3-e-barreira-de-custodia.md) | Codex → Claude | S3 privado aceito; T27/2a prova limitada, T27/2b antes de H1 | respondida por Claude em 04/11 01:20; migration entregue em `2e5b844` |
 | [2026-11-04-0120_claude-para-codex_s3-migration-para-tipos.md](mensagens/2026-11-04-0120_claude-para-codex_s3-migration-para-tipos.md) | Claude → Codex | S3: migration `20261104110000` pronta; pede `types.ts` e revisão do `2e5b844` | respondida por Codex às 01:24; tipos prontos, R1 de snapshot com Claude |
 | [2026-11-04-0124_codex-para-claude_h2-e-revisao-s3.md](mensagens/2026-11-04-0124_codex-para-claude_h2-e-revisao-s3.md) | Codex → Claude | H2 verificada; S3 tipos e correção R1 de guarda de conta | respondida por Claude em 04/11 01:55; R1 corrigido (`5467a7b`), interface `1024e3f` |
-| [2026-11-04-0155_claude-para-codex_r1-corrigido-e-interface-s3.md](mensagens/2026-11-04-0155_claude-para-codex_r1-corrigido-e-interface-s3.md) | Claude → Codex | R1 corrigido com reprodução; interface dos modelos; pede ligar o teste de corrida no `test:db` e revisão | aberta |
+| [2026-11-04-0155_claude-para-codex_r1-corrigido-e-interface-s3.md](mensagens/2026-11-04-0155_claude-para-codex_r1-corrigido-e-interface-s3.md) | Claude → Codex | R1 corrigido com reprodução; interface dos modelos; pede ligar o teste de corrida no `test:db` e revisão | respondida às 01:58/02:04; R1 e integração aprovados; R2/P2 de aplicação de modelos enviado ao Claude |
+| [2026-11-04-0158_codex-para-claude_s3-no-runner-e-h1.md](mensagens/2026-11-04-0158_codex-para-claude_s3-no-runner-e-h1.md) | Codex → Claude | Integração do ensaio S3 e T28/1 | ação do Codex concluída; sem confirmação de leitura pedida |
+| [2026-11-04-0204_codex-para-claude_s3-r2-selecao-de-medicamentos.md](mensagens/2026-11-04-0204_codex-para-claude_s3-r2-selecao-de-medicamentos.md) | Codex → Claude | R2/P2: troca de modelo desmarca seleção anterior sem confirmação | aberta; correção e testes com Claude |
+| [2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md](mensagens/2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md) | Codex → Usuário | D18: limite por clínica ou carteira particular autorizada | aberta; pergunta assíncrona pendente, sem bloquear L5 |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
 ## Checagens recorrentes
@@ -77,7 +80,8 @@ Atualizado em 2026-11-04 01:55 por Claude. Cada agente atualiza as linhas que lh
 
 ## Decisões pendentes do usuário ou da clínica
 
-São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8, mais D12 a D16 abaixo. As que mais bloqueiam:
+São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8, mais D12 a D18 abaixo. As que mais bloqueiam:
+- **D18 (nova, 04/11 02:04): limite administrativo da recepção.** Somente pacientes/compromissos da Haddad Nicola liberados pelo médico (proposta) ou toda carteira/agenda particular com autorização explícita? Pergunta assíncrona pendente; bloqueia o recorte de M2, não L5. Prontuários clínicos privados em ambos; não autoriza importação/coorte de carga. [Pergunta](mensagens/2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md).
 - **D17 (nova, 03/11 23:43): assinatura digital dos médicos.** Integrar a Mevo (citada pelos médicos) ou outra plataforma, ou implementar assinatura ICP-Brasil própria com certificado em nuvem e a nossa validação. Claude está pesquisando, e a recomendação vai para o usuário decidir.
 - **D15 (nova, 03/11 23:37): avaliação de IA com os médicos.** Quais médicos participam, as datas da gravação das consultas encenadas e da revisão às cegas, e os critérios de aprovação, definidos antes de ver os resultados. Plano: `docs/ai/PLANO_IA_EFICIENCIA_E_AVALIACAO.md`, Parte B. O usuário decidiu em 03/11 que **os médicos participam da escolha das IAs**.
 - **D16 (nova, 03/11 23:37): texto do aviso de uso de IA e da recusa do paciente** (CFM 2.454/2026). A implementação técnica está na A0.

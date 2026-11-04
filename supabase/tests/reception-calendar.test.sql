@@ -54,7 +54,12 @@ do $$ declare booked_id uuid:=current_setting('test.booked_id')::uuid; begin
  begin update public.appointments set created_by=auth.uid() where appointments.id=booked_id;raise exception 'Actor forged by owner write';exception when insufficient_privilege then null;end;
  begin delete from public.appointments where appointments.id=booked_id;raise exception 'CRM appointment history erased';exception when insufficient_privilege then null;end;
 end $$;
-select public.reception_update_case(current_setting('test.calendar_case')::uuid,1,'route','{"doctorId":"c1000000-0000-4000-8000-000000000004"}');
+-- Routing across doctors requires an explicitly scoped receptionist, not the admin role.
+select public.update_reception_staff('c1000000-0000-4000-8000-000000000002',array['c1000000-0000-4000-8000-000000000001'::uuid,'c1000000-0000-4000-8000-000000000004'::uuid],true);
+select set_config('request.jwt.claim.sub','c1000000-0000-4000-8000-000000000002',true);
+select public.reception_update_case(current_setting('test.calendar_case')::uuid,1,'claim','{}');
+select public.reception_update_case(current_setting('test.calendar_case')::uuid,2,'route','{"doctorId":"c1000000-0000-4000-8000-000000000004"}');
+select set_config('request.jwt.claim.sub','c1000000-0000-4000-8000-000000000001',true);
 select public.reception_change_appointment(current_setting('test.calendar_clinic')::uuid,current_setting('test.booked_id')::uuid,3,'cancel',null,null);
 select set_config('test.calendar_block',public.reception_block_time(current_setting('test.calendar_clinic')::uuid,'c1000000-0000-4000-8000-000000000001','2099-11-01T16:00Z','2099-11-01T17:00Z','Indisponível','c4000000-0000-4000-8000-000000000004')::text,true);
 select set_config('request.jwt.claim.sub','c1000000-0000-4000-8000-000000000002',true);

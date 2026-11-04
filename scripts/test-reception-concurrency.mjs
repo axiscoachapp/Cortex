@@ -161,12 +161,14 @@ export async function testReceptionConcurrency(container) {
   const draftCase = sync(
     `begin;${claims(staffA)}select public.reception_create_case('${contact}','${admin}','Concurrent draft routing','scheduling',gen_random_uuid());commit;`,
   );
+  sync(`begin;${claims(admin)}select public.update_reception_staff('${staffB}',array['${admin}'::uuid,'${doctor}'::uuid],true);commit;
+    begin;${claims(staffB)}select public.reception_update_case('${draftCase}',1,'claim','{}');commit;`);
   await contest(
-    `select public.reception_update_case('${draftCase}',1,'route','{"doctorId":"${doctor}"}')`,
+    `select public.reception_update_case('${draftCase}',2,'route','{"doctorId":"${doctor}"}')`,
     `select public.reception_save_draft('${draftCase}','Stale scoped write',0)`,
     '42501',
     false,
-    admin,
+    staffB,
     staffA,
   );
   assert.equal(

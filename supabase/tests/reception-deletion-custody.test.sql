@@ -13,7 +13,7 @@ insert into auth.users(id,email) values
  ('b8100000-0000-4000-8000-000000000010','custody-booking-owner@example.invalid');
 insert into public.clinics(id,name,created_by) values('b8200000-0000-4000-8000-000000000001','Clínica sintética custódia','b8100000-0000-4000-8000-000000000001');
 insert into public.clinic_members(clinic_id,user_id,role,status)
- select 'b8200000-0000-4000-8000-000000000001',id,case when email='custody-admin@example.invalid' then 'admin' else 'doctor' end,'active'
+ select 'b8200000-0000-4000-8000-000000000001',id,case when email in ('custody-admin@example.invalid','custody-deleting@example.invalid') then 'admin' else 'doctor' end,'active'
  from auth.users where id in ('b8100000-0000-4000-8000-000000000001','b8100000-0000-4000-8000-000000000003','b8100000-0000-4000-8000-000000000004','b8100000-0000-4000-8000-000000000005','b8100000-0000-4000-8000-000000000006','b8100000-0000-4000-8000-000000000007','b8100000-0000-4000-8000-000000000009');
 insert into public.clinic_staff_members(user_id,clinic_id,name) values('b8100000-0000-4000-8000-000000000008','b8200000-0000-4000-8000-000000000001','Recepção sintética');
 insert into public.staff_doctor_scopes values('b8200000-0000-4000-8000-000000000001','b8100000-0000-4000-8000-000000000008','b8100000-0000-4000-8000-000000000003');
@@ -56,18 +56,20 @@ end $$;
 -- This does not simulate an in-flight transaction or a privileged direct writer.
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
-select set_config('request.jwt.claim.sub','b8100000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claim.sub','b8100000-0000-4000-8000-000000000009',true);
 select public.reception_patient_search('b8200000-0000-4000-8000-000000000001','b8100000-0000-4000-8000-000000000009','Paciente');
 reset role;
 select set_config('request.jwt.claim.role','service_role',true);
 insert into public.account_deletion_requests(user_id) values('b8100000-0000-4000-8000-000000000009');
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','b8100000-0000-4000-8000-000000000001',true);
 do $$ begin
  begin
   perform public.update_reception_staff('b8100000-0000-4000-8000-000000000008',array['b8100000-0000-4000-8000-000000000009'::uuid],true);
   raise exception 'Deleting doctor delegation was accepted';
  exception when sqlstate '42501' then null;end;
+ perform set_config('request.jwt.claim.sub','b8100000-0000-4000-8000-000000000009',true);
  begin
   perform public.reception_patient_search('b8200000-0000-4000-8000-000000000001','b8100000-0000-4000-8000-000000000009','Paciente');
   raise exception 'Deleting doctor remained searchable';

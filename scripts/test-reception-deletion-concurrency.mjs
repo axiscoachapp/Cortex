@@ -52,7 +52,7 @@ async function testReceptionDeletionConcurrency(container) {
  const doctors=[2,3,4,5,6,7,8,9].map(n=>`e9100000-0000-4000-8000-${String(n).padStart(12,'0')}`);
  sql(`insert into auth.users(id,email) values('${admin}','race-custody-admin@example.invalid'),${doctors.map((id,n)=>`('${id}','race-custody-${n}@example.invalid')`).join(',')};
   insert into public.clinics(id,name,created_by) values('${clinic}','Clínica sintética concorrência','${admin}');
-  insert into public.clinic_members(clinic_id,user_id,role,status) values('${clinic}','${admin}','admin','active'),${doctors.map(id=>`('${clinic}','${id}','doctor','active')`).join(',')};
+  insert into public.clinic_members(clinic_id,user_id,role,status) values('${clinic}','${admin}','admin','active'),${doctors.map((id,i)=>`('${clinic}','${id}','${[3,5,6].includes(i)?'admin':'doctor'}','active')`).join(',')};
   insert into public.clinic_contacts(id,clinic_id,name,created_by,request_id) values('${contact}','${clinic}','Contato sintético','${admin}',gen_random_uuid());`);
  const appointment='e9600000-0000-4000-8000-000000000006';
  const patientA='e9500000-0000-4000-8000-000000000007',patientB='e9500000-0000-4000-8000-000000000008';
@@ -104,7 +104,7 @@ async function testReceptionDeletionConcurrency(container) {
  // Public RPC, not just service-role: an old writer must not bypass a new marker.
  const oldWriter=session(container);
  try {
-  oldWriter.send('begin isolation level repeatable read;'+claims(admin)+'select count(*) from public.patients;\n\\echo WRITER_SNAPSHOT');
+  oldWriter.send('begin isolation level repeatable read;'+claims(doctors[3])+'select count(*) from public.patients;\n\\echo WRITER_SNAPSHOT');
   await oldWriter.wait('WRITER_SNAPSHOT');
   const marker=sqlResult('begin;'+intent(doctors[3])+'commit;');required(marker);
   const written=await oldWriter.finish(`select public.reception_create_case('${contact}','${doctors[3]}','Caso RPC sintético','scheduling',gen_random_uuid());commit;`);
@@ -129,14 +129,14 @@ async function testReceptionDeletionConcurrency(container) {
  try {
   oldPatientMarker.send('begin isolation level repeatable read;'+trusted+'select count(*) from public.patients;\n\\echo PATIENT_MARKER_SNAPSHOT');
   await oldPatientMarker.wait('PATIENT_MARKER_SNAPSHOT');
-  const linked=sqlResult('begin;'+claims(admin)+link(patientA)+'commit;');required(linked);
+  const linked=sqlResult('begin;'+claims(doctors[5])+link(patientA)+'commit;');required(linked);
   const marker=await oldPatientMarker.finish(patientIntent(patientA)+'commit;');
   record('old-patient-marker-snapshot',doctors[5],[linked,marker],staleEpoch,false,linkExists(patientA),patientMarked(patientA));
  } finally {oldPatientMarker.close();}
 
  const oldLinker=session(container);
  try {
-  oldLinker.send('begin isolation level repeatable read;'+claims(admin)+'select count(*) from public.patients;\n\\echo LINKER_SNAPSHOT');
+  oldLinker.send('begin isolation level repeatable read;'+claims(doctors[6])+'select count(*) from public.patients;\n\\echo LINKER_SNAPSHOT');
   await oldLinker.wait('LINKER_SNAPSHOT');
   const marker=sqlResult('begin;'+trusted+patientIntent(patientB)+'commit;');required(marker);
   const linked=await oldLinker.finish(link(patientB)+'commit;');

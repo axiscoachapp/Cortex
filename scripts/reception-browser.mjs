@@ -181,6 +181,41 @@ try {
   }
   const admin = await account('admin', '/recepcao/equipe');
   await expect(admin.getByRole('heading', { name: 'Equipe e permissões' })).toBeVisible();
+  await expect(admin.getByRole('group', { name: 'Agendas permitidas' }).getByRole('checkbox', { name: 'Dr. Bruno Exemplo' })).toBeVisible();
+  await admin.goto(origin + '/recepcao/agenda');
+  await expect(admin.getByRole('heading', { name: 'Agenda da equipe' })).toBeVisible();
+  const adminAgenda = admin.getByLabel('Agenda do médico', { exact: true });
+  await expect(adminAgenda).toBeVisible();
+  await expect(adminAgenda.getByRole('option', { name: 'Dra. Ana Exemplo' })).toBeAttached();
+  await expect(adminAgenda.getByRole('option', { name: 'Dr. Bruno Exemplo' })).toHaveCount(0);
+  await admin.goto(origin + '/recepcao/equipe');
+  await expect(admin.getByRole('button', { name: 'Atualizar profissionais' })).toBeEnabled();
+  await admin.getByLabel('Nome da secretária', { exact: true }).fill('Rascunho sintético');
+  await admin.getByRole('group', { name: 'Agendas permitidas' }).getByRole('checkbox', { name: 'Dr. Bruno Exemplo' }).check();
+  api.setTeamDirectoryFailure(true);
+  await admin.getByRole('button', { name: 'Atualizar profissionais' }).click();
+  await expect(admin.getByRole('alert')).toBeVisible();
+  await expect(admin.getByRole('button', { name: 'Criar conta com acesso restrito' })).toBeDisabled();
+  await expect(admin.getByRole('button', { name: 'Salvar permissões' }).first()).toBeDisabled();
+  await expect(admin.getByRole('button', { name: 'Desativar acesso' }).first()).toBeEnabled();
+  api.setTeamDirectoryFailure(false);
+  await admin.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(admin.getByLabel('Nome da secretária', { exact: true })).toHaveValue('Rascunho sintético');
+  await expect(admin.getByRole('group', { name: 'Agendas permitidas' }).getByRole('checkbox', { name: 'Dr. Bruno Exemplo' })).toBeChecked();
+  await admin.getByRole('group', { name: 'Agendas permitidas' }).getByRole('checkbox', { name: 'Dr. Bruno Exemplo' }).uncheck();
+  checks.push('team directory includes other doctors while admin operational agenda excludes them; failed refetch preserves draft and blocks scope writes, not revocation');
+  for (const width of [390, 768, 1280, 1920]) {
+    await admin.setViewportSize({ width, height: 1000 });
+    if (await admin.locator('html').evaluate((element) => element.scrollWidth > element.clientWidth + 1)) throw new Error('Team page overflow at '+width);
+    const staffNameInput = admin.getByLabel('Nome da secretária', { exact: true });
+    await staffNameInput.click();
+    await expect(staffNameInput).toBeInViewport();
+    const createAction = await admin.getByRole('button', { name: 'Criar conta com acesso restrito' }).boundingBox();
+    if (!createAction || createAction.x < -1 || createAction.x + createAction.width > width + 1) throw new Error('Team create action overflow at '+width);
+    await admin.screenshot({path:resolve(artifacts,'team-scopes-'+width+'.png'),animations:'disabled'});
+  }
+  await admin.setViewportSize({width:1280,height:1000});
+  checks.push('team scopes responsive at 150% for 390/768/1280/1920 px');
   await admin.getByLabel('Nome da secretária', { exact: true }).fill('Secretária Nova');
   await admin.getByLabel('E-mail exclusivo da conta').fill('nova@example.invalid');
   await admin

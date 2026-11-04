@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,10 +20,17 @@ export default function TeamSettings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [credentials, setCredentials] = useState<{ email: string; temporaryPassword: string } | null>(null);
+  const directory = useQuery({
+    queryKey: ['reception', 'team-doctors', access?.clinic?.id, access?.actorId],
+    queryFn: () => receptionApi.teamDoctors(access!.clinic!.id),
+    enabled: !!access?.admin && !!access.clinic,
+    staleTime: 30_000,
+  });
+  const teamDoctors = directory.isSuccess ? directory.data : [];
   if (!access?.admin) return <p role="alert">Somente o administrador pode gerenciar a equipe.</p>;
   async function create(event: React.FormEvent) {
     event.preventDefault();
-    if (busy || !doctors.length) return;
+    if (busy || !directory.isSuccess || !doctors.length) return;
     setBusy(true);
     setError(null);
     try {
@@ -50,6 +57,7 @@ export default function TeamSettings() {
     }
   }
   async function update(id: string, doctorIds: string[], active: boolean) {
+    if (busy || (active && !directory.isSuccess)) return;
     setBusy(true);
     setError(null);
     try {
@@ -67,11 +75,16 @@ export default function TeamSettings() {
       <div>
         <h1 className="text-xl font-semibold">Equipe e permissões</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Cada conta de recepção acessa somente as agendas delegadas. Evoluções e documentos clínicos permanecem no
-          ambiente médico.
+          Configure as agendas das secretárias. Seu acesso às agendas e aos prontuários é independente da gestão da equipe.
         </p>
+        {!directory.isError && (
+          <Button className="mt-3" size="sm" variant="outline" disabled={busy || directory.isFetching} onClick={() => void directory.refetch()}>
+            Atualizar profissionais
+          </Button>
+        )}
       </div>
       <ReceptionNotice error={error} />
+      <ReceptionNotice error={directory.error} loading={directory.isPending} onRetry={() => void directory.refetch()} />
       <section className="rounded-xl border bg-card p-4 space-y-4">
         <h2 className="font-semibold text-base">Criar conta de recepção</h2>
         <form onSubmit={create} className="space-y-4">
@@ -101,9 +114,9 @@ export default function TeamSettings() {
               />
             </div>
           </fieldset>
-          <fieldset disabled={busy} className="space-y-2">
+          <fieldset disabled={busy || !directory.isSuccess} className="space-y-2">
             <legend className="text-sm font-medium mb-2">Agendas permitidas</legend>
-            {access.doctors.map((d) => (
+            {teamDoctors.map((d) => (
               <label key={d.id} className="flex items-start gap-2 text-sm">
                 <input
                   className="mt-1 accent-primary"
@@ -117,7 +130,7 @@ export default function TeamSettings() {
               </label>
             ))}
           </fieldset>
-          <Button type="submit" disabled={busy || !doctors.length}>
+          <Button className="h-auto min-h-10 max-w-full whitespace-normal" type="submit" disabled={busy || !directory.isSuccess || !doctors.length}>
             {busy ? 'Salvando…' : 'Criar conta com acesso restrito'}
           </Button>
         </form>
@@ -129,7 +142,8 @@ export default function TeamSettings() {
           <StaffCard
             key={staff.id + JSON.stringify(staff.doctorIds) + staff.active}
             staff={staff}
-            doctors={access.doctors}
+            doctors={teamDoctors}
+            scopesReady={directory.isSuccess}
             busy={busy}
             onSave={(ids) => void update(staff.id, ids, true)}
             onDeactivate={() => void update(staff.id, [], false)}
@@ -171,12 +185,14 @@ function StaffCard({
   staff,
   doctors,
   busy,
+  scopesReady,
   onSave,
   onDeactivate,
 }: {
   staff: { id: string; name: string; active: boolean; doctorIds: string[] };
   doctors: { id: string; name: string }[];
   busy: boolean;
+  scopesReady: boolean;
   onSave: (ids: string[]) => void;
   onDeactivate: () => void;
 }) {
@@ -187,7 +203,7 @@ function StaffCard({
         <h3 className="font-medium">{staff.name}</h3>
         <span className="text-xs text-muted-foreground">{staff.active ? 'Ativa' : 'Desativada'}</span>
       </div>
-      <fieldset disabled={busy} className="flex flex-wrap gap-3">
+      <fieldset disabled={busy || !scopesReady} className="flex flex-wrap gap-3">
         <legend className="sr-only">Agendas de {staff.name}</legend>
         {doctors.map((d) => (
           <label key={d.id} className="flex gap-2 items-start text-xs">
@@ -204,7 +220,7 @@ function StaffCard({
         ))}
       </fieldset>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" disabled={busy || !selected.length} onClick={() => onSave(selected)}>
+        <Button className="h-auto min-h-9 max-w-full whitespace-normal" size="sm" variant="outline" disabled={busy || !scopesReady || !selected.length} onClick={() => onSave(selected)}>
           {staff.active ? 'Salvar permissões' : 'Reativar com estas agendas'}
         </Button>
         {staff.active && (
