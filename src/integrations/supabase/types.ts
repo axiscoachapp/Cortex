@@ -615,6 +615,48 @@ export type Database = {
         }
         Relationships: []
       }
+      document_snippets: {
+        Row: {
+          created_at: string
+          id: string
+          items: Json
+          kind: string
+          name: string
+          owner_user_id: string
+          review_status: string
+          revision: number
+          source: string
+          source_ref: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items?: Json
+          kind?: string
+          name: string
+          owner_user_id: string
+          review_status?: string
+          revision?: number
+          source?: string
+          source_ref?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items?: Json
+          kind?: string
+          name?: string
+          owner_user_id?: string
+          review_status?: string
+          revision?: number
+          source?: string
+          source_ref?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       document_templates: {
         Row: {
           content: string
@@ -2033,6 +2075,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      archive_document_snippet: {
+        Args: { p_expected_revision: number; p_id: string }
+        Returns: undefined
+      }
       assert_chat_patient: {
         Args: { p_patient: string; p_user: string }
         Returns: undefined
@@ -2152,6 +2198,7 @@ export type Database = {
         Args: { p_document_id: string }
         Returns: boolean
       }
+      document_snippet_writer: { Args: never; Returns: string }
       finalize_manual_encounter: {
         Args: { p_item_id: string; p_revision: number }
         Returns: string
@@ -2467,6 +2514,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_document_snippet: {
+        Args: {
+          p_expected_revision: number
+          p_id: string
+          p_items: Json
+          p_name: string
+        }
+        Returns: Json
+      }
       session_assurance_ok: { Args: never; Returns: boolean }
       set_reception_scopes: {
         Args: {
@@ -2503,6 +2559,7 @@ export type Database = {
       }
       update_user_settings: { Args: { p_patch: Json }; Returns: undefined }
       valid_patient_cpf: { Args: { value: string }; Returns: boolean }
+      valid_snippet_items: { Args: { p_items: Json }; Returns: boolean }
       validate_security_boundaries: {
         Args: never
         Returns: {
