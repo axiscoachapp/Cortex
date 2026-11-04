@@ -12,7 +12,12 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { validateCertificateDays } from '../../supabase/functions/_shared/documentLayout';
+import { currentPatientAge } from '../../supabase/functions/_shared/patientAge';
 import { Patient, Medication } from '@/types/patient';
+import { useUserSettings } from '@/hooks/useUserSettings';
+
+/** Sex values that satisfy RDC 471/2021; 'nao_informado' does not. */
+const PRINTABLE_SEX = new Set(['feminino', 'masculino', 'intersexo']);
 
 export type RxDocType = 'receita_simples' | 'receita_antimicrobiano' | 'atestado' | 'solicitacao_exames';
 
@@ -180,6 +185,15 @@ export function DocumentComposerModal({
   const isExames = docType === 'solicitacao_exames';
   const isReceita = !isAtestado && !isExames;
 
+  // RDC 471/2021: the server refuses an antimicrobial prescription without the
+  // prescriber phone or the patient's age and sex. Say so before generating.
+  const { prescriber, isLoading: settingsLoading } = useUserSettings();
+  const antimicrobialGaps = docType !== 'receita_antimicrobiano' ? [] : [
+    ...(!settingsLoading && !prescriber.professionalPhone.trim() ? ['seu telefone profissional (Configurações)'] : []),
+    ...(currentPatientAge(patient) === null ? ['a idade ou data de nascimento do paciente'] : []),
+    ...(PRINTABLE_SEX.has(patient.sex ?? '') ? [] : ['o sexo do paciente']),
+  ];
+
   // Grounded duplication alert: the same active ingredient (per the Anvisa
   // catalog) appearing in two or more selected medications.
   const duplicatedIngredients = useMemo(() => {
@@ -272,6 +286,19 @@ export function DocumentComposerModal({
             <p className="text-[0.6875rem] text-amber-700 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               Há antimicrobiano selecionado — considere o tipo "Antimicrobiano" (retenção, 10 dias).
+            </p>
+          )}
+
+          {antimicrobialGaps.length > 0 && (
+            <p role="alert" className="text-[0.6875rem] text-amber-800 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>
+                A receita de antimicrobiano exige{' '}
+                {antimicrobialGaps.length > 1
+                  ? `${antimicrobialGaps.slice(0, -1).join(', ')} e ${antimicrobialGaps[antimicrobialGaps.length - 1]}`
+                  : antimicrobialGaps[0]}
+                . Complete antes de gerar (RDC 471/2021).
+              </span>
             </p>
           )}
 

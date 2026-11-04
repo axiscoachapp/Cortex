@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useUserSettings, SPECIALTY_LABELS, Specialty } from '@/hooks/useUserSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllRows } from '@/lib/pagination';
+import { professionalPhoneError, rqeError } from '@/lib/prescriberContact';
 
 export function SpecialtySettingsSheet() {
   const { user } = useAuth();
@@ -65,8 +66,18 @@ export function SpecialtySettingsSheet() {
         crmNumber: prescriber.crmNumber,
         crmUf: prescriber.crmUf,
         professionalAddress: prescriber.professionalAddress,
+        professionalPhone: prescriber.professionalPhone,
+        rqe: prescriber.rqe,
       });
-  }, [prescriber.doctorName, prescriber.crmNumber, prescriber.crmUf, prescriber.professionalAddress, identityDirty]);
+  }, [
+    prescriber.doctorName,
+    prescriber.crmNumber,
+    prescriber.crmUf,
+    prescriber.professionalAddress,
+    prescriber.professionalPhone,
+    prescriber.rqe,
+    identityDirty,
+  ]);
   const editDraft = (patch: Partial<typeof draft>) => {
     setIdentityDirty(true);
     setSaveStatus('');
@@ -78,12 +89,19 @@ export function SpecialtySettingsSheet() {
     if (isSaving || !identityDirty) return;
     setIdentityError('');
     setSaveStatus('');
+    const contactError = professionalPhoneError(draft.professionalPhone) ?? rqeError(draft.rqe);
+    if (contactError) {
+      setIdentityError(contactError);
+      return;
+    }
     try {
       await updateSettingsAsync({
         doctor_name: draft.doctorName.trim(),
         crm_number: draft.crmNumber.trim(),
         crm_uf: draft.crmUf.trim().toUpperCase().slice(0, 2),
         professional_address: draft.professionalAddress.trim(),
+        professional_phone: draft.professionalPhone.trim(),
+        rqe: draft.rqe.trim(),
       });
       setIdentityDirty(false);
       setSaveStatus('Dados do prescritor salvos.');
@@ -210,7 +228,8 @@ export function SpecialtySettingsSheet() {
                 Dados do prescritor
               </label>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Obrigatórios na receita digital (CFM 2.299/2021): nome, CRM e endereço profissional.
+                Obrigatórios em todo documento: nome, CRM e endereço profissional. O telefone é obrigatório na receita
+                de antimicrobiano (RDC 471/2021). O RQE aparece ao lado do CRM, se você tiver.
               </p>
             </div>
             <Input
@@ -244,6 +263,26 @@ export function SpecialtySettingsSheet() {
               onChange={(e) => editDraft({ professionalAddress: e.target.value })}
               placeholder="Endereço profissional"
             />
+            <div className="grid grid-cols-[1fr_110px] gap-2">
+              <Input
+                aria-label="Telefone profissional"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                disabled={isSaving || isLoading}
+                value={draft.professionalPhone}
+                onChange={(e) => editDraft({ professionalPhone: e.target.value })}
+                placeholder="Telefone com DDD"
+              />
+              <Input
+                aria-label="RQE (opcional)"
+                disabled={isSaving || isLoading}
+                value={draft.rqe}
+                onChange={(e) => editDraft({ rqe: e.target.value })}
+                placeholder="RQE"
+                maxLength={60}
+              />
+            </div>
             <Button size="sm" onClick={saveDraft} disabled={isSaving || isLoading || !identityDirty}>
               {isSaving ? 'Salvando…' : 'Salvar dados do prescritor'}
             </Button>

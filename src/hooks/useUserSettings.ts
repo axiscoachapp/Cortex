@@ -29,6 +29,8 @@ interface UserSettings {
   crm_number: string;
   crm_uf: string;
   professional_address: string;
+  professional_phone: string;
+  rqe: string;
   active_template_id: string | null;
 }
 
@@ -40,6 +42,8 @@ const DEFAULTS: UserSettings = {
   crm_number: '',
   crm_uf: '',
   professional_address: '',
+  professional_phone: '',
+  rqe: '',
   active_template_id: null,
 };
 
@@ -55,7 +59,7 @@ export function useUserSettings() {
       if (!user?.id) return DEFAULTS;
       const { data, error } = await supabase
         .from('user_settings')
-        .select('specialty, daily_credit_limit, live_copilot_enabled, doctor_name, crm_number, crm_uf, professional_address, active_template_id')
+        .select('specialty, daily_credit_limit, live_copilot_enabled, doctor_name, crm_number, crm_uf, professional_address, professional_phone, rqe, active_template_id')
         .eq('user_id', user.id)
         .maybeSingle();
       if (error) throw error;
@@ -67,6 +71,8 @@ export function useUserSettings() {
         crm_number:           data?.crm_number               ?? '',
         crm_uf:               data?.crm_uf                   ?? '',
         professional_address: data?.professional_address     ?? '',
+        professional_phone:   data?.professional_phone       ?? '',
+        rqe:                  data?.rqe                      ?? '',
         active_template_id:   data?.active_template_id        ?? null,
       };
     },
@@ -108,8 +114,11 @@ export function useUserSettings() {
       crmNumber:           data?.crm_number           ?? '',
       crmUf:               data?.crm_uf               ?? '',
       professionalAddress: data?.professional_address ?? '',
+      professionalPhone:   data?.professional_phone   ?? '',
+      rqe:                 data?.rqe                  ?? '',
     },
-    /** True when the CFM-mandatory prescription fields are filled. */
+    /** True when the CFM-mandatory prescription fields are filled. Phone and
+     *  RQE stay optional; the antimicrobial prescription also needs the phone. */
     prescriberComplete: !!(data?.doctor_name?.trim() && data?.crm_number?.trim() && data?.crm_uf?.trim() && data?.professional_address?.trim()),
     isLoading,
     setSpecialty:         (specialty: Specialty) => mutation.mutate({ specialty }),

@@ -6,7 +6,14 @@ import { MemoryRouter } from 'react-router-dom';
 import { SpecialtySettingsSheet } from './SpecialtySettingsSheet';
 
 const mocks = vi.hoisted(() => ({
-  prescriber: { doctorName: 'Nome original', crmNumber: '123', crmUf: 'SP', professionalAddress: 'Endereço original' },
+  prescriber: {
+    doctorName: 'Nome original',
+    crmNumber: '123',
+    crmUf: 'SP',
+    professionalAddress: 'Endereço original',
+    professionalPhone: '',
+    rqe: '',
+  },
   save: vi.fn().mockRejectedValue(new Error('offline')),
 }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'doctor' } }) }));
@@ -34,16 +41,49 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
+const client = new QueryClient();
+const tree = () => (
+  <QueryClientProvider client={client}>
+    <MemoryRouter>
+      <SpecialtySettingsSheet />
+    </MemoryRouter>
+  </QueryClientProvider>
+);
+
 describe('Prescriber identity draft', () => {
+  it('saves phone and RQE with the other prescriber fields', async () => {
+    mocks.save.mockReset().mockResolvedValue(undefined);
+    render(tree());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Configurações' }));
+    await user.type(screen.getByLabelText('Telefone profissional'), ' (41) 3000-0000 ');
+    await user.type(screen.getByLabelText('RQE (opcional)'), '4567');
+    await user.click(screen.getByRole('button', { name: 'Salvar dados do prescritor' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Dados do prescritor salvos.');
+    expect(mocks.save).toHaveBeenCalledWith({
+      doctor_name: 'Nome original',
+      crm_number: '123',
+      crm_uf: 'SP',
+      professional_address: 'Endereço original',
+      professional_phone: '(41) 3000-0000',
+      rqe: '4567',
+    });
+  });
+
+  it('asks for the area code before saving a phone without DDD', async () => {
+    mocks.save.mockReset();
+    render(tree());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Configurações' }));
+    await user.type(screen.getByLabelText('Telefone profissional'), '3000-0000');
+    await user.click(screen.getByRole('button', { name: 'Salvar dados do prescritor' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/com DDD/);
+    expect(mocks.save).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Telefone profissional')).toHaveValue('3000-0000');
+  });
+
   it('preserves typing across background refresh and failed explicit save', async () => {
-    const client = new QueryClient();
-    const tree = () => (
-      <QueryClientProvider client={client}>
-        <MemoryRouter>
-          <SpecialtySettingsSheet />
-        </MemoryRouter>
-      </QueryClientProvider>
-    );
+    mocks.save.mockReset().mockRejectedValue(new Error('offline'));
     const view = render(tree());
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Configurações' }));
