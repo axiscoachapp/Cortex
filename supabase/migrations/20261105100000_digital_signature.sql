@@ -363,6 +363,17 @@ begin
  -- (PostgreSQL locks the tuple before BEFORE ROW triggers), so a wait here
  -- would close a cycle. A busy row is a retryable 40001 instead.
  perform pg_advisory_xact_lock(hashtextextended(p_user::text,123));
+ -- The account row, NOWAIT, before any other lock (Codex 04/11 16:46). Every
+ -- INSERT of a signature row takes an implicit KEY SHARE on auth.users through
+ -- its FK; an account DELETE locks that tuple before waiting on 123 in
+ -- guard_parent_deletion, so waiting on it here would close a cycle. FOR SHARE
+ -- also conflicts with a non-key UPDATE, so an account_type change (reception
+ -- classification read below) cannot slip past an older RR snapshot either.
+ begin
+  perform 1 from auth.users where id=p_user for share nowait;
+ exception when lock_not_available then
+  raise exception 'Conta em alteração por outra operação; tente de novo.' using errcode='40001';
+ end;
  -- T33 barrier before reading intent: an older RR snapshot or a concurrent
  -- deletion intent fails here (40001) instead of reading a stale "no intent".
  perform cortex_private.touch_custody_epoch(array[p_user]);
@@ -370,6 +381,21 @@ begin
   or exists(select 1 from public.account_deletion_requests where user_id=p_user) then
   raise exception 'Signature account unavailable' using errcode='42501';end if;
 end $$;
+
+-- Locks taken under 123 by the signature functions, all NOWAIT or re-entrant
+-- (inventory for the Codex review of 04/11 16:46):
+--  * auth.users row: FOR SHARE NOWAIT above; covers the implicit FK KEY SHARE of
+--    every INSERT into signature_oauth_states, signature_sessions and
+--    signature_operations, and the account_type read.
+--  * custody epochs (account, prescription, patient, consultation): T33 touch
+--    helpers, NOWAIT, 40001 on contention.
+--  * signature_sessions / signature_operations rows: FOR UPDATE NOWAIT before
+--    any UPDATE or INSERT referencing them (session FK of an operation).
+--  * prescriptions row: FOR SHARE/UPDATE NOWAIT before the operation INSERT
+--    (prescription FK), the completion UPDATE and the audit INSERT (its FK).
+--  * the completion UPDATE of prescriptions re-enters 123 in
+--    guard_clinical_write; its custody triggers touch epochs NOWAIT.
+--  * oauth state rows: private, written only under the same doctor's 125.
 
 -- Authoritative check of the document's parents, after their T33 barriers:
 -- prescription identity first, then its patient and consultation. Never

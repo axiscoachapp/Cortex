@@ -175,6 +175,12 @@ Nenhuma transação ou lock SQL fica aberto durante chamadas de rede.
    - uma linha ocupada vira um 40001 controlado ("tente de novo"), sem mudar a operação;
    - a espera pelo 123 continua no começo, quando a função ainda não segura nenhuma linha.
 
+8. **Conta travada sem espera** (revisão do Codex de 04/11 16:46).
+   - Logo depois do 123, `signature_lock` faz `FOR SHARE NOWAIT` na linha de `auth.users`. Isso cobre a KEY SHARE implícita das FKs de conta em todo INSERT de assinatura: uma exclusão de conta trava a tupla antes de esperar o 123.
+   - O mesmo lock cobre a leitura do tipo de conta (recepção) contra uma mudança feita depois de um snapshot RR antigo.
+   - Ocupado vira um 40001 controlado.
+   - O inventário completo das travas pegas sob o 123 está comentado na migration.
+
 **Descoberta para reconciliação:** `signature_pending_work(limite)` (só serviço) lista os candidatos a remover e as operações paradas há mais de 15 minutos. **A execução da reconciliação ainda não existe.** Ela vai ficar na função do Edge, com estas regras:
 - confere o hash do objeto existente antes de qualquer ação;
 - nunca remove o arquivo de uma operação concluída;

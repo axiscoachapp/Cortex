@@ -386,6 +386,80 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     results.consultationPatientInProgress = (/ERROR:\s+(\w+):/.exec(r.stderr) || [])[1];
   });
 
+  // 9. Codex 16:46: implicit FK lock on the account. A real account DELETE locks
+  //    the auth.users tuple, then waits on 123 in guard_parent_deletion; a
+  //    signature holding 123 must never wait on that tuple (its INSERTs take an
+  //    implicit KEY SHARE through the user FK).
+  for (const isolation of ['read committed', 'repeatable read']) {
+    await check(`account delete vs. signature holding 123 (${isolation})`, async () => {
+      const f = fixture();
+      const signer = session(container);
+      signer.send(`begin isolation level ${isolation};select pg_advisory_xact_lock(hashtextextended('signature:${f.user}',125));select pg_advisory_xact_lock(hashtextextended('${f.user}',123));\n\\echo SIGNER_HOLDS_123`);
+      await signer.wait('SIGNER_HOLDS_123');
+      const deleter = session(container);
+      deleter.send(`select 'PID='||pg_backend_pid();`);
+      await deleter.wait('PID=');
+      const pid = backendPid(deleter);
+      deleter.send(`begin;set local request.jwt.claim.role='service_role';delete from auth.users where id='${f.user}';commit;`);
+      let observed = false;
+      for (let i = 0; i < 40 && !observed; i++) {
+        observed = sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock';
+        if (!observed) await new Promise((r) => setTimeout(r, 50));
+      }
+      assert.ok(observed, 'The account delete did not wait on 123');
+      const signed1 = await signer.finish(`${service}select ${reserve(f)};commit;`);
+      const deleted = await deleter.finish('');
+      const all = signed1.stderr + deleted.stderr;
+      assert.doesNotMatch(all, /40P01|deadlock/i, all);
+      assert.notEqual(signed1.status, 0, 'The signature reserved while the account was being deleted');
+      assert.match(signed1.stderr, /40001/, signed1.stderr);
+      assert.equal(deleted.status, 0, deleted.stderr);
+      assert.equal(Number(sql(`select count(*) from auth.users where id='${f.user}'`)), 0, 'Account not deleted');
+      results[`accountDeleteFirst_${isolation.replace(' ', '_')}`] = 'signature 40001 at once, delete committed, no deadlock';
+    });
+  }
+  await check('signature waits on 123 behind an account delete, then refuses', async () => {
+    const f = fixture();
+    const deleter = session(container);
+    deleter.send(`begin;set local request.jwt.claim.role='service_role';delete from auth.users where id='${f.user}';\n\\echo DELETED_HELD\nselect pg_sleep(1.5);commit;`);
+    await deleter.wait('DELETED_HELD');
+    const signer = session(container);
+    signer.send(`select 'PID='||pg_backend_pid();`);
+    await signer.wait('PID=');
+    const pid = backendPid(signer);
+    signer.send(`begin;${service}select ${reserve(f)};commit;`);
+    let observed = false;
+    for (let i = 0; i < 40 && !observed; i++) {
+      observed = sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock';
+      if (!observed) await new Promise((r) => setTimeout(r, 50));
+    }
+    assert.ok(observed, 'The signature did not wait on 123 behind the account delete');
+    const done = await signer.finish('');
+    const del = await deleter.finish('');
+    assert.doesNotMatch(done.stderr + del.stderr, /40P01|deadlock/i);
+    assert.equal(del.status, 0, del.stderr);
+    assert.notEqual(done.status, 0, 'Reserved for a deleted account');
+    assert.match(done.stderr, /42501|40001/, done.stderr);
+    results.signatureAfterAccountDelete = 'waited on 123, refused, no deadlock';
+  });
+
+  // 10. Codex 16:46: the reception classification (auth.users account_type)
+  //     changed after an older RR snapshot: neither the token nor a reservation.
+  await check('account classified as reception after an old RR snapshot', async () => {
+    const f = fixture();
+    const reader = session(container);
+    reader.send(`begin isolation level repeatable read;select count(*) from auth.users;\n\\echo SNAPSHOT`);
+    await reader.wait('SNAPSHOT');
+    sql(`update auth.users set raw_app_meta_data=raw_app_meta_data||'{"account_type":"reception"}'::jsonb where id='${f.user}'`);
+    const r = await reader.finish(`${service}select public.signature_session_token('${f.user}','${f.session}',1);commit;`);
+    assert.notEqual(r.status, 0, 'Stale snapshot read the token of an account reclassified as reception');
+    assert.match(r.stderr, /40001|42501/, r.stderr);
+    // And after the change committed (RC): refused as reception.
+    const after = docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'], `begin;${service}select ${reserve(f)};commit;`);
+    assert.notEqual(after.status, 0, 'Reserved for an account reclassified as reception');
+    results.receptionReclassifiedRR = (/ERROR:\s+(\w+):/.exec(r.stderr) || [])[1] ?? 'refused';
+  });
+
   // 6. Two reservations of one document with different operation ids: exactly one.
   await check('double reservation', async () => {
   {
