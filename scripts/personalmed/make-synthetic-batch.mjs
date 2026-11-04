@@ -5,8 +5,8 @@
 
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { EXPORT_DATE, USAGE_SINCE, agenda, charts, clinical, cohortFlags, issuedDocuments, persons, plans, templates } from './fixtures/synthetic-legacy.mjs';
-import { buildAgenda, buildChartClinical, buildPerson, buildTemplate, writeBatch } from './staging.mjs';
+import { EXPORT_DATE, USAGE_SINCE, agenda, alerts, charts, clinical, cohortFlags, issuedDocuments, persons, plans, templates } from './fixtures/synthetic-legacy.mjs';
+import { buildAgenda, buildChartClinical, buildLegacyAlert, buildPerson, buildTemplate, writeBatch } from './staging.mjs';
 import { splitHistory, templateChunks, templateUsage, wallClockToUtc } from './transforms.mjs';
 import { antimicrobialsIn, controlledSubstancesIn } from '../../supabase/functions/_shared/regulatedMedications.ts';
 
@@ -28,6 +28,11 @@ export function syntheticBatch() {
     envelopes.push(...buildChartClinical(ctx, { pcod, user, patientTargetId: chartIds.get(key) }, { ...c, encounters, history }));
   }
   envelopes.push(...buildAgenda(ctx, agenda, chartIds));
+  for (const a of alerts) {
+    const own = charts.filter((c) => c.pcod === a.pcod).map((c) => ({ user: c.user, patientTargetId: chartIds.get(`${c.pcod}|${c.user}`) }));
+    const e = buildLegacyAlert(ctx, a, own);
+    if (e) envelopes.push(e);
+  }
   const usage = templateUsage(
     templates.map((t) => ({ key: `${t.table}:${t.modelNumber}`, chunks: templateChunks(t.text) })),
     issuedDocuments,

@@ -1,6 +1,7 @@
 // Synthetic fixtures only: invented names, numbers and texts.
 import { describe, expect, it } from 'vitest';
 import {
+  alertCategories,
   cleanName,
   cpfValid,
   dateInWords,
@@ -301,5 +302,17 @@ describe('template recognition', () => {
     const doc = (user, date, qty = '1 caixa') => ({ user, date, text: `PESSOA SINTÉTICA\n- Medicamento sintético ______ ${qty}\nTomar 1 comprimido ao dia.` });
     const usage = templateUsage(templates, [doc(3, '2025-02-01'), doc(3, '2026-01-10'), doc(5, '2025-06-01'), doc(5, '2024-12-31'), doc(5, '2026-02-01', '2 caixas'), { user: 3, date: null, text: '' }], { since: '2025-01-01' });
     expect(usage.get('Us05:1')).toEqual({ uses: 3, byDoctor: { 'user:3': 2, 'user:5': 1 }, lastUsed: '2026-01-10' });
+  });
+});
+
+describe('"Atenção" alert categories', () => {
+  it('flags clinical and administrative content, accents and case aside', () => {
+    expect(alertCategories('ALÉRGICA A DIPIRONA. Ligar antes.')).toEqual({
+      categories: ['alergia', 'medicamento_citado', 'administrativo'],
+      clinical: true,
+      administrative: true,
+    });
+    expect(alertCategories('Faleceu em 2019')).toMatchObject({ categories: ['obito'], clinical: true, administrative: false });
+    expect(alertCategories('Prefere a tarde')).toEqual({ categories: [], clinical: false, administrative: false });
   });
 });

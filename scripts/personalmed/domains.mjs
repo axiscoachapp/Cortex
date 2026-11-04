@@ -16,6 +16,7 @@ import { basename, extname, join } from 'node:path';
 import { ParadoxTable, decodeText, toCalendarDate } from './paradox-reader.mjs';
 import { Mdf } from './mssql2000-reader.mjs';
 import { rtfToText } from './rtf-to-text.mjs';
+import { alertCategories } from './transforms.mjs';
 
 const args = process.argv.slice(2);
 const dir = args[0];
@@ -390,29 +391,17 @@ out.obstetricia.climaterio = co51;
 // ---------------------------------------------------------------------------
 // 6. "Atenção" alerts (Clini_01.Attention): what kind of content they hold
 
-const ALERT = {
-  alergia: /\balerg/,
-  medicamento_citado: /\b(dipirona|novalgina|penicilina|benzetacil|amoxicilina|cefalexina|sulfa|aas|aspirina|ibuprofeno|diclofenaco|nimesulida|cetoprofeno|anti ?inflamatorio|aine|iodo|contraste|latex|esparadrapo|codeina|tramadol|morfina|buscopan|metronidazol|ciprofloxacino|azitromicina)\b/,
-  financeiro: /\b(cheque|deve|devendo|pagament|pagar|pago|debito|divida|cobr|desconto|cortesia|valor|reembolso|nota fiscal|recibo)/,
-  comportamento: /\b(cuidado|dificil|reclam|grosseir|agressiv|processo|advogad|briga|nervos|exigente)/,
-  administrativo: /\b(ligar|telefon|whats|recado|avisar|marcar|encaixe|horario|agenda|confirmar|email)/,
-  obito: /\b(falec|obito|morreu)/,
-  gestacao: /\b(gestante|gravida|gestacao|dum|dpp|pre natal)/,
-  convenio: /\b(unimed|amil|sulamerica|convenio|plano|carteir|guia|autoriz)/,
-  doenca_cronica: /\b(diabet|hipertens|hipotireoid|tireoid|asma|epileps|cardiopat|marcapasso|anticoagul|hiv|hepatite|cancer|neoplasia|lupus|trombofilia|trombose)/,
-};
+// Categories come from transforms.mjs (alertCategories), shared with staging.
 const alerts = { comTexto: 0, tamanho: [], categorias: new Map(), soAlergia: 0, misto: 0 };
 for (const p of rows(mdf.table('Clini_01'), ['Attention'], 'text')) {
   const t = norm(plain(p.Attention));
   if (!t) continue;
   alerts.comTexto += 1;
   alerts.tamanho.push(t.length);
-  const hits = Object.entries(ALERT).filter(([, re]) => re.test(t)).map(([k]) => k);
+  const { categories: hits, clinical, administrative } = alertCategories(t);
   for (const h of hits) inc(alerts.categorias, h);
   if (!hits.length) inc(alerts.categorias, 'nenhuma_das_categorias');
-  const clinical = hits.filter((h) => ['alergia', 'medicamento_citado', 'gestacao', 'doenca_cronica', 'obito'].includes(h));
-  const admin = hits.filter((h) => ['financeiro', 'comportamento', 'administrativo', 'convenio'].includes(h));
-  if (clinical.length && admin.length) alerts.misto += 1;
+  if (clinical && administrative) alerts.misto += 1;
 }
 out.alertasAtencao = { comTexto: alerts.comTexto, caracteres: { mediana: median(alerts.tamanho), p90: pctl(alerts.tamanho, 0.9) }, categorias: byCount(alerts.categorias), clinicoEAdministrativoNoMesmoAlerta: alerts.misto };
 

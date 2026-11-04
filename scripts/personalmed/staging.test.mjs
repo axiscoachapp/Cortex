@@ -220,3 +220,27 @@ describe('synthetic templates (S3)', () => {
     }
   });
 });
+
+describe('synthetic "Atenção" alerts (S6)', () => {
+  const alert = (pcod) => find('legacy_alert', `pcod:${pcod}`);
+
+  it('sends a one-doctor alert to that chart, for the doctor only, pending review', () => {
+    const e = alert(102);
+    expect(e).toMatchObject({ mappingStatus: 'ready', sourceDoctorId: 'user:3', targetTable: 'legacy_alerts', issues: ['alert_clinical_and_admin'] });
+    expect(e.payload).toMatchObject({ status: 'pending_review', visibility: 'doctor_only', clinical: true, administrative: true });
+    expect(e.payload.recipients).toEqual([{ doctor: 'user:3', patientTargetId: find('chart', 'pcod:102|user:3').targetId }]);
+  });
+
+  it('waits for D20 when the person has several doctors, and for review when there is no chart', () => {
+    expect(alert(101)).toMatchObject({ mappingStatus: 'requires_review', sourceDoctorId: null, issues: ['alert_multiple_doctors'] });
+    expect(alert(101).payload.recipients.map((r) => r.doctor)).toEqual(['user:3', 'user:5']);
+    expect(alert(199)).toMatchObject({ mappingStatus: 'requires_review', issues: ['alert_no_chart'] });
+  });
+
+  it('flags a mention of death and skips empty text', () => {
+    expect(alert(104)).toMatchObject({ mappingStatus: 'ready', issues: ['alert_mentions_death'] });
+    expect(alert(105)).toMatchObject({ mappingStatus: 'ready', issues: [] });
+    expect(alert(103)).toBeUndefined();
+    expect(of('legacy_alert')).toHaveLength(5);
+  });
+});

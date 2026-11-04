@@ -163,3 +163,19 @@ export const issuedDocuments = [
   // Edited quantity: one fixed line differs, so the template is not counted.
   { user: 3, date: '2026-07-01', text: 'PACIENTE SINTÉTICA\n- Medicamento sintético A ______ 2 frascos\nAplicar à noite.\nTipo sanguíneo: A+' },
 ];
+
+// "Atenção" field (Clini_01.Attention): invented texts, one per person.
+export const alerts = [
+  // One doctor; clinical and administrative content in the same note.
+  { pcod: 102, text: 'Alérgica a dipirona. Ligar antes para confirmar o horário.' },
+  // Two doctors (3 and 5): who receives it depends on D20.
+  { pcod: 101, text: 'Gestante, DUM informada na última consulta.' },
+  // Mentions death: flagged for the doctor, never sent to the reception directly.
+  { pcod: 104, text: 'Paciente faleceu em 2019, segundo a família.' },
+  // No category matched.
+  { pcod: 105, text: 'Prefere atendimento à tarde.' },
+  // Empty or punctuation-only text: no alert.
+  { pcod: 103, text: '  -- . ' },
+  // Person without any chart.
+  { pcod: 199, text: 'Cadastro sintético sem prontuário.' },
+];

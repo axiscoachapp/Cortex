@@ -342,9 +342,25 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
 9. `diagnosis_set`
 10. `pregnancy_item`
 11. `medical_history`
-12. `legacy_alert`
+12. `legacy_alert`: o campo "Atenção" (S6), especificado abaixo.
 13. `file`
 14. `template`: modelo de documento para `document_snippets` (S3), especificado abaixo.
+
+**Entidade `legacy_alert`** (04/11/2026). Implementação: `buildLegacyAlert` em `staging.mjs` e `alertCategories` em `transforms.mjs`. O `domains.mjs` usa a mesma função. Exemplos sintéticos em `fixtures/synthetic-batch/legacy_alert.ndjson`.
+- **Origem e chave:**
+  - `Clini_01.Attention`, um texto por pessoa; `sourceRecordId` é `pcod:N`;
+  - texto vazio ou só com pontuação não gera alerta.
+- **Destino:** `legacy_alerts`. A tabela é definida pelo Codex na S6, e o nome é provisório.
+- **Payload:**
+  - `text`;
+  - `categories`: palavras-chave para quem revisa (alergia, medicamento citado, gestação, doença crônica, óbito, financeiro, comportamento, administrativo, convênio). Não são diagnóstico;
+  - `clinical`, `administrative`;
+  - `recipients`: `[{doctor, patientTargetId}]`, com os prontuários construídos para a pessoa;
+  - `status: pending_review` e `visibility: doctor_only`.
+- **Situação:**
+  - `ready` quando a pessoa tem um único prontuário: o alerta vai só para aquele médico;
+  - `requires_review` com `alert_multiple_doctors` (depende da D20) ou `alert_no_chart`.
+- **Códigos que não bloqueiam:** `alert_clinical_and_admin` e `alert_mentions_death`. Nada vai para a recepção diretamente (D7): uma nota administrativa só existe se o médico decidir criá-la.
 
 **Entidade `template`** (04/11/2026). Implementação: `buildTemplate` em `staging.mjs` e `templateKind`, `templateChunks` e `templateUsage` em `transforms.mjs`. Exemplos sintéticos em `fixtures/synthetic-batch/template.ndjson`. É o formato de staging, **não** uma linha pronta de `document_snippets`. O MVP da tabela exige dono individual e só guarda receita com itens; ver S3.
 - **Chave e destino:**
@@ -567,7 +583,7 @@ Os valores são da exportação de 24/08/2026 e devem ser recalculados na export
 | Diagnósticos fora do Z | 4.721 linhas em 2.353 prontuários |
 | Gestações em curso | 97 (recalcular) |
 | Itens de histórico pessoal | 4.571 páginas `Me` mais 668 de contracepção e climatério |
-| Alertas herdados | 5.277 |
+| Alertas herdados | 5.277. Ensaio de 04/11 sem diferença: 4.702 com um único médico (`ready`); 575 de pessoas com mais de um médico (D20); 96 misturam conteúdo clínico e administrativo; 15 citam óbito |
 | Carteiras de convênio | 62.204 |
 | Arquivos | 48 embutidos (172 dependem da pasta externa) |
 | Modelos | 1.123: 743 receitas, 329 textos e 51 pedidos de exame. Ensaio de 04/11 sem diferença: 622 receitas `ready`; 121 receitas em revisão (106 em texto livre, 32 com controlado, 3 com mais de 15 itens); 380 textos e pedidos em revisão até o Cortex aceitar esses tipos. Usados desde 2025: 375. Receitas usadas por médico (tamanho da lista da D19): 5 → 179; 2 → 153; 3 → 132; 4 → 73; 11 → 8; 9 → 1 |
@@ -619,6 +635,7 @@ Navegador: 390, 768, 1280 e 1920 px na escala de 150%, como já está definido.
 | D4 | DDD 41 automático para Curitiba e região | Sim, com código de problema e confirmação na recepção. |
 | D5 | Modelos: todos ou só os usados | Todos, com os 291 usados em 2025–2026 revisados primeiro. |
 | D19 | Quem recebe os modelos da clínica (1.090 sem médico dono), já que a biblioteca do Cortex é de cada médico | **Proposta:** cada médico recebe, como "a revisar", os modelos que ele usou em 2025–2026 (`usage.by_doctor`). Os demais ficam no staging e entram a pedido. Alternativas: todos os modelos para todos os médicos, ou esperar uma biblioteca compartilhada da clínica. |
+| D20 | Alerta "Atenção" de pessoa atendida por mais de um médico (575) | **Proposta:** uma cópia para cada médico que tem prontuário da pessoa, como "a revisar" e visível só a ele. No PersonalMed todos esses médicos já viam o campo, então não há exposição nova. Alternativas: só o médico mais recente, ou nenhum, ficando no staging. |
 | D6 | QP/HDA como consulta ou como histórico | Consulta da primeira visita. |
 | D7 | Alertas "Atenção" | Revisão pelo médico (S6). Nada vai direto para o prontuário ou para a recepção. |
 | D8 | Controlados no Cortex | Fase 2, depois de confirmação jurídica. Até lá, receituário próprio. |

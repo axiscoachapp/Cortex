@@ -30,6 +30,10 @@
       "sha256": "30670b131df968e8344cf442f57f5b974d8f7653e2ecba5c075e720a60482ee5",
       "lines": 1
     },
+    "legacy_alert.ndjson": {
+      "sha256": "8cfc34b9c83cedb5188b34119581518a651bf7ff1affd1d0df13001903ce15b9",
+      "lines": 5
+    },
     "medical_history.ndjson": {
       "sha256": "ba9716ff1c626894bffa295ab8864261b8eeff65c6e55faa977fc9a97e26198b",
       "lines": 1
@@ -114,6 +118,18 @@
         "user:3": 1
       }
     },
+    "legacy_alert": {
+      "total": 5,
+      "byStatus": {
+        "requires_review": 2,
+        "ready": 3
+      },
+      "byDoctor": {
+        "user:3": 1,
+        "user:9": 1,
+        "user:5": 1
+      }
+    },
     "medical_history": {
       "total": 1,
       "byStatus": {
@@ -162,6 +178,10 @@
   },
   "issues": {
     "address_without_number": 1,
+    "alert_clinical_and_admin": 1,
+    "alert_mentions_death": 1,
+    "alert_multiple_doctors": 1,
+    "alert_no_chart": 1,
     "appointment_chart_missing": 1,
     "appointment_overlap": 1,
     "appointment_without_patient": 1,

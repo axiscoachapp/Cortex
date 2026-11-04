@@ -10,7 +10,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   TRANSFORM_VERSION,
+  alertCategories,
   cleanName,
+  fold,
   envelope,
   findCpf,
   findOverlaps,
@@ -382,6 +384,49 @@ export function buildChartClinical(ctx, chart, input) {
 }
 
 /** Write one NDJSON file per entity plus manifest.json. Deterministic order. */
+/**
+ * One "Atenção" text (Clini_01.Attention, one per person) -> `legacy_alert`
+ * (S6): delivered to the chart of the doctor who treats the person, visible
+ * only to that doctor, status pending_review. Nothing goes to the chart or to
+ * the reception directly (D7). In PersonalMed every doctor saw the field; in
+ * Cortex charts are private, so a person with several doctors waits for D20.
+ *
+ * @param ctx    { sourceInstance, batchId }
+ * @param alert  { pcod, text } with plain text (RTF already converted)
+ * @param charts [{ user, patientTargetId }] charts built for this person
+ */
+export function buildLegacyAlert(ctx, alert, charts) {
+  const body = text(alert.text);
+  // Only punctuation or symbols ("-", ".") is not an alert.
+  if (!fold(body)) return null;
+  const { categories, clinical, administrative } = alertCategories(body);
+  const issues = [];
+  if (clinical && administrative) issues.push('alert_clinical_and_admin');
+  if (categories.includes('obito')) issues.push('alert_mentions_death');
+  if (!charts.length) issues.push('alert_no_chart');
+  if (charts.length > 1) issues.push('alert_multiple_doctors');
+  const status = charts.length === 1 ? 'ready' : 'requires_review';
+  return envelope({
+    sourceInstance: ctx.sourceInstance,
+    batchId: ctx.batchId,
+    sourceEntity: 'legacy_alert',
+    key: { pcod: alert.pcod },
+    doctor: charts.length === 1 ? charts[0].user : null,
+    targetTable: 'legacy_alerts',
+    payload: {
+      text: body,
+      categories,
+      clinical,
+      administrative,
+      recipients: charts.map((c) => ({ doctor: `user:${c.user}`, patientTargetId: c.patientTargetId })),
+      status: 'pending_review',
+      visibility: 'doctor_only',
+    },
+    issues,
+    status,
+  });
+}
+
 /**
  * One legacy document template (Us05/Gintxt/Pedtxt row) -> `template`
  * envelope for document_snippets (S3). Every template arrives as

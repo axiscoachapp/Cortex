@@ -400,6 +400,36 @@ export function parseTemplateItems(templateText) {
   return { kind: 'items', header, items: items.map((i) => ({ ...i, instructions: i.instructions.join('\n') })), footer };
 }
 
+// ---------------------------------------------------------------------------
+// "Atenção" alerts (Clini_01.Attention)
+
+const ALERT_PATTERNS = {
+  alergia: /\balerg/,
+  medicamento_citado: /\b(dipirona|novalgina|penicilina|benzetacil|amoxicilina|cefalexina|sulfa|aas|aspirina|ibuprofeno|diclofenaco|nimesulida|cetoprofeno|anti ?inflamatorio|aine|iodo|contraste|latex|esparadrapo|codeina|tramadol|morfina|buscopan|metronidazol|ciprofloxacino|azitromicina)\b/,
+  financeiro: /\b(cheque|deve|devendo|pagament|pagar|pago|debito|divida|cobr|desconto|cortesia|valor|reembolso|nota fiscal|recibo)/,
+  comportamento: /\b(cuidado|dificil|reclam|grosseir|agressiv|processo|advogad|briga|nervos|exigente)/,
+  administrativo: /\b(ligar|telefon|whats|recado|avisar|marcar|encaixe|horario|agenda|confirmar|email)/,
+  obito: /\b(falec|obito|morreu)/,
+  gestacao: /\b(gestante|gravida|gestacao|dum|dpp|pre natal)/,
+  convenio: /\b(unimed|amil|sulamerica|convenio|plano|carteir|guia|autoriz)/,
+  doenca_cronica: /\b(diabet|hipertens|hipotireoid|tireoid|asma|epileps|cardiopat|marcapasso|anticoagul|hiv|hepatite|cancer|neoplasia|lupus|trombofilia|trombose)/,
+};
+const CLINICAL_ALERT = ['alergia', 'medicamento_citado', 'gestacao', 'doenca_cronica', 'obito'];
+const ADMIN_ALERT = ['financeiro', 'comportamento', 'administrativo', 'convenio'];
+
+/** What an "Atenção" text talks about. Keyword hints for the reviewer, not a diagnosis. */
+export function alertCategories(alertText) {
+  const t = fold(alertText);
+  const categories = Object.entries(ALERT_PATTERNS)
+    .filter(([, re]) => re.test(t))
+    .map(([k]) => k);
+  return {
+    categories,
+    clinical: categories.some((c) => CLINICAL_ALERT.includes(c)),
+    administrative: categories.some((c) => ADMIN_ALERT.includes(c)),
+  };
+}
+
 /** Template kind by PersonalMed ModelType: 1 prescription, 3 exam request, others text. */
 export function templateKind(modelType) {
   return modelType === 1 ? 'receita' : modelType === 3 ? 'pedido_exame' : 'texto';
