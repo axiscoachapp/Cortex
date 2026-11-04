@@ -121,35 +121,96 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
   }
   });
 
-  // 2. P2: completion waits on the prescription row past the session expiry.
-  await check('session expiry while waiting (P2)', async () => {
-  for (const [label, seconds, hold, expect] of [['expires-while-waiting', 2, 4, 'cancelled_by_revocation'], ['control-before-expiry', 120, 3, 'completed']]) {
+  // 2. P2: the prescription row is busy (another transaction holds it) while
+  //    the session runs out. Completion never waits on the row: it refuses at
+  //    once with 40001, publishes nothing, and a later retry sees the clock.
+  await check('busy prescription row around the expiry (P2)', async () => {
+  for (const [label, seconds, expect] of [['row-busy-then-expired', 2, 'cancelled_by_revocation'], ['row-busy-then-control', 120, 'completed']]) {
     const f = fixture({ minutes: 5 });
     toStored(f);
-    // The session ends while completion is held behind another transaction.
     sql(`update cortex_private.signature_sessions set expires_at=now()+interval '${seconds} seconds' where id='${f.session}'`);
     const holder = session(container);
-    holder.send(`begin;select 1 from public.prescriptions where id='${f.rx}' for update;\n\\echo ROW_HELD\nselect pg_sleep(${hold});commit;`);
+    holder.send(`begin;select 1 from public.prescriptions where id='${f.rx}' for update;\n\\echo ROW_HELD\nselect pg_sleep(1);commit;`);
     await holder.wait('ROW_HELD');
-    const completer = session(container);
-    completer.send(`select 'PID='||pg_backend_pid();`);
-    await completer.wait('PID=');
-    const pid = backendPid(completer);
-    completer.send(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`);
+    const startedAt = Date.now();
+    const busy = docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose'],
+      `${bounds}begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica');commit;`);
+    const refusedIn = Date.now() - startedAt;
+    await holder.finish('');
+    assert.notEqual(busy.status, 0, `${label}: completed while the row was held elsewhere`);
+    assert.match(busy.stderr, /40001/, busy.stderr);
+    assert.doesNotMatch(busy.stderr, /40P01/, busy.stderr);
+    assert.equal(state(f), 'stored', `${label}: refused attempt changed the operation`);
+    assert.equal(signed(f), 'generated');
+    // Retry after the row is free: the clock decides.
+    if (expect !== 'completed') await new Promise((r) => setTimeout(r, seconds * 1000 + 200));
+    call(f, `public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')`);
+    assert.equal(state(f), expect, `${label}: wrong outcome on retry`);
+    assert.equal(signed(f), expect === 'completed' ? 'signed' : 'generated', `${label}: prescription status`);
+    assert.equal(audits(f), expect === 'completed' ? 1 : 0, `${label}: audit rows`);
+    results[label] = { firstAttempt: '40001', refusedInMs: refusedIn, retry: expect };
+  }
+  });
+
+  // 2b. Codex 15:59: a signature holding 123 against an ordinary clinical
+  //     UPDATE of the same prescription, which locks its tuple first and then
+  //     waits on 123 in guard_clinical_write. No deadlock in either order.
+  for (const isolation of ['read committed', 'repeatable read']) {
+    await check(`clinical update vs. signature holding 123 (${isolation})`, async () => {
+      const f = fixture();
+      toStored(f);
+      const signer = session(container);
+      signer.send(`begin isolation level ${isolation};select pg_advisory_xact_lock(hashtextextended('signature:${f.user}',125));select pg_advisory_xact_lock(hashtextextended('${f.user}',123));\n\\echo SIGNER_HOLDS_123`);
+      await signer.wait('SIGNER_HOLDS_123');
+      const updater = session(container);
+      updater.send(`select 'PID='||pg_backend_pid();`);
+      await updater.wait('PID=');
+      const pid = backendPid(updater);
+      updater.send(`begin;set local request.jwt.claim.role='service_role';update public.prescriptions set expires_at=expires_at where id='${f.rx}';commit;\n\\echo UPDATED`);
+      let observed = false;
+      for (let i = 0; i < 40 && !observed; i++) {
+        observed = sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock';
+        if (!observed) await new Promise((r) => setTimeout(r, 50));
+      }
+      assert.ok(observed, 'The clinical update did not wait on 123');
+      // Now the signature asks for the tuple the updater already holds.
+      const signed1 = await signer.finish(`${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica');commit;`);
+      const updated = await updater.finish('');
+      const all = signed1.stderr + updated.stderr;
+      assert.doesNotMatch(all, /40P01|deadlock/i, all);
+      assert.notEqual(signed1.status, 0, 'The signature waited on a tuple while holding 123');
+      assert.match(signed1.stderr, /40001/, signed1.stderr);
+      assert.equal(updated.status, 0, updated.stderr);
+      assert.equal(state(f), 'stored');
+      // The same completion afterwards succeeds.
+      call(f, `public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')`);
+      assert.equal(state(f), 'completed');
+      results[`clinicalUpdateFirst_${isolation.replace(' ', '_')}`] = 'signature 40001 at once, update committed, no deadlock';
+    });
+  }
+  await check('signature waits on 123 behind a clinical update, then completes', async () => {
+    const f = fixture();
+    toStored(f);
+    const updater = session(container);
+    updater.send(`begin;set local request.jwt.claim.role='service_role';update public.prescriptions set expires_at=expires_at where id='${f.rx}';\n\\echo UPDATER_HOLDS\nselect pg_sleep(1.5);commit;`);
+    await updater.wait('UPDATER_HOLDS');
+    const signer = session(container);
+    signer.send(`select 'PID='||pg_backend_pid();`);
+    await signer.wait('PID=');
+    const pid = backendPid(signer);
+    signer.send(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`);
     let observed = false;
     for (let i = 0; i < 40 && !observed; i++) {
       observed = sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock';
       if (!observed) await new Promise((r) => setTimeout(r, 50));
     }
-    assert.ok(observed, `${label}: completion did not wait on the prescription row`);
-    const done = await completer.finish('');
-    await holder.finish('');
+    assert.ok(observed, 'The signature did not wait on 123 behind the clinical update');
+    const done = await signer.finish('');
+    const up = await updater.finish('');
+    assert.doesNotMatch(done.stderr + up.stderr, /40P01|deadlock/i);
     assert.equal(done.status, 0, done.stderr);
-    assert.equal(state(f), expect, `${label}: wrong outcome`);
-    assert.equal(signed(f), expect === 'completed' ? 'signed' : 'generated', `${label}: prescription status`);
-    assert.equal(audits(f), expect === 'completed' ? 1 : 0, `${label}: audit rows`);
-    results[label] = { waitedOnRow: observed, state: expect };
-  }
+    assert.equal(state(f), 'completed');
+    results.signatureAfterClinicalUpdate = 'waited on 123, completed, no deadlock';
   });
 
   // 3. P1: patient deletion intent vs. reservation and an existing operation.

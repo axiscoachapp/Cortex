@@ -170,6 +170,11 @@ Nenhuma transação ou lock SQL fica aberto durante chamadas de rede.
    - o UPDATE da receita na conclusão reentra no lock, sem esperar depois das checagens. Uma intenção em andamento faz a assinatura esperar esse lock, como qualquer escritor clínico, e depois recusa.
 6. **Paciente da consulta:** `signature_document`, depois de cercar a consulta, lê o paciente dela. Se for outro paciente (o schema permite), cerca e confere a intenção de exclusão dele também. Os recursos indiretos do T33 seguem a mesma cadeia.
 
+7. **Sem espera por linha com o 123 na mão** (revisão do Codex de 04/11 15:59). Um UPDATE clínico comum trava a tupla antes de esperar o 123 no trigger BEFORE ROW, e esperar a linha nessa situação fecharia um ciclo. Por isso:
+   - toda trava de linha das funções de assinatura (sessão, operação e receita) é `NOWAIT`;
+   - uma linha ocupada vira um 40001 controlado ("tente de novo"), sem mudar a operação;
+   - a espera pelo 123 continua no começo, quando a função ainda não segura nenhuma linha.
+
 **Descoberta para reconciliação:** `signature_pending_work(limite)` (só serviço) lista os candidatos a remover e as operações paradas há mais de 15 minutos. **A execução da reconciliação ainda não existe.** Ela vai ficar na função do Edge, com estas regras:
 - confere o hash do objeto existente antes de qualquer ação;
 - nunca remove o arquivo de uma operação concluída;

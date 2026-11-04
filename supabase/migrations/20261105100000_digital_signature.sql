@@ -357,7 +357,11 @@ begin
  -- The clinical write lock that guard_clinical_write (20261028000000) and the
  -- account deletion intent take: held from here, the UPDATE of prescriptions
  -- in signature_complete re-enters it instead of waiting after the checks.
- -- Order everywhere: 125, 123, custody epochs, then rows.
+ -- Order everywhere: 125, 123, custody epochs (NOWAIT), then rows (NOWAIT).
+ -- Holding 123, no signature function ever waits on a tuple: an ordinary
+ -- clinical UPDATE takes its tuple before waiting on 123 in its BEFORE trigger
+ -- (PostgreSQL locks the tuple before BEFORE ROW triggers), so a wait here
+ -- would close a cycle. A busy row is a retryable 40001 instead.
  perform pg_advisory_xact_lock(hashtextextended(p_user::text,123));
  -- T33 barrier before reading intent: an older RR snapshot or a concurrent
  -- deletion intent fails here (40001) instead of reading a stale "no intent".
@@ -457,10 +461,12 @@ language plpgsql volatile security definer set search_path='' as $$
 declare s cortex_private.signature_sessions;
 begin
  perform cortex_private.signature_lock(p_user);
- select * into s from cortex_private.signature_sessions where id=p_session and user_id=p_user for update;
+ select * into s from cortex_private.signature_sessions where id=p_session and user_id=p_user for update nowait;
  if not found or s.generation<>p_generation or not cortex_private.signature_session_usable(s) then
   raise exception 'Sessão de assinatura encerrada. Abra uma nova no aplicativo do certificado.' using errcode='P4031';end if;
  return s.token;
+exception when lock_not_available then
+ raise exception 'Documento ou sessão em uso por outra operação; tente de novo.' using errcode='40001';
 end $$;
 
 create function public.signature_reserve(p_user uuid,p_operation uuid,p_prescription uuid,p_shown_sha256 text) returns jsonb
@@ -479,8 +485,8 @@ begin
  end if;
  -- Barriers (NOWAIT) before row locks; row locks in the order session, prescription.
  perform cortex_private.signature_document(p_user,p_prescription);
- select * into s from cortex_private.signature_sessions where user_id=p_user and status='active' for update;
- select * into r from public.prescriptions where id=p_prescription for share;
+ select * into s from cortex_private.signature_sessions where user_id=p_user and status='active' for update nowait;
+ select * into r from public.prescriptions where id=p_prescription for share nowait;
  -- Every check after the locks, with the current clock.
  if s.id is null or not cortex_private.signature_session_usable(s) then
   raise exception 'Sessão de assinatura encerrada. Abra uma nova no aplicativo do certificado.' using errcode='P4031';end if;
@@ -505,6 +511,8 @@ begin
   values(p_operation,p_user,p_prescription,s.id,s.generation,p_shown_sha256,s.cert_sha256,date_trunc('second',clock_timestamp()),'reserved')
   returning * into o;
  return to_jsonb(o)-'staged_path';
+exception when lock_not_available then
+ raise exception 'Documento ou sessão em uso por outra operação; tente de novo.' using errcode='40001';
 end $$;
 
 -- One step of the state machine. Barriers first, then session, operation and
@@ -520,10 +528,10 @@ begin
   -- A document whose patient or account is going away never reaches the PSC.
   perform cortex_private.signature_document(p_user,o.prescription_id);
  end if;
- select * into s from cortex_private.signature_sessions where id=o.session_id for update;
- select * into o from cortex_private.signature_operations where operation_id=p_operation for update;
+ select * into s from cortex_private.signature_sessions where id=o.session_id for update nowait;
+ select * into o from cortex_private.signature_operations where operation_id=p_operation for update nowait;
  if p_to in ('prepared','psc_requested','stored') then
-  perform 1 from public.prescriptions where id=o.prescription_id for share;
+  perform 1 from public.prescriptions where id=o.prescription_id for share nowait;
   -- Revocation or expiry wins every step before the answer is stored.
   if s.generation<>o.session_generation or not cortex_private.signature_session_usable(s) then
    if o.state in ('reserved','prepared','psc_requested','ambiguous') then
@@ -567,6 +575,8 @@ begin
   raise exception 'Invalid signature step' using errcode='22023';
  end if;
  return to_jsonb(o)-'staged_path';
+exception when lock_not_available then
+ raise exception 'Documento ou sessão em uso por outra operação; tente de novo.' using errcode='40001';
 end $$;
 
 -- Commit point. Barriers, then session, operation and prescription rows; the
@@ -580,9 +590,9 @@ begin
  if not found then raise exception 'Signature operation unavailable' using errcode='42501';end if;
  if o.state='completed' then return to_jsonb(o);end if;
  perform cortex_private.signature_document(p_user,o.prescription_id);
- select * into s from cortex_private.signature_sessions where id=o.session_id for update;
- select * into o from cortex_private.signature_operations where operation_id=p_operation for update;
- select * into r from public.prescriptions where id=o.prescription_id for update;
+ select * into s from cortex_private.signature_sessions where id=o.session_id for update nowait;
+ select * into o from cortex_private.signature_operations where operation_id=p_operation for update nowait;
+ select * into r from public.prescriptions where id=o.prescription_id for update nowait;
  if o.state='completed' then return to_jsonb(o);end if;
  if o.state<>'stored' then raise exception 'Signature operation not ready' using errcode='P4093';end if;
  if s.generation<>o.session_generation or not cortex_private.signature_session_usable(s) then
@@ -605,6 +615,8 @@ begin
   values(r.id,p_user,o.operation_id,s.psc,o.shown_pdf_sha256,o.signed_pdf_sha256,o.cert_sha256,lower(p_cert_serial),p_cert_issuer,o.policy_oid,o.psc_attempts);
  update cortex_private.signature_operations set state='completed' where operation_id=p_operation returning * into o;
  return to_jsonb(o);
+exception when lock_not_available then
+ raise exception 'Documento ou sessão em uso por outra operação; tente de novo.' using errcode='40001';
 end $$;
 
 -- Reconciliation discovery for the Edge (service only): abandoned candidates
