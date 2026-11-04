@@ -1,0 +1,54 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.197.0",
+  "checks": [
+    "RED control: create without a preallocated id cannot recover that planned identity",
+    "Native create commits the exact planned id and a transactional birth receipt",
+    "Discarded native create response reconciles by reserved id and birth receipt without another write or session",
+    "An unrelated native creation without a provisioning marker remains unchanged",
+    "Existing email is neither adopted nor overwritten after a native duplicate refusal",
+    "Existing UUID collision cannot change the existing identity or create the new email",
+    "RED metadata-only candidate: user and Admin metadata edits cannot manufacture a birth receipt for a preexisting user; its password is preserved",
+    "Wrong operation rolls back the native creation and its receipt",
+    "Wrong revision rolls back the native creation and its receipt",
+    "Wrong user-metadata rolls back the native creation and its receipt",
+    "Error after the native INSERT rolls back Auth identity and both receipt stages in the same transaction",
+    "Two native creates observed behind one table lock yield one identity and one receipt, not an inferred sequential race",
+    "Busy reservation refuses the native INSERT while its holder remains open and leaves no partial identity",
+    "Deleted Auth identity leaves history but cannot be recreated or treated as a current receipt",
+    "Private receipts are unavailable to anon/authenticated/service roles and absent from the Data API"
+  ],
+  "prototypeIsProductionFix": false,
+  "birthReceiptProofPassed": true,
+  "humanAuthorizationImplemented": false,
+  "privateProvisioningIntegration": false,
+  "notCovered": [
+    "human session/MFA/administrator binding",
+    "credential completion",
+    "membership/consent/legacy integration",
+    "all privileged ledger writers",
+    "production custody and upgrade",
+    "hosted Auth configuration"
+  ],
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "f0f265a45b9da54ad6e8ec3af842423b60b0238dca77b98e0f46b765442d3c00"
+    },
+    {
+      "path": "scripts/test-provisioning-auth-identity.mjs",
+      "sha256": "bc11026056e0aa9ddd411fa3af84ba01e695ff8f429101b9dea3a72d8ea10ece"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-auth-identity.sql",
+      "sha256": "dc1e5690b14126912bfee987d8f3078454477e46cee13f193abaa26b3023f7de"
+    }
+  ],
+  "postgresImage": "pgvector/pgvector:pg16",
+  "restImage": "public.ecr.aws/supabase/postgrest:v16.5",
+  "authImage": "public.ecr.aws/supabase/gotrue:v2.197.0",
+  "cleanupVerified": true,
+  "localDockerEndpoint": "verified local named pipe",
+  "network": "owned internal network, no published ports or external route"
+}

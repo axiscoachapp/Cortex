@@ -1,0 +1,26 @@
+{
+  "syntheticOnly": true,
+  "authVersion": "v2.197.0",
+  "redOnly": true,
+  "observed": "Birth receipt missing after native creation",
+  "actual": "prepared",
+  "expected": "auth_created",
+  "nativePlannedIdMatched": true,
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "cac11e6980532588b3135f97309dc9155322dfaffd0e588d46fe888c21191d29"
+    },
+    {
+      "path": "scripts/test-provisioning-auth-identity.mjs",
+      "sha256": "1af0f9fe85626179200a477bd6cc16d02abf7242c490e78022fcf9d9e2b28eb3"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-auth-identity.sql",
+      "sha256": "bcfe6b454d501a00101887f731a430d8ca61feaede2913089ca286b4a62c8fe1"
+    }
+  ],
+  "cleanupVerified": true,
+  "cleanupEvidence": "No cortex.test.run labelled containers or networks remain after the failed native run",
+  "productionChanged": false
+}
