@@ -1,0 +1,53 @@
+{
+  "syntheticOnly": true,
+  "prototypeOnly": true,
+  "productionFix": false,
+  "sourceBaseline": "1328c2aa930eee41546443dfb33fc888c63d5aef",
+  "migrations": 61,
+  "prototype": {
+    "path": "scripts/prototypes/reception-consent-protocol.sql",
+    "sha256": "7e74db00c8b56040a18e86967a425fd5507ac6eabe514077340b6e89fe73a4c0"
+  },
+  "harness": {
+    "path": "scripts/test-reception-consent-protocol.mjs",
+    "sha256": "78e839a34b7a60e98de4db4cfe9f7ddf535231669e425a1f5807dc1b835243e9"
+  },
+  "checks": [
+    "RED: current setter grants another doctor without physician approval",
+    "RED: NULL in the BEFORE DELETE trigger silently suppresses an unrelated deletion",
+    "BEFORE DELETE does not silently suppress removal of an unrelated member",
+    "pending request is ineffective and model tables are private",
+    "only destination physician decides; admin, staff and another physician refused",
+    "MFA and account-deletion intent are enforced before approval",
+    "approval and lost-response retry produce one effective model grant",
+    "withdrawal prevents stale operation from restoring a grant; new request uses new UUID",
+    "request retries are payload-bound and do not mutate the current pair",
+    "UUID identity, revision and terminal history cannot be rewritten",
+    "raw grant deletion closes the approval and cannot be reinserted",
+    "staff lifecycle invalidates pending requests through reactivation",
+    "staff lifecycle invalidates approved requests through reactivation",
+    "doctor lifecycle invalidates pending requests through reactivation",
+    "doctor lifecycle invalidates approved requests through reactivation",
+    "read committed: approval truly waits for staff inactivation and cannot revive the request",
+    "read committed: held approval refuses inverse staff lifecycle NOWAIT; retry revokes atomically",
+    "read committed: approval truly waits for doctor inactivation and cannot revive the request",
+    "read committed: held approval refuses inverse doctor lifecycle NOWAIT; retry revokes atomically",
+    "repeatable read: approval truly waits for staff inactivation and cannot revive the request",
+    "repeatable read: held approval refuses inverse staff lifecycle NOWAIT; retry revokes atomically",
+    "repeatable read: approval truly waits for doctor inactivation and cannot revive the request",
+    "repeatable read: held approval refuses inverse doctor lifecycle NOWAIT; retry revokes atomically",
+    "model approval does not masquerade as a production gate or change legacy RPCs"
+  ],
+  "sqlSuites": 0,
+  "notCovered": [
+    "production migration and installation bridge",
+    "legacy writer/provisioning cut",
+    "full custody inventory and retention",
+    "model reader is a per-command snapshot predicate, not an authorization gate for old RR transactions",
+    "operational readers/writers, case release and calendar regressions",
+    "list DTO, UI and credential setup",
+    "hosted rollout"
+  ],
+  "network": "verified local Docker endpoint; owned internal network; no published ports",
+  "cleanupVerified": true
+}
