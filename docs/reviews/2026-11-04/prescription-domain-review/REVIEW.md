@@ -32,5 +32,5 @@ Suíte completa depois das correções: 79 arquivos e 573 testes aprovados; type
 
 ## Pendente
 
-- Aviso no compositor, antes de gerar, para controlado reconhecido pela marca. Hoje o servidor recusa com mensagem clara.
+- ~~Aviso no compositor antes de gerar~~. Feito em `3a4e831`: o compositor avisa sobre controlado (também pela marca ou pelo princípio ativo do catálogo) e sugere o tipo antimicrobiano para marca digitada à mão.
 - A trava global da barreira de custódia (achado 3) depende do Codex.
