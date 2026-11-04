@@ -491,7 +491,9 @@ serve(async (req) => {
         label(page, copyLabels[1]);
       });
     }
-    const pdfBytes = await pdf.save();
+    // Classic cross-reference table: _shared/pades.ts signs by incremental
+    // update and does not read compressed xref streams (D17).
+    const pdfBytes = await pdf.save({ useObjectStreams: false });
     const pdfSha256 = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(pdfBytes).buffer))]
       .map(byte => byte.toString(16).padStart(2, '0')).join('');
     const issuanceSnapshot = {

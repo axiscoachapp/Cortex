@@ -49,7 +49,7 @@ Funções puras, sem dependência externa: DER próprio e WebCrypto. Rodam igual
 - **OIDs de saúde:**
   - médico: CRM `2.16.76.1.4.2.2.1`, UF `2.16.76.1.4.2.2.2` e especialidade `2.16.76.1.4.2.2.3`;
   - tipo de documento: prescrição `2.16.76.1.12.1.1`, atestado `.2` e pedido de exame `.3`;
-  - o lugar certo (dicionário Info, XMP ou os dois) **só se confirma no validador do ITI com certificado real**. Por isso o lugar é uma opção (`healthOidsIn: 'info' | 'xmp' | 'both'`), com padrão `both` até o teste.
+  - o lugar certo (dicionário Info, XMP ou os dois) **só se confirma no validador do ITI com certificado real**. A primeira versão grava no dicionário Info; o XMP entra se o teste de aceite mostrar que é preciso.
 - **Configuração, não código:** OID e hash da política (o hash do artefato LPA do ITI ainda precisa ser obtido), algoritmo e tamanho reservado. A AD-RB v1.1 vale até 02/03/2029.
 
 ### `_shared/psc.ts`: cliente DOC-ICP-17.01
@@ -99,6 +99,12 @@ O ponto principal é a guarda do token: enquanto vale, a sessão é a "caneta" d
 - **Limite de ritmo:** no máximo 60 assinaturas por hora por médico (configurável). Acima disso, a sessão é suspensa e o médico é avisado.
 - **Sem arquivo A1 (.pfx):** o Cortex não aceita upload, para não guardar a chave do médico.
 - **O hash que vai ao PSC** é recalculado no servidor a partir do PDF guardado, nunca recebido do navegador.
+
+**Estado em 04/11/2026:** `_shared/pades.ts` está implementado.
+- Assina só PDFs com tabela de referência clássica; por isso, desde já, o `generate-prescription` grava com `useObjectStreams: false`. PDFs antigos com xref comprimida são recusados com o pedido de gerar de novo.
+- Aceita só certificados RSA, que é o caso dos certificados de pessoa física ICP-Brasil.
+- Testes em `src/lib/pades.test.ts`: os 6 primeiros itens abaixo, mais a verificação externa com `openssl cms -verify` (aceita o conteúdo assinado e recusa o PDF alterado).
+- Conferido também com um PDF gerado pela pdf-lib 1.17.1, a mesma versão do Edge, com cópia de página como na receita retida. A pdf-lib relê o arquivo assinado e o OpenSSL aprova.
 
 ## Testes
 
