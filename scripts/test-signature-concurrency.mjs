@@ -92,7 +92,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     call(f, reserve(f));
     call(f, advance(f, 'prepared'));
     call(f, advance(f, 'psc_requested'));
-    call(f, advance(f, 'stored', `jsonb_build_object('stagedPath','rx/${f.user}/${f.rx}/signed-${f.op}.pdf','signedSha256',repeat('f',64))`));
+    call(f, advance(f, 'stored', `jsonb_build_object('stagedPath','rx/${f.user}/${f.rx}/signed-${f.op}.pdf','signedSha256',repeat('f',64),'attempt',1)`));
   };
   const state = (f) => sql(`select state from cortex_private.signature_operations where operation_id='${f.op}'`);
   const signed = (f) => sql(`select status from public.prescriptions where id='${f.rx}'`);

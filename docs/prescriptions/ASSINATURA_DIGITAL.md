@@ -181,6 +181,26 @@ Nenhuma transação ou lock SQL fica aberto durante chamadas de rede.
    - Ocupado vira um 40001 controlado.
    - O inventário completo das travas pegas sob o 123 está comentado na migration.
 
+### Fluxo `signDocument` e tentativas (revisão do Codex de 04/11 19:49)
+
+O fluxo de uma assinatura está em `_shared/signatureFlow.ts` (`signDocument(ports, request)`). Ele recebe RPCs, Storage, PSC e chaves como portas injetadas. As Edge Functions ainda não existem: elas é que vão conferir a sessão do Cortex, o MFA e o ator a partir do JWT. Nada no corpo do pedido (`userId`, `humanRetry`) prova quem é o ator nem a anuência dele.
+
+9. **Cada passo depois de uma chamada ao PSC leva o número da tentativa.**
+   - Os passos são `ambiguous`, `stored` e `failed` quando a operação está em `psc_requested`. O número vai em `p_data.attempt` e é conferido sob a trava da linha.
+   - Se não for o `psc_attempts` atual, ou se o estado já não for `psc_requested` nem o próprio destino, o passo é recusado com **P4094** ("tentativa substituída").
+   - Assim, o timeout, a resposta ou a falha tardia de uma tentativa antiga nunca mexe na nova. O fluxo trata P4094 como `in_progress`: quem decide é a tentativa mais nova.
+   - Repetir o mesmo passo na tentativa atual é idempotente.
+10. **A limpeza é decidida pelo banco.** Uma operação que já chamou o PSC (em `psc_requested`, `ambiguous` ou `stored`) e termina sem concluir fica sempre com `cleanup_pending`, sem depender do que o chamador informar.
+11. **Revogação também encerra uma resposta já gravada.** Com a sessão revogada ou vencida, `stored` vira `cancelled_by_revocation` no próximo passo, como já acontecia na conclusão.
+12. **Retomada de `stored` sem PSC nem token.**
+    - O fluxo baixa o arquivo gravado e confere o SHA-256 guardado na operação.
+    - Lê do CMS o certificado com o `cert_sha256` da sessão (`signatureCertificates`) e chama `signature_complete`, que decide sobre revogação e documento alterado.
+    - Arquivo ausente ou diferente leva a `cancelled` (`stored_object_invalid`).
+13. **Conferência canônica do CMS.**
+    - `verifyPadesArtifact` reconstrói o CMS esperado (`buildCms`) com a assinatura lida e exige igualdade byte a byte. Isso cobre o identificador do signatário, os algoritmos, os certificados e os atributos.
+    - Depois do CMS, `/Contents` só pode ter zeros.
+    - Um objeto já existente no caminho da operação só é aceito se passar nessa conferência.
+
 **Descoberta para reconciliação:** `signature_pending_work(limite)` (só serviço) lista os candidatos a remover e as operações paradas há mais de 15 minutos. **A execução da reconciliação ainda não existe.** Ela vai ficar na função do Edge, com estas regras:
 - confere o hash do objeto existente antes de qualquer ação;
 - nunca remove o arquivo de uma operação concluída;

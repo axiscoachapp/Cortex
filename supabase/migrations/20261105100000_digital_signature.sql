@@ -558,14 +558,26 @@ begin
  select * into o from cortex_private.signature_operations where operation_id=p_operation for update nowait;
  if p_to in ('prepared','psc_requested','stored') then
   perform 1 from public.prescriptions where id=o.prescription_id for share nowait;
-  -- Revocation or expiry wins every step before the answer is stored.
+  -- Revocation or expiry wins every step before the commit point, a stored
+  -- answer included. Once the PSC was called a candidate may exist, so the
+  -- cleanup is scheduled whatever the caller says.
   if s.generation<>o.session_generation or not cortex_private.signature_session_usable(s) then
-   if o.state in ('reserved','prepared','psc_requested','ambiguous') then
+   if o.state in ('reserved','prepared','psc_requested','ambiguous','stored') then
     update cortex_private.signature_operations set state='cancelled_by_revocation',
-     cleanup_pending=(p_to='stored' or coalesce((p_data->>'uploaded')::boolean,false))
+     cleanup_pending=(p_to='stored' or o.state in ('psc_requested','ambiguous','stored') or coalesce((p_data->>'uploaded')::boolean,false))
      where operation_id=p_operation returning * into o;
    end if;
    return to_jsonb(o)-'staged_path';
+  end if;
+ end if;
+ -- What follows a PSC call belongs to one attempt (Codex 04/11 19:49): a late
+ -- timeout, answer or failure of an older attempt never moves the operation,
+ -- checked here under the row lock. The same step of the current attempt is
+ -- idempotent.
+ if p_to in ('ambiguous','stored') or (p_to='failed' and o.state='psc_requested') then
+  if coalesce(p_data->>'attempt','') !~ '^[0-9]{1,2}$' or (p_data->>'attempt')::integer<>o.psc_attempts
+   or o.state not in ('psc_requested',p_to) then
+   raise exception 'Tentativa substituída por outra mais recente.' using errcode='P4094';
   end if;
  end if;
  if p_to='prepared' then
@@ -596,7 +608,8 @@ begin
    where operation_id=p_operation returning * into o;
  elsif p_to in ('failed','cancelled') then
   update cortex_private.signature_operations set state=p_to,error_code=p_data->>'code',
-   cleanup_pending=(o.staged_path is not null or coalesce((p_data->>'uploaded')::boolean,false)) where operation_id=p_operation returning * into o;
+   cleanup_pending=(o.staged_path is not null or o.state in ('psc_requested','ambiguous') or coalesce((p_data->>'uploaded')::boolean,false))
+   where operation_id=p_operation returning * into o;
  else
   raise exception 'Invalid signature step' using errcode='22023';
  end if;

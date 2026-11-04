@@ -110,7 +110,7 @@ do $$ declare d jsonb:=jsonb_build_object('preparedSha256',repeat('d',64),'toBeS
   raise exception 'Attempt in flight authorized twice';exception when sqlstate 'P4093' then null;end;
  begin perform public.signature_advance(u,op,'psc_requested',d||'{"humanRetry":true}');
   raise exception 'Human retry skipped reconciliation of an attempt in flight';exception when sqlstate 'P4093' then null;end;
- assert public.signature_advance(u,op,'ambiguous')->>'state'='ambiguous','Not ambiguous';
+ assert public.signature_advance(u,op,'ambiguous',jsonb_build_object('attempt',1))->>'state'='ambiguous','Not ambiguous';
  begin perform public.signature_reserve(u,'d1740000-0000-4000-8000-000000000003','d1720000-0000-4000-8000-000000000001',repeat('a',64));
   raise exception 'New id bypassed an unreconciled attempt';exception when sqlstate 'P4093' then null;end;
  begin perform public.signature_advance(u,op,'psc_requested',d);
@@ -132,7 +132,7 @@ exception when insufficient_privilege then null;end $$;
 -- Completion, idempotent; signature fields cannot be written any other way.
 do $$ declare op uuid:='d1740000-0000-4000-8000-000000000001';u uuid:='d1700000-0000-4000-8000-000000000001';
  path text:='rx/d1700000-0000-4000-8000-000000000001/d1720000-0000-4000-8000-000000000001/signed-d1740000-0000-4000-8000-000000000001.pdf';begin
- assert public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath',path,'signedSha256',repeat('f',64)))->>'state'='stored','Not stored';
+ assert public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath',path,'signedSha256',repeat('f',64),'attempt',2))->>'state'='stored','Not stored';
  assert public.signature_complete(u,op,'00AB12','CN=AC Sintetica')->>'state'='completed','Not completed';
  assert public.signature_complete(u,op,'00AB12','CN=AC Sintetica')->>'state'='completed','Completion not idempotent';
  begin update public.prescriptions set status='signed',signature_verified_at=now() where id='d1720000-0000-4000-8000-000000000002';
@@ -172,7 +172,7 @@ do $$ declare u uuid:='d1700000-0000-4000-8000-000000000001';
  perform public.signature_advance(u,'d1740000-0000-4000-8000-000000000012','prepared',d);
  perform public.signature_advance(u,'d1740000-0000-4000-8000-000000000012','psc_requested',d);
  perform public.signature_advance(u,'d1740000-0000-4000-8000-000000000012','stored',jsonb_build_object('stagedPath',
-  'rx/d1700000-0000-4000-8000-000000000001/d1720000-0000-4000-8000-000000000004/signed-d1740000-0000-4000-8000-000000000012.pdf','signedSha256',repeat('f',64)));
+  'rx/d1700000-0000-4000-8000-000000000001/d1720000-0000-4000-8000-000000000004/signed-d1740000-0000-4000-8000-000000000012.pdf','signedSha256',repeat('f',64),'attempt',1));
  perform public.signature_revoke_session(u);
  r:=public.signature_complete(u,'d1740000-0000-4000-8000-000000000012','01','CN=AC Sintetica');
  assert r->>'state'='cancelled_by_revocation' and (r->>'cleanup_pending')::boolean,'Revocation lost the race to completion';
@@ -183,7 +183,7 @@ do $$ declare u uuid:='d1700000-0000-4000-8000-000000000001';
  perform public.signature_advance(u,'d1740000-0000-4000-8000-000000000013','prepared',d);
  perform public.signature_advance(u,'d1740000-0000-4000-8000-000000000013','psc_requested',d);
  perform public.signature_advance(u,'d1740000-0000-4000-8000-000000000013','stored',jsonb_build_object('stagedPath',
-  'rx/d1700000-0000-4000-8000-000000000001/d1720000-0000-4000-8000-000000000005/signed-d1740000-0000-4000-8000-000000000013.pdf','signedSha256',repeat('f',64)));
+  'rx/d1700000-0000-4000-8000-000000000001/d1720000-0000-4000-8000-000000000005/signed-d1740000-0000-4000-8000-000000000013.pdf','signedSha256',repeat('f',64),'attempt',1));
  update public.prescriptions set status='revoked' where id='d1720000-0000-4000-8000-000000000005';
  r:=public.signature_complete(u,'d1740000-0000-4000-8000-000000000013','01','CN=AC Sintetica');
  assert r->>'state'='cancelled' and r->>'error_code'='document_changed' and (r->>'cleanup_pending')::boolean,'Changed document completed';
@@ -249,6 +249,80 @@ do $$ declare u uuid:='d1700000-0000-4000-8000-000000000003';op uuid;r jsonb;
  assert public.signature_reserve(u,'d1750000-0000-4000-8000-000000000001','d1720000-0000-4000-8000-000000000009',repeat('a',64))->>'state'='failed','Repeat consumed or changed';
 end $$;
 reset role;
+
+-- Codex 04/11 19:49: what follows a PSC call belongs to one attempt. A late
+-- timeout, answer or failure of an older attempt never moves the operation;
+-- a terminal step after any PSC call schedules the candidate's cleanup by
+-- itself; revocation also ends an operation whose answer is already stored.
+select pg_temp.rx(('d1720000-0000-4000-8000-00000000004'||n)::uuid,'d1700000-0000-4000-8000-000000000001','d1710000-0000-4000-8000-000000000001')
+ from generate_series(1,4) n;
+set local role service_role;
+do $$ declare u uuid:='d1700000-0000-4000-8000-000000000001';op uuid:='d1740000-0000-4000-8000-000000000041';
+ d jsonb:=jsonb_build_object('preparedSha256',repeat('d',64),'toBeSignedSha256',repeat('e',64),'policyOid','2.16.76.1.7.1.11.1.1');
+ t jsonb:=jsonb_build_object('v',1,'keyId','k1','nonce','bm9uY2U=','ciphertext','dG9rZW4=');
+ path text:='rx/d1700000-0000-4000-8000-000000000001/d1720000-0000-4000-8000-000000000041/signed-d1740000-0000-4000-8000-000000000041.pdf';
+ r jsonb;begin
+ perform public.signature_activate_session(u,'vidaas','d1730000-0000-4000-8000-000000000041',now()+interval '8 hours',repeat('c',64),t);
+ perform public.signature_reserve(u,op,'d1720000-0000-4000-8000-000000000041',repeat('a',64));
+ perform public.signature_advance(u,op,'prepared',d);
+ perform public.signature_advance(u,op,'psc_requested',d); -- attempt 1 (request A)
+ begin perform public.signature_advance(u,op,'ambiguous');
+  raise exception 'Ambiguous without the attempt';exception when sqlstate 'P4094' then null;end;
+ begin perform public.signature_advance(u,op,'ambiguous',jsonb_build_object('attempt',0));
+  raise exception 'Ambiguous for another attempt';exception when sqlstate 'P4094' then null;end;
+ -- Request B (human retry) reconciles attempt 1, idempotently.
+ assert public.signature_advance(u,op,'ambiguous',jsonb_build_object('attempt',1))->>'state'='ambiguous','Attempt 1 not reconciled';
+ assert public.signature_advance(u,op,'ambiguous',jsonb_build_object('attempt',1))->>'state'='ambiguous','Reconciliation not idempotent';
+ begin perform public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath',path,'signedSha256',repeat('f',64),'attempt',1));
+  raise exception 'Late answer of a reconciled attempt stored';exception when sqlstate 'P4094' then null;end;
+ assert public.signature_advance(u,op,'psc_requested',d||'{"humanRetry":true}')->>'psc_attempts'='2','Human retry not counted'; -- attempt 2
+ begin perform public.signature_advance(u,op,'ambiguous',jsonb_build_object('attempt',1));
+  raise exception 'Late timeout of attempt 1 marked attempt 2';exception when sqlstate 'P4094' then null;end;
+ begin perform public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath',path,'signedSha256',repeat('f',64),'attempt',1));
+  raise exception 'Late answer of attempt 1 stored over attempt 2';exception when sqlstate 'P4094' then null;end;
+ begin perform public.signature_advance(u,op,'failed',jsonb_build_object('code','psc_rejected','attempt',1));
+  raise exception 'Late failure of attempt 1 failed attempt 2';exception when sqlstate 'P4094' then null;end;
+ begin perform public.signature_advance(u,op,'failed',jsonb_build_object('code','psc_rejected'));
+  raise exception 'Failure after a PSC call without the attempt';exception when sqlstate 'P4094' then null;end;
+ assert public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath',path,'signedSha256',repeat('f',64),'attempt',2))->>'state'='stored','Attempt 2 not stored';
+ assert public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath',path,'signedSha256',repeat('f',64),'attempt',2))->>'state'='stored','Store not idempotent';
+ assert public.signature_complete(u,op,'01','CN=AC Sintetica')->>'state'='completed','Attempt 2 not completed';
+
+ -- A failure after a PSC call schedules the cleanup without the caller's flag.
+ op:='d1740000-0000-4000-8000-000000000042';
+ perform public.signature_reserve(u,op,'d1720000-0000-4000-8000-000000000042',repeat('a',64));
+ perform public.signature_advance(u,op,'prepared',d);
+ perform public.signature_advance(u,op,'psc_requested',d);
+ r:=public.signature_advance(u,op,'failed',jsonb_build_object('code','invalid_signature','attempt',1));
+ assert r->>'state'='failed' and (r->>'cleanup_pending')::boolean,'Failure after a PSC call left its candidate';
+
+ -- An ambiguous operation ended by revocation schedules the cleanup too.
+ op:='d1740000-0000-4000-8000-000000000043';
+ perform public.signature_reserve(u,op,'d1720000-0000-4000-8000-000000000043',repeat('a',64));
+ perform public.signature_advance(u,op,'prepared',d);
+ perform public.signature_advance(u,op,'psc_requested',d);
+ perform public.signature_advance(u,op,'ambiguous',jsonb_build_object('attempt',1));
+ perform public.signature_revoke_session(u);
+ r:=public.signature_advance(u,op,'psc_requested',d||'{"humanRetry":true}');
+ assert r->>'state'='cancelled_by_revocation' and (r->>'cleanup_pending')::boolean,'Revoked ambiguous operation left its candidate';
+
+ -- Stored answer, then revocation: the next step ends it (Codex 19:49, case 1).
+ perform public.signature_activate_session(u,'vidaas','d1730000-0000-4000-8000-000000000042',now()+interval '8 hours',repeat('c',64),t);
+ op:='d1740000-0000-4000-8000-000000000044';
+ path:='rx/d1700000-0000-4000-8000-000000000001/d1720000-0000-4000-8000-000000000044/signed-d1740000-0000-4000-8000-000000000044.pdf';
+ perform public.signature_reserve(u,op,'d1720000-0000-4000-8000-000000000044',repeat('a',64));
+ perform public.signature_advance(u,op,'prepared',d);
+ perform public.signature_advance(u,op,'psc_requested',d);
+ perform public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath',path,'signedSha256',repeat('f',64),'attempt',1));
+ perform public.signature_revoke_session(u);
+ r:=public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath',path,'signedSha256',repeat('f',64),'attempt',1));
+ assert r->>'state'='cancelled_by_revocation' and (r->>'cleanup_pending')::boolean,'Revoked stored operation kept open';
+end $$;
+reset role;
+do $$ begin
+ assert (select psc_attempts=2 from cortex_private.prescription_signatures where operation_id='d1740000-0000-4000-8000-000000000041'),'Audit of attempt 2 missing';
+ assert (select status='generated' from public.prescriptions where id='d1720000-0000-4000-8000-000000000044'),'Revoked stored operation published';
+end $$;
 
 -- Account deletion intent: neither the sealed token nor the OAuth verifier leaves.
 insert into public.user_settings(user_id,prescriber_cpf) values('d1700000-0000-4000-8000-000000000004','52998224725')

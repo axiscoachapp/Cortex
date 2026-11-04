@@ -208,6 +208,30 @@ describe('final check before storing a signed PDF', () => {
     expect(await verifyPadesArtifact(finalizePades(swapped, otherSig), prepared)).not.toBeNull();
   });
 
+  it('refuses a CMS whose SignerInfo does not identify the certificate, or with bytes after it (Codex 19:49)', async () => {
+    const { prepared, signed } = await signedPdf();
+    const cms = cmsFrom(signed, prepared.contentsStart, prepared.contentsEnd);
+    const signedData = derChildren(cms, derChildren(cms, readDer(cms))[1])[0];
+    const parts = derChildren(cms, signedData);
+    const signerInfo = derChildren(cms, parts[parts.length - 1])[0];
+    const serial = derChildren(cms, derChildren(cms, signerInfo)[1])[1]; // sid = IssuerAndSerialNumber
+    const flipHexDigit = (pdf: Uint8Array, at: number) => {
+      const out = pdf.slice();
+      out[at] = (parseInt(String.fromCharCode(out[at]), 16) ^ 1).toString(16).toUpperCase().charCodeAt(0);
+      return out;
+    };
+    // Last hex digit of the serial inside /Contents.
+    const sidChanged = flipHexDigit(signed, prepared.contentsStart + 1 + (serial.end - 1) * 2 + 1);
+    expect(await verifyPadesArtifact(sidChanged, prepared)).not.toBeNull();
+    // A digest algorithm OID byte (SignerInfo.digestAlgorithm) changed.
+    const digestAlgorithm = derChildren(cms, signerInfo)[2];
+    const algChanged = flipHexDigit(signed, prepared.contentsStart + 1 + (digestAlgorithm.end - 1) * 2 + 1);
+    expect(await verifyPadesArtifact(algChanged, prepared)).not.toBeNull();
+    // Something written in the zero padding after the CMS.
+    const trailing = flipHexDigit(signed, prepared.contentsEnd - 3);
+    expect(await verifyPadesArtifact(trailing, prepared)).not.toBeNull();
+  });
+
   it('refuses a /Contents that is not the CMS this preparation expects', async () => {
     const { prepared, signed } = await signedPdf();
     const zeroed = signed.slice();

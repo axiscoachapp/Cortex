@@ -521,6 +521,32 @@ function commonName(name: Uint8Array): string {
   return '';
 }
 
+/**
+ * Certificates carried by the last signature of a PDF (its /ByteRange names
+ * /Contents), or [] when there is none or it cannot be read. Used to resume a
+ * stored answer without asking the PSC again; the caller checks the file's
+ * hash first and picks the certificate by its SHA-256.
+ */
+export function signatureCertificates(pdf: Uint8Array): Uint8Array[] {
+  const text = new TextDecoder('latin1').decode(pdf);
+  const at = text.lastIndexOf('/ByteRange');
+  const range = at < 0 ? null : /^\/ByteRange\s*\[\s*0\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/.exec(text.slice(at, at + 96));
+  if (!range) return [];
+  const [b, c, d] = range.slice(1).map(Number);
+  if (c + d !== pdf.length || b >= c || pdf[b] !== 0x3c || pdf[c - 1] !== 0x3e) return [];
+  const hexText = text.slice(b + 1, c - 1);
+  if (!/^[0-9A-Fa-f]+$/.test(hexText) || hexText.length % 2) return [];
+  try {
+    const contents = Uint8Array.from(hexText.match(/../g)!.map((h) => parseInt(h, 16)));
+    const cms = contents.subarray(0, readDer(contents).end);
+    const signedData = derChildren(cms, derChildren(cms, readDer(cms))[1])[0];
+    const certificates = derChildren(cms, signedData).find((n) => n.tag === 0xa0);
+    return certificates ? derChildren(cms, certificates).map((n) => n.bytes.slice()) : [];
+  } catch {
+    return [];
+  }
+}
+
 /** What the audit keeps about the signer certificate (never the CPF). */
 export async function certificateSummary(der: Uint8Array): Promise<{ sha256: string; serialHex: string; issuer: string }> {
   const cert = parseCertificate(der);
@@ -533,39 +559,43 @@ export async function certificateSummary(der: Uint8Array): Promise<{ sha256: str
 }
 
 /**
- * Re-reads a signed PDF before it is stored: the ByteRange covers everything
- * but /Contents, the CMS inside is the one expected (certificate, policy,
- * messageDigest of that range) and its signature verifies over the signed
- * attributes. Returns null when it holds, or the reason it does not.
+ * Re-reads a signed PDF before it is stored (or before an object already in
+ * Storage is accepted): the ByteRange covers everything but /Contents, the
+ * bytes outside /Contents are exactly the prepared ones, messageDigest is the
+ * hash of that range, and /Contents holds exactly the CMS this preparation
+ * produces for the signature it carries (same SignerInfo identifier,
+ * algorithms, certificates and signed attributes, byte for byte), followed
+ * only by zero padding. The signature itself must verify. Returns null when
+ * all of it holds, or the reason it does not.
  */
 export async function verifyPadesArtifact(signed: Uint8Array, prepared: PreparedPades): Promise<string | null> {
   const [a, b, c, d] = prepared.byteRange;
-  if (a !== 0 || c + d !== signed.length || signed[b] !== 0x3c || signed[c - 1] !== 0x3e) return 'ByteRange não cobre o arquivo';
+  if (a !== 0 || c + d !== signed.length || signed.length !== prepared.pdf.length || signed[b] !== 0x3c || signed[c - 1] !== 0x3e) {
+    return 'ByteRange não cobre o arquivo';
+  }
   const text = new TextDecoder('latin1').decode(signed.subarray(b + 1, c - 1));
-  if (!/^[0-9A-F]+$/.test(text)) return '/Contents inválido';
+  if (!/^[0-9A-F]+$/.test(text) || text.length % 2) return '/Contents inválido';
+  if (!equalBytes(signed.subarray(0, b), prepared.pdf.subarray(0, b)) || !equalBytes(signed.subarray(c), prepared.pdf.subarray(c))) {
+    return 'PDF alterado fora da assinatura';
+  }
+  if (!equalBytes(await sha256(signedContent(signed, prepared.byteRange)), prepared.messageDigest)) return 'messageDigest não confere';
   const contents = Uint8Array.from(text.match(/../g)!.map((h) => parseInt(h, 16)));
   let cms: Uint8Array;
-  try { cms = contents.subarray(0, readDer(contents).end); } catch { return 'CMS ilegível'; }
-  // The bytes outside /Contents are exactly the prepared ones.
-  if (!equalBytes(signed.subarray(0, b), prepared.pdf.subarray(0, b)) || !equalBytes(signed.subarray(c), prepared.pdf.subarray(c))) return 'PDF alterado fora da assinatura';
-  if (!equalBytes(await sha256(signedContent(signed, prepared.byteRange)), prepared.messageDigest)) return 'messageDigest não confere';
+  let signature: Uint8Array;
   try {
+    cms = contents.subarray(0, readDer(contents).end);
     const signedData = derChildren(cms, derChildren(cms, readDer(cms))[1])[0];
     const parts = derChildren(cms, signedData);
-    const certificates = derChildren(cms, parts.find((n) => n.tag === 0xa0)!).map((n) => n.bytes);
-    if (!certificates.some((cert) => equalBytes(cert, prepared.certificate.der))) return 'certificado ausente do CMS';
-    const signerInfo = derChildren(cms, parts[parts.length - 1])[0];
-    const fields = derChildren(cms, signerInfo);
-    const attrs = fields.find((n) => n.tag === 0xa0)!;
-    const asSet = Uint8Array.from(attrs.bytes);
-    asSet[0] = 0x31;
-    if (!equalBytes(asSet, prepared.signedAttributes)) return 'atributos assinados diferentes';
+    const fields = derChildren(cms, derChildren(cms, parts[parts.length - 1])[0]);
     const signatureNode = fields[fields.length - 1];
-    const signature = cms.subarray(signatureNode.contentStart, signatureNode.end);
-    if (!(await verifyRawSignature(prepared.certificate.der, prepared.signedAttributes, signature))) return 'assinatura não confere';
+    if (signatureNode.tag !== 0x04) return 'CMS fora do formato esperado';
+    signature = cms.slice(signatureNode.contentStart, signatureNode.end);
   } catch {
     return 'CMS fora do formato esperado';
   }
+  if (contents.subarray(cms.length).some((byte) => byte !== 0)) return 'conteúdo extra em /Contents';
+  if (!equalBytes(cms, buildCms(prepared.signedAttributes, signature, prepared.certificate, prepared.chain))) return 'CMS diferente do esperado';
+  if (!(await verifyRawSignature(prepared.certificate.der, prepared.signedAttributes, signature))) return 'assinatura não confere';
   return null;
 }
 

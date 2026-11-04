@@ -95,10 +95,14 @@ function fakeDb(original: Uint8Array) {
         const to = a.p_to as string;
         const data = (a.p_data ?? {}) as Record<string, unknown>;
         if (['prepared', 'psc_requested', 'stored'].includes(to) && !usable(op)) {
-          if (['reserved', 'prepared', 'psc_requested', 'ambiguous'].includes(op.state)) {
-            set(op, { state: 'cancelled_by_revocation', cleanup_pending: to === 'stored' || data.uploaded === true });
+          if (['reserved', 'prepared', 'psc_requested', 'ambiguous', 'stored'].includes(op.state)) {
+            set(op, { state: 'cancelled_by_revocation', cleanup_pending: to === 'stored' || ['psc_requested', 'ambiguous', 'stored'].includes(op.state) || data.uploaded === true });
           }
           return out(op);
+        }
+        // Steps after a PSC call name their attempt (P4094 for an older one).
+        if (to === 'ambiguous' || to === 'stored' || (to === 'failed' && op.state === 'psc_requested')) {
+          if (data.attempt !== op.psc_attempts || !['psc_requested', to].includes(op.state)) throw rpcError('P4094', 'superseded attempt');
         }
         if (to === 'prepared') {
           if (op.state === 'prepared' && op.prepared_pdf_sha256 === data.preparedSha256 && op.to_be_signed_sha256 === data.toBeSignedSha256) return out(op);
@@ -115,7 +119,7 @@ function fakeDb(original: Uint8Array) {
           if (op.state === 'stored' && (op.staged_path !== data.stagedPath || op.signed_pdf_sha256 !== data.signedSha256)) throw rpcError('22023', 'stored immutable');
           set(op, { state: 'stored', staged_path: data.stagedPath as string, signed_pdf_sha256: data.signedSha256 as string });
         } else if (to === 'failed' || to === 'cancelled') {
-          set(op, { state: to, error_code: (data.code as string) ?? null, cleanup_pending: op.staged_path !== null || data.uploaded === true });
+          set(op, { state: to, error_code: (data.code as string) ?? null, cleanup_pending: op.staged_path !== null || ['psc_requested', 'ambiguous'].includes(op.state) || data.uploaded === true });
         } else throw rpcError('22023');
         return out(op);
       }
@@ -149,7 +153,11 @@ interface World {
   pscCalls: number;
   ports: SignaturePorts;
   request: SignatureRequest;
-  psc: { lose?: boolean; reject?: boolean; corrupt?: boolean; certificates?: PscCertificate[]; onSign?: () => void };
+  psc: {
+    lose?: boolean; reject?: boolean; corrupt?: boolean; certificates?: PscCertificate[]; onSign?: () => void;
+    /** Per call (1, 2, ...): may wait, then sign, lose the answer or refuse. */
+    answer?: (call: number) => Promise<'sign' | 'lose' | 'reject'>;
+  };
   original: Uint8Array;
 }
 
@@ -178,11 +186,12 @@ beforeEach(async () => {
       sign: async (token, p) => {
         expect(token).toBe('synthetic-psc-token');
         expect(p.id).toBe(w.request.operationId);
-        w.pscCalls++;
+        const call = ++w.pscCalls;
         w.psc.onSign?.();
-        if (w.psc.reject) throw new PscRejectedError('recusado', 403);
+        const answer = w.psc.answer ? await w.psc.answer(call) : 'sign';
+        if (w.psc.reject || answer === 'reject') throw new PscRejectedError('recusado', 403);
         const raw = rawRsaSign(doctorJwk, p.hash);
-        if (w.psc.lose) throw new PscAmbiguousError('resposta perdida');
+        if (w.psc.lose || answer === 'lose') throw new PscAmbiguousError('resposta perdida');
         if (w.psc.corrupt) raw[7] ^= 0xff;
         return raw;
       },
@@ -204,6 +213,12 @@ beforeEach(async () => {
 });
 
 const opOf = () => world.db.ops.get(world.request.operationId)!;
+const until = async (condition: () => boolean) => {
+  for (let i = 0; i < 1000 && !condition(); i++) await new Promise((r) => setTimeout(r, 1));
+  expect(condition()).toBe(true);
+};
+const gate = () => { let open!: () => void; const wait = new Promise<void>((r) => { open = r; }); return { open, wait }; };
+const tokenCalls = () => world.db.calls.filter((c) => c === 'signature_session_token').length;
 const path = () => signedPathOf({ user_id: USER, prescription_id: RX, operation_id: world.request.operationId });
 
 describe('signDocument: normal path', () => {
@@ -292,6 +307,80 @@ describe('signDocument: lost answers and human retry', () => {
     expect(outcome).toEqual({ status: 'failed', code: 'storage_conflict' });
     expect(world.storage.has(path())).toBe(false);
     expect(opOf().cleanup_pending).toBe(false);
+  });
+});
+
+describe('signDocument: attempts and resumption (Codex 04/11 19:49)', () => {
+  it('resumes a stored answer without the PSC or the session token, and a revocation still wins', async () => {
+    world.db.throwOnce.set('signature_complete', [rpcError('40001'), rpcError('40001'), rpcError('40001'), rpcError('40001')]);
+    await expect(signDocument(world.ports, world.request)).rejects.toMatchObject({ code: '40001' });
+    expect(opOf().state).toBe('stored');
+    world.db.session.active = false;
+    world.db.session.generation++;
+    const before = tokenCalls();
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'cancelled_by_revocation', code: null });
+    expect(tokenCalls()).toBe(before);
+    expect(world.pscCalls).toBe(1);
+    expect(world.storage.size).toBe(0);
+    expect(opOf().cleanup_pending).toBe(false);
+    expect(world.db.audit).toHaveLength(0);
+  });
+
+  it('a stored answer resumed with a valid session completes with the certificate from the stored file', async () => {
+    world.db.throwOnce.set('signature_complete', [rpcError('40001'), rpcError('40001'), rpcError('40001'), rpcError('40001')]);
+    await expect(signDocument(world.ports, world.request)).rejects.toMatchObject({ code: '40001' });
+    const before = tokenCalls();
+    const outcome = await signDocument(world.ports, world.request);
+    expect(outcome.status).toBe('completed');
+    expect(tokenCalls()).toBe(before);
+    expect(world.pscCalls).toBe(1);
+    expect(world.db.audit[0]).toMatchObject({ serial: '2a17', issuer: 'AC Sintética' });
+  });
+
+  it('a stored answer whose file is gone or different is cancelled, never completed', async () => {
+    world.db.throwOnce.set('signature_complete', [rpcError('40001'), rpcError('40001'), rpcError('40001'), rpcError('40001')]);
+    await expect(signDocument(world.ports, world.request)).rejects.toMatchObject({ code: '40001' });
+    world.storage.set(path(), minimalPdf('outro'));
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'cancelled', code: 'stored_object_invalid' });
+    expect(world.storage.size).toBe(0);
+    expect(world.db.doc.status).toBe('generated');
+  });
+
+  it('a late timeout of the older attempt never marks the newer one', async () => {
+    const a = gate();
+    const b = gate();
+    world.psc.answer = async (call) => { await (call === 1 ? a : b).wait; return call === 1 ? 'lose' : 'sign'; };
+    const first = signDocument(world.ports, world.request);
+    await until(() => world.pscCalls === 1);
+    const second = signDocument(world.ports, { ...world.request, humanRetry: true });
+    await until(() => world.pscCalls === 2);
+    expect(opOf()).toMatchObject({ state: 'psc_requested', psc_attempts: 2 });
+    a.open(); // attempt 1 times out while attempt 2 is waiting for the PSC
+    expect(await first).toEqual({ status: 'in_progress' });
+    expect(opOf()).toMatchObject({ state: 'psc_requested', psc_attempts: 2 });
+    b.open();
+    expect((await second).status).toBe('completed');
+    expect(world.storage.size).toBe(1);
+    expect(world.db.audit).toEqual([expect.objectContaining({ attempts: 2 })]);
+    expect(world.db.states.slice(-3)).toEqual(['psc_requested', 'stored', 'completed']);
+  });
+
+  it('a late answer of the older attempt is not stored over the newer one, and its file is reused only if identical', async () => {
+    const a = gate();
+    const b = gate();
+    world.psc.answer = async (call) => { await (call === 1 ? a : b).wait; return 'sign'; };
+    const first = signDocument(world.ports, world.request);
+    await until(() => world.pscCalls === 1);
+    const second = signDocument(world.ports, { ...world.request, humanRetry: true });
+    await until(() => world.pscCalls === 2);
+    a.open(); // attempt 1 answers late: it uploads, then its store is refused
+    expect(await first).toEqual({ status: 'in_progress' });
+    expect(opOf()).toMatchObject({ state: 'psc_requested', psc_attempts: 2 });
+    const uploadedByFirst = world.storage.get(path())!;
+    b.open();
+    expect((await second).status).toBe('completed');
+    expect(world.storage.get(path())).toEqual(uploadedByFirst); // same bytes (deterministic RSA)
+    expect(opOf().signed_pdf_sha256).toBe(hex(await sha256(uploadedByFirst)));
   });
 });
 
