@@ -5,7 +5,8 @@
 import { deflateRawSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import {
-  formatCid, parseCid10, parseCmed, parseDcb, parseDelimited, parseTuss, readXlsxRows, tussGroup, unzip,
+  CATALOG_URLS, formatCid, parseCid10, parseCmed, parseDcb, parseDelimited, parseTuss, readXlsxRows, refreshCatalog, tussGroup, unzip,
+  type CatalogSource, type RefreshPorts,
 } from '../../supabase/functions/_shared/referenceCatalogs';
 
 /** Minimal ZIP writer (deflate), enough for the reader under test. */
@@ -113,5 +114,65 @@ describe('DCB list (XLSX)', () => {
     expect(rows[2]).toEqual(['1', 'substância sintética', '000-00-0', 'IFA']);
     expect(parseDcb(rows)).toEqual([{ number: '1', name: 'substância sintética', cas: '000-00-0', classification: 'IFA' }]);
     expect(() => parseDcb([['sem cabeçalho']])).toThrow('cabeçalho');
+  });
+});
+
+
+describe('catalog refresh (fake network and database)', () => {
+  const tussCsv = '"CD_TERMO";"NM_TERMO";"DT_INICIO_VIGENCIA";"DT_FIM_VIGENCIA";"DT_FIM_IMPLANTACAO"\n"40304361";"Exame sintético";"2009-02-13";"";""\n';
+  const files: Record<string, Uint8Array> = {
+    [CATALOG_URLS.tuss]: zip({ 'pda-049-tabela_22_procedimentos_e_eventos_em_saude.csv': tussCsv, 'outra_tabela.csv': 'x' }),
+    [CATALOG_URLS.cid10]: zip({
+      'CID-10-CATEGORIAS.CSV': new Uint8Array(Buffer.from('CAT;CLASSIF;DESCRICAO;DESCRABREV;REFER;EXCLUIDOS;\nN76;;Categoria sintética;N76 Cat;;;\n', 'latin1')),
+      'CID-10-SUBCATEGORIAS.CSV': new Uint8Array(Buffer.from('SUBCAT;CLASSIF;RESTRSEXO;CAUSAOBITO;DESCRICAO;DESCRABREV;REFER;EXCLUIDOS;\nN760;;F;;Subcategoria sintética;N76.0 Sub;;;\n', 'latin1')),
+    }),
+    [CATALOG_URLS.dcb]: new TextEncoder().encode('<a href="/jspui/handle/anvisa/1">Lista DCB antiga</a><a href="/jspui/handle/anvisa/22551">Lista consolidada das DCB - VIGENTE</a>'),
+    'https://bibliotecadigital.anvisa.gov.br/jspui/handle/anvisa/22551': new TextEncoder().encode('<a href="/jspui/bitstream/anvisa/22551/1/lista.xlsx">xlsx</a>'),
+  };
+  function ports(extra: Partial<RefreshPorts> = {}) {
+    const calls = { upserts: [] as Array<{ table: string; rows: Record<string, unknown>[]; key: string }>, deletes: [] as string[], versions: [] as Record<string, unknown>[] };
+    const known = new Map<CatalogSource, string>();
+    const p: RefreshPorts = {
+      download: async (url) => { const f = files[url]; if (!f) throw new Error(`404 ${url}`); return f; },
+      version: async (source) => (known.has(source) ? { sha256: known.get(source)! } : null),
+      upsert: async (table, rows, key) => { calls.upserts.push({ table, rows, key }); },
+      deleteOlder: async (table) => { calls.deletes.push(table); },
+      saveVersion: async (row) => { calls.versions.push(row); known.set(row.source, row.sha256); },
+      now: () => new Date('2026-11-04T20:00:00Z'),
+      ...extra,
+    };
+    return { p, calls };
+  }
+
+  it('loads TUSS and CID-10, removes rows that left the list and records the version', async () => {
+    const { p, calls } = ports();
+    expect(await refreshCatalog('tuss', p)).toMatchObject({ status: 'loaded', rows: 1, skipped: 0 });
+    expect(await refreshCatalog('cid10', p)).toMatchObject({ status: 'loaded', rows: 2 });
+    expect(calls.upserts[0]).toMatchObject({ table: 'exam_catalog', key: 'code', rows: [{ code: '40304361', exam_group: 'laboratorio', refreshed_at: '2026-11-04T20:00:00.000Z' }] });
+    expect(calls.upserts[1].rows.map((r) => r.code)).toEqual(['N76', 'N76.0']);
+    expect(calls.deletes).toEqual(['exam_catalog', 'cid10_catalog']);
+    expect(calls.versions[0]).toMatchObject({ source: 'tuss', source_url: CATALOG_URLS.tuss, rows_loaded: 1 });
+    // Same file again: nothing written.
+    expect(await refreshCatalog('tuss', p)).toMatchObject({ status: 'unchanged' });
+    expect(calls.upserts).toHaveLength(2);
+  });
+
+  it('finds the current DCB spreadsheet and keeps only gov.br sources', async () => {
+    const urls: string[] = [];
+    const { p } = ports({ download: async (url) => { urls.push(url); if (url.endsWith('.xlsx')) throw new Error('stop after resolving'); return files[url]; } });
+    await expect(refreshCatalog('dcb', p)).rejects.toThrow('stop after resolving');
+    expect(urls.at(-1)).toBe('https://bibliotecadigital.anvisa.gov.br/jspui/bitstream/anvisa/22551/1/lista.xlsx');
+    const outside = ports({ download: async (url) => (url === CATALOG_URLS.dcb
+      ? new TextEncoder().encode('<a href="https://example.com/handle/anvisa/9">DCB VIGENTE</a>')
+      : new TextEncoder().encode('<a href="https://example.com/x/bitstream/x.xlsx">x</a>')) });
+    await expect(refreshCatalog('dcb', outside.p)).rejects.toThrow('gov.br');
+    expect(outside.calls.upserts).toHaveLength(0);
+  });
+
+  it('writes nothing when a file reads as empty', async () => {
+    const empty = ports({ download: async () => zip({ 'pda-049-tabela_22_x.csv': '"CD_TERMO";"NM_TERMO";"DT_INICIO_VIGENCIA";"DT_FIM_VIGENCIA"\n' }) });
+    await expect(refreshCatalog('tuss', empty.p)).rejects.toThrow('vazio');
+    expect(empty.calls.upserts).toHaveLength(0);
+    expect(empty.calls.deletes).toHaveLength(0);
   });
 });

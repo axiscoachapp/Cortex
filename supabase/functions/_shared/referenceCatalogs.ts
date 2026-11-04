@@ -238,3 +238,107 @@ export function parseDcb(rows: string[][]): DcbEntry[] {
     .map((r) => ({ number: clean(r[at.number]), name: clean(r[at.name]), cas: clean(r[at.cas]), classification: clean(r[at.classification]) }))
     .filter((e) => /^\d+$/.test(e.number) && e.name);
 }
+
+// ---------------------------------------------------------------------------
+// Refresh orchestration (I/O injected; refresh-reference-catalogs wires it)
+
+export type CatalogSource = 'tuss' | 'cid10' | 'cmed' | 'dcb';
+export const CATALOG_URLS: Record<CatalogSource, string> = {
+  tuss: 'https://dadosabertos.ans.gov.br/FTP/PDA/terminologia_unificada_saude_suplementar_TUSS-049/pda-049-tuss.zip',
+  cid10: 'http://www2.datasus.gov.br/cid10/V2008/downloads/CID10CSV.zip',
+  cmed: 'https://dados.anvisa.gov.br/dados/TA_PRECO_MEDICAMENTO.csv',
+  // The DCB file changes address with every version: resolved at run time.
+  dcb: 'https://bibliotecadigital.anvisa.gov.br/jspui/handle/anvisa/11933',
+};
+const TABLE: Record<CatalogSource, { table: string; key: string }> = {
+  tuss: { table: 'exam_catalog', key: 'code' },
+  cid10: { table: 'cid10_catalog', key: 'code' },
+  cmed: { table: 'medication_presentations', key: 'ggrem' },
+  dcb: { table: 'dcb_catalog', key: 'dcb_number,name' },
+};
+
+export interface RefreshPorts {
+  download(url: string): Promise<Uint8Array>;
+  version(source: CatalogSource): Promise<{ sha256: string } | null>;
+  upsert(table: string, rows: Record<string, unknown>[], onConflict: string): Promise<void>;
+  /** Removes rows not refreshed in this run (they left the official list). */
+  deleteOlder(table: string, refreshedBefore: string): Promise<void>;
+  saveVersion(row: { source: CatalogSource; source_url: string; rows_loaded: number; sha256: string; refreshed_at: string }): Promise<void>;
+  now(): Date;
+}
+
+export interface RefreshResult { source: CatalogSource; status: 'unchanged' | 'loaded'; rows: number; skipped: number; url: string }
+
+const hex = (bytes: Uint8Array) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+const within = (v: unknown, max: number) => v == null || String(v).length <= max;
+
+/** Finds the current DCB spreadsheet from the Anvisa digital library pages. */
+export async function resolveDcbUrl(download: RefreshPorts['download'], collectionUrl = CATALOG_URLS.dcb): Promise<string> {
+  const base = new URL(collectionUrl);
+  const html = new TextDecoder().decode(await download(collectionUrl));
+  const item = [...html.matchAll(/<a[^>]+href="([^"]*\/handle\/anvisa\/\d+)"[^>]*>([\s\S]*?)<\/a>/gi)]
+    .find((m) => /VIGENTE/i.test(m[2]) && /DCB/i.test(m[2]));
+  if (!item) throw new Error('Versão vigente da lista DCB não encontrada.');
+  const itemUrl = new URL(item[1], base);
+  // Follow only links of the Anvisa library itself.
+  if (itemUrl.hostname !== base.hostname || itemUrl.protocol !== 'https:') throw new Error(`Fonte fora de gov.br: ${itemUrl}`);
+  const page = new TextDecoder().decode(await download(itemUrl.toString()));
+  const file = /href="([^"]*\/bitstream\/[^"]+\.xlsx)"/i.exec(page)?.[1];
+  if (!file) throw new Error('Planilha da lista DCB não encontrada.');
+  return new URL(file.replace(/&amp;/g, '&'), base).toString();
+}
+
+export async function refreshCatalog(source: CatalogSource, ports: RefreshPorts): Promise<RefreshResult> {
+  const url = source === 'dcb' ? await resolveDcbUrl(ports.download) : CATALOG_URLS[source];
+  if (!/^https?:\/\/[a-z0-9.-]+\.gov\.br\//.test(url)) throw new Error(`Fonte fora de gov.br: ${url}`);
+  const bytes = await ports.download(url);
+  const sha256 = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
+  if ((await ports.version(source))?.sha256 === sha256) return { source, status: 'unchanged', rows: 0, skipped: 0, url };
+  const refreshedAt = ports.now().toISOString();
+  let rows: Record<string, unknown>[] = [];
+  if (source === 'tuss') {
+    const files = await unzip(bytes);
+    const name = [...files.keys()].find((k) => /tabela_22/i.test(k) && k.toLowerCase().endsWith('.csv'));
+    if (!name) throw new Error('Tabela 22 ausente no pacote TUSS.');
+    rows = parseTuss(new TextDecoder().decode(files.get(name))).map((t) => ({
+      code: t.code, name: t.name, exam_group: t.group, valid_from: t.validFrom, valid_to: t.validTo, refreshed_at: refreshedAt,
+    }));
+  } else if (source === 'cid10') {
+    const files = await unzip(bytes);
+    const read = (suffix: string) => {
+      const name = [...files.keys()].find((k) => k.toUpperCase().endsWith(suffix));
+      if (!name) throw new Error(`Arquivo ${suffix} ausente no pacote CID-10.`);
+      return parseCid10(new TextDecoder('latin1').decode(files.get(name)));
+    };
+    rows = [...read('CID-10-CATEGORIAS.CSV'), ...read('CID-10-SUBCATEGORIAS.CSV')].map((c) => ({
+      code: c.code, description: c.description, short_description: c.short || null, sex: c.sex, kind: c.kind, refreshed_at: refreshedAt,
+    }));
+  } else if (source === 'cmed') {
+    const unique = new Map<string, Record<string, unknown>>();
+    for (const p of parseCmed(new TextDecoder().decode(bytes))) {
+      unique.set(p.ggrem, {
+        ggrem: p.ggrem, registration: p.registration, registration9: p.registration9, substance: p.substance, laboratory: p.laboratory,
+        product: p.product, presentation: p.presentation, therapeutic_class: p.therapeuticClass, product_type: p.productType,
+        tarja: p.tarja || null, eans: p.eans, hospital_only: p.hospitalOnly, refreshed_at: refreshedAt,
+      });
+    }
+    rows = [...unique.values()];
+  } else {
+    const unique = new Map<string, Record<string, unknown>>();
+    for (const d of parseDcb(await readXlsxRows(bytes))) {
+      unique.set(`${d.number}|${d.name}`, { dcb_number: Number(d.number), name: d.name, cas: d.cas || null, classification: d.classification || null, refreshed_at: refreshedAt });
+    }
+    rows = [...unique.values()];
+  }
+  // Rows over the table limits are reported, never cut.
+  const limits: Record<string, number> = { name: 500, description: 500, short_description: 200, substance: 2000, laboratory: 300, product: 300,
+    presentation: 500, therapeutic_class: 300, product_type: 100, tarja: 100, cas: 100, classification: 20 };
+  const accepted = rows.filter((r) => Object.entries(limits).every(([k, max]) => within(r[k], max)));
+  if (!accepted.length) throw new Error(`Catálogo ${source} vazio após a leitura; nada foi alterado.`);
+  const { table, key } = TABLE[source];
+  for (let i = 0; i < accepted.length; i += 500) await ports.upsert(table, accepted.slice(i, i + 500), key);
+  await ports.deleteOlder(table, refreshedAt);
+  await ports.saveVersion({ source, source_url: url, rows_loaded: accepted.length, sha256, refreshed_at: refreshedAt });
+  return { source, status: 'loaded', rows: accepted.length, skipped: rows.length - accepted.length, url };
+}
+

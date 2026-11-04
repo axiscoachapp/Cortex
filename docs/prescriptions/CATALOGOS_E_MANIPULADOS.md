@@ -33,6 +33,15 @@ Os leitores ficam em `_shared/referenceCatalogs.ts`:
 
 Não usam nenhuma dependência nova. Os testes em `src/lib/referenceCatalogs.test.ts` montam arquivos sintéticos nos mesmos formatos. As contagens acima foram conferidas nos arquivos oficiais, fora do repositório.
 
+**Banco e atualização:**
+- **Migration `20261105110000`:** tabelas `exam_catalog`, `cid10_catalog`, `medication_presentations`, `dcb_catalog` e `reference_catalog_versions`, com leitura para qualquer usuário logado e escrita só pelo serviço. Também deixa os modelos de receita guardarem fórmulas manipuladas (`valid_snippet_formula`).
+- **Função `refresh-reference-catalogs`:** só aceita a chave de serviço, como a atualização mensal da base de medicamentos.
+  - Baixa cada fonte, pula as que não mudaram (SHA-256 igual ao da última carga) e grava em lotes de 500. Depois remove o que saiu da lista oficial e registra fonte, data e contagem.
+  - Uma fonte com falha não mexe na tabela dela nem impede as outras.
+  - Só aceita endereços gov.br. A DCB vigente é achada a cada execução nas páginas da biblioteca da Anvisa, seguindo só links do próprio site.
+- **Conferência:** a orquestração rodou sobre os arquivos oficiais reais (rede simulada) e carregou 5.966 exames, 14.496 códigos CID, 26.635 apresentações e 12.760 nomes DCB, sem descarte.
+- **Agendamento mensal:** fica para o deploy, como o da base de medicamentos.
+
 **Licenças:**
 - TUSS e CMED são dados abertos federais (Decreto 8.777/2016), reutilizáveis com atribuição.
 - A DCB é conteúdo de ato normativo.

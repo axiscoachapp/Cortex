@@ -33,7 +33,7 @@ create table public.medication_presentations(
  ggrem text primary key check(ggrem ~ '^[0-9]{6,20}$'),
  registration text check(registration ~ '^[0-9]{0,15}$'),
  registration9 text check(registration9 ~ '^[0-9]{0,9}$'),
- substance text check(length(substance)<=1000),
+ substance text check(length(substance)<=2000),
  laboratory text check(length(laboratory)<=300),
  product text not null check(length(product) between 1 and 300),
  presentation text check(length(presentation)<=500),
