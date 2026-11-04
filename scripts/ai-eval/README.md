@@ -50,7 +50,18 @@ O áudio gravado da consulta encenada fica fora do repositório.
 
 Testes: `npx vitest run scripts/ai-eval`.
 
+## Execução e relatório (`pipeline.mjs`, `cli.mjs`)
+
+- `runCandidates(casos, candidatos)` roda cada candidato em cada caso, na transcrição e na evolução, e mede a latência.
+- `scoreOutputs` aplica as métricas e soma os erros críticos por candidato.
+- `renderReport` monta o relatório da B4:
+  - a tabela por candidato;
+  - aprovado ou reprovado pelos critérios fixados antes de ver os resultados;
+  - a lista de erros críticos.
+- Os candidatos `sintetico-referencia` e `sintetico-com-erros` existem só para testar o caminho todo sem rede.
+- `node scripts/ai-eval/cli.mjs demo --out <pasta>` gera as saídas, as métricas, o pacote às cegas e o `report.md`.
+
 ## A fazer
 
-1. Executor por candidato, quando houver contas de teste.
-2. Relatório final.
+1. Adaptadores dos provedores reais em `CANDIDATES`, depois das contas de teste (usuário) e das decisões D13 e D15. Cada adaptador recebe o áudio gravado do caso, que fica fora do repositório.
+2. Casos reais: de 15 a 20 roteiros escritos ou aprovados pelos médicos (B1).
