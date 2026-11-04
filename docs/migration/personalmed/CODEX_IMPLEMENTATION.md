@@ -346,7 +346,7 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
 13. `file`
 14. `template`: modelo de documento para `document_snippets` (S3), especificado abaixo.
 
-**Entidade `template`** (04/11/2026). Implementação: `buildTemplate` em `staging.mjs` e `templateKind`, `templateChunks` e `templateUsage` em `transforms.mjs`. Exemplos sintéticos em `fixtures/synthetic-batch/template.ndjson`.
+**Entidade `template`** (04/11/2026). Implementação: `buildTemplate` em `staging.mjs` e `templateKind`, `templateChunks` e `templateUsage` em `transforms.mjs`. Exemplos sintéticos em `fixtures/synthetic-batch/template.ndjson`. É o formato de staging, **não** uma linha pronta de `document_snippets`. O MVP da tabela exige dono individual e só guarda receita com itens; ver S3.
 - **Chave e destino:**
   - `sourceRecordId` é `table:<Us05|Gintxt|Pedtxt>|model:<ModelNumber>`, e `targetTable` é `document_snippets`;
   - `sourceDoctorId` é o `UserNumber` dono ou `null`. Hoje 1.090 dos 1.091 modelos de `Us05` são da clínica toda.
@@ -440,7 +440,20 @@ A ideia original era o cadastro legal ficar na pessoa, não em cada prontuário.
   - corrigir o CPF numa pessoa com dois prontuários reflete nos dois;
   - fixture de família com o mesmo telefone continua como duas pessoas.
 
-### S3. Biblioteca de modelos de documento (fora do backlog atual)
+### S3. Biblioteca de modelos de documento
+
+> **MVP implementado em 04/11/2026 (Claude, domínio de prescrição).** Migrations `20261104110000_document_snippets.sql` e `20261104120000_document_snippets_custody_epoch.sql`; interface em `PrescriptionTemplatePicker`, dentro do `DocumentComposerModal`.
+> - **Tabela `document_snippets`:**
+>   - `owner_user_id` **obrigatório**: cada médico tem a própria biblioteca, sem `clinic_id` e sem compartilhamento;
+>   - `kind` só aceita `receita`;
+>   - `items` é uma lista de 1 a 15 itens no formato `{name, dosage, instructions}`;
+>   - `review_status` pode ser `approved`, `imported_unreviewed` ou `archived`;
+>   - `source`, `source_ref` e `revision`.
+> - **O que o MVP não guarda:** `body`, `quantity`, `catalog_ref`, `regulated` e os campos automáticos. O `generate-prescription` decide a classe regulatória na emissão.
+> - **Escrita:** só pelas RPCs `save_document_snippet` e `archive_document_snippet`. Salvar é a revisão explícita: `imported_unreviewed` vira `approved`.
+> - **Importação:** o formato de staging (§3, entidade `template`) guarda mais do que a tabela aceita hoje: `body`, `header`/`footer`, uso, campos automáticos e escopo de clínica. Esse formato **não é um payload para inserir direto**. Um `ready` no staging não dispensa `imported_unreviewed`, D2, D19 nem a aprovação do médico. Texto e origem continuam no staging até existir um contrato autorizado de destino.
+>
+> O texto abaixo é a **proposta original e futura** (vários tipos, biblioteca da clínica, campos automáticos). Ela não descreve o que existe hoje.
 
 - **Tabela `document_snippets`** (o nome fica a seu critério). Não reutilizar `document_templates`, que é estrutura de nota da IA.
   - Campos: `clinic_id`, `owner_user_id` (nulo quando é da clínica toda), `kind` (`receita`, `texto`, `atestado`, `declaracao`, `pedido_exame`, `orientacoes`, `termo`, `encaminhamento`), `name` (até 120 caracteres), `body` (texto), `items` (jsonb com `name`, `quantity`, `instructions` e `catalog_ref` opcional), `regulated` (`none`, `antimicrobial`, `controlled`, calculado no servidor), `review_status` (`imported_unreviewed`, `approved`, `archived`) e a origem.
@@ -457,7 +470,11 @@ A ideia original era o cadastro legal ficar na pessoa, não em cada prontuário.
   - os 291 usados em 2025–2026 marcados para revisão primeiro;
   - teste de preenchimento de cada campo automático e da conversão de itens com fixtures sintéticas.
 
-### S4. Receita e PDF (fora do backlog atual)
+### S4. Receita e PDF
+
+> **Situação em 04/11/2026:**
+> - **Implementado:** telefone e RQE do prescritor (migration `20261104100000`, commits `7427926` e `a715210`); CPF quando houver; sexo e idade na receita de antimicrobiano, com recusa clara quando faltam.
+> - **Pendente:** endereço do paciente, que depende da S2, e controlados, que dependem da D8.
 
 - **Paciente no PDF:**
   - imprimir o **endereço** em toda receita (Lei 5.991/73, art. 35, II);
