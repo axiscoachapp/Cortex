@@ -155,7 +155,7 @@ export async function testReceptionConcurrency(container) {
   sync(`insert into auth.users(id,email) values('${doctor}','race-doctor@example.invalid');
    begin;${claims(admin)}select public.invite_clinic_doctor('${clinic}','race-doctor@example.invalid');commit;
    begin;${claims(doctor)}select public.respond_clinic_invitation('${clinic}',true);commit;
-   begin;${claims(admin)}select public.update_reception_staff('${staffA}',array['${admin}'::uuid,'${doctor}'::uuid],true);commit;`);
+   begin;set local request.jwt.claim.role='service_role';select public.set_reception_scopes('${clinic}','${staffA}',array['${admin}'::uuid,'${doctor}'::uuid],true);commit;`);
   await contest(
     `select public.reception_update_case('${receptionCase}',2,'route','{"doctorId":"${doctor}"}')`,
     `select public.update_reception_staff('${staffA}',array['${admin}'::uuid],true)`,
@@ -172,7 +172,9 @@ export async function testReceptionConcurrency(container) {
   const draftCase = sync(
     `begin;${claims(staffA)}select public.reception_create_case('${contact}','${admin}','Concurrent draft routing','scheduling',gen_random_uuid());commit;`,
   );
-  sync(`begin;${claims(admin)}select public.update_reception_staff('${staffB}',array['${admin}'::uuid,'${doctor}'::uuid],true);commit;
+  // Server-only pre-existing scope fixture; the public removal/route races
+  // remain authenticated. This setup is not physician-approval evidence.
+  sync(`begin;set local request.jwt.claim.role='service_role';select public.set_reception_scopes('${clinic}','${staffB}',array['${admin}'::uuid,'${doctor}'::uuid],true);commit;
     begin;${claims(staffB)}select public.reception_update_case('${draftCase}',1,'claim','{}');commit;`);
   await contest(
     `select public.reception_update_case('${draftCase}',2,'route','{"doctorId":"${doctor}"}')`,

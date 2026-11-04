@@ -95,11 +95,19 @@ do $$ begin
  begin perform public.reception_create_case(current_setting('test.lifecycle_contact')::uuid,'bc100000-0000-4000-8000-000000000002','Forbidden old scope','scheduling',gen_random_uuid());raise exception 'Old scope can write after rejoin';exception when insufficient_privilege then null;end;
 end $$;
 set local request.jwt.claim.sub='bc100000-0000-4000-8000-000000000001';
+reset role;
+-- This suite retains legacy offboarding/audit behavior. Seed trusted legacy
+-- data; physician-bound approval has dedicated decision and cut suites.
+set local request.jwt.claim.role='service_role';
+select public.set_reception_scopes(current_setting('test.lifecycle_clinic')::uuid,
+ 'bc100000-0000-4000-8000-000000000003',array['bc100000-0000-4000-8000-000000000001'::uuid,'bc100000-0000-4000-8000-000000000002'::uuid],true);
+set local request.jwt.claim.role='authenticated';
+set local role authenticated;
 select public.update_reception_staff('bc100000-0000-4000-8000-000000000003',array['bc100000-0000-4000-8000-000000000001'::uuid,'bc100000-0000-4000-8000-000000000002'::uuid],true);
 set local request.jwt.claim.sub='bc100000-0000-4000-8000-000000000003';
 do $$ begin
- assert jsonb_array_length(public.clinic_access()->'doctors')=2,'Fresh explicit grant did not work';
- assert jsonb_array_length(public.reception_patient_search(current_setting('test.lifecycle_clinic')::uuid,'bc100000-0000-4000-8000-000000000002','Pessoa'))=1,'Fresh explicit grant cannot search';
+ assert jsonb_array_length(public.clinic_access()->'doctors')=2,'Trusted legacy/save-existing control did not work';
+ assert jsonb_array_length(public.reception_patient_search(current_setting('test.lifecycle_clinic')::uuid,'bc100000-0000-4000-8000-000000000002','Pessoa'))=1,'Trusted legacy/save-existing control cannot search';
 end $$;
 set local request.jwt.claim.sub='bc100000-0000-4000-8000-000000000001';
 select public.offboard_clinic_doctor(current_setting('test.lifecycle_clinic')::uuid,'bc100000-0000-4000-8000-000000000002');

@@ -63,7 +63,13 @@ do $$ begin
  assert (select count(*) from public.patients)=0,'Clinical access exposed to reception';
 end $$;
 set local request.jwt.claim.sub='d4100000-0000-4000-8000-000000000001';
-select public.update_reception_staff('d4100000-0000-4000-8000-000000000003',array['d4100000-0000-4000-8000-000000000001'::uuid],true);
+-- Server-only legacy fixture for the reassignment/inactivity guard below.
+-- This is not an authenticated grant or a physician-approval proof.
+reset role;
+set local request.jwt.claim.role='service_role';
+select public.set_reception_scopes(current_setting('test.staff_life_clinic')::uuid,'d4100000-0000-4000-8000-000000000003',array['d4100000-0000-4000-8000-000000000001'::uuid],true);
+set local role authenticated;
+set local request.jwt.claim.role='authenticated';
 set local request.jwt.claim.sub='d4100000-0000-4000-8000-000000000003';
 do $$ begin assert jsonb_array_length(public.reception_patient_search(current_setting('test.staff_life_clinic')::uuid,'d4100000-0000-4000-8000-000000000001','Pessoa'))=1,'Fresh explicit grant lost';end $$;
 set local role service_role;

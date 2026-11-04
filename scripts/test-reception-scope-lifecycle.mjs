@@ -63,11 +63,17 @@ export async function testReceptionScopeLifecycle(container) {
   sql(`insert into auth.users(id,email) values('${admin}','scope-race-admin@example.invalid'),('${staff}','scope-race-staff@example.invalid');`);
   const clinic = sql(`begin;${claims(admin)}select public.create_clinic('Synthetic scope lifecycle races');commit;`);
   sql(`begin;set local role service_role;set local request.jwt.claim.role='service_role';select public.provision_clinic_receptionist('${admin}','${staff}','Synthetic scope race',array['${admin}'::uuid]);commit;`);
+  const authenticatedCut = sql("select to_regprocedure('cortex_private.guard_authenticated_legacy_scope()') is not null") === 't';
+  const seedExistingLegacy = doctor => sql(`begin;set local request.jwt.claim.role='service_role';
+    select public.set_reception_scopes('${clinic}','${staff}',array['${admin}'::uuid,'${doctor}'::uuid],true);commit;`);
   const outcomes = [];
   for (const writer of ['raw', 'rpc']) for (const isolation of ['read committed', 'repeatable read']) {
     for (const order of ['grant-held', 'leave-held', 'grant-committed', 'leave-committed', ...(writer === 'raw' ? ['grant-held-rpc', 'leave-held-rpc'] : [])]) {
       const doctor = randomUUID();
       sql(`insert into auth.users(id,email) values('${doctor}','${doctor}@example.invalid');insert into public.clinic_members(clinic_id,user_id,status) values('${clinic}','${doctor}','active');`);
+      // After the cut the public array saves existing scopes, never creates
+      // them. Seed a trusted pre-existing legacy row to retain these races.
+      if (authenticatedCut && writer === 'rpc') seedExistingLegacy(doctor);
       const grant = writer === 'raw'
         ? `set local role service_role;set local request.jwt.claim.role='service_role';insert into public.staff_doctor_scopes(clinic_id,staff_user_id,doctor_user_id) values('${clinic}','${staff}','${doctor}')`
         : `select public.update_reception_staff('${staff}',array['${admin}'::uuid,'${doctor}'::uuid],true)`;
@@ -114,16 +120,17 @@ export async function testReceptionScopeLifecycle(container) {
         if (state.startsWith('active|')) sql(`begin;${claims(doctor)}${leaveRpc};commit;`);
         sql(`begin;${claims(admin)}select public.invite_clinic_doctor('${clinic}','${doctor}@example.invalid');commit;begin;${claims(doctor)}select public.respond_clinic_invitation('${clinic}',true);commit;`);
         assert.equal(sql(`select count(*) from public.staff_doctor_scopes where clinic_id='${clinic}' and doctor_user_id='${doctor}';`), '0', 'Rejoin restored a raced delegation');
+        if (authenticatedCut && writer === 'rpc') seedExistingLegacy(doctor);
         sql(`begin;${claims(admin)}${grant};commit;`);
-        assert.equal(sql(`select count(*) from public.staff_doctor_scopes where clinic_id='${clinic}' and doctor_user_id='${doctor}';`), '1', 'New explicit grant failed after rejoin');
+        assert.equal(sql(`select count(*) from public.staff_doctor_scopes where clinic_id='${clinic}' and doctor_user_id='${doctor}';`), '1', 'Post-rejoin trusted grant/save-existing control failed');
         sql(`begin;${claims(doctor)}${leaveRpc};commit;`);
-        const outcome = { writer, isolation, order, refused: expected, blockedRpc, staleScopesAfterRejoin: 0 };
+        const outcome = { writer, rpcMode: authenticatedCut && writer === 'rpc' ? 'save-existing-server-fixture' : null, isolation, order, refused: expected, blockedRpc, staleScopesAfterRejoin: 0 };
         outcomes.push(outcome); process.stdout.write(JSON.stringify(outcome) + '\n');
       } finally { first?.close(); second.close(); }
     }
   }
   assert.equal(outcomes.length, 20);
-  process.stdout.write('Passed reception scope lifecycle: 16 epoch races, 4 observed RPC/FK waits, rejoin, fresh grants\n');
+  process.stdout.write('Passed reception scope lifecycle: 16 epoch races, 4 observed RPC/FK waits, rejoin, trusted grant/save-existing controls\n');
 }
 
 // Standalone regression also proves migration cleanup against predecessor data.

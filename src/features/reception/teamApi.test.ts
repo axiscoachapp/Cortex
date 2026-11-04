@@ -43,3 +43,21 @@ describe('legacy team array conflict',()=>{
   await expect(receptionApi.teamDoctors(clinic)).rejects.toMatchObject({code:'40001',message:'Os dados mudaram em outra tela. Atualize antes de tentar novamente.'});
  });
 });
+
+describe('authenticated legacy grant cut',()=>{
+ beforeEach(()=>{vi.resetAllMocks();mocks.rpc.mockReturnValue({abortSignal:mocks.reply});});
+ it('explains that a new scope requires physician approval and never retries',async()=>{
+  mocks.reply.mockResolvedValue({data:null,error:{code:'42501',message:'Authenticated legacy delegation requires physician approval'}});
+  await expect(receptionApi.updateStaff(doctor.id,[doctor.id],true)).rejects.toMatchObject({code:'42501',
+   message:'Novos acessos dependem da aprovação do médico. A lista antiga não pode criar nem restaurar permissões.'});
+  expect(mocks.rpc).toHaveBeenCalledTimes(1);
+ });
+ it.each(['Authenticated legacy delegation requires physician approval: internal detail','Delegation physician approval required'])('keeps other denials generic (%s)',async message=>{
+  mocks.reply.mockResolvedValue({data:null,error:{code:'42501',message}});
+  await expect(receptionApi.updateStaff(doctor.id,[doctor.id],true)).rejects.toMatchObject({code:'42501',message:'Você não tem mais permissão para esta ação. Atualize a página.'});
+ });
+ it('does not use the grant explanation for another RPC',async()=>{
+  mocks.reply.mockResolvedValue({data:null,error:{code:'42501',message:'Authenticated legacy delegation requires physician approval'}});
+  await expect(receptionApi.teamDoctors(clinic)).rejects.toMatchObject({code:'42501',message:'Você não tem mais permissão para esta ação. Atualize a página.'});
+ });
+});

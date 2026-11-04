@@ -38,6 +38,14 @@ do $$ begin
  assert (select count(*) from public.patients)=1,'Doctor private directory changed';
  begin perform public.invite_clinic_doctor(current_setting('test.reception_clinic')::uuid,'reception-staff@example.invalid');raise exception 'Reception promoted through medical invitation';exception when insufficient_privilege then null;end;
 end $$;
+-- A new scope now requires a real physician decision in this synthetic setup.
+reset role;
+select set_config('test.access_request',(cortex_private.request_reception_delegation(current_setting('test.reception_clinic')::uuid,
+ 'a1000000-0000-4000-8000-000000000003','a1000000-0000-4000-8000-000000000002',gen_random_uuid()))->>'id',true);
+set local request.jwt.claim.sub='a1000000-0000-4000-8000-000000000002';
+select cortex_private.decide_reception_delegation(current_setting('test.access_request')::uuid,1,'approve',gen_random_uuid());
+set local request.jwt.claim.sub='a1000000-0000-4000-8000-000000000001';
+set local role authenticated;
 select public.update_reception_staff('a1000000-0000-4000-8000-000000000003',array['a1000000-0000-4000-8000-000000000002'::uuid],true);
 select set_config('request.jwt.claim.sub','a1000000-0000-4000-8000-000000000003',true);
 do $$ begin assert public.clinic_access()->'doctors'->0->>'id'='a1000000-0000-4000-8000-000000000002','Scope update not immediate';end $$;

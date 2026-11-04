@@ -1,0 +1,11 @@
+{
+  "syntheticOnly": true,
+  "transportOnly": true,
+  "saveAttempts": 1,
+  "checks": [
+    "dedicated physician-approval denial from exact RPC/code/message; one request, no automatic retry",
+    "visible conflict, preserved drafts/choices, deactivation available and no overflow at 390px",
+    "visible conflict, preserved drafts/choices, deactivation available and no overflow at 1280px"
+  ],
+  "pageErrors": []
+}

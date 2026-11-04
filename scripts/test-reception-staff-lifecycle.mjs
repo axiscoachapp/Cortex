@@ -78,6 +78,9 @@ export async function testReceptionStaffLifecycle(container) {
   const admin = 'd5100000-0000-4000-8000-000000000001';
   sql(`insert into auth.users(id,email) values('${admin}','staff-race-admin@example.invalid');`);
   const clinic = sql(`begin;${claims(admin)}select public.create_clinic('Synthetic staff lifecycle races');commit;`);
+  const authenticatedCut = sql("select to_regprocedure('cortex_private.guard_authenticated_legacy_scope()') is not null") === 't';
+  const seedExistingLegacy = staff => sql(`begin;${service}
+    select public.set_reception_scopes('${clinic}','${staff}',array['${admin}'::uuid],true);commit;`);
   const newStaff = () => {
     const staff = randomUUID();
     sql(`insert into auth.users(id,email) values('${staff}','${staff}@example.invalid');
@@ -89,14 +92,16 @@ export async function testReceptionStaffLifecycle(container) {
   const purgeAndCheck = staff => {
     sql(`begin;${deactivate(staff)};update public.clinic_staff_members set active=true where user_id='${staff}';commit;`);
     assert.equal(sql(`select count(*) from public.staff_doctor_scopes where staff_user_id='${staff}'`), '0', 'Flag reactivation restored a raced scope');
+    if (authenticatedCut) seedExistingLegacy(staff);
     sql(`begin;${claims(admin)}${regrant(staff)};commit;`);
-    assert.equal(sql(`select count(*) from public.staff_doctor_scopes where staff_user_id='${staff}'`), '1', 'Fresh explicit grant failed');
+    assert.equal(sql(`select count(*) from public.staff_doctor_scopes where staff_user_id='${staff}'`), '1', 'Trusted grant/save-existing control failed');
     sql(`begin;${deactivate(staff)};commit;`);
   };
   const outcomes = [];
   for (const writer of ['raw', 'rpc']) for (const isolation of ['read committed', 'repeatable read'])
     for (const order of ['grant-held', 'deactivate-held', 'grant-committed', 'deactivate-committed']) {
       const staff = newStaff();
+      if (authenticatedCut && writer === 'rpc') seedExistingLegacy(staff);
       const grant = writer === 'raw' ? `${service}insert into public.staff_doctor_scopes(clinic_id,staff_user_id,doctor_user_id) values('${clinic}','${staff}','${admin}')` : regrant(staff);
       const grantFirst = order.startsWith('grant'), held = order.endsWith('held');
       const firstSql = grantFirst ? grant : deactivate(staff), secondSql = grantFirst ? deactivate(staff) : grant;
@@ -115,16 +120,17 @@ export async function testReceptionStaffLifecycle(container) {
         if (blocked) { await observeBlocked(first, second); assert.equal((await first.finish('commit;')).status, 0); loser = await pending; }
         else { loser = await pending; if (first) assert.equal((await first.finish('commit;')).status, 0); }
         const expected = isolation === 'repeatable read' || (held && writer === 'raw') ? '40001'
-          : !grantFirst && writer === 'raw' ? '42501' : null;
+          : !grantFirst && (writer === 'raw' || authenticatedCut) ? '42501' : null;
         if (expected) { assert.notEqual(loser.status, 0, 'Unsafe staff race committed'); assert.match(loser.errors, new RegExp(`ERROR:\\s+${expected}:`)); }
         else assert.equal(loser.status, 0, loser.errors);
         assert.notEqual(sql(`select s.active,count(d.*) from public.clinic_staff_members s left join public.staff_doctor_scopes d on d.staff_user_id=s.user_id where s.user_id='${staff}' group by s.active`), 'f|1', 'Inactive raced account retained scope');
         purgeAndCheck(staff);
-        outcomes.push({ writer, isolation, order, refused: expected, blocked });
+        outcomes.push({ writer, rpcMode: authenticatedCut && writer === 'rpc' ? 'save-existing-server-fixture' : null, isolation, order, refused: expected, blocked });
       } finally { first?.close(); second.close(); }
     }
   for (const isolation of ['read committed', 'repeatable read']) for (const order of ['writer-held', 'deactivate-held']) {
     const staff = newStaff();
+    if (authenticatedCut) seedExistingLegacy(staff);
     sql(`begin;${claims(admin)}${regrant(staff)};commit;`);
     const contact = sql(`begin;${claims(staff)}select public.reception_create_contact('${clinic}','Synthetic staff authorization','41999990000',gen_random_uuid());commit;`);
     const caseId = sql(`begin;${claims(staff)}select public.reception_create_case('${contact}','${admin}','Synthetic revocation race','scheduling',gen_random_uuid());commit;`);
@@ -151,6 +157,6 @@ export async function testReceptionStaffLifecycle(container) {
     } finally { first.close(); second.close(); }
   }
   assert.equal(outcomes.length, 20);
-  process.stdout.write('Passed staff lifecycle: 16 grant/inactivity races, 4 observed authorization waits, fresh grants and no latent reactivation\n');
+  process.stdout.write('Passed staff lifecycle: 16 grant/save-existing vs inactivity races, 4 observed authorization waits, no latent reactivation\n');
   return outcomes;
 }

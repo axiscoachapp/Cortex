@@ -1,0 +1,112 @@
+{
+  "syntheticOnly": true,
+  "redOnly": true,
+  "focused": false,
+  "sourceBaseline": "38274c84c05840f82fb99d72e0197b36ae7c61cf",
+  "overlays": [
+    {
+      "path": "supabase/tests/reception-authenticated-scope-cut.test.sql",
+      "sha256": "dc8b2645f3e529da0774340e754d3c5b7e2279c6280e964c8bf29dff5a0f6fcc"
+    },
+    {
+      "path": "supabase/tests/reception-function-boundaries.test.sql",
+      "sha256": "2f7040cd8c73d81768fa7efc61c4c276baf94ee1ba521533ce34f4dca58827cc"
+    },
+    {
+      "path": "scripts/test-reception-authenticated-cut.mjs",
+      "sha256": "fb0e7704839994f22947c88452542e02ea58602313ce3725e872c238c2e8b58d"
+    },
+    {
+      "path": "scripts/test-reception-delegation-request-concurrency.mjs",
+      "sha256": "c64e0fa786ccd3150419e80be8d984fb3dafc95632569e1b7117dc77ef1638bb"
+    },
+    {
+      "path": "scripts/test-reception-delegation-decision-concurrency.mjs",
+      "sha256": "0fa434ccec2bdfb14e283f113ac57ebf2db9ecb132b7a40efa39ca7132897e68"
+    },
+    {
+      "path": "scripts/test-reception-legacy-array-concurrency.mjs",
+      "sha256": "76b314eabdc827ff4325eb5ebfa72ce7247b28c89b92d0604f1b754c5a4ee4cd"
+    }
+  ],
+  "helperSources": [
+    {
+      "path": "scripts/test-function-boundaries.mjs",
+      "source": "HEAD",
+      "sha256": "77b4964fbaec6f90430356432893ee5d13f066f0b4babc7ba20c829000af4707"
+    },
+    {
+      "path": "scripts/test-reception-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "45453fb3000a8f8421ee31ea84c39ced66a79a9400ad27dd3b27113cc00becb9"
+    },
+    {
+      "path": "scripts/test-reception-appointment-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "04072b4738d9b6b51b81067237e663e501ef4cb698698cf886c877846badbc61"
+    },
+    {
+      "path": "scripts/test-reception-scope-lifecycle.mjs",
+      "source": "HEAD",
+      "sha256": "52d9c7cc1554ce0d522dc500ecbbd54660aed4355f97232c1ab6494e131f695c"
+    },
+    {
+      "path": "scripts/test-reception-staff-lifecycle.mjs",
+      "source": "HEAD",
+      "sha256": "691950be032d835de2d97d54442bf7d4bcfa816d479f41d5a2c6e49b190825fa"
+    },
+    {
+      "path": "scripts/test-document-snippets-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "87ae8ad9e400f9b628f97424e2e17aeb0e6590769483952e8c8f2fa360d99a0e"
+    },
+    {
+      "path": "scripts/test-reception-deletion-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "3957f3693f30d0e8b1c0a8d396ed8741e224258c5aef5718c4b82c3ee4772010"
+    },
+    {
+      "path": "scripts/test-reception-delegation-request-concurrency.mjs",
+      "source": "overlay",
+      "sha256": "c64e0fa786ccd3150419e80be8d984fb3dafc95632569e1b7117dc77ef1638bb"
+    },
+    {
+      "path": "scripts/test-reception-delegation-decision-concurrency.mjs",
+      "source": "overlay",
+      "sha256": "0fa434ccec2bdfb14e283f113ac57ebf2db9ecb132b7a40efa39ca7132897e68"
+    },
+    {
+      "path": "scripts/test-reception-legacy-array-concurrency.mjs",
+      "source": "overlay",
+      "sha256": "76b314eabdc827ff4325eb5ebfa72ce7247b28c89b92d0604f1b754c5a4ee4cd"
+    }
+  ],
+  "omittedRegressions": [
+    "function-boundary fault injections",
+    "reception concurrency",
+    "appointment concurrency",
+    "doctor scope lifecycle concurrency",
+    "staff lifecycle concurrency",
+    "document snippet concurrency",
+    "deletion concurrency"
+  ],
+  "notCovered": [
+    "hosted rollout",
+    "new authenticated consent API/UI",
+    "general legacy grant cutover",
+    "GREEN SQL and consent concurrency"
+  ],
+  "migrations": 65,
+  "sqlSuites": 0,
+  "deletionScenarios": 0,
+  "requestRaces": [],
+  "decisionRaces": [],
+  "arrayRaces": [],
+  "checks": [
+    "RED: authenticated legacy array creates an unreviewed grant"
+  ],
+  "publicConsentGate": false,
+  "globalLegacyCutover": false,
+  "network": "verified local Docker; owned internal network; no published ports",
+  "cleanupVerified": true
+}

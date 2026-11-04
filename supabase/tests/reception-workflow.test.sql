@@ -58,7 +58,12 @@ select public.reception_update_case(current_setting('test.queue_case')::uuid,4,'
 select public.reception_update_case(current_setting('test.queue_case')::uuid,5,'claim','{}');
 select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000001',true);
 -- Cross-doctor work uses an explicitly scoped assignee; admin is management only.
-select public.update_reception_staff('b1000000-0000-4000-8000-000000000003',array['b1000000-0000-4000-8000-000000000001'::uuid,'b1000000-0000-4000-8000-000000000002'::uuid],true);
+-- Seed a trusted legacy fixture; authenticated creation is no longer allowed.
+reset role;
+set local request.jwt.claim.role='service_role';
+select public.set_reception_scopes(current_setting('test.queue_clinic')::uuid,'b1000000-0000-4000-8000-000000000003',array['b1000000-0000-4000-8000-000000000001'::uuid,'b1000000-0000-4000-8000-000000000002'::uuid],true);
+set local role authenticated;
+set local request.jwt.claim.role='authenticated';
 select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000004',true);
 select public.reception_update_case(current_setting('test.queue_case')::uuid,6,'transfer','{"assigneeId":"b1000000-0000-4000-8000-000000000003"}');
 select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000003',true);
@@ -68,7 +73,11 @@ select public.update_reception_staff('b1000000-0000-4000-8000-000000000003',arra
 -- Also retain the route-time release invariant: admin may route unassigned
 -- intake to their own agenda, clearing an assignee scoped only to another doctor.
 select set_config('test.intake_route',public.reception_create_case(current_setting('test.queue_contact')::uuid,null,'Encaminhamento sintético','scheduling',gen_random_uuid())::text,true);
-select public.update_reception_staff('b1000000-0000-4000-8000-000000000004',array['b1000000-0000-4000-8000-000000000002'::uuid],true);
+reset role;
+set local request.jwt.claim.role='service_role';
+select public.set_reception_scopes(current_setting('test.queue_clinic')::uuid,'b1000000-0000-4000-8000-000000000004',array['b1000000-0000-4000-8000-000000000002'::uuid],true);
+set local role authenticated;
+set local request.jwt.claim.role='authenticated';
 select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000004',true);
 select public.reception_update_case(current_setting('test.intake_route')::uuid,1,'claim','{}');
 select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000001',true);
@@ -77,9 +86,17 @@ do $$ declare d jsonb; begin
  d:=public.reception_case(current_setting('test.intake_route')::uuid);
  assert d->>'assignedTo' is null and d->>'status'='new','Routing retained an assignee without the new agenda';
 end $$;
-select public.update_reception_staff('b1000000-0000-4000-8000-000000000004',array['b1000000-0000-4000-8000-000000000001'::uuid],true);
+reset role;
+set local request.jwt.claim.role='service_role';
+select public.set_reception_scopes(current_setting('test.queue_clinic')::uuid,'b1000000-0000-4000-8000-000000000004',array['b1000000-0000-4000-8000-000000000001'::uuid],true);
+set local role authenticated;
+set local request.jwt.claim.role='authenticated';
 -- Keep staff A active on another agenda: authorship must not retain an old contact.
-select public.update_reception_staff('b1000000-0000-4000-8000-000000000003',array['b1000000-0000-4000-8000-000000000001'::uuid,'b1000000-0000-4000-8000-000000000002'::uuid],true);
+reset role;
+set local request.jwt.claim.role='service_role';
+select public.set_reception_scopes(current_setting('test.queue_clinic')::uuid,'b1000000-0000-4000-8000-000000000003',array['b1000000-0000-4000-8000-000000000001'::uuid,'b1000000-0000-4000-8000-000000000002'::uuid],true);
+set local role authenticated;
+set local request.jwt.claim.role='authenticated';
 select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000003',true);
 select set_config('test.revoked_contact',public.reception_create_contact(current_setting('test.queue_clinic')::uuid,'Contato do escopo antigo','41999990001','b3000000-0000-4000-8000-000000000005')::text,true);
 select public.reception_link_patient(current_setting('test.revoked_contact')::uuid,'b1000000-0000-4000-8000-000000000001','b2000000-0000-4000-8000-000000000001','self');

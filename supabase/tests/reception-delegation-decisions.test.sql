@@ -16,7 +16,10 @@ insert into public.patients(id,user_id,name,status,medical_history) values
 set local request.jwt.claim.role='authenticated';
 set local request.jwt.claim.sub='d6100000-0000-4000-8000-000000000001';
 -- Legacy adoption is explicit: creating the request does not bind the grant.
+-- Trusted fixture for pre-existing legacy data; the authenticated writer is cut.
+set local request.jwt.claim.role='service_role';
 insert into public.staff_doctor_scopes(clinic_id,staff_user_id,doctor_user_id) values('d6200000-0000-4000-8000-000000000001','d6100000-0000-4000-8000-000000000004','d6100000-0000-4000-8000-000000000002');
+set local request.jwt.claim.role='authenticated';
 select set_config('test.decision_request',(cortex_private.request_reception_delegation(
  'd6200000-0000-4000-8000-000000000001','d6100000-0000-4000-8000-000000000004','d6100000-0000-4000-8000-000000000002',gen_random_uuid()))->>'id',true);
 -- RED is a missing real private decision function, not a prototype assertion.
@@ -52,7 +55,7 @@ do $$ declare message text;begin
  exception when insufficient_privilege then get stacked diagnostics message=message_text;assert message='Delegation physician unavailable';end;
 end $$;
 -- The old setter may preserve an already approved scope, but cannot restore
--- one after it closes. Its public grant-creation cutover is still separate.
+-- one after it closes. Service provisioning/reconciliation remain separate.
 select public.set_reception_scopes('d6200000-0000-4000-8000-000000000001','d6100000-0000-4000-8000-000000000004',array['d6100000-0000-4000-8000-000000000002'::uuid],true);
 set local request.jwt.claim.sub='d6100000-0000-4000-8000-000000000003';
 do $$ declare message text;begin
@@ -100,7 +103,9 @@ do $$ begin
 end $$;
 -- Approval of a previously untouched legacy grant requires the actual doctor.
 set local request.jwt.claim.sub='d6100000-0000-4000-8000-000000000001';
+set local request.jwt.claim.role='service_role';
 insert into public.staff_doctor_scopes(clinic_id,staff_user_id,doctor_user_id) values('d6200000-0000-4000-8000-000000000001','d6100000-0000-4000-8000-000000000004','d6100000-0000-4000-8000-000000000003');
+set local request.jwt.claim.role='authenticated';
 select set_config('test.decision_third',(cortex_private.request_reception_delegation('d6200000-0000-4000-8000-000000000001','d6100000-0000-4000-8000-000000000004','d6100000-0000-4000-8000-000000000003',gen_random_uuid()))->>'id',true);
 set local request.jwt.claim.sub='d6100000-0000-4000-8000-000000000003';
 select cortex_private.decide_reception_delegation(current_setting('test.decision_third')::uuid,1,'deny',gen_random_uuid());

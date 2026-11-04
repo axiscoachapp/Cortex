@@ -55,7 +55,13 @@ do $$ declare booked_id uuid:=current_setting('test.booked_id')::uuid; begin
  begin delete from public.appointments where appointments.id=booked_id;raise exception 'CRM appointment history erased';exception when insufficient_privilege then null;end;
 end $$;
 -- Routing across doctors requires an explicitly scoped receptionist, not the admin role.
-select public.update_reception_staff('c1000000-0000-4000-8000-000000000002',array['c1000000-0000-4000-8000-000000000001'::uuid,'c1000000-0000-4000-8000-000000000004'::uuid],true);
+-- Trusted pre-existing scope fixture for cross-doctor routing. Client creation
+-- of this unreviewed scope is independently refused by the cutover suite.
+reset role;
+set local request.jwt.claim.role='service_role';
+select public.set_reception_scopes(current_setting('test.calendar_clinic')::uuid,'c1000000-0000-4000-8000-000000000002',array['c1000000-0000-4000-8000-000000000001'::uuid,'c1000000-0000-4000-8000-000000000004'::uuid],true);
+set local role authenticated;
+set local request.jwt.claim.role='authenticated';
 select set_config('request.jwt.claim.sub','c1000000-0000-4000-8000-000000000002',true);
 select public.reception_update_case(current_setting('test.calendar_case')::uuid,1,'claim','{}');
 select public.reception_update_case(current_setting('test.calendar_case')::uuid,2,'route','{"doctorId":"c1000000-0000-4000-8000-000000000004"}');
