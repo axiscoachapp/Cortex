@@ -590,7 +590,7 @@ Os valores são da exportação de 24/08/2026 e devem ser recalculados na export
 | Alertas herdados | 5.277. Ensaio de 04/11 sem diferença: 4.702 com um único médico (`ready`); 575 de pessoas com mais de um médico (D20); 96 misturam conteúdo clínico e administrativo; 15 citam óbito |
 | Carteiras de convênio | 62.204 linhas de `Clini_05`: 29.518 carteirinhas e 32.686 registros "Particular". Ensaio de 04/11 sem diferença. Das carteirinhas, 13.963 estão vencidas e 3.895 não têm número. |
 | Arquivos | 48 embutidos (172 dependem da pasta externa) |
-| Modelos | 1.123: 743 receitas, 329 textos e 51 pedidos de exame. Ensaio de 04/11 sem diferença: 622 receitas `ready`; 121 receitas em revisão (106 em texto livre, 32 com controlado, 3 com mais de 15 itens); 380 textos e pedidos em revisão até o Cortex aceitar esses tipos. Usados desde 2025: 375. Receitas usadas por médico (tamanho da lista da D19): 5 → 179; 2 → 153; 3 → 132; 4 → 73; 11 → 8; 9 → 1 |
+| Modelos | 1.123: 743 receitas, 329 textos e 51 pedidos de exame. Ensaio de 04/11 08:55, sem diferença: 617 receitas `ready`, que entram aprovadas (D19); 126 receitas fora do formato (106 em texto livre, 39 com controlado à espera do tipo controle especial da D8, 3 com mais de 15 itens); 3 com campo automático trocado por `____`; 380 textos e pedidos em revisão até o Cortex aceitar esses tipos. Usados desde 2025: 375. Receitas usadas por médico (tamanho da lista da D19): 5 → 179; 2 → 153; 3 → 132; 4 → 73; 11 → 8; 9 → 1 |
 | Agendamentos | Dependem de D3. Futuros na exportação: 2.954; atendidos desde 2025: 19.675; total: 273.794 |
 | Caracteres de texto | Total antes e depois da conversão RTF, por tabela (o script já calcula) |
 
