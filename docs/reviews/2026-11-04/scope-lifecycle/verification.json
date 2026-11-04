@@ -1,0 +1,252 @@
+{
+  "scope": "T28/2a/L5",
+  "data": "synthetic; owned disposable PostgreSQL only",
+  "migration": "20261104004000_reception_scope_lifecycle.sql",
+  "regressionExitCode": 0,
+  "migrations": 56,
+  "sqlSuites": 34,
+  "lifecycleCases": [
+    {
+      "writer": "raw",
+      "isolation": "read committed",
+      "order": "grant-held",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "raw",
+      "isolation": "read committed",
+      "order": "leave-held",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "raw",
+      "isolation": "read committed",
+      "order": "grant-committed",
+      "refused": null,
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "raw",
+      "isolation": "read committed",
+      "order": "leave-committed",
+      "refused": "42501",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "raw",
+      "isolation": "read committed",
+      "order": "grant-held-rpc",
+      "refused": null,
+      "blockedRpc": true,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "raw",
+      "isolation": "read committed",
+      "order": "leave-held-rpc",
+      "refused": "42501",
+      "blockedRpc": true,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "raw",
+      "isolation": "repeatable read",
+      "order": "grant-held",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "raw",
+      "isolation": "repeatable read",
+      "order": "leave-held",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "raw",
+      "isolation": "repeatable read",
+      "order": "grant-committed",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "raw",
+      "isolation": "repeatable read",
+      "order": "leave-committed",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "raw",
+      "isolation": "repeatable read",
+      "order": "grant-held-rpc",
+      "refused": "40001",
+      "blockedRpc": true,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "raw",
+      "isolation": "repeatable read",
+      "order": "leave-held-rpc",
+      "refused": "40001",
+      "blockedRpc": true,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "rpc",
+      "isolation": "read committed",
+      "order": "grant-held",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "rpc",
+      "isolation": "read committed",
+      "order": "leave-held",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "rpc",
+      "isolation": "read committed",
+      "order": "grant-committed",
+      "refused": null,
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "rpc",
+      "isolation": "read committed",
+      "order": "leave-committed",
+      "refused": "42501",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "rpc",
+      "isolation": "repeatable read",
+      "order": "grant-held",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "rpc",
+      "isolation": "repeatable read",
+      "order": "leave-held",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "rpc",
+      "isolation": "repeatable read",
+      "order": "grant-committed",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    },
+    {
+      "writer": "rpc",
+      "isolation": "repeatable read",
+      "order": "leave-committed",
+      "refused": "40001",
+      "blockedRpc": false,
+      "staleScopesAfterRejoin": 0
+    }
+  ],
+  "deletionCases": [
+    {
+      "scenario": "intent-before-service-actor",
+      "unsafe": false,
+      "intentPresent": true,
+      "referencePresent": false,
+      "sqlstates": [
+        "55000"
+      ]
+    },
+    {
+      "scenario": "uncommitted-case-before-intent",
+      "unsafe": false,
+      "intentPresent": false,
+      "referencePresent": true,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "old-marker-snapshot",
+      "unsafe": false,
+      "intentPresent": false,
+      "referencePresent": true,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "old-public-writer-snapshot",
+      "unsafe": false,
+      "intentPresent": true,
+      "referencePresent": false,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "old-indirect-booking-snapshot",
+      "unsafe": false,
+      "intentPresent": true,
+      "referencePresent": false,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "old-patient-marker-snapshot",
+      "unsafe": false,
+      "intentPresent": false,
+      "referencePresent": true,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "old-public-linker-snapshot",
+      "unsafe": false,
+      "intentPresent": true,
+      "referencePresent": false,
+      "sqlstates": [
+        "40001"
+      ]
+    },
+    {
+      "scenario": "audit-before-future-appointment",
+      "unsafe": false,
+      "intentPresent": true,
+      "referencePresent": false,
+      "sqlstates": [
+        "40001"
+      ]
+    }
+  ],
+  "priorReceptionConcurrency": true,
+  "snippetConcurrency": true,
+  "standaloneCleanup": true,
+  "standaloneExitCode": 0,
+  "redSql": "L5: leaving retained latent doctor scopes",
+  "redRace": "raw/read committed/grant-held: unsafe competing transaction committed",
+  "build": "passed with synthetic loopback configuration",
+  "lint": "0 errors; 8 preexisting warnings"
+}

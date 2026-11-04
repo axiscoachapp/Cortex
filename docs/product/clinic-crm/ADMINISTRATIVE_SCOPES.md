@@ -21,3 +21,15 @@ Não criar delegação implícita, compartilhamento clínico ou uma identidade d
 Reproduzir admin A contra médico membro B, sem delegação: roster, agenda, vínculo, caso, reserva e cancelamento devem recusar; calendário agregado não revela B. Provar acesso médico próprio, gestão de equipe para B, recepção delegada, negativa a diretório por não-admin/externo/service/anon/inativo/MFA incompleto, DTO mínimo e regressões de custódia.
 
 Na UI, a lista da equipe deve conter B mesmo quando `clinic_access.doctors` só contém A. Verificar carregamento, falha/retry e desativação durante falha, sem perda silenciosa de escopos. Usar apenas fixtures sintéticas e navegador isolado a 150%.
+
+## T28/2a — Saída e reingresso (L5)
+
+Qualquer mudança de status do médico para um valor diferente de `active` deve remover suas delegações de recepção naquela clínica, inclusive quando feita por `leave_clinic`, offboarding administrativo ou escritor privilegiado. Reconvite, recusa e aceite não restauram os escopos antigos. Uma delegação nova e explícita, pelas capacidades já existentes, continua possível depois do aceite; o consentimento/recorte mais amplo de M2 continua dependendo de D18.
+
+A remoção preserva pacientes, vínculos, reservas, casos encerrados, notas e autoria. O mecanismo atual devolve trabalho aberto do médico inativo à entrada e libera atribuições sem escopo. Registrar a revogação com identificador do médico e quantidade de escopos, sem nomes ou conteúdo pessoal.
+
+Não permitir inserir/atualizar um escopo para médico inativo ou convidado, mesmo por escritor privilegiado. Saída e concessão concorrentes não podem deixar escopo latente para reingresso, em READ COMMITTED ou REPEATABLE READ; uma das transações pode falhar com `40001` e ser repetida integralmente. A barreira privada existente de custódia deve ordenar as escritas sem introduzir locks bloqueantes adicionais. A validação do escopo precisa ocorrer depois da barreira, com snapshot atual em READ COMMITTED.
+
+A migration remove escopos já associados a membros atualmente não ativos, com o mesmo registro mínimo. Escopos de membros ativos sem proveniência da concessão não podem ser classificados automaticamente como antigos ou novos; revisão de permissões preexistentes permanece no piloto. Não inferir uma autorização médica nem ampliar a política para resolver esse histórico.
+
+Provar com SQL real: saída voluntária e administrativa, reconvite/recusa/aceite, duas secretárias e outra clínica, nova concessão após aceite, negativas de leitura/escrita antes e depois do reingresso, prontuário privado e histórico preservados. Provar corridas em duas conexões nas duas ordens e nos dois níveis de isolamento, incluindo concessão direta privilegiada, não apenas RPCs.
