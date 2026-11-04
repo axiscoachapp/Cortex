@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 09:28 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 09:42 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -37,10 +37,12 @@ Atualizado em 2026-11-04 09:28 por Codex. Cada agente atualiza as linhas que lhe
 | `20261104006000` | T29/M3/L4: ordem de locks e agendamento indisponível | Codex | Implementada; 57 migrations/35 SQL, dez provas de agenda, regressões anteriores e 48 testes da recepção aprovados. Sem espera na aquisição da conta após linha/CAS; API/DTO e escopos preservados |
 | `20261104200000` | T33/2: custódia por recurso/conta e ponte de instalação | Codex | Implementada/verificada localmente: 30 grupos no protótipo, 37 no upgrade real, 58 migrations/36 SQL e regressões completas em base nova/upgrade; singleton só na ponte de instalação. 578 testes/80 arquivos, lint/tipos/Edge/build sintético aprovados; sem aplicação hospedada |
 | `20261104210000` | T28/2b/1: limite explícito da agenda administrativa da clínica | Codex | Implementada/verificada localmente: RED anterior, 59 migrations/37 SQL e regressões concorrentes de fila/agenda/escopo/modelos, lint/sintaxe e cleanup aprovados. Sem campos/importação/publicação; anuência médica segue T28/2b/2 |
+| `20261104220000` | T28/2b/2a: inativação da recepção revoga delegações | Codex | Reservada em 04/11 09:36 antes da criação; remover escopos inativos, impedir nova delegação latente e provar corrida/reativação. Não implementa ainda anuência médica |
 | `20261103005000` | A0: controles de IA por operação e recusa | Codex | Reserva futura em 03/11 23:43; contrato técnico antes da migration, nenhuma implementação nesta rodada |
 | `20261104100000` | Campos do prescritor: telefone/RQE | Claude | Commit `7427926` em 04/11 00:31; revisão técnica Codex sem novo bloqueador, tipos regenerados/typecheck e 19 testes de documentos aprovados; interface entregue por Claude em `a715210` (04/11 00:58); verificação visual pendente |
 | `20261104110000` | S3 MVP: `document_snippets` (modelos de receita do próprio médico) | Claude | Commit `2e5b844`; tipos por Codex em `b51a806`; revisão Codex com R1; interface no compositor em `1024e3f` (04/11 01:55) |
 | `20261104120000` | R1: `document_snippet_writer` toca o epoch de custódia | Claude | Commit `5467a7b`; revisão/ensaio integrados e aprovados. R3 (`952adcb`) e documentação (`7657a1c`) revisados; 19 testes/3 arquivos aprovados pelo Codex; visual separado com Claude |
+| `20261104130000` | D8: tipo `receita_controle_especial` no check de `prescriptions.doc_type` (e CPF do prescritor para C5) | Claude | Reservada em 04/11 09:42; contrato em `docs/prescriptions/RECEITA_CONTROLE_ESPECIAL.md` |
 | a reservar | S2: campos legais do cadastro (contato, endereço, mãe, naturalidade, convênio) | Codex | Depende de T04/T05 |
 
 ## Conversas
