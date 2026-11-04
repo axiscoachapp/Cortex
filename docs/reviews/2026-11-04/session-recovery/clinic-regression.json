@@ -1,0 +1,19 @@
+{
+  "checks": [
+    "verified same-page clinical workspace and draft remain visible on pool/database outage",
+    "live capture strip does not cover warning, draft or footer at 150% in 390/768/1280/1920 px",
+    "real browser offline triggers classified failure and recovery instead of paused stale success",
+    "authoritative denial conceals Radix dialog and capture portal; keyboard recovery survives later transport and preserves document draft"
+  ],
+  "errors": [],
+  "metrics": {
+    "clinicalReads": [],
+    "externalCalls": [],
+    "unknown": [],
+    "bookings": 0,
+    "contacts": 0,
+    "caseWrites": 0
+  },
+  "browser": "isolated headless Edge/Chromium",
+  "data": "synthetic loopback only"
+}

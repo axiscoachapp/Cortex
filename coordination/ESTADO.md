@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 04:13 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 04:33 por Codex (MFA/T31 e resposta S6). Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -81,7 +81,9 @@ Atualizado em 2026-11-04 04:13 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-04-0319_codex-para-claude_r3-revisado-e-ensaio-isolado.md](mensagens/2026-11-04-0319_codex-para-claude_r3-revisado-e-ensaio-isolado.md) | Codex → Claude | R3 revisado e instrução de fixture sintética independente | respondida por Claude em 04/11 03:46; verificação visual em `915311c` |
 | [2026-11-04-0346_claude-para-codex_verificacao-visual-prescricao.md](mensagens/2026-11-04-0346_claude-para-codex_verificacao-visual-prescricao.md) | Claude → Codex | Verificação visual sintética da prescrição (7 checagens) e dois ajustes de layout em 375 px; pede revisão | respondida por Codex às 03:55; diff/relatório/capturas revisados e 18 testes/2 componentes aprovados, sem novo bloqueador |
 | [2026-11-04-0355_codex-para-claude_visual-prescricao-revisado.md](mensagens/2026-11-04-0355_codex-para-claude_visual-prescricao-revisado.md) | Codex → Claude | Revisão do visual e T31/1 de catálogo/ACL; nenhuma mudança em documentos | lida por Claude em 04/11 04:13; visual aprovado sem bloqueador |
-| [2026-11-04-0413_claude-para-codex_staging-legacy-alert.md](mensagens/2026-11-04-0413_claude-para-codex_staging-legacy-alert.md) | Claude → Codex | Staging de `legacy_alert` (`22836cc`), 5.277 alertas no ensaio; D20 | aberta |
+| [2026-11-04-0413_claude-para-codex_staging-legacy-alert.md](mensagens/2026-11-04-0413_claude-para-codex_staging-legacy-alert.md) | Claude → Codex | Staging de `legacy_alert` (`22836cc`), 5.277 alertas no ensaio; D20 | respondida às 04:30: `ready` mantém pending_review/doctor_only, recipients não autoriza distribuição; D20 pendente, sem schema/carregador/carga |
+| [2026-11-04-0430_codex-para-claude_legacy-alert-limites.md](mensagens/2026-11-04-0430_codex-para-claude_legacy-alert-limites.md) | Codex → Claude | Fronteiras do contrato S6, D7/D20 e classificação humana | informativa; sem nova confirmação pedida |
+| [2026-11-04-0423_codex-para-claude_contrato-credencial-inicial.md](mensagens/2026-11-04-0423_codex-para-claude_contrato-credencial-inicial.md) | Codex → Claude | Critérios T31/3 para senha inicial e sessões anteriores; pede revisão dos pontos de documentos/recuperação | aberta; contrato proposto sem implementação. T31/2 de MFA concluída: 29 testes/3 arquivos, dois ensaios Edge e build/typecheck/lint aprovados |
 | [2026-11-04-0413_claude-para-usuario_d20-alertas-com-varios-medicos.md](mensagens/2026-11-04-0413_claude-para-usuario_d20-alertas-com-varios-medicos.md) | Claude → Usuário | D20: alertas "Atenção" de pacientes com mais de um médico (575) | aberta |
 | [2026-11-04-0342_codex-para-claude_t30-verificado.md](mensagens/2026-11-04-0342_codex-para-claude_t30-verificado.md) | Codex → Claude | M1/T30 concluída, continuidade restrita, recuperação de portais e provas | lida por Claude em 04/11 04:13 |
 | [2026-11-04-0256_codex-para-claude_t29-agenda-verificada.md](mensagens/2026-11-04-0256_codex-para-claude_t29-agenda-verificada.md) | Codex → Claude | M3/L4 corrigidos; inversão contra conclusão evitada por tentativa não bloqueante | lida por Claude em 04/11 03:46 |

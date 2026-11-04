@@ -1,0 +1,49 @@
+{
+  "syntheticOnly": true,
+  "verifiedAt": "2026-11-04T04:32:54-03:00",
+  "scope": "SessionAssurance recovery over an already-open Radix document modal; no backend or hosted Auth changes",
+  "redPhase": "Old recovery retry button had an aria-hidden=true ancestor imposed by the open document modal",
+  "unit": {
+    "command": "npx vitest run src/components/SessionAssurance.test.tsx src/features/reception/ClinicAccessGate.test.tsx src/lib/authAssurance.test.ts --maxWorkers=1 --pool=threads",
+    "files": 3,
+    "tests": 29,
+    "exitCode": 0
+  },
+  "browser": {
+    "command": "node scripts/session-assurance-browser.mjs",
+    "exitCode": 0,
+    "flows": 4,
+    "widths": [390, 768, 1280, 1920],
+    "rootFontSize": "24px (150%)",
+    "documentDraftAndFocusRestored": true,
+    "nestedGateRecovery": "passed",
+    "pageErrors": 0,
+    "clinicalReads": 0,
+    "externalCalls": 0,
+    "providerResponses": "MFA responses simulated inside browser fixture; no real OTP or Auth-provider assurance proof",
+    "report": "browser/verification.json"
+  },
+  "clinicRegression": {
+    "command": "node scripts/clinic-access-browser.mjs",
+    "exitCode": 0,
+    "flows": 4,
+    "pageErrors": 0,
+    "report": "clinic-regression.json"
+  },
+  "build": { "command": "npm run build", "environment": "Explicit synthetic Supabase URL and publishable key", "includesTypecheck": true, "exitCode": 0 },
+  "lint": { "command": "npx eslint src/components/SessionAssurance.tsx src/components/SessionAssurance.test.tsx scripts/session-assurance-browser.mjs scripts/fixtures/session-assurance-page.tsx", "errors": 0, "warnings": 0, "exitCode": 0 },
+  "review": {
+    "localAdversarialCycles": 2,
+    "actionableFinding": "Focus was lost after recovery; capture by actor/control and restoration after Radix scope cleanup added",
+    "executionFinding": "Closing recovery presence retained the CSS lock marker during focus restoration; recovery now mounts only while blocked",
+    "finalReview": "No new concrete issue within declared contract",
+    "externalCrossModel": "Skipped: non-interactive heartbeat and prior user preference for local verification"
+  },
+  "limitations": [
+    "Arbitrary new modal mounting after lock can steal modal priority; reproduced technically by reviewer but no current application trigger confirmed; not addressed by a global broker in this increment",
+    "Initial password server enforcement remains T31/3; requirements only in INITIAL_PASSWORD_CONTRACT.md",
+    "No real microphone, clinical document generation, hosted database or migration loading",
+    "SQL suite and full unit suite not rerun; targeted coverage and browser regressions executed"
+  ],
+  "pushDeployOrHostedMutation": false
+}

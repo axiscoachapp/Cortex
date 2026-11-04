@@ -276,8 +276,8 @@
 :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
 ::selection { background: #e8d39e; color: #393833; }
 
-body:has([data-session-locked]) :is([role="dialog"], [role="alertdialog"]), body:has([data-session-locked]) [data-radix-popper-content-wrapper],
-body:has([data-clinic-access-blocked]) :is([role="dialog"], [role="alertdialog"]):not([data-clinic-access-recovery]),
+body:has([data-session-locked]) :is([role="dialog"], [role="alertdialog"]):not([data-session-recovery]), body:has([data-session-locked]) [data-radix-popper-content-wrapper],
+body:has([data-clinic-access-blocked]) :is([role="dialog"], [role="alertdialog"]):not([data-clinic-access-recovery]):not([data-session-recovery]),
 body:has([data-clinic-access-blocked]) [data-radix-popper-content-wrapper] { visibility: hidden; }
 
 .clinic-access-continued { height: 100dvh; display: flex; flex-direction: column; }

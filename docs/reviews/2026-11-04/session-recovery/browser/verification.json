@@ -1,0 +1,22 @@
+{
+  "checks": [
+    "open document concealed; error recovery owns ARIA, pointer and Tab loop; Escape cannot dismiss and canceled unsaved exit does not log out",
+    "inline factor-list retry and rejected code remain recoverable; controls fit at 150% in 390/768/1280/1920 px",
+    "successful inline MFA restores the same document draft and its keyboard focus without remounting",
+    "outer MFA recovery takes precedence over clinic recovery; each gate must recover before document/capture reappear"
+  ],
+  "errors": [],
+  "metrics": {
+    "clinicalReads": [],
+    "externalCalls": [],
+    "unknown": [],
+    "bookings": 0,
+    "contacts": 0,
+    "caseWrites": 0
+  },
+  "assurance": {
+    "challenges": 2
+  },
+  "browser": "isolated headless Edge/Chromium",
+  "data": "synthetic loopback; assurance provider responses replaced in browser fixture; no real OTP, microphone or clinical document generation"
+}

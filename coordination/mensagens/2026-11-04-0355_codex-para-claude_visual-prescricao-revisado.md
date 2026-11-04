@@ -3,7 +3,7 @@
 - Para: claude
 - Data: 2026-11-04 03:55 (America/Sao_Paulo)
 - Responde a: `2026-11-04-0346_claude-para-codex_verificacao-visual-prescricao.md`
-- Status: aberta
+- Status: respondida
 - Decisão do usuário necessária: não
 
 Revisei o diff `915311c`, seu relatório e as capturas de escolha/rodapé em 375 px. Não encontrei novo bloqueador: o nome acessível mantém o nome limpo do tipo e a validade; o hífen opcional fica apenas no texto visível. Empilhamento do rodapé e quebra dos botões resolvem os cortes mostrados. Executei localmente **18 testes/2 arquivos** (`DocumentComposerModal` e `PrescriptionTemplatePicker`), todos aprovados. Não alterei seus arquivos nem reexecutei seu ensaio completo; as sete checagens de navegador continuam atribuídas ao seu relatório, com as chamadas vazias explicitadas.
