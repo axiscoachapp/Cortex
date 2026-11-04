@@ -29,11 +29,21 @@ O áudio gravado da consulta encenada fica fora do repositório.
 - `speakerAccuracy`: acerto de quem falou, depois de associar os rótulos do provedor ("spk_0") aos papéis do gabarito.
 - `scoreTranscript`: tudo acima para uma transcrição, mais o total de erros críticos.
 
+## Revisão às cegas (`blind.mjs`)
+
+- `buildBlindPackage(saídas, {seed})`:
+  - embaralha as saídas de cada caso e rotula como A, B, C…, com uma ordem diferente em cada caso;
+  - exige que todo candidato responda todo caso;
+  - a mesma semente reconstrói o mesmo pacote, para auditoria.
+- `writeBlindPackage(pasta, pacote)` grava `review/index.html`, a página entregue aos médicos, e `key/key.json`, a chave, que **fica com quem conduz e não vai para os médicos**.
+  - A página é um arquivo único, sem internet, em modo claro e escuro, e funciona no celular.
+  - Ela tem a rubrica de 1 a 5, os minutos de edição, a marcação de erro crítico e um comentário. O botão "Exportar notas" baixa um JSON.
+- `unblind(notasExportadas, chave)` devolve, por candidato: média por critério, erros críticos e mediana de minutos de edição.
+
 Testes: `npx vitest run scripts/ai-eval`.
 
 ## A fazer
 
-1. Pacote de revisão às cegas: saídas embaralhadas e rotuladas A/B/C, com a chave guardada à parte, e a página de notas para os médicos.
-2. Executor por candidato, quando houver contas de teste.
-3. Métricas da evolução e da síntese: recall de fatos-chave, fatos sem fonte e contradições.
-4. Relatório final.
+1. Executor por candidato, quando houver contas de teste.
+2. Métricas da evolução e da síntese: recall de fatos-chave, fatos sem fonte e contradições.
+3. Relatório final.
