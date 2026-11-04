@@ -38,6 +38,8 @@ Fundação local implementada: contas dedicadas, delegação de agendas, contato
 
 Incremento seguinte: [correção auditada de nome/telefone de contato pela administração](../../reviews/2026-11-03/contact-corrections/IMPLEMENTATION.md), com confirmação, revisão concorrente e preservação do legado bruto. Retificação de vínculos continua no backlog.
 
+A [retificação de vínculos administrativos](CONTACT_LINK_CORRECTIONS.md) tem contrato especificado/revisado, ainda sem implementação. Separadamente, o [alerta verificado sobre provedor/modelo de IA](../../reviews/2026-11-03/ai-provider-alert/VERIFICATION.md) foi registrado em D13 para decisão antes da ativação clínica e do redirecionamento anunciado para 01/12/2026.
+
 As três migrations foram ensaiadas apenas em banco descartável; nenhuma alteração foi aplicada ao Supabase hospedado. WhatsApp oficial, financeiro, fiscal, métricas e piloto seguem no backlog. Não houve mensagens, emissão de notas ou importação PersonalMed.
 
 As decisões sobre quantidade de números, divisão da equipe, horários, SLAs e regras de cobrança ficam registradas como perguntas de refinamento. Elas não impedem construir primeiro a fundação com dados sintéticos.

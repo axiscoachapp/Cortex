@@ -46,9 +46,15 @@ Alvos futuros abaixo são sugestões de planejamento; os alvos implementados for
   - Alvos reais: `20261103003500_reception_contact_corrections.sql`, `reception-contact-corrections.test.sql`, `ContactCorrectionDialog.tsx`, `ContactCorrectionDialog.test.tsx`, `ContactsPage.tsx`.
   - [Evidências e limites](../../docs/reviews/2026-11-03/contact-corrections/IMPLEMENTATION.md).
 
-- [ ] **T05a — Especificar retificação de vínculo administrativo.** Dep.: T05.
+- [x] **T05a — Especificar retificação de vínculo administrativo.** Dep.: T05.
   - Aceite de desenho: correção de relação/beneficiário exige escopo, ator e revisão; registros anteriores da agenda continuam íntegros; nenhuma fusão de prontuários nem concessão clínica implícita.
   - Verificar antes de implementar: relações familiares, contato reciclado, paciente com dois médicos, vínculo usado por agendamento histórico e revogação de escopo. S2 e carga real permanecem separadas.
+  - [Contrato revisado localmente](../../docs/product/clinic-crm/CONTACT_LINK_CORRECTIONS.md). Nenhuma migration ou interface de vínculo implementada por esta tarefa.
+
+- [ ] **T05b — Implementar ciclo auditado do vínculo administrativo.** Dep.: T04a, T05a.
+  - Fatias: SQL/guardas de todos os escritores; concorrência e contratos mínimos; editor admin e integração com reserva/modal médico. Seguir o contrato T05a, sem retificação de identidade clínica ou carga real.
+  - Aceite: relação/revogação/reativação por revisão; nenhuma confirmação antiga reativa implicitamente; novas reservas/reaberturas/remarcações exigem vínculo ativo; histórico e encerramento clínico preservados; paciente de CRM não é remapeado.
+  - Verificar: atores/MFA, duas conexões reais, FK histórica, regra de órfãos e formatos estritos de leitura. Migration precisa de reserva prévia no ESTADO.
 
 - [x] **T06 — Criar atendimento na fila e assumir sem disputa.** Dep.: T04.
   - Aceite: entrada manual tem estado/origem; assumir é atômico e auditado; uma responsabilidade atual por caso.
