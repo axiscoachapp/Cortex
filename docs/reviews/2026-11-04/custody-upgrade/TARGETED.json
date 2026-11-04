@@ -45,14 +45,14 @@
     "resource ledger and helper remain private to database guards"
   ],
   "installedMigration": "20261104200000_reception_scoped_custody.sql",
-  "sourceBaseline": "39d84f5c440712a3abcdcee6eeb33d4fd5c52330",
+  "sourceBaseline": "62965597396e98494d46db9944ee3b1874c16e18",
   "migrationOverlays": [
     {
-      "path": "supabase/migrations/20261105000000_reception_authenticated_scope_cut.sql",
-      "sha256": "1b66162bdbb01764ec004af33c14311e574793d5b3e662bbdefe71c931c75679"
+      "path": "supabase/migrations/20261105010000_reception_legacy_scope_identity.sql",
+      "sha256": "8a4ae16b0c6dcdbe72490b3e85ca2f2d2c68f4ba81c8a8f4ef249f07098cf8ac"
     }
   ],
-  "sqlSourceDigest": "e269ba19795cae6e745cdb780ddbbcbf79e55e6b1f7cdc136cbedf59b2ceaee1",
+  "sqlSourceDigest": "be58e939b1bebba9fc6de035a937c7d2b375ce3ef9ddf946529ea7416c1ac238",
   "initialMigrations": [
     "20251202010825_ef944f56-ea3e-477a-a69c-5aa7568cc610.sql",
     "20251202010938_c18b88ee-067b-4874-acfe-fa2c70c4b8e1.sql",
@@ -120,9 +120,10 @@
     "20261104240000_reception_delegation_decisions.sql",
     "20261104250000_reception_legacy_array_guard.sql",
     "20261105000000_reception_authenticated_scope_cut.sql",
+    "20261105010000_reception_legacy_scope_identity.sql",
     "20261105100000_digital_signature.sql"
   ],
-  "migrations": 66,
+  "migrations": 67,
   "sqlSuites": 0,
   "deletionScenarios": 0,
   "directoryFixture": null,

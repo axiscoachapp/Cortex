@@ -1,0 +1,181 @@
+{
+  "syntheticOnly": true,
+  "redOnly": true,
+  "focused": false,
+  "sourceBaseline": "62965597396e98494d46db9944ee3b1874c16e18",
+  "overlays": [
+    {
+      "path": "supabase/tests/reception-legacy-scope-identity.test.sql",
+      "sha256": "4ec82636483ea24a8e13654874f4ed5c284f585cc58a4641fa8767619c1a5f4c"
+    },
+    {
+      "path": "scripts/test-reception-legacy-scope-identity.mjs",
+      "sha256": "74b6bb096cdfa4223f728cd29c5fed8979a3b3d26c2397450e9fca2ef00e8d20"
+    },
+    {
+      "path": "scripts/test-reception-legacy-scope-identity-concurrency.mjs",
+      "sha256": "51fbc57f75e00b4ad8805dcae8cb182cdf1d11f541acc3feb4131956e2b12df0"
+    }
+  ],
+  "helperSources": [
+    {
+      "path": "scripts/test-function-boundaries.mjs",
+      "source": "HEAD",
+      "sha256": "77b4964fbaec6f90430356432893ee5d13f066f0b4babc7ba20c829000af4707"
+    },
+    {
+      "path": "scripts/test-reception-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "403cca81c219552a26aec823d5bcbb4eba1952858cabf1c181a28dc52855afa5"
+    },
+    {
+      "path": "scripts/test-reception-appointment-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "04072b4738d9b6b51b81067237e663e501ef4cb698698cf886c877846badbc61"
+    },
+    {
+      "path": "scripts/test-reception-scope-lifecycle.mjs",
+      "source": "HEAD",
+      "sha256": "e1e962fbbe2226cddd476830f41bd176e4b190fde2aec8520776293836a86aaf"
+    },
+    {
+      "path": "scripts/test-reception-staff-lifecycle.mjs",
+      "source": "HEAD",
+      "sha256": "bfdd38cd9913f04750f01ba434c8f694bc2990590706a26e58410ac82d783eba"
+    },
+    {
+      "path": "scripts/test-document-snippets-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "87ae8ad9e400f9b628f97424e2e17aeb0e6590769483952e8c8f2fa360d99a0e"
+    },
+    {
+      "path": "scripts/test-reception-deletion-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "3957f3693f30d0e8b1c0a8d396ed8741e224258c5aef5718c4b82c3ee4772010"
+    },
+    {
+      "path": "scripts/test-reception-delegation-request-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "8d7700be7bb885e762abd8e1d81898dee03f4d2e67ed7bd05497f54bdbb470e4"
+    },
+    {
+      "path": "scripts/test-reception-delegation-decision-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "5d8c9bba4784d4130ed0f8562ffbfaeea3df209585e7869505fdd9bc5caa32a5"
+    },
+    {
+      "path": "scripts/test-reception-legacy-array-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "297ceb7e5744cbfc3d37f79f708e83d9afb5d95c369e3aa23ccbcecc8b0adb49"
+    },
+    {
+      "path": "scripts/test-reception-legacy-scope-identity-concurrency.mjs",
+      "source": "overlay",
+      "sha256": "51fbc57f75e00b4ad8805dcae8cb182cdf1d11f541acc3feb4131956e2b12df0"
+    },
+    {
+      "path": "scripts/test-signature-concurrency.mjs",
+      "source": "HEAD",
+      "sha256": "d536d80c7771525f960317878e8af8405f1f808ef2fec59329fb576b7ac06c1d"
+    }
+  ],
+  "omittedRegressions": [
+    "function-boundary fault injections",
+    "reception concurrency",
+    "appointment concurrency",
+    "doctor scope lifecycle concurrency",
+    "staff lifecycle concurrency",
+    "document snippet concurrency",
+    "deletion concurrency"
+  ],
+  "notCovered": [
+    "hosted rollout",
+    "new authenticated consent API/UI",
+    "general legacy grant cutover",
+    "GREEN SQL and consent concurrency"
+  ],
+  "migrations": 65,
+  "migrationOrder": [
+    "supabase/migrations/20251202010825_ef944f56-ea3e-477a-a69c-5aa7568cc610.sql",
+    "supabase/migrations/20251202010938_c18b88ee-067b-4874-acfe-fa2c70c4b8e1.sql",
+    "supabase/migrations/20251202011629_a6f41da4-2fa8-4167-96b2-179e23c81df2.sql",
+    "supabase/migrations/20260516000000_calendar_consultations_patient_fields.sql",
+    "supabase/migrations/20260517000000_add_performance_indexes.sql",
+    "supabase/migrations/20260517000001_create_audio_recordings_bucket.sql",
+    "supabase/migrations/20260518000000_patient_files.sql",
+    "supabase/migrations/20260519000000_usage_quota.sql",
+    "supabase/migrations/20260529000000_secure_user_integrations.sql",
+    "supabase/migrations/20260530000000_add_specialty_to_user_settings.sql",
+    "supabase/migrations/20260601000000_add_live_copilot_setting.sql",
+    "supabase/migrations/20260602000000_patient_files_ai_summary.sql",
+    "supabase/migrations/20260603000000_prescriptions.sql",
+    "supabase/migrations/20260604000000_medication_catalog.sql",
+    "supabase/migrations/20260605000000_exam_requests.sql",
+    "supabase/migrations/20260606000000_document_templates.sql",
+    "supabase/migrations/20260607000000_knowledge_base.sql",
+    "supabase/migrations/20261028000000_security_boundaries.sql",
+    "supabase/migrations/20261028000100_clinical_durability.sql",
+    "supabase/migrations/20261028000200_atomic_quota.sql",
+    "supabase/migrations/20261028000300_storage_deletion_guards.sql",
+    "supabase/migrations/20261028000400_atomic_document_review.sql",
+    "supabase/migrations/20261028000500_verified_signature_metadata.sql",
+    "supabase/migrations/20261028000600_legacy_deletion_preflight.sql",
+    "supabase/migrations/20261028000700_live_storage_parents.sql",
+    "supabase/migrations/20261028000800_verified_issuance.sql",
+    "supabase/migrations/20261029000100_privacy_integrity.sql",
+    "supabase/migrations/20261029000200_clinical_integrity.sql",
+    "supabase/migrations/20261029000300_selective_sharing.sql",
+    "supabase/migrations/20261029001000_clinical_workspace.sql",
+    "supabase/migrations/20261029001100_proposal_acceptance.sql",
+    "supabase/migrations/20261029001200_reviewed_knowledge.sql",
+    "supabase/migrations/20261029001300_operation_controls.sql",
+    "supabase/migrations/20261029001400_session_assurance.sql",
+    "supabase/migrations/20261029001500_clinic_specialties.sql",
+    "supabase/migrations/20261029001600_workspace_directory.sql",
+    "supabase/migrations/20261029001700_medication_reconciliation.sql",
+    "supabase/migrations/20261029001800_encounter_completion.sql",
+    "supabase/migrations/20261029001900_shared_protocols.sql",
+    "supabase/migrations/20261101000000_review_hardening.sql",
+    "supabase/migrations/20261103000100_patient_conversations.sql",
+    "supabase/migrations/20261103000200_patient_registration.sql",
+    "supabase/migrations/20261103001000_reception_access.sql",
+    "supabase/migrations/20261103002000_reception_workflow.sql",
+    "supabase/migrations/20261103003000_reception_calendar.sql",
+    "supabase/migrations/20261103003500_reception_contact_corrections.sql",
+    "supabase/migrations/20261103003600_reception_appointment_identity.sql",
+    "supabase/migrations/20261103003700_reception_link_confirmation.sql",
+    "supabase/migrations/20261103003800_reception_link_corrections.sql",
+    "supabase/migrations/20261104001000_reception_deletion_custody.sql",
+    "supabase/migrations/20261104002000_reception_deletion_barrier.sql",
+    "supabase/migrations/20261104003000_reception_admin_scopes.sql",
+    "supabase/migrations/20261104004000_reception_scope_lifecycle.sql",
+    "supabase/migrations/20261104006000_reception_appointment_changes.sql",
+    "supabase/migrations/20261104100000_prescriber_contact.sql",
+    "supabase/migrations/20261104110000_document_snippets.sql",
+    "supabase/migrations/20261104120000_document_snippets_custody_epoch.sql",
+    "supabase/migrations/20261104130000_controlled_prescription.sql",
+    "supabase/migrations/20261104200000_reception_scoped_custody.sql",
+    "supabase/migrations/20261104210000_reception_clinic_calendar.sql",
+    "supabase/migrations/20261104220000_reception_staff_scope_lifecycle.sql",
+    "supabase/migrations/20261104230000_reception_delegation_requests.sql",
+    "supabase/migrations/20261104240000_reception_delegation_decisions.sql",
+    "supabase/migrations/20261104250000_reception_legacy_array_guard.sql",
+    "supabase/migrations/20261105000000_reception_authenticated_scope_cut.sql"
+  ],
+  "sqlSuites": 0,
+  "deletionScenarios": 0,
+  "requestRaces": [],
+  "decisionRaces": [],
+  "arrayRaces": [],
+  "installationRaces": [],
+  "signatureRegressionsPassed": false,
+  "checks": [
+    "RED: privileged UPDATE moves an unreviewed grant to another identity"
+  ],
+  "publicConsentGate": false,
+  "globalLegacyCutover": false,
+  "serviceProvisioningCutover": false,
+  "legacyIdentityCutover": false,
+  "network": "verified local Docker; owned internal network; no published ports",
+  "cleanupVerified": true
+}
