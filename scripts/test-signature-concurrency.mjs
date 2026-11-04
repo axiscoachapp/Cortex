@@ -25,19 +25,21 @@ function session(container) {
   const child = spawn('docker', ['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose'], { windowsHide: true });
   let output = '';
   let errors = '';
+  let closed = false;
   const listeners = new Set();
   child.stdout.on('data', (chunk) => { output += chunk; for (const notify of listeners) notify(); });
   child.stderr.on('data', (chunk) => { errors += chunk; });
   child.stdin.on('error', () => {});
   const done = new Promise((resolveDone, reject) => {
     child.once('error', reject);
-    child.once('close', (status) => resolveDone({ status, stdout: output, stderr: errors }));
+    child.once('close', (status) => { closed = true; resolveDone({ status, stdout: output, stderr: errors }); });
   });
   const send = (sql) => child.stdin.write(sql + '\n');
   send(bounds);
   return {
     send,
     output: () => output,
+    closed: () => closed,
     wait: (marker) => new Promise((resolveMarker, reject) => {
       const timer = setTimeout(() => { listeners.delete(check); child.kill(); reject(new Error('Timed out before ' + marker + ': ' + errors)); }, 20000);
       const check = () => { if (output.includes(marker)) { clearTimeout(timer); listeners.delete(check); resolveMarker(); } };
@@ -115,6 +117,25 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     assert.ok(await lockWaitOf(pid), `${label}: did not wait on the lock`);
     return s;
   };
+  /**
+   * Codex 04/11 19:10: a refusal must come from NOWAIT, not from lock_timeout
+   * (both are 55P03, both become 40001). The completion runs on a connection
+   * that is already open and is watched until psql exits: being seen waiting
+   * on a lock at any point is the regression.
+   */
+  const watchCompletion = async (f) => {
+    const s = session(container);
+    s.send(`select 'PID='||pg_backend_pid();`);
+    await s.wait('PID=');
+    const pid = backendPid(s);
+    s.send(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica');`);
+    for (let i = 0; i < 400 && !s.closed(); i++) {
+      if (sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock') return { s, waited: true };
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    assert.ok(s.closed(), 'completion neither refused nor waited');
+    return { s, waited: false };
+  };
 
   // 1. P1: two overlapping permissions for the same prepared operation.
   await check('overlapping permission (P1)', async () => {
@@ -152,12 +173,11 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     const holder = session(container);
     holder.send(`begin;select 1 from public.prescriptions where id='${f.rx}' for update;\n\\echo ROW_HELD`);
     await holder.wait('ROW_HELD');
-    const startedAt = Date.now();
-    const busy = docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose'],
-      `${bounds}begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica');commit;`);
-    const refusedIn = Date.now() - startedAt;
+    const watched = await watchCompletion(f);
     const released = await holder.finish('commit;');
+    const busy = await watched.s.finish('commit;');
     assert.equal(released.status, 0, released.stderr);
+    assert.equal(watched.waited, false, `${label}: completion waited on the busy row instead of refusing at once`);
     assert.notEqual(busy.status, 0, `${label}: completed while the row was held elsewhere`);
     assert.match(busy.stderr, /40001/, busy.stderr);
     assert.doesNotMatch(busy.stderr, /40P01/, busy.stderr);
@@ -169,7 +189,30 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     assert.equal(state(f), expect, `${label}: wrong outcome on retry`);
     assert.equal(signed(f), expect === 'completed' ? 'signed' : 'generated', `${label}: prescription status`);
     assert.equal(audits(f), expect === 'completed' ? 1 : 0, `${label}: audit rows`);
-    results[label] = { firstAttempt: '40001', refusedInMs: refusedIn, retry: expect };
+    results[label] = { firstAttempt: '40001', waitedOnRow: false, retry: expect };
+  }
+  // Control (disposable database only): without NOWAIT on the prescription
+  // row the same observation must see the completion waiting.
+  if (!beforeFix) {
+    const f = fixture({ minutes: 5 });
+    toStored(f);
+    const original = sql(`select pg_get_functiondef('public.signature_complete(uuid,uuid,text,text)'::regprocedure)`);
+    const site = 'from public.prescriptions where id=o.prescription_id for update nowait';
+    assert.equal(original.split(site).length, 2, 'control: NOWAIT site not found in signature_complete');
+    sql(original.replace(site, 'from public.prescriptions where id=o.prescription_id for update') + ';');
+    try {
+      const holder = session(container);
+      holder.send(`begin;select 1 from public.prescriptions where id='${f.rx}' for update;\n\\echo ROW_HELD`);
+      await holder.wait('ROW_HELD');
+      const watched = await watchCompletion(f);
+      await holder.finish('commit;');
+      await watched.s.finish('commit;');
+      assert.equal(watched.waited, true, 'control: a completion without NOWAIT was not seen waiting');
+    } finally {
+      sql(original + ';');
+    }
+    assert.equal(sql(`select pg_get_functiondef('public.signature_complete(uuid,uuid,text,text)'::regprocedure)`), original, 'control: signature_complete not restored');
+    results.rowBusyControl = 'wait detected without NOWAIT';
   }
   });
 
