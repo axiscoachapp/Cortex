@@ -1920,6 +1920,7 @@ export type Database = {
           daily_credit_limit: number
           doctor_name: string | null
           live_copilot_enabled: boolean
+          prescriber_cpf: string | null
           professional_address: string | null
           professional_phone: string | null
           rqe: string | null
@@ -1935,6 +1936,7 @@ export type Database = {
           daily_credit_limit?: number
           doctor_name?: string | null
           live_copilot_enabled?: boolean
+          prescriber_cpf?: string | null
           professional_address?: string | null
           professional_phone?: string | null
           rqe?: string | null
@@ -1950,6 +1952,7 @@ export type Database = {
           daily_credit_limit?: number
           doctor_name?: string | null
           live_copilot_enabled?: boolean
+          prescriber_cpf?: string | null
           professional_address?: string | null
           professional_phone?: string | null
           rqe?: string | null
