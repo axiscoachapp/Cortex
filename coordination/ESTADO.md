@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 14:40 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 15:02 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -146,7 +146,7 @@ Atualizado em 2026-11-04 14:40 por Codex. Cada agente atualiza as linhas que lhe
 ## Checagens recorrentes
 
 - **Codex:** automação `coordenar-cortex-com-claude` ativa neste chat, a cada 15 minutos, configurada e conferida em 03/11/2026 22:11. Checkpoint: [CODEX_CHECKPOINT.md](CODEX_CHECKPOINT.md). Continua trabalho local autorizado e avisa apenas sobre novidade relevante.
-- **Próximo incremento Codex:** corte geral dos writers/provisionamento legados, reconciliação e leitura operacional sobre pedido+grant de T28/2b/2b/2, com nova reserva/provas antes de APIs/UI. [Proteção transitória](../docs/reviews/2026-11-04/legacy-array-guard/IMPLEMENTATION.md) `04250000` em `7b80155`. [Resposta incerta do provisionamento](../docs/reviews/2026-11-04/provisioning-ambiguity/IMPLEMENTATION.md) corrigida sem migration: 37 testes/2 arquivos, 65 migrations/43 SQL dirigidas, conta sem filiação clinicamente negada, casos de consentimento/cleanup, Deno offline/build/lint aprovados. Não exclui identidade, não repete RPC e só devolve credenciais com booleano true sem erro; reconciliação durável/T31 e anuência não implementadas por esse ajuste. M2 aberta. Retestar D17 após correções/provas do Claude para as quatro lacunas de 14:15; três helpers continuam com ele. SQLs dele em andamento não entraram no baseline congelado desta rodada. T31/T34/T37 separados. Sem carga, dados reais, envio, hosted, publicação ou push.
+- **Próximo incremento Codex:** corte geral dos writers/provisionamento legados, reconciliação e leitura operacional sobre pedido+grant de T28/2b/2b/2, com nova reserva/provas antes de APIs/UI. Proteção transitória `04250000` em `7b80155`; resposta incerta do provisionamento em `29b6f2f`, sem reconciliador durável ou anuência por esse ajuste. M2 aberta. [T37 concluída localmente](../docs/reviews/2026-11-04/calendar-header/README.md): corte vertical de rótulos corrigido a 135%, RED/13 verificações reais/97 testes, tipos/build/lint e sonda de tentativa adiada aprovados. Sem nova SQL nesta rodada; limitação horizontal de semana/eventos em 390 px registrada em T38. Retestar D17 após correções/provas do Claude para as quatro lacunas de 14:15; três helpers continuam com ele, sem mensagem nova nesta rodada. T31/T34/T38 separados. Sem carga, dados reais, envio, hosted, publicação ou push.
 - **Claude:** loop autorregulado de cerca de 15 minutos, ativo desde 03/11/2026 22:13. Vale só enquanto a sessão atual do Claude estiver aberta; numa sessão nova, o `CLAUDE.md` manda ler o canal ao iniciar.
 
 ## Decisões do usuário e da clínica

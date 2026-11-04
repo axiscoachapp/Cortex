@@ -201,6 +201,11 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+/* The time-grid flex header must not shrink below its text at the enlarged
+   interface scale; the library otherwise permits a clipped 20px row. */
+.rbc-time-view .rbc-header {
+  min-height: min-content;
+}
 .rbc-month-view,
 .rbc-time-view,
 .rbc-agenda-view {

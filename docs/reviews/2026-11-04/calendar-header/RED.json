@@ -1,0 +1,126 @@
+{
+  "syntheticOnly": true,
+  "red": true,
+  "sourceBaseline": "29b6f2fb3cbdd25af9412d0fcf11e2f74fa43ca4",
+  "checks": [],
+  "layouts": [
+    {
+      "width": 1727,
+      "view": "week",
+      "headers": [
+        {
+          "label": "01 domingo",
+          "height": 21.09375,
+          "clientHeight": 20,
+          "scrollHeight": 29,
+          "fontSize": "19.44px",
+          "lineHeight": "29.16px",
+          "padding": "0px 3px",
+          "overflow": "hidden",
+          "top": 0,
+          "bottom": 29.15625,
+          "clipped": true
+        },
+        {
+          "label": "02 segunda",
+          "height": 21.09375,
+          "clientHeight": 20,
+          "scrollHeight": 29,
+          "fontSize": "19.44px",
+          "lineHeight": "29.16px",
+          "padding": "0px 3px",
+          "overflow": "hidden",
+          "top": 0,
+          "bottom": 29.15625,
+          "clipped": true
+        },
+        {
+          "label": "03 terça",
+          "height": 21.09375,
+          "clientHeight": 20,
+          "scrollHeight": 29,
+          "fontSize": "19.44px",
+          "lineHeight": "29.16px",
+          "padding": "0px 3px",
+          "overflow": "hidden",
+          "top": 0,
+          "bottom": 29.15625,
+          "clipped": true
+        },
+        {
+          "label": "04 quarta",
+          "height": 21.09375,
+          "clientHeight": 20,
+          "scrollHeight": 29,
+          "fontSize": "19.44px",
+          "lineHeight": "29.16px",
+          "padding": "0px 3px",
+          "overflow": "hidden",
+          "top": 0,
+          "bottom": 29.15625,
+          "clipped": true
+        },
+        {
+          "label": "05 quinta",
+          "height": 21.09375,
+          "clientHeight": 20,
+          "scrollHeight": 29,
+          "fontSize": "19.44px",
+          "lineHeight": "29.16px",
+          "padding": "0px 3px",
+          "overflow": "hidden",
+          "top": 0,
+          "bottom": 29.15625,
+          "clipped": true
+        },
+        {
+          "label": "06 sexta",
+          "height": 21.09375,
+          "clientHeight": 20,
+          "scrollHeight": 29,
+          "fontSize": "19.44px",
+          "lineHeight": "29.16px",
+          "padding": "0px 3px",
+          "overflow": "hidden",
+          "top": 0,
+          "bottom": 29.15625,
+          "clipped": true
+        },
+        {
+          "label": "07 sábado",
+          "height": 21.09375,
+          "clientHeight": 20,
+          "scrollHeight": 29,
+          "fontSize": "19.44px",
+          "lineHeight": "29.16px",
+          "padding": "0px 3px",
+          "overflow": "hidden",
+          "top": 0,
+          "bottom": 29.15625,
+          "clipped": true
+        }
+      ]
+    }
+  ],
+  "pageErrors": [],
+  "forbiddenRequests": [],
+  "sources": [
+    {
+      "path": "src/index.css",
+      "sha256": "00cab4e35c6fd1b752ca0d229e1e3e0113ca5c24dbf3ac46573d357881151636"
+    },
+    {
+      "path": "src/pages/Calendar.tsx",
+      "sha256": "b4b38f050d79fed55286d2d64614e15403feb6e7f10ced2d4a543562dc092383"
+    },
+    {
+      "path": "scripts/calendar-header-browser.mjs",
+      "sha256": "fddcb5d9f336ebb15901727531896656ca99220b5f7206410f4acdfe469c3984"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "2c56404a59be9aa5e25813722848a1437de02f2cab8d877ef4b71916ada53c0e"
+    }
+  ],
+  "failure": "Calendar date text is vertically clipped"
+}
