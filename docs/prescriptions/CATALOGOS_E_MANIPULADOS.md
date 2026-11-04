@@ -78,6 +78,15 @@ Não usam nenhuma dependência nova. Os testes em `src/lib/referenceCatalogs.tes
 - veículo ou excipiente é opcional (até 80 caracteres);
 - campo desconhecido é recusado, e nada é cortado.
 
+**Texto de cada campo.** A regra é a mesma no servidor (`formulaError`) e na guarda dos modelos (`valid_snippet_text`, SQL), escrita com códigos explícitos e sem classes de locale:
+- são recusados caracteres de controle (C0, DEL e C1), espaços que não sejam o espaço comum (NBSP, U+2000–U+200A, U+3000 etc.), BOM e qualquer caractere fora do plano básico (emoji);
+- só o espaço comum é aparado nas pontas;
+- o limite conta caracteres, que então coincidem com o `String.length` do servidor.
+
+O compositor troca os espaços colados de outros programas por espaço comum antes de conferir (`normalizeFormulaText`), para o médico não ver recusa por um NBSP invisível.
+
+**Caracteres invisíveis nos nomes:** hífen discricionário (comum ao copiar de PDF), espaço de largura zero e BOM são ignorados ao procurar substâncias controladas e antimicrobianos. "Clonaze­pam" com hífen invisível continua reconhecido.
+
 **Impressão:** abaixo da linha do item ("1. Fórmula manipulada — 1 cápsula") saem, recuados:
 - cada componente com a sua quantidade;
 - o veículo;

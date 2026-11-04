@@ -74,4 +74,29 @@ do $$ begin
  assert public.valid_snippet_items(('[{"name":"F","formula":{"components":[{"substance":"A","amount":"1 mg"}],"form":"cápsula","quantity":"  '||repeat('9',40)||'  "}}]')::jsonb),'Trimmed quantity of 40 refused';
  assert not public.valid_snippet_items('[{"name":"F","formula":{"components":[{"substance":1,"amount":"1 mg"}],"form":"cápsula","quantity":"30"}}]'),'Numeric substance accepted';
 end $$;
+-- Codex 19:10: Unicode spaces, code points outside the BMP and C1 controls
+-- are refused, trim is U+0020 only and lengths count characters, exactly as
+-- formulaError (same cases in src/lib/regulatedMedications.test.ts).
+do $$
+declare
+ base jsonb := '{"components":[{"substance":"A","amount":"1 mg"}],"form":"cápsula","quantity":"30"}';
+ comp jsonb;
+begin
+ comp := jsonb_build_array(jsonb_build_object('substance',U&'\00A0','amount','1 mg'));
+ assert public.valid_snippet_formula(jsonb_set(base,'{components}',comp)) is false,'Substance of only NBSP accepted';
+ comp := jsonb_build_array(jsonb_build_object('substance',repeat(U&'\+01F600',61),'amount','1 mg'));
+ assert public.valid_snippet_formula(jsonb_set(base,'{components}',comp)) is false,'61 emoji accepted';
+ assert public.valid_snippet_formula(jsonb_set(base,'{quantity}',to_jsonb('1'||repeat(U&'\00A0',40)))) is false,'Quantity with NBSP accepted';
+ assert public.valid_snippet_formula(jsonb_set(base,'{form}',to_jsonb(U&'c\00E1psula \+01F48A'::text))) is false,'Emoji in the form accepted';
+ comp := jsonb_build_array(jsonb_build_object('substance',U&'A\0085B','amount','1 mg'));
+ assert public.valid_snippet_formula(jsonb_set(base,'{components}',comp)) is false,'C1 control accepted';
+ assert public.valid_snippet_formula(jsonb_set(base,'{form}',to_jsonb(U&'\FEFFc\00E1psula'::text))) is false,'BOM accepted';
+ comp := jsonb_build_array(jsonb_build_object('substance','A','amount',U&'1 mg\3000'));
+ assert public.valid_snippet_formula(jsonb_set(base,'{components}',comp)) is false,'Ideographic space accepted';
+ comp := jsonb_build_array(jsonb_build_object('substance',repeat(U&'\00E1',120),'amount','1 mg'));
+ assert public.valid_snippet_formula(jsonb_set(base,'{components}',comp)) is true,'Accented substance of 120 refused';
+ comp := jsonb_build_array(jsonb_build_object('substance',repeat(U&'\00E1',121),'amount','1 mg'));
+ assert public.valid_snippet_formula(jsonb_set(base,'{components}',comp)) is false,'Accented substance of 121 accepted';
+ assert public.valid_snippet_formula(base) is true,'Base formula refused';
+end $$;
 rollback;

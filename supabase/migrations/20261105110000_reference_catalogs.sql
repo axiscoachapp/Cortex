@@ -80,13 +80,16 @@ end $$;
 
 -- Prescription templates may keep a compounded formula per item. Total
 -- predicate (true or false, never NULL) with the same rules as formulaError in
--- _shared/regulatedMedications.ts: trimmed lengths, no control characters,
--- numbers in amounts and quantity, optional vehicle ('' allowed, blank not).
+-- _shared/regulatedMedications.ts: numbers in amounts and quantity, optional
+-- vehicle ('' allowed, blank not). Text fields: no control character (C0,
+-- DEL, C1), no space other than U+0020 and nothing outside the BMP, written
+-- as explicit code points (no locale classes); trimmed of U+0020 only;
+-- 1..max characters, which then equals the server's String.length.
 create function public.valid_snippet_text(p_value jsonb,p_max integer) returns boolean
 language sql immutable set search_path='' as $$
  select coalesce(jsonb_typeof(p_value)='string'
-  and length(trim(p_value #>> '{}')) between 1 and p_max
-  and (p_value #>> '{}') !~ '[[:cntrl:]]',false);
+  and (p_value #>> '{}') !~ '[\u0001-\u001f\u007f-\u009f\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff\U00010000-\U0010ffff]'
+  and length(btrim(p_value #>> '{}',' ')) between 1 and p_max,false);
 $$;
 create function public.valid_snippet_formula(p_formula jsonb) returns boolean
 language sql immutable set search_path='' as $$

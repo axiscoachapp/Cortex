@@ -16,7 +16,7 @@ import { currentPatientAge } from '../../supabase/functions/_shared/patientAge';
 import { Patient, Medication } from '@/types/patient';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import {
-  antimicrobialsIn, controlledFindings, controlledSubstancesIn, FORMULA_FORMS, formulaError, formulaSubstances, planControlledPrescription,
+  antimicrobialsIn, controlledFindings, controlledSubstancesIn, FORMULA_FORMS, formulaError, formulaSubstances, normalizeFormulaText, planControlledPrescription,
   type CompoundedFormula,
 } from '../../supabase/functions/_shared/regulatedMedications';
 import { PrescriptionTemplatePicker, type ApplyMode } from '@/components/PrescriptionTemplatePicker';
@@ -240,16 +240,18 @@ export function DocumentComposerModal({
     if (added.some(m => m.antimicrobial) && docType === 'receita_simples') setDocType('receita_antimicrobiano');
   };
 
-  // Same rule as the server (formulaError); nothing is cut.
+  // Same rule as the server (formulaError); nothing is cut. Spaces pasted
+  // from other programs (NBSP and the like) become plain spaces first.
   const addFormula = () => {
     if (!formulaDraft) return;
+    const clean = (v: string) => normalizeFormulaText(v).trim();
     const formula: CompoundedFormula = {
       components: formulaDraft.components
-        .map(c => ({ substance: c.substance.trim(), amount: c.amount.trim() }))
+        .map(c => ({ substance: clean(c.substance), amount: clean(c.amount) }))
         .filter(c => c.substance || c.amount),
-      ...(formulaDraft.vehicle.trim() ? { vehicle: formulaDraft.vehicle.trim() } : {}),
-      form: formulaDraft.form.trim(),
-      quantity: formulaDraft.quantity.trim(),
+      ...(clean(formulaDraft.vehicle) ? { vehicle: clean(formulaDraft.vehicle) } : {}),
+      form: clean(formulaDraft.form),
+      quantity: clean(formulaDraft.quantity),
     };
     const problem = formulaError(formula);
     if (problem) { setFormulaProblem(problem); return; }

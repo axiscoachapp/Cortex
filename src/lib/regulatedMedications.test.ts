@@ -4,6 +4,7 @@ import {
   controlledFindings,
   controlledSubstancesIn,
   formulaError,
+  normalizeFormulaText,
   formulaLines,
   formulaSubstances,
   toWinAnsi,
@@ -31,6 +32,12 @@ describe('regulated medication safety net', () => {
     expect(controlledSubstancesIn('Tylex 30mg')).toEqual(['codeina']);
     expect(controlledSubstancesIn('Roacutan 20 mg')).toEqual(['isotretinoina']);
     expect(controlledSubstancesIn('Clonazepam2mg')).toEqual(['clonazepam']);
+    // Invisible characters (a soft hyphen copied from a hyphenated PDF, a
+    // zero-width space, a BOM) must not hide the drug from the check.
+    expect(controlledSubstancesIn('Clonaze\u00adpam 2 mg')).toEqual(['clonazepam']);
+    expect(controlledSubstancesIn('Diaz\u200bepam 10 mg')).toEqual(['diazepam']);
+    expect(controlledSubstancesIn('\ufeffZolpi\u2060dem 10 mg')).toEqual(['zolpidem']);
+    expect(antimicrobialsIn('Amoxi\u00adcilina 500 mg')).toEqual(['amoxicilina']);
     expect(antimicrobialsIn('Monuril 3 g')).toEqual(['fosfomicina']);
     expect(antimicrobialsIn('Bactrim F')).toEqual(['sulfametoxazol']);
     expect(antimicrobialsIn('Ciprofloxacina 500mg')).toEqual(['ciprofloxacino']);
@@ -115,8 +122,25 @@ describe('formula rules shared with the template guard', () => {
     ['quantity over 40', { ...base, quantity: '9'.repeat(41) }, false],
     ['trimmed quantity of 40', { ...base, quantity: `  ${'9'.repeat(40)}  ` }, true],
     ['numeric substance', { ...base, components: [{ substance: 1, amount: '1 mg' }] }, false],
+    // Codex 19:10: Unicode spaces, code points outside the BMP and C1
+    // controls are refused by both; trim is U+0020 only; lengths in characters.
+    ['substance only NBSP', { ...base, components: [{ substance: '\u00a0', amount: '1 mg' }] }, false],
+    ['61 emoji in the substance', { ...base, components: [{ substance: '\u{1F600}'.repeat(61), amount: '1 mg' }] }, false],
+    ['quantity 1 and 40 NBSP', { ...base, quantity: `1${'\u00a0'.repeat(40)}` }, false],
+    ['one emoji in the form', { ...base, form: 'cápsula \u{1F48A}' }, false],
+    ['C1 control in the substance', { ...base, components: [{ substance: 'A\u0085B', amount: '1 mg' }] }, false],
+    ['BOM before the form', { ...base, form: '\ufeffcápsula' }, false],
+    ['ideographic space after the amount', { ...base, components: [{ substance: 'A', amount: '1 mg\u3000' }] }, false],
+    ['accented substance of 120', { ...base, components: [{ substance: 'á'.repeat(120), amount: '1 mg' }] }, true],
+    ['accented substance of 121', { ...base, components: [{ substance: 'á'.repeat(121), amount: '1 mg' }] }, false],
   ];
   it.each(cases)('%s', (_label, formula, valid) => {
     expect(formulaError(formula) === null).toBe(valid);
+  });
+
+  it('the composer turns pasted Unicode spaces into plain ones before checking', () => {
+    expect(normalizeFormulaText('1\u00a0g\u202f(\u2009x\u3000)\u2028')).toBe('1 g ( x ) ');
+    expect(normalizeFormulaText('\ufeffcápsula')).toBe('cápsula');
+    expect(formulaError({ ...base, quantity: normalizeFormulaText(`1${'\u00a0'.repeat(40)}`).trim() })).toBeNull();
   });
 });

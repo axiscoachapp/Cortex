@@ -65,6 +65,7 @@ const BRANDS: Record<string, string> = {
 
 function normalize(text: string): string {
   return text
+    .replace(/\p{Cf}/gu, '') // soft hyphen, zero-width and BOM never split a name
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase();
@@ -389,7 +390,21 @@ export const FORMULA_FORMS = [
 ] as const;
 
 const MAX_COMPONENTS = 12;
-const plain = (v: unknown, max: number) => typeof v === 'string' && v.trim().length >= 1 && v.trim().length <= max && !/[\u0000-\u001f\u007f]/.test(v);
+// Text of a formula field. Same contract as public.valid_snippet_text (SQL):
+// no control character (C0, DEL, C1), no space other than U+0020, nothing
+// outside the BMP; trimmed of U+0020 only; 1..max characters. With these
+// characters out, String.length and PostgreSQL length() count the same.
+const FORMULA_TEXT_REFUSED = /[\u0000-\u001f\u007f-\u009f\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff\ud800-\udfff]/;
+const plain = (v: unknown, max: number) => {
+  if (typeof v !== 'string' || FORMULA_TEXT_REFUSED.test(v)) return false;
+  const length = v.replace(/^ +| +$/g, '').length;
+  return length >= 1 && length <= max;
+};
+
+/** What the composer applies before checking: pasted Unicode spaces become U+0020 and a BOM goes away. */
+export function normalizeFormulaText(value: string): string {
+  return value.replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').replace(/\ufeff/g, '');
+}
 
 /** Error message for a formula, or null when it can be printed. */
 export function formulaError(formula: unknown): string | null {
