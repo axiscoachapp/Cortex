@@ -7,7 +7,8 @@
     "save as template sends the selection to save_document_snippet",
     "settings refuse a phone without DDD locally and save phone and RQE through update_user_settings",
     "after saving the phone, the warning names only the patient sex",
-    "at 375px the picker, the choice, the type cards and the footer fit inside the dialog"
+    "at 375px the picker, the choice, the type cards and the footer fit inside the dialog",
+    "at 375px the controlled prescription fields (strength, quantity, address, document, CID, justification) fit inside the dialog"
   ],
   "pageErrors": [],
   "unansweredCalls": {

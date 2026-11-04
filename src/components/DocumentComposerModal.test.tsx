@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { DocumentComposerModal } from './DocumentComposerModal';
 import type { Patient } from '@/types/patient';
 
-const settings = vi.hoisted(() => ({ value: { prescriber: { professionalPhone: '' }, isLoading: false } }));
+const settings = vi.hoisted(() => ({ value: { prescriber: { professionalPhone: '', prescriberCpf: '' } as { professionalPhone: string; prescriberCpf?: string }, isLoading: false } }));
 vi.mock('@/hooks/useUserSettings', () => ({ useUserSettings: () => settings.value }));
 vi.mock('@/hooks/useUnsavedChanges', () => ({ useUnsavedChanges: () => () => true }));
 vi.mock('@/hooks/useDocumentSnippets', () => ({
@@ -201,5 +201,83 @@ describe('Regulated drug warnings before generating', () => {
     );
     expect(screen.getByText(/Há antimicrobiano selecionado/)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+// D8: Receita de Controle Especial in the composer (synthetic data only).
+describe('Receita de Controle Especial (D8)', () => {
+  const SERTRALINE = { name: 'Sertralina', dosage: '1 comprimido', instructions: 'pela manhã' };
+  function setup(patient: Partial<Patient> = {}) {
+    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000', prescriberCpf: '' }, isLoading: false };
+    const onGenerate = vi.fn<(payload: unknown) => Promise<void>>(async () => {});
+    render(
+      <DocumentComposerModal open onOpenChange={() => {}} patient={person({ sex: 'feminino', medications: [SERTRALINE], ...patient })} onGenerate={onGenerate} isGenerating={false} />,
+    );
+    return { user: userEvent.setup(), onGenerate };
+  }
+
+  it('offers the controlled type when every controlled item fits it, and only then', async () => {
+    const { user } = setup();
+    expect(screen.getByRole('alert')).toHaveTextContent('use o tipo "Controle especial"');
+    await user.click(screen.getByRole('button', { name: 'Usar controle especial' }));
+    expect(screen.getByRole('button', { name: /Controle especial/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('names the notification for a drug the RCE cannot carry', () => {
+    setup({ medications: [{ name: 'Rivotril 2mg', dosage: '1 comprimido', instructions: 'à noite' }] });
+    expect(screen.getByRole('alert')).toHaveTextContent('notificação de receita em talão numerado');
+    expect(screen.queryByRole('button', { name: 'Usar controle especial' })).toBeNull();
+  });
+
+  it('collects strength, quantity, address and document, checking the same rules as the server', async () => {
+    const { user, onGenerate } = setup();
+    await user.click(screen.getByRole('button', { name: /Controle especial/ }));
+    expect(screen.getByText(/Antes de gerar: Informe a concentração de Sertralina/)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Concentração de Sertralina'), '50 mg');
+    await user.type(screen.getByLabelText('Quantidade de Sertralina'), '30');
+    await user.type(screen.getByLabelText('Unidade de Sertralina'), 'comprimidos');
+    expect(screen.getByText(/Antes de gerar: Informe o endereço completo/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/Endereço do paciente/), 'Rua Sintética, 100 — Curitiba/PR');
+    // No CPF in the registration: the doctor says which document identifies the patient.
+    expect(screen.getByText(/Antes de gerar: Informe o CPF do paciente/)).toBeInTheDocument();
+    await user.click(screen.getByLabelText('Passaporte'));
+    await user.type(screen.getByLabelText('Número do passaporte'), 'X123');
+    expect(screen.queryByText(/Antes de gerar/)).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Gerar/ }));
+    expect(onGenerate.mock.calls.at(-1)?.[0]).toEqual({
+      docType: 'receita_controle_especial',
+      medications: [{ ...SERTRALINE, concentration: '50 mg', quantity: 30, unit: 'comprimidos' }],
+      content: { patientAddress: 'Rua Sintética, 100 — Curitiba/PR', patientDocument: { kind: 'passaporte', value: 'X123' } },
+    });
+  });
+
+  it('prints the registration CPF when there is one and sends the CID and justification', async () => {
+    const { user, onGenerate } = setup({ cpf: '529.982.247-25' });
+    await user.click(screen.getByRole('button', { name: /Controle especial/ }));
+    expect(screen.getByText('O CPF do cadastro do paciente será impresso.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Passaporte')).toBeNull();
+    await user.type(screen.getByLabelText('Concentração de Sertralina'), '50 mg');
+    await user.type(screen.getByLabelText('Quantidade de Sertralina'), '90');
+    await user.type(screen.getByLabelText('Unidade de Sertralina'), 'comprimidos');
+    await user.type(screen.getByLabelText(/Endereço do paciente/), 'Rua Sintética, 100 — Curitiba/PR');
+    await user.type(screen.getByLabelText(/Justificativa/), 'Tratamento contínuo de 90 dias');
+    expect(screen.getByText(/Antes de gerar: A justificativa .* precisa do CID/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/CID ou diagnóstico/), 'F32.1');
+    await user.click(screen.getByRole('button', { name: /Gerar/ }));
+    expect(onGenerate.mock.calls.at(-1)?.[0]).toMatchObject({
+      content: { patientAddress: 'Rua Sintética, 100 — Curitiba/PR', cid: 'F32.1', justification: 'Tratamento contínuo de 90 dias' },
+    });
+    expect((onGenerate.mock.calls.at(-1)?.[0] as { content: object }).content).not.toHaveProperty('patientDocument');
+  });
+
+  it('refuses more than 3 medications before generating', async () => {
+    const meds = [1, 2, 3, 4].map((n) => ({ ...SERTRALINE, name: `Sertralina ${n}` }));
+    const { user } = setup({ medications: meds });
+    await user.click(screen.getAllByRole('button', { name: 'Usar controle especial' })[0]);
+    expect(screen.getByRole('alert')).toHaveTextContent('no máximo 3 medicamentos');
+    expect(screen.getByRole('button', { name: /Gerar/ })).toBeDisabled();
   });
 });

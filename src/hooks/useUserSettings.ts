@@ -31,6 +31,7 @@ interface UserSettings {
   professional_address: string;
   professional_phone: string;
   rqe: string;
+  prescriber_cpf: string;
   active_template_id: string | null;
 }
 
@@ -44,6 +45,7 @@ const DEFAULTS: UserSettings = {
   professional_address: '',
   professional_phone: '',
   rqe: '',
+  prescriber_cpf: '',
   active_template_id: null,
 };
 
@@ -59,7 +61,7 @@ export function useUserSettings() {
       if (!user?.id) return DEFAULTS;
       const { data, error } = await supabase
         .from('user_settings')
-        .select('specialty, daily_credit_limit, live_copilot_enabled, doctor_name, crm_number, crm_uf, professional_address, professional_phone, rqe, active_template_id')
+        .select('specialty, daily_credit_limit, live_copilot_enabled, doctor_name, crm_number, crm_uf, professional_address, professional_phone, rqe, prescriber_cpf, active_template_id')
         .eq('user_id', user.id)
         .maybeSingle();
       if (error) throw error;
@@ -73,6 +75,7 @@ export function useUserSettings() {
         professional_address: data?.professional_address     ?? '',
         professional_phone:   data?.professional_phone       ?? '',
         rqe:                  data?.rqe                      ?? '',
+        prescriber_cpf:       data?.prescriber_cpf           ?? '',
         active_template_id:   data?.active_template_id        ?? null,
       };
     },
@@ -116,6 +119,8 @@ export function useUserSettings() {
       professionalAddress: data?.professional_address ?? '',
       professionalPhone:   data?.professional_phone   ?? '',
       rqe:                 data?.rqe                  ?? '',
+      /** Printed only on anabolic (C5) prescriptions, Lei 9.965/2000. */
+      prescriberCpf:       data?.prescriber_cpf       ?? '',
     },
     /** True when the CFM-mandatory prescription fields are filled. Phone and
      *  RQE stay optional; the antimicrobial prescription also needs the phone. */

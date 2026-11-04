@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useUserSettings, SPECIALTY_LABELS, Specialty } from '@/hooks/useUserSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllRows } from '@/lib/pagination';
-import { professionalPhoneError, rqeError } from '@/lib/prescriberContact';
+import { prescriberCpfError, professionalPhoneError, rqeError } from '@/lib/prescriberContact';
 
 export function SpecialtySettingsSheet() {
   const { user } = useAuth();
@@ -68,6 +68,7 @@ export function SpecialtySettingsSheet() {
         professionalAddress: prescriber.professionalAddress,
         professionalPhone: prescriber.professionalPhone,
         rqe: prescriber.rqe,
+        prescriberCpf: prescriber.prescriberCpf,
       });
   }, [
     prescriber.doctorName,
@@ -76,6 +77,7 @@ export function SpecialtySettingsSheet() {
     prescriber.professionalAddress,
     prescriber.professionalPhone,
     prescriber.rqe,
+    prescriber.prescriberCpf,
     identityDirty,
   ]);
   const editDraft = (patch: Partial<typeof draft>) => {
@@ -89,7 +91,7 @@ export function SpecialtySettingsSheet() {
     if (isSaving || !identityDirty) return;
     setIdentityError('');
     setSaveStatus('');
-    const contactError = professionalPhoneError(draft.professionalPhone) ?? rqeError(draft.rqe);
+    const contactError = professionalPhoneError(draft.professionalPhone) ?? rqeError(draft.rqe) ?? prescriberCpfError(draft.prescriberCpf);
     if (contactError) {
       setIdentityError(contactError);
       return;
@@ -102,6 +104,7 @@ export function SpecialtySettingsSheet() {
         professional_address: draft.professionalAddress.trim(),
         professional_phone: draft.professionalPhone.trim(),
         rqe: draft.rqe.trim(),
+        prescriber_cpf: draft.prescriberCpf.replace(/\D/g, ''),
       });
       setIdentityDirty(false);
       setSaveStatus('Dados do prescritor salvos.');
@@ -229,7 +232,8 @@ export function SpecialtySettingsSheet() {
               </label>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Obrigatórios em todo documento: nome, CRM e endereço profissional. O telefone é obrigatório na receita
-                de antimicrobiano (RDC 471/2021). O RQE aparece ao lado do CRM, se você tiver.
+                de antimicrobiano (RDC 471/2021). O RQE aparece ao lado do CRM, se você tiver. O CPF só é impresso na receita
+                de anabolizante (lista C5, Lei 9.965/2000).
               </p>
             </div>
             <Input
@@ -283,6 +287,15 @@ export function SpecialtySettingsSheet() {
                 maxLength={60}
               />
             </div>
+            <Input
+              aria-label="CPF do médico (só para anabolizantes)"
+              inputMode="numeric"
+              disabled={isSaving || isLoading}
+              value={draft.prescriberCpf}
+              onChange={(e) => editDraft({ prescriberCpf: e.target.value })}
+              placeholder="CPF (só para anabolizantes, lista C5)"
+              maxLength={14}
+            />
             <Button size="sm" onClick={saveDraft} disabled={isSaving || isLoading || !identityDirty}>
               {isSaving ? 'Salvando…' : 'Salvar dados do prescritor'}
             </Button>

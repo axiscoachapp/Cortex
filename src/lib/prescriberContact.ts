@@ -1,5 +1,8 @@
-// Client-side mirror of the prescriber contact checks in migration
-// 20261104100000 (user_settings.professional_phone and rqe). The server is
+import { validCpf } from '@/lib/patientRegistration';
+
+// Client-side mirror of the prescriber contact checks in migrations
+// 20261104100000 (user_settings.professional_phone and rqe) and
+// 20261104130000 (prescriber_cpf). The server is
 // still the authority; this only gives a clear message before saving.
 
 /** Error message for the professional phone, or null when it is acceptable. */
@@ -18,4 +21,11 @@ export function rqeError(value: string): string | null {
   // eslint-disable-next-line no-control-regex
   if (rqe.length > 60 || /[\u0000-\u001f\u007f]/.test(rqe)) return 'Revise o RQE: até 60 caracteres.';
   return null;
+}
+
+/** Error message for the prescriber CPF (C5 prescriptions), or null when acceptable. */
+export function prescriberCpfError(value: string): string | null {
+  const cpf = value.trim();
+  if (!cpf) return null;
+  return validCpf(cpf) ? null : 'CPF do prescritor inválido. Confira os 11 dígitos.';
 }

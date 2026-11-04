@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
     professionalAddress: 'Endereço original',
     professionalPhone: '',
     rqe: '',
+    prescriberCpf: '',
   },
   save: vi.fn().mockRejectedValue(new Error('offline')),
 }));
@@ -67,6 +68,7 @@ describe('Prescriber identity draft', () => {
       professional_address: 'Endereço original',
       professional_phone: '(41) 3000-0000',
       rqe: '4567',
+      prescriber_cpf: '',
     });
   });
 
@@ -80,6 +82,28 @@ describe('Prescriber identity draft', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/com DDD/);
     expect(mocks.save).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Telefone profissional')).toHaveValue('3000-0000');
+  });
+
+  it('saves the prescriber CPF as digits, for anabolic (C5) prescriptions', async () => {
+    mocks.save.mockReset().mockResolvedValue(undefined);
+    render(tree());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Configurações' }));
+    await user.type(screen.getByLabelText('CPF do médico (só para anabolizantes)'), '111.444.777-35');
+    await user.click(screen.getByRole('button', { name: 'Salvar dados do prescritor' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Dados do prescritor salvos.');
+    expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ prescriber_cpf: '11144477735' }));
+  });
+
+  it('refuses an invalid prescriber CPF before saving', async () => {
+    mocks.save.mockReset();
+    render(tree());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Configurações' }));
+    await user.type(screen.getByLabelText('CPF do médico (só para anabolizantes)'), '111.444.777-00');
+    await user.click(screen.getByRole('button', { name: 'Salvar dados do prescritor' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('CPF do prescritor inválido');
+    expect(mocks.save).not.toHaveBeenCalled();
   });
 
   it('preserves typing across background refresh and failed explicit save', async () => {

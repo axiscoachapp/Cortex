@@ -1,7 +1,7 @@
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Pill, FileSignature, ClipboardPlus, Search, X, Loader2, AlertTriangle, FlaskConical,
+  Pill, FileSignature, ClipboardPlus, Search, X, Loader2, AlertTriangle, FlaskConical, ShieldAlert,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -15,14 +15,19 @@ import { validateCertificateDays } from '../../supabase/functions/_shared/docume
 import { currentPatientAge } from '../../supabase/functions/_shared/patientAge';
 import { Patient, Medication } from '@/types/patient';
 import { useUserSettings } from '@/hooks/useUserSettings';
-import { antimicrobialsIn, controlledSubstancesIn } from '../../supabase/functions/_shared/regulatedMedications';
+import {
+  antimicrobialsIn, controlledFindings, controlledSubstancesIn, planControlledPrescription,
+} from '../../supabase/functions/_shared/regulatedMedications';
 import { PrescriptionTemplatePicker, type ApplyMode } from '@/components/PrescriptionTemplatePicker';
 import type { SnippetItem } from '@/lib/documentSnippets';
 
 /** Sex values that satisfy RDC 471/2021; 'nao_informado' does not. */
 const PRINTABLE_SEX = new Set(['feminino', 'masculino', 'intersexo']);
 
-export type RxDocType = 'receita_simples' | 'receita_antimicrobiano' | 'atestado' | 'solicitacao_exames';
+export type RxDocType = 'receita_simples' | 'receita_antimicrobiano' | 'receita_controle_especial' | 'atestado' | 'solicitacao_exames';
+
+/** How the RCE identifies a patient without a CPF in the registration (D8). */
+type PatientDocumentKind = 'nao_possui' | 'passaporte' | 'outro';
 
 interface ComposerMed extends Medication {
   checked: boolean;
@@ -30,6 +35,22 @@ interface ComposerMed extends Medication {
   antimicrobial?: boolean;
   /** Active ingredient(s) from the Anvisa catalog — grounds duplication alerts. */
   ingredient?: string | null;
+  /** Receita de Controle Especial only: strength of the controlled substance and
+   *  the quantity dispensed (number + unit; the PDF writes it in words too). */
+  concentration?: string;
+  quantity?: string;
+  unit?: string;
+}
+
+/** What the RCE adds to each medication sent to generate-prescription. */
+export type ComposerMedication = Medication & { concentration?: string; quantity?: number; unit?: string };
+
+/** Content of a Receita de Controle Especial (stored only in the document). */
+export interface ControlledContent {
+  patientAddress: string;
+  patientDocument?: { kind: PatientDocumentKind; value?: string };
+  cid?: string;
+  justification?: string;
 }
 
 interface CatalogHit {
@@ -46,8 +67,8 @@ interface DocumentComposerModalProps {
   patient: Patient;
   onGenerate: (payload: {
     docType: RxDocType;
-    medications: Medication[];
-    content?: { days?: number; cid?: string; note?: string; exams?: string[]; indication?: string };
+    medications: ComposerMedication[];
+    content?: { days?: number; cid?: string; note?: string; exams?: string[]; indication?: string } | ControlledContent;
   }) => Promise<void>;
   isGenerating: boolean;
 }
@@ -57,6 +78,7 @@ interface DocumentComposerModalProps {
 const TYPE_META: Array<{ value: RxDocType; label: string; shown?: string; hint: string; icon: React.ComponentType<{ className?: string }> }> = [
   { value: 'receita_simples',        label: 'Receita simples',  hint: 'Validade 30 dias',                  icon: Pill },
   { value: 'receita_antimicrobiano', label: 'Antimicrobiano',   shown: 'Antimicro­biano', hint: 'Retenção · validade 10 dias', icon: AlertTriangle },
+  { value: 'receita_controle_especial', label: 'Controle especial', hint: 'Listas C1 e C5 · 2 vias · 30 dias', icon: ShieldAlert },
   { value: 'atestado',               label: 'Atestado médico',  hint: 'Afastamento com validação por QR', icon: ClipboardPlus },
   { value: 'solicitacao_exames',     label: 'Solicitação de exames', hint: 'Lista de exames com QR',      icon: FlaskConical },
 ];
@@ -93,6 +115,13 @@ export function DocumentComposerModal({
   const [note, setNote] = useState('');
   const [examsText, setExamsText] = useState('');
   const [indication, setIndication] = useState('');
+  // Receita de Controle Especial (D8). The address stays in this document only.
+  const [patientAddress, setPatientAddress] = useState('');
+  // No default: "não possui" is printed only when the doctor picks it.
+  const [documentKind, setDocumentKind] = useState<PatientDocumentKind | ''>('');
+  const [documentValue, setDocumentValue] = useState('');
+  const [rceCid, setRceCid] = useState('');
+  const [justification, setJustification] = useState('');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestMedications = useRef(patient.medications);
   const initialMedicationSelection = useRef<ComposerMed[]>([]);
@@ -107,6 +136,8 @@ export function DocumentComposerModal({
     setQuery(''); setHits([]);
     setDays('1'); setCid(''); setNote('');
     setExamsText(''); setIndication('');
+    setPatientAddress(''); setDocumentKind(''); setDocumentValue('');
+    setRceCid(''); setJustification('');
   }, [open, patient.id]);
 
   // Ground profile meds in the catalog (best-effort name match) so the
@@ -209,10 +240,38 @@ export function DocumentComposerModal({
   const isAtestado = docType === 'atestado';
   const isExames = docType === 'solicitacao_exames';
   const isReceita = !isAtestado && !isExames;
+  const isControlled = docType === 'receita_controle_especial';
+  // Forms the controlled items need: when all of them fit the RCE, the doctor
+  // can switch to it; otherwise the warning names the notification.
+  const controlledForms = [...new Set(selectedMeds.flatMap(m => regulatedNames(m).flatMap(controlledFindings)).map(f => f.form))];
+  const fitsControlled = controlledForms.length > 0 && controlledForms.every(f => f === 'receita_controle_especial');
 
   // RDC 471/2021: the server refuses an antimicrobial prescription without the
   // prescriber phone or the patient's age and sex. Say so before generating.
   const { prescriber, isLoading: settingsLoading } = useUserSettings();
+  const patientCpf = (patient.cpf ?? '').replace(/\D/g, '');
+  const hasPatientCpf = patientCpf.length === 11;
+
+  const controlledMedications = (): ComposerMedication[] => selectedMeds.map(({ name, dosage, instructions, concentration, quantity, unit }) => ({
+    name, dosage, instructions,
+    concentration: (concentration ?? '').trim(),
+    quantity: Number((quantity ?? '').trim()),
+    unit: (unit ?? '').trim(),
+  }));
+  const controlledContent = (): ControlledContent => ({
+    patientAddress: patientAddress.trim(),
+    ...(hasPatientCpf || !documentKind ? {} : { patientDocument: { kind: documentKind, ...(documentKind === 'nao_possui' ? {} : { value: documentValue.trim() }) } }),
+    ...(rceCid.trim() ? { cid: rceCid.trim() } : {}),
+    ...(justification.trim() ? { justification: justification.trim() } : {}),
+  });
+  // Same rules as the server (shared module), run before the round trip. The
+  // server stays authoritative: it also reads brands in the Anvisa catalog.
+  const controlledCheck = !isControlled || selectedMeds.length === 0 ? null : planControlledPrescription(
+    controlledMedications().map((m, i) => ({ ...m, ingredients: selectedMeds[i].ingredient ? [selectedMeds[i].ingredient.toLowerCase()] : [] })),
+    controlledContent(),
+    { patientCpf: hasPatientCpf ? patientCpf : null, prescriberCpf: (prescriber.prescriberCpf ?? '').trim() || null, prescriberPhone: (prescriber.professionalPhone ?? '').trim() },
+  );
+  const controlledError = controlledCheck && 'error' in controlledCheck ? controlledCheck.error : null;
   const antimicrobialGaps = docType !== 'receita_antimicrobiano' ? [] : [
     ...(!settingsLoading && !prescriber.professionalPhone.trim() ? ['seu telefone profissional (Configurações)'] : []),
     ...(currentPatientAge(patient) === null ? ['a idade ou data de nascimento do paciente'] : []),
@@ -242,25 +301,32 @@ export function DocumentComposerModal({
     ? validDays
     : isExames
     ? examList.length > 0 && examList.length <= 20
+    : isControlled
+    ? selectedMeds.length > 0 && selectedMeds.length <= 3
     : selectedMeds.length > 0 && selectedMeds.length <= 15;
 
   const handleGenerate = async () => {
     if (!canGenerate || isGenerating) return;
     await onGenerate({
       docType,
-      medications: isReceita
+      medications: isControlled
+        ? controlledMedications()
+        : isReceita
         ? selectedMeds.map(({ name, dosage, instructions }) => ({ name, dosage, instructions }))
         : [],
       content: isAtestado
         ? { days: validateCertificateDays(Number(days)), cid: cid.trim() || undefined, note: note.trim() || undefined }
         : isExames
         ? { exams: examList, indication: indication.trim() || undefined }
+        : isControlled
+        ? controlledContent()
         : undefined,
     });
   };
 
-  const selection = (values: ComposerMed[]) => values.map(({ name, dosage, instructions, checked }) => ({ name, dosage, instructions, checked }));
+  const selection = (values: ComposerMed[]) => values.map(({ name, dosage, instructions, checked, concentration, quantity, unit }) => ({ name, dosage, instructions, checked, concentration, quantity, unit }));
   const dirty = docType !== 'receita_simples' || !!query.trim() || days !== '1' || !!cid.trim() || !!note.trim() || !!examsText.trim() || !!indication.trim()
+    || !!patientAddress.trim() || !!documentKind || !!documentValue.trim() || !!rceCid.trim() || !!justification.trim()
     || JSON.stringify(selection(meds)) !== JSON.stringify(selection(initialMedicationSelection.current));
   const canClose = useUnsavedChanges(open && dirty);
   const changeOpen = (next: boolean) => {
@@ -306,19 +372,41 @@ export function DocumentComposerModal({
             ))}
           </div>
 
-          {(isReceita && selectedMeds.length > 15 || isExames && examList.length > 20) && (
+          {isControlled && selectedMeds.length > 3 && (
+            <p role="alert" className="text-sm text-red-800 bg-red-50 rounded-lg p-3">
+              A receita de controle especial aceita no máximo 3 medicamentos (Portaria 344/98, art. 57). Desmarque os demais ou divida em mais de uma receita.
+            </p>
+          )}
+
+          {(isReceita && !isControlled && selectedMeds.length > 15 || isExames && examList.length > 20) && (
             <p role="alert" className="text-sm text-red-800 bg-red-50 rounded-lg p-3">
               Divida a seleção em documentos de até 15 medicamentos ou 20 exames. Nenhum item será omitido.
             </p>
           )}
 
-          {isReceita && controlledSelected.length > 0 && (
-            <p role="alert" className="text-[0.6875rem] text-red-800 bg-red-50 border border-red-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
+          {isReceita && !isControlled && controlledSelected.length > 0 && (
+            <div role="alert" className="text-[0.6875rem] text-red-800 bg-red-50 border border-red-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              <span>
-                Medicamento sujeito a controle especial ({controlledSelected.join(', ')}). Ele não pode sair neste receituário: use o
-                receituário de controle especial ou a notificação de receita (Portaria 344/98).
-              </span>
+              <div className="space-y-1.5">
+                <p>
+                  Medicamento sujeito a controle especial ({controlledSelected.join(', ')}). Ele não pode sair neste receituário
+                  {fitsControlled
+                    ? ': use o tipo "Controle especial".'
+                    : ': ao menos um exige notificação de receita em talão numerado, que o Cortex não emite (Portaria 344/98).'}
+                </p>
+                {fitsControlled && (
+                  <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDocType('receita_controle_especial')}>
+                    Usar controle especial
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isControlled && controlledError && selectedMeds.length <= 3 && (
+            <p aria-live="polite" className="text-[0.6875rem] text-amber-800 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-2 flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>Antes de gerar: {controlledError}</span>
             </p>
           )}
 
@@ -491,9 +579,114 @@ export function DocumentComposerModal({
                         />
                       </div>
                     )}
+                    {m.checked && isControlled && (
+                      // Phones: strength on its own row, quantity and unit below it.
+                      <div className="grid grid-cols-2 gap-1.5 pl-5 sm:grid-cols-[1fr_72px_1fr]">
+                        <Input
+                          aria-label={`Concentração de ${m.name}`}
+                          className="h-7 text-xs col-span-2 sm:col-span-1"
+                          value={m.concentration ?? ''}
+                          onChange={e => setMeds(prev => prev.map((x, j) => j === i ? { ...x, concentration: e.target.value } : x))}
+                          placeholder="Concentração (50 mg)"
+                          maxLength={40}
+                        />
+                        <Input
+                          aria-label={`Quantidade de ${m.name}`}
+                          className="h-7 text-xs"
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          max={9999}
+                          step={1}
+                          value={m.quantity ?? ''}
+                          onChange={e => setMeds(prev => prev.map((x, j) => j === i ? { ...x, quantity: e.target.value } : x))}
+                          placeholder="Qtd."
+                        />
+                        <Input
+                          aria-label={`Unidade de ${m.name}`}
+                          className="h-7 text-xs"
+                          value={m.unit ?? ''}
+                          onChange={e => setMeds(prev => prev.map((x, j) => j === i ? { ...x, unit: e.target.value } : x))}
+                          placeholder="comprimidos"
+                          maxLength={40}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
+
+              {isControlled && (
+                <div className="space-y-3 border-t border-border/50 pt-3">
+                  <div className="space-y-1">
+                    <label htmlFor="rce-address" className="text-xs font-medium text-foreground/80">
+                      Endereço do paciente <span className="text-muted-foreground font-normal">(obrigatório; fica só neste documento)</span>
+                    </label>
+                    <Textarea
+                      id="rce-address"
+                      value={patientAddress}
+                      onChange={e => setPatientAddress(e.target.value)}
+                      placeholder="Rua, número, complemento, bairro, cidade/UF e CEP"
+                      className="min-h-[60px] text-sm"
+                      maxLength={300}
+                    />
+                  </div>
+
+                  {hasPatientCpf ? (
+                    <p className="text-[0.6875rem] text-muted-foreground">O CPF do cadastro do paciente será impresso.</p>
+                  ) : (
+                    <fieldset className="space-y-1.5 border-0 p-0 m-0 min-w-0">
+                      <legend className="text-xs font-medium text-foreground/80">
+                        Documento do paciente <span className="text-muted-foreground font-normal">(o cadastro não tem CPF)</span>
+                      </legend>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1">
+                        {([['nao_possui', 'Não possui CPF'], ['passaporte', 'Passaporte'], ['outro', 'Outro documento']] as const).map(([value, label]) => (
+                          <label key={value} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                            <input
+                              type="radio"
+                              name="rce-patient-document"
+                              value={value}
+                              checked={documentKind === value}
+                              onChange={() => setDocumentKind(value)}
+                              className="h-3.5 w-3.5"
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                      {(documentKind === 'passaporte' || documentKind === 'outro') && (
+                        <Input
+                          aria-label={documentKind === 'passaporte' ? 'Número do passaporte' : 'Tipo e número do documento'}
+                          value={documentValue}
+                          onChange={e => setDocumentValue(e.target.value)}
+                          placeholder={documentKind === 'passaporte' ? 'Número do passaporte' : 'Ex.: RG 12.345.678-9 SSP/PR'}
+                          maxLength={40}
+                        />
+                      )}
+                    </fieldset>
+                  )}
+
+                  <div className="space-y-1">
+                    <label htmlFor="rce-cid" className="text-xs font-medium text-foreground/80">
+                      CID ou diagnóstico <span className="text-muted-foreground font-normal">(obrigatório para anabolizante ou com justificativa)</span>
+                    </label>
+                    <Input id="rce-cid" value={rceCid} onChange={e => setRceCid(e.target.value)} placeholder="Ex.: F32.1" maxLength={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="rce-justification" className="text-xs font-medium text-foreground/80">
+                      Justificativa <span className="text-muted-foreground font-normal">(só se a quantidade passar de 60 dias de tratamento)</span>
+                    </label>
+                    <Textarea
+                      id="rce-justification"
+                      value={justification}
+                      onChange={e => setJustification(e.target.value)}
+                      placeholder="Ex.: tratamento contínuo de 90 dias"
+                      className="min-h-[52px] text-sm"
+                      maxLength={600}
+                    />
+                  </div>
+                </div>
+              )}
             </>
           )}
           </fieldset>

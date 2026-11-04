@@ -132,6 +132,27 @@ await new Promise((ready) => probe.listen(0, '127.0.0.1', ready));
 const port = probe.address().port;
 await new Promise((done) => probe.close(done));
 const origin = `http://127.0.0.1:${port}`;
+// Nothing scrolls sideways and every control stays inside the dialog.
+async function assertFitsAt375() {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  if (overflow > 1) throw new Error(`Horizontal overflow of ${overflow}px at 375px`);
+  // Inside the dialog too: every control within its box, and no text spilling out of an element.
+  const escaped = await page.evaluate(() => {
+    const box = document.querySelector('[role="dialog"]').getBoundingClientRect();
+    const out = [];
+    for (const el of document.querySelectorAll('[role="dialog"] button, [role="dialog"] input, [role="dialog"] select, [role="dialog"] textarea, [role="dialog"] p')) {
+      const r = el.getBoundingClientRect();
+      if (!r.width) continue;
+      // Inputs and text areas scroll their own text by design; only their box must fit.
+      const spills = !['INPUT', 'TEXTAREA'].includes(el.tagName) && el.scrollWidth > el.clientWidth + 1;
+      if (r.left < box.left - 1 || r.right > box.right + 1 || spills)
+        out.push(`${el.tagName.toLowerCase()}: ${(el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 30)}`);
+    }
+    return out;
+  });
+  if (escaped.length) throw new Error(`Elements escaping the dialog at 375px: ${escaped.join(' | ')}`);
+}
+
 const artifacts = resolve(process.env.CORTEX_BROWSER_ARTIFACTS || 'docs/reviews/2026-11-04/prescription-visual');
 await mkdir(artifacts, { recursive: true });
 const app = spawn(process.execPath, [resolve('node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
@@ -251,27 +272,31 @@ try {
   await mobile.getByRole('button', { name: /Receita simples/ }).click();
   await mobile.getByLabel('Modelos de receita').selectOption(state.snippets[0].id);
   await expect(mobile.getByRole('group', { name: 'Como aplicar o modelo' })).toBeVisible();
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  if (overflow > 1) throw new Error(`Horizontal overflow of ${overflow}px at 375px`);
-  // Inside the dialog too: every control within its box, and no text spilling out of an element.
-  const escaped = await page.evaluate(() => {
-    const box = document.querySelector('[role="dialog"]').getBoundingClientRect();
-    const out = [];
-    for (const el of document.querySelectorAll('[role="dialog"] button, [role="dialog"] input, [role="dialog"] select, [role="dialog"] p')) {
-      const r = el.getBoundingClientRect();
-      if (!r.width) continue;
-      // Inputs scroll their own text by design; only their box must fit.
-      const spills = el.tagName !== 'INPUT' && el.scrollWidth > el.clientWidth + 1;
-      if (r.left < box.left - 1 || r.right > box.right + 1 || spills)
-        out.push(`${el.tagName.toLowerCase()}: ${(el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 30)}`);
-    }
-    return out;
-  });
-  if (escaped.length) throw new Error(`Elements escaping the dialog at 375px: ${escaped.join(' | ')}`);
+  await assertFitsAt375();
   await shot('08-mobile-template-choice.png');
   await page.getByRole('dialog').getByRole('button', { name: 'Gerar documento' }).scrollIntoViewIfNeeded();
   await shot('09-mobile-footer.png');
   checks.push('at 375px the picker, the choice, the type cards and the footer fit inside the dialog');
+
+  // 8. Receita de Controle Especial (D8) at phone width: per-item strength and
+  // quantity, the patient's address and document, CID and justification.
+  await mobile.getByRole('button', { name: /Controle especial/ }).click();
+  await expect(mobile.getByText(/Antes de gerar: Informe a concentração/)).toBeVisible();
+  const firstChecked = mobile.getByLabel(/^Concentração de /).first();
+  await firstChecked.fill('50 mg');
+  await mobile.getByLabel(/^Quantidade de /).first().fill('30');
+  await mobile.getByLabel(/^Unidade de /).first().fill('comprimidos');
+  await assertFitsAt375();
+  await firstChecked.scrollIntoViewIfNeeded();
+  await shot('10-mobile-controlled-items.png');
+  await mobile.getByLabel(/Endereço do paciente/).fill('Rua Sintética, 100 — Centro — Curitiba/PR — 80000-000');
+  await mobile.getByLabel('Outro documento').check();
+  await mobile.getByLabel('Tipo e número do documento').fill('RG 0.000.000-0 SSP/PR');
+  await mobile.getByLabel(/CID ou diagnóstico/).fill('F32.1');
+  await assertFitsAt375();
+  await mobile.getByLabel(/Justificativa/).scrollIntoViewIfNeeded();
+  await shot('11-mobile-controlled-patient.png');
+  checks.push('at 375px the controlled prescription fields (strength, quantity, address, document, CID, justification) fit inside the dialog');
 
   const report = { synthetic: true, checks, pageErrors: errors, unansweredCalls: Object.fromEntries(unknown) };
   await writeFile(resolve(artifacts, 'verification.json'), JSON.stringify(report, null, 2) + '\n');
