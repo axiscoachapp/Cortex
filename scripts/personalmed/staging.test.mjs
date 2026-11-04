@@ -244,3 +244,27 @@ describe('synthetic "Atenção" alerts (S6)', () => {
     expect(of('legacy_alert')).toHaveLength(5);
   });
 });
+
+describe('synthetic health-plan cards (staging only)', () => {
+  const cards = (pcod) => of('health_plan_card').filter((e) => e.sourceRecordId.startsWith(`pcod:${pcod}|`));
+
+  it('stages every card except private pay, only in staging', () => {
+    expect(of('health_plan_card')).toHaveLength(4);
+    expect(cards(102)).toEqual([]);
+    expect(of('health_plan_card').every((e) => e.targetTable === 'staging_only' && e.mappingStatus === 'ready')).toBe(true);
+  });
+
+  it('keeps holder and expiry, flags an expired card and picks an active one as main', () => {
+    const [current, old] = cards(101);
+    expect(current.payload).toMatchObject({ carrier: 'PLANO SINTÉTICO A', cardNumber: '0000000000000101', holderName: 'PACIENTE SINTÉTICA UM', expiresOn: '2027-06-30', primary: true });
+    expect(old).toMatchObject({ issues: ['card_expired'], payload: { cardNumber: 'C0101', holderName: 'TITULAR SINTÉTICO', primary: false } });
+  });
+
+  it('flags missing numbers, repeated cards, inactive insurers and zero dates, with stable keys', () => {
+    const [first, second] = cards(105);
+    expect(first.issues).toEqual(['card_number_missing', 'carrier_disabled', 'date_sentinel']);
+    expect(second.issues).toEqual(['card_duplicated', 'card_number_missing', 'carrier_disabled']);
+    expect([first.sourceRecordId, second.sourceRecordId]).toEqual(['pcod:105|carrier:12|card:sem-numero|n:1', 'pcod:105|carrier:12|card:sem-numero|n:2']);
+    expect(cards(105).some((e) => e.payload.primary)).toBe(false);
+  });
+});

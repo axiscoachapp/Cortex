@@ -385,6 +385,60 @@ export function buildChartClinical(ctx, chart, input) {
 
 /** Write one NDJSON file per entity plus manifest.json. Deterministic order. */
 /**
+ * Health-plan cards of one person (Clini_05 + Carrier) -> `health_plan_card`,
+ * staging only until S2 gives cards a home in Cortex. "Particular" (private
+ * pay) is a payment mode, not a card, and is not staged. The holder name stays
+ * in the encrypted staging: it can be another person (a parent, a spouse).
+ *
+ * @param ctx   { sourceInstance, batchId, exportDate }
+ * @param pcod  legacy person key
+ * @param cards [{ carrierCod, carrier, isPrivate, disabled, card, ownerName, expiration }]
+ *              expiration as ISO date (or null)
+ */
+export function buildHealthPlanCards(ctx, pcod, cards) {
+  const seen = new Map();
+  const out = [];
+  for (const c of cards) {
+    if (c.isPrivate) continue;
+    const number = text(c.card).replace(/\s+/g, '');
+    // Stable key: same person, insurer and number; repeated or blank numbers get an ordinal.
+    const base = `${c.carrierCod}|${number || 'sem-numero'}`;
+    const n = (seen.get(base) ?? 0) + 1;
+    seen.set(base, n);
+    const expires = legacyDate(c.expiration, { max: '2100-12-31' });
+    const issues = [];
+    if (!number) issues.push('card_number_missing');
+    if (n > 1) issues.push('card_duplicated');
+    if (c.disabled) issues.push('carrier_disabled');
+    if (expires.date && expires.date < ctx.exportDate) issues.push('card_expired');
+    issues.push(...expires.issues);
+    out.push(
+      envelope({
+        sourceInstance: ctx.sourceInstance,
+        batchId: ctx.batchId,
+        sourceEntity: 'health_plan_card',
+        key: { pcod, carrier: c.carrierCod, card: number || 'sem-numero', n },
+        targetTable: 'staging_only',
+        payload: {
+          carrier: text(c.carrier) || null,
+          cardNumber: number || null,
+          holderName: text(c.ownerName) || null,
+          expiresOn: expires.date,
+          carrierDisabled: Boolean(c.disabled),
+          primary: false,
+        },
+        issues,
+        status: 'ready',
+      }),
+    );
+  }
+  // Main card: the first one of an active insurer that has not expired.
+  const main = out.find((e) => !e.payload.carrierDisabled && !e.issues.includes('card_expired'));
+  if (main) main.payload.primary = true;
+  return out;
+}
+
+/**
  * One "Atenção" text (Clini_01.Attention, one per person) -> `legacy_alert`
  * (S6): delivered to the chart of the doctor who treats the person, visible
  * only to that doctor, status pending_review. Nothing goes to the chart or to

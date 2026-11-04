@@ -49,10 +49,21 @@ export const charts = [
   { pcod: 105, user: 5, firstVisit: '1899-12-30', lastVisit: '2024-09-09', hasConsultations: true },
 ];
 
+// Clini_05 + Carrier. "Particular" is private pay, not a card.
 export const plans = {
-  101: [{ carrier: 'Particular', isPrivate: true }, { carrier: 'PLANO SINTÉTICO A', card: '0000000000000101', isPrivate: false }],
-  102: [{ carrier: 'Particular', isPrivate: true }],
-  105: [{ carrier: 'Particular', isPrivate: true }, { carrier: 'PLANO SINTÉTICO B', card: '', isPrivate: false }],
+  101: [
+    { carrierCod: 1, carrier: 'Particular', isPrivate: true },
+    { carrierCod: 10, carrier: 'PLANO SINTÉTICO A', card: '0000000000000101', isPrivate: false, ownerName: 'PACIENTE SINTÉTICA UM', expiration: '2027-06-30' },
+    // Old card of another holder, expired before the export.
+    { carrierCod: 11, carrier: 'PLANO SINTÉTICO C', card: 'C 0101', isPrivate: false, ownerName: 'TITULAR SINTÉTICO', expiration: '2020-01-31' },
+  ],
+  102: [{ carrierCod: 1, carrier: 'Particular', isPrivate: true }],
+  105: [
+    { carrierCod: 1, carrier: 'Particular', isPrivate: true },
+    // Insurer no longer active at the clinic, no card number, Delphi zero date.
+    { carrierCod: 12, carrier: 'PLANO SINTÉTICO B', card: '', isPrivate: false, disabled: true, expiration: '1899-12-30' },
+    { carrierCod: 12, carrier: 'PLANO SINTÉTICO B', card: '', isPrivate: false, disabled: true },
+  ],
 };
 
 /** Activity flags: the whole universe is staged; the first reception cohort is decided later (D12). */

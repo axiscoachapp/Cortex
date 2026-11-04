@@ -6,7 +6,7 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EXPORT_DATE, USAGE_SINCE, agenda, alerts, charts, clinical, cohortFlags, issuedDocuments, persons, plans, templates } from './fixtures/synthetic-legacy.mjs';
-import { buildAgenda, buildChartClinical, buildLegacyAlert, buildPerson, buildTemplate, writeBatch } from './staging.mjs';
+import { buildAgenda, buildChartClinical, buildHealthPlanCards, buildLegacyAlert, buildPerson, buildTemplate, writeBatch } from './staging.mjs';
 import { splitHistory, templateChunks, templateUsage, wallClockToUtc } from './transforms.mjs';
 import { antimicrobialsIn, controlledSubstancesIn } from '../../supabase/functions/_shared/regulatedMedications.ts';
 
@@ -19,6 +19,7 @@ export function syntheticBatch() {
     for (const e of list) if (e.sourceEntity === 'chart') chartIds.set(`${p.PCod}|${e.payload.ownerLegacyDoctor}`, e.targetId);
     envelopes.push(...list);
   }
+  for (const [pcod, cards] of Object.entries(plans)) envelopes.push(...buildHealthPlanCards(ctx, Number(pcod), cards));
   for (const [key, c] of Object.entries(clinical)) {
     const [pcod, user] = key.split('|').map(Number);
     const encounters = new Map(

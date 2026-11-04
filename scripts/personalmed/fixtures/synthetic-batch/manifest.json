@@ -30,6 +30,10 @@
       "sha256": "30670b131df968e8344cf442f57f5b974d8f7653e2ecba5c075e720a60482ee5",
       "lines": 1
     },
+    "health_plan_card.ndjson": {
+      "sha256": "f523a02b9e721ffca3ceba1c8e8f2cfdf0a7505e0831f45bf9a0d0e8fb37a64d",
+      "lines": 4
+    },
     "legacy_alert.ndjson": {
       "sha256": "8cfc34b9c83cedb5188b34119581518a651bf7ff1affd1d0df13001903ce15b9",
       "lines": 5
@@ -118,6 +122,13 @@
         "user:3": 1
       }
     },
+    "health_plan_card": {
+      "total": 4,
+      "byStatus": {
+        "ready": 4
+      },
+      "byDoctor": {}
+    },
     "legacy_alert": {
       "total": 5,
       "byStatus": {
@@ -186,11 +197,15 @@
     "appointment_overlap": 1,
     "appointment_without_patient": 1,
     "block_executor_contract_pending": 1,
+    "card_duplicated": 1,
+    "card_expired": 1,
+    "card_number_missing": 2,
+    "carrier_disabled": 2,
     "cep_generic": 2,
     "city_spelling_normalized": 1,
     "cpf_checksum_invalid": 2,
     "cpf_missing": 2,
-    "date_sentinel": 1,
+    "date_sentinel": 2,
     "doctor_map_pending": 6,
     "email_field_reused": 2,
     "history_no_dates": 1,

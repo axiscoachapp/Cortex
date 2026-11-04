@@ -16,7 +16,7 @@ import { ParadoxTable, decodeText, toCalendarDate } from './paradox-reader.mjs';
 import { Mdf } from './mssql2000-reader.mjs';
 import { rtfToText } from './rtf-to-text.mjs';
 import { SecureBatchWriter, keyFromEnv } from './secure-staging.mjs';
-import { buildAgenda, buildChartClinical, buildLegacyAlert, buildPerson, buildTemplate } from './staging.mjs';
+import { buildAgenda, buildChartClinical, buildHealthPlanCards, buildLegacyAlert, buildPerson, buildTemplate } from './staging.mjs';
 import { splitHistory, templateChunks, templateUsage, wallClockToUtc } from './transforms.mjs';
 import { antimicrobialsIn, controlledSubstancesIn } from '../../supabase/functions/_shared/regulatedMedications.ts';
 
@@ -182,13 +182,18 @@ for (const r of rows(mdf.table('Clini_02'), ['PCod', 'UserNumber', 'FirstMedAdvi
   touch(r.PCod, iso(r.LastMedAdvice));
 }
 const carrier = new Map();
-for (const r of rows(px('Carrier'), ['CarrierCod', 'Name', 'IsPrivate'])) carrier.set(r.CarrierCod, { name: str(r.Name).split(' - ')[0], isPrivate: Boolean(r.IsPrivate) });
+for (const r of rows(px('Carrier'), ['CarrierCod', 'Name', 'IsPrivate', 'Disabled'])) carrier.set(r.CarrierCod, { name: str(r.Name).split(' - ')[0], isPrivate: Boolean(r.IsPrivate), disabled: Boolean(r.Disabled) });
 const plans = new Map();
-for (const r of rows(px('Clini_05'), ['PCod', 'CarrierCod', 'Registration'])) {
+const planStats = { rows: 0, unknownCarrier: 0 };
+for (const r of rows(px('Clini_05'), ['PCod', 'CarrierCod', 'Registration', 'OwnerName', 'ExpirationDate'])) {
+  planStats.rows += 1;
   const c = carrier.get(r.CarrierCod);
-  if (!c) continue;
+  if (!c) {
+    planStats.unknownCarrier += 1;
+    continue;
+  }
   if (!plans.has(r.PCod)) plans.set(r.PCod, []);
-  plans.get(r.PCod).push({ carrier: c.name, card: str(r.Registration), isPrivate: c.isPrivate });
+  plans.get(r.PCod).push({ carrierCod: r.CarrierCod, carrier: c.name, card: str(r.Registration), isPrivate: c.isPrivate, disabled: c.disabled, ownerName: str(r.OwnerName), expiration: iso(r.ExpirationDate) });
 }
 
 const chartIds = new Map();
@@ -228,6 +233,11 @@ lap('clinical envelopes');
 
 for (const e of buildAgenda(ctx, agendaRows, chartIds)) count(e);
 lap('agenda envelopes');
+
+// Health-plan cards (staging only until S2). Private pay is not a card.
+for (const [pcod, list] of plans) for (const e of buildHealthPlanCards(ctx, pcod, list)) count(e);
+planStats.privatePay = [...plans.values()].flat().filter((c) => c.isPrivate).length;
+lap('health-plan cards');
 
 // "Atenção" alerts (S6): one per person with text, sent to the charts built
 // for that person. Counts only leave this script.
@@ -288,9 +298,9 @@ lap('templates');
 
 // ---------------------------------------------------------------------------
 
-const expected = { person: 32882, chart: 34796, contact_chart_link: 34796, consultation: 169934 + 13010, diagnosis_set: 2353, pregnancy_item: 97, template: 1123, legacy_alert: 5277 };
+const expected = { person: 32882, chart: 34796, contact_chart_link: 34796, consultation: 169934 + 13010, diagnosis_set: 2353, pregnancy_item: 97, template: 1123, legacy_alert: 5277, health_plan_card: 62204 - 32686 /* Clini_05 rows minus private pay */ };
 const reconciliation = Object.fromEntries(Object.entries(expected).map(([k, v]) => [k, { expected: v, staged: agg.entities[k]?.total ?? 0, diff: (agg.entities[k]?.total ?? 0) - v }]));
-const out = { exportDate: EXPORT, importDate: ctx.importDate, persons, chartsWithClinicalButNoHeader: chartsWithoutHeader, reconciliation, entities: agg.entities, issues: Object.fromEntries(Object.entries(agg.issues).sort()), consultationSections: agg.sections, historyChars: agg.chars, templates: templateStats, alerts: alertStats, seconds: Math.round((Date.now() - t0) / 1000) };
+const out = { exportDate: EXPORT, importDate: ctx.importDate, persons, chartsWithClinicalButNoHeader: chartsWithoutHeader, reconciliation, entities: agg.entities, issues: Object.fromEntries(Object.entries(agg.issues).sort()), consultationSections: agg.sections, historyChars: agg.chars, templates: templateStats, alerts: alertStats, healthPlans: planStats, seconds: Math.round((Date.now() - t0) / 1000) };
 if (writer) out.encryptedStaging = { dir: opt('--out'), manifest: 'manifest.json', files: Object.keys(writer.close({ sourceSystem: 'personalmed', sourceInstance: ctx.sourceInstance, batchId: ctx.batchId, exportDate: EXPORT, importDate: ctx.importDate }).files) };
 const json = JSON.stringify(out, null, 2);
 if (opt('--json')) writeFileSync(opt('--json'), json);
