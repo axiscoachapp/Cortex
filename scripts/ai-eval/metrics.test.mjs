@@ -2,7 +2,7 @@
 // Synthetic case and hand-made hypotheses only.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { alignWords, medicalTermErrors, negationErrors, normalize, scoreTranscript, speakerAccuracy, wordErrorRate } from './metrics.mjs';
+import { alignWords, factRecall, medicalTermErrors, negationErrors, normalize, scoreNote, scoreTranscript, speakerAccuracy, unsupportedDoses, wordErrorRate } from './metrics.mjs';
 
 const gold = JSON.parse(readFileSync(new URL('./cases/sintetico-01-itu/gold.json', import.meta.url), 'utf8'));
 const goldText = gold.transcript.map((s) => s.text).join(' ');
@@ -68,5 +68,33 @@ describe('scoreTranscript on the synthetic case', () => {
     expect(r.negations.inverted).toEqual(['febre']);
     expect(r.wer.substitutions + r.wer.deletions).toBeGreaterThan(0);
     expect(goldText.length).toBeGreaterThan(100);
+  });
+});
+
+describe('SOAP note metrics', () => {
+  it('gives the reference note full recall and no critical error', () => {
+    const r = scoreNote(gold, gold.referenceNote);
+    expect(r.facts).toMatchObject({ recall: 1, missing: [] });
+    expect(r).toMatchObject({ inventedDoses: [], criticalErrors: 0, sections: { S: true, O: true, A: true, P: true } });
+    expect(r.negations.inverted).toEqual([]);
+  });
+
+  it('catches an invented dose, a lost negation and missing facts', () => {
+    const bad = 'Subjetivo: ardência para urinar. Teve febre.\nPlano: nitrofurantoína 500 mg.';
+    const r = scoreNote(gold, bad);
+    expect(r.inventedDoses).toEqual(['500 mg']);
+    expect(r.negations.inverted).toEqual(['febre']);
+    expect(r.terms.wrongDose).toEqual(['nitrofurantoína 100 mg']);
+    expect(r.criticalErrors).toBe(3);
+    expect(r.facts.missing).toEqual(expect.arrayContaining(['polaciuria', 'duracao_3_dias', 'sem_alergia', 'urocultura']));
+    expect(r.sections).toEqual({ S: true, O: false, A: false, P: true });
+  });
+
+  it('accepts plural and accepted phrasings, and doses written with decimals', () => {
+    expect(negationErrors([{ cue: 'nega', subject: 'alergia' }], 'Nega alergias.')).toMatchObject({ inverted: [], missing: [] });
+    expect(negationErrors([{ cue: 'nega', subject: 'alergia' }], 'Alergista avaliou.')).toMatchObject({ missing: ['alergia'] });
+    expect(factRecall([{ id: 'x', match: ['ardor ao urinar', 'disuria'] }], 'Refere disúria.')).toMatchObject({ recall: 1 });
+    expect(unsupportedDoses('Dipirona 1,5 ml', 'tomar 1.5 ml de dipirona')).toEqual([]);
+    expect(unsupportedDoses('Dipirona 2 ml', 'tomar 1.5 ml de dipirona')).toEqual(['2 ml']);
   });
 });

@@ -16,6 +16,7 @@ Ferramentas fora do app para a Parte B de [`docs/ai/PLANO_IA_EFICIENCIA_E_AVALIA
 | `transcript` | `[{speaker, text}]`, com `speaker` igual a `medico`, `paciente` ou `acompanhante` |
 | `terms` | `[{name, dose?}]`: medicamentos e exames do roteiro, com a dose quando houver |
 | `negations` | `[{cue, subject}]`, por exemplo `{ "cue": "nega", "subject": "alergia" }` |
+| `keyFacts` | `[{id, match: [frases aceitas]}]`: fatos que a evolução e a síntese precisam trazer |
 | `referenceNote` | A evolução SOAP de referência, escrita pelo médico |
 | `approvedBy` | Quem aprovou o roteiro; `null` até a aprovação |
 
@@ -28,6 +29,13 @@ O áudio gravado da consulta encenada fica fora do repositório.
 - `negationErrors`: negação que se perdeu ("nega febre" virou "febre"). Também conta como erro crítico.
 - `speakerAccuracy`: acerto de quem falou, depois de associar os rótulos do provedor ("spk_0") aos papéis do gabarito.
 - `scoreTranscript`: tudo acima para uma transcrição, mais o total de erros críticos.
+- `scoreNote`, para a evolução SOAP ou a síntese do paciente:
+  - recall dos fatos-chave (`factRecall`);
+  - **doses que ninguém disse** (`unsupportedDoses`), que contam como erro crítico de informação inventada;
+  - dose errada e negação perdida;
+  - presença das seções S, O, A e P.
+
+  Contradições e achados inventados sem dose continuam com a revisão dos médicos.
 
 ## Revisão às cegas (`blind.mjs`)
 
@@ -45,5 +53,4 @@ Testes: `npx vitest run scripts/ai-eval`.
 ## A fazer
 
 1. Executor por candidato, quando houver contas de teste.
-2. Métricas da evolução e da síntese: recall de fatos-chave, fatos sem fonte e contradições.
-3. Relatório final.
+2. Relatório final.

@@ -113,8 +113,10 @@ export function negationErrors(negations, hypothesis, { window = 5 } = {}) {
   const inverted = [];
   for (const n of negations) {
     const subject = words(n.subject);
+    // "alergia" also matches "alergias": plural endings only, nothing looser.
+    const same = (w, x) => x === w || (x.startsWith(w) && /^(s|es)$/.test(x.slice(w.length)));
     const hits = [];
-    for (let k = 0; k + subject.length <= h.length; k++) if (subject.every((w, m) => h[k + m] === w)) hits.push(k);
+    for (let k = 0; k + subject.length <= h.length; k++) if (subject.every((w, m) => same(w, h[k + m]))) hits.push(k);
     if (!hits.length) {
       missing.push(n.subject);
       continue;
@@ -147,6 +149,55 @@ export function speakerAccuracy(gold, hyp) {
   const mapping = Object.fromEntries([...votes].map(([label, v]) => [label, [...v].sort((a, b) => b[1] - a[1])[0][0]]));
   const correct = ops.filter((o) => mapping[hypWords[o.hypIndex].speaker] === goldWords[o.refIndex].speaker).length;
   return { accuracy: ops.length ? correct / ops.length : 0, matchedWords: ops.length, mapping };
+}
+
+const DOSE = /\b(\d+(?:d\d+)?) (mg|mcg|g|ml|ui|gotas?|comprimidos?|capsulas?)\b/g;
+
+/** Doses written in the note that nobody said in the consultation. */
+export function unsupportedDoses(noteText, transcriptText) {
+  const said = ` ${words(transcriptText).join(' ')} `;
+  const found = [...new Set([...words(noteText).join(' ').matchAll(DOSE)].map((m) => m[0]))];
+  return found.filter((d) => !said.includes(` ${d} `));
+}
+
+/** Which of S, O, A, P the note has as headings ("## S", "Subjetivo:", "S:"). */
+export function soapSections(noteText) {
+  const names = { S: 'subjetivo', O: 'objetivo', A: 'avaliacao', P: 'plano' };
+  const lines = String(noteText ?? '').split(/\r?\n/).map((l) => normalize(l.replace(/^#+\s*/, '')));
+  return Object.fromEntries(Object.entries(names).map(([k, full]) => [k, lines.some((l) => l === k.toLowerCase() || l.startsWith(`${full}`) || l.startsWith(`${k.toLowerCase()} `))]));
+}
+
+/**
+ * Key-fact recall for a note or a patient synthesis. Each fact lists accepted
+ * phrasings; a fact is present when any of them appears.
+ * @param facts [{ id, match: ['disuria', 'ardencia para urinar'] }]
+ */
+export function factRecall(facts, text) {
+  const t = ` ${words(text).join(' ')} `;
+  const missing = facts.filter((f) => !f.match.some((m) => t.includes(` ${words(m).join(' ')} `))).map((f) => f.id);
+  return { total: facts.length, missing, recall: facts.length ? (facts.length - missing.length) / facts.length : 1 };
+}
+
+/**
+ * Everything B3 measures automatically for one SOAP note: key facts, doses
+ * with no source in the transcript (invented), lost negations and the four
+ * sections. Invented doses and inverted negations are critical errors.
+ */
+export function scoreNote(gold, noteText) {
+  const transcriptText = gold.transcript.map((s) => s.text).join(' ');
+  const facts = factRecall(gold.keyFacts ?? [], noteText);
+  const invented = unsupportedDoses(noteText, transcriptText);
+  const terms = medicalTermErrors(gold.terms ?? [], noteText);
+  const negations = negationErrors(gold.negations ?? [], noteText);
+  const sections = soapSections(noteText);
+  return {
+    facts,
+    inventedDoses: invented,
+    terms,
+    negations,
+    sections,
+    criticalErrors: invented.length + terms.wrongDose.length + negations.inverted.length,
+  };
 }
 
 /** Everything B3 measures automatically for one transcript. */
