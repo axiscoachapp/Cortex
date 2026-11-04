@@ -16,7 +16,7 @@ O documento tem três partes:
 - [ANALYSIS.md](ANALYSIS.md): estrutura completa do legado. A seção 4 de lá fica substituída por este documento onde houver diferença; por exemplo, CPF, sexo e convênio já têm coluna em `patients`.
 - [CADASTRO_E_RECEITAS.md](CADASTRO_E_RECEITAS.md): qualidade do cadastro, exigências legais da receita e modelos.
 
-**Base comum.** A exportação é de 24/08/2026. "Ativos" são os 9.300 pacientes atendidos desde 01/01/2025 ou com consulta marcada. O Cortex vai rodar no servidor da clínica: nada do que está aqui pode depender de recurso exclusivo do Supabase gerenciado.
+**Base comum.** A exportação é de 24/08/2026. "Ativos" são os 9.300 pacientes atendidos desde 01/01/2025 ou com consulta marcada. Em 03/11/2026 a clínica aceitou hospedagem em nuvem, não necessariamente num servidor físico; o que isso muda está na §1.3.
 
 ---
 
@@ -63,6 +63,24 @@ Problemas detectados no legado:
 - **Anexos externos:** 172 imagens apontam para arquivos fora da exportação.
 - **Histórico corrido:** em 1.481 documentos as datas digitadas estão fora de ordem, e há 52 datas inválidas.
 - **Campos com outro uso:** "FAX" guarda o CPF; "e-mail" guarda a acomodação do plano.
+
+### 1.3 Hospedagem em nuvem: o que muda
+
+A clínica pode usar nuvem (decisão D11). Hoje o projeto Supabase de produção está em **us-west-2 (Oregon, EUA)**, ocupa 27 MB e tem só dados de teste: 2 contas e 20 pacientes.
+
+| Tema | Impacto | Recomendação |
+|---|---|---|
+| Região e LGPD | Dado de saúde fora do Brasil é transferência internacional (LGPD, art. 33). Também aumenta a latência a partir de Curitiba. | Criar o projeto da clínica em **sa-east-1 (São Paulo)**. A região de um projeto não muda depois, e o atual só tem testes; recriar é mais simples que mover. |
+| Contrato | O provedor de nuvem passa a ser suboperador da clínica. | Aceitar o DPA do provedor e listá-lo no aviso de privacidade (`src/config/privacy.ts`). |
+| Backup e reversão | Na nuvem, backup diário só no plano pago; restauração a um ponto exato (PITR) é um adicional. | Plano Pro com PITR ativo antes da primeira carga real. É o "backup imediatamente antes" da S7. |
+| Onde fica a exportação | A exportação e o staging têm dados reais. | Continuam **só no computador do operador**, cifrados. Nada de bucket, chat ou CI. O carregador conecta direto no banco da nuvem com TLS e service role. |
+| Ensaios com dados reais | Um projeto de homologação na nuvem com dados reais precisa da mesma proteção da produção. | Ensaio real num Postgres descartável local (o harness que o Codex já usa). Homologação na nuvem só com dados sintéticos. Depois, carga direta na produção. |
+| Limites das funções Edge | Tempo e memória limitados. | Nem a carga nem a exportação completa rodam dentro de uma função Edge. A exportação em lotes (S7) fica ainda mais necessária. |
+| Tamanho | O texto clínico soma cerca de 80 milhões de caracteres, em 170 mil consultas. | Estimativa abaixo de 2 GB de banco com índices, e menos de 50 MB de arquivos. Cabe com folga no plano Pro. |
+| WhatsApp e NFS-e (T12–T22) | O webhook público pode ser uma função Edge, sem gateway nem servidor exposto. | Revisar a seção "WhatsApp e infraestrutura local" do `PRODUCT_SPEC.md` (decisão do Codex). O certificado A1 fica num cofre de segredos. |
+| Busca de CEP (S8) | Função Edge consultando um serviço de CEP, só com o CEP. | Sem mudança no desenho. |
+| Prazo | O plano de 12 semanas reservava 5 semanas para instalar no servidor da clínica. | Na nuvem, a preparação cai para cerca de 1 a 2 semanas: projeto, domínio, e-mail, backups. |
+| Portabilidade | Servidor próprio pode voltar a ser opção no futuro. | Evitar recurso que só existe no Supabase gerenciado. Postgres, Storage, Edge e pg_cron existem também na versão própria. |
 
 ---
 
@@ -231,6 +249,10 @@ Hoje o Cortex não tem estado de falta.
 - espera mediana de 22 minutos entre a chegada e o início do atendimento (90% esperam até 52);
 - o paciente chega em média 7 minutos antes do horário.
 
+**Sobreposição e bloqueios:** a agenda do Cortex recusa horários sobrepostos do mesmo médico.
+- No legado, só **27** dos 221.544 agendamentos não cancelados se sobrepõem a outro, e nenhum é de 2025 em diante nem futuro.
+- Há **358 bloqueios futuros** (`age03.Tipo = B`) e nenhum agendamento futuro cai dentro deles.
+
 **Pré-cadastro:** dos 65.466, 64.567 têm nome e 636 são futuros. Comparando nome e telefone com o cadastro: 1.199 têm o mesmo nome e telefone, 1.490 só o nome igual, 278 são ambíguos e 61.600 não correspondem a ninguém. **Não ligar automaticamente.** A correspondência só sugere; a secretária confirma (regra do handoff, item 5).
 
 ### 2.7 Receitas e modelos
@@ -301,20 +323,21 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
 - **Valores brutos não entram no banco.** Ficam no arquivo cifrado e no staging. No banco ficam só o mapa e os códigos de problema (S1), o que atende ao pedido de "área restrita" sem duplicar dado pessoal.
 - Para cada lote há um `manifest.json` com contagens por entidade e por médico, SHA-256 de cada arquivo, a versão da transformação e a lista de códigos de problema.
 
-**Entidades de staging**, em ordem de carga:
-1. `contact`
-2. `contact_channel`
-3. `health_plan_card`
-4. `chart`
-5. `contact_chart_link`
-6. `appointment`
-7. `consultation`
-8. `diagnosis_set`
-9. `pregnancy_item`
-10. `medical_history`
-11. `legacy_alert`
-12. `file`
-13. `template`
+**Entidades de staging**, em ordem de carga. A ordem foi revista com o Codex na mensagem `2026-11-03-2148`.
+1. `person`: identidade legal do legado, um registro por `PCod`. Fica só no staging até a S2 ter especificação própria.
+2. `chart`: linha de `patients` por `(PCod, UserNumber)`. Leva cópia de CPF, sexo, telefone com DDD, e-mail válido e convênio da `person`, nos campos que `patients` já tem hoje.
+3. `contact`: candidato a `clinic_contacts`. Leva nome e telefone bruto; `phone_normalized` é `55` + DDD + número, igual a `normalize_reception_phone`, ou `null` sem DDD seguro.
+4. `contact_chart_link`: `self` só pela chave do legado (mesmo `PCod`); nunca por telefone.
+5. `health_plan_card`
+6. `schedule_block`
+7. `appointment`
+8. `consultation`
+9. `diagnosis_set`
+10. `pregnancy_item`
+11. `medical_history`
+12. `legacy_alert`
+13. `file`
+14. `template`
 
 ---
 
@@ -354,7 +377,15 @@ As numerações de migração devem ser combinadas, como pede o handoff. Os rót
 
 ### S2. Cadastro da pessoa (encaixe: T04 e T05)
 
-O cadastro legal fica na pessoa (`clinic_contacts`), não em cada prontuário. Isso resolve as 774 pessoas ativas com mais de um médico e é o que a recepção edita sem tocar no prontuário.
+> **Adiado (03/11/2026, contraproposta do Codex).** `clinic_contacts` representa quem fala com a recepção, que pode ser um responsável ou familiar. Por isso não serve como fonte única do CPF, do endereço ou do nascimento do paciente.
+>
+> Enquanto a S2 não tem especificação própria:
+> - os campos legais continuam em `patients`;
+> - o staging mantém `person` (por `PCod`) separado de `chart` e de `contact`.
+>
+> A proposta abaixo fica como ponto de partida dessa especificação.
+
+A ideia original era o cadastro legal ficar na pessoa, não em cada prontuário. Isso resolveria as 774 pessoas ativas com mais de um médico e seria o que a recepção edita sem tocar no prontuário.
 
 - **Campos de `clinic_contacts`** (ou de uma tabela 1:1 de cadastro, se preferir separar):
   - nome;
@@ -425,6 +456,8 @@ O cadastro legal fica na pessoa (`clinic_contacts`), não em cada prontuário. I
   - `-` no passado: não importar, ou importar como desconhecido (decisão D3);
   - `-` no futuro → `agendado`.
   - Inserir com `google_sync_status = 'idle'` e sem lembretes.
+  - Os 27 agendamentos sobrepostos vão para a lista de rejeições. Os horários não são deslocados.
+  - Os 358 bloqueios futuros vão para `reception_schedule_blocks`, se o Codex concordar.
 - **Aceite:**
   - importar não enfileira sincronização com o Google nem mensagens;
   - os agendamentos futuros conferem com a exportação final;
@@ -543,6 +576,7 @@ Navegador: 390, 768, 1280 e 1920 px na escala de 150%, como já está definido.
 | D8 | Controlados no Cortex | Fase 2, depois de confirmação jurídica. Até lá, receituário próprio. |
 | D9 | Confirmar inferências | FAX = CPF, e-mail = acomodação, estados A/E/`-`, tipo de slot P. |
 | D10 | Pasta externa de imagens (172) | Pedir à clínica. |
+| D11 | Hospedagem e região | Nuvem: Supabase em sa-east-1 (São Paulo), plano Pro com PITR, projeto novo só da clínica. O de teste em us-west-2 não recebe dados reais. |
 
 ---
 
