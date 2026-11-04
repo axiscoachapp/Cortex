@@ -394,6 +394,31 @@ export function parseTemplateItems(templateText) {
 // ---------------------------------------------------------------------------
 // Agenda
 
+function tzOffsetMinutes(ts, timeZone) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      .formatToParts(new Date(ts))
+      .map((p) => [p.type, p.value]),
+  );
+  return Math.round((Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second) - ts) / 60000);
+}
+
+/**
+ * Legacy times are São Paulo wall-clock times. Brazil had daylight saving
+ * until 2019, so the UTC offset depends on the date (IANA tz database).
+ */
+export function wallClockToUtc(dateIso, minutes, timeZone = 'America/Sao_Paulo') {
+  const [y, m, d] = dateIso.split('-').map(Number);
+  const wall = Date.UTC(y, m - 1, d, Math.floor(minutes / 60), minutes % 60);
+  let ts = wall + 3 * 3600e3;
+  for (let i = 0; i < 3; i += 1) {
+    const next = wall - tzOffsetMinutes(ts, timeZone) * 60e3;
+    if (next === ts) break;
+    ts = next;
+  }
+  return new Date(ts).toISOString();
+}
+
 /**
  * Legacy status -> Cortex status. Returns null for rows not imported by
  * default (past rows without status, decision D3).

@@ -1,0 +1,116 @@
+{
+  "sourceSystem": "personalmed",
+  "sourceInstance": "pm-synthetic",
+  "batchId": "pm-synthetic-01",
+  "exportDate": "2026-08-24",
+  "synthetic": true,
+  "transformVersion": "pm-v1",
+  "files": {
+    "appointment.ndjson": {
+      "sha256": "d46939f5be312c12fa73f2efead71f5f9eb4da80a1f21cc6b8f60f8cbf1dd5b2",
+      "lines": 9
+    },
+    "chart.ndjson": {
+      "sha256": "367ab11a55643ecae79a838ef558383a0b2e218ad29898e5859cb7656f9d640c",
+      "lines": 6
+    },
+    "contact.ndjson": {
+      "sha256": "b1d5d6d515e719663de13e7777fe77ccc7a1b185e82ad1d0c5730df49649c858",
+      "lines": 6
+    },
+    "contact_chart_link.ndjson": {
+      "sha256": "b35cb47eca49532007edd9a7054962a02bbfe6167ed2d9efa323be845e2a706d",
+      "lines": 6
+    },
+    "person.ndjson": {
+      "sha256": "81d0e91daff7757787ccfdebf3c769f057b82aca84ed1da2649e03c62c84fb05",
+      "lines": 5
+    },
+    "schedule_block.ndjson": {
+      "sha256": "d842cb45564511a138e3890d92cec1e5c4c40748c80c4669b8f121550e06a239",
+      "lines": 1
+    }
+  },
+  "counts": {
+    "appointment": {
+      "total": 9,
+      "byStatus": {
+        "ready": 6,
+        "rejected": 2,
+        "requires_review": 1
+      },
+      "byDoctor": {
+        "user:3": 5,
+        "user:5": 3,
+        "user:9": 1
+      }
+    },
+    "chart": {
+      "total": 6,
+      "byStatus": {
+        "ready": 6
+      },
+      "byDoctor": {
+        "user:3": 3,
+        "user:5": 2,
+        "user:9": 1
+      }
+    },
+    "contact": {
+      "total": 6,
+      "byStatus": {
+        "ready": 5,
+        "requires_review": 1
+      },
+      "byDoctor": {}
+    },
+    "contact_chart_link": {
+      "total": 6,
+      "byStatus": {
+        "ready": 6
+      },
+      "byDoctor": {
+        "user:3": 3,
+        "user:5": 2,
+        "user:9": 1
+      }
+    },
+    "person": {
+      "total": 5,
+      "byStatus": {
+        "ready": 5
+      },
+      "byDoctor": {}
+    },
+    "schedule_block": {
+      "total": 1,
+      "byStatus": {
+        "requires_review": 1
+      },
+      "byDoctor": {
+        "user:3": 1
+      }
+    }
+  },
+  "issues": {
+    "address_without_number": 1,
+    "appointment_overlap": 1,
+    "appointment_without_patient": 1,
+    "block_executor_contract_pending": 1,
+    "cep_generic": 2,
+    "city_spelling_normalized": 1,
+    "cpf_checksum_invalid": 2,
+    "cpf_missing": 2,
+    "date_sentinel": 1,
+    "doctor_map_pending": 6,
+    "email_field_reused": 2,
+    "phone_ddd_assumed_41": 8,
+    "phone_ninth_digit_added": 2,
+    "phone_no_ddd_outside_41": 2,
+    "precadastro_unconfirmed": 1,
+    "sex_missing": 1,
+    "status_no_show_target_required": 1,
+    "status_unknown_past": 1,
+    "uf_inferred_from_cep": 2
+  }
+}
