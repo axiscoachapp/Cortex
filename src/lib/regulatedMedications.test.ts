@@ -97,3 +97,26 @@ describe('compounded formula rules', () => {
     expect(antimicrobialsIn('Metronidazol')).toContain('metronidazol');
   });
 });
+
+// Same cases as supabase/tests/reference-catalogs.test.sql (valid_snippet_formula):
+// the server rule and the template guard must agree.
+describe('formula rules shared with the template guard', () => {
+  const base = { components: [{ substance: 'A', amount: '1 mg' }], form: 'cápsula', quantity: '30' };
+  const cases: Array<[string, unknown, boolean]> = [
+    ['empty object', {}, false],
+    ['missing form and quantity', { components: base.components }, false],
+    ['null', null, false],
+    ['null form', { ...base, form: null }, false],
+    ['line break in a component', { ...base, components: [{ substance: 'A\nB', amount: '1 mg' }] }, false],
+    ['tab in the form', { ...base, form: 'cáp\tsula' }, false],
+    ['blank substance', { ...base, components: [{ substance: '   ', amount: '1 mg' }] }, false],
+    ['blank vehicle', { ...base, vehicle: '   ' }, false],
+    ['empty vehicle', { ...base, vehicle: '' }, true],
+    ['quantity over 40', { ...base, quantity: '9'.repeat(41) }, false],
+    ['trimmed quantity of 40', { ...base, quantity: `  ${'9'.repeat(40)}  ` }, true],
+    ['numeric substance', { ...base, components: [{ substance: 1, amount: '1 mg' }] }, false],
+  ];
+  it.each(cases)('%s', (_label, formula, valid) => {
+    expect(formulaError(formula) === null).toBe(valid);
+  });
+});

@@ -78,11 +78,20 @@ do $$ declare t text; begin
  end loop;
 end $$;
 
--- Prescription templates may keep a compounded formula per item (same shape
--- and limits as formulaError in _shared/regulatedMedications.ts).
+-- Prescription templates may keep a compounded formula per item. Total
+-- predicate (true or false, never NULL) with the same rules as formulaError in
+-- _shared/regulatedMedications.ts: trimmed lengths, no control characters,
+-- numbers in amounts and quantity, optional vehicle ('' allowed, blank not).
+create function public.valid_snippet_text(p_value jsonb,p_max integer) returns boolean
+language sql immutable set search_path='' as $$
+ select coalesce(jsonb_typeof(p_value)='string'
+  and length(trim(p_value #>> '{}')) between 1 and p_max
+  and (p_value #>> '{}') !~ '[[:cntrl:]]',false);
+$$;
 create function public.valid_snippet_formula(p_formula jsonb) returns boolean
 language sql immutable set search_path='' as $$
- select jsonb_typeof(p_formula)='object'
+ select coalesce(
+  jsonb_typeof(p_formula)='object'
   and not exists(select 1 from jsonb_object_keys(p_formula) k where k not in ('components','vehicle','form','quantity'))
   and jsonb_typeof(p_formula->'components')='array'
   and jsonb_array_length(p_formula->'components') between 1 and 12
@@ -90,11 +99,13 @@ language sql immutable set search_path='' as $$
    select 1 from jsonb_array_elements(p_formula->'components') c
    where jsonb_typeof(c)<>'object'
     or exists(select 1 from jsonb_object_keys(c) k where k not in ('substance','amount'))
-    or jsonb_typeof(c->'substance') is distinct from 'string' or length(trim(c->>'substance')) not between 1 and 120
-    or jsonb_typeof(c->'amount') is distinct from 'string' or length(trim(c->>'amount')) not between 1 and 40 or c->>'amount' !~ '[0-9]')
-  and (not p_formula ? 'vehicle' or (jsonb_typeof(p_formula->'vehicle')='string' and length(p_formula->>'vehicle')<=80))
-  and jsonb_typeof(p_formula->'form')='string' and length(trim(p_formula->>'form')) between 1 and 40
-  and jsonb_typeof(p_formula->'quantity')='string' and length(trim(p_formula->>'quantity')) between 1 and 40 and p_formula->>'quantity' ~ '[0-9]';
+    or not public.valid_snippet_text(c->'substance',120)
+    or not public.valid_snippet_text(c->'amount',40)
+    or (c->>'amount') !~ '[0-9]')
+  and (not p_formula ? 'vehicle' or p_formula->'vehicle'='""'::jsonb or public.valid_snippet_text(p_formula->'vehicle',80))
+  and public.valid_snippet_text(p_formula->'form',40)
+  and public.valid_snippet_text(p_formula->'quantity',40) and (p_formula->>'quantity') ~ '[0-9]',
+ false);
 $$;
 
 -- Same contract as 20261104110000 plus the optional 'formula' key.
@@ -110,9 +121,9 @@ language sql immutable set search_path = '' as $$
         or length(trim(item->>'name')) not between 1 and 200
         or (item ? 'dosage' and (jsonb_typeof(item->'dosage') <> 'string' or length(item->>'dosage') > 200))
         or (item ? 'instructions' and (jsonb_typeof(item->'instructions') <> 'string' or length(item->>'instructions') > 1000))
-        or (item ? 'formula' and not public.valid_snippet_formula(item->'formula'))
+        or (item ? 'formula' and public.valid_snippet_formula(item->'formula') is not true)
     );
 $$;
-revoke all on function public.valid_snippet_formula(jsonb) from public, anon;
-grant execute on function public.valid_snippet_formula(jsonb) to authenticated, service_role;
+revoke all on function public.valid_snippet_formula(jsonb),public.valid_snippet_text(jsonb,integer) from public, anon;
+grant execute on function public.valid_snippet_formula(jsonb),public.valid_snippet_text(jsonb,integer) to authenticated, service_role;
 commit;

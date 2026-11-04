@@ -53,4 +53,25 @@ do $$ begin
  assert not public.valid_snippet_items('[{"name":"F","formula":{"components":[{"substance":"A","amount":"1 mg"}],"form":"cápsula","quantity":"30","price":1}}]'),'Unknown formula key accepted';
  assert not public.valid_snippet_items('[{"name":"F","formula":{"components":[{"substance":"A","amount":"1 mg"}],"form":"cápsula","quantity":"muitas"}}]'),'Quantity without number accepted';
 end $$;
+-- Codex 17:53: the formula predicate is total (never NULL) and matches the
+-- server's formulaError: trimmed lengths, no control characters, vehicle ''
+-- allowed but blank refused, JSON null and wrong types refused.
+do $$ begin
+ assert public.valid_snippet_formula('{}'::jsonb) is false,'Empty formula not false';
+ assert public.valid_snippet_formula('{"components":[{"substance":"A","amount":"1 mg"}]}'::jsonb) is false,'Formula without form/quantity not false';
+ assert public.valid_snippet_formula('null'::jsonb) is false,'JSON null formula not false';
+ assert public.valid_snippet_formula('{"components":[{"substance":"A","amount":"1 mg"}],"form":null,"quantity":"30"}'::jsonb) is false,'Null form not false';
+ assert not public.valid_snippet_items('[{"name":"F","formula":{}}]'),'Template with an empty formula accepted';
+ assert not public.valid_snippet_items('[{"name":"F","formula":null}]'),'Template with a null formula accepted';
+ assert not public.valid_snippet_items(jsonb_build_array(jsonb_build_object('name','F','formula',jsonb_build_object(
+  'components',jsonb_build_array(jsonb_build_object('substance','A'||chr(10)||'B','amount','1 mg')),'form','cápsula','quantity','30')))),'Line break in a component accepted';
+ assert not public.valid_snippet_items(jsonb_build_array(jsonb_build_object('name','F','formula',jsonb_build_object(
+  'components',jsonb_build_array(jsonb_build_object('substance','A','amount','1 mg')),'form','cáp'||chr(9)||'sula','quantity','30')))),'Tab in the form accepted';
+ assert not public.valid_snippet_items('[{"name":"F","formula":{"components":[{"substance":"   ","amount":"1 mg"}],"form":"cápsula","quantity":"30"}}]'),'Blank substance accepted';
+ assert not public.valid_snippet_items('[{"name":"F","formula":{"components":[{"substance":"A","amount":"1 mg"}],"vehicle":"   ","form":"cápsula","quantity":"30"}}]'),'Blank vehicle accepted';
+ assert public.valid_snippet_items('[{"name":"F","formula":{"components":[{"substance":"A","amount":"1 mg"}],"vehicle":"","form":"cápsula","quantity":"30"}}]'),'Empty vehicle refused (server accepts it)';
+ assert not public.valid_snippet_items(('[{"name":"F","formula":{"components":[{"substance":"A","amount":"1 mg"}],"form":"cápsula","quantity":"'||repeat('9',41)||'"}}]')::jsonb),'Quantity over 40 accepted';
+ assert public.valid_snippet_items(('[{"name":"F","formula":{"components":[{"substance":"A","amount":"1 mg"}],"form":"cápsula","quantity":"  '||repeat('9',40)||'  "}}]')::jsonb),'Trimmed quantity of 40 refused';
+ assert not public.valid_snippet_items('[{"name":"F","formula":{"components":[{"substance":1,"amount":"1 mg"}],"form":"cápsula","quantity":"30"}}]'),'Numeric substance accepted';
+end $$;
 rollback;
