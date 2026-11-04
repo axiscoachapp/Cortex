@@ -130,6 +130,11 @@ export async function testReceptionConcurrency(container) {
   await contest(confirmation('guardian'), confirmation('guardian'), null);
   assert.equal(sync(`select relationship||'|'||confirmed_by from public.patient_contact_links where contact_id='${contact}' and patient_id='${confirmationPatient}'`), 'guardian|' + staffA);
   assert.equal(sync(`select count(*) from public.reception_audit where resource_id='${contact}' and action='beneficiary_confirmed' and details->>'patientId'='${confirmationPatient}'`), '1');
+  const correction = (revision, relation) => `select public.reception_update_link_relationship('${contact}','${confirmationPatient}',${revision},'${relation}')`;
+  await contest(correction(1, 'family'), confirmation('guardian'), '22023', false, admin, staffB);
+  await contest(correction(2, 'other'), correction(2, 'self'), '40001', false, admin, admin);
+  assert.equal(sync(`select relationship||'|'||revision||'|'||confirmed_by from public.patient_contact_links where contact_id='${contact}' and patient_id='${confirmationPatient}'`), 'other|3|' + staffA);
+  assert.equal(sync(`select count(*) from public.reception_audit where resource_id='${contact}' and action='beneficiary_relationship_corrected' and details->>'patientId'='${confirmationPatient}'`), '2');
   const doctor = 'd1000000-0000-4000-8000-000000000004';
   sync(`insert into auth.users(id,email) values('${doctor}','race-doctor@example.invalid');
    begin;${claims(admin)}select public.invite_clinic_doctor('${clinic}','race-doctor@example.invalid');commit;
@@ -178,6 +183,6 @@ export async function testReceptionConcurrency(container) {
     'Contact correction was overwritten',
   );
   process.stdout.write(
-    'Passed reception concurrency: claim, booking, repeatable-read booking, no orphan stubs, link confirmation, route/revoke, route/draft, contact correction\n',
+    'Passed reception concurrency: claim, booking, repeatable-read booking, no orphan stubs, link confirmation/correction, route/revoke, route/draft, contact correction\n',
   );
 }

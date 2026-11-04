@@ -34,9 +34,11 @@ Uma revogação neste módulo não representa uma proibição global de uma pess
 
 ## Modelo e contratos propostos
 
-Adicionar `active`, `revision` e carimbo de atualização a `patient_contact_links`, preservando a chave/FKs. Histórico existente começa como ativo; não inventar um autor ou evento retroativo. Gravação direta por cliente continua proibida; trigger protege identidade e revisão também contra escritores privilegiados.
+`revision` e carimbo/ator de atualização foram adicionados em T05b/3, preservando chave, FKs e confirmação original. `active` ainda será adicionado no ciclo de suspensão; o estado atual é implicitamente ativo. Não inventar autor/evento retroativo. Gravação direta por cliente continua proibida; trigger protege identidade e metadata também contra escritores privilegiados.
 
 Editor administrativo separado dos RPCs atuais, para preservar formatos estritos:
+
+Fatia de banco/API T05b/3: `reception_link_edit` lê um único vínculo por chave, com campos mínimos e disponibilidade; `reception_update_link_relationship` corrige a relação por revisão. Editor visual, leitura paginada e ações de estado continuam futuras.
 
 - Leitura paginada, até 50 vínculos por contato, com cursor estável. Projeta contato/paciente/médico por ID, nome e nascimento mínimos para conferência, relação, estado, revisão e disponibilidade do paciente/médico. Mostrar indisponibilidade sem liberar o prontuário.
 - Comando de correção recebe chave imutável, revisão esperada, ação `relationship`, `revoke` ou `reactivate`; a relação é obrigatória quando aplicável. Servidor deriva clínica, ator e proprietário, trava permissões e vínculo, e reautoriza depois do lock.
@@ -86,6 +88,8 @@ Comandos de verificação: `npm run test:db`, `npx vitest run src/features/recep
 
 Primeira fatia implementada separadamente: [T05b/1 — beneficiário da reserva CRM](../../reviews/2026-11-03/appointment-identity/IMPLEMENTATION.md), migration `03600`. O ciclo completo de vínculo continua pendente e exigirá nova reserva; esta especificação não representa entrega do editor.
 
-Segunda fatia: [T05b/2 — confirmação sem sobrescrita](../../reviews/2026-11-03/link-confirmation/IMPLEMENTATION.md), migration `03700`. Atividade/revisão e editor de correção seguem pendentes.
+Segunda fatia: [T05b/2 — confirmação sem sobrescrita](../../reviews/2026-11-03/link-confirmation/IMPLEMENTATION.md), migration `03700`. A revisão veio na fatia seguinte; atividade e editor continuam pendentes.
+
+Terceira fatia: [T05b/3 — correção de relação por revisão, banco/API](../../reviews/2026-11-04/link-relationship/IMPLEMENTATION.md), migration `03800`. Revisão/metadata e correção de relação estão implementadas; atividade e editor visual continuam pendentes. T27/T28 de custódia/escopos precedem a ampliação da interface.
 
 Revisão adversarial local concluída. Foram incorporadas três correções de desenho: proteger o beneficiário de reserva CRM, classificar reabertura/remarcação como novas reservas e limitar o aviso histórico a um contrato separado do DTO atual da agenda. Segunda leitura não identificou contradição remanescente no contrato revisado. **Cross-model skipped: non-interactive context.** Não há evidência de implementação ou testes de runtime de T05a nesta entrega de especificação.

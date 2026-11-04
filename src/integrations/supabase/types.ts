@@ -937,6 +937,9 @@ export type Database = {
           doctor_user_id: string
           patient_id: string
           relationship: string
+          revision: number
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
           clinic_id: string
@@ -946,6 +949,9 @@ export type Database = {
           doctor_user_id: string
           patient_id: string
           relationship: string
+          revision?: number
+          updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           clinic_id?: string
@@ -955,6 +961,9 @@ export type Database = {
           doctor_user_id?: string
           patient_id?: string
           relationship?: string
+          revision?: number
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -2031,6 +2040,10 @@ export type Database = {
         Args: { p_patient_id?: string; p_user_id: string }
         Returns: boolean
       }
+      assert_reception_link_editor: {
+        Args: { p_clinic: string; p_doctor: string; p_patient: string }
+        Returns: undefined
+      }
       assert_reception_scope: {
         Args: { p_clinic: string; p_doctor?: string }
         Returns: string
@@ -2334,6 +2347,10 @@ export type Database = {
         }
         Returns: string
       }
+      reception_link_edit: {
+        Args: { p_contact: string; p_patient: string }
+        Returns: Json
+      }
       reception_link_patient: {
         Args: {
           p_contact: string
@@ -2383,6 +2400,15 @@ export type Database = {
           p_contact: string
           p_name: string
           p_phone: string
+          p_revision: number
+        }
+        Returns: number
+      }
+      reception_update_link_relationship: {
+        Args: {
+          p_contact: string
+          p_patient: string
+          p_relationship: string
           p_revision: number
         }
         Returns: number

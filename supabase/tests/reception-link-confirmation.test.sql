@@ -12,7 +12,7 @@ select set_config('test.link_clinic',public.create_clinic('Clínica sintética v
 select set_config('test.link_contact',public.reception_create_contact(current_setting('test.link_clinic')::uuid,'Contato sintético','41999990002','e3000000-0000-4000-8000-000000000001')::text,true);
 select public.reception_link_patient(current_setting('test.link_contact')::uuid,auth.uid(),'e2000000-0000-4000-8000-000000000001','guardian');
 reset role;
-update public.patient_contact_links set confirmed_at='2020-01-01T00:00Z' where contact_id=current_setting('test.link_contact')::uuid;
+select set_config('test.original_link_confirmation',(select confirmed_at::text from public.patient_contact_links where contact_id=current_setting('test.link_contact')::uuid),true);
 set local role service_role;
 select set_config('request.jwt.claim.role','service_role',true);
 select public.provision_clinic_receptionist('e1000000-0000-4000-8000-000000000001','e1000000-0000-4000-8000-000000000002','Recepção sintética',array['e1000000-0000-4000-8000-000000000001'::uuid]);
@@ -22,7 +22,7 @@ select set_config('request.jwt.claim.sub','e1000000-0000-4000-8000-000000000002'
 select public.reception_link_patient(current_setting('test.link_contact')::uuid,'e1000000-0000-4000-8000-000000000001','e2000000-0000-4000-8000-000000000001','guardian');
 reset role;
 do $$ begin
- assert (select confirmed_by='e1000000-0000-4000-8000-000000000001' and confirmed_at='2020-01-01T00:00Z' and relationship='guardian'
+ assert (select confirmed_by='e1000000-0000-4000-8000-000000000001' and confirmed_at=current_setting('test.original_link_confirmation')::timestamptz and relationship='guardian'
   from public.patient_contact_links where contact_id=current_setting('test.link_contact')::uuid),'Retry replaced original confirmation authorship';
  assert (select count(*) from public.reception_audit where resource_id=current_setting('test.link_contact')::uuid and action='beneficiary_confirmed')=1,'Retry duplicated confirmation audit';
 end $$;

@@ -44,6 +44,8 @@ Sua primeira proteção histórica foi implementada: [reservas CRM mantêm o ben
 
 Também foi protegida a [confirmação de vínculos durante o agendamento](../../reviews/2026-11-03/link-confirmation/IMPLEMENTATION.md): novas reservas preservam a relação e a autoria anteriores, sem usar a confirmação como edição do vínculo.
 
+A [base da correção de relação por revisão](../../reviews/2026-11-04/link-relationship/IMPLEMENTATION.md) está pronta no banco/API, ainda sem editor visual. A revisão cruzada priorizou custódia de exclusão e escopos de agenda antes de ampliar a interface/piloto.
+
 As três migrations foram ensaiadas apenas em banco descartável; nenhuma alteração foi aplicada ao Supabase hospedado. WhatsApp oficial, financeiro, fiscal, métricas e piloto seguem no backlog. Não houve mensagens, emissão de notas ou importação PersonalMed.
 
 As decisões sobre quantidade de números, divisão da equipe, horários, SLAs e regras de cobrança ficam registradas como perguntas de refinamento. Elas não impedem construir primeiro a fundação com dados sintéticos.

@@ -62,6 +62,14 @@ export const contactEditSchema = z
   .object({ id, name: z.string(), phone: z.string(), revision: z.number().int().positive() })
   .strict();
 export type ContactEdit = z.infer<typeof contactEditSchema>;
+export const linkEditSchema = z.object({
+  contactId: id, patientId: id, doctorId: id,
+  patientName: z.string(), dateOfBirth: z.string().nullable(), doctorName: z.string(),
+  relationship: z.enum(['self', 'guardian', 'family', 'other']),
+  revision: z.number().int().positive(), active: z.boolean(),
+  patientAvailable: z.boolean(), doctorActive: z.boolean(),
+}).strict();
+export type LinkEdit = z.infer<typeof linkEditSchema>;
 export const contactSchema = z
   .object({
     id,

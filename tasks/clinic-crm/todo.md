@@ -57,6 +57,7 @@ Alvos futuros abaixo são sugestões de planejamento; os alvos implementados for
   - Verificar: atores/MFA, duas conexões reais, FK histórica, regra de órfãos e formatos estritos de leitura. Migration precisa de reserva prévia no ESTADO.
   - **T05b/1 concluída:** beneficiário imutável de reserva CRM, guarda contra escrita direta/privilegiada e orientação no modal médico; layout sem overflow a 150%. [Evidências](../../docs/reviews/2026-11-03/appointment-identity/IMPLEMENTATION.md). Revogação/reativação e editor de vínculo seguem pendentes; não considerar T05b inteira entregue.
   - **T05b/2 concluída:** confirmação idêntica preserva relação/autor/data e não duplica auditoria; divergência recusada e formulário preservado na busca/falha parcial/refetch. [Evidências](../../docs/reviews/2026-11-03/link-confirmation/IMPLEMENTATION.md). O ciclo completo continua pendente.
+  - **T05b/3 concluída no banco/API:** correção administrativa de relação por revisão, snapshot mínimo separado e identidade/confirmação imutáveis, sem mudar prontuário. [Evidências](../../docs/reviews/2026-11-04/link-relationship/IMPLEMENTATION.md). Editor e estados de vínculo seguem pendentes; T27/T28 de segurança precedem a ampliação visual.
 
 - [x] **T06 — Criar atendimento na fila e assumir sem disputa.** Dep.: T04.
   - Aceite: entrada manual tem estado/origem; assumir é atômico e auditado; uma responsabilidade atual por caso.
@@ -181,3 +182,20 @@ Alvos futuros abaixo são sugestões de planejamento; os alvos implementados for
 - [ ] **T26 — A0: contrato e controles independentes de provedor.** Plano de origem: `docs/ai/PLANO_IA_EFICIENCIA_E_AVALIACAO.md` (Claude). Reserva futura `05000`; sem migration implementada.
   - Primeiro definir entradas/saídas por tarefa, modelo pedido/efetivo, medição versus estimativa, desligamento/orçamento e verificação de recusa no servidor/worker. Sem texto clínico em logs, sem ampliar leitura da recepção nem inferir identidade entre médicos.
   - Verificar: recusa/desligamento concorrentes com chamada/retry, metadados ausentes, exportação/exclusão, posse/compartilhamento explícito e proveniência. D13/D15/D16 e escolha com os médicos continuam pendentes; não trocar modelo/provedor, habilitar uso real, disparar avaliação externa ou iniciar síntese A1 por esta tarefa de contrato.
+
+## Achados da revisão cruzada — prioridade antes do editor/piloto
+
+Origem: [revisão do Claude](../../docs/reviews/2026-11-04/claude-reception-review/REVIEW.md). Estado inicial: leitura/triagem; não marcar um achado resolvido sem reprodução e prova da correção.
+
+- [ ] **T27 — H2: custódia de exclusão antes de qualquer limpeza.** Reserva futura `20261104001000`.
+  - Reproduzir médico solo com agenda autenticada, médico delegado, caso encerrado, bloqueio e autor de confirmação/correção. Pré-check deve separar agenda própria de custódia de terceiros e cobrir todas as referências impeditivas antes de Storage/provedor/auth. Rejeitar novas operações de recepção no médico em exclusão; testar corrida e retomada sintéticas. Nenhuma exclusão real autorizada por esta tarefa.
+- [ ] **T28 — H1/M2/L5: escopos administrativos e prática particular.** Priorizar após T27, antes de editor/piloto.
+  - Provar admin versus médico membro sem delegação nos leitores e escritores. Separar gestão de equipe/contatos de autorização de agenda/lista de pacientes, seguindo a matriz atual. Explicitar anuência/limites de delegação; não reviver escopos antigos ao reingressar. Qualquer ampliação de política precisa de decisão explícita.
+- [ ] **T29 — M3/L4: concorrência e inexistência de agendamento.**
+  - Provar edição médica direta contra RPC de remarcação em duas conexões, corrigir ordem de locks e responder indisponibilidade para ID inexistente; manter CAS, conflito de horário e histórico.
+- [ ] **T30 — M1: continuidade clínica em falha transitória de acesso.**
+  - Preservar área clínica previamente autorizada em erro de transporte com aviso; resposta autorizativa negativa e mudança real de papel continuam bloqueando. Testar sucesso → falha → recuperação e negativa explícita.
+- [ ] **T31 — L2/L3: credencial inicial, guardas e privilégios.**
+  - Provar exigência de troca de senha no servidor e cobertura de funções clínicas/ACL no catálogo, incluindo redefines futuros. Não ampliar RPCs da recepção. Coordenar funções de documentos com Claude.
+- [ ] **T32 — L6/L8/L9/L10: integridade do legado, retenção/privacidade e consulta limitada.**
+  - Cancelar legado com intervalo inválido sem permitir nova reserva inválida; definir retenção mínima/idempotência e atendimento de dados da recepção em T24; medir e limitar leitura por médicos autorizados. L7 mantém a regra de órfãos por privacidade, com orientação operacional. L1 está coberto por T05b/2.

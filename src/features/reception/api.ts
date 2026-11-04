@@ -6,10 +6,12 @@ import {
   contactPageSchema,
   contactSchema,
   contactEditSchema,
+  linkEditSchema,
   caseSchema,
   patientSchema,
   appointmentsSchema,
   type BookingDetails,
+  type LinkEdit,
 } from './contracts';
 
 export class ReceptionError extends Error {
@@ -33,6 +35,8 @@ type RpcName =
   | 'reception_contact'
   | 'reception_contact_edit'
   | 'reception_update_contact'
+  | 'reception_link_edit'
+  | 'reception_update_link_relationship'
   | 'reception_update_case'
   | 'reception_add_note'
   | 'reception_save_draft'
@@ -73,6 +77,10 @@ export const receptionApi = {
     rpc('reception_contacts', { p_clinic: clinic, p_search: search, p_before: before }, contactPageSchema),
   contact: (id: string) => rpc('reception_contact', { p_contact: id }, contactSchema),
   contactEdit: (id: string) => rpc('reception_contact_edit', { p_contact: id }, contactEditSchema),
+  linkEdit: (contact: string, patient: string) =>
+    rpc('reception_link_edit', { p_contact: contact, p_patient: patient }, linkEditSchema),
+  updateLinkRelationship: (contact: string, patient: string, expected: number, relationship: LinkEdit['relationship']) =>
+    rpc('reception_update_link_relationship', { p_contact: contact, p_patient: patient, p_revision: expected, p_relationship: relationship }, revision),
   updateContact: (id: string, expected: number, name: string, phone: string) =>
     rpc('reception_update_contact', { p_contact: id, p_revision: expected, p_name: name, p_phone: phone }, revision),
   createContact: (clinic: string, name: string, phone: string, request: string) =>
