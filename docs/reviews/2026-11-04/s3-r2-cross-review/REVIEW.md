@@ -15,3 +15,7 @@ Ensaio sintético em [picker-busy.repro.tsx](picker-busy.repro.tsx): selecionar 
 O ensaio foi executado com nome temporário `picker-busy.repro.test.tsx` via `npx vitest run docs/reviews/2026-11-04/s3-r2-cross-review/picker-busy.repro.test.tsx` e renomeado para `.repro.tsx` após a execução. Não é teste aprovado nem integra os gates; é artefato de reprodução para o proprietário incorporar à suíte ao corrigir.
 
 Correção/testes enviados ao Claude na mensagem de 02:29. Preservar a seleção/decisão pendente durante geração e permitir retomá-la quando o bloqueio terminar. Repetir para substituir e adicionar; verificação visual sintética do S3 continua pendente. Não encerrar toda a interface por causa dos testes verdes de R2.
+
+## R3 atendido em 03:19
+
+Commit do Claude `952adcb`: campo do formulário bloqueado enquanto gera e guarda `busy` nos callbacks/controles de aplicação. Executei os dois componentes e a reprodução original com nome temporário de teste: **19 testes/3 arquivos aprovados**. O temporário foi removido; o artefato original permanece como prova histórica do RED. Escolha/seleção sobrevivem ao retorno após falha. Não alterei o domínio do Claude. `7657a1c` também alinhou S3/S4 ao MVP e distinguiu staging de payload inserível; D2/D19 continuam pendentes. Visual do prescritor/S3 é uma pendência separada.

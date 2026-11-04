@@ -13,6 +13,7 @@ export const ids = {
 };
 export async function startReceptionFixture() {
   let teamDirectoryFailure = false;
+  let clinicAccessFailure = null;
   const now = () => new Date().toISOString();
   const users = new Map(
     [
@@ -148,6 +149,7 @@ export async function startReceptionFixture() {
       if (rpc === 'reception_team_doctors')
         return actor !== ids.admin || input.p_clinic !== ids.clinic ? error('42501', 'Management scope required')
           : teamDirectoryFailure ? error('XX000', 'Synthetic team directory failure') : send(doctors);
+      if (rpc === 'clinic_access' && clinicAccessFailure) return send({ code: clinicAccessFailure.code ?? '', message: clinicAccessFailure.message ?? 'Synthetic access failure' }, clinicAccessFailure.status);
       if (rpc === 'clinic_access')
         return send({
           kind: member ? 'reception' : 'clinical',
@@ -431,6 +433,7 @@ export async function startReceptionFixture() {
   return {
     origin: `http://127.0.0.1:${server.address().port}`,
     setTeamDirectoryFailure: (failed) => { teamDirectoryFailure = failed; },
+    setClinicAccessFailure: (failure) => { clinicAccessFailure = failure; },
     metrics,
     cases,
     contacts,

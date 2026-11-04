@@ -1,13 +1,16 @@
 import { act, render, screen } from '@testing-library/react';
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClinicAccessGate } from './ClinicAccessGate';
+import { ClinicAccessTransportError } from './accessErrors';
+import { useSessionHidden } from '@/contexts/SessionVisibility';
 
-const mocks = vi.hoisted(() => ({ access: vi.fn(), clinicalRender: vi.fn(), clinicalUnmount: vi.fn() }));
+const mocks = vi.hoisted(() => ({ access: vi.fn(), clinicalRender: vi.fn(), clinicalUnmount: vi.fn(), userId: '11111111-1111-4111-8111-111111111111' }));
 vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ user: { id: '11111111-1111-4111-8111-111111111111' }, signOut: vi.fn() }),
+  useAuth: () => ({ user: { id: mocks.userId }, signOut: vi.fn() }),
 }));
 vi.mock('./api', () => ({ receptionApi: { access: mocks.access } }));
 const base = {
@@ -21,32 +24,40 @@ const base = {
 };
 function Clinical() {
   mocks.clinicalRender();
+  const hidden = useSessionHidden();
   useEffect(() => () => mocks.clinicalUnmount(), []);
-  return <p>Prontuário privado</p>;
+  return <><p>Prontuário privado</p><textarea aria-label="Rascunho clínico" />
+    {!hidden && createPortal(<p aria-label="Captura sintética">Captura sintética</p>, document.body)}</>;
 }
-function mount() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const result = render(
+function Navigation() {
+  const navigate = useNavigate();
+  return <><button onClick={() => navigate('/?patient=other')}>Outro prontuário</button>
+    <button onClick={() => navigate('/seguranca')}>Segurança</button><button onClick={() => navigate('/')}>Voltar ao prontuário</button></>;
+}
+function tree(client: QueryClient, initial = '/') {
+  return (
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter initialEntries={[initial]}>
+        <Navigation />
         <Routes>
-          <Route
-            path="/"
-            element={
-              <ClinicAccessGate>
-                <Clinical />
-              </ClinicAccessGate>
-            }
-          />
-          <Route path="/recepcao" element={<p>Ambiente da recepção</p>} />
+          <Route element={<ClinicAccessGate><Outlet /></ClinicAccessGate>}>
+            <Route path="/" element={<Clinical />} />
+            <Route path="/recepcao" element={<p>Ambiente da recepção</p>} />
+          </Route>
+          <Route path="/seguranca" element={<p>Segurança sintética</p>} />
         </Routes>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+}
+function mount(initial = '/') {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const result = render(tree(client, initial));
   return { ...result, client };
 }
+async function refetch(client: QueryClient) { await act(async () => { await client.invalidateQueries({ queryKey: ['clinic-access'] }); }); }
 describe('reception routing before clinical components mount', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => { vi.resetAllMocks(); mocks.userId = base.actorId; });
   it('redirects reception without mounting clinical data readers', async () => {
     mocks.access.mockResolvedValue({
       ...base,
@@ -70,16 +81,21 @@ describe('reception routing before clinical components mount', () => {
     mount();
     expect(await screen.findByText('Prontuário privado')).toBeInTheDocument();
   });
-  it('conceals an open workspace without destroying its draft state on background verification failure', async () => {
+  it('keeps a verified clinical workspace, draft and focus during transport failure and recovery', async () => {
     mocks.access.mockResolvedValue(base);
     const { client } = mount();
     expect(await screen.findByText('Prontuário privado')).toBeVisible();
-    mocks.access.mockRejectedValue(new Error('offline'));
+    const draft = screen.getByRole('textbox', { name: 'Rascunho clínico' }) as HTMLTextAreaElement;
+    draft.value = 'Rascunho sintético preservado';
+    draft.focus();
+    mocks.access.mockRejectedValue(new ClinicAccessTransportError());
     await act(async () => {
       await client.invalidateQueries({ queryKey: ['clinic-access'] });
     });
-    expect(await screen.findByRole('alert')).toHaveTextContent('verificar seu acesso');
-    expect(screen.getByText('Prontuário privado')).not.toBeVisible();
+    expect(await screen.findByRole('status')).toHaveTextContent('atendimento permanece aberto');
+    expect(screen.getByText('Prontuário privado')).toBeVisible();
+    expect(draft).toHaveValue('Rascunho sintético preservado');
+    expect(draft).toHaveFocus();
     expect(mocks.clinicalUnmount).not.toHaveBeenCalled();
     mocks.access.mockResolvedValue(base);
     await act(async () => {
@@ -88,10 +104,90 @@ describe('reception routing before clinical components mount', () => {
     expect(await screen.findByText('Prontuário privado')).toBeVisible();
     expect(mocks.clinicalUnmount).not.toHaveBeenCalled();
   });
+  it('does not grant clinical access on an initial transport failure', async () => {
+    mocks.access.mockRejectedValue(new ClinicAccessTransportError());
+    mount();
+    expect(await screen.findByRole('alert')).toHaveTextContent('verificar seu acesso');
+    expect(mocks.clinicalRender).not.toHaveBeenCalled();
+  });
+  it.each(['42501', 'INVALID_RESPONSE'])('does not revive old permission after %s then transport, even after remount', async (code) => {
+    mocks.access.mockResolvedValue(base);
+    const view = mount();
+    await screen.findByText('Prontuário privado');
+    mocks.access.mockRejectedValue(Object.assign(new Error('blocking'), { code }));
+    await refetch(view.client);
+    await screen.findByRole('alert');
+    expect(screen.getByText('Prontuário privado')).not.toBeVisible();
+    expect(screen.queryByLabelText('Captura sintética')).toBeNull();
+    expect(document.querySelector('[data-clinic-access-blocked]')).not.toBeNull();
+    mocks.access.mockRejectedValue(new ClinicAccessTransportError());
+    await refetch(view.client);
+    expect(screen.getByText('Prontuário privado')).not.toBeVisible();
+    view.unmount();
+    mocks.clinicalRender.mockClear();
+    render(tree(view.client));
+    expect(await screen.findByRole('alert')).toBeVisible();
+    expect(mocks.clinicalRender).not.toHaveBeenCalled();
+    mocks.access.mockResolvedValue(base);
+    await refetch(view.client);
+    expect(await screen.findByText('Prontuário privado')).toBeVisible();
+  });
+  it('requires fresh verification after a cached-success remount', async () => {
+    mocks.access.mockResolvedValue(base);
+    const view = mount();
+    await screen.findByText('Prontuário privado');
+    await act(async () => screen.getByRole('button', { name: /^Segurança$/ }).click());
+    await screen.findByText('Segurança sintética');
+    mocks.clinicalRender.mockClear();
+    mocks.access.mockRejectedValue(new ClinicAccessTransportError());
+    await act(async () => screen.getByRole('button', { name: 'Voltar ao prontuário' }).click());
+    expect(await screen.findByRole('alert')).toBeVisible();
+    expect(mocks.clinicalRender).not.toHaveBeenCalled();
+    view.client.clear();
+  });
+  it('does not authorize another query-string patient from a failed verification', async () => {
+    mocks.access.mockResolvedValue(base);
+    const view = mount();
+    await screen.findByText('Prontuário privado');
+    mocks.access.mockRejectedValue(new ClinicAccessTransportError());
+    await refetch(view.client);
+    mocks.clinicalRender.mockClear();
+    await act(async () => screen.getByRole('button', { name: 'Outro prontuário' }).click());
+    expect(await screen.findByRole('alert')).toBeVisible();
+    expect(mocks.clinicalRender).not.toHaveBeenCalled();
+  });
+  it('does not inherit a previous user or a mismatched actor response', async () => {
+    mocks.access.mockResolvedValue(base);
+    const view = mount();
+    await screen.findByText('Prontuário privado');
+    mocks.userId = '22222222-2222-4222-8222-222222222222';
+    view.rerender(tree(view.client));
+    expect(await screen.findByRole('alert')).toBeVisible();
+    expect(screen.queryByText('Prontuário privado')).toBeNull();
+  });
+  it('does not keep reception administration visible during transport failure', async () => {
+    mocks.access.mockResolvedValue({ ...base, active: true, admin: true, clinic: { id: base.actorId, name: 'Clínica sintética' } });
+    const view = mount('/recepcao');
+    expect(await screen.findByText('Ambiente da recepção')).toBeVisible();
+    mocks.access.mockRejectedValue(new ClinicAccessTransportError());
+    await refetch(view.client);
+    await screen.findByRole('alert');
+    expect(screen.getByText('Ambiente da recepção')).not.toBeVisible();
+    expect(screen.getByRole('alert')).toBeVisible();
+  });
   it('does not turn offboarded staff into a standalone doctor', async () => {
     mocks.access.mockResolvedValue({ ...base, kind: 'reception' });
     mount();
     expect(await screen.findByText('Acesso de recepção indisponível')).toBeInTheDocument();
     expect(mocks.clinicalRender).not.toHaveBeenCalled();
+  });
+  it.each([true, false])('honors an authoritative clinical-to-reception transition (active=%s)', async (active) => {
+    mocks.access.mockResolvedValue(base);
+    const view = mount();
+    await screen.findByText('Prontuário privado');
+    mocks.access.mockResolvedValue({ ...base, kind: 'reception', active, clinic: { id: base.actorId, name: 'Clínica sintética' }, doctors: [{ id: base.actorId, name: 'Médico sintético', specialty: null }] });
+    await refetch(view.client);
+    await screen.findByText(active ? 'Ambiente da recepção' : 'Acesso de recepção indisponível');
+    expect(screen.queryByText('Prontuário privado')).toBeNull();
   });
 });

@@ -1,0 +1,26 @@
+{
+  "scope": "T30/M1",
+  "data": "synthetic; isolated loopback browser",
+  "tests": 538,
+  "testFiles": 77,
+  "targetedTests": 38,
+  "targetedFiles": 3,
+  "focusedBrowserChecks": 4,
+  "receptionRegressionChecks": 19,
+  "widths": [
+    390,
+    768,
+    1280,
+    1920
+  ],
+  "defaultFont": "150% / 24px",
+  "build": "passed with synthetic loopback variables",
+  "lint": "0 errors; 8 preexisting warnings",
+  "sqlChanges": false,
+  "hostedOperations": false,
+  "externalCalls": 0,
+  "realMicrophone": false,
+  "crossModel": "skipped: user preference and non-interactive heartbeat",
+  "r3ReviewTests": 19,
+  "r3ReviewFiles": 3
+}

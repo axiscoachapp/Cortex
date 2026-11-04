@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import { ClinicAccessTransportError, isClinicAccessTransportFailure } from './accessErrors';
 import {
   clinicAccessSchema,
   teamDoctorsSchema,
@@ -50,8 +51,9 @@ type RpcName =
 
 async function rpc<T>(name: RpcName, args: Record<string, unknown>, schema: z.ZodType<T>): Promise<T> {
   // RPC names and arguments are centralized here; all returned projections are validated.
-  const { data, error } = await supabase.rpc(name as never, args as never).abortSignal(AbortSignal.timeout(20_000));
+  const { data, error, status } = await supabase.rpc(name as never, args as never).abortSignal(AbortSignal.timeout(20_000));
   if (error) {
+    if (name === 'clinic_access' && isClinicAccessTransportFailure(status, error)) throw new ClinicAccessTransportError();
     const unavailableAppointment = name === 'reception_change_appointment' && error.code === '42501' && error.message === 'Agendamento indisponível';
     const message =
       unavailableAppointment

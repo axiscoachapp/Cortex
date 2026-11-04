@@ -137,7 +137,7 @@ export function SessionAssurance({ children }: { children: React.ReactNode }) {
   );
   return (
     <SessionVisibilityContext.Provider value={!allowed}>
-      {(allowed || previouslyAuthorized) && <div hidden={!allowed}>{children}</div>}
+      {(allowed || previouslyAuthorized) && <div data-session-content hidden={!allowed}>{children}</div>}
       {!allowed && (
         <div data-session-locked="true" className="fixed inset-0 z-[100] bg-background overflow-y-auto">
           {gate}

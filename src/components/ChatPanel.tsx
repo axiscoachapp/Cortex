@@ -1437,6 +1437,7 @@ export function ChatPanel({
           <div
             role="status"
             aria-label="Captura de áudio em andamento"
+            data-clinical-capture
             className="fixed top-0 inset-x-0 z-40 min-h-14 bg-card border-b-2 border-record-red px-3 py-2 flex flex-wrap items-center justify-center gap-3 shadow-sm"
           >
             <span className="text-sm font-semibold text-record-red">

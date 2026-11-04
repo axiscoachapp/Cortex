@@ -66,7 +66,7 @@ function ProtectedRoute() {
   const location = useLocation();
   if (loading) return <RouteFallback />;
   if (!user) return <Navigate to={`/auth?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
-  const page=<><div className={location.pathname==='/'?undefined:'clinic-subpage-shell'}><Outlet key={user.id}/></div><MobileSubpageNavigation/></>;
+  const page=<><div data-clinic-page-shell className={location.pathname==='/'?undefined:'clinic-subpage-shell'}><Outlet key={user.id}/></div><MobileSubpageNavigation/></>;
   return (
     <PasswordChangeGate>
       <UnsavedChangesRouteGuard />

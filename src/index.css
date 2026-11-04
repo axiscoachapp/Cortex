@@ -276,7 +276,25 @@
 :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
 ::selection { background: #e8d39e; color: #393833; }
 
-body:has([data-session-locked]) [role="dialog"], body:has([data-session-locked]) [data-radix-popper-content-wrapper] { visibility: hidden; }
+body:has([data-session-locked]) :is([role="dialog"], [role="alertdialog"]), body:has([data-session-locked]) [data-radix-popper-content-wrapper],
+body:has([data-clinic-access-blocked]) :is([role="dialog"], [role="alertdialog"]):not([data-clinic-access-recovery]),
+body:has([data-clinic-access-blocked]) [data-radix-popper-content-wrapper] { visibility: hidden; }
+
+.clinic-access-continued { height: 100dvh; display: flex; flex-direction: column; }
+.clinic-access-continued > [data-clinic-page] { flex: 1; min-height: 0; overflow-y: auto; }
+.clinic-access-continued [data-clinic-page-shell] { height: 100%; overflow-y: auto; }
+.clinic-access-continued [data-clinic-page-shell] > .h-\[100dvh\] { height: 100%; }
+/* Portals remain mounted. Put a live capture strip in flow above the warning,
+   using its real wrapped height instead of covering the warning or controls. */
+body:has(.clinic-access-continued):has(> [data-clinical-capture]) { display: flex; flex-direction: column; height: 100dvh; overflow-y: hidden; }
+body:has(.clinic-access-continued):has(> [data-clinical-capture]) > #root { order: 1; flex: 1; min-height: 0; height: auto; }
+body:has(.clinic-access-continued) > [data-clinical-capture] { order: 0; position: static; flex-shrink: 0; }
+body:has(.clinic-access-continued):has(> [data-clinical-capture]) .clinic-access-continued,
+[data-session-content]:has(.clinic-access-continued) { height: 100%; }
+body:has(.clinic-access-continued):has(> [data-clinical-capture]) [data-clinic-page-shell] > .pt-14 { padding-top: 0; }
+@media (max-width: 1919px) {
+  .clinic-access-continued [data-clinic-page-shell].clinic-subpage-shell { height: calc(100% - 4rem - env(safe-area-inset-bottom)); }
+}
 
 @media (max-width: 1919px) {
   .clinic-subpage-shell { height: calc(100dvh - 4rem - env(safe-area-inset-bottom)); overflow-y: auto; }
