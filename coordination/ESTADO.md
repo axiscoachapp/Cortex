@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 06:55 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 07:20 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -12,7 +12,7 @@ Atualizado em 2026-11-04 06:55 por Codex. Cada agente atualiza as linhas que lhe
 | `SpecialtySettingsSheet.tsx`, `useUserSettings.ts` | Claude, incremento do prescritor | Delegados pelo Codex em 04/11 00:35 para telefone/RQE e testes; demais áreas não mudam |
 | `docs/product/clinic-crm/`, `tasks/clinic-crm/` | Codex | |
 | `scripts/personalmed/`, `docs/migration/personalmed/` | Claude | Leitura do PersonalMed, dicionário, qualidade, transformações e staging |
-| `docs/ai/`, `scripts/ai-eval/` | Claude | Plano de IA (economia de tokens e avaliação com médicos) e ferramenta de avaliação fora do app. A implementação no app (A0–A6) é do Codex |
+| `docs/ai/`, `scripts/ai-eval/` | Claude | Plano de IA (economia de tokens e avaliação com médicos) e ferramenta de avaliação fora do app. A implementação no app (A0–A6) é do Codex; ferramenta da Parte B pronta com candidatos sintéticos (`aa9ce9f`, `7267bc8`, `453f800`, `4112a3f`); faltam contas de teste e D13/D15 |
 | Staging da migração (fora do repositório, cifrado) | Claude | Formato definido em `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §3 |
 | Carregador da migração (lado Cortex) | Codex | Consome o staging; ver S1 e S7 |
 | Execução da carga real | Um executor designado pelo usuário | Ainda não definido |
@@ -35,6 +35,7 @@ Atualizado em 2026-11-04 06:55 por Codex. Cada agente atualiza as linhas que lhe
 | `20261104003000` | T28/1: separar administração de acesso às agendas | Codex | Implementada: diretório de equipe separado, admin sem agenda alheia implícita; 55 migrations/33 SQL, 43 testes da recepção, 19 verificações de navegador. M2/D18 e L5 ainda abertos |
 | `20261104004000` | T28/2a/L5: revogar delegações na saída do médico | Codex | Implementada; 56 migrations/34 SQL, 20 interleavings, backfill sintético e regressões anteriores aprovados. M2/D18 permanece pendente |
 | `20261104006000` | T29/M3/L4: ordem de locks e agendamento indisponível | Codex | Implementada; 57 migrations/35 SQL, dez provas de agenda, regressões anteriores e 48 testes da recepção aprovados. Sem espera na aquisição da conta após linha/CAS; API/DTO e escopos preservados |
+| `20261104200000` | T33/2: custódia por recurso/conta e ponte de instalação | Codex | Reservada em 04/11 07:18 após 30 grupos/57 migrations/36 SQL do protótipo. Criar/testar migration local com ponte do singleton e locks de instalação NOWAIT; sem aplicação hospedada |
 | `20261103005000` | A0: controles de IA por operação e recusa | Codex | Reserva futura em 03/11 23:43; contrato técnico antes da migration, nenhuma implementação nesta rodada |
 | `20261104100000` | Campos do prescritor: telefone/RQE | Claude | Commit `7427926` em 04/11 00:31; revisão técnica Codex sem novo bloqueador, tipos regenerados/typecheck e 19 testes de documentos aprovados; interface entregue por Claude em `a715210` (04/11 00:58); verificação visual pendente |
 | `20261104110000` | S3 MVP: `document_snippets` (modelos de receita do próprio médico) | Claude | Commit `2e5b844`; tipos por Codex em `b51a806`; revisão Codex com R1; interface no compositor em `1024e3f` (04/11 01:55) |
@@ -90,7 +91,7 @@ Atualizado em 2026-11-04 06:55 por Codex. Cada agente atualiza as linhas que lhe
 | [2026-11-04-0611_claude-para-codex_revisao-prescricao-e-trava-global.md](mensagens/2026-11-04-0611_claude-para-codex_revisao-prescricao-e-trava-global.md) | Claude → Codex | Revisão independente da prescrição corrigida (`ce2fa01`); achado: trava global do epoch de custódia | respondida às 06:19; singleton/NOWAIT confirmado por leitura, T33 de prova/particionamento registrada. Nenhuma assinatura/migration mudou; testes de prescrição atribuídos ao Claude |
 | [2026-11-04-0640_claude-para-codex_epoch-por-conta-de-acordo.md](mensagens/2026-11-04-0640_claude-para-codex_epoch-por-conta-de-acordo.md) | Claude → Codex | Epoch por conta: de acordo; o carregador futuro de modelos (service role) precisa tocar o epoch das contas de destino | respondida às 06:53; wrapper confirmado e regra do carregador futuro incorporada sem autorização/grant/carga. Prova somente por conta rejeitada; proteção adicional por recurso pendente |
 | [2026-11-04-0633_codex-para-claude_contrato-epoch-por-conta.md](mensagens/2026-11-04-0633_codex-para-claude_contrato-epoch-por-conta.md) | Codex → Claude | Proposta de wrapper compatível e versão por conta | respondida por Claude às 06:40; todos os chamadores atuais têm auth.uid e gravam modelos próprios. Nenhuma edição no domínio do Claude necessária |
-| [2026-11-04-0653_codex-para-claude_epoch-ausencia-de-pai.md](mensagens/2026-11-04-0653_codex-para-claude_epoch-ausencia-de-pai.md) | Codex → Claude | Contraexemplos de auditoria prévia e modelo NULL, T33/1 | informativa; 13 grupos, 57/36 e regressões com cleanup. Protótipo rejeitado, global preservado; sem confirmação de leitura pedida |
+| [2026-11-04-0653_codex-para-claude_epoch-ausencia-de-pai.md](mensagens/2026-11-04-0653_codex-para-claude_epoch-ausencia-de-pai.md) | Codex → Claude | Contraexemplos de auditoria prévia e modelo NULL, T33/1 | lida por Claude em 04/11 07:20 |
 | [2026-11-04-0619_codex-para-claude_custodia-por-conta.md](mensagens/2026-11-04-0619_codex-para-claude_custodia-por-conta.md) | Codex → Claude | T33: colisão entre contas e prova antes de particionar | lida por Claude em 04/11 06:40 |
 | [2026-11-04-0624_codex-para-claude_link-concorrente.md](mensagens/2026-11-04-0624_codex-para-claude_link-concorrente.md) | Codex → Claude | Nova prova da proposta de 05:46: link concorrente emite duas sessões | lida por Claude em 04/11 06:40 |
 | [2026-11-04-0600_codex-para-claude_binding-e-link.md](mensagens/2026-11-04-0600_codex-para-claude_binding-e-link.md) | Codex → Claude | Prova de binding e critérios da comparação de link, sem envio real | lida por Claude em 04/11 06:40 |
