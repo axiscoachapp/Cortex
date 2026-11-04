@@ -9,8 +9,10 @@ import { resolve } from 'node:path';
 const versions = process.argv.includes('--all') ? ['v2.197.0', 'v2.189.0'] : ['v2.197.0'];
 const cleanupCheck = process.argv.includes('--check-cleanup');
 const bindingMode = process.argv.includes('--binding');
-assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding'].includes(arg)), 'Unknown lab option');
-assert.ok(!(cleanupCheck && (process.argv.includes('--all') || bindingMode)), 'Choose normal lab or cleanup diagnostic');
+const linkMode = process.argv.includes('--link');
+assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding', '--link'].includes(arg)), 'Unknown lab option');
+assert.ok(!(bindingMode && linkMode), 'Choose one credential lab');
+assert.ok(!(cleanupCheck && (process.argv.includes('--all') || bindingMode || linkMode)), 'Choose normal lab or cleanup diagnostic');
 const postgresImage = 'pgvector/pgvector:pg16';
 const restImage = 'public.ecr.aws/supabase/postgrest:v16.5';
 function required(result, stage) {
@@ -155,6 +157,7 @@ for (const { version, fault } of runs) {
       sql(readFileSync('supabase/tests/prototypes/credential-session-binding.sql', 'utf8'));
       await restartAuth(hookEnv);
     }
+    if (linkMode) sql(readFileSync('supabase/tests/prototypes/single-use-setup.sql', 'utf8'));
     const restEnv = { PGRST_DB_URI: `postgres://authenticator@${names.db}:5432/postgres`, PGRST_DB_ANON_ROLE: 'anon',
       PGRST_DB_SCHEMAS: 'public', PGRST_JWT_SECRET: jwtSecret, PGRST_JWT_AUD: 'authenticated' };
     start(names.rest, restImage, Object.keys(restEnv).flatMap(key => ['--env', key]), [], restEnv);
@@ -164,9 +167,10 @@ for (const { version, fault } of runs) {
       return transport({ url: base + path, method, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         ...(body ? { body: JSON.stringify(body) } : {}) });
     };
-    if (bindingMode) {
-      const { exerciseCredentialBinding } = await import('./test-credential-binding.mjs');
-      report = await exerciseCredentialBinding({ auth, rest, adminJwt, version, call, sql, asyncHttp, restartAuth: extra => restartAuth({ ...hookEnv, ...extra }),
+    if (bindingMode || linkMode) {
+      const exercise = bindingMode ? (await import('./test-credential-binding.mjs')).exerciseCredentialBinding
+        : (await import('./test-single-use-setup.mjs')).exerciseSingleUseSetup;
+      report = await exercise({ auth, rest, adminJwt, version, call, sql, asyncHttp, restartAuth: extra => restartAuth({ ...(bindingMode ? hookEnv : {}), ...extra }),
         pause, syntheticSecrets, holderSession: () => {
           const child = spawn('docker', dockerArgs(['exec', '-i', names.db, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1']), { env: dockerEnvironment, windowsHide: true });
           observeChild(child); child.stderr.resume(); return child;
@@ -358,7 +362,7 @@ for (const { version, fault } of runs) {
   report.cleanupVerified = true;
   report.localDockerEndpoint = dockerEndpoint.startsWith('npipe:') ? 'verified local named pipe' : 'verified local Unix socket';
   report.network = 'owned internal network, no published ports or external route';
-  const artifacts = resolve('docs/reviews/2026-11-04/' + (bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
+  const artifacts = resolve('docs/reviews/2026-11-04/' + (linkMode ? 'single-use-setup' : bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
   mkdirSync(artifacts, { recursive: true });
   writeFileSync(resolve(artifacts, version + '.json'), JSON.stringify(report, null, 2) + '\n');
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');

@@ -1,6 +1,6 @@
 # T31 — contrato de segurança da credencial inicial (proposta técnica)
 
-Estado em 04/11/2026: **fluxo de produção não implementado**. T31/3a rejeitou duas estratégias insuficientes em Auth/Data API reais. T31/3b/1 ensaiou vínculo canônico por sessão: 24 grupos em duas versões, sem aprovação de produção; [resultados e limites](../../reviews/2026-11-04/credential-session-binding/IMPLEMENTATION.md). A próxima comparação é provisionamento por link de uso único, sem senha temporária, proposto pelo Claude. T31/2 de MFA visual está em `a12a561`. Nenhuma migration reservada por este documento.
+Estado em 04/11/2026: **fluxo de produção não implementado**. T31/3a rejeitou duas estratégias insuficientes em Auth/Data API reais. T31/3b/1 ensaiou vínculo canônico por sessão: 24 grupos em duas versões, sem aprovação de produção; [resultados e limites](../../reviews/2026-11-04/credential-session-binding/IMPLEMENTATION.md). T31/3b/2a comparou o link nativo: dois consumos concorrentes produziram duas sessões em ambas as versões; [prova e limites](../../reviews/2026-11-04/single-use-setup/IMPLEMENTATION.md). Conclusão serializada/CAS e recuperação continuam pendentes; consumo do link não é mutex. T31/2 de MFA visual está em `a12a561`. Nenhuma migration reservada por este documento.
 
 ## Falha atual e fronteira
 

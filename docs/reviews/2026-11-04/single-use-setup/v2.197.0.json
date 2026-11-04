@@ -1,0 +1,40 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.197.0",
+  "checks": [
+    "Password omitted from Admin provision: native Auth stores its own random credential, never returned to this client; arbitrary password login denied",
+    "generate_link returns a recovery capability without creating a session; no email delivery is possible on the owned internal network",
+    "Two native verify requests observed waiting on the database: statuses 200/200, 2 live session(s)",
+    "Sequential replay denied; every issued link session remains blocked by private pending state",
+    "User-editable metadata does not clear the private pending state",
+    "Native admin password write revokes all issued setup sessions and their refresh tokens; private pending remains set",
+    "Personal-password login succeeds after Auth commit but data remains denied before application completion",
+    "Unused generated recovery link is revoked by the native admin password write",
+    "After test-owner fixture completion a live personal session reads data; previously revoked JWTs remain denied while unexpired"
+  ],
+  "observed": {
+    "concurrentVerifyStatuses": [
+      200,
+      200
+    ],
+    "sessionsAfterConcurrentVerify": 2,
+    "reusedUnconsumedToken": false,
+    "outstandingLinkSurvivedPasswordWrite": false,
+    "outstandingCanReadAfterFixtureCompletion": false
+  },
+  "prototypeIsProductionFix": false,
+  "completionProtocolImplemented": false,
+  "notCovered": [
+    "serialized/CAS trusted completion",
+    "lost admin response reconciliation",
+    "in-flight unused link verification during rotation",
+    "MFA and PKCE setup integration",
+    "existing accounts and privileged reset policy",
+    "application RLS/RPC/storage/Edge/frontend integration",
+    "hosted Auth version/configuration"
+  ],
+  "cleanupVerified": true,
+  "localDockerEndpoint": "verified local named pipe",
+  "network": "owned internal network, no published ports or external route"
+}
