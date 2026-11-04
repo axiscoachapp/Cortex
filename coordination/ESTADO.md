@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 08:52 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 09:23 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -131,14 +131,21 @@ Decididas:
 - **D13:** **OpenAI GPT-6.1 Terra** para texto e **Azure Speech** (Brazil South) para transcrição. O GPT-6.1 Terra foi lançado em 26/10/2026 (US$ 1/US$ 5 por milhão de tokens); conferir o identificador exato na documentação da OpenAI ao configurar. A integração no app é do Codex (A0).
 - **D17:** assinatura ICP-Brasil própria, com o certificado em nuvem VIDaaS e a validação do ITI; a Mevo fica como plano B. A implementação é do Claude.
 - **D18:** recorte da Haddad Nicola, porque os médicos só trabalham na clínica (08:17).
-- **D19:** cada médico recebe os modelos que usou, já adaptados e **aprovados**, sem revisão prévia, e pode editá-los.
+- **D19:** cada médico recebe os modelos que usou, já adaptados e **aprovados**, sem revisão prévia, e pode editá-los. Aplicado no staging em `634e7df` (617 modelos entram aprovados; 3 com campo automático trocado por `____`).
 - **D20 (08:50):** **cadastro único do paciente, notas por médico.** Nome, CPF, endereço, convênio e alertas ficam num cadastro só, visto pelos médicos que atendem o paciente. Cada médico vê as próprias consultas e pode compartilhar outras. O alerta entra uma vez, no cadastro. Muda o modelo de pacientes (Codex): retoma a ideia original da S2.
 - **D14 (08:50):** "como funcionava no PersonalMed". O agendamento fica ligado ao cadastro único, na agenda daquele médico, e a ficha do médico só nasce quando ele atende. Nada de ficha vazia.
+- **D9 (09:23), confirmada pelos dados (`8ac0f6f`):**
+  - FAX = CPF e e-mail = acomodação;
+  - `T` atendido, `C` cancelado, `F` falta;
+  - `A` chegou sem o atendimento marcado; `E` em atendimento sem fechar;
+  - `-` agendado no futuro e sem comparecimento no passado (vira `faltou`);
+  - horário `P` é um bloqueio curto (vira bloqueio).
+
+  Detalhes na §8.
 
 Abertas ou em andamento:
 - **D2, adiada:** a migração fica pronta e roda sobre uma exportação atualizada. Os códigos foram identificados pelos nomes do sistema antigo (2 Sinaida Haddad, 3 Patricia Haddad, 4 Marcelo Chemim Nicola, 5 Marcia Regina Chemin Nicola, 9 Osny de Barros Junior, 11 "Gineco", que é um login compartilhado, e 13 Dr Daniel, sem prontuário). Faltam as contas Cortex e saber quem usava o "Gineco".
 - **D6 e D7:** o usuário pediu uma análise mais funda. Claude prepara.
-- **D9:** delegada ao Claude, que confirma pelos dados.
 - **D10:** tarefa a fazer (pedir a pasta de imagens à clínica).
 - **D15:** teste com vídeos de consultas encenadas do YouTube. É preciso cuidar da licença dos vídeos e do gabarito (transcrição correta) de cada um.
 - **D16:** para depois, com os médicos.
