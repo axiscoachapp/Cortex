@@ -44,8 +44,8 @@ function session(container) {
  };
 }
 
-async function testReceptionDeletionConcurrency(container) {
- assert.match(container,/^cortex-deletion-race-[a-z0-9-]+$/,'Unexpected owned test container name');
+export async function testReceptionDeletionConcurrency(container) {
+ assert.match(container,/^cortex-(deletion-race|test)-[a-z0-9-]+$/,'Unexpected owned test container name');
  const sqlResult=source=>docker(['exec','-i',container,'psql','-U','postgres','-qAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose'],bounds+source);
  const sql=source=>required(sqlResult(source));
  const admin='e9100000-0000-4000-8000-000000000001',clinic='e9200000-0000-4000-8000-000000000001',contact='e9300000-0000-4000-8000-000000000001';

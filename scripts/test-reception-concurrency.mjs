@@ -7,7 +7,7 @@ export async function testReceptionConcurrency(container) {
     const result = spawnSync(
       'docker',
       ['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'],
-      { input: source, encoding: 'utf8' },
+      { input: source, encoding: 'utf8', windowsHide: true, timeout: 15000 },
     );
     assert.equal(result.status, 0, result.stderr);
     return result.stdout.trim();
@@ -34,7 +34,7 @@ export async function testReceptionConcurrency(container) {
     const child = spawn(
       'docker',
       ['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose'],
-      { windowsHide: true },
+      { windowsHide: true, timeout: 15000 },
     );
     let output = '';
     let errors = '';
@@ -46,6 +46,7 @@ export async function testReceptionConcurrency(container) {
     child.stderr.on('data', (data) => {
       errors += data;
     });
+    child.stdin.on('error', () => {});
     const done = new Promise((resolve, reject) => {
       child.on('error', reject);
       child.on('close', (code) => {
@@ -54,6 +55,7 @@ export async function testReceptionConcurrency(container) {
         resolve({ code, output, errors });
       });
     });
+    done.catch(() => {});
     return {
       send: (sql) => child.stdin.write(sql + '\n'),
       end: () => child.stdin.end(),
@@ -61,7 +63,16 @@ export async function testReceptionConcurrency(container) {
       marker: (marker) =>
         new Promise((resolve, reject) => {
           if (output.includes(marker)) resolve();
-          else readers.push({ marker, resolve, reject });
+          else {
+            const remove = () => { clearTimeout(timer); readers = readers.filter(reader => reader !== entry); };
+            const entry = {
+              marker,
+              resolve: () => { remove(); resolve(); },
+              reject: error => { remove(); reject(error); },
+            };
+            const timer = setTimeout(() => { child.kill(); entry.reject(new Error('Timed out before ' + marker)); }, 10000);
+            readers.push(entry);
+          }
         }),
     };
   }

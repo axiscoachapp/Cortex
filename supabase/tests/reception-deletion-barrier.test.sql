@@ -42,13 +42,23 @@ insert into public.account_deletion_requests(user_id) values('b9100000-0000-4000
 -- Observe actual INSERT + UPDATE order on the real upsert, immediately before
 -- the real shared precheck. This test trigger disappears with the transaction.
 create temporary table custody_probe(operation text,revision bigint);
+-- Measure the marker's actual account when testing the scoped prototype;
+-- the predecessor still measures its singleton. Neither path changes guards.
+create function pg_temp.custody_revision(p_user uuid) returns bigint language plpgsql as $$
+declare value bigint;
+begin
+ if to_regclass('cortex_private.account_custody_epochs') is not null then
+  execute 'select revision from cortex_private.account_custody_epochs where user_id=$1' into value using p_user;
+ else select revision into value from cortex_private.custody_epoch;end if;
+ return value;
+end $$;
 create function pg_temp.observe_custody_epoch() returns trigger language plpgsql as $$
 begin
- insert into pg_temp.custody_probe select tg_op,revision from cortex_private.custody_epoch;
+ insert into pg_temp.custody_probe values(tg_op,pg_temp.custody_revision(new.user_id));
  return new;
 end $$;
 create trigger s_custody_probe before insert or update on public.account_deletion_requests for each row execute function pg_temp.observe_custody_epoch();
-select set_config('test.custody_epoch_before',(select revision::text from cortex_private.custody_epoch),true);
+select set_config('test.custody_epoch_before',pg_temp.custody_revision('b9100000-0000-4000-8000-000000000007')::text,true);
 -- Repeated intent remains a valid resumable job.
 insert into public.account_deletion_requests(user_id) values('b9100000-0000-4000-8000-000000000007') on conflict(user_id) do update set user_id=excluded.user_id,requested_at=excluded.requested_at;
 do $$ declare names text[];begin

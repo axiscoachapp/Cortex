@@ -1,0 +1,46 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "prototypeIsProductionFix": false,
+  "candidateRejected": true,
+  "checks": [
+    "RED reproduced: independent draft writers collide on predecessor singleton",
+    "GREEN: independent draft writers both commit while first remains open",
+    "same-account writer retains NOWAIT refusal",
+    "all direct recipients are fenced",
+    "UPDATE fences OLD indirect owner when removing a reference",
+    "new accounts receive their epoch without lazy writer inserts",
+    "real Auth cascade removes intent but preserves minimal epoch tombstone",
+    "missing account epoch and missing wrapper actor fail closed with dedicated 55000",
+    "two independent deletion intents proceed while the other transaction is open",
+    "Injected missing recheck reproduces concurrent new-owner intent plus uncommitted indirect reference",
+    "GREEN: recheck rejects changed indirect owner before unfenced reference can commit",
+    "REJECTED account-only candidate: audit of absent appointment commits after future parent and owner deletion intent",
+    "REJECTED account-only candidate: NULL-owned template acquires new owner and deletion intent while referring settings is uncommitted"
+  ],
+  "migrations": 57,
+  "sqlSuites": 36,
+  "deletionScenarios": 8,
+  "directoryFixture": {
+    "rows": 2500,
+    "baselineMs": 15254,
+    "prototypeMs": 12836,
+    "statementBudgetSeconds": 25,
+    "qualification": "functional fixture only; uncontrolled local load, not a production benchmark"
+  },
+  "regressions": [
+    "function boundaries",
+    "reception",
+    "appointments",
+    "scope lifecycle",
+    "document snippets",
+    "deletion interleavings"
+  ],
+  "notCovered": [
+    "resource fence for absent/NULL-owned parents",
+    "production migration and rollout",
+    "load/retry metrics"
+  ],
+  "network": "owned internal Docker network without published ports; endpoint pinned to local pipe/socket",
+  "cleanupVerified": true
+}
