@@ -167,7 +167,7 @@ export function buildAgenda(ctx, rows, chartIds) {
     const issues = [...mapped.issues];
     let contactTargetId = null;
     if (r.pcod == null && r.preCadastro?.name) {
-      if (r.date > ctx.exportDate) {
+      if (r.date > ctx.exportDate && mapped.status !== 'cancelado') {
         const cn = cleanName(r.preCadastro.name);
         const phone = normalizePhone(r.preCadastro.phone ?? '', {}) ?? { raw: '', normalized: null, issues: [] };
         const contact = envelope({
@@ -196,6 +196,9 @@ export function buildAgenda(ctx, rows, chartIds) {
         contactTargetId,
         start_time: start,
         end_time: end,
+        // appointments.title is NOT NULL: the pre-registered name when there is no
+        // patient; otherwise null and the loader uses the patient's name.
+        title: r.pcod == null ? (cleanName(r.preCadastro?.name).name ?? 'Pré-cadastro (PersonalMed)') : null,
         status: mapped.status,
         type: r.typeLabel ?? null,
         notes: mapped.note,
@@ -275,12 +278,14 @@ export function buildChartClinical(ctx, chart, input) {
   const { pcod, user, patientTargetId } = chart;
   const stamp = `[Importado do PersonalMed em ${ctx.importDate}]`;
   const out = [];
-  const historyIssues = input.history?.issues ?? [];
-  const dated = new Map();
+  const dated = new Map(); // day -> { text, outOfOrder }
   let undated = null;
   for (const e of input.history?.entries ?? []) {
     if (!e.date) undated = undated ? `${undated}\n\n${e.text}` : e.text;
-    else dated.set(e.date, dated.has(e.date) ? `${dated.get(e.date)}\n\n${e.text}` : e.text);
+    else {
+      const prev = dated.get(e.date);
+      dated.set(e.date, { text: prev ? `${prev.text}\n\n${e.text}` : e.text, outOfOrder: Boolean(prev?.outOfOrder || e.outOfOrder) });
+    }
   }
   const days = [...new Set([...(input.encounters?.keys() ?? []), ...dated.keys()])].sort();
   for (const day of days) {
@@ -291,7 +296,7 @@ export function buildChartClinical(ctx, chart, input) {
       SECTION('Pré-natal', (enc?.prenatal ?? []).map(prenatalText).filter(Boolean).join('\n')),
       SECTION('CID registrado', [...new Map((enc?.cids ?? []).map((c) => [c.code, c])).values()].map((c) => `${c.code} ${c.description ?? ''}`.trim()).join('\n')),
       SECTION('Documentos emitidos', (enc?.documents ?? []).map((d) => `**${DOC_TYPE[d.type] ?? 'Documento'}**\n\n${d.text}`).join('\n\n---\n\n')),
-      SECTION('Histórico corrido', dated.get(day)),
+      SECTION('Histórico corrido', dated.get(day)?.text),
     ].filter(Boolean);
     const onlyHistory = !enc;
     out.push(
@@ -309,7 +314,8 @@ export function buildChartClinical(ctx, chart, input) {
           soap_note: [stamp, ...sections].join('\n\n'),
           appointmentSourceRecordId: enc?.appointmentKey ? `user:${enc.appointmentKey.user}|date:${enc.appointmentKey.date}|start:${enc.appointmentKey.start}` : null,
         },
-        issues: dated.has(day) ? historyIssues : [],
+        // Only the day whose typed date broke the chronological order needs review.
+        issues: dated.get(day)?.outOfOrder ? ['history_date_out_of_order'] : [],
       }),
     );
   }
@@ -323,7 +329,7 @@ export function buildChartClinical(ctx, chart, input) {
         doctor: user,
         targetTable: 'consultations',
         payload: { patientTargetId, ownerLegacyDoctor: user, created_at: wallClockToUtc(anchor, 12 * 60), chief_complaint: 'Histórico PersonalMed (texto corrido)', soap_note: `${stamp}\n\n${undated}`, appointmentSourceRecordId: null },
-        issues: historyIssues,
+        issues: ['history_no_dates'],
       }),
     );
   }
@@ -361,6 +367,13 @@ export function buildChartClinical(ctx, chart, input) {
         payload: { patientTargetId, kind: 'pregnancy', status: 'open', details: { date: dpp, source: g.dppSource === 'USG' ? 'USG' : 'DUM' } },
       }),
     );
+  }
+  // Clinical rows whose chart header does not exist (legacy orphans) cannot be loaded.
+  if (!patientTargetId) {
+    for (const e of out) {
+      e.issues = [...new Set([...e.issues, 'chart_missing'])].sort();
+      e.mappingStatus = 'rejected';
+    }
   }
   return out;
 }

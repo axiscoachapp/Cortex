@@ -57,7 +57,7 @@ describe('identifiers', () => {
     expect(e.sourceDoctorId).toBe('user:3');
     expect(e.issues).toEqual(['a', 'b']);
     expect(e.mappingStatus).toBe('ready');
-    expect(envelope({ sourceInstance: 'x', sourceEntity: 'consultation', key: { pcod: 1 }, batchId: 'b', targetTable: 'consultations', payload: {}, issues: ['history_dates_out_of_order'] }).mappingStatus).toBe('requires_review');
+    expect(envelope({ sourceInstance: 'x', sourceEntity: 'consultation', key: { pcod: 1 }, batchId: 'b', targetTable: 'consultations', payload: {}, issues: ['history_date_out_of_order'] }).mappingStatus).toBe('requires_review');
   });
 });
 
@@ -213,6 +213,7 @@ describe('running history', () => {
     const t = '10/03/2024 A\n31/02/2024 B\n05/01/2023 C';
     const { entries, issues } = splitHistory(t, { exportDate });
     expect(entries.map((e) => e.date)).toEqual(['2024-03-10', '2023-01-05']);
+    expect(entries.map((e) => e.outOfOrder)).toEqual([false, true]);
     expect(issues.sort()).toEqual(['history_dates_out_of_order', 'history_invalid_date_stamp']);
   });
 
@@ -222,7 +223,7 @@ describe('running history', () => {
 
   it('keeps the typed date in the text, ignores future dates and merges entries of the same day', () => {
     const { entries } = splitHistory('01/02/2025 A\n01/02/2025 B\n01/01/2030 C', { exportDate });
-    expect(historyByDay(entries)).toEqual([{ date: '2025-02-01', text: '01/02/2025 A\n\n01/02/2025 B\n01/01/2030 C' }]);
+    expect(historyByDay(entries)).toEqual([{ date: '2025-02-01', text: '01/02/2025 A\n\n01/02/2025 B\n01/01/2030 C', outOfOrder: false }]);
   });
 });
 

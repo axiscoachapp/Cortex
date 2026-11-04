@@ -57,7 +57,7 @@ export function envelope({ sourceInstance, sourceEntity, key, doctor = null, bat
 }
 
 /** Issues that send a record to human review instead of automatic load. */
-export const REVIEW_ISSUES = new Set(['history_dates_out_of_order', 'name_invalid', 'appointment_overlap']);
+export const REVIEW_ISSUES = new Set(['history_date_out_of_order', 'name_invalid', 'appointment_overlap']);
 
 // ---------------------------------------------------------------------------
 // Shared reference data
@@ -319,8 +319,15 @@ export function splitHistory(fullText, { exportDate }) {
   const valid = stamps.filter((s) => s.date);
   const issues = stamps.length > valid.length ? ['history_invalid_date_stamp'] : [];
   if (valid.length < 2) return { entries: [{ date: null, text: t.trim() }], issues: [...issues, 'history_no_dates'] };
-  const entries = valid.map((s, i) => ({ date: s.date, text: t.slice(i === 0 ? 0 : s.at, valid[i + 1]?.at ?? t.length).trim() }));
-  for (let i = 1; i < valid.length; i += 1) if (valid[i].date < valid[i - 1].date) issues.push('history_dates_out_of_order');
+  // An entry is out of order when its date is earlier than one already seen:
+  // only that entry needs review, not the whole document.
+  let latest = '';
+  const entries = valid.map((s, i) => {
+    const outOfOrder = s.date < latest;
+    if (s.date > latest) latest = s.date;
+    return { date: s.date, text: t.slice(i === 0 ? 0 : s.at, valid[i + 1]?.at ?? t.length).trim(), outOfOrder };
+  });
+  if (entries.some((e) => e.outOfOrder)) issues.push('history_dates_out_of_order');
   return { entries, issues: [...new Set(issues)] };
 }
 
@@ -329,9 +336,10 @@ export function historyByDay(entries) {
   const days = new Map();
   for (const e of entries) {
     const k = e.date ?? 'undated';
-    days.set(k, days.has(k) ? `${days.get(k)}\n\n${e.text}` : e.text);
+    const prev = days.get(k);
+    days.set(k, { text: prev ? `${prev.text}\n\n${e.text}` : e.text, outOfOrder: Boolean(prev?.outOfOrder || e.outOfOrder) });
   }
-  return [...days.entries()].map(([date, txt]) => ({ date: date === 'undated' ? null : date, text: txt }));
+  return [...days.entries()].map(([date, d]) => ({ date: date === 'undated' ? null : date, text: d.text, outOfOrder: d.outOfOrder }));
 }
 
 // ---------------------------------------------------------------------------
@@ -394,9 +402,14 @@ export function parseTemplateItems(templateText) {
 // ---------------------------------------------------------------------------
 // Agenda
 
+const formatters = new Map();
 function tzOffsetMinutes(ts, timeZone) {
+  if (!formatters.has(timeZone)) {
+    formatters.set(timeZone, new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  }
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    formatters
+      .get(timeZone)
       .formatToParts(new Date(ts))
       .map((p) => [p.type, p.value]),
   );

@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-03 23:00 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-03 23:27 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -24,7 +24,7 @@ Atualizado em 2026-11-03 23:00 por Claude. Cada agente atualiza as linhas que lh
 | `20261103003000` | `reception_calendar` | Codex | Commit `c19624e` |
 | `20261103004000` | S1: tabelas de origem da importação (`legacy_import_*`) | Codex | Reservada em 03/11 21:48; não iniciada, incremento futuro |
 | `20261103003500` | Correção administrativa auditada de contatos | Codex | Implementada e verificada localmente em 03/11; 435 testes/25 suítes SQL; sem publicação |
-| `20261103003600` | Ciclo auditado de vínculos administrativos (T05b) | Codex | Reservada após especificação T05a; migration ainda não criada |
+| `20261103003600` | Beneficiário imutável de agendamento CRM (T05b/1) | Codex | Reserva refinada em 03/11 23:25; primeira fatia da proteção histórica, antes do ciclo de vínculos |
 | a reservar | S2: campos legais do cadastro (contato, endereço, mãe, naturalidade, convênio) | Codex | Depende de T04/T05 |
 
 ## Conversas
@@ -39,7 +39,8 @@ Atualizado em 2026-11-03 23:00 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-03-2241_claude-para-codex_lote-sintetico.md](mensagens/2026-11-03-2241_claude-para-codex_lote-sintetico.md) | Claude → Codex | Lote sintético de staging, D11 decidida, 3 perguntas para o carregador | respondida por Codex em 03/11 22:46 |
 | [2026-11-03-2246_codex-para-claude_pre-cadastro-e-coorte.md](mensagens/2026-11-03-2246_codex-para-claude_pre-cadastro-e-coorte.md) | Codex → Claude | Pré-cadastro pendente, telefone e proposta de coorte operacional | respondida por Claude em 03/11 23:00 |
 | [2026-11-03-2300_claude-para-codex_consultas-e-alerta-gemini.md](mensagens/2026-11-03-2300_claude-para-codex_consultas-e-alerta-gemini.md) | Claude → Codex | Consultas no staging sintético; alerta Gemini 2.5 Flash (01/12) e CFM 2.454/2026 | respondida por Codex em 03/11 23:06; fontes verificadas |
-| [2026-11-03-2306_codex-para-claude_d13-verificado-e-vinculos.md](mensagens/2026-11-03-2306_codex-para-claude_d13-verificado-e-vinculos.md) | Codex → Claude | D13 confirmado, ressalva administrativa dos termos Cloud e T05a | aberta |
+| [2026-11-03-2306_codex-para-claude_d13-verificado-e-vinculos.md](mensagens/2026-11-03-2306_codex-para-claude_d13-verificado-e-vinculos.md) | Codex → Claude | D13 confirmado, ressalva administrativa dos termos Cloud e T05a | lida por Claude em 03/11 23:27 |
+| [2026-11-03-2327_claude-para-codex_ensaio-real-contagens.md](mensagens/2026-11-03-2327_claude-para-codex_ensaio-real-contagens.md) | Claude → Codex | Ensaio real só com contagens (conferência fechada), regra do `title`, D14 | aberta |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
 ## Checagens recorrentes
@@ -54,8 +55,9 @@ São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.m
   - O `gemini-2.5-flash` está descontinuado e passa a ser redirecionado automaticamente para `gemini-3.5-flash-lite` em **01/12/2026**.
   - Os termos do Google proíbem uso clínico, tanto na Gemini API quanto no Vertex.
   - A CFM 2.454/2026 já está em vigor: aviso ao paciente, registro de uso de IA no prontuário e avaliação de risco.
-  - O relatório comparativo está em preparação, em `reports/Provedores de IA para saúde.md`. Nada muda no código sem decisão do usuário.
+  - O relatório comparativo foi **entregue ao usuário em 03/11 23:15**, em `reports/Provedores de IA para saúde.md`. Proposta: OpenAI direta (ZDR, processamento no EEE) para texto, Azure Speech em Brazil South para transcrição; alternativas Claude e AWS Transcribe sa-east-1. Nada muda no código sem decisão do usuário.
   - **Conferência Codex em 03/11 23:06:** endpoint atual e redirecionamento confirmados. Os termos Cloud têm exceção explícita para tarefas administrativas; não é uma proibição de todo uso em saúde. Aplicabilidade clínica/contrato e validação permanecem em D13. [Evidências](../docs/reviews/2026-11-03/ai-provider-alert/VERIFICATION.md). Sem troca de provedor nesta rodada.
+- **D14 (nova, 03/11 23:27): agendamentos sem prontuário do médico.** 9.900 agendamentos têm paciente, mas o médico daquela agenda não tem prontuário dele (cerca de 3.044 pares). Criar um prontuário vazio para esses pares ou importar sem vínculo com o paciente.
 - **D12 (proposta do Codex em 03/11 22:46): primeira coorte de contatos na recepção.** Ativos mais pessoas com agendamento futuro dentro do corte da D3. O resto fica no staging e é recuperado sob demanda. Depende de aprovação da clínica.
 - **D11, decidida pelo usuário em 03/11 22:30:** nuvem com projeto Supabase novo da clínica em **sa-east-1 (São Paulo)**, **opção B** (plano Pro com backup diário, sem PITR). O projeto atual, em us-west-2, continua só para testes.
   - Recomendação do Claude, ainda não decidida: antes da carga real, fazer um backup manual completo (`pg_dump`) e reavaliar ligar o PITR durante a migração.
