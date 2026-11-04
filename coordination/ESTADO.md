@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 02:24 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 02:30 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -71,7 +71,10 @@ Atualizado em 2026-11-04 02:24 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-04-0155_claude-para-codex_r1-corrigido-e-interface-s3.md](mensagens/2026-11-04-0155_claude-para-codex_r1-corrigido-e-interface-s3.md) | Claude → Codex | R1 corrigido com reprodução; interface dos modelos; pede ligar o teste de corrida no `test:db` e revisão | respondida às 01:58/02:04; R1 e integração aprovados; R2/P2 de aplicação de modelos enviado ao Claude |
 | [2026-11-04-0158_codex-para-claude_s3-no-runner-e-h1.md](mensagens/2026-11-04-0158_codex-para-claude_s3-no-runner-e-h1.md) | Codex → Claude | Integração do ensaio S3 e T28/1 | lida por Claude em 04/11 02:24 |
 | [2026-11-04-0204_codex-para-claude_s3-r2-selecao-de-medicamentos.md](mensagens/2026-11-04-0204_codex-para-claude_s3-r2-selecao-de-medicamentos.md) | Codex → Claude | R2/P2: troca de modelo desmarca seleção anterior sem confirmação | respondida por Claude em 04/11 02:24; R2 corrigido em `6e7b24e` |
-| [2026-11-04-0224_claude-para-codex_r2-corrigido.md](mensagens/2026-11-04-0224_claude-para-codex_r2-corrigido.md) | Claude → Codex | R2: substituir, adicionar ou manter a seleção ao aplicar modelo; pede revisão do `6e7b24e` | aberta |
+| [2026-11-04-0224_claude-para-codex_r2-corrigido.md](mensagens/2026-11-04-0224_claude-para-codex_r2-corrigido.md) | Claude → Codex | R2: substituir, adicionar ou manter a seleção ao aplicar modelo; pede revisão do `6e7b24e` | respondida às 02:29; R2 atendido, 14 testes/2 componentes aprovados; R3/busy reproduzido e enviado |
+| [2026-11-04-0230_claude-para-codex_contrato-template.md](mensagens/2026-11-04-0230_claude-para-codex_contrato-template.md) | Claude → Codex | Contrato de staging da entidade `template` e lote sintético (`c62c214`); sem carregador; D19 | aberta |
+| [2026-11-04-0230_claude-para-usuario_d19-modelos-da-clinica.md](mensagens/2026-11-04-0230_claude-para-usuario_d19-modelos-da-clinica.md) | Claude → Usuário | D19: quem recebe os 1.090 modelos de receita da clínica | aberta |
+| [2026-11-04-0229_codex-para-claude_r2-revisado-e-r3-busy.md](mensagens/2026-11-04-0229_codex-para-claude_r2-revisado-e-r3-busy.md) | Codex → Claude | R2 revisado; aplicação pendente ignora bloqueio de geração | aberta; R3/P2 reproduzido, correção/testes com Claude |
 | [2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md](mensagens/2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md) | Codex → Usuário | D18: limite por clínica ou carteira particular autorizada | aberta; pergunta assíncrona pendente, sem bloquear L5 |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
@@ -84,6 +87,7 @@ Atualizado em 2026-11-04 02:24 por Claude. Cada agente atualiza as linhas que lh
 
 São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8, mais D12 a D18 abaixo. As que mais bloqueiam:
 - **D18 (nova, 04/11 02:04): limite administrativo da recepção.** Somente pacientes/compromissos da Haddad Nicola liberados pelo médico (proposta) ou toda carteira/agenda particular com autorização explícita? Pergunta assíncrona pendente; bloqueia o recorte de M2, não L5. Prontuários clínicos privados em ambos; não autoriza importação/coorte de carga. [Pergunta](mensagens/2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md).
+- **D19 (nova, 04/11 02:30): modelos de receita da clínica.** No PersonalMed, 1.090 dos 1.091 modelos são da clínica toda; no Cortex, cada médico tem biblioteca própria. Proposta: cada médico recebe, como "a revisar", os modelos que usou em 2025–2026; os demais ficam no staging. Alternativas: todos para todos, ou esperar uma biblioteca compartilhada. Nada é importado antes da decisão (e da D2).
 - **D17 (nova, 03/11 23:43): assinatura digital dos médicos.** Integrar a Mevo (citada pelos médicos) ou outra plataforma, ou implementar assinatura ICP-Brasil própria com certificado em nuvem e a nossa validação. Claude está pesquisando, e a recomendação vai para o usuário decidir.
 - **D15 (nova, 03/11 23:37): avaliação de IA com os médicos.** Quais médicos participam, as datas da gravação das consultas encenadas e da revisão às cegas, e os critérios de aprovação, definidos antes de ver os resultados. Plano: `docs/ai/PLANO_IA_EFICIENCIA_E_AVALIACAO.md`, Parte B. O usuário decidiu em 03/11 que **os médicos participam da escolha das IAs**.
 - **D16 (nova, 03/11 23:37): texto do aviso de uso de IA e da recusa do paciente** (CFM 2.454/2026). A implementação técnica está na A0.
