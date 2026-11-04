@@ -32,7 +32,7 @@ select set_config('test.calendar_case',public.reception_create_case(current_sett
 do $$ declare data jsonb; booking jsonb; id uuid; revision integer; begin
  data:=public.reception_appointments(current_setting('test.calendar_clinic')::uuid,'2099-11-01','2099-11-02',null);
  assert position('PRIVATE' in data::text)=0,'Legacy appointment clinical text leaked';
- assert jsonb_array_length(data->'items')=1,'Delegated legacy appointment missing';
+ assert jsonb_array_length(data->'items')=0,'Delegation exposed an appointment without clinic origin';
  booking:=jsonb_build_object('doctorId','c1000000-0000-4000-8000-000000000001','contactId',current_setting('test.calendar_contact'),
   'patientId','c2000000-0000-4000-8000-000000000001','caseId',current_setting('test.calendar_case'),'startTime','2099-11-01T13:00:00Z','endTime','2099-11-01T13:30:00Z','type','retorno');
  id:=public.reception_book_appointment(current_setting('test.calendar_clinic')::uuid,booking,'c4000000-0000-4000-8000-000000000002');

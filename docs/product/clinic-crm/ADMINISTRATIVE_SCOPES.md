@@ -33,3 +33,9 @@ Não permitir inserir/atualizar um escopo para médico inativo ou convidado, mes
 A migration remove escopos já associados a membros atualmente não ativos, com o mesmo registro mínimo. Escopos de membros ativos sem proveniência da concessão não podem ser classificados automaticamente como antigos ou novos; revisão de permissões preexistentes permanece no piloto. Não inferir uma autorização médica nem ampliar a política para resolver esse histórico.
 
 Provar com SQL real: saída voluntária e administrativa, reconvite/recusa/aceite, duas secretárias e outra clínica, nova concessão após aceite, negativas de leitura/escrita antes e depois do reingresso, prontuário privado e histórico preservados. Provar corridas em duas conexões nas duas ordens e nos dois níveis de isolamento, incluindo concessão direta privilegiada, não apenas RPCs.
+
+## T28/2b/1 — Origem da agenda da clínica
+
+D18 foi respondida em 04/11 08:17: médicos trabalham somente na Haddad Nicola. Isso não atribui uma clínica aos compromissos antigos. `20261104210000_reception_clinic_calendar.sql` limita leitura e alteração pela recepção ao `clinic_id` explícito, preservando o próprio médico em sua agenda `NULL`. Vínculo de paciente/contato e auditoria não atribuem origem. Horários ocultos continuam sujeitos a conflito, sem identificação na agenda administrativa.
+
+[Contrato e limites](CLINIC_CALENDAR_BOUNDARY.md) e [provas locais](../../reviews/2026-11-04/clinic-calendar-boundary/IMPLEMENTATION.md): RED anterior, 59 migrations/37 SQL e regressões concorrentes aprovados, sem publicação. Anuência por médico continua em T28/2b/2; este incremento não encerra M2, não muda a busca de pacientes ou o modelo em esclarecimento na D20, nem autoriza atribuição/importação automática do legado.

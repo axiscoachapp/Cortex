@@ -1,0 +1,17 @@
+{
+  "syntheticOnly": true,
+  "migration": "20261104210000_reception_clinic_calendar.sql",
+  "migrations": 59,
+  "sqlSuites": 37,
+  "checks": [
+    "RED: predecessor discloses an unassigned appointment despite clinic-only reception scope",
+    "GREEN: explicit clinic calendar readable and mutable; unassigned rows hidden from scoped and aggregate queries",
+    "all five mutations refuse unassigned/foreign/missing IDs without side effects or origin disclosure",
+    "contact/patient link and old/new administrative audit do not infer appointment clinic",
+    "owner keeps own unassigned agenda and maintenance; raw clinical reception reads remain denied",
+    "hidden slots still reject overlapping human bookings; DTO, clinic blocks, scopes, MFA and CAS regressions preserved",
+    "all SQL suites, function boundary fault injection, reception/appointment/scope/snippet concurrency pass"
+  ],
+  "network": "verified local Docker, owned internal network without published ports",
+  "cleanupVerified": true
+}
