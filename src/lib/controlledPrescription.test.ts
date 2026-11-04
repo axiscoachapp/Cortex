@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { numberInWords, planControlledPrescription } from '../../supabase/functions/_shared/controlledPrescription';
+import { numberInWords, planControlledPrescription } from '../../supabase/functions/_shared/regulatedMedications';
 
 const ctx = { patientCpf: '52998224725', prescriberCpf: null, prescriberPhone: '(41) 3000-0000' };
 const address = { patientAddress: 'Rua Sintética, 100 — Centro — Curitiba/PR' };

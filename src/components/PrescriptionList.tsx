@@ -11,7 +11,7 @@ import { functionErrorMessage } from '@/lib/functionErrors';
 
 interface PrescriptionRow {
   id: string;
-  doc_type: 'receita_simples' | 'receita_antimicrobiano' | 'atestado' | 'solicitacao_exames';
+  doc_type: 'receita_simples' | 'receita_antimicrobiano' | 'receita_controle_especial' | 'atestado' | 'solicitacao_exames';
   status: 'generated' | 'signed' | 'revoked';
   secret_code: string;
   created_at: string;
@@ -23,6 +23,7 @@ interface PrescriptionRow {
 const TYPE_LABELS: Record<PrescriptionRow['doc_type'], string> = {
   receita_simples: 'Receita simples',
   receita_antimicrobiano: 'Receita — antimicrobiano',
+  receita_controle_especial: 'Receita de controle especial',
   atestado: 'Atestado médico',
   solicitacao_exames: 'Solicitação de exames',
 };

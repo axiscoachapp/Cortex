@@ -23,7 +23,7 @@ import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { currentPatientAge } from "../_shared/patientAge.ts";
 import { clinicDayBounds } from "../_shared/clinicDate.ts";
-import { antimicrobialsIn, controlledSubstancesIn, toWinAnsi } from "../_shared/regulatedMedications.ts";
+import { antimicrobialsIn, controlledFindings, controlledSubstancesIn, FORM_LABEL, planControlledPrescription, toWinAnsi, type ControlledPlan } from "../_shared/regulatedMedications.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -33,13 +33,15 @@ const corsHeaders = {
   'Vary': 'Origin',
 };
 
-type DocType = 'receita_simples' | 'receita_antimicrobiano' | 'atestado' | 'solicitacao_exames';
+type DocType = 'receita_simples' | 'receita_antimicrobiano' | 'receita_controle_especial' | 'atestado' | 'solicitacao_exames';
+const DOC_TYPES: DocType[] = ['receita_simples', 'receita_antimicrobiano', 'receita_controle_especial', 'atestado', 'solicitacao_exames'];
 
 /** Legal validity per document type (days). Atestado/solicitação have no
  *  dispensing window — theirs is the retention of the validation link. */
 const VALIDITY: Record<DocType, number> = {
   receita_simples: 30,
   receita_antimicrobiano: 10,   // RDC 471/2021
+  receita_controle_especial: 30, // Portaria 344/98, art. 52 §1º
   atestado: 90,
   solicitacao_exames: 90,
 };
@@ -47,8 +49,17 @@ const VALIDITY: Record<DocType, number> = {
 const DOC_TITLES: Record<DocType, string> = {
   receita_simples: 'RECEITUÁRIO',
   receita_antimicrobiano: 'RECEITUÁRIO — ANTIMICROBIANO',
+  // Without this exact heading the pharmacy must refuse it (Anvisa Q&A, RDC 1.000/2025).
+  receita_controle_especial: 'RECEITA DE CONTROLE ESPECIAL',
   atestado: 'ATESTADO MÉDICO',
   solicitacao_exames: 'SOLICITAÇÃO DE EXAMES',
+};
+
+/** The two copies of a retained prescription and their legal text. */
+const COPY_LABELS: Partial<Record<DocType, [string, string]>> = {
+  receita_antimicrobiano: ['1ª via — paciente', '2ª via — retenção da farmácia'],
+  // Portaria 344/98, art. 52: highlighted on each copy.
+  receita_controle_especial: ['1ª via - Retenção da Farmácia ou Drogaria', '2ª via - Orientação ao Paciente'],
 };
 
 /** Printed label per registration value. 'nao_informado' has no label on
@@ -96,7 +107,7 @@ serve(async (req) => {
     const { userId } = await requireUser(req);
     const body = await readJsonObject(req);
     const { patientId, consultationId } = body;
-    const docType: DocType = ['receita_simples', 'receita_antimicrobiano', 'atestado', 'solicitacao_exames'].includes(body.docType)
+    const docType: DocType = DOC_TYPES.includes(body.docType)
       ? body.docType
       : 'receita_simples';
 
@@ -115,7 +126,7 @@ serve(async (req) => {
     // Prescriber identity — CFM 2.299 art. 2º makes these mandatory on the document.
     const { data: settings } = await supabase
       .from('user_settings')
-      .select('doctor_name, crm_number, crm_uf, professional_address, professional_phone, rqe')
+      .select('doctor_name, crm_number, crm_uf, professional_address, professional_phone, rqe, prescriber_cpf')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -210,14 +221,30 @@ serve(async (req) => {
       const found = [m.name, ...(hit?.ingredients ?? [])].flatMap(antimicrobialsIn);
       return found.length || !hit?.antimicrobial ? found : [hit.ingredients[0] ?? m.name.trim()];
     };
-    if (isReceita) {
+    // D8: the Receita de Controle Especial has its own rules; other prescriptions
+    // refuse any controlled drug and say which form it needs.
+    let controlledPlan: ControlledPlan | null = null;
+    if (docType === 'receita_controle_especial') {
+      const result = planControlledPrescription(
+        meds.map((m: Medication) => ({ ...m, ingredients: catalogOf(m)?.ingredients ?? [] })),
+        body.content ?? null,
+        { patientCpf, prescriberCpf: typeof settings.prescriber_cpf === 'string' ? settings.prescriber_cpf : null, prescriberPhone },
+      );
+      if ('error' in result) throw new RequestError(result.error, 422);
+      controlledPlan = result.plan;
+    } else if (isReceita) {
       const controlled = meds.flatMap(controlledIn);
-      if (controlled.length)
+      if (controlled.length) {
+        const findings = meds.flatMap((m: Medication) => [m.name, ...(catalogOf(m)?.ingredients ?? []).map((i) => `${i} ${m.name}`)].flatMap(controlledFindings));
+        const forms = [...new Set(findings.map((f) => f.form))];
         throw new RequestError(
           `Medicamento sujeito a controle especial (Portaria SVS/MS 344/98): ${[...new Set(controlled)].join(', ')}. ` +
-            'Emita em receituário de controle especial ou notificação de receita, conforme a lista do medicamento.',
+            (forms.length === 1 && forms[0] === 'receita_controle_especial'
+              ? 'Escolha o tipo "Controle especial" para emiti-lo.'
+              : `Exige: ${forms.map((f) => FORM_LABEL[f]).join('; ')}.`),
           422,
         );
+      }
       const antimicrobials = meds.flatMap(antimicrobialIn);
       if (antimicrobials.length && docType !== 'receita_antimicrobiano')
         throw new RequestError(
@@ -299,6 +326,10 @@ serve(async (req) => {
     if (contactLine) {
       text(contactLine, { size: 9, color: mut }); down(13);
     }
+    // Lei 9.965/2000: anabolic steroids (C5) carry the prescriber's CPF.
+    if (controlledPlan?.hasC5 && typeof settings.prescriber_cpf === 'string') {
+      text(`CPF do médico: ${formatCpf(settings.prescriber_cpf)}`, { size: 9, color: mut }); down(13);
+    }
     down(6);
     writer.page.drawLine({
       start: { x: margin, y: writer.y }, end: { x: width - margin, y: writer.y },
@@ -316,9 +347,14 @@ serve(async (req) => {
     text(DOC_TITLES[docType], { size: 13, bold: true }); down(22);
     const sexPart = docType === 'receita_antimicrobiano' && patientSex ? `, sexo ${patientSex}` : '';
     text(`Paciente: ${patient.name}, ${patientAge !== null ? `${patientAge} anos` : 'idade não informada'}${sexPart}`, { size: 11 }); down(15);
-    // CFM 2.381/2024: patient CPF "quando houver". The address follows when the
-    // registration has address fields (S2).
-    if (patientCpf) {
+    if (controlledPlan) {
+      // Portaria 344/98 art. 55 and Lei 5.991/73 art. 35: full address and CPF
+      // (or "não possui"/another document) of the patient.
+      wrapText(`Endereço: ${controlledPlan.patientAddress}`, { size: 9.5, max: 95 });
+      text(controlledPlan.patientDocumentLine, { size: 9.5 }); down(13);
+    } else if (patientCpf) {
+      // CFM 2.381/2024: patient CPF "quando houver". The address follows when the
+      // single patient registration has address fields (S2/D20).
       text(`CPF: ${formatCpf(patientCpf)}`, { size: 9, color: mut }); down(13);
     }
     const emitted = now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
@@ -330,6 +366,9 @@ serve(async (req) => {
 
     if (docType === 'receita_antimicrobiano') {
       text('Receita de antimicrobiano — sujeita a retenção. Validade: 10 dias (RDC 471/2021).', { size: 9, bold: true, color: rgb(0.66, 0.36, 0.06) });
+      down(20);
+    } else if (controlledPlan) {
+      text('Sujeita a retenção. Validade: 30 dias, em todo o território nacional (Portaria SVS/MS 344/98).', { size: 9, bold: true, color: rgb(0.66, 0.36, 0.06) });
       down(20);
     } else {
       down(8);
@@ -359,6 +398,31 @@ serve(async (req) => {
       exames.exams.forEach((e, i) => {
         text(`${i + 1}. ${e}`, { size: 11.5, bold: true }); down(17);
       });
+    } else if (controlledPlan) {
+      // RCE items: generic name next to a brand, dose and form, quantity in
+      // numbers and in words, posology (Portaria 344/98 arts. 52 and 55).
+      controlledPlan.items.forEach((item, i) => {
+        const generic = item.findings.map((f) => f.substance).join(' + ');
+        const folded = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+        const shown = folded(item.name).includes(folded(generic).split(/\s+/)[0]) ? item.name : `${item.name} (${generic})`;
+        text(`${i + 1}. ${shown} — ${item.dosage}`, { size: 11.5, bold: true }); down(15);
+        text(`Quantidade: ${item.quantity} (${item.quantityText}) ${item.unit}`, { x: margin + 14, size: 10.5 }); down(14);
+        wrapText(item.instructions, { x: margin + 14, size: 10, color: mut, max: 90 });
+        down(9);
+      });
+      if (controlledPlan.justification) {
+        wrapText(`Justificativa (quantidade acima do limite, art. 60): ${controlledPlan.justification}`, { size: 9.5, max: 95 });
+      }
+      if (controlledPlan.cid) {
+        text(`CID: ${controlledPlan.cid}`, { size: 9.5 }); down(14);
+      }
+      down(6);
+      // Filled by the pharmacy (Portaria 6/99, art. 85).
+      text('IDENTIFICAÇÃO DO COMPRADOR', { size: 8.5, bold: true }); down(12);
+      text('Nome: ______________________________________________   Identidade nº: ________________   Órgão emissor: ______', { size: 8, color: mut }); down(11);
+      text('Endereço: _________________________________________________   Cidade/UF: _______________   Telefone: ____________', { size: 8, color: mut }); down(14);
+      text('IDENTIFICAÇÃO DO FORNECEDOR', { size: 8.5, bold: true }); down(12);
+      text('Assinatura do farmacêutico: _______________________________________________   Data: ____/____/______', { size: 8, color: mut }); down(12);
     } else {
       // Medications
       meds.forEach((m, i) => {
@@ -411,16 +475,18 @@ serve(async (req) => {
     text('Gerado pelo Cortex.', { size: 8, color: mut });
     }
 
-    if (docType === 'receita_antimicrobiano') {
+    // Retained prescriptions go out in two copies, each with its legal label.
+    const copyLabels = COPY_LABELS[docType];
+    if (copyLabels) {
       const originals = pdf.getPages();
       const source = await PDFDocument.load(await pdf.save());
       const copies = await pdf.copyPages(source, originals.map((_, index) => index));
       const label = (page: typeof originals[number], value: string) =>
-        page.drawText(value, { x: width - margin - helvBold.widthOfTextAtSize(value, 8.5), y: height - 30, size: 8.5, font: helvBold, color: mut });
-      originals.forEach((page) => label(page, '1ª via — paciente'));
+        page.drawText(toWinAnsi(value), { x: width - margin - helvBold.widthOfTextAtSize(toWinAnsi(value), 8.5), y: height - 30, size: 8.5, font: helvBold, color: mut });
+      originals.forEach((page) => label(page, copyLabels[0]));
       copies.forEach((page) => {
         pdf.addPage(page);
-        label(page, '2ª via — retenção da farmácia');
+        label(page, copyLabels[1]);
       });
     }
     const pdfBytes = await pdf.save();
@@ -431,8 +497,17 @@ serve(async (req) => {
         doctor_name: settings.doctor_name.trim(), crm_number: settings.crm_number.trim(), crm_uf: settings.crm_uf.trim().toUpperCase(),
         professional_address: settings.professional_address?.trim() ?? '', professional_phone: prescriberPhone || null, rqe: prescriberRqe || null,
       },
-      patient: { name: patient.name, age: patientAge, dateOfBirth: patient.date_of_birth ?? null, cpf: patientCpf, sex: patient.sex ?? null },
-      pdf_sha256: pdfSha256, template_version: 'cortex-clinical-document-v2', issued_at: now.toISOString(),
+      patient: {
+        name: patient.name, age: patientAge, dateOfBirth: patient.date_of_birth ?? null, cpf: patientCpf, sex: patient.sex ?? null,
+        ...(controlledPlan ? { address: controlledPlan.patientAddress, document: controlledPlan.patientDocumentLine } : {}),
+      },
+      ...(controlledPlan ? {
+        controlled: {
+          items: controlledPlan.items.map((i) => ({ name: i.name, quantity: i.quantity, unit: i.unit, substances: i.findings.map((f) => `${f.substance} (${f.list})`) })),
+          cid: controlledPlan.cid, justification: controlledPlan.justification, prescriber_cpf_printed: controlledPlan.hasC5,
+        },
+      } : {}),
+      pdf_sha256: pdfSha256, template_version: 'cortex-clinical-document-v3', issued_at: now.toISOString(),
     };
 
     // ── Store + record ────────────────────────────────────────────────────────
@@ -446,7 +521,9 @@ serve(async (req) => {
       consultation_id: consultationId ?? null,
       medications: meds,
       doc_type: docType,
-      content: atestado ?? exames,
+      content: atestado ?? exames ?? (controlledPlan
+        ? { patientAddress: controlledPlan.patientAddress, patientDocument: controlledPlan.patientDocumentLine, cid: controlledPlan.cid, justification: controlledPlan.justification }
+        : null),
       storage_path: storagePath,
       secret_code: code,
       status: 'revoked',
