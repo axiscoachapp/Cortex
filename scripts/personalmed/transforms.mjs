@@ -57,7 +57,8 @@ export function envelope({ sourceInstance, sourceEntity, key, doctor = null, bat
 }
 
 /** Issues that send a record to human review instead of automatic load. */
-export const REVIEW_ISSUES = new Set(['history_date_out_of_order', 'name_invalid', 'appointment_overlap']);
+// appointment_chart_missing: the doctor has no chart for that patient (D14, clinic decision pending).
+export const REVIEW_ISSUES = new Set(['history_date_out_of_order', 'name_invalid', 'appointment_overlap', 'appointment_chart_missing']);
 
 // ---------------------------------------------------------------------------
 // Shared reference data

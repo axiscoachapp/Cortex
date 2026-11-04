@@ -115,6 +115,8 @@ export const agenda = [
   appt({ user: 5, date: '2026-09-03', startMinutes: 10 * 60, estado: '-', preCadastro: { name: 'NOVA PACIENTE SINTÉTICA', phone: '(41) 99000-0909' } }),
   // Past appointment without status (not imported by default, D3).
   appt({ pcod: 105, user: 5, date: '2024-09-09', startMinutes: 11 * 60, estado: '' }),
+  // Appointment with a doctor who has no chart for this person (D14).
+  appt({ pcod: 104, user: 3, date: '2025-03-12', startMinutes: 16 * 60, estado: 'T' }),
   // Cancelled and no-show.
   appt({ pcod: 102, user: 3, date: '2026-03-03', startMinutes: 15 * 60, estado: 'C' }),
   appt({ pcod: 102, user: 3, date: '2026-04-07', startMinutes: 15 * 60, estado: 'F' }),

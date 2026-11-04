@@ -73,6 +73,11 @@ describe('synthetic staging batch', () => {
     expect(c).toMatchObject({ sourceEntity: 'contact', mappingStatus: 'requires_review', payload: { origin: 'personalmed_precadastro', phone_normalized: '5541990000909' } });
   });
 
+  it('sends appointments whose doctor has no chart for the person to review (D14)', () => {
+    const a = find('appointment', 'user:3|date:2025-03-12|start:960');
+    expect(a).toMatchObject({ mappingStatus: 'requires_review', payload: { patientTargetId: null }, issues: ['appointment_chart_missing'] });
+  });
+
   it('keeps future blocks in staging with no executor and drops past ones', () => {
     const blocks = of('schedule_block');
     expect(blocks).toHaveLength(1);
@@ -134,7 +139,7 @@ describe('synthetic staging batch', () => {
     try {
       const m = writeBatch(dir, envelopes, { synthetic: true });
       expect(m.counts.chart.total).toBe(6);
-      expect(m.counts.appointment.byStatus).toEqual({ ready: 6, rejected: 2, requires_review: 1 });
+      expect(m.counts.appointment.byStatus).toEqual({ ready: 6, rejected: 2, requires_review: 2 });
       const lines = readFileSync(join(dir, 'chart.ndjson'), 'utf8').trim().split('\n');
       expect(lines).toHaveLength(6);
       expect(m.files['chart.ndjson'].sha256).toMatch(/^[0-9a-f]{64}$/);

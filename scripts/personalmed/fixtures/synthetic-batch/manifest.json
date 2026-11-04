@@ -7,8 +7,8 @@
   "transformVersion": "pm-v1",
   "files": {
     "appointment.ndjson": {
-      "sha256": "03dd99e28dd490331b1ac885db5beec54c4e7809650457fb310304b43d8b70f3",
-      "lines": 9
+      "sha256": "3e8fad840d09abb909e20e6d38d749ee90f08f5b5b3235a38b4311d958ffed72",
+      "lines": 10
     },
     "chart.ndjson": {
       "sha256": "367ab11a55643ecae79a838ef558383a0b2e218ad29898e5859cb7656f9d640c",
@@ -49,14 +49,14 @@
   },
   "counts": {
     "appointment": {
-      "total": 9,
+      "total": 10,
       "byStatus": {
+        "requires_review": 2,
         "ready": 6,
-        "rejected": 2,
-        "requires_review": 1
+        "rejected": 2
       },
       "byDoctor": {
-        "user:3": 5,
+        "user:3": 6,
         "user:5": 3,
         "user:9": 1
       }
@@ -147,6 +147,7 @@
   },
   "issues": {
     "address_without_number": 1,
+    "appointment_chart_missing": 1,
     "appointment_overlap": 1,
     "appointment_without_patient": 1,
     "block_executor_contract_pending": 1,
