@@ -5,6 +5,7 @@ import http from 'node:http';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { startClinicFixture, patientId } from './fixtures/clinic-review-api.mjs';
+import { INTERFACE_SCALE } from '../src/lib/interfaceScale.ts';
 
 const api=await startClinicFixture();
 const probe=http.createServer();await new Promise(resolveReady=>probe.listen(0,'127.0.0.1',resolveReady));
@@ -34,7 +35,7 @@ try {
   await page.goto(origin+'/?patient='+patientId);
   await expect(page.getByRole('heading',{name:'Paciente Exemplo A',exact:true}).first()).toBeVisible();
   const fontSize=await page.evaluate(()=>getComputedStyle(document.documentElement).fontSize);
-  if(fontSize!=='24px')throw new Error('Expected the default 150% scale, received '+fontSize);checks.push('150% default interface scale');
+  if(fontSize!==`${16*INTERFACE_SCALE}px`)throw new Error(`Expected the default ${INTERFACE_SCALE*100}% scale, received `+fontSize);checks.push(`${INTERFACE_SCALE*100}% default interface scale`);
   await expect(page.getByRole('button',{name:'Gerar resumo com IA',exact:true})).toBeVisible();
   if(api.metrics.briefings!==0 || api.metrics.checklists!==0 || api.metrics.patientWrites!==0)throw new Error('Opening the chart caused a paid operation or status write');checks.push('read-only chart opening');
   await expect(page.getByRole('button',{name:'Receita / atestado',exact:true})).toBeVisible();checks.push('document action discoverability');

@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    font-size: 150%;
+    font-size: 135%; /* = INTERFACE_SCALE in src/lib/interfaceScale.ts */
     --background: 42 33% 98%;
     --foreground: 38 9% 22%;
 
@@ -266,9 +266,19 @@
   }
 }
 
-@media (max-width: 639px) {
-  .rbc-toolbar { justify-content: center; }
-  .rbc-toolbar .rbc-toolbar-label { flex-basis: 100%; order: -1; }
+/* The agenda page has its own view switcher ("Visualização da agenda"); the
+   calendar's second Dia/Semana/Mês group was a duplicate that overflowed on phones. */
+.rbc-toolbar > .rbc-btn-group:last-child:not(:first-child) { display: none; }
+
+/* Media queries cannot read INTERFACE_SCALE (src/lib/interfaceScale.ts, 1.35):
+   863px = 640 x 1.35 - 1 (Tailwind sm). */
+@media (max-width: 863px) {
+  /* react-big-calendar.css turns the toolbar into a wrapping column below 768px,
+     which put the date beside the buttons and pushed them off screen. */
+  .rbc-calendar > .rbc-toolbar { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+  .rbc-toolbar .rbc-toolbar-label { flex: 0 0 100%; order: -1; }
+  .rbc-toolbar .rbc-btn-group { white-space: normal; }
+  .rbc-toolbar button { padding: 0.25rem 0.625rem; }
 }
 
 /* Clinic identity: original gold is reserved for ornament; darker ochre gives readable controls. */
@@ -292,11 +302,12 @@ body:has(.clinic-access-continued) > [data-clinical-capture] { order: 0; positio
 body:has(.clinic-access-continued):has(> [data-clinical-capture]) .clinic-access-continued,
 [data-session-content]:has(.clinic-access-continued) { height: 100%; }
 body:has(.clinic-access-continued):has(> [data-clinical-capture]) [data-clinic-page-shell] > .pt-14 { padding-top: 0; }
-@media (max-width: 1919px) {
+/* 1727px = DESKTOP_BREAKPOINT - 1 (1280 x 1.35 - 1): below it the bottom navigation is shown. */
+@media (max-width: 1727px) {
   .clinic-access-continued [data-clinic-page-shell].clinic-subpage-shell { height: calc(100% - 4rem - env(safe-area-inset-bottom)); }
 }
 
-@media (max-width: 1919px) {
+@media (max-width: 1727px) {
   .clinic-subpage-shell { height: calc(100dvh - 4rem - env(safe-area-inset-bottom)); overflow-y: auto; }
   .clinic-subpage-shell > .min-h-screen { min-height: 100%; }
   .clinic-subpage-shell > .h-\[100dvh\] { height: 100%; }

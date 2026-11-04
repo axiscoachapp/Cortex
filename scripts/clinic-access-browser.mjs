@@ -4,6 +4,7 @@ import http from 'node:http';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { startReceptionFixture } from './fixtures/reception-api.mjs';
+import { INTERFACE_SCALE } from '../src/lib/interfaceScale.ts';
 
 const api = await startReceptionFixture();
 const probe = http.createServer();
@@ -51,10 +52,10 @@ try {
     const warningBox = await warning.boundingBox();
     if (!captureBox || !warningBox || captureBox.y + captureBox.height > warningBox.y + 2) throw new Error('Recording strip covers continuity warning at ' + width);
     const layout = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, font: getComputedStyle(document.documentElement).fontSize }));
-    if (layout.scroll > layout.width + 2 || layout.font !== '24px') throw new Error('Continuity overflow/scale at ' + width);
+    if (layout.scroll > layout.width + 2 || layout.font !== `${16 * INTERFACE_SCALE}px`) throw new Error('Continuity overflow/scale at ' + width);
     await page.screenshot({ path: resolve(artifacts, `continued-${width}.png`), animations: 'disabled' });
   }
-  checks.push('live capture strip does not cover warning, draft or footer at 150% in 390/768/1280/1920 px');
+  checks.push('live capture strip does not cover warning, draft or footer at ' + INTERFACE_SCALE * 100 + '% in 390/768/1280/1920 px');
   api.setClinicAccessFailure(null);
   await page.getByRole('button', { name: 'Verificar acesso novamente' }).click();
   await expect(warning).toHaveCount(0);

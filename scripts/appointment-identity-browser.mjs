@@ -5,6 +5,7 @@ import http from 'node:http';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { startClinicFixture, uid, patientId } from './fixtures/clinic-review-api.mjs';
+import { INTERFACE_SCALE } from '../src/lib/interfaceScale.ts';
 
 const slot = (hour) => {
   const date = new Date();
@@ -59,7 +60,7 @@ try {
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('combobox', { name: 'Paciente' })).toBeDisabled();
     await expect(dialog.getByText(/Para trocar o paciente, cancele este agendamento/)).toBeVisible();
-    if (await page.evaluate(() => getComputedStyle(document.documentElement).fontSize) !== '24px') throw new Error('Expected 150% default scale');
+    if (await page.evaluate(() => getComputedStyle(document.documentElement).fontSize) !== `${16 * INTERFACE_SCALE}px`) throw new Error(`Expected ${INTERFACE_SCALE * 100}% default scale`);
     const overflow = await dialog.evaluate((element) => element.scrollWidth > element.clientWidth + 1);
     await page.screenshot({ path: resolve(artifacts, `crm-${width}.png`), fullPage: true });
     if (overflow) {
@@ -69,7 +70,7 @@ try {
       throw new Error('Dialog overflow at ' + width + ': ' + JSON.stringify(oversized));
     }
     await page.keyboard.press('Escape');
-    checks.push('CRM patient fixed, explanatory copy and 150% layout at ' + width);
+    checks.push('CRM patient fixed, explanatory copy and ' + INTERFACE_SCALE * 100 + '% layout at ' + width);
   }
   await page.getByText('Reserva CRM sintética', { exact: true }).first().click();
   await page.getByLabel('Observações').fill('Edição sintética preservando beneficiário');

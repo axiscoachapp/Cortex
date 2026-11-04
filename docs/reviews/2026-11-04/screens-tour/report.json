@@ -1,0 +1,494 @@
+{
+  "synthetic": true,
+  "fontSize": "21.6px",
+  "widths": [
+    390,
+    768,
+    1280,
+    1536
+  ],
+  "screens": [
+    {
+      "name": "login",
+      "width": 390,
+      "file": "login-390.png",
+      "issues": []
+    },
+    {
+      "name": "login",
+      "width": 768,
+      "file": "login-768.png",
+      "issues": []
+    },
+    {
+      "name": "login",
+      "width": 1280,
+      "file": "login-1280.png",
+      "issues": []
+    },
+    {
+      "name": "login",
+      "width": 1536,
+      "file": "login-1536.png",
+      "issues": []
+    },
+    {
+      "name": "home",
+      "width": 390,
+      "file": "home-390.png",
+      "issues": []
+    },
+    {
+      "name": "home",
+      "width": 768,
+      "file": "home-768.png",
+      "issues": []
+    },
+    {
+      "name": "home",
+      "width": 1280,
+      "file": "home-1280.png",
+      "issues": []
+    },
+    {
+      "name": "home",
+      "width": 1536,
+      "file": "home-1536.png",
+      "issues": []
+    },
+    {
+      "name": "chart",
+      "width": 390,
+      "file": "chart-390.png",
+      "issues": []
+    },
+    {
+      "name": "chart",
+      "width": 768,
+      "file": "chart-768.png",
+      "issues": []
+    },
+    {
+      "name": "chart",
+      "width": 1280,
+      "file": "chart-1280.png",
+      "issues": []
+    },
+    {
+      "name": "chart",
+      "width": 1536,
+      "file": "chart-1536.png",
+      "issues": []
+    },
+    {
+      "name": "document-composer",
+      "width": 390,
+      "file": "document-composer-390.png",
+      "issues": []
+    },
+    {
+      "name": "document-composer",
+      "width": 768,
+      "file": "document-composer-768.png",
+      "issues": []
+    },
+    {
+      "name": "document-composer",
+      "width": 1280,
+      "file": "document-composer-1280.png",
+      "issues": []
+    },
+    {
+      "name": "document-composer",
+      "width": 1536,
+      "file": "document-composer-1536.png",
+      "issues": []
+    },
+    {
+      "name": "settings",
+      "width": 390,
+      "file": "settings-390.png",
+      "issues": []
+    },
+    {
+      "name": "settings",
+      "width": 768,
+      "file": "settings-768.png",
+      "issues": []
+    },
+    {
+      "name": "settings",
+      "width": 1280,
+      "file": "settings-1280.png",
+      "issues": []
+    },
+    {
+      "name": "settings",
+      "width": 1536,
+      "file": "settings-1536.png",
+      "issues": []
+    },
+    {
+      "name": "patients",
+      "width": 390,
+      "file": "patients-390.png",
+      "issues": []
+    },
+    {
+      "name": "patients",
+      "width": 768,
+      "file": "patients-768.png",
+      "issues": []
+    },
+    {
+      "name": "patients",
+      "width": 1280,
+      "file": "patients-1280.png",
+      "issues": []
+    },
+    {
+      "name": "patients",
+      "width": 1536,
+      "file": "patients-1536.png",
+      "issues": []
+    },
+    {
+      "name": "new-patient",
+      "width": 390,
+      "file": "new-patient-390.png",
+      "issues": []
+    },
+    {
+      "name": "new-patient",
+      "width": 768,
+      "file": "new-patient-768.png",
+      "issues": []
+    },
+    {
+      "name": "new-patient",
+      "width": 1280,
+      "file": "new-patient-1280.png",
+      "issues": []
+    },
+    {
+      "name": "new-patient",
+      "width": 1536,
+      "file": "new-patient-1536.png",
+      "issues": []
+    },
+    {
+      "name": "calendar",
+      "width": 390,
+      "file": "calendar-390.png",
+      "issues": []
+    },
+    {
+      "name": "calendar",
+      "width": 768,
+      "file": "calendar-768.png",
+      "issues": []
+    },
+    {
+      "name": "calendar",
+      "width": 1280,
+      "file": "calendar-1280.png",
+      "issues": []
+    },
+    {
+      "name": "calendar",
+      "width": 1536,
+      "file": "calendar-1536.png",
+      "issues": []
+    },
+    {
+      "name": "templates",
+      "width": 390,
+      "file": "templates-390.png",
+      "issues": []
+    },
+    {
+      "name": "templates",
+      "width": 768,
+      "file": "templates-768.png",
+      "issues": []
+    },
+    {
+      "name": "templates",
+      "width": 1280,
+      "file": "templates-1280.png",
+      "issues": []
+    },
+    {
+      "name": "templates",
+      "width": 1536,
+      "file": "templates-1536.png",
+      "issues": []
+    },
+    {
+      "name": "knowledge",
+      "width": 390,
+      "file": "knowledge-390.png",
+      "issues": []
+    },
+    {
+      "name": "knowledge",
+      "width": 768,
+      "file": "knowledge-768.png",
+      "issues": []
+    },
+    {
+      "name": "knowledge",
+      "width": 1280,
+      "file": "knowledge-1280.png",
+      "issues": []
+    },
+    {
+      "name": "knowledge",
+      "width": 1536,
+      "file": "knowledge-1536.png",
+      "issues": []
+    },
+    {
+      "name": "assistant",
+      "width": 390,
+      "file": "assistant-390.png",
+      "issues": []
+    },
+    {
+      "name": "assistant",
+      "width": 768,
+      "file": "assistant-768.png",
+      "issues": []
+    },
+    {
+      "name": "assistant",
+      "width": 1280,
+      "file": "assistant-1280.png",
+      "issues": []
+    },
+    {
+      "name": "assistant",
+      "width": 1536,
+      "file": "assistant-1536.png",
+      "issues": []
+    },
+    {
+      "name": "sharing",
+      "width": 390,
+      "file": "sharing-390.png",
+      "issues": []
+    },
+    {
+      "name": "sharing",
+      "width": 768,
+      "file": "sharing-768.png",
+      "issues": []
+    },
+    {
+      "name": "sharing",
+      "width": 1280,
+      "file": "sharing-1280.png",
+      "issues": []
+    },
+    {
+      "name": "sharing",
+      "width": 1536,
+      "file": "sharing-1536.png",
+      "issues": []
+    },
+    {
+      "name": "workspace",
+      "width": 390,
+      "file": "workspace-390.png",
+      "issues": []
+    },
+    {
+      "name": "workspace",
+      "width": 768,
+      "file": "workspace-768.png",
+      "issues": []
+    },
+    {
+      "name": "workspace",
+      "width": 1280,
+      "file": "workspace-1280.png",
+      "issues": []
+    },
+    {
+      "name": "workspace",
+      "width": 1536,
+      "file": "workspace-1536.png",
+      "issues": []
+    },
+    {
+      "name": "security",
+      "width": 390,
+      "file": "security-390.png",
+      "issues": []
+    },
+    {
+      "name": "security",
+      "width": 768,
+      "file": "security-768.png",
+      "issues": []
+    },
+    {
+      "name": "security",
+      "width": 1280,
+      "file": "security-1280.png",
+      "issues": []
+    },
+    {
+      "name": "security",
+      "width": 1536,
+      "file": "security-1536.png",
+      "issues": []
+    },
+    {
+      "name": "privacy",
+      "width": 390,
+      "file": "privacy-390.png",
+      "issues": []
+    },
+    {
+      "name": "privacy",
+      "width": 768,
+      "file": "privacy-768.png",
+      "issues": []
+    },
+    {
+      "name": "privacy",
+      "width": 1280,
+      "file": "privacy-1280.png",
+      "issues": []
+    },
+    {
+      "name": "privacy",
+      "width": 1536,
+      "file": "privacy-1536.png",
+      "issues": []
+    },
+    {
+      "name": "about",
+      "width": 390,
+      "file": "about-390.png",
+      "issues": []
+    },
+    {
+      "name": "about",
+      "width": 768,
+      "file": "about-768.png",
+      "issues": []
+    },
+    {
+      "name": "about",
+      "width": 1280,
+      "file": "about-1280.png",
+      "issues": []
+    },
+    {
+      "name": "about",
+      "width": 1536,
+      "file": "about-1536.png",
+      "issues": []
+    },
+    {
+      "name": "reception-queue",
+      "width": 390,
+      "file": "reception-queue-390.png",
+      "issues": []
+    },
+    {
+      "name": "reception-queue",
+      "width": 768,
+      "file": "reception-queue-768.png",
+      "issues": []
+    },
+    {
+      "name": "reception-queue",
+      "width": 1280,
+      "file": "reception-queue-1280.png",
+      "issues": []
+    },
+    {
+      "name": "reception-queue",
+      "width": 1536,
+      "file": "reception-queue-1536.png",
+      "issues": []
+    },
+    {
+      "name": "reception-calendar",
+      "width": 390,
+      "file": "reception-calendar-390.png",
+      "issues": []
+    },
+    {
+      "name": "reception-calendar",
+      "width": 768,
+      "file": "reception-calendar-768.png",
+      "issues": []
+    },
+    {
+      "name": "reception-calendar",
+      "width": 1280,
+      "file": "reception-calendar-1280.png",
+      "issues": []
+    },
+    {
+      "name": "reception-calendar",
+      "width": 1536,
+      "file": "reception-calendar-1536.png",
+      "issues": []
+    },
+    {
+      "name": "reception-contacts",
+      "width": 390,
+      "file": "reception-contacts-390.png",
+      "issues": []
+    },
+    {
+      "name": "reception-contacts",
+      "width": 768,
+      "file": "reception-contacts-768.png",
+      "issues": []
+    },
+    {
+      "name": "reception-contacts",
+      "width": 1280,
+      "file": "reception-contacts-1280.png",
+      "issues": []
+    },
+    {
+      "name": "reception-contacts",
+      "width": 1536,
+      "file": "reception-contacts-1536.png",
+      "issues": []
+    },
+    {
+      "name": "reception-team",
+      "width": 390,
+      "file": "reception-team-390.png",
+      "issues": []
+    },
+    {
+      "name": "reception-team",
+      "width": 768,
+      "file": "reception-team-768.png",
+      "issues": []
+    },
+    {
+      "name": "reception-team",
+      "width": 1280,
+      "file": "reception-team-1280.png",
+      "issues": []
+    },
+    {
+      "name": "reception-team",
+      "width": 1536,
+      "file": "reception-team-1536.png",
+      "issues": []
+    }
+  ],
+  "pageErrors": [],
+  "broken": []
+}

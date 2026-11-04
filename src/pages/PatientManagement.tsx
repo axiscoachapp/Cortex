@@ -266,7 +266,7 @@ const PatientManagement = () => {
     <div className="min-h-screen bg-slate-50">
       <header className="bg-background border-b">
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -278,7 +278,7 @@ const PatientManagement = () => {
 
       <main className="container mx-auto px-4 py-4 md:py-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardHeader className="flex flex-row items-center justify-between p-4 pb-3 md:p-6 md:pb-3">
             <CardTitle className="text-base md:text-xl">Pacientes</CardTitle>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" aria-label="Importar pacientes" onClick={() => setImportOpen(true)}>
@@ -375,7 +375,7 @@ const PatientManagement = () => {
               </Dialog>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
             <Input
               type="search"
               aria-label="Buscar pacientes"
@@ -422,31 +422,34 @@ const PatientManagement = () => {
                 {/* Mobile cards */}
                 <div className="md:hidden space-y-2">
                   {visiblePatients.map((patient) => (
-                    <div
-                      key={patient.id}
-                      className="flex items-center gap-3 p-3 rounded-xl border border-border bg-background"
-                    >
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold bg-medical-blue/10 text-medical-blue">
-                        {patient.name
-                          .split(' ')
-                          .map((n) => n[0])
-                          .join('')
-                          .slice(0, 2)
-                          .toUpperCase()}
+                    // Name on its own line, full width; status, last visit and
+                    // actions below it, so a long name is never cut on a phone.
+                    <div key={patient.id} className="p-3 rounded-xl border border-border bg-background space-y-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold bg-medical-blue/10 text-medical-blue">
+                          {patient.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <Link
+                            to={`/?patient=${encodeURIComponent(patient.id)}`}
+                            aria-label={`Abrir prontuário de ${patient.name}`}
+                            className="font-medium text-sm text-medical-blue hover:underline break-words block"
+                          >
+                            {patient.name}
+                          </Link>
+                          <p className="text-xs text-muted-foreground mt-0.5 break-words">
+                            {patient.age === null ? 'Idade não informada' : `${patient.age} anos`}
+                            {patient.profession ? ` · ${patient.profession}` : ''}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <Link
-                          to={`/?patient=${encodeURIComponent(patient.id)}`}
-                          aria-label={`Abrir prontuário de ${patient.name}`}
-                          className="font-medium text-sm text-medical-blue hover:underline truncate block"
-                        >
-                          {patient.name}
-                        </Link>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {patient.age === null ? 'Idade não informada' : `${patient.age} anos`}
-                          {patient.profession ? ` · ${patient.profession}` : ''}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-1 min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                           <span className="text-[0.625rem] capitalize font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                             {patient.status}
                           </span>
@@ -454,49 +457,49 @@ const PatientManagement = () => {
                             {patient.lastVisit ? formatDateOnly(patient.lastVisit) : 'Sem consulta concluída'}
                           </span>
                         </div>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          aria-label="Editar paciente"
-                          onClick={() => handleEdit(patient)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        {showArchived ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-10 w-10"
-                              aria-label={`Restaurar ${patient.name}`}
-                              onClick={() => setPendingAction({ patient, kind: 'restore' })}
-                            >
-                              <RotateCcw className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-10 w-10"
-                              aria-label={`Excluir definitivamente ${patient.name}`}
-                              onClick={() => setPendingAction({ patient, kind: 'delete' })}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </>
-                        ) : (
+                        <div className="flex gap-1 shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-10 w-10"
-                            aria-label={`Arquivar ${patient.name}`}
-                            onClick={() => setPendingAction({ patient, kind: 'archive' })}
+                            aria-label="Editar paciente"
+                            onClick={() => handleEdit(patient)}
                           >
-                            <Archive className="h-4 w-4 text-muted-foreground" />
+                            <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                        )}
+                          {showArchived ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                aria-label={`Restaurar ${patient.name}`}
+                                onClick={() => setPendingAction({ patient, kind: 'restore' })}
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10"
+                                aria-label={`Excluir definitivamente ${patient.name}`}
+                                onClick={() => setPendingAction({ patient, kind: 'delete' })}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10"
+                              aria-label={`Arquivar ${patient.name}`}
+                              onClick={() => setPendingAction({ patient, kind: 'archive' })}
+                            >
+                              <Archive className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

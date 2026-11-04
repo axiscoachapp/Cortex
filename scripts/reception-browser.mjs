@@ -4,6 +4,7 @@ import http from 'node:http';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
+import { INTERFACE_SCALE } from '../src/lib/interfaceScale.ts';
 
 const api = await startReceptionFixture();
 const probe = http.createServer();
@@ -109,7 +110,7 @@ try {
       throw new Error('Booking dialog overflow at ' + width);
     await a.screenshot({ path: resolve(artifacts, 'link-confirmation-' + width + '.png'), fullPage: true, animations: 'disabled' });
   }
-  checks.push('linked patient chosen through search keeps guardian relation fixed at 150% for four widths');
+  checks.push('linked patient chosen through search keeps guardian relation fixed at ' + INTERFACE_SCALE * 100 + '% for four widths');
   await expect(confirm).toBeDisabled();
   await dialog.getByRole('checkbox', { name: /Conferi o paciente/ }).check();
   await expect(confirm).toBeEnabled();
@@ -168,8 +169,8 @@ try {
     await expect(a.getByRole('heading', { name: 'Família Exemplo' })).toBeVisible();
     if (await a.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1))
       throw new Error('Horizontal overflow in reception at ' + width);
-    if ((await a.evaluate(() => getComputedStyle(document.documentElement).fontSize)) !== '24px')
-      throw new Error('150% default scale changed');
+    if ((await a.evaluate(() => getComputedStyle(document.documentElement).fontSize)) !== `${16 * INTERFACE_SCALE}px`)
+      throw new Error(`${INTERFACE_SCALE * 100}% default scale changed`);
     await a.screenshot({ path: resolve(artifacts, 'queue-' + width + '.png'), fullPage: true });
     await a.goto(origin + '/recepcao/agenda');
     await expect(a.getByRole('heading', { name: 'Agenda da equipe' })).toBeVisible();
@@ -177,7 +178,7 @@ try {
       throw new Error('Calendar overflow at ' + width);
     await a.screenshot({ path: resolve(artifacts, 'calendar-' + width + '.png'), fullPage: true });
     await a.goto(origin + '/recepcao?case=' + ids.case);
-    checks.push('150% responsive reception and calendar ' + width);
+    checks.push(INTERFACE_SCALE * 100 + '% responsive reception and calendar ' + width);
   }
   const admin = await account('admin', '/recepcao/equipe');
   await expect(admin.getByRole('heading', { name: 'Equipe e permissões' })).toBeVisible();
@@ -215,7 +216,7 @@ try {
     await admin.screenshot({path:resolve(artifacts,'team-scopes-'+width+'.png'),animations:'disabled'});
   }
   await admin.setViewportSize({width:1280,height:1000});
-  checks.push('team scopes responsive at 150% for 390/768/1280/1920 px');
+  checks.push('team scopes responsive at ' + INTERFACE_SCALE * 100 + '% for 390/768/1280/1920 px');
   await admin.getByLabel('Nome da secretária', { exact: true }).fill('Secretária Nova');
   await admin.getByLabel('E-mail exclusivo da conta').fill('nova@example.invalid');
   await admin
@@ -293,7 +294,7 @@ try {
     await admin.screenshot({ path: resolve(artifacts, 'contact-correction-' + width + '.png'), fullPage: true,animations:'disabled' });
     await admin.getByRole('button', { name: 'Voltar', exact: true }).click();
   }
-  checks.push('contact editor responsive at 150% for 390/768/1280/1920 px');
+  checks.push('contact editor responsive at ' + INTERFACE_SCALE * 100 + '% for 390/768/1280/1920 px');
   const staffReads = api.metrics.clinicalReads.filter((r) => r.actor !== ids.admin);
   if (staffReads.length || api.metrics.externalCalls.length || api.metrics.unknown.length || errors.length)
     throw new Error(JSON.stringify({ staffReads, metrics: api.metrics, errors }));
