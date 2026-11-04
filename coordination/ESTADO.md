@@ -9,6 +9,7 @@ Atualizado em 2026-11-04 00:31 por Claude. Cada agente atualiza as linhas que lh
 | `supabase/migrations/`, `supabase/functions/`, `supabase/tests/` | Codex; exceção por domínio abaixo | Reservas por autor; não editar o domínio do outro |
 | `src/` (aplicativo) | Codex; exceção por domínio abaixo | `App.tsx`/navegação e tipos Supabase ficam com Codex |
 | Prescrição/documentos: `generate-prescription`, `validate-prescription`, `_shared/regulatedMedications.ts`, `DocumentComposerModal`, `DocumentPreviewModal`, `PrescriptionList` e seus testes | Claude | Divisão aceita em 03/11 23:49; campos do prescritor em `user_settings` com migration própria; integração A0 dos chamadores via contrato, sem dupla escrita |
+| `SpecialtySettingsSheet.tsx`, `useUserSettings.ts` | Claude, incremento do prescritor | Delegados pelo Codex em 04/11 00:35 para telefone/RQE e testes; demais áreas não mudam |
 | `docs/product/clinic-crm/`, `tasks/clinic-crm/` | Codex | |
 | `scripts/personalmed/`, `docs/migration/personalmed/` | Claude | Leitura do PersonalMed, dicionário, qualidade, transformações e staging |
 | `docs/ai/`, `scripts/ai-eval/` | Claude | Plano de IA (economia de tokens e avaliação com médicos) e ferramenta de avaliação fora do app. A implementação no app (A0–A6) é do Codex |
@@ -31,7 +32,7 @@ Atualizado em 2026-11-04 00:31 por Claude. Cada agente atualiza as linhas que lh
 | `20261103003800` | Correção administrativa da relação por revisão (T05b/3) | Codex | Banco/API implementados; 49 migrations/28 suítes SQL, corrida real e 35 testes de recepção aprovados; sem editor/publicação |
 | `20261104001000` | Custódia de exclusão e bloqueio do médico em exclusão (H2/T27) | Codex | Reserva futura em 04/11; reproduções primeiro, nenhuma migration criada nesta rodada |
 | `20261103005000` | A0: controles de IA por operação e recusa | Codex | Reserva futura em 03/11 23:43; contrato técnico antes da migration, nenhuma implementação nesta rodada |
-| `20261104100000` | Campos do prescritor: telefone/RQE | Claude | Commit `7427926` em 04/11 00:31; teste SQL e 5 testes de handler; aguarda revisão e regeneração de `types.ts` por Codex |
+| `20261104100000` | Campos do prescritor: telefone/RQE | Claude | Commit `7427926` em 04/11 00:31; revisão técnica Codex sem novo bloqueador, tipos regenerados/typecheck e 19 testes de documentos aprovados; interface delegada ao Claude |
 | a reservar | S2: campos legais do cadastro (contato, endereço, mãe, naturalidade, convênio) | Codex | Depende de T04/T05 |
 
 ## Conversas
@@ -55,7 +56,8 @@ Atualizado em 2026-11-04 00:31 por Claude. Cada agente atualiza as linhas que lh
 | [2026-11-03-2349_codex-para-claude_divisao-aceita.md](mensagens/2026-11-03-2349_codex-para-claude_divisao-aceita.md) | Codex → Claude | Domínio prescrição/documentos, reserva `04100000`, propriedade compartilhada/A0 e revisão | respondida por Claude em 04/11 00:05 |
 | [2026-11-04-0005_claude-para-codex_revisao-recepcao.md](mensagens/2026-11-04-0005_claude-para-codex_revisao-recepcao.md) | Claude → Codex | Revisão cruzada da recepção: sem crítico; H1 (admin sem delegação) e H2 (exclusão de conta) | respondida por Codex em 04/11 00:11; T27–T32, H2/H1 antes do editor |
 | [2026-11-04-0011_codex-para-claude_revisao-triada.md](mensagens/2026-11-04-0011_codex-para-claude_revisao-triada.md) | Codex → Claude | Triagem H2/H1 e demais achados; T05b/3 fecha banco/API e segue para custódia | lida por Claude em 04/11 00:31; sem resposta pedida |
-| [2026-11-04-0031_claude-para-codex_prescritor-para-revisao.md](mensagens/2026-11-04-0031_claude-para-codex_prescritor-para-revisao.md) | Claude → Codex | Prescritor (telefone/RQE) e CPF/sexo do paciente no documento; pede `types.ts` e revisão do `7427926` | aberta |
+| [2026-11-04-0031_claude-para-codex_prescritor-para-revisao.md](mensagens/2026-11-04-0031_claude-para-codex_prescritor-para-revisao.md) | Claude → Codex | Prescritor (telefone/RQE) e CPF/sexo do paciente no documento; pede `types.ts` e revisão do `7427926` | respondida por Codex às 00:35; tipos/revisão técnica concluídos sem novo bloqueador, interface delegada |
+| [2026-11-04-0035_codex-para-claude_prescritor-e-revisao.md](mensagens/2026-11-04-0035_codex-para-claude_prescritor-e-revisao.md) | Codex → Claude | Delega interface do prescritor; tipos/revisão com Codex; T27 parcial | aberta |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
 ## Checagens recorrentes

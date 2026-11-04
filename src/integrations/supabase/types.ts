@@ -1879,6 +1879,8 @@ export type Database = {
           doctor_name: string | null
           live_copilot_enabled: boolean
           professional_address: string | null
+          professional_phone: string | null
+          rqe: string | null
           specialty: string
           updated_at: string
           user_id: string
@@ -1892,6 +1894,8 @@ export type Database = {
           doctor_name?: string | null
           live_copilot_enabled?: boolean
           professional_address?: string | null
+          professional_phone?: string | null
+          rqe?: string | null
           specialty?: string
           updated_at?: string
           user_id: string
@@ -1905,6 +1909,8 @@ export type Database = {
           doctor_name?: string | null
           live_copilot_enabled?: boolean
           professional_address?: string | null
+          professional_phone?: string | null
+          rqe?: string | null
           specialty?: string
           updated_at?: string
           user_id?: string
