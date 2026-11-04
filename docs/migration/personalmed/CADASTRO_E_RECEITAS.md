@@ -36,14 +36,14 @@ Pesquisa feita em 03/11/2026, só em fontes oficiais abertas (links no fim).
 |---|---|---|---|
 | Receita comum (papel) | Nome e **endereço residencial**, mais o modo de usar. O CFM pede também o CPF "quando houver". | Data, assinatura, CRM e endereço. Pelo CFM, também RQE (se houver) e telefone ou e-mail. | Lei 5.991/73, art. 35; Res. CFM 2.381/2024, art. 2º |
 | Receita eletrônica | Nome e número de um documento legal | Nome, CRM, endereço, RQE, data e hora; assinatura ICP-Brasil | Res. CFM 2.299/2021; Lei 14.063/2020, art. 13 |
-| Antimicrobiano | Nome, **idade e sexo** | Nome, CRM, endereço completo, **telefone**; 2 vias; validade de 10 dias | RDC Anvisa 471/2021, arts. 6º e 9º |
-| Receita de controle especial (C1, C5) | Nome e **CPF** (ou passaporte). Desde 13/02/2026 não exige mais endereço. | Nome, conselho e UF; 2 vias; validade de 30 dias | Portaria 344/98, arts. 52 e 55, com redação da RDC 1.000/2025 |
+| Antimicrobiano | Nome, **idade e sexo** | Nome, CRM, endereço completo, **telefone**; validade de 10 dias; 2 vias no papel, via única na eletrônica (RDC 1.000/2025, art. 10) | RDC Anvisa 471/2021, arts. 6º e 9º |
+| Receita de controle especial (C1, C5) | Nome e **CPF** (ou passaporte). Desde 13/02/2026 não exige mais endereço. | Nome, conselho e UF; validade de 30 dias; 2 vias no papel, via única na eletrônica | Portaria 344/98, arts. 52 e 55, com redação da RDC 1.000/2025 |
 | Notificação de Receita A, B, B2 | Nome e CPF, ou "não possui" | Igual à anterior, com numeração da Vigilância Sanitária | Portaria 344/98, art. 36 (RDC 1.000/2025) |
 | **Prontuário** (identificação) | Nome, nascimento, sexo, **nome da mãe**, **naturalidade**, **endereço completo com CEP**. O CPF não está na lista. | Registro com data, hora, assinatura e CRM | Res. CFM 1.638/2002, art. 5º; Código de Ética Médica, art. 87 |
 
 O que mudou recentemente:
 - **Notificação eletrônica:** a Anvisa colocou o sistema nacional de numeração de receitas (SNCR) no ar em 30/09/2026. Desde então a notificação pode ser emitida eletronicamente, mas isso é opcional.
-- **Prazo de transição:** até 03/03/2027, receitas eletrônicas de controle especial e de antimicrobiano podem sair sem o número do SNCR (RDC 1.046/2026).
+- **Prazo de transição:** até 03/03/2027, receitas eletrônicas de controle especial e de antimicrobiano podem sair sem o número do SNCR. A partir de **04/03/2027**, o número é obrigatório (RDC 1.046/2026; a data já mudou duas vezes em 2026).
 - **Farmácia Popular:** o CPF é apresentado no balcão; a receita não precisa trazê-lo.
 
 **Não foi confirmado:** a página da plataforma do CFM diz que os modelos atuais de controle especial trazem o endereço do paciente, o que contradiz a RDC 1.000. Até esclarecer, **vale manter o endereço** nesses documentos: ele já é exigido na receita comum e não prejudica nada.
@@ -295,7 +295,7 @@ Hoje o Cortex monta a receita item por item (medicamento, dose e posologia, busc
 1. **Criar a biblioteca de modelos** no Cortex, compartilhada pela clínica, com nomes sem limite de 20 caracteres e com os mesmos campos automáticos. Pelo menos `@nome`, `@data`, `@extenso`, `@endereco`, `@idade`, `@bairro` e `@cidade` precisam funcionar como no PersonalMed.
 2. **Converter cada modelo em itens** automaticamente: cada linha "- NOME ___ quantidade" vira um item e as linhas seguintes viram a posologia. Isso cobre bem os 639 modelos com 1 item ou mais. Os 104 modelos só de texto continuam como texto.
 3. **Revisão pelos médicos:** primeiro os 291 modelos usados em 2025–2026, a começar pelos 50 mais usados. Os demais entram como "não revisado" ou ficam no arquivo, como a clínica preferir.
-4. **Modelos regulados:** os 46 com antimicrobiano vão para o fluxo de antimicrobiano (2 vias). Os 24 com controlado vão para o fluxo de controle especial, assim que ele existir (ver 7).
+4. **Modelos regulados:** os 46 com antimicrobiano vão para o fluxo de antimicrobiano (2 vias no papel, via única na eletrônica). Os 24 com controlado vão para o fluxo de controle especial, assim que ele existir (ver 7).
 
 ---
 
@@ -314,9 +314,9 @@ Também há casos raros de opioides e hipnóticos (tramadol, codeína, morfina e
 
 Para trazê-las ao Cortex, a receita de controle especial (listas C1 e C5) precisa de:
 - **CPF do paciente:** obrigatório desde 02/2026;
-- **2 vias**;
+- **2 vias no papel**, ou via única na versão eletrônica (RDC 1.000/2025, art. 10);
 - **validade de 30 dias**;
-- **número do SNCR:** a partir de 03/03/2027, para a versão eletrônica.
+- **número do SNCR:** obrigatório a partir de 04/03/2027 na versão eletrônica.
 
 As notificações A e B podem continuar em papel ou na plataforma do CFM.
 

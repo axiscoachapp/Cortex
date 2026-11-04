@@ -446,9 +446,9 @@ A ideia original era o cadastro legal ficar na pessoa, não em cada prontuário.
 - **Prescritor:** acrescentar em `user_settings` e em `update_user_settings` o **telefone** (exigido na RDC 471) e/ou e-mail, e o **RQE** quando houver. Esses dados não existem no legado; os médicos informam.
 - **Controlados (fase 2, cerca de 58 por mês):** Receita de Controle Especial das listas C1 e C5.
   - **CPF obrigatório** (Portaria 344/98 com a RDC 1.000/2025, em vigor desde 13/02/2026);
-  - 2 vias e validade de 30 dias;
+  - validade de 30 dias; 2 vias no papel, via única na versão eletrônica (RDC 1.000/2025, art. 10);
   - primeira etapa: impressão para assinatura manual;
-  - a versão eletrônica precisa do número do SNCR a partir de 03/03/2027 (RDC 1.046/2026);
+  - a versão eletrônica precisa do número do SNCR a partir de 04/03/2027 (RDC 1.046/2026). O Cortex pode se integrar direto ao SNCR, sem credenciamento; ver `reports/Assinatura digital de receitas.md`;
   - Notificações A e B continuam fora, porque usam talão numerado.
 
   **Confirmar com o jurídico da clínica antes de liberar.**
