@@ -187,8 +187,10 @@ Alvos futuros abaixo são sugestões de planejamento; os alvos implementados for
 
 Origem: [revisão do Claude](../../docs/reviews/2026-11-04/claude-reception-review/REVIEW.md). Estado inicial: leitura/triagem; não marcar um achado resolvido sem reprodução e prova da correção.
 
-- [ ] **T27 — H2: custódia de exclusão antes de qualquer limpeza.** Reserva futura `20261104001000`.
+- [ ] **T27 — H2: custódia de exclusão antes de qualquer limpeza.** `20261104001000` implementada apenas como T27/1; H2 permanece aberta.
   - Reproduzir médico solo com agenda autenticada, médico delegado, caso encerrado, bloqueio e autor de confirmação/correção. Pré-check deve separar agenda própria de custódia de terceiros e cobrir todas as referências impeditivas antes de Storage/provedor/auth. Rejeitar novas operações de recepção no médico em exclusão; testar corrida e retomada sintéticas. Nenhuma exclusão real autorizada por esta tarefa.
+  - [x] **T27/1:** pré-check de referências existentes, cascata real da conta solo sintética e recusa de busca/caso/delegação após marcador visível. 51 migrations/30 suítes SQL e 26 testes de handlers de segurança aprovados. [Evidências](../../docs/reviews/2026-11-04/deletion-custody/IMPLEMENTATION.md).
+  - [ ] **T27/2, antes de H1/editor:** barreira comum para referências de ator/médico, escritores em andamento/privilegiados, ordem de locks e snapshots antigos. Provar duas conexões e retomada antes de efeitos externos. A proposta de locks de associação antes do advisory foi rejeitada por inversão e cobertura incompleta; não está implementada.
 - [ ] **T28 — H1/M2/L5: escopos administrativos e prática particular.** Priorizar após T27, antes de editor/piloto.
   - Provar admin versus médico membro sem delegação nos leitores e escritores. Separar gestão de equipe/contatos de autorização de agenda/lista de pacientes, seguindo a matriz atual. Explicitar anuência/limites de delegação; não reviver escopos antigos ao reingressar. Qualquer ampliação de política precisa de decisão explícita.
 - [ ] **T29 — M3/L4: concorrência e inexistência de agendamento.**
