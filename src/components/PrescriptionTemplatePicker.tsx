@@ -134,10 +134,10 @@ export function PrescriptionTemplatePicker({ selected, onApply, disabled }: Pres
             {selected.map((m) => m.name.trim() || 'sem nome').join(', ')}. Como aplicar o modelo "{pending.name}"?
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" disabled={busy} onClick={() => apply(pending, 'replace')}>
+            <Button type="button" size="sm" className="h-auto min-h-9 whitespace-normal" disabled={busy} onClick={() => apply(pending, 'replace')}>
               Substituir a seleção
             </Button>
-            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => apply(pending, 'add')}>
+            <Button type="button" size="sm" variant="outline" className="h-auto min-h-9 whitespace-normal" disabled={busy} onClick={() => apply(pending, 'add')}>
               Adicionar aos selecionados
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setPending(null)}>

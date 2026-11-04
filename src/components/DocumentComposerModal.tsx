@@ -52,9 +52,11 @@ interface DocumentComposerModalProps {
   isGenerating: boolean;
 }
 
-const TYPE_META: Array<{ value: RxDocType; label: string; hint: string; icon: React.ComponentType<{ className?: string }> }> = [
+// `shown` adds a soft hyphen where a long word may break on a phone; the
+// accessible name keeps the plain label.
+const TYPE_META: Array<{ value: RxDocType; label: string; shown?: string; hint: string; icon: React.ComponentType<{ className?: string }> }> = [
   { value: 'receita_simples',        label: 'Receita simples',  hint: 'Validade 30 dias',                  icon: Pill },
-  { value: 'receita_antimicrobiano', label: 'Antimicrobiano',   hint: 'Retenção · validade 10 dias',      icon: AlertTriangle },
+  { value: 'receita_antimicrobiano', label: 'Antimicrobiano',   shown: 'Antimicro­biano', hint: 'Retenção · validade 10 dias', icon: AlertTriangle },
   { value: 'atestado',               label: 'Atestado médico',  hint: 'Afastamento com validação por QR', icon: ClipboardPlus },
   { value: 'solicitacao_exames',     label: 'Solicitação de exames', hint: 'Lista de exames com QR',      icon: FlaskConical },
 ];
@@ -277,21 +279,23 @@ export function DocumentComposerModal({
           <fieldset disabled={isGenerating} aria-busy={isGenerating} className="m-0 min-w-0 space-y-4 border-0 p-0">
           {/* Type selector */}
           <div className="grid grid-cols-2 gap-2">
-            {TYPE_META.map(({ value, label, hint, icon: Icon }) => (
+            {TYPE_META.map(({ value, label, shown, hint, icon: Icon }) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => setDocType(value)}
                 aria-pressed={docType === value}
+                aria-label={`${label}. ${hint}`}
                 className={cn(
-                  'rounded-lg border p-2.5 text-left transition-all',
+                  // min-w-0 + soft hyphen: "Antimicro-biano" breaks inside a 375px card instead of spilling out.
+                  'min-w-0 rounded-lg border p-2.5 text-left transition-all hyphens-manual [overflow-wrap:anywhere]',
                   docType === value
                     ? 'border-medical-blue bg-medical-blue-light/40 ring-1 ring-medical-blue/30'
                     : 'border-border/60 bg-white hover:border-medical-blue/40',
                 )}
               >
                 <Icon className={cn('w-3.5 h-3.5 mb-1', docType === value ? 'text-medical-blue' : 'text-muted-foreground')} />
-                <p className="text-[0.6875rem] font-semibold text-foreground leading-tight">{label}</p>
+                <p className="text-[0.6875rem] font-semibold text-foreground leading-tight">{shown ?? label}</p>
                 <p className="text-[0.5625rem] text-muted-foreground mt-0.5 leading-tight">{hint}</p>
               </button>
             ))}
@@ -481,7 +485,8 @@ export function DocumentComposerModal({
         </div>
 
         {catalogError && <p role="alert" className="px-5 text-xs text-destructive">Não foi possível consultar o catálogo. Edite a busca para tentar novamente ou preencha o medicamento manualmente.</p>}
-        <div className="px-5 py-3 border-t border-border/50 shrink-0 flex gap-2 justify-end">
+        {/* Stacked on phones (primary action on top), side by side from sm up. */}
+        <div className="px-5 py-3 border-t border-border/50 shrink-0 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" size="sm" onClick={() => changeOpen(false)} disabled={isGenerating}>
             Cancelar
           </Button>

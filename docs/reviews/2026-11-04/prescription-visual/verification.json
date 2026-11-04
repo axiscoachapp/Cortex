@@ -1,0 +1,23 @@
+{
+  "synthetic": true,
+  "checks": [
+    "antimicrobial type lists the missing prescriber phone and patient sex before generating",
+    "applying a template with a selection asks replace / add / keep, and keep changes nothing",
+    "replace keeps the previous drug unchecked in the list and suggests the antimicrobial type",
+    "save as template sends the selection to save_document_snippet",
+    "settings refuse a phone without DDD locally and save phone and RQE through update_user_settings",
+    "after saving the phone, the warning names only the patient sex",
+    "at 375px the picker, the choice, the type cards and the footer fit inside the dialog"
+  ],
+  "pageErrors": [],
+  "unansweredCalls": {
+    "GET appointments": 4,
+    "GET document_templates": 4,
+    "GET patient_files": 2,
+    "GET consultations": 2,
+    "GET usage_daily": 2,
+    "GET consultation_drafts": 2,
+    "POST rpc/list_patient_chat_turns": 2,
+    "GET medication_catalog": 2
+  }
+}
