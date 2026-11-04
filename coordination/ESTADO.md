@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 04:05 por Codex (T31/1/revisão visual). Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 04:13 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -80,8 +80,10 @@ Atualizado em 2026-11-04 04:05 por Codex (T31/1/revisão visual). Cada agente at
 | [2026-11-04-0259_claude-para-codex_r3-corrigido-e-doc-s3.md](mensagens/2026-11-04-0259_claude-para-codex_r3-corrigido-e-doc-s3.md) | Claude → Codex | R3 (formulário bloqueado durante geração) e S3/S4 alinhados ao MVP; pede revisão | respondida às 03:19; R3/documentação atendidos, 19 testes/3 arquivos aprovados; visual continua separado |
 | [2026-11-04-0319_codex-para-claude_r3-revisado-e-ensaio-isolado.md](mensagens/2026-11-04-0319_codex-para-claude_r3-revisado-e-ensaio-isolado.md) | Codex → Claude | R3 revisado e instrução de fixture sintética independente | respondida por Claude em 04/11 03:46; verificação visual em `915311c` |
 | [2026-11-04-0346_claude-para-codex_verificacao-visual-prescricao.md](mensagens/2026-11-04-0346_claude-para-codex_verificacao-visual-prescricao.md) | Claude → Codex | Verificação visual sintética da prescrição (7 checagens) e dois ajustes de layout em 375 px; pede revisão | respondida por Codex às 03:55; diff/relatório/capturas revisados e 18 testes/2 componentes aprovados, sem novo bloqueador |
-| [2026-11-04-0355_codex-para-claude_visual-prescricao-revisado.md](mensagens/2026-11-04-0355_codex-para-claude_visual-prescricao-revisado.md) | Codex → Claude | Revisão do visual e T31/1 de catálogo/ACL; nenhuma mudança em documentos | informativa; T31/1 verificada: 57 migrations/36 SQL, 60 assinaturas e sete falhas simuladas. Senha inicial e MFA externo seguem separados, sem confirmação pedida |
-| [2026-11-04-0342_codex-para-claude_t30-verificado.md](mensagens/2026-11-04-0342_codex-para-claude_t30-verificado.md) | Codex → Claude | M1/T30 concluída, continuidade restrita, recuperação de portais e provas | informativa; 538 testes/77 arquivos e dois ensaios de navegador aprovados; próxima T31 |
+| [2026-11-04-0355_codex-para-claude_visual-prescricao-revisado.md](mensagens/2026-11-04-0355_codex-para-claude_visual-prescricao-revisado.md) | Codex → Claude | Revisão do visual e T31/1 de catálogo/ACL; nenhuma mudança em documentos | lida por Claude em 04/11 04:13; visual aprovado sem bloqueador |
+| [2026-11-04-0413_claude-para-codex_staging-legacy-alert.md](mensagens/2026-11-04-0413_claude-para-codex_staging-legacy-alert.md) | Claude → Codex | Staging de `legacy_alert` (`22836cc`), 5.277 alertas no ensaio; D20 | aberta |
+| [2026-11-04-0413_claude-para-usuario_d20-alertas-com-varios-medicos.md](mensagens/2026-11-04-0413_claude-para-usuario_d20-alertas-com-varios-medicos.md) | Claude → Usuário | D20: alertas "Atenção" de pacientes com mais de um médico (575) | aberta |
+| [2026-11-04-0342_codex-para-claude_t30-verificado.md](mensagens/2026-11-04-0342_codex-para-claude_t30-verificado.md) | Codex → Claude | M1/T30 concluída, continuidade restrita, recuperação de portais e provas | lida por Claude em 04/11 04:13 |
 | [2026-11-04-0256_codex-para-claude_t29-agenda-verificada.md](mensagens/2026-11-04-0256_codex-para-claude_t29-agenda-verificada.md) | Codex → Claude | M3/L4 corrigidos; inversão contra conclusão evitada por tentativa não bloqueante | lida por Claude em 04/11 03:46 |
 | [2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md](mensagens/2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md) | Codex → Usuário | D18: limite por clínica ou carteira particular autorizada | aberta; pergunta assíncrona pendente, sem bloquear L5 |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
@@ -93,8 +95,9 @@ Atualizado em 2026-11-04 04:05 por Codex (T31/1/revisão visual). Cada agente at
 
 ## Decisões pendentes do usuário ou da clínica
 
-São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8, mais D12 a D19 abaixo. As que mais bloqueiam:
+São as decisões D1 a D11 de `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §8, mais D12 a D20 abaixo. As que mais bloqueiam:
 - **D18 (nova, 04/11 02:04): limite administrativo da recepção.** Somente pacientes/compromissos da Haddad Nicola liberados pelo médico (proposta) ou toda carteira/agenda particular com autorização explícita? Pergunta assíncrona pendente; bloqueia o recorte de M2, não L5. Prontuários clínicos privados em ambos; não autoriza importação/coorte de carga. [Pergunta](mensagens/2026-11-04-0204_codex-para-usuario_limite-da-recepcao.md).
+- **D20 (nova, 04/11 04:13): alertas "Atenção" de pacientes com mais de um médico (575 de 5.277).** Proposta: uma cópia para cada médico com prontuário, visível só a ele (todos já viam no PersonalMed). Alternativas: só o médico mais recente, ou nenhum. 15 alertas citam óbito: conferir antes de lembretes.
 - **D19 (nova, 04/11 02:30): modelos de receita da clínica.** No PersonalMed, 1.090 dos 1.091 modelos são da clínica toda; no Cortex, cada médico tem biblioteca própria. Proposta: cada médico recebe, como "a revisar", os modelos que usou em 2025–2026; os demais ficam no staging. Alternativas: todos para todos, ou esperar uma biblioteca compartilhada. Nada é importado antes da decisão (e da D2). Ensaio de 04/11 03:05 (`e5f9268`): pela proposta, cada médico receberia de 1 a 179 receitas a revisar (5 → 179; 2 → 153; 3 → 132; 4 → 73; 11 → 8; 9 → 1).
 - **D17 (nova, 03/11 23:43): assinatura digital dos médicos.** Integrar a Mevo (citada pelos médicos) ou outra plataforma, ou implementar assinatura ICP-Brasil própria com certificado em nuvem e a nossa validação. Claude está pesquisando, e a recomendação vai para o usuário decidir.
 - **D15 (nova, 03/11 23:37): avaliação de IA com os médicos.** Quais médicos participam, as datas da gravação das consultas encenadas e da revisão às cegas, e os critérios de aprovação, definidos antes de ver os resultados. Plano: `docs/ai/PLANO_IA_EFICIENCIA_E_AVALIACAO.md`, Parte B. O usuário decidiu em 03/11 que **os médicos participam da escolha das IAs**.
