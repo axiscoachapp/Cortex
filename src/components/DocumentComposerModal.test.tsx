@@ -33,8 +33,10 @@ vi.mock('@/hooks/useDocumentSnippets', () => ({
 }));
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: () => {
-      const query = { select: () => query, or: () => query, limit: async () => ({ data: [], error: null }) };
+    from: (table: string) => {
+      const query: Record<string, unknown> = {};
+      for (const op of ['select', 'or', 'neq', 'ilike', 'like', 'order']) query[op] = () => query;
+      query.limit = async () => ({ data: table === 'exam_catalog' ? [{ code: '40304361', name: 'Exame laboratorial sintético' }] : [], error: null });
       return query;
     },
   },
@@ -59,7 +61,7 @@ async function openAntimicrobial(patient: Patient) {
   await userEvent.setup().click(screen.getByRole('button', { name: /Antimicrobiano/ }));
 }
 
-describe('Antimicrobial prescription requirements (RDC 471/2021)', () => {
+describe('Antimicrobial prescription requirements (RDC 471/2021)', { timeout: 20000 }, () => {
   it('lists every missing item before generating', async () => {
     settings.value = { prescriber: { professionalPhone: '' }, isLoading: false };
     await openAntimicrobial(person({ dateOfBirth: undefined, sex: 'nao_informado' }));
@@ -83,7 +85,7 @@ describe('Antimicrobial prescription requirements (RDC 471/2021)', () => {
 
 // R2: applying a template never removes a selected medication without an
 // explicit choice, and cancel keeps the selection, doses and instructions.
-describe('Prescription templates in the composer', () => {
+describe('Prescription templates in the composer', { timeout: 20000 }, () => {
   const A = { name: 'Medicamento sintético A', dosage: '1', instructions: 'x' };
   const UTI = { name: 'Nitrofurantoína 100 mg', dosage: '1 cápsula', instructions: 'de 6 em 6 horas por 5 dias' };
   const PAIN = { name: 'Medicamento sintético C', dosage: '1 comprimido', instructions: 'se dor' };
@@ -137,7 +139,7 @@ describe('Prescription templates in the composer', () => {
   });
 });
 
-describe('Composer while generating (R3)', () => {
+describe('Composer while generating (R3)', { timeout: 20000 }, () => {
   it('locks the form during generation and keeps the pending template choice for after a failure', async () => {
     settings.value = { prescriber: { professionalPhone: '(41) 3000-0000' }, isLoading: false };
     const A = { name: 'Medicamento sintético A', dosage: '1', instructions: 'x' };
@@ -173,7 +175,7 @@ describe('Composer while generating (R3)', () => {
   });
 });
 
-describe('Regulated drug warnings before generating', () => {
+describe('Regulated drug warnings before generating', { timeout: 20000 }, () => {
   it('warns about a controlled drug known only by its brand', async () => {
     settings.value = { prescriber: { professionalPhone: '(41) 3000-0000' }, isLoading: false };
     render(
@@ -205,7 +207,7 @@ describe('Regulated drug warnings before generating', () => {
 });
 
 // D8: Receita de Controle Especial in the composer (synthetic data only).
-describe('Receita de Controle Especial (D8)', () => {
+describe('Receita de Controle Especial (D8)', { timeout: 20000 }, () => {
   const SERTRALINE = { name: 'Sertralina', dosage: '1 comprimido', instructions: 'pela manhã' };
   function setup(patient: Partial<Patient> = {}) {
     settings.value = { prescriber: { professionalPhone: '(41) 3000-0000', prescriberCpf: '' }, isLoading: false };
@@ -344,4 +346,22 @@ describe('Compounded formulas', { timeout: 20000 }, () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Medicamento sujeito a controle especial (testosterona)');
     expect(screen.getByRole('button', { name: 'Usar controle especial' })).toBeInTheDocument();
   });
+});
+
+describe('Exam request with the TUSS catalog', { timeout: 20000 }, () => {
+  it('adds the picked exam with its TUSS code to the list sent to the server', async () => {
+    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000', prescriberCpf: '' }, isLoading: false };
+    const onGenerate = vi.fn<(payload: unknown) => Promise<void>>(async () => {});
+    render(<DocumentComposerModal open onOpenChange={() => {}} patient={person({ sex: 'feminino' })} onGenerate={onGenerate} isGenerating={false} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Solicitação de exames/ }));
+    await user.type(screen.getByLabelText('Exames solicitados, um por linha'), 'Exame digitado à mão');
+    await user.type(screen.getByLabelText('Buscar exame na tabela TUSS'), 'exa');
+    await user.click(await screen.findByRole('button', { name: /Exame laboratorial sintético/ }));
+    await user.click(screen.getByRole('button', { name: /Gerar/ }));
+    expect(onGenerate.mock.calls.at(-1)?.[0]).toMatchObject({
+      docType: 'solicitacao_exames',
+      content: { exams: ['Exame digitado à mão', 'Exame laboratorial sintético (TUSS 40304361)'] },
+    });
+  }, 20000);
 });

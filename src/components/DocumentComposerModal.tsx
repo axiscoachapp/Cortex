@@ -20,6 +20,7 @@ import {
   type CompoundedFormula,
 } from '../../supabase/functions/_shared/regulatedMedications';
 import { PrescriptionTemplatePicker, type ApplyMode } from '@/components/PrescriptionTemplatePicker';
+import { CidInput, ExamSearch, examLine } from '@/components/ReferenceSearch';
 import type { SnippetItem } from '@/lib/documentSnippets';
 
 /** Sex values that satisfy RDC 471/2021; 'nao_informado' does not. */
@@ -476,6 +477,11 @@ export function DocumentComposerModal({
 
           {isExames ? (
             <div className="space-y-3">
+              <ExamSearch disabled={isGenerating} onPick={hit => setExamsText(prev => {
+                const line = examLine(hit);
+                const lines = prev.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                return lines.includes(line) ? prev : [...lines, line].join('\n');
+              })} />
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground/80">Exames solicitados <span className="text-muted-foreground font-normal">(um por linha)</span></label>
                 <Textarea
@@ -504,7 +510,7 @@ export function DocumentComposerModal({
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-foreground/80">CID <span className="text-muted-foreground font-normal">(opcional, a pedido do paciente)</span></label>
-                  <Input aria-label="CID, opcional a pedido do paciente" value={cid} onChange={e => setCid(e.target.value)} placeholder="Ex: J06.9" maxLength={20} />
+                  <CidInput ariaLabel="CID, opcional a pedido do paciente" value={cid} onChange={setCid} placeholder="Ex: J06.9" />
                 </div>
               </div>
               <div className="space-y-1">
@@ -758,7 +764,7 @@ export function DocumentComposerModal({
                     <label htmlFor="rce-cid" className="text-xs font-medium text-foreground/80">
                       CID ou diagnóstico <span className="text-muted-foreground font-normal">(obrigatório para anabolizante ou com justificativa)</span>
                     </label>
-                    <Input id="rce-cid" value={rceCid} onChange={e => setRceCid(e.target.value)} placeholder="Ex.: F32.1" maxLength={20} />
+                    <CidInput id="rce-cid" value={rceCid} onChange={setRceCid} placeholder="Ex.: F32.1" />
                   </div>
                   <div className="space-y-1">
                     <label htmlFor="rce-justification" className="text-xs font-medium text-foreground/80">

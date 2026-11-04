@@ -7,8 +7,8 @@ Pedido do usuário em 04/11/2026: seguir com a proposta de catálogos próprios,
 | Item | Fonte oficial | Estado |
 |---|---|---|
 | Fórmulas manipuladas | Não há catálogo oficial de fórmulas: são os componentes, com os nomes da DCB, mais as fórmulas que cada médico salva | **Servidor e tela prontos**; falta salvar como modelo |
-| Exames com código TUSS | ANS, Terminologia Unificada da Saúde Suplementar | Leitor pronto e conferido |
-| CID-10 | DATASUS | Leitor pronto e conferido |
+| Exames com código TUSS | ANS, Terminologia Unificada da Saúde Suplementar | **Pronto**: busca no pedido de exames, com o código impresso |
+| CID-10 | DATASUS | **Pronto**: sugestões no CID do atestado e da RCE |
 | Apresentações dos medicamentos | Lista CMED (Anvisa), sem os preços | Leitor pronto e conferido |
 | Nome genérico oficial (DCB) | Anvisa | Leitor pronto e conferido |
 | Favoritos de cada médico | Modelos do PersonalMed (743 receitas e 51 pedidos de exame) e os do próprio Cortex | Depois dos catálogos |
@@ -41,6 +41,12 @@ Não usam nenhuma dependência nova. Os testes em `src/lib/referenceCatalogs.tes
   - Só aceita endereços gov.br. A DCB vigente é achada a cada execução nas páginas da biblioteca da Anvisa, seguindo só links do próprio site.
 - **Conferência:** a orquestração rodou sobre os arquivos oficiais reais (rede simulada) e carregou 5.966 exames, 14.496 códigos CID, 26.635 apresentações e 12.760 nomes DCB, sem descarte.
 - **Agendamento mensal:** fica para o deploy, como o da base de medicamentos.
+
+**Na tela** (`src/components/ReferenceSearch.tsx`):
+- **Pedido de exames:** "Buscar exame (tabela TUSS)" procura por nome ou pelo começo do código, sem o grupo "outro". O exame escolhido entra na lista como "Nome do exame (TUSS 40304361)", sem repetir, e a lista continua editável à mão. Se a tabela não responder, o médico é avisado e digita.
+- **CID do atestado e da receita de controle especial:** sugestões por código ou por descrição. Escolher preenche o código e mostra a descrição; texto livre continua valendo.
+- **Testes:** `src/components/ReferenceSearch.test.tsx` cobre consultas, curingas de LIKE removidos e falha da tabela; `DocumentComposerModal.test.tsx` cobre o pedido de exames ponta a ponta.
+- **Tipos:** até o Codex gerar os tipos das tabelas novas, só esse arquivo usa uma visão sem tipo do cliente.
 
 **Licenças:**
 - TUSS e CMED são dados abertos federais (Decreto 8.777/2016), reutilizáveis com atribuição.
