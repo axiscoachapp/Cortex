@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 // D17 signature races with real connections (migration 20261105100000; Codex
 // review of 04/11 14:15). Owns a disposable database; synthetic data only.
 //   node scripts/test-signature-concurrency.mjs              -> expects the fixes
-//   node scripts/test-signature-concurrency.mjs --before-fix -> RED report against 6636629
+//   node scripts/test-signature-concurrency.mjs --before-fix -> RED report against BEFORE_COMMIT (default 38274c8)
 const docker = (args, input) =>
   spawnSync('docker', args, { input, encoding: 'utf8', windowsHide: true, timeout: 60000, maxBuffer: 16 * 1024 * 1024 });
 const required = (result) => {
@@ -62,15 +62,23 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
   const results = {};
   let n = 0;
   /** A doctor with CPF, a patient, a generated prescription and an active session. */
-  function fixture({ minutes = 60 } = {}) {
+  function fixture({ minutes = 60, consultationOfOtherPatient = false } = {}) {
     n++;
     const id = (prefix) => `${prefix}-0000-4000-8000-${String(n).padStart(12, '0')}`;
-    const f = { user: id('e1700000'), patient: id('e1710000'), rx: id('e1720000'), session: id('e1730000'), op: id('e1740000') };
+    const f = { user: id('e1700000'), patient: id('e1710000'), rx: id('e1720000'), session: id('e1730000'), op: id('e1740000'),
+      other: id('e1760000'), consultation: id('e1770000') };
+    // Schema-valid legacy shape: the prescription's consultation belongs to
+    // another patient of the same doctor (not corrected here by inference).
+    const other = consultationOfOtherPatient
+      ? `insert into public.patients(id,user_id,name,age,last_visit,status) values('${f.other}','${f.user}','Paciente sintética ${n}B',31,current_date,'novo');
+         insert into public.consultations(id,user_id,patient_id,soap_note) values('${f.consultation}','${f.user}','${f.other}','Consulta sintética');`
+      : '';
     sql(`insert into auth.users(id,email) values('${f.user}','race-${n}@example.invalid');
      insert into public.user_settings(user_id,prescriber_cpf) values('${f.user}','52998224725');
      insert into public.patients(id,user_id,name,age,last_visit,status) values('${f.patient}','${f.user}','Paciente sintética ${n}',30,current_date,'novo');
-     insert into public.prescriptions(id,user_id,patient_id,storage_path,secret_code,expires_at,issuance_snapshot)
-      values('${f.rx}','${f.user}','${f.patient}','rx/${f.user}/${f.rx}.pdf','synthetic',now()+interval '30 days',
+     ${other}
+     insert into public.prescriptions(id,user_id,patient_id,consultation_id,storage_path,secret_code,expires_at,issuance_snapshot)
+      values('${f.rx}','${f.user}','${f.patient}',${consultationOfOtherPatient ? `'${f.consultation}'` : 'null'},'rx/${f.user}/${f.rx}.pdf','synthetic',now()+interval '30 days',
        jsonb_build_object('prescriber','{}'::jsonb,'patient','{}'::jsonb,'pdf_sha256',${A64},'template_version','test','issued_at',now()));
      begin;${service}select public.signature_activate_session('${f.user}','vidaas','${f.session}',now()+interval '${minutes} minutes',repeat('c',64),${SEALED});commit;`);
     return f;
@@ -162,7 +170,8 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
   });
   await check('patient intent in progress (P3)', async () => {
   {
-    // Intent in progress (uncommitted) while an existing operation asks for the PSC: never waits, never passes.
+    // Intent in progress (uncommitted) while an existing operation asks for the PSC: waits only on the
+    // clinical lock (key 123, taken before any epoch or row, like every clinical writer), then refuses.
     const f = fixture();
     call(f, reserve(f));
     call(f, advance(f, 'prepared'));
@@ -236,6 +245,86 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
   }
   });
 
+  // 7. Residual (Codex 15:26) 1: completion behind the legacy per-account
+  //    clinical lock (key 123 of guard_clinical_write) until after the expiry.
+  for (const [label, seconds, hold, expect] of [['legacy-lock-expiry', 2, 4, 'cancelled_by_revocation'], ['legacy-lock-control', 120, 3, 'completed']]) {
+    await check(`clinical lock held past expiry: ${label}`, async () => {
+      const f = fixture({ minutes: 5 });
+      toStored(f);
+      sql(`update cortex_private.signature_sessions set expires_at=now()+interval '${seconds} seconds' where id='${f.session}'`);
+      const holder = session(container);
+      holder.send(`begin;select pg_advisory_xact_lock(hashtextextended('${f.user}',123));\n\\echo LEGACY_HELD\nselect pg_sleep(${hold});commit;`);
+      await holder.wait('LEGACY_HELD');
+      const completer = session(container);
+      completer.send(`select 'PID='||pg_backend_pid();`);
+      await completer.wait('PID=');
+      const pid = backendPid(completer);
+      completer.send(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`);
+      let observed = false;
+      for (let i = 0; i < 40 && !observed; i++) {
+        observed = sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock';
+        if (!observed) await new Promise((r) => setTimeout(r, 50));
+      }
+      assert.ok(observed, `${label}: completion did not wait on the clinical lock`);
+      const done = await completer.finish('');
+      await holder.finish('');
+      assert.equal(done.status, 0, done.stderr);
+      assert.equal(state(f), expect, `${label}: wrong outcome`);
+      assert.equal(signed(f), expect === 'completed' ? 'signed' : 'generated', `${label}: prescription status`);
+      assert.equal(audits(f), expect === 'completed' ? 1 : 0, `${label}: audit rows`);
+      results[label] = { waitedOnLegacyLock: observed, state: expect };
+    });
+  }
+
+  // 8. Residual 2: the patient of the prescription's consultation (B) is
+  //    being deleted; the prescription's own patient (A) is not.
+  const intentOn = (patient) => `begin;set local request.jwt.claim.role='service_role';update public.patients set deletion_requested_at=now() where id='${patient}';commit;`;
+  await check('consultation patient intent, committed (RC)', async () => {
+    const f = fixture({ consultationOfOtherPatient: true });
+    sql(intentOn(f.other));
+    const r = docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'], `begin;${service}select ${reserve(f)};commit;`);
+    assert.notEqual(r.status, 0, 'Reserved while the consultation patient is being deleted');
+    assert.match(r.stderr, /42501|Documento indispon/, r.stderr);
+    assert.equal(Number(sql(`select count(*) from cortex_private.signature_operations where prescription_id='${f.rx}'`)), 0);
+    results.consultationPatientRC = 'refused';
+  });
+  await check('consultation patient intent, existing operation before the PSC', async () => {
+    const f = fixture({ consultationOfOtherPatient: true });
+    call(f, reserve(f));
+    call(f, advance(f, 'prepared'));
+    sql(intentOn(f.other));
+    const r = docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'], `begin;${service}select ${advance(f, 'psc_requested')};commit;`);
+    assert.notEqual(r.status, 0, 'Consultation patient being deleted reached the PSC');
+    assert.equal(state(f), 'prepared');
+    results.consultationPatientExistingOp = 'refused';
+  });
+  await check('consultation patient intent, old RR snapshot', async () => {
+    const f = fixture({ consultationOfOtherPatient: true });
+    const writer = session(container);
+    writer.send(`begin isolation level repeatable read;select count(*) from public.patients;\n\\echo SNAPSHOT`);
+    await writer.wait('SNAPSHOT');
+    sql(intentOn(f.other));
+    const r = await writer.finish(`${service}select ${reserve(f)};commit;`);
+    assert.notEqual(r.status, 0, 'RR reservation after the consultation patient intent');
+    assert.match(r.stderr, /40001|42501/, r.stderr);
+    results.consultationPatientRR = (/ERROR:\s+(\w+):/.exec(r.stderr) || [])[1];
+  });
+  await check('consultation patient intent in progress', async () => {
+    const f = fixture({ consultationOfOtherPatient: true });
+    call(f, reserve(f));
+    call(f, advance(f, 'prepared'));
+    const deleter = session(container);
+    deleter.send(`begin;set local request.jwt.claim.role='service_role';update public.patients set deletion_requested_at=now() where id='${f.other}';\n\\echo INTENT_HELD\nselect pg_sleep(1);commit;`);
+    await deleter.wait('INTENT_HELD');
+    const writer = session(container);
+    const r = await writer.finish(`begin;${service}select ${advance(f, 'psc_requested')};commit;`);
+    await deleter.finish('');
+    assert.notEqual(r.status, 0, 'PSC permission while the consultation patient intent was in progress');
+    assert.match(r.stderr, /40001|55000|42501/, r.stderr);
+    assert.equal(state(f), 'prepared');
+    results.consultationPatientInProgress = (/ERROR:\s+(\w+):/.exec(r.stderr) || [])[1];
+  });
+
   // 6. Two reservations of one document with different operation ids: exactly one.
   await check('double reservation', async () => {
   {
@@ -269,9 +358,9 @@ async function standalone({ beforeFix = false } = {}) {
     const apply = (source) => required(docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '--quiet'], source));
     apply(readFileSync(resolve('supabase/tests/bootstrap.sql'), 'utf8'));
     for (const name of readdirSync('supabase/migrations').filter((name) => name.endsWith('.sql')).sort()) {
-      // RED: the D17 migration as first sent for review (6636629), from git.
+      // RED: an earlier D17 migration from git (BEFORE_COMMIT; default 38274c8).
       const source = beforeFix && name === '20261105100000_digital_signature.sql'
-        ? required(spawnSync('git', ['show', '6636629:supabase/migrations/' + name], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }))
+        ? required(spawnSync('git', ['show', `${process.env.BEFORE_COMMIT || '38274c8'}:supabase/migrations/` + name], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }))
         : readFileSync(resolve('supabase/migrations', name), 'utf8');
       apply(source);
     }

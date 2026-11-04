@@ -296,6 +296,8 @@ begin
   select patient_id,consultation_id into patient,rx_consultation from public.prescriptions where id=(row_data->>'prescription_id')::uuid;
   keys:=array_append(keys,'patient:'||patient::text);
   keys:=array_append(keys,'consultation:'||rx_consultation::text);
+  select patient_id into patient from public.consultations where id=rx_consultation;
+  keys:=array_append(keys,'patient:'||patient::text);
  end if;
  return keys;
 end $$;
@@ -352,6 +354,11 @@ begin
  if p_user is null then raise exception 'Missing signature account' using errcode='42501';end if;
  -- One serialization point per doctor for every signature state change.
  perform pg_advisory_xact_lock(hashtextextended('signature:'||p_user::text,125));
+ -- The clinical write lock that guard_clinical_write (20261028000000) and the
+ -- account deletion intent take: held from here, the UPDATE of prescriptions
+ -- in signature_complete re-enters it instead of waiting after the checks.
+ -- Order everywhere: 125, 123, custody epochs, then rows.
+ perform pg_advisory_xact_lock(hashtextextended(p_user::text,123));
  -- T33 barrier before reading intent: an older RR snapshot or a concurrent
  -- deletion intent fails here (40001) instead of reading a stale "no intent".
  perform cortex_private.touch_custody_epoch(array[p_user]);
@@ -365,7 +372,7 @@ end $$;
 -- blocks (the touches are NOWAIT); a confirmed deletion intent refuses.
 create function cortex_private.signature_document(p_user uuid,p_prescription uuid) returns public.prescriptions
 language plpgsql volatile security definer set search_path='' as $$
-declare r public.prescriptions;deleting timestamptz;
+declare r public.prescriptions;deleting timestamptz;consultation_patient uuid;
 begin
  if p_prescription is null then raise exception 'Documento indisponível.' using errcode='42501';end if;
  perform cortex_private.touch_custody_resources(array['prescription:'||p_prescription::text]);
@@ -374,6 +381,16 @@ begin
  perform cortex_private.touch_custody_resources(array['patient:'||r.patient_id::text,'consultation:'||r.consultation_id::text]);
  select deletion_requested_at into deleting from public.patients where id=r.patient_id and user_id=r.user_id;
  if not found or deleting is not null then raise exception 'Documento indisponível.' using errcode='42501';end if;
+ -- The consultation is fenced above; only now read its patient, which the
+ -- schema does not force to equal the prescription's, fence it and check it.
+ if r.consultation_id is not null then
+  select patient_id into consultation_patient from public.consultations where id=r.consultation_id;
+  if consultation_patient is not null and consultation_patient<>r.patient_id then
+   perform cortex_private.touch_custody_resources(array['patient:'||consultation_patient::text]);
+   if exists(select 1 from public.patients where id=consultation_patient and deletion_requested_at is not null) then
+    raise exception 'Documento indisponível.' using errcode='42501';end if;
+  end if;
+ end if;
  return r;
 end $$;
 

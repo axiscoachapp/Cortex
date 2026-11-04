@@ -14,6 +14,8 @@ insert into public.user_settings(user_id,prescriber_cpf) values
 insert into public.patients(id,user_id,name,age,last_visit,status) values
  ('d1710000-0000-4000-8000-000000000001','d1700000-0000-4000-8000-000000000001','Paciente sintética A',30,current_date,'novo'),
  ('d1710000-0000-4000-8000-000000000002','d1700000-0000-4000-8000-000000000001','Paciente sintética B',31,current_date,'novo'),
+ ('d1710000-0000-4000-8000-000000000004','d1700000-0000-4000-8000-000000000001','Paciente sintética D',32,current_date,'novo'),
+ ('d1710000-0000-4000-8000-000000000005','d1700000-0000-4000-8000-000000000001','Paciente sintética E',33,current_date,'novo'),
  ('d1710000-0000-4000-8000-000000000003','d1700000-0000-4000-8000-000000000003','Paciente sintética S',40,current_date,'novo');
 
 create function pg_temp.rx(p_id uuid,p_user uuid,p_patient uuid,p_doc text default 'receita_simples') returns void
@@ -25,6 +27,11 @@ $$;
 select pg_temp.rx(('d1720000-0000-4000-8000-00000000000'||n)::uuid,'d1700000-0000-4000-8000-000000000001','d1710000-0000-4000-8000-000000000001',
  case n when 3 then 'receita_antimicrobiano' else 'receita_simples' end) from generate_series(1,5) n;
 select pg_temp.rx(('d1720000-0000-4000-8000-00000000002'||n)::uuid,'d1700000-0000-4000-8000-000000000001','d1710000-0000-4000-8000-000000000002') from generate_series(1,2) n;
+-- Schema-valid legacy shape: a prescription for D whose consultation is E's.
+insert into public.consultations(id,user_id,patient_id,soap_note) values
+ ('d1780000-0000-4000-8000-000000000001','d1700000-0000-4000-8000-000000000001','d1710000-0000-4000-8000-000000000005','Consulta sintética de E');
+select pg_temp.rx('d1720000-0000-4000-8000-000000000031','d1700000-0000-4000-8000-000000000001','d1710000-0000-4000-8000-000000000004');
+update public.prescriptions set consultation_id='d1780000-0000-4000-8000-000000000001' where id='d1720000-0000-4000-8000-000000000031';
 select pg_temp.rx('d1720000-0000-4000-8000-000000000009','d1700000-0000-4000-8000-000000000003','d1710000-0000-4000-8000-000000000003');
 
 -- ACL: nothing of D17 is reachable by anon or authenticated; tables not even by service_role.
@@ -212,6 +219,16 @@ do $$ declare u uuid:='d1700000-0000-4000-8000-000000000001';
   raise exception 'Completed for a patient being deleted';exception when sqlstate 'P4093' or insufficient_privilege then null;end;
  assert public.signature_advance(u,'d1740000-0000-4000-8000-000000000021','cancelled',jsonb_build_object('code','patient_deleting'))->>'state'='cancelled',
   'Operation of a deleting patient cannot be closed';
+end $$;
+reset role;
+
+-- The patient of the prescription's consultation (E) is part of the chain:
+-- E's deletion intent stops the reservation even though D is not leaving.
+update public.patients set deletion_requested_at=now() where id='d1710000-0000-4000-8000-000000000005';
+set local role service_role;
+do $$ begin
+ begin perform public.signature_reserve('d1700000-0000-4000-8000-000000000001','d1740000-0000-4000-8000-000000000031','d1720000-0000-4000-8000-000000000031',repeat('a',64));
+  raise exception 'Reserved while the consultation patient is being deleted';exception when insufficient_privilege then null;end;
 end $$;
 reset role;
 

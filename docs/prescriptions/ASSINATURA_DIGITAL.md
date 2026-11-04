@@ -162,6 +162,14 @@ Nenhuma transação ou lock SQL fica aberto durante chamadas de rede.
 3. **Pais conferidos depois das barreiras** (`signature_document`): cerca `prescription:<id>`, depois `patient:` e `consultation:`, e só então recusa a intenção de exclusão do paciente. Vale para a reserva e para os passos `prepared`, `psc_requested`, `stored` e a conclusão.
 4. **Conta cercada antes dos segredos:** `signature_lock` toca o epoch da conta (T33) antes de ler a intenção de exclusão. Um snapshot RR antigo falha com 40001, também na leitura do token e no consumo do verificador.
 
+### Casos residuais (revisão do Codex de 04/11 15:26)
+
+5. **Lock clínico legado:**
+   - `signature_lock` toma, logo depois do lock próprio (125), o mesmo `pg_advisory_xact_lock(hashtextextended(médico,123))` de `guard_clinical_write` e da intenção de exclusão de conta;
+   - a ordem fica 125 → 123 → epochs → linhas em toda função de assinatura, a mesma relação que os escritores clínicos antigos têm entre 123 e epochs/linhas;
+   - o UPDATE da receita na conclusão reentra no lock, sem esperar depois das checagens. Uma intenção em andamento faz a assinatura esperar esse lock, como qualquer escritor clínico, e depois recusa.
+6. **Paciente da consulta:** `signature_document`, depois de cercar a consulta, lê o paciente dela. Se for outro paciente (o schema permite), cerca e confere a intenção de exclusão dele também. Os recursos indiretos do T33 seguem a mesma cadeia.
+
 **Descoberta para reconciliação:** `signature_pending_work(limite)` (só serviço) lista os candidatos a remover e as operações paradas há mais de 15 minutos. **A execução da reconciliação ainda não existe.** Ela vai ficar na função do Edge, com estas regras:
 - confere o hash do objeto existente antes de qualquer ação;
 - nunca remove o arquivo de uma operação concluída;
