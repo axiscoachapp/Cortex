@@ -50,6 +50,18 @@ const DOC_TITLES: Record<DocType, string> = {
   solicitacao_exames: 'SOLICITAÇÃO DE EXAMES',
 };
 
+/** Printed label per registration value. 'nao_informado' has no label on
+ *  purpose: RDC 471/2021 needs the sex on an antimicrobial prescription. */
+const SEX_LABELS: Record<string, string> = {
+  feminino: 'feminino',
+  masculino: 'masculino',
+  intersexo: 'intersexo',
+};
+
+function formatCpf(digits: string): string {
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
 interface Medication { name: string; dosage?: string; instructions?: string }
 
 function accessCode(): string {
@@ -87,7 +99,7 @@ serve(async (req) => {
     // Prescriber identity — CFM 2.299 art. 2º makes these mandatory on the document.
     const { data: settings } = await supabase
       .from('user_settings')
-      .select('doctor_name, crm_number, crm_uf, professional_address')
+      .select('doctor_name, crm_number, crm_uf, professional_address, professional_phone, rqe')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -104,7 +116,7 @@ serve(async (req) => {
     // Patient — ownership enforced.
     const { data: patient } = await supabase
       .from('patients')
-      .select('id, name, age, date_of_birth, medications')
+      .select('id, name, age, date_of_birth, medications, cpf, sex')
       .eq('id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -116,6 +128,22 @@ serve(async (req) => {
       );
     }
     const patientAge = currentPatientAge(patient);
+    const prescriberPhone = typeof settings.professional_phone === 'string' ? settings.professional_phone.trim() : '';
+    const prescriberRqe = typeof settings.rqe === 'string' ? settings.rqe.trim() : '';
+    const patientCpf = typeof patient.cpf === 'string' && /^\d{11}$/.test(patient.cpf) ? patient.cpf : null;
+    const patientSex = SEX_LABELS[String(patient.sex ?? '')] ?? null;
+
+    // RDC 471/2021: an antimicrobial prescription carries the prescriber's phone
+    // and the patient's age and sex. Refuse before building the PDF.
+    if (docType === 'receita_antimicrobiano') {
+      if (!prescriberPhone) {
+        throw new RequestError('Informe o telefone profissional em Configurações (ícone de engrenagem): ele é obrigatório na receita de antimicrobiano.', 422);
+      }
+      const missing = [...(patientAge === null ? ['idade ou data de nascimento'] : []), ...(patientSex ? [] : ['sexo'])];
+      if (missing.length) {
+        throw new RequestError(`Para a receita de antimicrobiano, complete no cadastro do paciente: ${missing.join(' e ')}.`, 422);
+      }
+    }
     if (consultationId) {
       const { data: consultation } = await supabase.from('consultations').select('id')
         .eq('id', consultationId).eq('patient_id', patientId).eq('user_id', userId).maybeSingle();
@@ -220,9 +248,10 @@ serve(async (req) => {
 
     // Header — prescriber
     text(settings.doctor_name.trim(), { size: 15, bold: true, color: blue }); down(16);
-    text(`CRM ${settings.crm_number.trim()}/${settings.crm_uf.trim().toUpperCase()}`, { size: 10.5, bold: true }); down(13);
-    if (settings.professional_address?.trim()) {
-      text(settings.professional_address.trim(), { size: 9, color: mut }); down(13);
+    text(`CRM ${settings.crm_number.trim()}/${settings.crm_uf.trim().toUpperCase()}${prescriberRqe ? ` · RQE ${prescriberRqe.replace(/^RQE\s*/i, '')}` : ''}`, { size: 10.5, bold: true }); down(13);
+    const contactLine = [settings.professional_address?.trim(), prescriberPhone ? `Tel. ${prescriberPhone}` : ''].filter(Boolean).join(' · ');
+    if (contactLine) {
+      text(contactLine, { size: 9, color: mut }); down(13);
     }
     down(6);
     writer.page.drawLine({
@@ -239,7 +268,13 @@ serve(async (req) => {
 
     // Title + patient + date
     text(DOC_TITLES[docType], { size: 13, bold: true }); down(22);
-    text(`Paciente: ${patient.name}, ${patientAge !== null ? `${patientAge} anos` : 'idade não informada'}`, { size: 11 }); down(15);
+    const sexPart = docType === 'receita_antimicrobiano' && patientSex ? `, sexo ${patientSex}` : '';
+    text(`Paciente: ${patient.name}, ${patientAge !== null ? `${patientAge} anos` : 'idade não informada'}${sexPart}`, { size: 11 }); down(15);
+    // CFM 2.381/2024: patient CPF "quando houver". The address follows when the
+    // registration has address fields (S2).
+    if (patientCpf) {
+      text(`CPF: ${formatCpf(patientCpf)}`, { size: 9, color: mut }); down(13);
+    }
     const emitted = now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
     const dateLine = isReceita
       ? `Emitido em: ${emitted} · Válida até ${expiresAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`
@@ -338,9 +373,12 @@ serve(async (req) => {
     const pdfSha256 = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(pdfBytes).buffer))]
       .map(byte => byte.toString(16).padStart(2, '0')).join('');
     const issuanceSnapshot = {
-      prescriber: { doctor_name: settings.doctor_name.trim(), crm_number: settings.crm_number.trim(), crm_uf: settings.crm_uf.trim().toUpperCase(), professional_address: settings.professional_address?.trim() ?? '' },
-      patient: { name: patient.name, age: patientAge, dateOfBirth: patient.date_of_birth ?? null },
-      pdf_sha256: pdfSha256, template_version: 'cortex-clinical-document-v1', issued_at: now.toISOString(),
+      prescriber: {
+        doctor_name: settings.doctor_name.trim(), crm_number: settings.crm_number.trim(), crm_uf: settings.crm_uf.trim().toUpperCase(),
+        professional_address: settings.professional_address?.trim() ?? '', professional_phone: prescriberPhone || null, rqe: prescriberRqe || null,
+      },
+      patient: { name: patient.name, age: patientAge, dateOfBirth: patient.date_of_birth ?? null, cpf: patientCpf, sex: patient.sex ?? null },
+      pdf_sha256: pdfSha256, template_version: 'cortex-clinical-document-v2', issued_at: now.toISOString(),
     };
 
     // ── Store + record ────────────────────────────────────────────────────────
