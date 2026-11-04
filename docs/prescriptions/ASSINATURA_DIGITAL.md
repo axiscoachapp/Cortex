@@ -180,6 +180,15 @@ O ponto principal é a guarda do token: enquanto vale, a sessão é a "caneta" d
 - Testes em `src/lib/pades.test.ts`: os 6 primeiros itens abaixo, mais a verificação externa com `openssl cms -verify` (aceita o conteúdo assinado e recusa o PDF alterado).
 - Conferido também com um PDF gerado pela pdf-lib 1.17.1, a mesma versão do Edge, com cópia de página como na receita retida. A pdf-lib relê o arquivo assinado e o OpenSSL aprova.
 
+`_shared/psc.ts` também está implementado, com testes em `src/lib/psc.test.ts` contra um PSC falso em memória.
+- O PSC falso confere o PKCE, usa o código uma vez só e assina o hash RAW com RSA bruto, como um PSC real.
+- A assinatura que ele devolve é idêntica à assinatura local dos atributos, o que mostra o determinismo usado na regra de `ambiguous`.
+- Cobre também: resposta perdida (`ambiguous`, sem repetição), assinatura que não confere, token revogado, CPF ausente, sessão limitada a 12 h e base sem HTTPS.
+- O token só viaja no cabeçalho `Authorization`, e o PDF nunca vai ao PSC.
+- A cifra do token (AES-256-GCM, com sessão, conta e geração como dado associado) recusa outra geração, outra chave e texto alterado.
+
+Os nomes dos campos seguem o DOC-ICP-17.01 e precisam ser confirmados na homologação do VIDaaS.
+
 ## Testes
 
 ### Locais, só com material sintético
