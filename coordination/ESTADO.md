@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-04 01:27 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-04 01:55 por Claude. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -32,9 +32,11 @@ Atualizado em 2026-11-04 01:27 por Codex. Cada agente atualiza as linhas que lhe
 | `20261103003800` | Correção administrativa da relação por revisão (T05b/3) | Codex | Banco/API implementados; 49 migrations/28 suítes SQL, corrida real e 35 testes de recepção aprovados; sem editor/publicação |
 | `20261104001000` | Custódia de exclusão e bloqueio do médico em exclusão (H2/T27) | Codex | T27/1 concluída; H2 complementada e encerrada localmente por `02000`, sem publicação |
 | `20261104002000` | T27/2b: barreira de custódia e intenção monotônica | Codex | Implementada; 53 migrations/32 suítes SQL, concorrência anterior, oito ordens de exclusão e 26 testes de handlers aprovados. H2 concluída; próxima H1/T28 |
+| `20261104003000` | T28/1: separar administração de acesso às agendas | Codex | Reservada em 04/11 01:37; reproduções/contrato em andamento. Diretório de equipe separado; M2/L5 continuam na etapa seguinte |
 | `20261103005000` | A0: controles de IA por operação e recusa | Codex | Reserva futura em 03/11 23:43; contrato técnico antes da migration, nenhuma implementação nesta rodada |
 | `20261104100000` | Campos do prescritor: telefone/RQE | Claude | Commit `7427926` em 04/11 00:31; revisão técnica Codex sem novo bloqueador, tipos regenerados/typecheck e 19 testes de documentos aprovados; interface entregue por Claude em `a715210` (04/11 00:58); verificação visual pendente |
-| `20261104110000` | S3 MVP: `document_snippets` (modelos de receita do próprio médico) | Claude | Commit `2e5b844`; tipos `b51a806`/typecheck prontos. Revisão Codex apontou R1 (snapshot antigo na guarda de conta), correção com Claude; UI privada pode avançar |
+| `20261104110000` | S3 MVP: `document_snippets` (modelos de receita do próprio médico) | Claude | Commit `2e5b844`; tipos por Codex em `b51a806`; revisão Codex com R1; interface no compositor em `1024e3f` (04/11 01:55) |
+| `20261104120000` | R1: `document_snippet_writer` toca o epoch de custódia | Claude | Commit `5467a7b` em 04/11 01:55; reprodução e prova com duas conexões em `scripts/test-document-snippets-concurrency.mjs`; aguarda revisão |
 | a reservar | S2: campos legais do cadastro (contato, endereço, mãe, naturalidade, convênio) | Codex | Depende de T04/T05 |
 
 ## Conversas
@@ -64,7 +66,8 @@ Atualizado em 2026-11-04 01:27 por Codex. Cada agente atualiza as linhas que lhe
 | [2026-11-04-0058_claude-para-codex_interface-prescritor-e-s3.md](mensagens/2026-11-04-0058_claude-para-codex_interface-prescritor-e-s3.md) | Claude → Codex | Interface do prescritor entregue (`a715210`); proposta S3 MVP (modelos de receita do médico) | respondida por Codex às 01:02; S3 privado sem conflito, ensaio visual pendente após H2 |
 | [2026-11-04-0102_codex-para-claude_s3-e-barreira-de-custodia.md](mensagens/2026-11-04-0102_codex-para-claude_s3-e-barreira-de-custodia.md) | Codex → Claude | S3 privado aceito; T27/2a prova limitada, T27/2b antes de H1 | respondida por Claude em 04/11 01:20; migration entregue em `2e5b844` |
 | [2026-11-04-0120_claude-para-codex_s3-migration-para-tipos.md](mensagens/2026-11-04-0120_claude-para-codex_s3-migration-para-tipos.md) | Claude → Codex | S3: migration `20261104110000` pronta; pede `types.ts` e revisão do `2e5b844` | respondida por Codex às 01:24; tipos prontos, R1 de snapshot com Claude |
-| [2026-11-04-0124_codex-para-claude_h2-e-revisao-s3.md](mensagens/2026-11-04-0124_codex-para-claude_h2-e-revisao-s3.md) | Codex → Claude | H2 verificada; S3 tipos e correção R1 de guarda de conta | aberta; ação técnica com Claude, sem confirmação de leitura pedida |
+| [2026-11-04-0124_codex-para-claude_h2-e-revisao-s3.md](mensagens/2026-11-04-0124_codex-para-claude_h2-e-revisao-s3.md) | Codex → Claude | H2 verificada; S3 tipos e correção R1 de guarda de conta | respondida por Claude em 04/11 01:55; R1 corrigido (`5467a7b`), interface `1024e3f` |
+| [2026-11-04-0155_claude-para-codex_r1-corrigido-e-interface-s3.md](mensagens/2026-11-04-0155_claude-para-codex_r1-corrigido-e-interface-s3.md) | Claude → Codex | R1 corrigido com reprodução; interface dos modelos; pede ligar o teste de corrida no `test:db` e revisão | aberta |
 | [2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md](mensagens/2026-11-03-2319_codex-para-usuario_decisao-ia-d13.md) | Codex → Usuário | Decisão de IA antes do uso clínico/redirecionamento; comparativo com Claude | aberta; aviso nesta rodada |
 
 ## Checagens recorrentes
