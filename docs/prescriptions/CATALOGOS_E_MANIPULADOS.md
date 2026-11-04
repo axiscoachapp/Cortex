@@ -7,15 +7,36 @@ Pedido do usuário em 04/11/2026: seguir com a proposta de catálogos próprios,
 | Item | Fonte oficial | Estado |
 |---|---|---|
 | Fórmulas manipuladas | Não há catálogo oficial de fórmulas: são os componentes, com os nomes da DCB, mais as fórmulas que cada médico salva | **Servidor e tela prontos**; falta salvar como modelo |
-| Exames com código TUSS | ANS, Terminologia Unificada da Saúde Suplementar | Formato da fonte em levantamento |
-| CID-10 | DATASUS | Formato da fonte em levantamento |
-| Apresentações dos medicamentos | Lista CMED (Anvisa), sem os preços | Formato da fonte em levantamento |
-| Nome genérico oficial (DCB) | Anvisa | Formato da fonte em levantamento |
+| Exames com código TUSS | ANS, Terminologia Unificada da Saúde Suplementar | Leitor pronto e conferido |
+| CID-10 | DATASUS | Leitor pronto e conferido |
+| Apresentações dos medicamentos | Lista CMED (Anvisa), sem os preços | Leitor pronto e conferido |
+| Nome genérico oficial (DCB) | Anvisa | Leitor pronto e conferido |
 | Favoritos de cada médico | Modelos do PersonalMed (743 receitas e 51 pedidos de exame) e os do próprio Cortex | Depois dos catálogos |
 
 **Fora do escopo:**
 - **Preços e farmácias:** é a parte comercial da Mevo, e a Res. CFM 2.299/2021, art. 11, proíbe direcionar o paciente a uma farmácia.
 - **Alerta de interação:** não há base pública confiável; ficaria para uma decisão à parte, com custo.
+
+## Fontes oficiais (conferidas em 04/11/2026)
+
+| Catálogo | Arquivo | Formato | Conferido |
+|---|---|---|---|
+| TUSS, tabela 22 | `https://dadosabertos.ans.gov.br/FTP/PDA/terminologia_unificada_saude_suplementar_TUSS-049/pda-049-tuss.zip` (1,4 MB, URL estável) | CSV UTF-8 `;` com aspas: `CD_TERMO;NM_TERMO;DT_INICIO_VIGENCIA;DT_FIM_VIGENCIA;DT_FIM_IMPLANTACAO` | 5.966 termos. Laboratório (403): 1.456; imagem (408 a 411): 510; patologia (406): 44; medicina nuclear (407): 97 |
+| CID-10 | `http://www2.datasus.gov.br/cid10/V2008/downloads/CID10CSV.zip` (só HTTP) | CSV latin-1 `;`, linha termina em `;` | 2.045 categorias e 12.451 subcategorias. `RESTRSEXO`: 758 F e 116 M. É a versão de 2008, sem os códigos U07/U09/U10 |
+| CMED | `https://dados.anvisa.gov.br/dados/TA_PRECO_MEDICAMENTO.csv` (17 MB, mensal) | CSV UTF-8 com BOM `;`, 74 colunas. Só guardamos as de apresentação, nunca preço | 26.635 apresentações. Liga com o registro Anvisa pelos 9 primeiros dígitos de `REGISTRO` |
+| DCB | Lista consolidada da IN 473/2026 em `bibliotecadigital.anvisa.gov.br` (a URL muda a cada versão: coleção 11933, item "VIGENTE") | XLSX, cabeçalho na linha 2 | 12.760 denominações. As outras 11 linhas da planilha são continuação do histórico, sem número nem nome |
+
+Os leitores ficam em `_shared/referenceCatalogs.ts`:
+- CSV com aspas;
+- ZIP com o `DecompressionStream` da plataforma;
+- XLSX mínimo.
+
+Não usam nenhuma dependência nova. Os testes em `src/lib/referenceCatalogs.test.ts` montam arquivos sintéticos nos mesmos formatos. As contagens acima foram conferidas nos arquivos oficiais, fora do repositório.
+
+**Licenças:**
+- TUSS e CMED são dados abertos federais (Decreto 8.777/2016), reutilizáveis com atribuição.
+- A DCB é conteúdo de ato normativo.
+- O CID-10 é distribuído pelo DATASUS, e a OMS detém o direito sobre a classificação. **Não encontramos licença formal para software comercial**, ponto a confirmar antes de vender o Cortex como SaaS.
 
 ## Fórmulas manipuladas
 
