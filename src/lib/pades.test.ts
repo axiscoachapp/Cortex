@@ -7,7 +7,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
-  AD_RB_V1_1, DER, HEALTH_OIDS, derChildren, finalizePades, preparePades, readDer, sha256, signedContent, tlv, verifyRawSignature,
+  AD_RB_V1_1, DER, HEALTH_OIDS, certificateSummary, derChildren, finalizePades, preparePades, readDer, sha256, signedContent, tlv,
+  verifyPadesArtifact, verifyRawSignature,
   type PadesOptions,
 } from '../../supabase/functions/_shared/pades';
 
@@ -174,6 +175,57 @@ describe('PAdES AD-RB incremental signature', () => {
     await expect(preparePades(xrefStream, options)).rejects.toThrow('xref stream');
     const prepared = await preparePades(minimalPdf(), { ...options, contentsSize: 64 });
     expect(() => finalizePades(prepared, new Uint8Array(256))).toThrow('não cabe');
+  });
+});
+
+describe('final check before storing a signed PDF', () => {
+  it('accepts the artifact it built', async () => {
+    const { prepared, signed } = await signedPdf();
+    expect(await verifyPadesArtifact(signed, prepared)).toBeNull();
+  });
+
+  it('refuses a forged signature, a changed byte outside /Contents, a truncated file and another certificate', async () => {
+    const { prepared, signature, signed } = await signedPdf();
+    const forged = signature.slice();
+    forged[20] ^= 0x01;
+    expect(await verifyPadesArtifact(finalizePades(prepared, forged), prepared)).toBe('assinatura não confere');
+
+    const changed = signed.slice();
+    changed[40] ^= 0x01; // inside the original page content
+    expect(await verifyPadesArtifact(changed, prepared)).toBe('PDF alterado fora da assinatura');
+
+    expect(await verifyPadesArtifact(signed.subarray(0, signed.length - 1), prepared)).toBe('ByteRange não cobre o arquivo');
+
+    const lower = signed.slice();
+    lower[prepared.contentsStart + 1] = 'a'.charCodeAt(0);
+    expect(await verifyPadesArtifact(lower, prepared)).toBe('/Contents inválido');
+
+    // A CMS signed by the right key but carrying another certificate.
+    const other = (await crypto.subtle.generateKey(RSA, true, ['sign', 'verify'])) as CryptoKeyPair;
+    const otherCert = await certificate('Outra Pessoa Sintética:11111111111', 'AC Sintética de Teste', other, other.privateKey, 7);
+    const swapped = await preparePades(minimalPdf(), { ...options, certificate: otherCert });
+    const otherSig = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', other.privateKey, swapped.signedAttributes));
+    expect(await verifyPadesArtifact(finalizePades(swapped, otherSig), prepared)).not.toBeNull();
+  });
+
+  it('refuses a /Contents that is not the CMS this preparation expects', async () => {
+    const { prepared, signed } = await signedPdf();
+    const zeroed = signed.slice();
+    zeroed.fill('0'.charCodeAt(0), prepared.contentsStart + 1, prepared.contentsEnd - 1);
+    expect(await verifyPadesArtifact(zeroed, prepared)).not.toBeNull();
+  });
+});
+
+describe('certificate summary for the audit', () => {
+  it('keeps the SHA-256, the serial in hex and the issuer name, never the subject', async () => {
+    const summary = await certificateSummary(doctorCert);
+    expect(summary).toEqual({
+      sha256: Buffer.from(await sha256(doctorCert)).toString('hex'),
+      serialHex: (4242).toString(16),
+      issuer: 'AC Sintética de Teste',
+    });
+    expect(JSON.stringify(summary)).not.toContain('00000000000');
+    expect((await certificateSummary(await certificate('X', 'AC', doctor, doctor.privateKey, 200))).serialHex).toBe('c8');
   });
 });
 

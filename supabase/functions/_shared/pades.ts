@@ -500,3 +500,72 @@ export function finalizePades(prepared: PreparedPades, signature: Uint8Array): U
 export function signedContent(pdf: Uint8Array, byteRange: [number, number, number, number]): Uint8Array {
   return concat(pdf.subarray(byteRange[0], byteRange[0] + byteRange[1]), pdf.subarray(byteRange[2], byteRange[2] + byteRange[3]));
 }
+
+// ---------------------------------------------------------------------------
+// Final artifact check and certificate summary (used before any upload)
+
+const hexOf = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+const equalBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
+
+/** Common name of an X.501 Name (DER), or '' when there is none. */
+function commonName(name: Uint8Array): string {
+  const root = readDer(name);
+  for (const rdn of derChildren(name, root)) {
+    for (const atv of derChildren(name, rdn)) {
+      const [type, value] = derChildren(name, atv);
+      if (type && value && hexOf(type.bytes) === hexOf(DER.oid('2.5.4.3'))) {
+        return new TextDecoder().decode(name.subarray(value.contentStart, value.end));
+      }
+    }
+  }
+  return '';
+}
+
+/** What the audit keeps about the signer certificate (never the CPF). */
+export async function certificateSummary(der: Uint8Array): Promise<{ sha256: string; serialHex: string; issuer: string }> {
+  const cert = parseCertificate(der);
+  const serial = readDer(cert.serial);
+  return {
+    sha256: hexOf(await sha256(cert.der)),
+    serialHex: hexOf(cert.serial.subarray(serial.contentStart - serial.start)).replace(/^(00)+(?=.)/, ''),
+    issuer: commonName(cert.issuer) || hexOf(await sha256(cert.issuer)),
+  };
+}
+
+/**
+ * Re-reads a signed PDF before it is stored: the ByteRange covers everything
+ * but /Contents, the CMS inside is the one expected (certificate, policy,
+ * messageDigest of that range) and its signature verifies over the signed
+ * attributes. Returns null when it holds, or the reason it does not.
+ */
+export async function verifyPadesArtifact(signed: Uint8Array, prepared: PreparedPades): Promise<string | null> {
+  const [a, b, c, d] = prepared.byteRange;
+  if (a !== 0 || c + d !== signed.length || signed[b] !== 0x3c || signed[c - 1] !== 0x3e) return 'ByteRange não cobre o arquivo';
+  const text = new TextDecoder('latin1').decode(signed.subarray(b + 1, c - 1));
+  if (!/^[0-9A-F]+$/.test(text)) return '/Contents inválido';
+  const contents = Uint8Array.from(text.match(/../g)!.map((h) => parseInt(h, 16)));
+  let cms: Uint8Array;
+  try { cms = contents.subarray(0, readDer(contents).end); } catch { return 'CMS ilegível'; }
+  // The bytes outside /Contents are exactly the prepared ones.
+  if (!equalBytes(signed.subarray(0, b), prepared.pdf.subarray(0, b)) || !equalBytes(signed.subarray(c), prepared.pdf.subarray(c))) return 'PDF alterado fora da assinatura';
+  if (!equalBytes(await sha256(signedContent(signed, prepared.byteRange)), prepared.messageDigest)) return 'messageDigest não confere';
+  try {
+    const signedData = derChildren(cms, derChildren(cms, readDer(cms))[1])[0];
+    const parts = derChildren(cms, signedData);
+    const certificates = derChildren(cms, parts.find((n) => n.tag === 0xa0)!).map((n) => n.bytes);
+    if (!certificates.some((cert) => equalBytes(cert, prepared.certificate.der))) return 'certificado ausente do CMS';
+    const signerInfo = derChildren(cms, parts[parts.length - 1])[0];
+    const fields = derChildren(cms, signerInfo);
+    const attrs = fields.find((n) => n.tag === 0xa0)!;
+    const asSet = Uint8Array.from(attrs.bytes);
+    asSet[0] = 0x31;
+    if (!equalBytes(asSet, prepared.signedAttributes)) return 'atributos assinados diferentes';
+    const signatureNode = fields[fields.length - 1];
+    const signature = cms.subarray(signatureNode.contentStart, signatureNode.end);
+    if (!(await verifyRawSignature(prepared.certificate.der, prepared.signedAttributes, signature))) return 'assinatura não confere';
+  } catch {
+    return 'CMS fora do formato esperado';
+  }
+  return null;
+}
+
