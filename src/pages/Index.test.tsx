@@ -2,10 +2,45 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider, Outlet } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Index from './Index';
 import { UnsavedChangesRouteGuard } from '@/hooks/useUnsavedChanges';
 import { useEffect } from 'react';
+import { DESKTOP_BREAKPOINT } from '@/lib/interfaceScale';
+
+const originalInnerWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+afterEach(() => { if (originalInnerWidth) Object.defineProperty(window, 'innerWidth', originalInnerWidth); });
+
+// matchMedia uses layout width, which can be fractional under browser zoom.
+// innerWidth is an integer; query changes fire only across the query boundary.
+function desktopViewport(start: number) {
+  let width = start;
+  const queries: Array<{ query: string; matches: boolean; listeners: Set<(event: MediaQueryListEvent) => void> }> = [];
+  const matches = (query: string) => {
+    const rule = /^\((min|max)-width:\s*([\d.]+)px\)$/.exec(query);
+    if (!rule) throw new Error('Unsupported test query: ' + query);
+    return rule[1] === 'min' ? width >= Number(rule[2]) : width <= Number(rule[2]);
+  };
+  window.matchMedia = (query: string) => {
+    const entry = { query, matches: matches(query), listeners: new Set<(event: MediaQueryListEvent) => void>() };
+    queries.push(entry);
+    return {
+      media: query, get matches() { return matches(query); },
+      addEventListener: (_: string, listener: (event: MediaQueryListEvent) => void) => entry.listeners.add(listener),
+      removeEventListener: (_: string, listener: (event: MediaQueryListEvent) => void) => entry.listeners.delete(listener),
+    } as unknown as MediaQueryList;
+  };
+  Object.defineProperty(window, 'innerWidth', { configurable: true, get: () => Math.floor(width) });
+  return (next: number) => act(() => {
+    width = next;
+    for (const entry of queries) {
+      const current = matches(entry.query);
+      if (current === entry.matches) continue;
+      entry.matches = current;
+      entry.listeners.forEach(listener => listener({ matches: current, media: entry.query } as MediaQueryListEvent));
+    }
+  });
+}
 
 const fixture = vi.hoisted(() => ({
   rows: ['A', 'B'].map((id) => ({
@@ -227,5 +262,37 @@ describe('patient activation', () => {
     await screen.findByRole('heading', { name: 'Patient A' });
     await user.click(screen.getByRole('button', { name: 'Home' }));
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+  });
+});
+
+describe('desktop layout at fractional widths', () => {
+  it('widens from the fractional gap without keeping the compact dashboard or remounting capture', async () => {
+    const resize = desktopViewport(DESKTOP_BREAKPOINT - 0.5);
+    const { router } = setup('/?patient=A');
+    await screen.findByRole('heading', { name: 'Patient A' });
+    await userEvent.click(screen.getByRole('button', { name: 'Perfil' }));
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    resize(DESKTOP_BREAKPOINT + 192);
+    expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Perfil' })).toHaveAttribute('aria-current', 'page');
+    expect(new URLSearchParams(router.state.location.search).get('patient')).toBe('A');
+    expect(fixture.chatMount).toHaveBeenCalledTimes(1);
+    expect(fixture.invoke).not.toHaveBeenCalled();
+    expect(fixture.update).not.toHaveBeenCalled();
+  });
+
+  it('narrows into the fractional gap and crosses the exact breakpoint in both directions', async () => {
+    const resize = desktopViewport(DESKTOP_BREAKPOINT + 192);
+    setup('/?patient=A');
+    await screen.findByRole('heading', { name: 'Patient A' });
+    await userEvent.click(screen.getByRole('button', { name: 'Perfil' }));
+    expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
+    resize(DESKTOP_BREAKPOINT - 0.5);
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    resize(DESKTOP_BREAKPOINT);
+    expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
+    resize(DESKTOP_BREAKPOINT - 1);
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(fixture.chatMount).toHaveBeenCalledTimes(1);
   });
 });

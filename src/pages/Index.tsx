@@ -21,6 +21,8 @@ import { functionErrorBody } from '@/lib/functionErrors';
 import { DESKTOP_BREAKPOINT } from '@/lib/interfaceScale';
 import { useUnsavedChanges, afterConfirmedSaveOrDiscard } from '@/hooks/useUnsavedChanges';
 
+const DESKTOP_LAYOUT_QUERY = `(min-width: ${DESKTOP_BREAKPOINT}px)`;
+
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,7 +66,7 @@ const Index = () => {
   const [briefingError, setBriefingError] = useState(false);
   const [briefingRequested, setBriefingRequested] = useState(false);
   const [mobileView, setMobileView] = useState<'home' | 'list' | 'chat' | 'info'>('home');
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < DESKTOP_BREAKPOINT);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && !window.matchMedia(DESKTOP_LAYOUT_QUERY).matches);
   const preBriefingCache = useRef<Map<string, PreBriefing | null>>(new Map());
   const briefingInFlight = useRef(new Set<string>());
   const selectedPatientIdRef = useRef<string | null>(null);
@@ -84,9 +86,10 @@ const Index = () => {
   }, [hasWork,captureBusy,toast]);
 
   useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${DESKTOP_BREAKPOINT-1}px)`);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    const mq = window.matchMedia(DESKTOP_LAYOUT_QUERY);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(!e.matches);
     mq.addEventListener('change', handler);
+    setIsMobile(!mq.matches);
     return () => mq.removeEventListener('change', handler);
   }, []);
 

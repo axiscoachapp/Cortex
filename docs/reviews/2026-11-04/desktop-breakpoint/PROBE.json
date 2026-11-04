@@ -1,0 +1,58 @@
+{
+  "syntheticOnly": true,
+  "breakpoint": 1728,
+  "checks": [
+    "layout, draft, patient, chosen tab and mounted consultation at 1727px",
+    "layout, draft, patient, chosen tab and mounted consultation at 1728px",
+    "layout, draft, patient, chosen tab and mounted consultation at 1920px",
+    "layout, draft, patient, chosen tab and mounted consultation at 1727px",
+    "layout, draft, patient, chosen tab and mounted consultation at 1280px",
+    "layout, draft, patient, chosen tab and mounted consultation at 1728px",
+    "layout, draft, patient, chosen tab and mounted consultation at 1727px",
+    "135% interface scale unchanged",
+    "calendar shell and navigation at 1727px",
+    "calendar shell and navigation at 1728px",
+    "calendar shell and navigation at 1920px",
+    "calendar shell and navigation at 1280px"
+  ],
+  "failures": [
+    "Resize attempted an AI call or a relevant write\n+ actual - expected\n\n+ [\n+   {\n+     method: 'POST',\n+     path: '/functions/v1/live-copilot'\n+   }\n+ ]\n- []\n"
+  ],
+  "pageErrors": [],
+  "probeSideEffects": true,
+  "forbiddenRequests": [
+    {
+      "method": "POST",
+      "path": "/functions/v1/live-copilot"
+    }
+  ],
+  "requestsDuringResize": 2,
+  "notCovered": [
+    "real browser zoom at a fractional layout width; covered by component simulation",
+    "timers beyond the observed resizes and 600ms settle window"
+  ],
+  "sources": [
+    {
+      "path": "src/pages/Index.tsx",
+      "sha256": "ded12566350cb99ab345bebbb2080707beb139150c260120a25d02975780ecc3"
+    },
+    {
+      "path": "src/pages/Index.test.tsx",
+      "sha256": "07029243bb9bc93e5c2453bff66978e0cd239c1f82b235b601b0ad1b58e9e43f"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "00cab4e35c6fd1b752ca0d229e1e3e0113ca5c24dbf3ac46573d357881151636"
+    },
+    {
+      "path": "scripts/desktop-breakpoint-browser.mjs",
+      "sha256": "11e172e083baf1d48c9d28d26b5c12fd4e420c0efa4f2365e02cbca2db1f32c6"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "2c56404a59be9aa5e25813722848a1437de02f2cab8d877ef4b71916ada53c0e"
+    }
+  ],
+  "sourceBaseline": "eb2311d0c04fc85f0fd6f9f3fc14795300e165ef",
+  "failureStage": "agenda resize 1280"
+}
