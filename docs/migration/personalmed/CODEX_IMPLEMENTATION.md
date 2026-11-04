@@ -345,6 +345,8 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
 
 Todas são determinísticas e testadas com fixtures sintéticas. Quando a regra não resolve, o valor fica vazio, recebe um código de problema e vai para a secretária ou o médico. Nada é inventado.
 
+**Implementação de referência:** [`scripts/personalmed/transforms.mjs`](../../../scripts/personalmed/transforms.mjs), só com funções puras, e os testes em `transforms.test.mjs` (34 casos, vitest). A lista completa de códigos de problema está no módulo.
+
 | Campo | Regra | Código de problema |
 |---|---|---|
 | CPF | Procurar CPF com dígito verificador válido em FAX, depois RG, depois e-mail. Guardar só os dígitos. 11 dígitos com dígito errado não entram. | `cpf_checksum_invalid`, `cpf_shared_by_n_contacts` |
