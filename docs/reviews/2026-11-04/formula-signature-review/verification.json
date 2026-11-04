@@ -1,0 +1,103 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "c89492f20d4f6ac7719700940529acd7f5e9d401",
+  "migrations": 69,
+  "sqlSuites": [
+    "supabase/tests/reference-catalogs.test.sql",
+    "supabase/tests/document-snippets.test.sql",
+    "supabase/tests/digital-signature.test.sql"
+  ],
+  "sqlSourceDigest": "846e8566365cfebf4df9d8c38de85001f0c73c1843e8323aab1246f1eadb809b",
+  "signatureHelperSha256": "9b92c4f4ec93e11acd5c05382a46d23e29d7d27e891f3dd5e60713f3ea5b4fef",
+  "regulatedSourceSha256": "a79bb76ee97eb98bc0cb635e6baa413835d83b350a7d05e2c8cc96b9f71d6eb2",
+  "probes": [
+    {
+      "id": "empty",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "null",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "number",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "array",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "components-object",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "components-string",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "component-null",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "component-array",
+      "expected": false,
+      "actual": "false",
+      "agrees": true
+    },
+    {
+      "id": "valid",
+      "expected": true,
+      "actual": "true",
+      "agrees": true
+    },
+    {
+      "id": "nbsp-only",
+      "expected": false,
+      "actual": "true",
+      "agrees": false
+    },
+    {
+      "id": "astral-length",
+      "expected": false,
+      "actual": "true",
+      "agrees": false
+    },
+    {
+      "id": "unicode-trim-limit",
+      "expected": true,
+      "actual": "false",
+      "agrees": false
+    }
+  ],
+  "probeMismatches": 3,
+  "signatureConcurrencyPassed": true,
+  "typesSha256": "ffc5283a34ea76f2a42898f8d828f595e60d733c1ce9b0b58e016bc60a750f04",
+  "ownedInternalNetwork": true,
+  "publishedPorts": false,
+  "cleanupVerified": true,
+  "unitTests": {
+    "command": "npx vitest run src/lib/regulatedMedications.test.ts",
+    "passed": 24,
+    "files": 1
+  },
+  "typecheck": "npm run typecheck: app and node passed",
+  "typeGenerator": "public.ecr.aws/supabase/postgres-meta:v0.95.2",
+  "reviewResolved": false,
+  "nowaitMutationControlExecuted": false,
+  "immediateRefusalRegressionGap": true
+}

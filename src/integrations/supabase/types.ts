@@ -2788,6 +2788,10 @@ export type Database = {
       valid_patient_cpf: { Args: { value: string }; Returns: boolean }
       valid_snippet_formula: { Args: { p_formula: Json }; Returns: boolean }
       valid_snippet_items: { Args: { p_items: Json }; Returns: boolean }
+      valid_snippet_text: {
+        Args: { p_max: number; p_value: Json }
+        Returns: boolean
+      }
       validate_security_boundaries: {
         Args: never
         Returns: {
