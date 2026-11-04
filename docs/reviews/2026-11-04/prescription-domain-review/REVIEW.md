@@ -33,4 +33,4 @@ Suíte completa depois das correções: 79 arquivos e 573 testes aprovados; type
 ## Pendente
 
 - ~~Aviso no compositor antes de gerar~~. Feito em `3a4e831`: o compositor avisa sobre controlado (também pela marca ou pelo princípio ativo do catálogo) e sugere o tipo antimicrobiano para marca digitada à mão.
-- A trava global da barreira de custódia (achado 3) depende do Codex.
+- ~~A trava global da barreira de custódia (achado 3)~~. Resolvida pelo Codex em `a7b992c` (migration `20261104200000`, versões por conta e por recurso). O ensaio de corrida dos modelos de receita e as 36 suítes SQL continuam aprovados sobre ela (verificação do Claude em 04/11 07:55).
