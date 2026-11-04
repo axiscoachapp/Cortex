@@ -3,7 +3,7 @@ import { numberInWords, planControlledPrescription } from '../../supabase/functi
 
 const ctx = { patientCpf: '52998224725', prescriberCpf: null, prescriberPhone: '(41) 3000-0000' };
 const address = { patientAddress: 'Rua Sintética, 100 — Centro — Curitiba/PR' };
-const item = (name: string, extra: Record<string, unknown> = {}) => ({ name, dosage: '1 comprimido', instructions: 'à noite', quantity: 30, unit: 'comprimidos', ...extra });
+const item = (name: string, extra: Record<string, unknown> = {}) => ({ name, concentration: '50 mg', dosage: '1 comprimido', instructions: 'à noite', quantity: 30, unit: 'comprimidos', ...extra });
 
 describe('quantity in words', () => {
   it('writes Portuguese numbers as the RCE requires', () => {
@@ -55,6 +55,29 @@ describe('Receita de Controle Especial rules (D8)', () => {
 
   it('accepts codeine and tramadol within the dose adendo', () => {
     expect(planControlledPrescription([item('Tylex 30 mg')], address, ctx)).toHaveProperty('plan');
-    expect(planControlledPrescription([item('Tramadol')], address, ctx)).toMatchObject({ error: expect.stringContaining('Notificação de Receita A') });
+    expect(planControlledPrescription([item('Tramadol', { concentration: '150 mg' })], address, ctx)).toMatchObject({ error: expect.stringContaining('Notificação de Receita A') });
+  });
+});
+
+describe('review findings on the RCE rules (Codex, 04/11 10:15)', () => {
+  it('decides the codeine/tramadol adendo by the explicit concentration, also for a brand without dose in the name', () => {
+    // Brand from the catalog: the name has no dose; the concentration field does.
+    expect(planControlledPrescription([item('Tramal', { concentration: '50 mg', ingredients: ['cloridrato de tramadol'] })], address, ctx)).toHaveProperty('plan');
+    expect(planControlledPrescription([item('Tramal', { concentration: '', ingredients: ['cloridrato de tramadol'] })], address, ctx)).toMatchObject({ error: expect.stringContaining('concentração') });
+    // A combination: only the controlled substance's concentration counts.
+    expect(planControlledPrescription([item('Paracetamol + codeína', { concentration: '500 mg + 30 mg' })], address, ctx)).toMatchObject({ error: expect.stringContaining('só a concentração') });
+    expect(planControlledPrescription([item('Paracetamol + codeína', { concentration: '30 mg' })], address, ctx)).toHaveProperty('plan');
+  });
+
+  it('refuses an over-long address, CID, justification or document instead of cutting it', () => {
+    const long = `Rua ${'Sintética '.repeat(36)}, 100 — Curitiba/PR`;
+    expect(long.length).toBeGreaterThan(300);
+    expect(planControlledPrescription([item('Sertralina 50 mg')], { patientAddress: long }, ctx)).toMatchObject({ error: expect.stringContaining('300 caracteres') });
+    expect(planControlledPrescription([item('Sertralina 50 mg')], { ...address, cid: 'F32.1 episódio depressivo' }, ctx)).toMatchObject({ error: expect.stringContaining('CID') });
+    expect(planControlledPrescription([item('Sertralina 50 mg')], { ...address, cid: 'F32.1', justification: 'x'.repeat(601) }, ctx)).toMatchObject({ error: expect.stringContaining('600') });
+    const noCpf = { ...ctx, patientCpf: null };
+    expect(planControlledPrescription([item('Sertralina 50 mg')], { ...address, patientDocument: { kind: 'outro', value: '9'.repeat(41) } }, noCpf)).toMatchObject({ error: expect.stringContaining('40') });
+    const exact = `Rua ${'A'.repeat(280)}, 1 — Curitiba/PR`.slice(0, 300);
+    expect(planControlledPrescription([item('Sertralina 50 mg')], { patientAddress: exact }, ctx)).toMatchObject({ plan: { patientAddress: exact } });
   });
 });

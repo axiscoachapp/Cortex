@@ -405,7 +405,9 @@ serve(async (req) => {
         const generic = item.findings.map((f) => f.substance).join(' + ');
         const folded = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
         const shown = folded(item.name).includes(folded(generic).split(/\s+/)[0]) ? item.name : `${item.name} (${generic})`;
-        text(`${i + 1}. ${shown} — ${item.dosage}`, { size: 11.5, bold: true }); down(15);
+        // Concentration of the controlled substance, unless the name already shows it.
+        const strength = folded(shown).replace(/\s+/g, '').includes(folded(item.concentration).replace(/\s+/g, '')) ? '' : ` ${item.concentration}`;
+        text(`${i + 1}. ${shown}${strength} — ${item.dosage}`, { size: 11.5, bold: true }); down(15);
         text(`Quantidade: ${item.quantity} (${item.quantityText}) ${item.unit}`, { x: margin + 14, size: 10.5 }); down(14);
         wrapText(item.instructions, { x: margin + 14, size: 10, color: mut, max: 90 });
         down(9);
@@ -503,7 +505,7 @@ serve(async (req) => {
       },
       ...(controlledPlan ? {
         controlled: {
-          items: controlledPlan.items.map((i) => ({ name: i.name, quantity: i.quantity, unit: i.unit, substances: i.findings.map((f) => `${f.substance} (${f.list})`) })),
+          items: controlledPlan.items.map((i) => ({ name: i.name, concentration: i.concentration, quantity: i.quantity, unit: i.unit, substances: i.findings.map((f) => `${f.substance} (${f.list})`) })),
           cid: controlledPlan.cid, justification: controlledPlan.justification, prescriber_cpf_printed: controlledPlan.hasC5,
         },
       } : {}),

@@ -203,8 +203,13 @@ export function numberInWords(n: number): string {
   return rest < 100 || rest % 100 === 0 ? `${head} e ${below1000(rest)}` : `${head} ${below1000(rest)}`;
 }
 
-/** `ingredients`: active ingredients from the Anvisa catalog for a brand name. */
-export interface ControlledItemInput { name: string; dosage?: string; instructions?: string; quantity?: unknown; unit?: unknown; ingredients?: string[] }
+/**
+ * `ingredients`: active ingredients from the Anvisa catalog for a brand name.
+ * `concentration`: concentration of the controlled substance itself ("30 mg",
+ * "200 mg/ml"), required on the RCE and the only source for the dose adendos;
+ * never inferred from the name or from the posology.
+ */
+export interface ControlledItemInput { name: string; concentration?: unknown; dosage?: string; instructions?: string; quantity?: unknown; unit?: unknown; ingredients?: string[] }
 
 /** Findings from the item name and, for a brand, from its catalog ingredients
  *  (read with the name so a dose like "30 mg" still counts for the adendos). */
@@ -222,7 +227,7 @@ export interface ControlledContentInput {
 }
 
 export interface ControlledPlan {
-  items: Array<{ name: string; dosage: string; instructions: string; quantity: number; unit: string; quantityText: string; findings: ControlledFinding[] }>;
+  items: Array<{ name: string; concentration: string; dosage: string; instructions: string; quantity: number; unit: string; quantityText: string; findings: ControlledFinding[] }>;
   patientAddress: string;
   patientDocumentLine: string;
   justification: string | null;
@@ -245,8 +250,27 @@ export function planControlledPrescription(
   if (meds.length > 3) return { error: 'A receita de controle especial aceita no máximo 3 medicamentos (Portaria 344/98, art. 57). Divida em mais de uma receita.' };
   const items: ControlledPlan['items'] = [];
   for (const m of meds) {
-    const findings = findingsOf(m);
+    const concentration = text(m.concentration).slice(0, 41);
+    if (!concentration || concentration.length > 40 || !/\d/.test(concentration) || !/(mg|mcg|µg|ug|g|ml|ui|%)/i.test(concentration)) {
+      return { error: `Informe a concentração de ${m.name.trim()} (ex.: 50 mg ou 200 mg/ml): é obrigatória na receita de controle especial.` };
+    }
+    let findings = findingsOf(m);
     if (!findings.length) return { error: `${m.name.trim()} não é controlado: prescreva em receita simples ou de antimicrobiano.` };
+    // Codeine and tramadol adendos: decided only by the explicit concentration
+    // of the controlled substance (≤ 100 mg per unit), never by the name.
+    if (findings.some((f) => f.substance === 'codeina' || f.substance === 'tramadol')) {
+      const mgs = [...concentration.toLowerCase().replace(/,/g, '.').matchAll(/(\d+(?:\.\d+)?)\s*mg\b/g)].map((x) => Number(x[1]));
+      if (mgs.length !== 1) {
+        return { error: `Informe só a concentração da substância controlada de ${m.name.trim()} em mg por unidade (ex.: 30 mg), sem a dos outros componentes.` };
+      }
+      findings = findings.map((f) =>
+        f.substance === 'codeina' || f.substance === 'tramadol'
+          ? mgs[0] <= 100
+            ? { ...f, form: 'receita_controle_especial', note: 'até 100 mg por unidade (adendo da lista A2)' }
+            : { ...f, form: 'notificacao_a', note: 'acima de 100 mg por unidade' }
+          : f,
+      );
+    }
     const other = findings.find((f) => f.form !== 'receita_controle_especial');
     if (other) {
       return { error: `${m.name.trim()} (${other.substance}, lista ${other.list}) não pode sair na receita de controle especial: exige ${FORM_LABEL[other.form]}${other.note ? ` (${other.note})` : ''}.` };
@@ -257,32 +281,39 @@ export function planControlledPrescription(
       return { error: `Informe a quantidade de ${m.name.trim()} em número inteiro e a unidade (ex.: 30 comprimidos).` };
     }
     if (!text(m.dosage) || !text(m.instructions)) return { error: `Informe a dose e a posologia de ${m.name.trim()}.` };
-    items.push({ name: m.name.trim(), dosage: text(m.dosage), instructions: text(m.instructions), quantity, unit: unit.slice(0, 40), quantityText: numberInWords(quantity), findings });
+    if (unit.length > 40) return { error: `A unidade de ${m.name.trim()} passou de 40 caracteres; use, por exemplo, "comprimidos" ou "frasco-ampola".` };
+    items.push({ name: m.name.trim(), concentration, dosage: text(m.dosage), instructions: text(m.instructions), quantity, unit, quantityText: numberInWords(quantity), findings });
   }
 
   const address = text(content?.patientAddress);
   if (address.length < 10) return { error: 'Informe o endereço completo do paciente (rua, número, cidade e UF): é obrigatório na receita de controle especial.' };
+  // Refuse rather than cut: a trimmed address could lose the city and UF.
+  if (address.length > 300) return { error: 'O endereço passou de 300 caracteres. Resuma em rua, número, complemento, bairro, cidade/UF e CEP.' };
 
   let documentLine: string;
   if (context.patientCpf) documentLine = `CPF: ${context.patientCpf.slice(0, 3)}.${context.patientCpf.slice(3, 6)}.${context.patientCpf.slice(6, 9)}-${context.patientCpf.slice(9)}`;
   else {
     const kind = text(content?.patientDocument?.kind);
-    const value = text(content?.patientDocument?.value).slice(0, 40);
+    const value = text(content?.patientDocument?.value);
+    if (value.length > 40) return { error: 'O número do documento do paciente passou de 40 caracteres.' };
     if (kind === 'nao_possui') documentLine = 'CPF: não possui';
     else if ((kind === 'passaporte' || kind === 'outro') && value) documentLine = `${kind === 'passaporte' ? 'Passaporte' : 'Documento'}: ${value}`;
     else return { error: 'Informe o CPF do paciente no cadastro, ou marque "não possui" ou outro documento: é obrigatório na receita de controle especial.' };
   }
 
   const hasC5 = items.some((i) => i.findings.some((f) => f.list === 'C5'));
-  const cid = text(content?.cid).toUpperCase().slice(0, 20) || null;
-  const justification = text(content?.justification).slice(0, 600) || null;
+  // Every accepted value is printed whole: refuse what is too long instead of cutting it.
+  const cid = text(content?.cid).toUpperCase() || null;
+  const justification = text(content?.justification) || null;
+  if (cid && cid.length > 20) return { error: 'O CID ou diagnóstico passou de 20 caracteres; use o código (ex.: F32.1).' };
+  if (justification && justification.length > 600) return { error: 'A justificativa passou de 600 caracteres; resuma.' };
   if (hasC5) {
     if (!context.prescriberCpf) return { error: 'Anabolizante (lista C5): informe o seu CPF em Configurações (Lei 9.965/2000).' };
     if (!context.prescriberPhone) return { error: 'Anabolizante (lista C5): informe o telefone profissional em Configurações (Lei 9.965/2000).' };
     if (!cid) return { error: 'Anabolizante (lista C5): informe o CID (Lei 9.965/2000).' };
   }
   if (justification && !cid) return { error: 'A justificativa de quantidade acima do limite precisa do CID ou do diagnóstico (Portaria 344/98, art. 60).' };
-  return { plan: { items, patientAddress: address.slice(0, 300), patientDocumentLine: documentLine, justification, cid, hasC5 } };
+  return { plan: { items, patientAddress: address, patientDocumentLine: documentLine, justification, cid, hasC5 } };
 }
 
 /**

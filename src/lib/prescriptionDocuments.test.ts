@@ -305,7 +305,7 @@ describe('regulated drugs by brand, generic name and validity (review findings)'
 
 describe('Receita de Controle Especial (D8)', () => {
   const settings = (extra: Row = {}) => prescriber({ professional_phone: '(41) 3000-0000', ...extra });
-  const rce = { name: 'Sertralina 50 mg', dosage: '1 comprimido', instructions: '1 vez ao dia, pela manhã', quantity: 30, unit: 'comprimidos' };
+  const rce = { name: 'Sertralina 50 mg', concentration: '50 mg', dosage: '1 comprimido', instructions: '1 vez ao dia, pela manhã', quantity: 30, unit: 'comprimidos' };
   const address = { patientAddress: 'Rua Sintética, 100 — Centro — Curitiba/PR' };
 
   it('prints the legal heading, address, CPF, quantity in words, buyer blocks and both labelled copies', async () => {
@@ -341,7 +341,7 @@ describe('Receita de Controle Especial (D8)', () => {
   });
 
   it('requires the prescriber CPF and the CID for an anabolic steroid (C5)', async () => {
-    const testosterone = { name: 'Cipionato de testosterona 200 mg/ml', dosage: '1 ml', instructions: 'IM a cada 15 dias', quantity: 1, unit: 'frasco-ampola' };
+    const testosterone = { name: 'Cipionato de testosterona', concentration: '200 mg/ml', dosage: '1 ml', instructions: 'IM a cada 15 dias', quantity: 1, unit: 'frasco-ampola' };
     const without = await generate(database({ user_settings: [settings()], patients: [person({ cpf: '52998224725' })] }))({
       patientId, docType: 'receita_controle_especial', medications: [testosterone], content: { ...address, cid: 'E29.1' },
     });
@@ -351,5 +351,7 @@ describe('Receita de Controle Especial (D8)', () => {
     expect(ok.status).toBe(200);
     expect(db.drawnText).toContain('CPF do médico: 111.444.777-35');
     expect(db.drawnText).toContain('CID: E29.1');
+    // The concentration is printed when the name does not show it.
+    expect(db.drawnText).toContain('1. Cipionato de testosterona 200 mg/ml — 1 ml');
   });
 });
