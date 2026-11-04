@@ -1,0 +1,32 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.189.0",
+  "candidateProtocol": "immutable per-session credential epoch via native access-token hook and transactional password audit",
+  "checks": [
+    "pending accounts and editable metadata cannot authorize a session; initial hook snapshots trusted epoch",
+    "native password event advances canonical epoch and revokes every session; old JWT, refresh and Auth user operations are denied until new login",
+    "a stale native metadata snapshot cannot roll back canonical generation or pending state",
+    "native hash re-encryption does not rotate credential epoch or clear pending state",
+    "in-flight initial-password login is refused at native token issuance; only a new credential login reads data",
+    "two native password updates held after credential checks produce one committed rotation and one rollback; only winning password signs in",
+    "native old-password re-encryption paused before its write cannot restore the initial password after a committed rotation",
+    "observed refresh/password contention finishes before deadlock detection; any refreshed token is revoked by the committed rotation and new login recovers",
+    "native TOTP preserves credential binding; new password plus AAL2 is required when an enrolled factor exists",
+    "native recovery verification permits password repair while pending without granting chart access or sending email",
+    "discarding the client response after native password commit leaves consistent state; new password login recovers without repeating password mutation",
+    "disabling the native token hook cannot authorize new sessions; reenabling it restores normal login without a fallback grant"
+  ],
+  "prototypeIsProductionFix": false,
+  "notCovered": [
+    "application RPC/RLS/storage/Edge integration",
+    "legacy/backfill",
+    "audit configuration/version drift",
+    "PKCE recovery authenticated before rotation",
+    "privileged reset",
+    "transparent encryption migration of completed accounts"
+  ],
+  "cleanupVerified": true,
+  "localDockerEndpoint": "verified local named pipe",
+  "network": "owned internal network, no published ports or external route"
+}

@@ -8,8 +8,9 @@ import { resolve } from 'node:path';
 // and --pull=never. Every container/network belongs to this invocation.
 const versions = process.argv.includes('--all') ? ['v2.197.0', 'v2.189.0'] : ['v2.197.0'];
 const cleanupCheck = process.argv.includes('--check-cleanup');
-assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup'].includes(arg)), 'Unknown lab option');
-assert.ok(!(cleanupCheck && process.argv.includes('--all')), 'Choose normal lab or cleanup diagnostic');
+const bindingMode = process.argv.includes('--binding');
+assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding'].includes(arg)), 'Unknown lab option');
+assert.ok(!(cleanupCheck && (process.argv.includes('--all') || bindingMode)), 'Choose normal lab or cleanup diagnostic');
 const postgresImage = 'pgvector/pgvector:pg16';
 const restImage = 'public.ecr.aws/supabase/postgrest:v16.5';
 function required(result, stage) {
@@ -143,6 +144,17 @@ for (const { version, fault } of runs) {
     const auth = 'http://' + names.auth + ':9999';
     await ready(auth + '/health', 'Auth');
     sql(readFileSync('supabase/tests/prototypes/initial-password-auth.sql', 'utf8'));
+    const restartAuth = async extraEnv => {
+      required(docker(['rm', '--force', names.auth]), 'owned Auth restart');
+      const nextEnv = { ...authEnv, ...extraEnv };
+      start(names.auth, 'public.ecr.aws/supabase/gotrue:' + version, Object.keys(nextEnv).flatMap(key => ['--env', key]), [], nextEnv);
+      await ready(auth + '/health', 'Auth restart');
+    };
+    const hookEnv = { GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: 'true', GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI: 'pg-functions://postgres/password_lab/bind_access_token' };
+    if (bindingMode) {
+      sql(readFileSync('supabase/tests/prototypes/credential-session-binding.sql', 'utf8'));
+      await restartAuth(hookEnv);
+    }
     const restEnv = { PGRST_DB_URI: `postgres://authenticator@${names.db}:5432/postgres`, PGRST_DB_ANON_ROLE: 'anon',
       PGRST_DB_SCHEMAS: 'public', PGRST_JWT_SECRET: jwtSecret, PGRST_JWT_AUD: 'authenticated' };
     start(names.rest, restImage, Object.keys(restEnv).flatMap(key => ['--env', key]), [], restEnv);
@@ -152,6 +164,14 @@ for (const { version, fault } of runs) {
       return transport({ url: base + path, method, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         ...(body ? { body: JSON.stringify(body) } : {}) });
     };
+    if (bindingMode) {
+      const { exerciseCredentialBinding } = await import('./test-credential-binding.mjs');
+      report = await exerciseCredentialBinding({ auth, rest, adminJwt, version, call, sql, asyncHttp, restartAuth: extra => restartAuth({ ...hookEnv, ...extra }),
+        pause, syntheticSecrets, holderSession: () => {
+          const child = spawn('docker', dockerArgs(['exec', '-i', names.db, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1']), { env: dockerEnvironment, windowsHide: true });
+          observeChild(child); child.stderr.resume(); return child;
+        } });
+    } else {
     const email = 'password-lab@example.invalid';
     const temporary = randomBytes(18).toString('hex');
     const personal = randomBytes(18).toString('hex');
@@ -308,6 +328,7 @@ for (const { version, fault } of runs) {
     report = { syntheticOnly: true, labOnly: true, authVersion: version, postgresImage, restImage, checks,
       oldJwtStillWithinExpiry: true, prototypeIsProductionFix: false, candidateRejected: true,
       notCovered: ['application RPC/RLS/storage/Edge integration', 'existing accounts/backfill', 'MFA and recovery protocol', 'two concurrent password updates', 'password response lost after commit', 'privileged Auth admin password reset', 'hosted Auth version/configuration'] };
+    }
   } catch (error) {
     failure = error;
   } finally {
@@ -337,7 +358,7 @@ for (const { version, fault } of runs) {
   report.cleanupVerified = true;
   report.localDockerEndpoint = dockerEndpoint.startsWith('npipe:') ? 'verified local named pipe' : 'verified local Unix socket';
   report.network = 'owned internal network, no published ports or external route';
-  const artifacts = resolve('docs/reviews/2026-11-04/initial-password-auth');
+  const artifacts = resolve('docs/reviews/2026-11-04/' + (bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
   mkdirSync(artifacts, { recursive: true });
   writeFileSync(resolve(artifacts, version + '.json'), JSON.stringify(report, null, 2) + '\n');
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');

@@ -1,0 +1,47 @@
+{
+  "syntheticOnly": true,
+  "verifiedAt": "2026-11-04T06:02:01-03:00",
+  "scope": "Experimental native credential/session binding; not approved for production",
+  "authVersions": ["v2.197.0", "v2.189.0"],
+  "groupsPerVersion": 12,
+  "totalGroups": 24,
+  "commands": [
+    { "command": "node scripts/test-initial-password-auth.mjs --binding --all", "exitCode": 0, "cleanupVerified": true },
+    { "command": "node scripts/test-initial-password-auth.mjs --all", "exitCode": 0, "counterexampleRegressionGroups": 18, "cleanupVerified": true },
+    { "command": "node --check scripts/test-initial-password-auth.mjs", "exitCode": 0 },
+    { "command": "node --check scripts/test-credential-binding.mjs", "exitCode": 0 },
+    { "command": "node --check scripts/test-credential-binding-concurrency.mjs", "exitCode": 0 },
+    { "command": "npx eslint scripts/test-initial-password-auth.mjs scripts/test-credential-binding.mjs scripts/test-credential-binding-concurrency.mjs", "exitCode": 0, "errors": 0, "warnings": 0 }
+  ],
+  "nativeCoverage": [
+    "pending state and editable metadata",
+    "canonical state and mirror protection",
+    "all-session revocation and new login",
+    "in-flight initial-password login",
+    "two concurrent password updates with one commit",
+    "sequential and concurrent hash re-encryption",
+    "observed refresh/password contention before 15-second deadlock detector",
+    "native TOTP and AAL requirements",
+    "native OTP recovery with repair-only purpose",
+    "client response discarded after commit",
+    "missing hook fails closed without fallback"
+  ],
+  "review": {
+    "completedLocalCycles": 2,
+    "corrections": "Recovery OTP, stale metadata, concurrent re-encryption and lock acquisition addressed in candidate; native runtime probes added",
+    "thirdCycle": "Automatically interrupted by platform citing possible cybersecurity risk; not an approval",
+    "productionReviewComplete": false,
+    "externalCrossModel": "Skipped: non-interactive heartbeat and user preference for local verification"
+  },
+  "limits": [
+    "PKCE recovery authenticated before credential rotation still needs a dedicated test and policy",
+    "Provider internals, audit settings and maintenance/encryption migration require explicit operational contract",
+    "No application RLS/RPC/storage/Edge or frontend integration",
+    "No legacy/backfill or privileged reset implementation",
+    "No hosted Auth configuration/version attestation"
+  ],
+  "next": "Compare native single-use invite/recovery link provisioning without temporary password before selecting production protocol",
+  "productionMigrationsOrCodeChanged": false,
+  "personalmedSchemaLoaderOrDataChanged": false,
+  "pushDeployOrHostedMutation": false
+}

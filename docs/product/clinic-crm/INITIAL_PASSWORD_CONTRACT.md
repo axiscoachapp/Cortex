@@ -1,6 +1,6 @@
 # T31 — contrato de segurança da credencial inicial (proposta técnica)
 
-Estado em 04/11/2026: **fluxo de produção não implementado**. T31/3a acrescentou laboratório descartável com Auth/Data API reais e rejeitou duas estratégias insuficientes; evidências em [initial-password-auth](../../reviews/2026-11-04/initial-password-auth/IMPLEMENTATION.md). T31/2 de MFA visual foi entregue em `a12a561`. T31/3b deve provar a vinculação confiável da autenticação à sessão antes de integrar o fluxo, mantendo Supabase Auth e os domínios atuais. Nenhuma migration reservada por este documento.
+Estado em 04/11/2026: **fluxo de produção não implementado**. T31/3a rejeitou duas estratégias insuficientes em Auth/Data API reais. T31/3b/1 ensaiou vínculo canônico por sessão: 24 grupos em duas versões, sem aprovação de produção; [resultados e limites](../../reviews/2026-11-04/credential-session-binding/IMPLEMENTATION.md). A próxima comparação é provisionamento por link de uso único, sem senha temporária, proposto pelo Claude. T31/2 de MFA visual está em `a12a561`. Nenhuma migration reservada por este documento.
 
 ## Falha atual e fronteira
 
@@ -30,7 +30,15 @@ Revisão do Claude de 04/11 04:42 incorporada: estender as guardas existentes `s
 - **Mudança de `encrypted_password` → liberar pendência:** rejeitada. O Auth pode recifrar a representação durante login sem trocar a senha. A trigger candidata liberou a conta; refresh e outro login com a senha inicial leram a linha protegida no laboratório. Não usar igualdade/diferença de hash como confirmação suficiente. O [caminho oficial do Auth](https://github.com/supabase/auth/blob/v2.197.0/internal/api/token.go) distingue explicitamente recifragem de troca.
 - **Estado global livre + claim livre + sessão existente, acrescentando `session.created_at >= credential_rotated_at`:** insuficiente. Um login pausado depois de validar a senha antiga criou a sessão após a troca; seu refresh passou também pela regra de data. Isso foi reproduzido em duas versões, com espera observada em banco. Pedir novo login após a troca continua útil ao usuário, mas o servidor não pode inferir que uma sessão mais recente usou a senha mais recente.
 
-As provas não escolhem uma solução definitiva. O próximo contrato técnico precisa vincular a verificação da credencial ao estado confiável de cada sessão, incluindo login em andamento, refresh e confirmação real da troca. Permanecem por provar recuperação/MFA, resposta perdida após commit e duas trocas concorrentes. Nenhum dos protótipos rejeitados entra em migration de produção.
+Essas provas isoladas não escolhem uma solução definitiva. O contrato precisa vincular a verificação da credencial ao estado confiável de cada sessão, incluindo login em andamento, refresh e confirmação real da troca. A cobertura experimental posterior e seus limites estão abaixo. Nenhum dos protótipos rejeitados entra em migration de produção.
+
+## Candidato de vínculo ensaiado e comparação seguinte
+
+O experimento com autoridade privada, hook nativo e evento transacional passou TOTP/recuperação OTP, resposta descartada após commit, duas trocas simultâneas e recifragem concorrente. Ele revoga todas as sessões e exige novo login; OTP/recovery são somente reparação, sem leitura direta de dados. A aquisição do lock do usuário é sem espera, e contenção refresh/troca foi ensaiada. A confirmação não persiste senha, hash ou token: usa geração e ID da transação.
+
+Isso não elimina os limites: recuperação PKCE autenticada antes da rotação ainda precisa de prova/política; a constraint contra escritas tardias exige procedimento para manutenção da criptografia de contas concluídas. A revisão adicional por agente foi interrompida automaticamente, portanto não há aprovação de produção. O protocolo não está escolhido para o aplicativo.
+
+Comparar agora a proposta de `auth.admin.generateLink` sem envio: conta sem senha temporária, link entregue manualmente pela clínica, consumo concorrente provado, finalização no servidor com exclusão mútua/revisão e estado pendente confiável. A validade curta do JWT não substitui checar sessão viva depois do encerramento global. Não presumir segurança de duas conclusões concorrentes apenas porque a última senha vence; não enviar e-mail nem ativar fluxo hospedado neste ensaio.
 
 ## Provas e divisão
 
