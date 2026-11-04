@@ -7,6 +7,7 @@
 // Usage:
 //   node --max-old-space-size=6144 scripts/personalmed/extract.mjs <exportDir> \
 //        [--export-date 2026-08-24] [--import-date YYYY-MM-DD] [--json <aggregates.json>]
+//        [--usage-since 2025-01-01]       # window for template usage counts
 //        [--out <dir outside the repo>]   # writes the ENCRYPTED staging; needs PM_STAGING_KEY
 
 import { readdirSync, writeFileSync } from 'node:fs';
@@ -15,8 +16,9 @@ import { ParadoxTable, decodeText, toCalendarDate } from './paradox-reader.mjs';
 import { Mdf } from './mssql2000-reader.mjs';
 import { rtfToText } from './rtf-to-text.mjs';
 import { SecureBatchWriter, keyFromEnv } from './secure-staging.mjs';
-import { buildAgenda, buildChartClinical, buildPerson } from './staging.mjs';
-import { splitHistory, wallClockToUtc } from './transforms.mjs';
+import { buildAgenda, buildChartClinical, buildPerson, buildTemplate } from './staging.mjs';
+import { splitHistory, templateChunks, templateUsage, wallClockToUtc } from './transforms.mjs';
+import { antimicrobialsIn, controlledSubstancesIn } from '../../supabase/functions/_shared/regulatedMedications.ts';
 
 const args = process.argv.slice(2);
 const dir = args[0];
@@ -227,11 +229,53 @@ lap('clinical envelopes');
 for (const e of buildAgenda(ctx, agendaRows, chartIds)) count(e);
 lap('agenda envelopes');
 
+// Document templates (S3). UserNumber 0 is the clinic-wide library. Usage
+// comes from documents issued since USAGE_SINCE with the same ModelType; only
+// counts leave templateUsage(), and the document text is dropped right after.
+const USAGE_SINCE = opt('--usage-since') ?? '2025-01-01';
+ctx.usageSince = USAGE_SINCE;
+const templates = [];
+for (const table of ['Us05', 'Gintxt', 'Pedtxt']) {
+  for (const r of rows(px(table), ['UserNumber', 'ModelNumber', 'ModelName', 'ModelType', 'Contents'], 'text')) {
+    const raw = typeof r.Contents === 'string' ? r.Contents : '';
+    templates.push({ table, modelNumber: r.ModelNumber, user: r.UserNumber > 0 ? r.UserNumber : null, modelType: r.ModelType, name: str(r.ModelName), text: plain(raw), rtfTable: /\\trowd/.test(raw) });
+  }
+}
+const issuedByType = new Map();
+for (const r of rows(px('Clini_06'), ['UserNumber', 'DateInsert', 'ModelType', 'Contents'], 'text')) {
+  const date = iso(r.DateInsert);
+  if (!date || date < USAGE_SINCE) continue;
+  if (!issuedByType.has(r.ModelType)) issuedByType.set(r.ModelType, []);
+  issuedByType.get(r.ModelType).push({ user: r.UserNumber, date, text: plain(r.Contents) });
+}
+const usage = new Map();
+for (const [type, docs] of issuedByType) {
+  const candidates = templates.filter((t) => t.modelType === type).map((t) => ({ key: `${t.table}:${t.modelNumber}`, chunks: templateChunks(t.text) }));
+  for (const [key, u] of templateUsage(candidates, docs, { since: USAGE_SINCE })) usage.set(key, u);
+}
+issuedByType.clear();
+const templateStats = { since: USAGE_SINCE, byKind: {}, used: 0, usedByDoctor: {}, recognisable: 0 };
+for (const t of templates) {
+  const key = `${t.table}:${t.modelNumber}`;
+  const regulated = { antimicrobial: [...new Set(antimicrobialsIn(t.text))], controlled: [...new Set(controlledSubstancesIn(t.text))] };
+  const e = buildTemplate(ctx, t, usage.get(key), regulated);
+  count(e);
+  const k = (templateStats.byKind[e.payload.kind] ??= {});
+  k[e.mappingStatus] = (k[e.mappingStatus] ?? 0) + 1;
+  if (templateChunks(t.text).length) templateStats.recognisable += 1;
+  if (e.payload.usage.uses) templateStats.used += 1;
+  // D19 sizing: how many distinct templates of each kind each doctor would receive.
+  const perKind = (templateStats.usedByDoctor[e.payload.kind] ??= {});
+  for (const doctor of Object.keys(e.payload.usage.by_doctor)) perKind[doctor] = (perKind[doctor] ?? 0) + 1;
+}
+templates.length = 0;
+lap('templates');
+
 // ---------------------------------------------------------------------------
 
-const expected = { person: 32882, chart: 34796, contact_chart_link: 34796, consultation: 169934 + 13010, diagnosis_set: 2353, pregnancy_item: 97 };
+const expected = { person: 32882, chart: 34796, contact_chart_link: 34796, consultation: 169934 + 13010, diagnosis_set: 2353, pregnancy_item: 97, template: 1123 };
 const reconciliation = Object.fromEntries(Object.entries(expected).map(([k, v]) => [k, { expected: v, staged: agg.entities[k]?.total ?? 0, diff: (agg.entities[k]?.total ?? 0) - v }]));
-const out = { exportDate: EXPORT, importDate: ctx.importDate, persons, chartsWithClinicalButNoHeader: chartsWithoutHeader, reconciliation, entities: agg.entities, issues: Object.fromEntries(Object.entries(agg.issues).sort()), consultationSections: agg.sections, historyChars: agg.chars, seconds: Math.round((Date.now() - t0) / 1000) };
+const out = { exportDate: EXPORT, importDate: ctx.importDate, persons, chartsWithClinicalButNoHeader: chartsWithoutHeader, reconciliation, entities: agg.entities, issues: Object.fromEntries(Object.entries(agg.issues).sort()), consultationSections: agg.sections, historyChars: agg.chars, templates: templateStats, seconds: Math.round((Date.now() - t0) / 1000) };
 if (writer) out.encryptedStaging = { dir: opt('--out'), manifest: 'manifest.json', files: Object.keys(writer.close({ sourceSystem: 'personalmed', sourceInstance: ctx.sourceInstance, batchId: ctx.batchId, exportDate: EXPORT, importDate: ctx.importDate }).files) };
 const json = JSON.stringify(out, null, 2);
 if (opt('--json')) writeFileSync(opt('--json'), json);
