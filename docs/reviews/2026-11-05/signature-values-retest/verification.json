@@ -1,0 +1,51 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "7310e2fdc7cf4c2d551547332b4a916e02c4f16c",
+  "reviewResolved": false,
+  "previousFiveDerCasesRefused": true,
+  "newDerCasesStillActivated": 5,
+  "remainingFindings": [
+    {
+      "severity": "P2",
+      "issue": "primitive SEQUENCE/SET accepted by permissive fallback",
+      "cases": 2
+    },
+    {
+      "severity": "P2",
+      "issue": "BMP/UniversalString accepts invalid scalars",
+      "cases": 3
+    }
+  ],
+  "typecheckResolved": true,
+  "globalTypecheckExitCode": 0,
+  "ownAtomicTestTs2550Fixed": true,
+  "unitTests": {
+    "passed": 140,
+    "skipped": 1,
+    "files": 6,
+    "exitCode": 0
+  },
+  "combinedSelection": {
+    "passed": 190,
+    "skipped": 1,
+    "files": 8,
+    "includes50M2Tests": true
+  },
+  "deno": {
+    "version": "2.9.6",
+    "entrypoints": 2,
+    "offline": true,
+    "cachedOnly": true,
+    "exitCode": 0
+  },
+  "syntaxAndLintExitCode": 0,
+  "frozenHashesVerified": true,
+  "sqlAndConcurrencyUnchangedFrom": "876875c8930806ff04310bf1928fe0f33a4119b4",
+  "sqlOrConcurrencyRepeated": false,
+  "realStorageSdkFetchInMemory": true,
+  "review": "fresh-context findings reproduced by root through complete handler activation",
+  "externalReview": "dispensed by user",
+  "historical876875cEvidencePreserved": true,
+  "externalServicesUsed": false,
+  "implementationFilesOfClaudeChanged": false
+}

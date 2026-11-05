@@ -6,8 +6,8 @@ import {registerHooks} from 'node:module';
 import ts from 'typescript';
 
 // Review only: real frozen handlers/adapters, in-memory Auth/SDK/PSC seams.
-const options=process.argv.slice(2),arg=options.find(a=>a.startsWith('--source=')),edgesFixed=options.includes('--edges-fixed'),fixed=options.includes('--fixed')||edgesFixed;
-assert.ok(arg&&/^--source=[0-9a-f]{40}$/.test(arg)&&options.length===(fixed?2:1)&&options.every(a=>a===arg||a==='--fixed'||a==='--edges-fixed'));
+const options=process.argv.slice(2),arg=options.find(a=>a.startsWith('--source=')),valuesFixed=options.includes('--values-fixed'),edgesFixed=options.includes('--edges-fixed')||valuesFixed,fixed=options.includes('--fixed')||edgesFixed;
+assert.ok(arg&&/^--source=[0-9a-f]{40}$/.test(arg)&&options.length===(fixed?2:1)&&options.every(a=>a===arg||a==='--fixed'||a==='--edges-fixed'||a==='--values-fixed'));
 const baseline=arg.slice(9),ownPath='scripts/test-signature-handler-boundaries.mjs';
 const hash=s=>createHash('sha256').update(s).digest('hex'),ownHash=hash(readFileSync(ownPath));
 const get=path=>{const r=spawnSync('git',['show',baseline+':'+path],{encoding:'utf8',windowsHide:true,timeout:10000,maxBuffer:8*1024*1024});assert.equal(r.status,0);return r.stdout;};
@@ -107,21 +107,28 @@ try{
   }
   if(edgesFixed){
    const fields=derChildren(der,tbs),offset=fields[0].tag===0xa0?1:0;remainingDerCases=[];
+   const residues=valuesFixed?[
+    ['primitiveSequence',tlv(0x10),null],['primitiveSet',tlv(0x11),null],
+    ['bmpSurrogate',null,tlv(0x1e,Uint8Array.of(0xd8,0))],['universalSurrogate',null,tlv(0x1c,Uint8Array.of(0,0,0xd8,0))],['universalOutOfRange',null,tlv(0x1c,Uint8Array.of(0,0x11,0,0))],
+   ]:[];
+   const residueNames=new Set(residues.map(r=>r[0]));
    for(const [name,parameter,badName] of [
     ['nullWithContent',tlv(0x05,Uint8Array.of(0)),null],['emptyInteger',tlv(0x02),null],['nonminimalInteger',tlv(0x02,Uint8Array.of(0,1)),null],
-    ['invalidUtf8Name',null,tlv(0x0c,Uint8Array.of(0xff))],['oddBmpName',null,tlv(0x1e,Uint8Array.of(0))],
+    ['invalidUtf8Name',null,tlv(0x0c,Uint8Array.of(0xff))],['oddBmpName',null,tlv(0x1e,Uint8Array.of(0))],...residues,
    ]){
     const parts=fields.map(n=>n.bytes),alg=parameter?DER.seq(DER.oid('1.2.840.113549.1.1.11'),parameter):algorithm.bytes;
     parts[offset+1]=alg;if(badName)parts[offset+2]=DER.seq(DER.setOf(DER.seq(DER.oid('2.5.4.3'),badName)));
     const changedTbs=DER.seq(...parts),signed=new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key.privateKey,changedTbs));
     const bytes=DER.seq(changedTbs,alg,tlv(0x03,Uint8Array.of(0),signed));let x509Parsed=true;try{new X509Certificate(bytes);}catch{x509Parsed=false;}
-    const problem=await signerCertificateProblem(bytes,new Date());assert.equal(problem,null);assert.equal(x509Parsed,false);
+    const refused=valuesFixed&&!residueNames.has(name);
+    const problem=await signerCertificateProblem(bytes,new Date());assert.equal(problem,refused?'certificate_invalid':null);assert.equal(x509Parsed,false);
     providerCertificate=Buffer.from(bytes).toString('base64');calls=[];
     const started=await signatureSessionHandler(req('start'),signatureDeps());assert.equal(started.status,200);
     const state=new URL((await started.json()).authorizeUrl).searchParams.get('state');
-    const response=await signatureSessionHandler(req('complete','aal2',{state,code:'synthetic'}),signatureDeps());assert.equal(response.status,200);
-    assert.equal(calls.find(c=>c.name==='signature_activate_session')?.args.p_cert_sha256,hash(bytes));
-    remainingDerCases.push({name,helperProblem:problem,x509Parsed,completeStatus:response.status,activationCalled:true});
+    const response=await signatureSessionHandler(req('complete','aal2',{state,code:'synthetic'}),signatureDeps());assert.equal(response.status,refused?409:200);
+    if(refused)assert.equal(calls.find(c=>c.name==='signature_activate_session'),undefined);
+    else assert.equal(calls.find(c=>c.name==='signature_activate_session')?.args.p_cert_sha256,hash(bytes));
+    remainingDerCases.push({name,helperProblem:problem,x509Parsed,completeStatus:response.status,activationCalled:!refused});
    }
   }
   providerCertificate=Buffer.from(der).toString('base64');calls=[];
@@ -163,5 +170,5 @@ try{
  if(originalGlobals.sdk===undefined)delete globalThis.cortexReviewSdk;else globalThis.cortexReviewSdk=originalGlobals.sdk;
 }
 assert.equal(hash(readFileSync(ownPath)),ownHash);
-const directory='docs/reviews/2026-11-05/'+(edgesFixed?'signature-handler-edges-retest':fixed?'signature-handler-retest':'signature-handler-boundaries');mkdirSync(directory,{recursive:true});writeFileSync(directory+'/'+(fixed?'boundaries.json':'counterexamples.json'),JSON.stringify(report,null,2)+'\n');
+const directory='docs/reviews/2026-11-05/'+(valuesFixed?'signature-values-retest':edgesFixed?'signature-handler-edges-retest':fixed?'signature-handler-retest':'signature-handler-boundaries');mkdirSync(directory,{recursive:true});writeFileSync(directory+'/'+(fixed?'boundaries.json':'counterexamples.json'),JSON.stringify(report,null,2)+'\n');
 process.stdout.write(JSON.stringify({aal1Routes:report.aal1VerifiedFactorRoutes,aal2Controls:report.aal2RouteControls,storage:report.storageClassification,certificate:report.certificate,bodyLimit:report.bodyLimit,resume:report.resumeWithEndedPsc.cases})+'\n');

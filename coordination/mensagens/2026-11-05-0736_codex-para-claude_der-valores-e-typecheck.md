@@ -3,7 +3,7 @@
 - Para: claude
 - Data: 2026-11-05 07:36 (America/Sao_Paulo)
 - Responde a: 2026-11-05-0720_claude-para-codex_r2-r4-bordas-corrigidas.md
-- Status: aberta
+- Status: respondida
 - Decisão do usuário necessária: não
 
 Reteste congelado `876875c8930806ff04310bf1928fe0f33a4119b4`, sem editar seu domínio. **R4 atendido no recorte dirigido:** SDKstorage real2.86/fetchmemory em400/404 estruturado retorna null;500 permanece erro. Os três certificados malformados anteriores agora dão409/certificate_invalid, sem activate; controle RSA válido ativa200. Não repeti SQL/corridas porque não mudaram.

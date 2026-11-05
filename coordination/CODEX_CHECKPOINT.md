@@ -1,6 +1,8 @@
 # Checkpoint do Codex
 
-Atualizado em 05/11/2026 08:39 (America/Sao_Paulo). Instalação atômica dos overlays M2 concluída no laboratório, mensagem informativa08:39. **Nova0815/7310e2f em reteste separado**; não repetir0720 já respondida. Nenhum arquivo Claude alterado.
+Atualizado em 05/11/2026 08:44 (America/Sao_Paulo). **0815/7310e2f respondida0830**: tipos e cinco casos antigos atendidos, dois gruposDER residuais com Claude. Não repetir cabeçalhos já respondidos nem aprovar UI ainda. Instalação atômica M2 concluída em laboratório/commit76ab011, mensagem informativa08:39. Nenhum arquivo Claude alterado.
+
+**Reteste7310e2f:** docs/reviews/2026-11-05/signature-values-retest/RETEST.md. Cinco casos antigos409/semactivate; válidoRSA200, R4/MFA/corpo mantidos. Cinco novoshelpernull/complete200/activate eOpenSSLfalse (TBSassinados): parâmetrosSEQUENCE/SETprimitivos10/11 e issuerBMPsurrogate/UniversalStringsurrogate/>10FFFF. Revisor fresh-context e root reproduziram; pedido0830 para corrigir forma/escalares/fallback defaulttrue (lista explícita sugerida), semmudarAuth.140unitários/um ignorado/seis arquivos e doisDeno/lint/hashes/tsc global0. Seleção com50M2:190/um ignorado/oito, não somar. Awaited corrigido peloClaude; nossoTS2550replaceAllES2020 reproduzido/corrigidoRegex. SQL/helperD17 byteidênticos876, não repetidos. UI aguarda novoSHA; histórico preservado. Não alegar confiançaICP/HTTPreal/homologação.
 
 **Instalação M2:** docs/reviews/2026-11-05/provisioning-atomic-install/IMPLEMENTATION.md. RED seis overlays persistidos apósP4110; novo modoTXRC/dez fontes com pinsSHA/gatesAuthSRExcl e membershipAExclNOWAIT antesDDL; corpos do checker/creator conferidos dentroTX. Falha tardia reverte fingerprint/fixture semDROP. AuthINSERT/memberUPDATE mantidos abertos; normal55P03 exigeNOWAITsemTimeout; controle removendo sóNOWAITheader observado porPID/relação/modo/query e depoisP4110rollback. Repetição42P06 apósNativehistória não muda catálogo/ledgers.46 grupos por Auth (92),69 migrations congeladas1d5eacc,84unitários/três arquivos, tsc/lint/hashes/cleanup verdes. QA corrigiu arquivoRED compartilhado, assertindex-1/timeout e replaceAllES2020; finais repetidos sem somar intermediários. Sóoverlays, bootstrap/appmigrations foraTX. M2 aberta para custódia/retenção/upgrade com histórico/recuperação/adaptador/corte/gate. Prova não é rollout produtivo.
 
@@ -22,13 +24,13 @@ Atualizado em 05/11/2026 08:39 (America/Sao_Paulo). Instalação atômica dos ov
 
 **VALIDAR:** docs/reviews/2026-11-05/validar-format-review/RETEST.md. 65 testes/três arquivos, dois Deno offline, helper real congelado e caso HTTP simulado para UUID canônico aprovados. Recusas404/409/segredo/path/dono e URL/hash coerentes preservados. Testes securityHandlers/privacyHandlers voltaram ao Codex; delegação limitada encerrada. Sem SQL/PSC/VALIDAR real ou homologação; RED anterior mantido.
 
-**Próximo independente:** M2 custódia/retenção/instalação e upgrade produtivos com histórico/recuperação, depois adaptador/endpoint/integração/corte/reconciliação/gate. Não encerrar M2 por instalação de overlays nem expor helpers ao cliente. D17 7310e2f em reteste separado da nova0815; fonte congelada M2 não cobre a entrega. Helper Auth continua Codex e inalterado, R3 estrito AAL2. Três helpers T33 dentro de20261105100000, SaaS e PersonalMed preservados.
+**Próximo independente:** M2 custódia/retenção/instalação e upgrade produtivos com histórico/recuperação, depois adaptador/endpoint/integração/corte/reconciliação/gate. Não encerrar M2 por instalação de overlays nem expor helpers ao cliente. D17 aguarda correção dos dois gruposR2 com Claude e novoSHA; tipos estão verdes. Fonte congelada M2 não cobre a entrega. Helper Auth continua Codex e inalterado, R3 estrito AAL2. Três helpers T33 dentro de20261105100000, SaaS e PersonalMed preservados.
 
 **Histórico útil:** 9e82193 produtor privado de nascimento no laboratório (54 grupos/duas Auth/69 migrations); 4ea274c fixtures/adaptador14colunas (46 grupos e69/48SQL + D17); 7b02644 contexto verificado (138 testes). Pedido de identidade alvo removida já concluído/notificado em33628f7:19grupos por Auth v2.197.0/v2.189.0 e17 regressões base, hashes/cleanup. Não repetir essas execuções como novidade. Mocks não substituem prova Native.
 
 Somente sintéticos, Docker próprio local/rede interna e limpeza conferida. Sem hosted, dados reais, PersonalMed/carregador, mensagens externas, emissão, chamadas pagas, deploy ou push. Commits próprios main/axiscoachapp; revisão externa já dispensada. Arquivos paralelos/índice preservados.
 
-As provas de assinatura atuais usam876875c congelado. Aguardar próxima entrega/SHA; não testar ou desfazer delta parcial do Claude por inferência.
+As provas de assinatura atuais usam7310e2f congelado. Aguardar próxima entrega/SHA; não testar ou desfazer delta parcial do Claude por inferência.
 
 ## Rotina
 
@@ -142,6 +144,7 @@ As provas de assinatura atuais usam876875c congelado. Aguardar próxima entrega/
 | `2026-11-05-0440_claude-para-codex_handlers-d17-locais.md` | SHA-256 `95D221444E68C6F6D7C6F60652879917EEBEECCDB666325B3371B725452CFC14` (finalb6c21f8) | Respondida05:09 com cinco ajustes/provas. Correção com Claude, R3 precisa alinhar helper Codex sem enfraquecer gate global. Não aprovar UI nem repetir confirmação por cabeçalho |
 | `2026-11-05-0610_claude-para-codex_r1-r5-handlers-corrigidos.md` | SHA-256 `6A1A0E4566069B244609CBE6B35798C9E929049F392FEECBDD123D14956EE6A4` (final13a39ad) | Respondida0635: R3 estrito AAL2 aceito sem helperalternativo;129 testes/um ignorado/doisDeno. Dois P2 residuais R2 forma X.509/R4 downloadSDKreal com Claude, provas próprias no novo relatório; UI aguarda novoSHA, não repetir confirmação |
 | `2026-11-05-0720_claude-para-codex_r2-r4-bordas-corrigidas.md` | SHA-256 `9CD2E7DEB41760D0935A007B39294FAC695C687D3FB3CB9C8C57BB81787CB6CE` (final876875c) | Respondida0736: R4 atendido, cinco novos casos DER primitivo/string ainda ativam200 e13TS2322 no tipo do teste.139testes/um ignorado/doisDeno, hashes, SQLunchanged. Corrigir com Claude, UI aguarda; não repetir pelo cabeçalho |
+| `2026-11-05-0815_claude-para-codex_der-valores-corrigidos.md` | SHA-256 `F91B178F1D85437CF2A55AEE3ED0E7CFD9FDEF9440151B3E7985EAD283BEA076` (final7310e2f) | Respondida0830: cinco antigos atendidos e tiposglobais0, dois gruposDER novos (5casos) ainda ativam200;140unitários/um ignorado/doisDeno. Corrigir com Claude/novoSHA, UI aguarda; não repetir cabeçalho |
 
 Atualizar os hashes/entradas quando houver mudança relevante de conteúdo. Conferir também `Responde a` e o ESTADO antes de decidir que uma mensagem exige ação. Não criar cadeia de mensagens que apenas confirme outra confirmação.
 
