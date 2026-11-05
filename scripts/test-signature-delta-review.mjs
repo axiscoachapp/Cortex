@@ -8,12 +8,14 @@ import {pathToFileURL} from 'node:url';
 import ts from 'typescript';
 
 // A bounded review, never a production test target or a global GREEN verdict.
-assert.ok(process.argv.slice(2).every(a=>/^--source=[0-9a-f]{40}$/.test(a))&&process.argv.length<=3);
+const options=process.argv.slice(2),resolved=options.includes('--resolved');
+assert.ok(options.every(a=>a==='--resolved'||/^--source=[0-9a-f]{40}$/.test(a))&&new Set(options).size===options.length);
+const sourceArgs=options.filter(a=>a.startsWith('--source='));assert.ok(sourceArgs.length<=1);
 assert.ok(!process.env.DOCKER_HOST,'Refusing inherited Docker target');
 const required=r=>{assert.equal(r.status,0,r.stderr||r.error?.message);return r.stdout.trim();};
 const raw=(command,args,input)=>spawnSync(command,args,{input,encoding:'utf8',windowsHide:true,timeout:60000,maxBuffer:24*1024*1024});
 const git=args=>required(raw('git',args));
-const baseline=git(['rev-parse',process.argv[2]?.slice(9)||'HEAD']);assert.match(baseline,/^[0-9a-f]{40}$/);
+const baseline=git(['rev-parse',sourceArgs[0]?.slice(9)||'HEAD']);assert.match(baseline,/^[0-9a-f]{40}$/);
 const get=path=>git(['show',baseline+':'+path]);
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const runnerPath='scripts/test-signature-delta-review.mjs',probePath='supabase/tests/prototypes/signature-late-failure.sql';
@@ -30,6 +32,7 @@ const detectorProbes=vectors.map(input=>({input,prior:prior.controlledFindings(i
 assert.deepEqual(current.controlledSubstancesIn(vectors[0]),['clonazepam']);
 assert.deepEqual(current.antimicrobialsIn(vectors[1]),['amoxicilina']);
 assert.equal(current.controlledFindings(vectors[6])[0].form,'notificacao_a');
+if(resolved)for(const input of vectors.slice(7,11))assert.equal(current.controlledFindings(input)[0].form,'notificacao_a','Decimal Cf regression');
 const context=localDockerEndpoint();
 function localDockerEndpoint(){const name=required(raw('docker',['context','show']));return JSON.parse(required(raw('docker',['context','inspect',name,'--format','{{json .Endpoints.docker.Host}}'])));}
 assert.ok(/^npipe:\/{2,}\.\/pipe\/[^/]+$/.test(context)||/^unix:\/\//.test(context),'Expected local Docker');
@@ -49,15 +52,18 @@ try{
  for(const {path,source} of suites){sql(source);process.stdout.write('Passed '+path+'\n');}
  const lateFailure=JSON.parse(sql(probe));
  assert.equal(lateFailure.length,2);
- // Pin the review counterexample rather than calling the whole run GREEN.
- assert.deepEqual(lateFailure.find(r=>r.destination==='ambiguous'),{destination:'ambiguous',refusal:null,resulting_state:'failed',attempts:2,cleanup:true});
- assert.equal(lateFailure.find(r=>r.destination==='stored').refusal,'22023');
+ // Historical mode pins the counterexample; resolved mode requires the
+ // old failure to leave attempt 2 untouched. Neither is a global verdict.
+ assert.deepEqual(lateFailure.find(r=>r.destination==='ambiguous'),resolved
+  ? {destination:'ambiguous',refusal:'P4094',resulting_state:'ambiguous',attempts:2,cleanup:false}
+  : {destination:'ambiguous',refusal:null,resulting_state:'failed',attempts:2,cleanup:true});
+ assert.deepEqual(lateFailure.find(r=>r.destination==='stored'),{destination:'stored',refusal:'22023',resulting_state:'stored',attempts:2,cleanup:false});
  await testSignatureConcurrency(container);
  report={syntheticOnly:true,sourceBaseline:baseline,migrations:migrations.length,sqlSuites:suites.map(s=>s.path),
   sqlSourceDigest:hash([bootstrap,...migrations.map(m=>m.source),...suites.map(s=>s.source)].join('\n')),
   helperSha256:hash(helper),regulatedSourceSha256:hash(regulated),ownSources:[{path:runnerPath,sha256:runnerHash},{path:probePath,sha256:hash(probe)}],
   detectorPriorBaseline:git(['rev-parse','7f699c4']),detectorProbes,lateFailure,signatureConcurrencyPassed:true,
-  fullSqlMatrixRun:false,reviewResolved:false,ownedInternalNetwork:true,publishedPorts:false};
+  fullSqlMatrixRun:false,lateFailureResolved:resolved,reviewResolved:false,ownedInternalNetwork:true,publishedPorts:false};
 }catch(error){failure=error;}finally{
  for(const [kind,name,planned] of [['container',container,containerPlanned],['network',network,networkPlanned]]){
   if(!planned)continue;
@@ -74,6 +80,7 @@ if(failure)throw failure;
 assert.equal(hash(readFileSync(runnerPath)),runnerHash,'Runner changed during execution');
 assert.equal(hash(readFileSync(probePath,'utf8')),hash(probe),'Probe changed during execution');
 report.cleanupVerified=true;
-mkdirSync('docs/reviews/2026-11-04/signature-delta-review',{recursive:true});
-writeFileSync('docs/reviews/2026-11-04/signature-delta-review/verification.json',JSON.stringify(report,null,2)+'\n');
+const artifactDirectory=resolved?'docs/reviews/2026-11-04/signature-handlers-review':'docs/reviews/2026-11-04/signature-delta-review';
+mkdirSync(artifactDirectory,{recursive:true});
+writeFileSync(join(artifactDirectory,resolved?'sql-verification.json':'verification.json'),JSON.stringify(report,null,2)+'\n');
 process.stdout.write(JSON.stringify({migrations:report.migrations,sqlSuites:report.sqlSuites,lateFailure:report.lateFailure,cleanupVerified:true})+'\n');

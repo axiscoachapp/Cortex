@@ -6,7 +6,7 @@
 
 [verification.json](verification.json): **93 testes aprovados, um ignorado, quatro arquivos**, zero falhas; fontes executáveis conferidas antes/depois. Exercitados `pades`, `signatureFlow`, `regulatedMedications` e `DocumentComposerModal`, com PKI e dados sintéticos. O código de `908c38d` inclui os quatro ajustes pedidos: cerca de tentativa também em ambiguous/terminal imutável, upload incerto para ambiguous e descoberta de candidato terminal, leitura de ByteRange e dose decimal com Cf. A regressão unitária dirigida passou. Classificação textual é conferência da regra interna do módulo, sem nova conclusão clínica/regulatória.
 
-**Zero suítes SQL, corridas de banco ou Auth nativo nesta rodada.** Os 47 SQL/771 testes relatados pelo Claude e as provas SQL anteriores continuam atribuídos às suas respectivas execuções; a leitura do delta não os substitui. A primeira tentativa de atestar testes incluiu o documento enquanto Claude o editava e foi descartada por mudança de hash. A rodada final atesta as fontes executáveis; o documento revisto é o commit v2 identificado acima.
+**A rodada unitária acima não executou SQL/corridas/Auth nativo.** Os 47 SQL/771 testes relatados pelo Claude e as provas SQL anteriores continuam atribuídos às suas respectivas execuções; a leitura do delta não os substitui. A primeira tentativa de atestar testes incluiu o documento enquanto Claude o editava e foi descartada por mudança de hash. A rodada final atesta as fontes executáveis; o documento revisto é o commit v2 identificado acima. O complemento SQL posterior tem execução e limites próprios abaixo.
 
 ## Ajustes necessários no desenho antes da cerca SQL
 
@@ -27,3 +27,15 @@ Reconciliação de `stored` não publica sem contexto humano validado. O prazo d
 Próximo: Claude ajusta esses pontos do desenho e envia o contrato fechado; Codex então entrega o helper/fixtures e atualiza o adaptador nativo junto, antes de Claude implementar a cerca SQL. A revisão SQL integral de `908c38d` ainda precisa do reteste dirigido e das corridas correspondentes. PersonalMed, SaaS e prontuários privados permanecem intactos.
 
 Revisão adversarial local desta resposta, contra o desenho congelado e o SQL atual, não encontrou exigência sem base ou outro erro concreto. Somente leitura estática; revisão externa dispensada conforme preferência do usuário.
+
+## Complemento SQL de 23:07 — resíduos corrigidos
+
+[sql-verification.json](sql-verification.json): snapshot `fae3884`, **69 migrations instaladas e três suítes SQL dirigidas aprovadas** (`digital-signature`, `reference-catalogs`, `document-snippets`), ensaio concorrente D17 congelado aprovado, hashes/cleanup verificados. Não é repetição das 47 suítes globais, do upgrade T33 ou do Auth nativo. Os 93 unitários anteriores não foram executados outra vez neste complemento.
+
+O probe próprio confirmou que `failed(attempt=1)` sobre a tentativa 2 em ambiguous recebe **P4094**, mantendo ambiguous/2/cleanup=false. Em stored recebe **22023**, mantendo stored/2/cleanup=false; não atribuir P4094 a esse segundo ramo. A suíte SQL também verifica encerramento pela tentativa atual, terminal sem reescrever código e descoberta do candidato terminal mesmo com a flag de limpeza falsa. O ensaio observa as duas ordens do upload/encerramento: encerramento espera o upload anterior, agenda/descobre limpeza; upload posterior ao encerramento é recusado. O controle que retira NOWAIT foi visto esperando, e as ordens RC/RR de exclusão e escrita clínica passaram.
+
+`--resolved` exige esses resultados e os vetores decimais Cf, salvando evidência separada. O modo histórico continua exigindo o contraexemplo e conserva seu relatório anterior. Leitura adversarial local do delta do executor sem achado concreto; sintaxe/ESLint aprovados. `lateFailureResolved=true` fecha o achado específico exercitado; `reviewResolved=false` conserva o limite de não aprovar todo D17 ou o desenho dos handlers. Nenhum arquivo SQL/helper do Claude foi editado.
+
+```text
+node scripts/test-signature-delta-review.mjs --resolved --source=fae38840f3cbaf59da0f33569763264612c4b7aa
+```
