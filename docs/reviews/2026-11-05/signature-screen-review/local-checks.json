@@ -1,0 +1,23 @@
+{
+  "reference": "91434e3",
+  "unit": {
+    "passed": 44,
+    "files": 4,
+    "uiClientCallbackPassed": 19,
+    "handlerPassed": 25,
+    "exitCodes": [0, 0]
+  },
+  "browser": {
+    "scenes": 6,
+    "positiveChecks": 3,
+    "functionalFindings": 3,
+    "mobilePolishFindings": 1,
+    "pageErrors": 0,
+    "fixedRevisionComponents": 5,
+    "exitCode": 0,
+    "fixtureServersAndBrowserClosed": true
+  },
+  "eslint": {"ownFiles": 2, "exitCode": 0},
+  "nodeSyntax": {"exitCode": 0},
+  "notRepeated": ["global unit suite", "build", "typecheck", "Deno", "SQL", "Native Auth matrix", "DER review"]
+}

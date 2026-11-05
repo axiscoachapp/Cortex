@@ -1,0 +1,60 @@
+{
+  "reference": "91434e3",
+  "syntheticOnly": true,
+  "scope": "real components/AuthProvider/SessionAssurance with fixture router and mocked HTTP; not PSC/hosted/SQL evidence",
+  "checks": [
+    "Ambiguous response requires confirmed human retry of same document/hash/operation, then refreshes signed status",
+    "Callback success keeps local navigation and sends completion once",
+    "Callback denied keeps local navigation and sends completion zero times"
+  ],
+  "observations": [
+    {
+      "case": "stranded psc_requested",
+      "calls": 3,
+      "sameOperation": true,
+      "confirmedRetryAvailable": false,
+      "humanRetrySent": false
+    },
+    {
+      "case": "375px document readability",
+      "horizontalOverflow": 0,
+      "textIntersections": 1,
+      "clippedControls": 0
+    },
+    {
+      "case": "configured server requires MFA for doctor without enrolled factor",
+      "clinicalShellAccessible": true,
+      "signingControls": 0,
+      "mfaRecoveryInstructions": 0
+    },
+    {
+      "case": "operation storage quota failure",
+      "calls": 2,
+      "distinctOperationIds": 2,
+      "serverRejectsSecondAsDifferentActiveOperation": true
+    }
+  ],
+  "pageErrors": [],
+  "sourceHashes": [
+    {
+      "path": "src/lib/signatureClient.ts",
+      "sha256": "07f5ee5d96ad05e04434392957ae38de71aee844f8e63a2ce88610db591dbce8"
+    },
+    {
+      "path": "src/components/SignatureControls.tsx",
+      "sha256": "d4741ca16658a982d3c521e1d9a131de61b422ac1db3de53b5b2999821680328"
+    },
+    {
+      "path": "src/hooks/useSignatureSession.ts",
+      "sha256": "3aa25b09826a10342a836635154c9b9940241fff7e50de9013f03cfd6f657eca"
+    },
+    {
+      "path": "src/components/PrescriptionList.tsx",
+      "sha256": "729a9abbbfd5e95e8a33acb4c247f36a959225095e5077cca1ab97abc867b553"
+    },
+    {
+      "path": "src/pages/SignatureReturn.tsx",
+      "sha256": "33f62af26bedf51885d4592ae2d7f5cf167c543a3e7e5609f3bb5d0050288bf2"
+    }
+  ]
+}
