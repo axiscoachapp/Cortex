@@ -1,0 +1,45 @@
+{
+  "syntheticOnly": true,
+  "unitTests": {
+    "newBoundaryTests": 35,
+    "authRegressionTests": 34,
+    "total": 69,
+    "files": 2,
+    "exitCode": 0,
+    "alsoIncludedInFinalSevenFileSelection": true
+  },
+  "initialRed": "35 cases failed because the new module did not exist; not a reproduced production exploit",
+  "deno": {
+    "version": "2.9.6",
+    "entrypoints": 1,
+    "offline": true,
+    "cachedOnly": true,
+    "exitCode": 0
+  },
+  "syntaxAndLintExitCode": 0,
+  "globalTypecheck": {
+    "exitCode": 1,
+    "failuresOnlyInClaudeSignatureHandlersTest": true,
+    "errors": 13,
+    "code": "TS2322"
+  },
+  "sources": [
+    {
+      "path": "scripts/prototypes/provisioning-confirmation-boundary.ts",
+      "sha256": "b890af969858f22edeffe7ba6daa4d98ed8c6183c30602e48641747d2e9f7793"
+    },
+    {
+      "path": "scripts/test-provisioning-confirmation-boundary.mjs",
+      "sha256": "d3c40ee6e3846c9d7ef8c6b00067419b5c25d2427fbefbddf80589364bc2d58f"
+    },
+    {
+      "path": "src/lib/provisioningConfirmationBoundary.test.ts",
+      "sha256": "a67b6952de7aa08e73e68fa3dff4ba55ee7e01a14d00005dce0da66bbfa13f6f"
+    },
+    {
+      "path": "supabase/functions/_shared/auth.ts",
+      "sha256": "7ad19b9c7173ea41a516a0d4018a3ad772b5a047fc9b47c6bfa6c4e10e09eeeb"
+    }
+  ],
+  "frontendBuildRepeated": false
+}

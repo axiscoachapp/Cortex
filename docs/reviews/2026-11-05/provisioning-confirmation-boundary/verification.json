@@ -1,0 +1,66 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "sourceBaseline": "fe407e31aebb93a68f19920237f045e4de49ee35",
+  "versions": [
+    {
+      "authVersion": "v2.197.0",
+      "migrations": 69,
+      "compositionAndBirthGroups": 27,
+      "reservationGroups": 5,
+      "confirmationGroups": 3,
+      "creationGroups": 3,
+      "serverBoundaryGroups": 4,
+      "nativeUserEndpointLookups": 16,
+      "confirmationSqlCalls": 7,
+      "cleanupVerified": true
+    },
+    {
+      "authVersion": "v2.189.0",
+      "migrations": 69,
+      "compositionAndBirthGroups": 27,
+      "reservationGroups": 5,
+      "confirmationGroups": 3,
+      "creationGroups": 3,
+      "serverBoundaryGroups": 4,
+      "nativeUserEndpointLookups": 16,
+      "confirmationSqlCalls": 7,
+      "cleanupVerified": true
+    }
+  ],
+  "totalGroups": 84,
+  "sameSourceManifestsAcrossVersions": true,
+  "finalSourceHashesVerified": true,
+  "nativeAuthUserEndpoint": true,
+  "sdkTransportShim": true,
+  "edgeHttpRouteTested": false,
+  "sameClinicAdminBHasOwnPositiveConfirmation": true,
+  "actorAndSessionPinTestedTogether": true,
+  "revocationBetweenAuthAndSqlPreservesIdentityAndReceipt": true,
+  "unitTests": {
+    "newBoundary": 35,
+    "authRegressions": 34,
+    "total": 69
+  },
+  "denoModuleOfflineExitCode": 0,
+  "syntaxAndLintExitCode": 0,
+  "globalTypecheck": {
+    "exitCode": 1,
+    "errors": 13,
+    "code": "TS2322",
+    "onlyPath": "src/lib/signatureHandlers.test.ts",
+    "owner": "Claude",
+    "reported": "2026-11-05-0736_codex-para-claude_der-valores-e-typecheck.md"
+  },
+  "review": {
+    "contractConcreteFindings": 0,
+    "codeConcreteFindings": 0,
+    "nativeQaCycles": 2,
+    "qaFindingFixed": "foreign actor lacked authority/own positive control; explicit same-clinic admin and own confirmation added",
+    "finalConcreteQaFindings": 0,
+    "externalReview": "dispensed by user"
+  },
+  "rootSqlSuitesOrFrontendBuildRepeated": false,
+  "productionAuthorizationImplemented": false,
+  "externalCalls": false
+}

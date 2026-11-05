@@ -64,6 +64,7 @@ export function installClinicSchema({sql,inputs,red}){
   const before=sql(body),site='exists(select 1 from auth.users where id=p_planned)';assert.equal(before.split(site).length,2);
   sql(inputs.creationProducer);assert.equal(sql(body),before.replace(site,'provision_identity_lab.target_exists(p_planned)'),'Creation changed authorization beyond the minimal reader');
  }
+ if(inputs.confirmationBoundary)sql(inputs.confirmationBoundary);
  assert.equal(columns(),beforeColumns,'Native Auth core columns/owners/table or column ACL/RLS flags changed');assert.equal(functions(),beforeFunctions,'Native identity helper definition or owner changed');
  assert.equal(enums(),beforeEnums,'Native Auth enum definition/owner/ACL changed');
  assert.equal(sql(clientReadsQuery),'t','Native Auth table or column became readable by a client role');
@@ -82,10 +83,10 @@ export function installClinicSchema({sql,inputs,red}){
  return {sourceBaseline:inputs.baseline,migrations:inputs.migrations.length,nativeCoreColumnsOwnersAndTableAclUnchanged:true,nativeIdentityHelpersUnchanged:true,
   nativeTablesUnavailableToClientRoles:true,nativeColumnAclUnchanged:true,nativeColumnAclControlPassed:true,nativeEnumsOwnersAndAclUnchanged:true,nativeTableRlsFlagsUnchanged:true,ledgerBindingsInstalled:!!inputs.ledger,birthProducerInstalled:!!inputs.birthProducer,
   ...(inputs.sessionFixture?{fixtureProjectionVerified:true,fixtureProjection:projection,bootstrapOverlaySha256:createHash('sha256').update(inputs.bootstrap).digest('hex')}:{}),
-  creationProducerInstalled:!!inputs.creationProducer,confirmationProducerInstalled:!!inputs.confirmationProducer,...(inputs.confirmationProducer?{confirmationAuthorizingBodyUnchanged:true}:{}),reservationKeysInstalled:!!inputs.reservationKeys,sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
+  confirmationBoundaryInstalled:!!inputs.confirmationBoundary,creationProducerInstalled:!!inputs.creationProducer,confirmationProducerInstalled:!!inputs.confirmationProducer,...(inputs.confirmationProducer?{confirmationAuthorizingBodyUnchanged:true}:{}),reservationKeysInstalled:!!inputs.reservationKeys,sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
 }
 
-export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,birthProducer,birthProducerRed,reservationCheck,reservationRed,confirmationCheck,confirmationRed,creationCheck,creationRed,creationInstalled,asyncHttp,pause,holderSession,restartAuth}){
+export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,birthProducer,birthProducerRed,reservationCheck,reservationRed,confirmationCheck,confirmationRed,creationCheck,creationRed,creationInstalled,boundaryCheck,boundaryFactory,asyncHttp,pause,holderSession,restartAuth}){
  const password=randomBytes(24).toString('hex');syntheticSecrets.push(password);
  const created=await call(auth,'/admin/users',adminJwt,{email:'clinic-authority@example.invalid',password,email_confirm:true});assert.equal(created.status,200);
  const login=await call(auth,'/token?grant_type=password',adminJwt,{email:'clinic-authority@example.invalid',password});assert.equal(login.status,200);
@@ -353,5 +354,6 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
  assert.equal(sql('select count(*) from public.staff_doctor_scopes'),'0');
  checks.push('Private composition stays absent from Data API and creates no target clinic/staff/chart memberships or scopes');
  assert.equal(checks.length,19+(ledger?4:0)+(birthProducer?4:0));
- return {...report,checks,compositionProofPassed:true,...reservation,...confirmation,...creation,...(ledger?{ledgerBindingsProofPassed:true}:{}),...(birthProducer?{birthProducerProofPassed:true}:{}),notCovered:[(creationCheck?'production creation API':'authority of reservation/intent INSERT')+(confirmationCheck?'; production confirmation API':' and human confirmation writers')+(reservationCheck?'':'; UUID reservation races'),'production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
+ const boundary=boundaryCheck?await boundaryCheck({auth,adminJwt,call,sql,syntheticSecrets,fixture,begin,birth,fresh,factory:boundaryFactory}):undefined;
+ return {...report,checks,compositionProofPassed:true,...reservation,...confirmation,...creation,...boundary,...(ledger?{ledgerBindingsProofPassed:true}:{}),...(birthProducer?{birthProducerProofPassed:true}:{}),notCovered:[(creationCheck?'production creation API':'authority of reservation/intent INSERT')+(confirmationCheck?'; production confirmation API':' and human confirmation writers')+(reservationCheck?'':'; UUID reservation races'),'production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
 }

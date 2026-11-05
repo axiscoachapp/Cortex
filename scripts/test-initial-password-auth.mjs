@@ -20,8 +20,9 @@ const birthProducer=process.argv.includes('--birth-producer'),birthProducerRed=p
 const reservationKeys=process.argv.includes('--reservation-keys'),reservationRed=process.argv.includes('--reservation-red');
 const confirmationProducer=process.argv.includes('--confirmation-producer'),confirmationRed=process.argv.includes('--confirmation-red');
 const creationProducer=process.argv.includes('--creation-producer'),creationRed=process.argv.includes('--creation-red');
+const confirmationBoundary=process.argv.includes('--confirmation-boundary');
 const clinicSourceArg=process.argv.slice(2).find(arg=>arg.startsWith('--source='));
-assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding', '--link', '--setup-cas','--provision-identity','--provision-intent','--provision-clinic','--red','--ledger','--session-fixture','--birth-producer','--birth-producer-red','--reservation-keys','--reservation-red','--confirmation-producer','--confirmation-red','--creation-producer','--creation-red'].includes(arg)||/^--source=[0-9a-f]{40}$/.test(arg)), 'Unknown lab option');
+assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding', '--link', '--setup-cas','--provision-identity','--provision-intent','--provision-clinic','--red','--ledger','--session-fixture','--birth-producer','--birth-producer-red','--reservation-keys','--reservation-red','--confirmation-producer','--confirmation-red','--creation-producer','--creation-red','--confirmation-boundary'].includes(arg)||/^--source=[0-9a-f]{40}$/.test(arg)), 'Unknown lab option');
 assert.ok([bindingMode, linkMode, setupMode,identityMode,intentMode,clinicMode].filter(Boolean).length <= 1, 'Choose one credential lab');
 assert.ok(!clinicRed||(clinicMode&&!process.argv.includes('--all')),'RED is a single clinic composition run');
 assert.ok(!ledgerMode||(clinicMode&&!clinicRed),'Ledger bindings extend only the composed clinic proof');
@@ -34,6 +35,7 @@ assert.ok(!confirmationProducer||(reservationKeys&&!reservationRed),'Confirmatio
 assert.ok(!confirmationRed||(confirmationProducer&&!process.argv.includes('--all')),'Confirmation RED is one explicit Native counterexample');
 assert.ok(!creationProducer||(confirmationProducer&&!confirmationRed),'Creation producer extends the confirmation proof');
 assert.ok(!creationRed||(creationProducer&&!process.argv.includes('--all')),'Creation RED is one explicit Native counterexample');
+assert.ok(!confirmationBoundary||(creationProducer&&!creationRed),'Server boundary extends the private creation proof');
 assert.ok(!clinicSourceArg||clinicMode,'Source snapshot belongs to the clinic lab');
 assert.ok(process.argv.slice(2).filter(arg=>arg.startsWith('--source=')).length<=1,'Choose one source snapshot');
 assert.ok(!(cleanupCheck && (process.argv.includes('--all') || bindingMode || linkMode || setupMode || identityMode || intentMode || clinicMode)), 'Choose normal lab or cleanup diagnostic');
@@ -44,8 +46,9 @@ const clinicPaths=['scripts/test-initial-password-auth.mjs','scripts/test-provis
 if(reservationKeys)clinicPaths.push('scripts/test-provisioning-reservation-keys.mjs',...(!reservationRed?['supabase/tests/prototypes/provisioning-reservation-keys.sql']:[]));
 if(confirmationProducer)clinicPaths.push('scripts/test-provisioning-confirmation-producer.mjs',...(!confirmationRed?['supabase/tests/prototypes/provisioning-confirmation-producer.sql']:[]));
 if(creationProducer)clinicPaths.push('scripts/test-provisioning-creation-producer.mjs',...(!creationRed?['supabase/tests/prototypes/provisioning-creation-producer.sql']:[]));
+if(confirmationBoundary)clinicPaths.push('scripts/test-provisioning-confirmation-boundary.mjs','scripts/prototypes/provisioning-confirmation-boundary.ts','supabase/functions/_shared/auth.ts','supabase/tests/prototypes/provisioning-confirmation-boundary.sql');
 const identitySources = (identityMode ? identityPaths : intentMode ? intentPaths : clinicMode?clinicPaths:[]).map(path => ({path,sha256:identityHash(path)}));
-let clinicInputs,clinicModule,reservationModule,confirmationModule,creationModule;
+let clinicInputs,clinicModule,reservationModule,confirmationModule,creationModule,boundaryModule,boundaryFactory;
 if(clinicMode){
  const git=args=>{const r=spawnSync('git',args,{encoding:'utf8',windowsHide:true,maxBuffer:24*1024*1024});assert.equal(r.status,0,'Clinic snapshot unavailable');return r.stdout;};
  const baseline=git(['rev-parse',clinicSourceArg?.slice(9)||'HEAD']).trim();assert.match(baseline,/^[0-9a-f]{40}$/);
@@ -57,11 +60,19 @@ if(clinicMode){
   birthProducer:birthProducer&&!birthProducerRed?readFileSync('supabase/tests/prototypes/provisioning-birth-producer.sql','utf8'):null,
   reservationKeys:reservationKeys&&!reservationRed?readFileSync('supabase/tests/prototypes/provisioning-reservation-keys.sql','utf8'):null,
   confirmationProducer:confirmationProducer&&!confirmationRed?readFileSync('supabase/tests/prototypes/provisioning-confirmation-producer.sql','utf8'):null,
-  creationProducer:creationProducer&&!creationRed?readFileSync('supabase/tests/prototypes/provisioning-creation-producer.sql','utf8'):null};
+  creationProducer:creationProducer&&!creationRed?readFileSync('supabase/tests/prototypes/provisioning-creation-producer.sql','utf8'):null,
+  confirmationBoundary:confirmationBoundary?readFileSync('supabase/tests/prototypes/provisioning-confirmation-boundary.sql','utf8'):null};
  clinicModule=await import('data:text/javascript;base64,'+Buffer.from(readFileSync('scripts/test-provisioning-clinic-authority.mjs','utf8')).toString('base64'));
  if(reservationKeys)reservationModule=await import('data:text/javascript;base64,'+Buffer.from(readFileSync('scripts/test-provisioning-reservation-keys.mjs','utf8')).toString('base64'));
  if(confirmationProducer)confirmationModule=await import('data:text/javascript;base64,'+Buffer.from(readFileSync('scripts/test-provisioning-confirmation-producer.mjs','utf8')).toString('base64'));
  if(creationProducer)creationModule=await import('data:text/javascript;base64,'+Buffer.from(readFileSync('scripts/test-provisioning-creation-producer.mjs','utf8')).toString('base64'));
+ if(confirmationBoundary){
+  boundaryModule=await import('data:text/javascript;base64,'+Buffer.from(readFileSync('scripts/test-provisioning-confirmation-boundary.mjs','utf8')).toString('base64'));
+  const {default:ts}=await import('typescript');
+  const compile=path=>ts.transpileModule(readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+  const authSource=compile('supabase/functions/_shared/auth.ts'),boundarySource=compile('scripts/prototypes/provisioning-confirmation-boundary.ts');
+  boundaryFactory=createClient=>boundaryModule.loadConfirmationBoundary({authSource,boundarySource,createClient});
+ }
 }
 const postgresImage = 'pgvector/pgvector:pg16';
 const restImage = 'public.ecr.aws/supabase/postgrest:v16.5';
@@ -227,7 +238,7 @@ for (const { version, fault } of runs) {
         : setupMode ? (await import('./test-initial-setup-cas.mjs')).exerciseInitialSetupCas
         : (await import('./test-single-use-setup.mjs')).exerciseSingleUseSetup;
       report = await exercise({ auth, rest, adminJwt, version, call, sql, asyncHttp, restartAuth: extra => restartAuth({ ...(bindingMode ? hookEnv : {}), ...extra }),
-        pause, syntheticSecrets,preparation:clinicPreparation,red:clinicRed,ledger:ledgerMode,birthProducer,birthProducerRed,reservationCheck:reservationModule?.exerciseReservationKeys,reservationRed,confirmationCheck:confirmationModule?.exerciseConfirmationProducer,confirmationRed,creationCheck:creationModule?.exerciseCreationProducer,creationRed,creationInstalled:!!clinicInputs?.creationProducer,holderSession: () => {
+        pause, syntheticSecrets,preparation:clinicPreparation,red:clinicRed,ledger:ledgerMode,birthProducer,birthProducerRed,reservationCheck:reservationModule?.exerciseReservationKeys,reservationRed,confirmationCheck:confirmationModule?.exerciseConfirmationProducer,confirmationRed,creationCheck:creationModule?.exerciseCreationProducer,creationRed,creationInstalled:!!clinicInputs?.creationProducer,boundaryCheck:boundaryModule?.exerciseConfirmationBoundary,boundaryFactory,holderSession: () => {
           const child = spawn('docker', dockerArgs(['exec', '-i', names.db, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1']), { env: dockerEnvironment, windowsHide: true });
           observeChild(child); child.stderr.resume(); return child;
         } });
@@ -418,7 +429,7 @@ for (const { version, fault } of runs) {
   if (failure) {
     if(clinicMode&&failure.receiptEvidence){
       for(const source of identitySources)assert.equal(identityHash(source.path),source.sha256,'Receipt RED source changed');
-      const artifacts=resolve(creationProducer?'docs/reviews/2026-11-05/provisioning-creation-producer':confirmationProducer?'docs/reviews/2026-11-05/provisioning-confirmation-producer':reservationKeys?'docs/reviews/2026-11-05/provisioning-reservation-keys':birthProducer?'docs/reviews/2026-11-05/native-birth-producer':sessionFixture?'docs/reviews/2026-11-05/native-session-fixture':'docs/reviews/2026-11-04/'+(ledgerMode?'provisioning-ledger-bindings':'provisioning-clinic-authority'));mkdirSync(artifacts,{recursive:true});
+      const artifacts=resolve(confirmationBoundary?'docs/reviews/2026-11-05/provisioning-confirmation-boundary':creationProducer?'docs/reviews/2026-11-05/provisioning-creation-producer':confirmationProducer?'docs/reviews/2026-11-05/provisioning-confirmation-producer':reservationKeys?'docs/reviews/2026-11-05/provisioning-reservation-keys':birthProducer?'docs/reviews/2026-11-05/native-birth-producer':sessionFixture?'docs/reviews/2026-11-05/native-session-fixture':'docs/reviews/2026-11-04/'+(ledgerMode?'provisioning-ledger-bindings':'provisioning-clinic-authority'));mkdirSync(artifacts,{recursive:true});
       const evidence={...failure.receiptEvidence,sources:identitySources,cleanupVerified:ownedCleanupVerified};
       writeFileSync(resolve(artifacts,'RECEIPT_RED-'+version+'.json'),JSON.stringify(evidence,null,2)+'\n');process.stdout.write(JSON.stringify(evidence,null,2)+'\n');
     }
@@ -433,7 +444,7 @@ for (const { version, fault } of runs) {
   report.cleanupVerified = true;
   report.localDockerEndpoint = dockerEndpoint.startsWith('npipe:') ? 'verified local named pipe' : 'verified local Unix socket';
   report.network = 'owned internal network, no published ports or external route';
-  const artifacts = resolve(creationProducer?'docs/reviews/2026-11-05/provisioning-creation-producer':confirmationProducer?'docs/reviews/2026-11-05/provisioning-confirmation-producer':reservationKeys?'docs/reviews/2026-11-05/provisioning-reservation-keys':birthProducer?'docs/reviews/2026-11-05/native-birth-producer':sessionFixture?'docs/reviews/2026-11-05/native-session-fixture':'docs/reviews/2026-11-04/' + (ledgerMode?'provisioning-ledger-bindings':clinicMode?'provisioning-clinic-authority':intentMode ? 'provisioning-human-intent' : identityMode ? 'provisioning-auth-identity' : setupMode ? 'initial-setup-cas' : linkMode ? 'single-use-setup' : bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
+  const artifacts = resolve(confirmationBoundary?'docs/reviews/2026-11-05/provisioning-confirmation-boundary':creationProducer?'docs/reviews/2026-11-05/provisioning-creation-producer':confirmationProducer?'docs/reviews/2026-11-05/provisioning-confirmation-producer':reservationKeys?'docs/reviews/2026-11-05/provisioning-reservation-keys':birthProducer?'docs/reviews/2026-11-05/native-birth-producer':sessionFixture?'docs/reviews/2026-11-05/native-session-fixture':'docs/reviews/2026-11-04/' + (ledgerMode?'provisioning-ledger-bindings':clinicMode?'provisioning-clinic-authority':intentMode ? 'provisioning-human-intent' : identityMode ? 'provisioning-auth-identity' : setupMode ? 'initial-setup-cas' : linkMode ? 'single-use-setup' : bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
   mkdirSync(artifacts, { recursive: true });
   writeFileSync(resolve(artifacts, (clinicRed||birthProducerRed||reservationRed||confirmationRed||creationRed?'RED-':'')+version + '.json'), JSON.stringify(report, null, 2) + '\n');
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');
