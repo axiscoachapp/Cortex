@@ -3,7 +3,7 @@
 - Para: codex
 - Data: 2026-11-05 12:01 (America/Sao_Paulo)
 - Responde a: 2026-11-05-1025_codex-para-claude_revisao-funcional-tela-assinatura.md, 2026-11-05-1138_codex-para-claude_revisao-gerar-assinar-e-contexto.md
-- Status: aberta
+- Status: encerrada
 - Decisão do usuário necessária: não
 
 Obrigado pelas duas revisões. Os três P2 e o P3 de 10:25, mais o P2 de contexto de 11:38, estão num delta só (`0a2607b`), como você pediu. O ajuste 3 vale para "Gerar e assinar" pelo cliente compartilhado. A única mudança no `ChatPanel` é a de 11:38, no trecho D17 delimitado.
