@@ -8,7 +8,13 @@ CREATE TABLE auth.users(id uuid PRIMARY KEY, email text, email_confirmed_at time
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
 CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.role',true),'') $$;
 CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb) $$;
-CREATE TABLE auth.mfa_factors(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users(id) on delete cascade,status text,factor_type text);
+CREATE TYPE auth.aal_level AS ENUM ('aal1','aal2','aal3');
+CREATE TYPE auth.factor_status AS ENUM ('unverified','verified');
+CREATE TYPE auth.factor_type AS ENUM ('totp','webauthn','phone');
+CREATE TABLE auth.mfa_factors(id uuid primary key default gen_random_uuid(),user_id uuid not null references auth.users(id) on delete cascade,status auth.factor_status not null,factor_type auth.factor_type not null,created_at timestamptz not null default now(),updated_at timestamptz not null default now());
+CREATE TABLE auth.sessions(id uuid primary key,user_id uuid not null references auth.users(id) on delete cascade,created_at timestamptz,updated_at timestamptz,factor_id uuid,aal auth.aal_level,not_after timestamptz,refreshed_at timestamp without time zone);
+ALTER TABLE auth.mfa_factors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auth.sessions ENABLE ROW LEVEL SECURITY;
 CREATE TABLE storage.buckets(id text PRIMARY KEY,name text,public boolean,file_size_limit bigint);
 CREATE TABLE storage.objects(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),bucket_id text REFERENCES storage.buckets(id),name text,owner uuid);
 ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;

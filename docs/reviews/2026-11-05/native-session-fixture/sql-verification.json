@@ -1,0 +1,373 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "26a927292865a93d1cdd2f958aaf9854d5d98d3e",
+  "migrations": 69,
+  "sqlSuites": [
+    "supabase/tests/auth-session-fixture.test.sql",
+    "supabase/tests/calendar-sync.test.sql",
+    "supabase/tests/clinical-integrity.test.sql",
+    "supabase/tests/clinical-workspace.test.sql",
+    "supabase/tests/clinical.test.sql",
+    "supabase/tests/controlled-prescription.test.sql",
+    "supabase/tests/digital-signature.test.sql",
+    "supabase/tests/document-snippets.test.sql",
+    "supabase/tests/encounter-completion.test.sql",
+    "supabase/tests/legacy-deletion.test.sql",
+    "supabase/tests/medication-reconciliation.test.sql",
+    "supabase/tests/operation-controls.test.sql",
+    "supabase/tests/patient-conversations.test.sql",
+    "supabase/tests/patient-registration.test.sql",
+    "supabase/tests/prescriber-contact.test.sql",
+    "supabase/tests/privacy-integrity.test.sql",
+    "supabase/tests/proposal-acceptance.test.sql",
+    "supabase/tests/reception-access.test.sql",
+    "supabase/tests/reception-admin-scopes.test.sql",
+    "supabase/tests/reception-appointment-changes.test.sql",
+    "supabase/tests/reception-appointment-identity.test.sql",
+    "supabase/tests/reception-authenticated-scope-cut.test.sql",
+    "supabase/tests/reception-calendar.test.sql",
+    "supabase/tests/reception-clinic-boundary.test.sql",
+    "supabase/tests/reception-contact-corrections.test.sql",
+    "supabase/tests/reception-delegation-decisions.test.sql",
+    "supabase/tests/reception-delegation-requests.test.sql",
+    "supabase/tests/reception-deletion-barrier.test.sql",
+    "supabase/tests/reception-deletion-custody.test.sql",
+    "supabase/tests/reception-directory.test.sql",
+    "supabase/tests/reception-function-boundaries.test.sql",
+    "supabase/tests/reception-legacy-array-guard.test.sql",
+    "supabase/tests/reception-legacy-scope-identity.test.sql",
+    "supabase/tests/reception-link-confirmation.test.sql",
+    "supabase/tests/reception-link-corrections.test.sql",
+    "supabase/tests/reception-provisioning-requests.test.sql",
+    "supabase/tests/reception-scope-lifecycle.test.sql",
+    "supabase/tests/reception-staff-lifecycle.test.sql",
+    "supabase/tests/reception-workflow.test.sql",
+    "supabase/tests/reference-catalogs.test.sql",
+    "supabase/tests/reviewed-knowledge.test.sql",
+    "supabase/tests/security-lifecycle.test.sql",
+    "supabase/tests/security.test.sql",
+    "supabase/tests/session-assurance.test.sql",
+    "supabase/tests/shared-protocols.test.sql",
+    "supabase/tests/sharing.test.sql",
+    "supabase/tests/storage-parent-liveness.test.sql",
+    "supabase/tests/workspace-directory.test.sql"
+  ],
+  "sqlSourceDigest": "e46d3810a0c828879c262a036737f28c01946ec7ffc842ef25e728c2ea3745c8",
+  "helperSha256": "8a6ff1dea0e0ca9ca2c85bbb7c193fb0e78b17747056022fe272cf7ac1575ad0",
+  "regulatedSourceSha256": "959798790a7e58cc4ac2bbe696b1c26de13df7e9545cbeca7b93a350a9760390",
+  "ownSources": [
+    {
+      "path": "scripts/test-signature-delta-review.mjs",
+      "sha256": "bc4ff9fecac032a5062a98ecb0c4ee7ae6aac65f4c4d5c169124e216d4336a05"
+    },
+    {
+      "path": "supabase/tests/prototypes/signature-late-failure.sql",
+      "sha256": "da0dcb6498e7157b8ea5b3dc47a25d71f66f9ad7ad27bf25df8aadc64d124cc6"
+    },
+    {
+      "path": "supabase/tests/bootstrap.sql",
+      "sha256": "41750e297ffb18f256ccde334bd6773799be6ad0c5d2cb6c3a6885a25b6aefbe"
+    },
+    {
+      "path": "supabase/tests/auth-session-fixture.test.sql",
+      "sha256": "0d3a79b13e70ef0eb1b668437aff04204e0664c59e72b0a24f1fe9396bb77be4"
+    },
+    {
+      "path": "scripts/test-provisioning-clinic-authority.mjs",
+      "sha256": "7d180f72d880f766997bbafa203e898eeed4b32271d8f41b0e07cfa1f39a223a"
+    }
+  ],
+  "detectorPriorBaseline": "7f699c4ddc08bdaab24d939c877a053c06a96637",
+  "detectorProbes": [
+    {
+      "input": "Clonazepam​SOS 2 mg",
+      "prior": [],
+      "current": [
+        {
+          "substance": "clonazepam",
+          "list": "B1",
+          "form": "notificacao_b"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Amoxicilina​VO 500 mg",
+      "prior": [],
+      "current": [],
+      "antimicrobials": [
+        "amoxicilina"
+      ]
+    },
+    {
+      "input": "Clonaze­pam​SOS",
+      "prior": [],
+      "current": [
+        {
+          "substance": "clonazepam",
+          "list": "B1",
+          "form": "notificacao_b"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Rivo­tril​SOS",
+      "prior": [],
+      "current": [
+        {
+          "substance": "clonazepam",
+          "list": "B1",
+          "form": "notificacao_b"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Ácido​val­proico​VO",
+      "prior": [],
+      "current": [
+        {
+          "substance": "acido valproico",
+          "list": "C1",
+          "form": "receita_controle_especial"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Cipro­floxacina​500mg",
+      "prior": [],
+      "current": [],
+      "antimicrobials": [
+        "ciprofloxacino"
+      ]
+    },
+    {
+      "input": "Tramadol 1​50 mg",
+      "prior": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "current": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Tramadol 150​.0 mg",
+      "prior": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "current": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Tramadol 150.​0 mg",
+      "prior": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "current": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Tramadol 150​,0 mg",
+      "prior": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "current": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Tramadol 150.0 mg",
+      "prior": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "current": [
+        {
+          "substance": "tramadol",
+          "list": "A2",
+          "form": "notificacao_a",
+          "note": "acima de 100 mg por unidade"
+        }
+      ],
+      "antimicrobials": []
+    },
+    {
+      "input": "Clonazepamsos",
+      "prior": [],
+      "current": [],
+      "antimicrobials": []
+    },
+    {
+      "input": "Clona zepam",
+      "prior": [],
+      "current": [],
+      "antimicrobials": []
+    }
+  ],
+  "lateFailure": [
+    {
+      "cleanup": false,
+      "refusal": "P4094",
+      "attempts": 2,
+      "destination": "ambiguous",
+      "resulting_state": "ambiguous"
+    },
+    {
+      "cleanup": false,
+      "refusal": "22023",
+      "attempts": 2,
+      "destination": "stored",
+      "resulting_state": "stored"
+    }
+  ],
+  "signatureConcurrencyPassed": true,
+  "fullSqlMatrixRun": false,
+  "allSqlSuitesRun": true,
+  "lateFailureResolved": true,
+  "reviewResolved": false,
+  "ownedInternalNetwork": true,
+  "publishedPorts": false,
+  "fixtureProjectionVerified": true,
+  "fixtureProjection": [
+    {
+      "type": "timestamp with time zone",
+      "table": "mfa_factors",
+      "column": "created_at",
+      "nullable": false
+    },
+    {
+      "type": "auth.factor_type",
+      "table": "mfa_factors",
+      "column": "factor_type",
+      "nullable": false
+    },
+    {
+      "type": "uuid",
+      "table": "mfa_factors",
+      "column": "id",
+      "nullable": false
+    },
+    {
+      "type": "auth.factor_status",
+      "table": "mfa_factors",
+      "column": "status",
+      "nullable": false
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "mfa_factors",
+      "column": "updated_at",
+      "nullable": false
+    },
+    {
+      "type": "uuid",
+      "table": "mfa_factors",
+      "column": "user_id",
+      "nullable": false
+    },
+    {
+      "type": "auth.aal_level",
+      "table": "sessions",
+      "column": "aal",
+      "nullable": true
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "sessions",
+      "column": "created_at",
+      "nullable": true
+    },
+    {
+      "type": "uuid",
+      "table": "sessions",
+      "column": "factor_id",
+      "nullable": true
+    },
+    {
+      "type": "uuid",
+      "table": "sessions",
+      "column": "id",
+      "nullable": false
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "sessions",
+      "column": "not_after",
+      "nullable": true
+    },
+    {
+      "type": "timestamp without time zone",
+      "table": "sessions",
+      "column": "refreshed_at",
+      "nullable": true
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "sessions",
+      "column": "updated_at",
+      "nullable": true
+    },
+    {
+      "type": "uuid",
+      "table": "sessions",
+      "column": "user_id",
+      "nullable": false
+    }
+  ],
+  "fixtureColumnAclNegativeControlPassed": true,
+  "bootstrapOverlaySha256": "41750e297ffb18f256ccde334bd6773799be6ad0c5d2cb6c3a6885a25b6aefbe",
+  "fixtureStatementTimeoutSeconds": 45,
+  "cleanupVerified": true
+}

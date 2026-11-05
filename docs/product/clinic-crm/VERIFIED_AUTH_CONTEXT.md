@@ -8,4 +8,4 @@ O modo estrito exige usuário e session_id em formato UUID, papel authenticated,
 
 Essa é extração autenticada de contexto, **não autorização atômica**. O handler D17 ainda exige AAL2 e sua margem operacional; SQL ainda deve cercar sessão/fator atuais, conta/recursos e relógio no ponto autorizativo. Um contexto que era válido pode expirar ou ser revogado depois do retorno. Não confiar em valores reenviados pelo cliente.
 
-Nesta fatia o helper foi entregue e testado; fixtures `auth.sessions`/MFA e adaptação do bootstrap nativo são o incremento seguinte, juntos. Nenhum schema, migration ou tipo Supabase gerado mudou. Os dois casos de CAS/replay enviados ao Claude às 23:29 continuam exigidos nos testes SQL da assinatura.
+O helper foi entregue em `7b02644`. Em 05/11, as [fixtures `auth.sessions`/MFA e o adaptador Native](AUTH_SESSION_FIXTURES.md) foram acrescentados juntos, sem migration de produção nem tipo Supabase gerado novo. Os dois casos de CAS/replay enviados ao Claude às 23:29 estão no contrato D17 v3.1; a implementação/prova da cerca SQL continua separada.

@@ -8,8 +8,8 @@ import {pathToFileURL} from 'node:url';
 import ts from 'typescript';
 
 // A bounded review, never a production test target or a global GREEN verdict.
-const options=process.argv.slice(2),resolved=options.includes('--resolved');
-assert.ok(options.every(a=>a==='--resolved'||/^--source=[0-9a-f]{40}$/.test(a))&&new Set(options).size===options.length);
+const options=process.argv.slice(2),authFixture=options.includes('--auth-fixture'),resolved=options.includes('--resolved')||authFixture;
+assert.ok(options.every(a=>a==='--resolved'||a==='--auth-fixture'||/^--source=[0-9a-f]{40}$/.test(a))&&new Set(options).size===options.length);
 const sourceArgs=options.filter(a=>a.startsWith('--source='));assert.ok(sourceArgs.length<=1);
 assert.ok(!process.env.DOCKER_HOST,'Refusing inherited Docker target');
 const required=r=>{assert.equal(r.status,0,r.stderr||r.error?.message);return r.stdout.trim();};
@@ -20,9 +20,22 @@ const get=path=>git(['show',baseline+':'+path]);
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const runnerPath='scripts/test-signature-delta-review.mjs',probePath='supabase/tests/prototypes/signature-late-failure.sql';
 const runnerHash=hash(readFileSync(runnerPath)),probe=readFileSync(probePath,'utf8');
+const fixturePaths=authFixture?['supabase/tests/bootstrap.sql','supabase/tests/auth-session-fixture.test.sql','scripts/test-provisioning-clinic-authority.mjs']:[];
+const fixtureSources=fixturePaths.map(path=>({path,sha256:hash(readFileSync(path))}));
 const migrations=git(['ls-tree','-r','--name-only',baseline,'--','supabase/migrations']).split('\n').filter(p=>p.endsWith('.sql')).sort().map(path=>({path,source:get(path)}));
-const suites=['supabase/tests/digital-signature.test.sql','supabase/tests/reference-catalogs.test.sql','supabase/tests/document-snippets.test.sql'].map(path=>({path,source:get(path)}));
-const bootstrap=get('supabase/tests/bootstrap.sql'),helper=get('scripts/test-signature-concurrency.mjs');
+const suitePaths=authFixture?git(['ls-tree','-r','--name-only',baseline,'--','supabase/tests']).split('\n').filter(p=>/^supabase\/tests\/[^/]+\.test\.sql$/.test(p))
+ :['supabase/tests/digital-signature.test.sql','supabase/tests/reference-catalogs.test.sql','supabase/tests/document-snippets.test.sql'];
+const suites=suitePaths.filter(p=>!authFixture||p!=='supabase/tests/auth-session-fixture.test.sql').map(path=>({path,source:get(path)}));
+if(authFixture)suites.push({path:'supabase/tests/auth-session-fixture.test.sql',source:readFileSync('supabase/tests/auth-session-fixture.test.sql','utf8')});
+suites.sort((a,b)=>a.path.localeCompare(b.path));
+const bootstrap=authFixture?readFileSync('supabase/tests/bootstrap.sql','utf8'):get('supabase/tests/bootstrap.sql'),helper=get('scripts/test-signature-concurrency.mjs');
+const fixtureModule=authFixture?await import('data:text/javascript;base64,'+Buffer.from(readFileSync('scripts/test-provisioning-clinic-authority.mjs','utf8')).toString('base64')):null;
+if(authFixture){
+ for(const source of [bootstrap,get('supabase/tests/bootstrap.sql')])assert.ok(!/CREATE (?:TABLE|TYPE) auth\./.test(fixtureModule.nativeApplicationBootstrap(source)));
+ const declaration="CREATE TYPE auth.aal_level AS ENUM ('aal1','aal2','aal3');";
+ assert.throws(()=>fixtureModule.nativeApplicationBootstrap(bootstrap.replace(declaration,'')));
+ assert.throws(()=>fixtureModule.nativeApplicationBootstrap(bootstrap+'\n'+declaration));
+}
 const regulatedPath='supabase/functions/_shared/regulatedMedications.ts',regulated=get(regulatedPath);
 const moduleOf=async source=>import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText).toString('base64'));
 const current=await moduleOf(regulated),prior=await moduleOf(git(['show','7f699c4:supabase/functions/_shared/regulatedMedications.ts']));
@@ -40,7 +53,7 @@ process.env.DOCKER_HOST=context;
 for(const key of ['DOCKER_CONTEXT','DOCKER_TLS_VERIFY','DOCKER_CERT_PATH'])delete process.env[key];
 const docker=(args,input)=>raw('docker',['--host',context,...args],input);
 const owner=randomUUID(),container='cortex-signature-review-'+owner.slice(0,8),network=container+'-internal';
-const sql=source=>required(docker(['exec','-i',container,'psql','-U','postgres','-qAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose'],"set statement_timeout='15s';set lock_timeout='3s';"+source));
+const sql=source=>required(docker(['exec','-i',container,'psql','-U','postgres','-qAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose'],`set statement_timeout='${authFixture?45:15}s';set lock_timeout='3s';`+source));
 let containerPlanned=false,networkPlanned=false,failure,report,directory,helperPath;
 try{
  directory=mkdtempSync(join(tmpdir(),'cortex-signature-review-'));helperPath=join(directory,'signature.mjs');writeFileSync(helperPath,helper);
@@ -49,7 +62,19 @@ try{
  containerPlanned=true;required(docker(['run','--detach','--pull=never','--name',container,'--network',network,'--label','cortex.test.owner='+owner,'--env','POSTGRES_HOST_AUTH_METHOD=trust','pgvector/pgvector:pg16']));
  let ready=false;for(let n=0;n<60;n++){if(docker(['exec',container,'pg_isready','-h','127.0.0.1','-U','postgres']).status===0){ready=true;break;}await new Promise(r=>setTimeout(r,300));}assert.ok(ready);
  sql(bootstrap);for(const {source} of migrations)sql(source);
+ const fixtureProjection=authFixture?fixtureModule.assertAuthFixtureProjection(sql):undefined;
  for(const {path,source} of suites){sql(source);process.stdout.write('Passed '+path+'\n');}
+ if(authFixture){
+  // A preexisting column grant must fail the probe; its temporary positive
+  // control must never erase that grant and turn the negative check green.
+  const probe=suites.find(s=>s.path==='supabase/tests/auth-session-fixture.test.sql').source;
+  const poisoned=probe.replace('\nbegin;','\nbegin;\ngrant select(id) on auth.sessions to service_role;');
+  assert.notEqual(poisoned,probe,'Fixture ACL fault was not injected');
+  const fault=docker(['exec','-i',container,'psql','-U','postgres','-qAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose'],"set statement_timeout='15s';set lock_timeout='3s';"+poisoned);
+  assert.notEqual(fault.status,0,'Fixture accepted a preexisting Auth column grant');
+  assert.match(fault.stderr,/P0004: Client received Auth column privileges/,'Unexpected fixture ACL fault');
+  assert.equal(sql("select has_any_column_privilege('service_role','auth.sessions','select')"),'f','Fixture fault did not roll back');
+ }
  const lateFailure=JSON.parse(sql(probe));
  assert.equal(lateFailure.length,2);
  // Historical mode pins the counterexample; resolved mode requires the
@@ -61,9 +86,10 @@ try{
  await testSignatureConcurrency(container);
  report={syntheticOnly:true,sourceBaseline:baseline,migrations:migrations.length,sqlSuites:suites.map(s=>s.path),
   sqlSourceDigest:hash([bootstrap,...migrations.map(m=>m.source),...suites.map(s=>s.source)].join('\n')),
-  helperSha256:hash(helper),regulatedSourceSha256:hash(regulated),ownSources:[{path:runnerPath,sha256:runnerHash},{path:probePath,sha256:hash(probe)}],
+  helperSha256:hash(helper),regulatedSourceSha256:hash(regulated),ownSources:[{path:runnerPath,sha256:runnerHash},{path:probePath,sha256:hash(probe)},...fixtureSources],
   detectorPriorBaseline:git(['rev-parse','7f699c4']),detectorProbes,lateFailure,signatureConcurrencyPassed:true,
-  fullSqlMatrixRun:false,lateFailureResolved:resolved,reviewResolved:false,ownedInternalNetwork:true,publishedPorts:false};
+  fullSqlMatrixRun:false,allSqlSuitesRun:authFixture,lateFailureResolved:resolved,reviewResolved:false,ownedInternalNetwork:true,publishedPorts:false,
+  ...(authFixture?{fixtureProjectionVerified:true,fixtureProjection,fixtureColumnAclNegativeControlPassed:true,bootstrapOverlaySha256:hash(bootstrap),fixtureStatementTimeoutSeconds:45}:{} )};
 }catch(error){failure=error;}finally{
  for(const [kind,name,planned] of [['container',container,containerPlanned],['network',network,networkPlanned]]){
   if(!planned)continue;
@@ -79,8 +105,9 @@ try{
 if(failure)throw failure;
 assert.equal(hash(readFileSync(runnerPath)),runnerHash,'Runner changed during execution');
 assert.equal(hash(readFileSync(probePath,'utf8')),hash(probe),'Probe changed during execution');
+for(const source of fixtureSources)assert.equal(hash(readFileSync(source.path)),source.sha256,'Fixture source changed during execution');
 report.cleanupVerified=true;
-const artifactDirectory=resolved?'docs/reviews/2026-11-04/signature-handlers-review':'docs/reviews/2026-11-04/signature-delta-review';
+const artifactDirectory=authFixture?'docs/reviews/2026-11-05/native-session-fixture':resolved?'docs/reviews/2026-11-04/signature-handlers-review':'docs/reviews/2026-11-04/signature-delta-review';
 mkdirSync(artifactDirectory,{recursive:true});
 writeFileSync(join(artifactDirectory,resolved?'sql-verification.json':'verification.json'),JSON.stringify(report,null,2)+'\n');
 process.stdout.write(JSON.stringify({migrations:report.migrations,sqlSuites:report.sqlSuites,lateFailure:report.lateFailure,cleanupVerified:true})+'\n');

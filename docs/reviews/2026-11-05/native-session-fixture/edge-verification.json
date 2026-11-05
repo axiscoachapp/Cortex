@@ -1,0 +1,195 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "26a927292865a93d1cdd2f958aaf9854d5d98d3e",
+  "denoVersion": "2.9.6",
+  "denoOptions": [
+    "check",
+    "--cached-only",
+    "--no-config"
+  ],
+  "entrypoints": [
+    "supabase/functions/analyze-document/index.ts",
+    "supabase/functions/chat-assistant/index.ts",
+    "supabase/functions/create-clinic-doctor/index.ts",
+    "supabase/functions/create-clinic-receptionist/index.ts",
+    "supabase/functions/create-template-ai/index.ts",
+    "supabase/functions/delete-patient/index.ts",
+    "supabase/functions/delete-user-data/index.ts",
+    "supabase/functions/discard-consultation/index.ts",
+    "supabase/functions/export-user-data/index.ts",
+    "supabase/functions/finalize-consultation/index.ts",
+    "supabase/functions/generate-document/index.ts",
+    "supabase/functions/generate-prebriefing/index.ts",
+    "supabase/functions/generate-prescription/index.ts",
+    "supabase/functions/google-oauth-callback/index.ts",
+    "supabase/functions/google-oauth-start/index.ts",
+    "supabase/functions/ingest-knowledge/index.ts",
+    "supabase/functions/live-copilot/index.ts",
+    "supabase/functions/process-clinical-notes/index.ts",
+    "supabase/functions/process-comment/index.ts",
+    "supabase/functions/refresh-medication-catalog/index.ts",
+    "supabase/functions/refresh-reference-catalogs/index.ts",
+    "supabase/functions/send-appointment-reminder/index.ts",
+    "supabase/functions/shared-patient-file/index.ts",
+    "supabase/functions/suggest-questions/index.ts",
+    "supabase/functions/sync-google-calendar/index.ts",
+    "supabase/functions/transcribe-consultation/index.ts",
+    "supabase/functions/validate-prescription/index.ts"
+  ],
+  "denoExitCode": 0,
+  "unitFiles": 4,
+  "unitPassed": 62,
+  "unitSkipped": 1,
+  "unitExitCode": 0,
+  "frontendBuildRun": false,
+  "sources": [
+    {
+      "path": "supabase/functions/analyze-document/index.ts",
+      "sha256": "e8af2e79488dfeb92256d50d0ed5c0021f85cdb5aa398bcc02d0c37957ec98cd"
+    },
+    {
+      "path": "supabase/functions/chat-assistant/index.ts",
+      "sha256": "189b7dd596de77dda91f8974ff445766382b13ab407a8ff9711020645ff582e0"
+    },
+    {
+      "path": "supabase/functions/create-clinic-doctor/index.ts",
+      "sha256": "c0250d1d0c97a6b8e4eb048c8c7cb4f3b586447b98993f1fef32213cb91f7e32"
+    },
+    {
+      "path": "supabase/functions/create-clinic-receptionist/index.ts",
+      "sha256": "4a23bab04db158d08376a7181f066ef1069dcbf264ef8a5f8151f01a17e9d72b"
+    },
+    {
+      "path": "supabase/functions/create-template-ai/index.ts",
+      "sha256": "95227902dfe2b9ea2eed145de684f3ad415a78e312a3ab6a163469376b9270b8"
+    },
+    {
+      "path": "supabase/functions/delete-patient/index.ts",
+      "sha256": "5ae3a0b227ef2f2894155e0937f45675c208809a286af12edc0396cef425ef34"
+    },
+    {
+      "path": "supabase/functions/delete-user-data/index.ts",
+      "sha256": "a4676b1413224a93c9f76901e6d1539cb3de3031bedff48cbfc699473c6acbc9"
+    },
+    {
+      "path": "supabase/functions/discard-consultation/index.ts",
+      "sha256": "3d85fd93a9cb8642d559227db1ead21d5a2781e6c92bad98bac08ee4b0ffbba2"
+    },
+    {
+      "path": "supabase/functions/export-user-data/index.ts",
+      "sha256": "ba3b86b20b9e0ee8e0265dbe42b40343994ef22e5c13c5b533323499509dcba6"
+    },
+    {
+      "path": "supabase/functions/finalize-consultation/index.ts",
+      "sha256": "22e81386f588079353a38e58e56b1c80c89dd4aa052a6a6ac750cdf5fa3efca8"
+    },
+    {
+      "path": "supabase/functions/generate-document/index.ts",
+      "sha256": "cd0547754e223ce91ce3c05428b093fa7dfdf87064aab37a4ce5ecdf69900b80"
+    },
+    {
+      "path": "supabase/functions/generate-prebriefing/index.ts",
+      "sha256": "2e868dbb423a32bf34e0244e420fea3aeaabef292c92c0cfa963156383cf9118"
+    },
+    {
+      "path": "supabase/functions/generate-prescription/index.ts",
+      "sha256": "4df68eb9bb39f7c5879e78d9e9e48d2282d75e2018016042cfc0eb8c00def948"
+    },
+    {
+      "path": "supabase/functions/google-oauth-callback/index.ts",
+      "sha256": "3128d7568a5f5a3305f742b2af5975cb4c69279dad88673807af21c55aee4fcf"
+    },
+    {
+      "path": "supabase/functions/google-oauth-start/index.ts",
+      "sha256": "31dd90a26ec08c39405236eaccaff1426f8a18208d2592639be9227f996762b5"
+    },
+    {
+      "path": "supabase/functions/ingest-knowledge/index.ts",
+      "sha256": "01e942ca0ddaa00826aaf733607f60199f7d1eb121f24c7dd5ce08e5c53d0d01"
+    },
+    {
+      "path": "supabase/functions/live-copilot/index.ts",
+      "sha256": "79f839bd1b019ed3e1b6c2c419c239ae9869c07fdd811c4b23a1a036ca18feae"
+    },
+    {
+      "path": "supabase/functions/process-clinical-notes/index.ts",
+      "sha256": "9f2d9d25a270ea6590fadb53623b9fad89ca226f51a306c6e6271aaa9e185611"
+    },
+    {
+      "path": "supabase/functions/process-comment/index.ts",
+      "sha256": "d08e14fc11d0f72738b54e231fa787a78e1b3dcc0857e88e567025815636c4ca"
+    },
+    {
+      "path": "supabase/functions/refresh-medication-catalog/index.ts",
+      "sha256": "4393bb08b92754fea65b341b94a3b7e1f66bbcca759c739f53765fa70bb20e5a"
+    },
+    {
+      "path": "supabase/functions/refresh-reference-catalogs/index.ts",
+      "sha256": "ff66d0cdadaaecf9e2a73e9590cab6a30ff59ecffc5b8a5cd9f3fb263b680409"
+    },
+    {
+      "path": "supabase/functions/send-appointment-reminder/index.ts",
+      "sha256": "4a7f4aa7b556bc65f9b187d0e780569bcc05f75b34b62c3ede11b2cfa5f1851c"
+    },
+    {
+      "path": "supabase/functions/shared-patient-file/index.ts",
+      "sha256": "34d8aa4047e1e60529cc3e057c250ed216c100cafcfc8b16c14a92ab5cf6b450"
+    },
+    {
+      "path": "supabase/functions/suggest-questions/index.ts",
+      "sha256": "92cf1cce82322056089ce9532633a2e1968c836965b6ba2d7a6747eda4087f49"
+    },
+    {
+      "path": "supabase/functions/sync-google-calendar/index.ts",
+      "sha256": "a55c0c969f9c16bc65a0f8d64274d4f67a86352cb6baa870c0d81ddd19e8abcc"
+    },
+    {
+      "path": "supabase/functions/transcribe-consultation/index.ts",
+      "sha256": "0825beda088ffbe0689d04f829a3fe30ecb0fdd2558729e8283cdc8aceb228a4"
+    },
+    {
+      "path": "supabase/functions/validate-prescription/index.ts",
+      "sha256": "5e4822519dc87b69a96cf922c2ba85c2266e70ddba60fae6adaa37ad9940719a"
+    },
+    {
+      "path": "supabase/functions/_shared/auth.ts",
+      "sha256": "7ad19b9c7173ea41a516a0d4018a3ad772b5a047fc9b47c6bfa6c4e10e09eeeb"
+    },
+    {
+      "path": "supabase/functions/_shared/referenceCatalogs.ts",
+      "sha256": "78cb2b115a252fcf47eaf9097463ad0069efd2347c5330b8b6eb652a353e5bdb"
+    },
+    {
+      "path": "supabase/functions/_shared/pades.ts",
+      "sha256": "23f2d6ea4b67ce135db59f934b32fe1c346beef0833da48a2340768687b4259e"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "sha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureFlow.ts",
+      "sha256": "3af8cc2c7394c57c5f79b0dc424e620df26bb71864d532dfb6af4cd36c8f170e"
+    },
+    {
+      "path": "supabase/functions/_shared/regulatedMedications.ts",
+      "sha256": "3d8d6c907d9de9060143630ae6983759984b83f93c3c1d7e4509d5e8f8ef577c"
+    },
+    {
+      "path": "src/lib/referenceCatalogs.test.ts",
+      "sha256": "66c0c220b76f45272c8a9fe68a8e5eb0323769f2945db9b750e09afb5278f912"
+    },
+    {
+      "path": "src/lib/pades.test.ts",
+      "sha256": "5d3f124b1387e9addb3afa3275828f0ed1faa21db65f821006ba69dbd1141127"
+    },
+    {
+      "path": "src/lib/psc.test.ts",
+      "sha256": "439a2756ccf8d470e3e6e1f3ccc78c4d4ec62616b1382279625e3f0e7d220a36"
+    },
+    {
+      "path": "src/lib/signatureFlow.test.ts",
+      "sha256": "d778bba4b3f434734169c47de586e0f44a4d08f6b0ca5cb1e5a649e55233800d"
+    }
+  ]
+}

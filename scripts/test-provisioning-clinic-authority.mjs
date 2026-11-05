@@ -3,32 +3,75 @@ import {createHash,createHmac,randomBytes,randomUUID} from 'node:crypto';
 
 // Native Auth owns these objects. Omit only the exact mock statements.
 export function nativeApplicationBootstrap(source){
+ const legacyMfa='CREATE TABLE auth.mfa_factors(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users(id) on delete cascade,status text,factor_type text);';
+ const fixtureStatements=[
+  "CREATE TYPE auth.aal_level AS ENUM ('aal1','aal2','aal3');",
+  "CREATE TYPE auth.factor_status AS ENUM ('unverified','verified');",
+  "CREATE TYPE auth.factor_type AS ENUM ('totp','webauthn','phone');",
+  'CREATE TABLE auth.mfa_factors(id uuid primary key default gen_random_uuid(),user_id uuid not null references auth.users(id) on delete cascade,status auth.factor_status not null,factor_type auth.factor_type not null,created_at timestamptz not null default now(),updated_at timestamptz not null default now());',
+  'CREATE TABLE auth.sessions(id uuid primary key,user_id uuid not null references auth.users(id) on delete cascade,created_at timestamptz,updated_at timestamptz,factor_id uuid,aal auth.aal_level,not_after timestamptz,refreshed_at timestamp without time zone);',
+  'ALTER TABLE auth.mfa_factors ENABLE ROW LEVEL SECURITY;',
+  'ALTER TABLE auth.sessions ENABLE ROW LEVEL SECURITY;',
+ ];
+ const lines=source.split(/\r?\n/),legacy=lines.includes(legacyMfa);
+ assert.ok(!legacy||!fixtureStatements.some(s=>lines.includes(s)),'Mixed Auth bootstrap profiles');
  const omitted=[
   'CREATE ROLE anon NOLOGIN;','CREATE ROLE authenticated NOLOGIN;','CREATE ROLE service_role NOLOGIN BYPASSRLS;','CREATE SCHEMA auth;',
   "CREATE TABLE auth.users(id uuid PRIMARY KEY, email text, email_confirmed_at timestamptz DEFAULT now(), raw_app_meta_data jsonb NOT NULL DEFAULT '{}');",
   "CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;",
   "CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.role',true),'') $$;",
   "CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb) $$;",
-  'CREATE TABLE auth.mfa_factors(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users(id) on delete cascade,status text,factor_type text);',
+  ...(legacy?[legacyMfa]:fixtureStatements),
  ];
- const lines=source.split(/\r?\n/);for(const statement of omitted)assert.equal(lines.filter(l=>l===statement).length,1,'Unexpected mock bootstrap shape');
+ for(const statement of omitted)assert.equal(lines.filter(l=>l===statement).length,1,'Unexpected mock bootstrap shape');
  const broad='GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA auth,storage TO anon,authenticated,service_role;';assert.equal(lines.filter(l=>l===broad).length,1);
  return lines.filter(l=>!omitted.includes(l)).map(l=>l===broad
   ? 'GRANT EXECUTE ON FUNCTION auth.uid(),auth.role(),auth.jwt() TO anon,authenticated,service_role;\nGRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA storage TO anon,authenticated,service_role;':l).join('\n');
 }
+// Only the columns required by the agreed session/factor interface. This is
+// deliberately not a copy of the full Native Auth schema or its defaults.
+export function assertAuthFixtureProjection(sql){
+ const definitions={mfa_factors:{id:['uuid',false],user_id:['uuid',false],status:['auth.factor_status',false],factor_type:['auth.factor_type',false],created_at:['timestamp with time zone',false],updated_at:['timestamp with time zone',false]},
+  sessions:{id:['uuid',false],user_id:['uuid',false],aal:['auth.aal_level',true],factor_id:['uuid',true],not_after:['timestamp with time zone',true],created_at:['timestamp with time zone',true],updated_at:['timestamp with time zone',true],refreshed_at:['timestamp without time zone',true]}};
+ const expected=Object.entries(definitions).flatMap(([table,cols])=>Object.entries(cols).map(([column,[type,nullable]])=>({table,column,type,nullable})))
+  .sort((a,b)=>(a.table+'.'+a.column).localeCompare(b.table+'.'+b.column));
+ const filter=Object.entries(definitions).map(([table,cols])=>`(c.relname='${table}' and a.attname in (${Object.keys(cols).map(c=>`'${c}'`).join(',')}))`).join(' or ');
+ const actual=JSON.parse(sql(`select jsonb_agg(jsonb_build_object('table',c.relname,'column',a.attname,'type',format_type(a.atttypid,a.atttypmod),'nullable',not a.attnotnull) order by c.relname,a.attname) from pg_class c join pg_namespace n on n.oid=c.relnamespace join pg_attribute a on a.attrelid=c.oid and a.attnum>0 and not a.attisdropped where n.nspname='auth' and (${filter})`));
+ assert.deepEqual(actual,expected,'Auth session/factor fixture projection differs');
+ return actual;
+}
 export function installClinicSchema({sql,inputs,red}){
- const columns=()=>sql(`select md5(string_agg(c.relname||':'||c.relowner::text||':'||coalesce(c.relacl::text,'')||':'||a.attnum::text||':'||a.attname||':'||format_type(a.atttypid,a.atttypmod)||':'||a.attnotnull::text,'|' order by c.relname,a.attnum)) from pg_class c join pg_namespace n on n.oid=c.relnamespace join pg_attribute a on a.attrelid=c.oid and a.attnum>0 and not a.attisdropped where n.nspname='auth' and c.relname in ('users','sessions','mfa_factors')`);
+ const columnsQuery=`select md5(string_agg(c.relname||':'||c.relowner::text||':'||coalesce(c.relacl::text,'')||':'||c.relrowsecurity::text||':'||c.relforcerowsecurity::text||':'||a.attnum::text||':'||a.attname||':'||format_type(a.atttypid,a.atttypmod)||':'||a.attnotnull::text||':'||coalesce(a.attacl::text,''),'|' order by c.relname,a.attnum)) from pg_class c join pg_namespace n on n.oid=c.relnamespace join pg_attribute a on a.attrelid=c.oid and a.attnum>0 and not a.attisdropped where n.nspname='auth' and c.relname in ('users','sessions','mfa_factors')`;
+ const columns=()=>sql(columnsQuery);
+ const clientReadsQuery="select bool_and(not has_table_privilege(r,t,'select') and not has_any_column_privilege(r,t,'select')) from unnest(array['anon','authenticated','service_role']) r cross join unnest(array['auth.users','auth.sessions','auth.mfa_factors']) t";
+ const enums=()=>sql("select md5(string_agg(t.typname||':'||t.typowner::text||':'||coalesce(t.typacl::text,'')||':'||e.enumlabel,'|' order by t.typname,e.enumsortorder)) from pg_type t join pg_namespace n on n.oid=t.typnamespace join pg_enum e on e.enumtypid=t.oid where n.nspname='auth' and t.typname in ('aal_level','factor_status','factor_type')");
  const functions=()=>sql("select md5(string_agg(p.proowner::text||pg_get_functiondef(p.oid),'|' order by p.proname)) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='auth' and p.proname in ('uid','role','jwt','email')");
- const beforeColumns=columns(),beforeFunctions=functions();
+ const beforeColumns=columns(),beforeFunctions=functions(),beforeEnums=enums();
+ const projection=inputs.sessionFixture?assertAuthFixtureProjection(sql):undefined;
  const bootstrap=nativeApplicationBootstrap(inputs.bootstrap);sql(bootstrap);
  for(const {path,source} of inputs.migrations){try{sql(source);}catch(error){throw new Error('Application snapshot install failed at '+path,{cause:error});}}
  sql(inputs.identity);sql(inputs.intent);sql(inputs.membership);
  if(!red)sql(inputs.composed);
  if(inputs.ledger)sql(inputs.ledger);
- assert.equal(columns(),beforeColumns,'Native Auth core columns/owners/table ACL changed');assert.equal(functions(),beforeFunctions,'Native identity helper definition or owner changed');
- assert.equal(sql("select bool_and(not has_table_privilege(r,t,'select')) from unnest(array['anon','authenticated','service_role']) r cross join unnest(array['auth.users','auth.sessions','auth.mfa_factors']) t"),'t');
+ assert.equal(columns(),beforeColumns,'Native Auth core columns/owners/table or column ACL/RLS flags changed');assert.equal(functions(),beforeFunctions,'Native identity helper definition or owner changed');
+ assert.equal(enums(),beforeEnums,'Native Auth enum definition/owner/ACL changed');
+ assert.equal(sql(clientReadsQuery),'t','Native Auth table or column became readable by a client role');
+ // A temporary column grant must trip both checks even though PostgreSQL's
+ // table-wide SELECT predicate stays false. Roll back before any Auth traffic.
+ const control=sql(`begin;do $acl$ declare original text;begin
+ original:=(${columnsQuery});
+ grant select(id) on auth.sessions to service_role;
+ assert not has_table_privilege('service_role','auth.sessions','select');
+ assert has_any_column_privilege('service_role','auth.sessions','select');
+ assert (${clientReadsQuery}) is false;
+ assert (${columnsQuery}) is distinct from original;
+ end $acl$;set local role service_role;select count(id) from auth.sessions;reset role;rollback;`);
+ assert.match(control,/^\d+$/,'Column grant did not permit the expected synthetic count');
+ assert.equal(columns(),beforeColumns,'Column ACL control did not roll back');assert.equal(sql(clientReadsQuery),'t');
  return {sourceBaseline:inputs.baseline,migrations:inputs.migrations.length,nativeCoreColumnsOwnersAndTableAclUnchanged:true,nativeIdentityHelpersUnchanged:true,
-  nativeTablesUnavailableToClientRoles:true,ledgerBindingsInstalled:!!inputs.ledger,sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
+  nativeTablesUnavailableToClientRoles:true,nativeColumnAclUnchanged:true,nativeColumnAclControlPassed:true,nativeEnumsOwnersAndAclUnchanged:true,nativeTableRlsFlagsUnchanged:true,ledgerBindingsInstalled:!!inputs.ledger,
+  ...(inputs.sessionFixture?{fixtureProjectionVerified:true,fixtureProjection:projection,bootstrapOverlaySha256:createHash('sha256').update(inputs.bootstrap).digest('hex')}:{}),
+  sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
 }
 
 export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,asyncHttp,pause,holderSession,restartAuth}){
