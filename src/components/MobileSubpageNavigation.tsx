@@ -6,7 +6,7 @@ import { useClinicAccess } from '@/features/reception/accessContext';
 import { useAuth } from '@/contexts/AuthContext';
 
 const main=[{to:'/',label:'Início',icon:Home},{to:'/gerenciar-pacientes',label:'Pacientes',icon:Users},{to:'/agenda',label:'Agenda',icon:CalendarDays},{to:'/trabalho',label:'Pendências',icon:ClipboardList}];
-const more=[{to:'/assistente',label:'Assistente',icon:Sparkles},{to:'/modelos',label:'Modelos',icon:FileStack},{to:'/conhecimento',label:'Conhecimento',icon:BookOpen},{to:'/compartilhamento',label:'Compartilhamento',icon:Share2},{to:'/seguranca',label:'Segurança da conta',icon:Shield},{to:'/privacidade',label:'Privacidade e dados',icon:Shield}];
+const more=[{to:'/assistente',label:'Assistente',icon:Sparkles},{to:'/modelos',label:'Modelos',icon:FileStack},{to:'/conhecimento',label:'Conhecimento',icon:BookOpen},{to:'/compartilhamento',label:'Compartilhamento',icon:Share2},{to:'/permissoes-recepcao',label:'Permissões da recepção',icon:Users},{to:'/seguranca',label:'Segurança da conta',icon:Shield},{to:'/privacidade',label:'Privacidade e dados',icon:Shield}];
 export function MobileSubpageNavigation() {
   const {pathname}=useLocation();
   const access=useClinicAccess();const {user}=useAuth();

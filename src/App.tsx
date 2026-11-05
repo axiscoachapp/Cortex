@@ -36,6 +36,7 @@ const ReceptionQueue = lazy(() => import('./features/reception/ReceptionQueue'))
 const ReceptionCalendar = lazy(() => import('./features/reception/ReceptionCalendar'));
 const ReceptionContacts = lazy(() => import('./features/reception/ContactsPage'));
 const ReceptionTeam = lazy(() => import('./features/reception/TeamSettings'));
+const DelegationPermissions = lazy(() => import('./features/reception/DelegationPermissions'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -104,6 +105,7 @@ const router = createBrowserRouter([
     { path: '/conhecimento', element: <KnowledgeBasePage /> },
     { path: '/assistente', element: <AssistantPage /> },
     { path: '/compartilhamento', element: <SharingPage /> },
+    { path: '/permissoes-recepcao', element: <DelegationPermissions /> },
     { path: '/trabalho', element: <ClinicalWorkspacePage /> },
     { path: '/seguranca', element: <AccountSecurityPage /> },
   ] },

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TeamSettings from './TeamSettings';
 import { ClinicAccessContext } from './accessContext';
@@ -14,7 +15,7 @@ function mount({cached=false,inactive=false}={}) {
  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
  if(cached)client.setQueryData(['reception','team-doctors',clinic,a.id],[a,b],{updatedAt:1});
  const access:ClinicAccess={kind:'clinical',active:true,admin:true,actorId:a.id,clinic:{id:clinic,name:'Clínica sintética'},doctors:[a],staff:[{id:staff,name:'Secretária sintética',active:!inactive,doctorIds:[b.id]}]};
- render(<QueryClientProvider client={client}><ClinicAccessContext.Provider value={access}><TeamSettings/></ClinicAccessContext.Provider></QueryClientProvider>);
+ render(<QueryClientProvider client={client}><MemoryRouter><ClinicAccessContext.Provider value={access}><TeamSettings/></ClinicAccessContext.Provider></MemoryRouter></QueryClientProvider>);
  return client;
 }
 describe('management directory separate from authorized agendas',()=>{

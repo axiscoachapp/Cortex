@@ -1,0 +1,135 @@
+import { useEffect, useRef, useState } from 'react';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useSearchParams } from 'react-router-dom';
+import { z } from 'zod';
+import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { delegationApi, type DelegationAction, type DelegationCursor, type DelegationRequest } from './delegationApi';
+import { useClinicAccess } from './accessContext';
+import { receptionApi } from './api';
+import { ReceptionNotice } from './ReceptionNotice';
+import { useRequestId } from './useRequestId';
+
+const labels: Record<DelegationRequest['state'], string> = { pending: 'Aguardando médico', approved: 'Aprovado', denied: 'Recusado', cancelled: 'Cancelado', revoked: 'Revogado' };
+export default function DelegationPermissions() {
+  const { user } = useAuth();
+  const [params] = useSearchParams();
+  const clinicId = params.get('clinica');
+  if (clinicId !== null && !z.string().uuid().safeParse(clinicId).success) return <p role="alert" className="p-6">Clínica inválida. Confira o endereço da página.</p>;
+  if (!user) return null;
+  return <Permissions key={`${user.id}:${clinicId ?? 'mine'}`} actorId={user.id} clinicId={clinicId} />;
+}
+
+function Permissions({ actorId, clinicId }: { actorId: string; clinicId: string | null }) {
+  const access = useClinicAccess();
+  const client = useQueryClient();
+  const operation = useRequestId();
+  const mounted = useRef(true), submitting = useRef(false);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [notice, setNotice] = useState('');
+  const [staffId, setStaffId] = useState(''), [doctorId, setDoctorId] = useState('');
+  const [confirmation, setConfirmation] = useState<{ row: DelegationRequest; action: 'approve' | 'revoke' } | null>(null);
+  const requests = useInfiniteQuery({
+    queryKey: ['reception-delegations', actorId, clinicId],
+    queryFn: ({ pageParam }) => delegationApi.list({ clinicId, cursor: pageParam }),
+    initialPageParam: null as DelegationCursor | null,
+    getNextPageParam: last => last.nextCursor ?? undefined,
+    retry: false, staleTime: 0, refetchOnWindowFocus: true, refetchInterval: 15_000,
+  });
+  const verified = requests.isSuccess && requests.isFetchedAfterMount;
+  const canManage = verified && requests.data.pages[0].canManage;
+  const currentClinic = !!clinicId && access?.actorId === actorId && access.admin && access.clinic?.id === clinicId;
+  const directory = useQuery({
+    queryKey: ['reception', 'team-doctors', clinicId, actorId],
+    queryFn: () => receptionApi.teamDoctors(clinicId!),
+    enabled: !!canManage && !!currentClinic, retry: false, staleTime: 0,
+  });
+  const staff = currentClinic ? access.staff.filter(s => s.active) : [];
+  const rows = verified ? requests.data.pages.flatMap(p => p.items) : [];
+  const ready = verified && !requests.isFetching && !busy;
+  const formReady = ready && currentClinic && directory.isSuccess && !directory.isFetching;
+  const confirmCurrent = confirmation && rows.some(r => r.id === confirmation.row.id && r.revision === confirmation.row.revision && (confirmation.action === 'approve' ? r.canDecide : r.canRevoke));
+
+  async function mutate(body: { kind: 'request'; staffId: string; doctorId: string } | { kind: 'change'; row: DelegationRequest; action: DelegationAction }) {
+    if (submitting.current || !ready) return;
+    submitting.current = true; setBusy(true); setError(null); setNotice('');
+    const payload = body.kind === 'request'
+      ? { actorId, clinicId, staffId: body.staffId, doctorId: body.doctorId }
+      : { actorId, requestId: body.row.id, revision: body.row.revision, action: body.action };
+    try {
+      const operationId = operation(payload);
+      if (body.kind === 'request') await delegationApi.request({ clinicId: clinicId!, staffId: body.staffId, doctorId: body.doctorId, operationId });
+      else await delegationApi.change({ requestId: body.row.id, revision: body.row.revision, action: body.action, operationId });
+      if (!mounted.current) return;
+      operation.reset(); setConfirmation(null);
+      setNotice(body.kind === 'request' ? 'Pedido enviado. O acesso depende da aprovação do médico.' : 'Decisão registrada. A lista será atualizada.');
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['reception-delegations', actorId] }),
+        client.invalidateQueries({ queryKey: ['clinic-access', actorId] }),
+      ]);
+    } catch (failure) {
+      if (!mounted.current) return;
+      setError(failure);
+      if (failure && typeof failure === 'object' && 'code' in failure && ['40001', '42501'].includes(String(failure.code))) {
+        setConfirmation(null);
+        await client.invalidateQueries({ queryKey: ['reception-delegations', actorId] });
+      }
+    } finally {
+      submitting.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  }
+
+  return <main className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6">
+    <Link to={clinicId ? '/recepcao/equipe' : '/'} className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />{clinicId ? 'Voltar à equipe' : 'Voltar ao início'}</Link>
+    <header className="space-y-3">
+      <div className="flex items-start gap-3"><ShieldCheck className="mt-1 h-6 w-6 shrink-0 text-primary" /><div><h1 className="text-2xl font-semibold tracking-tight">Permissões da recepção</h1><p className="mt-1 text-sm text-muted-foreground">{clinicId ? 'Pedidos da clínica para contas já cadastradas.' : 'Você decide quem pode operar sua agenda na clínica.'}</p></div></div>
+      <p className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed">A aprovação permite atender contatos, operar a fila e gerenciar agendamentos da clínica. Os prontuários, evoluções e documentos clínicos continuam privados. Você pode revogar o acesso a qualquer momento.</p>
+      <Button variant="outline" disabled={busy || requests.isFetching} onClick={() => void requests.refetch()}>Atualizar lista</Button>
+    </header>
+    <ReceptionNotice loading={requests.isPending} error={requests.error} onRetry={() => void requests.refetch()} />
+    <ReceptionNotice error={error} />
+    {notice && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">{notice}</p>}
+    {canManage && <section className="space-y-4 rounded-xl border bg-card p-4 sm:p-5" aria-labelledby="request-title">
+      <h2 id="request-title" className="font-semibold">Solicitar acesso para uma conta existente</h2>
+      {!currentClinic ? <p role="alert" className="text-sm">Abra este fluxo pela equipe da clínica selecionada para escolher as contas corretas.</p> : <>
+        <ReceptionNotice loading={directory.isPending} error={directory.error} onRetry={() => void directory.refetch()} />
+        <form className="space-y-4" onSubmit={event => { event.preventDefault(); if (formReady && staff.some(s => s.id === staffId) && directory.data?.some(d => d.id === doctorId)) void mutate({ kind: 'request', staffId, doctorId }); }}>
+          <fieldset disabled={!formReady} className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2"><Label htmlFor="delegation-staff">Conta de recepção</Label><select id="delegation-staff" className="flex min-h-11 w-full min-w-0 rounded-md border bg-background px-3 text-sm" required value={staffId} onChange={event => setStaffId(event.target.value)}><option value="">Selecione uma conta ativa</option>{staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+            <div className="space-y-2"><Label htmlFor="delegation-doctor">Médico responsável</Label><select id="delegation-doctor" className="flex min-h-11 w-full min-w-0 rounded-md border bg-background px-3 text-sm" required value={doctorId} onChange={event => setDoctorId(event.target.value)}><option value="">Selecione um médico</option>{directory.isSuccess && directory.data.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></div>
+          </fieldset>
+          <Button type="submit" className="h-auto min-h-11 whitespace-normal" disabled={!formReady || !staffId || !doctorId}>Enviar pedido ao médico</Button>
+        </form>
+      </>}
+    </section>}
+    {verified && <section className="space-y-3" aria-labelledby="requests-title">
+      <h2 id="requests-title" className="text-lg font-semibold">{clinicId ? 'Pedidos e aprovações da clínica' : 'Meus pedidos e aprovações'}</h2>
+      <p className="text-sm text-muted-foreground">Esta lista acompanha os pedidos feitos por este fluxo. A gestão dos acessos anteriores continua na página da equipe.</p>
+      {!rows.length && <p className="rounded-xl border p-5 text-sm text-muted-foreground">Nenhum pedido encontrado.</p>}
+      {rows.map(row => <article key={row.id} className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0 break-words"><h3 className="font-semibold">{row.staffName}</h3><p className="mt-1 text-sm text-muted-foreground">{row.clinicName} · {row.doctorName}</p></div><span className="w-fit shrink-0 rounded-full bg-muted px-3 py-1 text-xs font-medium">{labels[row.state]}</span></div>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground"><span>{new Date(row.createdAt).toLocaleString('pt-BR')}</span><span>{row.effective ? 'Acesso ativo' : 'Sem acesso ativo'}</span></div>
+        <div className="flex flex-wrap gap-2">
+          {row.canDecide && <><Button disabled={!ready} onClick={() => setConfirmation({ row, action: 'approve' })}>Aprovar acesso</Button><Button variant="outline" disabled={!ready} onClick={() => void mutate({ kind: 'change', row, action: 'deny' })}>Recusar pedido</Button></>}
+          {row.canCancel && <Button variant="outline" disabled={!ready} onClick={() => void mutate({ kind: 'change', row, action: 'cancel' })}>Cancelar pedido</Button>}
+          {row.canRevoke && <Button variant="outline" disabled={!ready} onClick={() => setConfirmation({ row, action: 'revoke' })}>Revogar acesso</Button>}
+        </div>
+      </article>)}
+      {requests.hasNextPage && <Button variant="outline" disabled={!ready} onClick={() => void requests.fetchNextPage()}>Carregar mais pedidos</Button>}
+    </section>}
+    <Dialog open={!!confirmation} onOpenChange={open => { if (!open && !busy) setConfirmation(null); }}>
+      <DialogContent><DialogHeader><DialogTitle>{confirmation?.action === 'approve' ? 'Aprovar acesso da recepção?' : 'Revogar acesso da recepção?'}</DialogTitle><DialogDescription>{confirmation?.row.staffName} · {confirmation?.row.clinicName} · {confirmation?.row.doctorName}</DialogDescription></DialogHeader>
+        <p className="text-sm leading-relaxed">{confirmation?.action === 'approve' ? 'Esta conta poderá operar seus contatos, fila e agenda da clínica. Seus prontuários e documentos clínicos continuam privados.' : 'Esta conta perderá o acesso delegado à sua agenda da clínica. O histórico será preservado.'}</p>
+        {!confirmCurrent && <p role="alert" className="text-sm">O pedido mudou. Feche esta confirmação e atualize a lista.</p>}
+        <ReceptionNotice error={error} />
+        <DialogFooter><Button variant="outline" disabled={busy} onClick={() => setConfirmation(null)}>Voltar</Button><Button disabled={!ready || !confirmCurrent} onClick={() => { if (confirmation && confirmCurrent) void mutate({ kind: 'change', ...confirmation }); }}>{confirmation?.action === 'approve' ? 'Confirmar aprovação' : 'Confirmar revogação'}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </main>;
+}

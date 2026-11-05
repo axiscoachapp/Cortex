@@ -1,0 +1,126 @@
+{
+  "syntheticOnly": true,
+  "realPageAndApi": true,
+  "realSql": false,
+  "hosted": false,
+  "checks": [
+    "admin request without approval authority",
+    "physician explicit confirmation and activation",
+    "explicit withdrawal",
+    "failed refresh hides cached rows and recovers",
+    "375px no overflow or clipped buttons",
+    "no actor injection"
+  ],
+  "pageErrors": [],
+  "calls": [
+    {
+      "name": "reception_delegation_requests",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_after": null,
+        "p_after_id": null,
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "reception_team_doctors",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666"
+      }
+    },
+    {
+      "name": "reception_request_delegation",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_staff": "77777777-7777-4777-8777-777777777777",
+        "p_doctor": "11111111-1111-4111-8111-111111111111",
+        "p_operation": "d4afb5c5-c7f0-4bd4-b8ef-8ee81d1caf80"
+      }
+    },
+    {
+      "name": "reception_delegation_requests",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_after": null,
+        "p_after_id": null,
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "reception_delegation_requests",
+      "body": {
+        "p_clinic": null,
+        "p_after": null,
+        "p_after_id": null,
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "reception_decide_delegation",
+      "body": {
+        "p_request": "877fbf3f-4fed-45f9-8438-b755b5bb5e84",
+        "p_revision": 1,
+        "p_operation": "f34fb0cb-442c-459e-a37f-246c0ecd1a5d",
+        "p_decision": "approve"
+      }
+    },
+    {
+      "name": "reception_delegation_requests",
+      "body": {
+        "p_clinic": null,
+        "p_after": null,
+        "p_after_id": null,
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "reception_revoke_delegation",
+      "body": {
+        "p_request": "877fbf3f-4fed-45f9-8438-b755b5bb5e84",
+        "p_revision": 2,
+        "p_operation": "0b182bdc-02c1-4a57-a3eb-e2ea1fd8bd13"
+      }
+    },
+    {
+      "name": "reception_delegation_requests",
+      "body": {
+        "p_clinic": null,
+        "p_after": null,
+        "p_after_id": null,
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "reception_delegation_requests",
+      "body": {
+        "p_clinic": null,
+        "p_after": null,
+        "p_after_id": null,
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "reception_delegation_requests",
+      "body": {
+        "p_clinic": null,
+        "p_after": null,
+        "p_after_id": null,
+        "p_limit": 50
+      }
+    }
+  ],
+  "sources": [
+    {
+      "path": "src/features/reception/DelegationPermissions.tsx",
+      "sha256": "6c1b15caf59cb7c0207131662c60604f69b912ad4e0b256f741cea4733374323"
+    },
+    {
+      "path": "src/features/reception/delegationApi.ts",
+      "sha256": "142597d1b8a6e5a0cec87fab72842183e7eb5f16c8fc6ceac1b5596ee2cd8827"
+    },
+    {
+      "path": "scripts/fixtures/delegation-permissions-page.tsx",
+      "sha256": "1a0ff62ddcef9cda853afe2c38c656ace632f77d1c3f8702be067d7cc8421aee"
+    }
+  ]
+}

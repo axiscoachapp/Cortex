@@ -47,6 +47,7 @@ function formatTime(iso: string): string {
 const NAV_ITEMS = [
   { to: '/trabalho', icon: ClipboardList, label: 'Trabalho pendente' },
   { to: '/compartilhamento', icon: Share2, label: 'Compartilhamento' },
+  { to: '/permissoes-recepcao', icon: Users, label: 'Permissões da recepção' },
   { to: '/seguranca', icon: Users, label: 'Segurança da conta' },
   { to: '/assistente',           icon: Sparkles,    label: 'Assistente' },
   { to: '/modelos',              icon: FileStack,   label: 'Modelos' },

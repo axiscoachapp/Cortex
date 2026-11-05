@@ -2514,6 +2514,10 @@ export type Database = {
         Args: { p_clinic: string; p_details: Json; p_request: string }
         Returns: string
       }
+      reception_cancel_delegation: {
+        Args: { p_operation: string; p_request: string; p_revision: number }
+        Returns: Json
+      }
       reception_case: {
         Args: { p_before_note?: string; p_case: string }
         Returns: Json
@@ -2559,6 +2563,24 @@ export type Database = {
         }
         Returns: string
       }
+      reception_decide_delegation: {
+        Args: {
+          p_decision: string
+          p_operation: string
+          p_request: string
+          p_revision: number
+        }
+        Returns: Json
+      }
+      reception_delegation_requests: {
+        Args: {
+          p_after?: string
+          p_after_id?: string
+          p_clinic?: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
       reception_link_edit: {
         Args: { p_contact: string; p_patient: string }
         Returns: Json
@@ -2584,6 +2606,19 @@ export type Database = {
           p_mine?: boolean
           p_status?: string
         }
+        Returns: Json
+      }
+      reception_request_delegation: {
+        Args: {
+          p_clinic: string
+          p_doctor: string
+          p_operation: string
+          p_staff: string
+        }
+        Returns: Json
+      }
+      reception_revoke_delegation: {
+        Args: { p_operation: string; p_request: string; p_revision: number }
         Returns: Json
       }
       reception_save_draft: {

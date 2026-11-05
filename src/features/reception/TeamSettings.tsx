@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,7 @@ export default function TeamSettings() {
         <p className="mt-2 text-sm text-muted-foreground">
           Configure as agendas das secretárias. Seu acesso às agendas e aos prontuários é independente da gestão da equipe.
         </p>
+        {access.clinic && <Button asChild variant="outline" className="mt-3 h-auto min-h-11 max-w-full whitespace-normal"><Link to={`/permissoes-recepcao?clinica=${access.clinic.id}`}>Pedidos de acesso e aprovações médicas</Link></Button>}
         {!directory.isError && (
           <Button className="mt-3" size="sm" variant="outline" disabled={busy || directory.isFetching} onClick={() => void directory.refetch()}>
             Atualizar profissionais

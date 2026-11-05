@@ -1,0 +1,26 @@
+# Pedidos de permissão da recepção: contas existentes
+
+05/11/2026. Entrega local T28/2b/3. [Contrato](../../../product/clinic-crm/RECEPTION_DELEGATION_API.md).
+
+Gestão solicita acesso para uma conta existente ativa; somente o médico de destino aprova ou recusa. Médico/gestão revogam, gestão cancela pedidos pendentes. Página `/permissoes-recepcao`, acesso pela navegação médica e link de equipe para gestão. Aprovar/revogar requer confirmação humana identificando os três participantes. Aprovação libera capacidades administrativas da clínica, sem acesso a prontuários/evoluções/documentos. Não altera o cadastro legal, PersonalMed ou importação.
+
+Migration `20261105200000` reservada antes do arquivo, adiciona cinco RPCs autenticadas e dois índices de paginação sobre a fundação privada existente. Writers privados, epochs, custódia e três helpers do Claude permanecem intactos. Listagem administrativa com DTO estrito, cursor composto, limite1–100 e autoridade validada antes da entrada; médico vê apenas seus pedidos em filiações ativas, clínica explícita exige administração ativa. Sem SELECT nos ledgers ou EXECUTE para anon/service. As ações revalidam ator/escopo/revisão e preservam idempotência.
+
+## Evidências
+
+- **RED SQL:** `RED.json`, 69 migrations congeladas em `f716e68`; chamada pública ausente42883. Não contar a construção inicial sem função como teste de autorização completo.
+- **GREEN final:** `SQL.json`, 70 migrations (69 fontes Git + overlay próprio), cinco suítes: API nova, pedidos privados, decisões privadas, pedidos do provisionamento e catálogo/fronteiras. Cobrem gestão/outro médico/outra clínica/recepção, pending sem grant, decisão própria/replay/revisão/UUID, deny/cancel/revoke, RLS de paciente, campos exatos, cursores com empate, limites, ACL e ator em exclusão. Bootstrap/claims/SET ROLE são fixtures SQL, **não Auth HTTP nativo**. Cleanup de containers/rede internos e rotulados verificado. Runner captura fontes, confere os overlays ao terminar e usa imagens locais sem pull, portas ou rota externa.
+- Tipos públicos regenerados no mesmo banco descartável com postgres-meta local: apenas cinco assinaturas novas/35 linhas. Execução final repete as mesmas cinco suítes para gerar tipos, sem somar as duas passagens.
+- **22 testes/3 arquivos** da API/tela/equipe: vinculação de argumentos e DTO estrito, cursor com microssegundos, aprovação explícita, administrador sem decisão por outro, retry da resposta perdida com mesmo UUID, duplo clique, conflito40001 sem aprovar nova revisão automaticamente, revogação, falha de atualização escondendo ações antigas e cache isolado após troca de ator. RED dos dois módulos novos registrado pela ausência do import antes da implementação; unitários usam API simulada.
+- **Seis verificações de navegador**, `browser/verification.json`: página/API/DTO reais em Edge headless, AuthProvider real com HTTP sintético e contexto de clínica fixture. Gestão solicita, médico confirma/ativa e revoga; refresh negado oculta lista e retry recupera;375px sem overflow horizontal nem botões cortados; payload sem ator/papel/origem; zero pageerrors. Não é ponta a ponta contra PostgREST/SQL ou App inteiro. Fontes dos três arquivos próprios conferidas antes/depois; capturas desktop/móvel inspecionadas, escala global135% preservada.
+- Typecheck app/Node e build Vite com URL/chave públicas **sintéticas por processo**, sem arquivo env alterado. ESLint dos11 arquivos próprios sem erro/aviso; sintaxe dos dois runners e `git diff --check` aprovados. Revisão independente limitada de API/SQL/UI/roteamento sem achado material, somente leitura.
+
+## Ajustes durante a validação
+
+O primeiro GREEN chegou até a preparação final de exclusão: uma conta com histórico administrativo foi corretamente recusada porP4092. O teste passou a usar outra conta sintética sem referências, preservando a política de custódia. A passagem seguinte detectou a precedência22023 na chamada da fronteira com entradas nulas: a autoridade da listagem foi movida antes da validação de página, preservando42501 para recepção. Ambos os casos foram corrigidos e as cinco suítes passaram na repetição final. Não foram falhas de Auth ou acesso indevido a paciente. Recursos das execuções foram removidos pelo finally com conferência de ownership.
+
+## Limites e sequência
+
+Este caminho é para **contas existentes**. Não conclui M2: provisionamento antigo pelo serviço, reconciliação/corte dos grants anteriores, credencial inicial, retenção/custódia/upgrade e gate do piloto continuam separados. Não converter grants antigos em consentimento; a lista explicita sua abrangência. Contas inativas precisam do ciclo de reativação antes de um novo pedido. Não há publicação, push, carga real ou mudança em banco hospedado. Não foram repetidas as matrizes Native Auth, corridas antigas ou suíte global do frontend sem alteração correspondente.
+
+Em paralelo, o delta de geração/assinatura do Claude foi lido e respondido em11:38. Uma execução de10 testes começou enquanto esses arquivos eram editados e terminou9/10 com divergência de texto; não é prova congelada de `0f2794f` nem compõe os22 testes acima. Reteste desse domínio aguarda SHA; root preservou os arquivos do Claude.
