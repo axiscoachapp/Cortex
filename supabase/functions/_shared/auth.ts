@@ -17,12 +17,16 @@ export class AuthError extends Error {
   }
 }
 
-/**
- * Validates the caller's JWT and returns their user id.
- * Throws AuthError (401) when the header is missing or the token is invalid —
- * the public anon key resolves to no user and is rejected too.
- */
-export async function requireUser(req: Request, options: { allowReception?: boolean } = {}): Promise<{ userId: string }> {
+type UserAuthOptions = { allowReception?: boolean };
+
+export type VerifiedUserContext = Readonly<{
+  userId: string;
+  sessionId: string;
+  aal: 'aal1' | 'aal2';
+  exp: number;
+}>;
+
+async function authenticateUser(req: Request, options: UserAuthOptions): Promise<{ userId: string; claims: Record<string, unknown> }> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) throw new AuthError();
 
@@ -54,7 +58,31 @@ export async function requireUser(req: Request, options: { allowReception?: bool
     throw new AuthError('Esta operação é restrita ao ambiente médico.', 403);
   }
 
-  return { userId: user.id };
+  return { userId: user.id, claims };
+}
+
+/** Validates the bearer and preserves the existing user-id-only interface. */
+export async function requireUser(req: Request, options: UserAuthOptions = {}): Promise<{ userId: string }> {
+  const { userId } = await authenticateUser(req, options);
+  return { userId };
+}
+
+/**
+ * Context from the same bearer verified by Auth, never the request body.
+ * Consumers still enforce operation-specific assurance and recheck live
+ * session/factor rows and deadlines in the authorizing database transaction.
+ */
+export async function requireUserContext(req: Request, options: UserAuthOptions = {}): Promise<VerifiedUserContext> {
+  const { userId, claims } = await authenticateUser(req, options);
+  const { session_id: sessionId, aal, exp } = claims;
+  const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+  if (!uuid.test(userId) || claims.role !== 'authenticated'
+    || typeof sessionId !== 'string' || !uuid.test(sessionId)
+    || (aal !== 'aal1' && aal !== 'aal2')
+    || typeof exp !== 'number' || !Number.isSafeInteger(exp) || exp <= 0 || exp <= Date.now() / 1000) {
+    throw new AuthError('Sessão inválida');
+  }
+  return { userId, sessionId, aal, exp };
 }
 
 /** 401 response the generic catch block can return for AuthError. */

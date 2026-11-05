@@ -1,0 +1,48 @@
+{
+  "syntheticOnly": true,
+  "sources": [
+    {
+      "path": "supabase/functions/_shared/auth.ts",
+      "sha256": "7ad19b9c7173ea41a516a0d4018a3ad772b5a047fc9b47c6bfa6c4e10e09eeeb"
+    },
+    {
+      "path": "src/lib/authAssurance.test.ts",
+      "sha256": "fc732b021f8742cab5785457120c39659fcdd8b1d1fe1d36dd4f7574424e0978"
+    },
+    {
+      "path": "supabase/functions/_shared/referenceCatalogs.ts",
+      "sha256": "cdfba962a4a41658ebafa291ddc795cb9de0dbf958af072a175b90001e263c9d"
+    }
+  ],
+  "unitFiles": 5,
+  "unitPassed": 138,
+  "unitFailed": 0,
+  "authUnitTests": 34,
+  "red": {
+    "failed": 28,
+    "passed": 6,
+    "reason": "requireUserContext missing before implementation"
+  },
+  "frontendAndNodeTypecheckPassed": true,
+  "authDenoCachedCheckPassed": true,
+  "lintPassed": true,
+  "globalDenoCheckPassed": false,
+  "globalDenoEntrypoints": 27,
+  "preExistingDenoFailure": {
+    "path": "supabase/functions/_shared/referenceCatalogs.ts",
+    "lines": [
+      57,
+      295
+    ],
+    "codes": [
+      "TS2345",
+      "TS2345"
+    ],
+    "standaloneReproduced": true,
+    "unchangedFromBaseline": "618e0f7"
+  },
+  "sqlSuitesRun": 0,
+  "nativeAuthRuns": 0,
+  "fixturesImplemented": false,
+  "productionHandlersAdded": false
+}
