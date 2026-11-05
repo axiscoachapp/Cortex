@@ -1,0 +1,18 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "sourceBaseline": "428d5408be0a04fad0d5da8de32dd437d4c7e0b4",
+  "migrations": 69,
+  "sqlSourceDigest": "9d669cf6daebeaf85e1104d3a2fd3e66d31a6478ae6000e8c6b3ab34571defc5",
+  "ownSources": [
+    {
+      "path": "scripts/test-provisioning-membership-generation.mjs",
+      "sha256": "9c51f44336a36eb56ce67d0c99dfdde1ca98c002d9c8d370933426344b538e91"
+    }
+  ],
+  "redOnly": true,
+  "currentGuardInitiallyAllowed": true,
+  "currentGuardAllowsAfterRoleABA": true,
+  "productionFix": false,
+  "cleanupVerified": true
+}

@@ -1,0 +1,57 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "sourceBaseline": "428d5408be0a04fad0d5da8de32dd437d4c7e0b4",
+  "migrations": 69,
+  "sqlSourceDigest": "cef0ffc3be1d11dab3a9de158c6f56a1d9d8298da0b7b033c6118c982ad58248",
+  "ownSources": [
+    {
+      "path": "scripts/test-provisioning-membership-generation.mjs",
+      "sha256": "7db4e0f88b5eb6edcdad7d63ba2aece961fcc18e1bc2b7ac0ced5c259342f9c8"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-membership-generation.sql",
+      "sha256": "0d56096dd8f560db70fba89f8162137b20fb77774d897426f02822542c1ecf95"
+    },
+    {
+      "path": "scripts/test-provisioning-membership-generation-cases.mjs",
+      "sha256": "7ed302b722a40846ae05642d0b8c2cd8003e2e853996ddd8304b5c31c811cb5c"
+    }
+  ],
+  "productionFix": false,
+  "checks": [
+    "Busy installation refuses without waiting; removing NOWAIT is observed and cancelled; no partial DDL",
+    "Installation refuses an established RR snapshot without partial DDL",
+    "Existing real memberships are seeded and the actual admin/T33 guard authorizes current generation",
+    "Null generation, other clinic/member and non-service context cannot use the witness",
+    "Timestamp-only, supplied UUID and no-op upsert preserve the current generation",
+    "Authority role ABA refuses the old generation even when the writer supplies it",
+    "Authority status ABA refuses the old generation even when the writer supplies it",
+    "Loss and return in one transaction still rotates authority",
+    "DELETE/recreate of the same composite identity cannot restore the old generation",
+    "Service write reaches the trigger without restoring a UUID; authenticated direct write remains ACL-denied",
+    "Uncommitted member mutation refuses the guard NOWAIT while the writer remains open",
+    "Member-row refusal is nonblocking; a controlled guard mutation waits, is cancelled and is restored exactly",
+    "Established RR snapshot refuses committed ABA through the actual T33 barrier",
+    "Another account/clinic mutation does not invalidate or block this generation",
+    "Guard-first ordering actually blocks the member writer until the short check commits",
+    "Current real account deletion intent is still refused by the existing guard",
+    "Private ACL, no grants, original provisioning guard and all T33 function definitions preserved"
+  ],
+  "inverseWriterWaitObserved": true,
+  "installationNowaitMutationDetected": true,
+  "membershipNowaitMutationDetected": true,
+  "sqlSuites": [
+    "supabase/tests/reception-provisioning-requests.test.sql",
+    "supabase/tests/reception-delegation-requests.test.sql"
+  ],
+  "membershipGenerationProofPassed": true,
+  "nativeAuthRun": false,
+  "notCovered": [
+    "native Auth/session/MFA composition",
+    "credential generation and recovery",
+    "production intent ledger/custody/install/upgrade",
+    "provisioning grants and app cutover"
+  ],
+  "cleanupVerified": true
+}
