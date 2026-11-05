@@ -10,17 +10,19 @@ import { createServer } from 'vite';
 import tailwindcss from 'tailwindcss';
 import loadConfig from 'tailwindcss/loadConfig.js';
 import autoprefixer from 'autoprefixer';
-import { startClinicFixture } from './fixtures/clinic-review-api.mjs';
+import { startClinicFixture, patientId } from './fixtures/clinic-review-api.mjs';
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|check-time-layout|check-mobile-navigation|check-calendar-header)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|check-time-layout|check-mobile-navigation|check-calendar-header)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
-const welcomeOnly = args.includes('--only=welcome-dashboard'), focusedOnly = weekOnly || welcomeOnly;
+const chatOnly = args.includes('--only=chat-prompts');
+const welcomeOnly = args.includes('--only=welcome-dashboard'), focusedOnly = weekOnly || welcomeOnly || chatOnly;
 assert.ok(args.filter(arg => arg.startsWith('--only=')).length <= 1, 'Only one focused audit mode is supported');
 assert.ok(!weekOnly || !args.some(arg => arg.startsWith('--check-')), 'Week caption mode runs its own checks');
 assert.ok(!welcomeOnly || !args.some(arg => arg.startsWith('--check-')), 'Welcome mode runs its own checks');
+assert.ok(!chatOnly || !args.some(arg => arg.startsWith('--check-')), 'Chat prompt mode runs its own checks');
 const checkMobileNavigation = args.includes('--check-mobile-navigation');
 assert.ok(!timeOnly || !checkMobileNavigation, 'Mobile navigation checks require the full route audit');
 const checkCalendarHeader = args.includes('--check-calendar-header');
@@ -28,7 +30,7 @@ assert.ok(!timeOnly || !checkCalendarHeader, 'Calendar header checks require the
 const git = options => { const result = spawnSync('git', options, { encoding: 'utf8', windowsHide: true, maxBuffer: 20 * 1024 * 1024 }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); };
 const baseline = args.find(arg => arg.startsWith('--baseline='))?.slice(11) || git(['rev-parse', 'HEAD']);
 const overlays = args.filter(arg => arg.startsWith('--overlay=')).map(arg => arg.slice(10));
-const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation|WelcomeDashboard)\.tsx|src\/lib\/calendarLabels\.ts)$/;
+const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation|WelcomeDashboard|ChatPanel)\.tsx|src\/lib\/calendarLabels\.ts)$/;
 for (const path of overlays) assert.match(path, allowed, 'Overlay must be in the Codex audit scope');
 const run = args.find(arg => arg.startsWith('--run='))?.slice(6) || 'baseline';
 const folder = resolve('docs/reviews/2026-11-05/reception-app-audit', run);
@@ -58,7 +60,7 @@ const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/c
 const ownHashes = await Promise.all(ownPaths.map(async path => ({ path, sha256: createHash('sha256').update(await readFile(path)).digest('hex') })));
 const apps = [], apis = [], contexts = [], errors = [], blocked = [], consoleErrors = [], screens = [], failedRequests = [], errorResponses = [];
 const cacheOwner = randomUUID();
-let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false;
+let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false, draftPreserved = false;
 async function appFor(api) {
   process.env.VITE_SUPABASE_URL = api.origin; process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'synthetic-public-key';
   process.env.VITE_BYPASS_EMAIL = ''; process.env.VITE_BYPASS_PASSWORD = '';
@@ -131,8 +133,18 @@ async function capture(page, app, role, path, width, action, variant = '') {
       return { label: element.textContent.trim(), fullWidth: range.getBoundingClientRect().width, availableWidth: bounds?.width, width: target.width, height: target.height,
         clipped: !label || [...range.getClientRects()].some(rect => rect.left < Math.max(bounds.left, target.left) - 1 || rect.right > Math.min(bounds.right, target.right) + 1 || rect.top < Math.max(bounds.top, target.top) - 1 || rect.bottom > Math.min(bounds.bottom, target.bottom) + 1) };
     });
+    const clinicalInput = [...document.querySelectorAll('input[type="text"]')].find(element => visible(element) && ['Pergunta ao assistente clínico', 'Comentário clínico para este paciente'].includes(element.getAttribute('aria-label')));
+    let clinicalPrompt = null;
+    if (clinicalInput) {
+      const style = getComputedStyle(clinicalInput), canvas = document.createElement('canvas'), context = canvas.getContext('2d');
+      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const spacing = parseFloat(style.letterSpacing) || 0;
+      clinicalPrompt = { label: clinicalInput.getAttribute('aria-label'), placeholder: clinicalInput.placeholder, hint: clinicalInput.title,
+        textWidth: context.measureText(clinicalInput.placeholder).width + spacing * Math.max(0, clinicalInput.placeholder.length - 1),
+        availableWidth: clinicalInput.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight), empty: clinicalInput.value === '' };
+    }
     return { fontSize: getComputedStyle(document.documentElement).fontSize, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, dialogOutsideViewport, dialogHorizontalOverflow: dialogElement ? dialogElement.scrollWidth - dialogElement.clientWidth : 0,
-      missingButtons, missingLabels, navigationLabels, headerTitles, calendarPeriod: periodElement?.textContent.trim(), calendarPeriodClipped, shortcuts,
+      missingButtons, missingLabels, navigationLabels, headerTitles, calendarPeriod: periodElement?.textContent.trim(), calendarPeriodClipped, shortcuts, clinicalPrompt,
       welcomeDate: dateLine ? { text: dateLine.textContent.trim(), transform: getComputedStyle(dateLine).textTransform } : null,
       visibleAlerts: [...document.querySelectorAll('[role="alert"]')].filter(visible).map(element => element.textContent.trim()),
       timeControls: [...document.querySelectorAll('input[type="time"]')].filter(visible).map(element => { const rect = element.getBoundingClientRect(); return { id: element.id, value: element.value, width: rect.width, top: rect.top, bottom: rect.bottom }; }),
@@ -184,10 +196,36 @@ try {
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
   if (focusedOnly) {
     const api = await startClinicFixture(welcomeOnly ? { lastVisit: '2026-10-01' } : {}); apis.push(api); const app = await appFor(api);
-    const doctor = await scene(app, 'review', welcomeOnly ? '/' : '/agenda');
+    const chatPath = '/?patient=' + patientId;
+    const doctor = await scene(app, 'review', chatOnly ? chatPath : welcomeOnly ? '/' : '/agenda');
     await doctor.waitForLoadState('networkidle');
     await doctor.clock.setFixedTime(new Date('2026-11-05T15:00:00Z'));
-    if (welcomeOnly) {
+    if (chatOnly) {
+      for (const width of [320, 375, 1280]) for (const mode of ['question', 'comment']) {
+        const label = mode === 'question' ? 'Pergunta ao assistente clínico' : 'Comentário clínico para este paciente';
+        await capture(doctor, app, 'clinical', chatPath, width, async page => {
+          await expect(page.getByRole('textbox', { name: 'Pergunta ao assistente clínico', exact: true })).toBeVisible();
+          const toggle = page.getByRole('button', { name: mode === 'question' ? 'Pergunta' : 'Comentário', exact: true });
+          await toggle.click();
+          await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+          await expect(page.getByRole('textbox', { name: label, exact: true })).toBeVisible();
+        }, mode);
+        const prompt = screens.at(-1).clinicalPrompt;
+        assert.ok(prompt && prompt.empty && prompt.placeholder.length > 0, 'Expected an empty clinical input with a placeholder');
+        assert.equal(prompt.label, label, 'Clinical input mode did not match the requested state');
+        assert.ok(prompt.textWidth <= prompt.availableWidth + 1, 'Clinical placeholder is clipped');
+        assert.ok(prompt.hint.length > prompt.placeholder.length, 'Keep the full clinical hint available');
+      }
+      const draft = 'Rascunho sintético sem envio';
+      await doctor.getByRole('textbox', { name: 'Comentário clínico para este paciente', exact: true }).fill(draft);
+      await doctor.getByRole('button', { name: 'Pergunta', exact: true }).click();
+      await expect(doctor.getByRole('textbox', { name: 'Pergunta ao assistente clínico', exact: true })).toHaveValue(draft);
+      await doctor.getByRole('button', { name: 'Comentário', exact: true }).click();
+      await expect(doctor.getByRole('textbox', { name: 'Comentário clínico para este paciente', exact: true })).toHaveValue(draft);
+      await doctor.waitForLoadState('networkidle');
+      assert.equal(api.metrics.chat, 0); assert.equal(api.metrics.newSources, 0); assert.equal(api.metrics.patientWrites, 0); assert.equal(api.metrics.appointmentWrites, 0);
+      draftPreserved = true;
+    } else if (welcomeOnly) {
       for (const width of [320, 375, 1280]) for (const variant of ['overview', 'shortcuts', 'recent-patients']) {
         await capture(doctor, app, 'clinical', '/', width, async page => {
           await expect(page.getByRole('heading', { name: 'Pacientes Recentes', exact: true })).toBeVisible();
@@ -291,7 +329,7 @@ try {
   }, 'block-time-dialog');
   }
   for (const source of [...ownHashes, ...overlayHashes]) assert.equal(createHash('sha256').update(await readFile(source.path)).digest('hex'), source.sha256, 'Audit source changed during run');
-  const requiredSources = welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
+  const requiredSources = chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
   for (const path of ['src/App.tsx', 'src/pages/Auth.tsx', ...overlays, ...requiredSources]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
   if (checkMobileNavigation || welcomeOnly) assert.equal(navigationKeyboardVerified, true, 'Keyboard navigation did not complete');
 } catch (error) {
@@ -310,7 +348,7 @@ try {
   }
   cleanupVerified = true;
 }
-const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, welcomeMetrics: welcomeOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
+const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, chatOnly, draftPreserved, welcomeMetrics: welcomeOnly || chatOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
   frozenLoads: [...frozenLoads].sort(), screens, errors, consoleErrors, failedRequests, errorResponses, blockedExternalRequests: blocked, cleanupVerified };
 await writeFile(resolve(folder, 'AUDIT.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify({ baseline, screens: screens.length, errors: errors.length, consoleErrors: consoleErrors.length,

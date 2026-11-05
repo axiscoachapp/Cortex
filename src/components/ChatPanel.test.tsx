@@ -254,7 +254,9 @@ describe('patient-scoped asynchronous clinical work', () => {
         </QueryClientProvider>,
       );
       if (mode === 'comment') fireEvent.click(screen.getByText('Comentário'));
-      const input = screen.getByPlaceholderText(mode === 'question' ? /Pergunte ao assistente/ : /Comentário — ex/);
+      const input = screen.getByRole('textbox', {
+        name: mode === 'question' ? 'Pergunta ao assistente clínico' : 'Comentário clínico para este paciente',
+      });
       fireEvent.change(input, { target: { value: 'Informação exclusiva de A' } });
       fireEvent.keyDown(input, { key: 'Enter' });
       await waitFor(() =>

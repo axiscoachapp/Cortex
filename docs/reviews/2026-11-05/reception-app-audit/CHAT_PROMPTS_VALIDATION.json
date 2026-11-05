@@ -1,0 +1,136 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "74a0880c969560cc11ead1a2878ee25305fd6af1",
+  "browser": {
+    "states": 6,
+    "widths": [
+      320,
+      375,
+      1280
+    ],
+    "draftPreserved": true,
+    "activeModeAsserted": true,
+    "recordingStarted": false,
+    "metrics": {
+      "briefings": 0,
+      "checklists": 0,
+      "chat": 0,
+      "newSources": 0,
+      "patientWrites": 0,
+      "appointmentWrites": 0
+    }
+  },
+  "regression": {
+    "mode": "week-caption",
+    "states": 18,
+    "passed": true
+  },
+  "unit": {
+    "files": 1,
+    "tests": 8,
+    "exitCode": 0
+  },
+  "checks": {
+    "appTypes": true,
+    "applicationLint": true,
+    "runnerLint": true,
+    "nodeSyntax": true,
+    "hashes": true,
+    "cleanup": true
+  },
+  "review": {
+    "localCycles": 2,
+    "actionableFinding": "Verify active mode and expected textbox before measuring each capture",
+    "fixed": true,
+    "external": "Declined by user"
+  },
+  "network": {
+    "acceptedOnly": {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    "counts": {
+      "red": 2,
+      "green": 7,
+      "regression": 0
+    },
+    "otherFailures": 0,
+    "causeInferred": false
+  },
+  "overlays": [
+    {
+      "path": "src/components/ChatPanel.tsx",
+      "sha256": "7e015bc2fb8626359ddd02502013824bc5b08cf25f296a7ecc4c44d8df6d1126"
+    }
+  ],
+  "prompts": [
+    {
+      "width": 320,
+      "mode": "question",
+      "label": "Pergunta ao assistente clínico",
+      "placeholder": "Faça uma pergunta",
+      "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+      "textWidth": 186.75523376464844,
+      "availableWidth": 209.8,
+      "empty": true
+    },
+    {
+      "width": 320,
+      "mode": "comment",
+      "label": "Comentário clínico para este paciente",
+      "placeholder": "Comentário clínico",
+      "hint": "Comentário — ex: \"alérgico a penicilina\", \"iniciar Losartana 50mg\", \"solicitar hemograma\"",
+      "textWidth": 177.6776123046875,
+      "availableWidth": 209.8,
+      "empty": true
+    },
+    {
+      "width": 375,
+      "mode": "question",
+      "label": "Pergunta ao assistente clínico",
+      "placeholder": "Faça uma pergunta",
+      "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+      "textWidth": 186.75523376464844,
+      "availableWidth": 264.79999999999995,
+      "empty": true
+    },
+    {
+      "width": 375,
+      "mode": "comment",
+      "label": "Comentário clínico para este paciente",
+      "placeholder": "Comentário clínico",
+      "hint": "Comentário — ex: \"alérgico a penicilina\", \"iniciar Losartana 50mg\", \"solicitar hemograma\"",
+      "textWidth": 177.6776123046875,
+      "availableWidth": 264.79999999999995,
+      "empty": true
+    },
+    {
+      "width": 1280,
+      "mode": "question",
+      "label": "Pergunta ao assistente clínico",
+      "placeholder": "Faça uma pergunta",
+      "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+      "textWidth": 186.75523376464844,
+      "availableWidth": 953.8,
+      "empty": true
+    },
+    {
+      "width": 1280,
+      "mode": "comment",
+      "label": "Comentário clínico para este paciente",
+      "placeholder": "Comentário clínico",
+      "hint": "Comentário — ex: \"alérgico a penicilina\", \"iniciar Losartana 50mg\", \"solicitar hemograma\"",
+      "textWidth": 177.6776123046875,
+      "availableWidth": 953.8,
+      "empty": true
+    }
+  ],
+  "limits": [
+    "Recording hint inspected in source only; microphone not started",
+    "Native title is not a new touch-help affordance",
+    "Synthetic UI fixture does not approve backend or pilot"
+  ]
+}

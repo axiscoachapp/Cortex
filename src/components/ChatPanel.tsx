@@ -2211,7 +2211,8 @@ export function ChatPanel({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSubmit();
                 }}
-                placeholder={
+                placeholder={inputMode === 'question' ? 'Faça uma pergunta' : 'Comentário clínico'}
+                title={
                   inputMode === 'question'
                     ? 'Pergunte ao assistente — o que conversamos na última consulta?'
                     : isRecording
