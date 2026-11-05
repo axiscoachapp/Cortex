@@ -299,8 +299,11 @@ serve(async (req) => {
     // scans on the last day at 16:00 must not be refused (it was now + N×24 h).
     const lastDay = clinicDayBounds(new Date(now.getTime() + VALIDITY[docType] * 86_400_000));
     const expiresAt = new Date(Date.parse(lastDay.end) - 1);
+    // VALIDAR (ITI): a link with other parameters needs type=prescricao for a
+    // prescription. Its value for sick notes and exam requests is not
+    // published, so those keep the plain link (Codex/Claude 05/11).
     const validationUrl =
-      `${Deno.env.get('SUPABASE_URL')}/functions/v1/validate-prescription?id=${prescriptionId}`;
+      `${Deno.env.get('SUPABASE_URL')}/functions/v1/validate-prescription?${isReceita ? 'type=prescricao&' : ''}id=${prescriptionId}`;
     // The QR carries the access code so scanning it opens the original document.
     const qrUrl = `${validationUrl}&code=${code}`;
 

@@ -110,7 +110,7 @@ describe('privacy edge regressions', () => {
     });
     const response = await load('validate-prescription', db)(
       {},
-      `?id=${draftId}&code=code&_format=application%2Fvalidador-iti%2Bjson`,
+      `?id=${draftId}&code=code&_format=application%2Fjson`,
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({

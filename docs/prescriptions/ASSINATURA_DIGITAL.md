@@ -70,7 +70,19 @@ As três são novas, no domínio do Claude. Revisão do Codex de 04/11 12:41 inc
 |---|---|
 | `signature-session` | `POST start` (JWT, clínico e MFA): cria um `state` de uso único e devolve a URL de autorização. `POST complete` (JWT, clínico e MFA): recebe `{code, state}` do frontend, consome o `state`, troca o código, confere o CPF e o certificado, e ativa a sessão. `POST revoke` (JWT): revoga na hora |
 | `sign-document` | `POST` (JWT, clínico e MFA), com `{prescriptionId, operationId, shownPdfSha256}`. Segue a máquina de estados abaixo |
-| `validate-prescription` (já existe) | A resposta `_format=application/validador-iti+json` passa a apontar `signatureFiles[].url` para o PDF assinado, por URL assinada de curta duração |
+| `validate-prescription` (já existe) | Contrato do VALIDAR (ITI), conforme o [guia do desenvolvedor](https://validar.iti.gov.br/guia-desenvolvedor.html) e combinado com o Codex em 05/11. Detalhes logo abaixo da tabela |
+
+**`validate-prescription` e o VALIDAR (ITI).** O ramo `_format=application/validador-iti+json` segue o [guia do desenvolvedor](https://validar.iti.gov.br/guia-desenvolvedor.html), combinado com o Codex em 05/11.
+
+- **Resposta exata:** `{"version":"1.0.0","prescription":{"signatureFiles":[{"url":…}]}}`.
+- **URL do arquivo:** assinada, de 300 segundos, para o PDF assinado. Só sai quando a receita está `signed`, com `signature_verified_at`, e `signed_storage_path` exatamente igual a `rx/<dono>/<receita>/signed-<operação>.pdf`.
+- **Documento só gerado:** 409.
+- **Assinatura incompleta ou caminho inválido:** 409 em todos os formatos, sem cair no PDF gerado.
+- **Código errado e documento inexistente:** a mesma resposta 404, em todos os formatos. É uma **divergência deliberada** do 401 do guia, por privacidade: o VALIDAR mostra "não encontrado" para um código errado.
+- **Código conferido:** quando há `_secretCode`, só ele é conferido, sem recorrer ao `code` do QR.
+- **QR das receitas:** leva `type=prescricao`, porque o link tem outros parâmetros. O valor de `type` para atestado e solicitação de exames não está publicado, e esses links ficam sem o parâmetro.
+- **Ramo do PDF:** serve o assinado quando é válido, e o gerado enquanto só gerado.
+- **Manifesto próprio** (`_format=application/json`): mantém juntos o PDF gerado e o `pdf_sha256` dele. Nunca aponta o assinado com esse hash.
 
 **Callback do PSC:** o redirecionamento comum do OAuth é um GET sem o Bearer do Cortex. Por isso:
 - o PSC volta para uma rota do **frontend** (`/assinatura/retorno`), cadastrada no PSC como o único `redirect_uri`;

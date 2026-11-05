@@ -414,17 +414,121 @@ describe('security endpoint regressions', () => {
           issuance_verified_at: '2026-01-01',
           issuance_snapshot: issuanceSnapshot,
           signature_verified_at: null,
+          signed_storage_path: `rx/${user}/${rxId}/signed-44444444-4444-4444-8444-444444444444.pdf`,
           expires_at: '2099-01-01',
           storage_path: `rx/${user}/${rxId}.pdf`,
         },
       ],
     });
-    const response = await loadHandler(
-      'validate-prescription',
-      db,
-    )(new Request(`https://edge.invalid?id=${rxId}&code=ABC&_format=application%2Fvalidador-iti%2Bjson`));
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ status: 'gerada_sem_assinatura', assinadaEm: null });
+    const handler = loadHandler('validate-prescription', db);
+    // Incomplete signed state: 409 in every format, never the generated file instead.
+    for (const format of ['', '&_format=application%2Fvalidador-iti%2Bjson', '&_format=application%2Fjson']) {
+      const response = await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABC${format}`));
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({ status: 'signature_incomplete' });
+    }
+    expect(db.createSignedUrl).not.toHaveBeenCalled();
+    expect(db.download).not.toHaveBeenCalled();
+  });
+
+  // VALIDAR (ITI) contract, guia-desenvolvedor.html, agreed with Codex 05/11 03:04.
+  describe('validate-prescription and the VALIDAR contract', () => {
+    const signedPath = `rx/${user}/${rxId}/signed-44444444-4444-4444-8444-444444444444.pdf`;
+    const row = (extra: Row = {}): Row => ({
+      id: rxId,
+      user_id: user,
+      secret_code: 'ABC',
+      status: 'signed',
+      signed_at: '2026-01-01',
+      signature_verified_at: '2026-01-01',
+      signed_storage_path: signedPath,
+      issuance_verified_at: '2026-01-01',
+      issuance_snapshot: issuanceSnapshot,
+      expires_at: '2099-01-01',
+      storage_path: `rx/${user}/${rxId}.pdf`,
+      doc_type: 'receita_simples',
+      ...extra,
+    });
+    const iti = '&_format=application%2Fvalidador-iti%2Bjson';
+
+    it('answers exactly the official structure with a short URL of the signed PDF', async () => {
+      const db = fakeDatabase({ prescriptions: [row()] });
+      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&_secretCode=ABC${iti}`));
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toBe('application/validador-iti+json');
+      expect(await response.json()).toEqual({ version: '1.0.0', prescription: { signatureFiles: [{ url: 'https://example.invalid/pdf' }] } });
+      expect(db.createSignedUrl).toHaveBeenCalledWith(signedPath, 300);
+    });
+
+    it('refuses a generated, unsigned document in the ITI branch without minting a URL', async () => {
+      const db = fakeDatabase({ prescriptions: [row({ status: 'generated', signed_at: null, signature_verified_at: null, signed_storage_path: null })] });
+      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&_secretCode=ABC${iti}`));
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({ status: 'unsigned' });
+      expect(db.createSignedUrl).not.toHaveBeenCalled();
+    });
+
+    it('refuses a signed path that is not this owner, prescription and operation', async () => {
+      for (const path of [
+        `rx/other-user/${rxId}/signed-44444444-4444-4444-8444-444444444444.pdf`,
+        `rx/${user}/55555555-5555-4555-8555-555555555555/signed-44444444-4444-4444-8444-444444444444.pdf`,
+        `rx/${user}/${rxId}/signed-not-a-uuid.pdf`,
+        `rx/${user}/${rxId}/../${rxId}.pdf`,
+        `rx/${user}/${rxId}.pdf`,
+        null,
+      ]) {
+        const db = fakeDatabase({ prescriptions: [row({ signed_storage_path: path })] });
+        const handler = loadHandler('validate-prescription', db);
+        for (const format of [iti, '']) {
+          const response = await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABC${format}`));
+          expect(response.status).toBe(409);
+        }
+        expect(db.createSignedUrl).not.toHaveBeenCalled();
+        expect(db.download).not.toHaveBeenCalled();
+      }
+    });
+
+    it('serves the signed PDF when validly signed and the original while only generated', async () => {
+      const signed = fakeDatabase({ prescriptions: [row()] });
+      expect((await loadHandler('validate-prescription', signed)(new Request(`https://edge.invalid?id=${rxId}&code=ABC`))).status).toBe(200);
+      expect(signed.download).toHaveBeenCalledWith(signedPath);
+      const generated = fakeDatabase({ prescriptions: [row({ status: 'generated', signed_at: null, signature_verified_at: null, signed_storage_path: null })] });
+      expect((await loadHandler('validate-prescription', generated)(new Request(`https://edge.invalid?id=${rxId}&code=ABC`))).status).toBe(200);
+      expect(generated.download).toHaveBeenCalledWith(`rx/${user}/${rxId}.pdf`);
+    });
+
+    it('keeps the own manifest on the generated PDF and its own digest, never the signed file with that digest', async () => {
+      const db = fakeDatabase({ prescriptions: [row()] });
+      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&code=ABC&_format=application%2Fjson`));
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body).toMatchObject({ status: 'assinada', sha256: issuanceSnapshot.pdf_sha256 });
+      expect(db.createSignedUrl).toHaveBeenCalledWith(`rx/${user}/${rxId}.pdf`, 300);
+      expect(db.createSignedUrl).not.toHaveBeenCalledWith(signedPath, expect.anything());
+    });
+
+    it('answers the same 404 for a wrong code and an unknown id, in every format', async () => {
+      const db = fakeDatabase({ prescriptions: [row()] });
+      const handler = loadHandler('validate-prescription', db);
+      for (const format of ['', iti, '&_format=application%2Fjson']) {
+        const wrong = await handler(new Request(`https://edge.invalid?id=${rxId}&_secretCode=XYZ${format}`));
+        const unknown = await handler(new Request(`https://edge.invalid?id=66666666-6666-4666-8666-666666666666&_secretCode=ABC${format}`));
+        expect(wrong.status).toBe(404);
+        expect(unknown.status).toBe(404);
+        expect(await wrong.text()).toBe(await unknown.text());
+      }
+      expect(db.createSignedUrl).not.toHaveBeenCalled();
+      expect(db.download).not.toHaveBeenCalled();
+    });
+
+    it('checks only _secretCode when present, never falling back to the code of the QR link', async () => {
+      const db = fakeDatabase({ prescriptions: [row()] });
+      const handler = loadHandler('validate-prescription', db);
+      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABC&_secretCode=XYZ${iti}`))).status).toBe(404);
+      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABC&_secretCode=${iti}`))).status).toBe(404);
+      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=XYZ&_secretCode=ABC${iti}`))).status).toBe(200);
+      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABC${iti}`))).status).toBe(200);
+    });
   });
   it('quarantines legacy forged future expiry without serving or signing a download URL', async () => {
     const db = fakeDatabase({

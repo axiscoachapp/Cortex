@@ -6,17 +6,43 @@
  * the patient-held secret code printed on the prescription, per the ITI
  * validation contract:
  *
- *   GET ?id=<uuid>&_secretCode=<code>                          → the PDF itself
+ *   GET ?id=<uuid>&_secretCode=<code>                          → the PDF: the
+ *        signed one when the document is validly signed, else the generated one
  *   GET ?id=<uuid>&_secretCode=<code>&_format=application%2Fvalidador-iti%2Bjson
- *                                                              → JSON manifest
+ *        → the VALIDAR (ITI) response, exactly
+ *          {"version":"1.0.0","prescription":{"signatureFiles":[{"url":…}]}}
+ *          for a validly signed document only (guia-desenvolvedor.html)
+ *   GET ?id=<uuid>&_secretCode=<code>&_format=application%2Fjson
+ *        → Cortex's own minimal manifest: the generated PDF and its digest
  *
- * No enumeration surface: responses for unknown id, wrong code, revoked and
- * expired are all minimal; the secret code never appears in any response.
+ * No enumeration surface: an unknown id and a wrong code answer the same 404
+ * in every format (a deliberate divergence from the guide's 401, Codex/Claude
+ * 05/11); when _secretCode is present it is the only code checked. The secret
+ * code and signed URLs never appear in logs.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { assertPrescriptionPath } from "../_shared/storage.ts";
+
+const ITI_FORMAT = 'application/validador-iti+json';
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
+
+/**
+ * The signed PDF of a validly signed document, or null when the document is
+ * not signed. Throws when it claims to be signed but is incomplete or points
+ * anywhere but rx/<owner>/<prescription>/signed-<operation>.pdf: no silent
+ * fallback to the generated file.
+ */
+function signedFileOf(rx: { status?: unknown; signature_verified_at?: unknown; signed_storage_path?: unknown; user_id: string; id: string }): string | null {
+  if (rx.status !== 'signed') return null;
+  const path = rx.signed_storage_path;
+  const verified = typeof rx.signature_verified_at === 'string' && Number.isFinite(Date.parse(rx.signature_verified_at));
+  const pattern = new RegExp(`^rx/${rx.user_id}/${rx.id}/signed-${UUID}\\.pdf$`, 'i');
+  if (!verified || typeof path !== 'string' || !pattern.test(path)) throw new SignatureIncomplete();
+  return path;
+}
+class SignatureIncomplete extends Error {}
 import { fetchWithDeadline } from "../_shared/http.ts";
 
 const corsHeaders = {
@@ -51,10 +77,12 @@ Em caso de dúvida, entre em contato com o médico emissor.`;
   try {
     const url = new URL(req.url);
     const id = url.searchParams.get('id') ?? '';
-    const code = url.searchParams.get('_secretCode') ?? url.searchParams.get('code') ?? '';
+    // The validator's _secretCode, when present, is the only code checked:
+    // a wrong one never falls back to the code embedded in the QR link.
+    const code = url.searchParams.has('_secretCode') ? (url.searchParams.get('_secretCode') ?? '') : (url.searchParams.get('code') ?? '');
     // A literal "+" in the query string decodes to a space; accept both
     // spellings of the ITI media type so the JSON branch is not missed.
-    const format = (url.searchParams.get('_format') ?? '').replace(/^application\/validador-iti json$/, 'application/validador-iti+json');
+    const format = (url.searchParams.get('_format') ?? '').replace(/^application\/validador-iti json$/, ITI_FORMAT);
 
     if (!id) {
       return reply(400, { error: 'Documento não informado.' });
@@ -68,7 +96,7 @@ Em caso de dúvida, entre em contato com o médico emissor.`;
 
     const { data: rx } = await supabase
       .from('prescriptions')
-      .select('id, storage_path, secret_code, status, created_at, expires_at, signed_at, signature_verified_at, issuance_verified_at, issuance_snapshot, user_id, doc_type')
+      .select('id, storage_path, signed_storage_path, secret_code, status, created_at, expires_at, signed_at, signature_verified_at, issuance_verified_at, issuance_snapshot, user_id, doc_type')
       .eq('id', id)
       .maybeSingle();
 
@@ -106,7 +134,36 @@ Em caso de dúvida, entre em contato com o médico emissor.`;
     }
     const prescriber = snapshot.prescriber;
 
-    if (format === 'application/validador-iti+json') {
+    // The signed file, after every guard above; incomplete signed state is a
+    // 409, never the generated file in its place.
+    let signedPath: string | null;
+    try {
+      signedPath = signedFileOf(rx);
+    } catch (error) {
+      if (!(error instanceof SignatureIncomplete)) throw error;
+      return new Response(JSON.stringify({ status: 'signature_incomplete', error: 'Assinatura digital incompleta. Solicite a reemissão ao prescritor.' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    if (format === ITI_FORMAT) {
+      // VALIDAR checks signatures: only a validly signed document is offered.
+      if (!signedPath) {
+        return new Response(JSON.stringify({ status: 'unsigned', error: 'Documento ainda não assinado digitalmente.' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const { data: signedUrl, error: urlError } = await supabase.storage
+        .from('prescriptions')
+        .createSignedUrl(signedPath, 300);
+      if (urlError || !signedUrl?.signedUrl) throw new Error('Documento indisponível');
+      return new Response(
+        JSON.stringify({ version: '1.0.0', prescription: { signatureFiles: [{ url: signedUrl.signedUrl }] } }),
+        { headers: { ...corsHeaders, 'Content-Type': ITI_FORMAT } },
+      );
+    }
+
+    if (format === 'application/json') {
+      // Cortex's own manifest: the generated PDF together with its own digest
+      // (issuance_snapshot.pdf_sha256); never the signed file with that digest.
       const { data: signedUrl, error: urlError } = await supabase.storage
         .from('prescriptions')
         .createSignedUrl(storagePath, 300);
@@ -130,14 +187,14 @@ Em caso de dúvida, entre em contato com o médico emissor.`;
           assinadaEm: rx.signature_verified_at ? rx.signed_at : null,
           documento: signedUrl?.signedUrl ?? null,
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/validador-iti+json' } },
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
-    // Default: serve the PDF inline.
+    // Default: serve the PDF inline, the signed one when validly signed.
     const { data: blob, error: dlErr } = await supabase.storage
       .from('prescriptions')
-      .download(storagePath);
+      .download(signedPath ?? storagePath);
     if (dlErr || !blob) throw new Error('Erro ao carregar o documento');
 
     return new Response(blob.stream(), {

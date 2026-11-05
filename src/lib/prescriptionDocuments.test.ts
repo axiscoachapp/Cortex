@@ -167,6 +167,17 @@ const person = (extra: Row = {}) => ({
 const simple = { name: 'Medicamento sintético', dosage: 'dose de teste', instructions: 'instrução de teste' };
 const antimicrobial = { name: 'Amoxicilina 500 mg', dosage: '1 cápsula', instructions: 'de 8 em 8 horas por 7 dias' };
 
+describe('validation link (VALIDAR)', () => {
+  it('marks a prescription link with type=prescricao and leaves a sick note link plain', async () => {
+    const receita = await generate(database({ user_settings: [prescriber()], patients: [person()] }))({ patientId, docType: 'receita_simples', medications: [simple] });
+    expect(receita.status).toBe(200);
+    expect((await receita.json()).validationUrl).toMatch(/\/validate-prescription\?type=prescricao&id=[0-9a-f-]{36}$/);
+    const atestado = await generate(database({ user_settings: [prescriber()], patients: [person()] }))({ patientId, docType: 'atestado', content: { days: 2 } });
+    expect(atestado.status).toBe(200);
+    expect((await atestado.json()).validationUrl).toMatch(/\/validate-prescription\?id=[0-9a-f-]{36}$/);
+  });
+});
+
 describe('prescription document content', () => {
   it('prints prescriber phone and RQE, and the patient CPF, and keeps them in the snapshot', async () => {
     vi.useFakeTimers();
