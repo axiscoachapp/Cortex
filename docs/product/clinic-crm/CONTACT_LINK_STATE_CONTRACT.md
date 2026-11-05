@@ -26,7 +26,11 @@
 | Contato/caso operacional | Beneficiários só ativos no DTO anterior. Autorização por vínculo exige ativo; exceção de órfão considera também vínculos suspensos. Permissão por caso/administrador continua independente. |
 | `reception_link_edit` / página administrativa | Mesmo schema estrito, `active` agora reflete o estado persistido. Itens suspensos seguem identificados minimamente para administração; DTO da agenda fica intacto. |
 
-Nenhuma alteração de medicamento, alergia, identidade legal, prontuário, alerta PersonalMed ou compartilhamento. Os três helpers de custódia do Claude ficam intactos. UI de suspensão/reativação e aviso de histórico serão entregas posteriores sobre esta base.
+Nenhuma alteração de medicamento, alergia, identidade legal, prontuário, alerta PersonalMed ou compartilhamento. Os três helpers de custódia do Claude ficam intactos. UI de suspensão/reativação e aviso de histórico entregues em T05b/4b sobre esta base.
+
+## Interface entregue — T05b/4b
+
+[Implementação e provas](../../reviews/2026-11-05/contact-link-state-ui/IMPLEMENTATION.md). Lista administrativa com alvo explícito, leitura fresca dos mesmos IDs, conferência humana e revisão congelada. Suspensão aceita indisponibilidade; reativação exige paciente/médico disponíveis. Resultado ambíguo exige recuperar antes de nova gravação; recuperação não escreve e, se o alvo já foi atingido, não inverte nem reaplica a ação. Todas as entradas de recuperação/saída respeitam write em voo; sucesso/retorno invalidam projeções da recepção. Histórico/agenda preservados, sem cancelamento implícito ou acesso clínico. RPC e guardas desta base permanecem iguais.
 
 ## Aceite local
 

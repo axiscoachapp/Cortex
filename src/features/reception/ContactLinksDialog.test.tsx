@@ -4,12 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClinicAccessContext } from './accessContext';
 import type { ClinicAccess, LinkEdit } from './contracts';
 import { ContactLinksDialog } from './ContactLinksDialog';
-const mocks = vi.hoisted(() => ({ page: vi.fn(), close: vi.fn(), editor: vi.fn() }));
+const mocks = vi.hoisted(() => ({ page: vi.fn(), close: vi.fn(), editor: vi.fn(), state: vi.fn() }));
 vi.mock('./api', () => ({ receptionApi: { contactLinks: mocks.page } }));
 vi.mock('./LinkRelationshipDialog', () => ({ LinkRelationshipDialog: (props: { patientId: string; doctorId: string; contactId: string; onClose: () => void; onSaved: () => void }) => {
   mocks.editor(props); return <div role="dialog"><p>Editor sintético</p><button onClick={props.onClose}>Cancelar edição sintética</button><button onClick={props.onSaved}>Salvar edição sintética</button></div>;
 } }));
 const actor='11111111-1111-4111-8111-111111111111',clinic='66666666-6666-4666-8666-666666666666',contact='77777777-7777-4777-8777-777777777777',otherContact='88888888-8888-4888-8888-888888888888';
+vi.mock('./LinkStateDialog',()=>({LinkStateDialog:(props:{onClose:()=>void;onSaved:()=>void})=>{mocks.state(props);return <div role="dialog"><button onClick={props.onClose}>Voltar do estado sintético</button><button onClick={props.onSaved}>Salvar estado sintético</button></div>;}}));
 const first: LinkEdit={contactId:contact,patientId:'22222222-2222-4222-8222-222222222222',doctorId:'33333333-3333-4333-8333-333333333333',patientName:'Beneficiário sintético A',dateOfBirth:'2000-01-02',doctorName:'Médico sintético A',relationship:'guardian',revision:1,active:true,patientAvailable:true,doctorActive:true};
 const second: LinkEdit={...first,patientId:'44444444-4444-4444-8444-444444444444',patientName:'Beneficiário sintético B',doctorName:'Médico sintético B',doctorId:'55555555-5555-4555-8555-555555555555',relationship:'family'};
 const access: ClinicAccess={actorId:actor,kind:'clinical',active:true,admin:true,clinic:{id:clinic,name:'Clínica sintética'},doctors:[],staff:[]};
@@ -37,6 +38,16 @@ describe('administrative contact links dialog',()=>{
   it('keeps unavailable beneficiaries visible and prevents their correction',async()=>{
     mocks.page.mockResolvedValue({items:[{...first,patientAvailable:false},{...second,doctorActive:false}],nextCursor:null});mount();await screen.findByText(first.patientName);
     expect(edit()).toBeDisabled();expect(edit(second)).toBeDisabled();expect(screen.getByText('Paciente indisponível')).toBeVisible();expect(screen.getByText('Médico indisponível')).toBeVisible();
+  });
+  it('opens explicit state targets with exact identities and refreshes the list even on return without a new write',async()=>{
+    mount();await screen.findByText(first.patientName);fireEvent.click(screen.getByRole('button',{name:'Suspender vínculo de '+first.patientName}));
+    expect(mocks.state).toHaveBeenLastCalledWith(expect.objectContaining({contactId:contact,patientId:first.patientId,doctorId:first.doctorId,targetActive:false}));
+    mocks.page.mockResolvedValue({items:[{...first,active:false}],nextCursor:null});fireEvent.click(screen.getByRole('button',{name:'Voltar do estado sintético'}));await screen.findByRole('button',{name:'Reativar vínculo de '+first.patientName});expect(mocks.page).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole('button',{name:'Reativar vínculo de '+first.patientName}));expect(mocks.state).toHaveBeenLastCalledWith(expect.objectContaining({targetActive:true}));fireEvent.click(screen.getByRole('button',{name:'Salvar estado sintético'}));await screen.findByText('Vínculo reativado.');
+  });
+  it('permits suspension for unavailable people but refuses their reactivation',async()=>{
+    mocks.page.mockResolvedValue({items:[{...first,doctorActive:false},{...second,active:false,patientAvailable:false}],nextCursor:null});mount();await screen.findByText(first.patientName);
+    expect(screen.getByRole('button',{name:'Suspender vínculo de '+first.patientName})).toBeEnabled();expect(screen.getByRole('button',{name:'Reativar vínculo de '+second.patientName})).toBeDisabled();
   });
   it('does not read or render cached patients for a non-admin',()=>{
     mount({admin:false,cached:true});expect(mocks.page).not.toHaveBeenCalled();expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();

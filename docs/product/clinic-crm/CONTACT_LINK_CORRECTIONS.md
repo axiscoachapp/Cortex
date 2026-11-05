@@ -1,6 +1,6 @@
 # T05a — Retificação de vínculos administrativos
 
-Data: 03/11/2026. Estado: especificação para implementação incremental; **sem migration, alteração de dados ou recurso publicado nesta entrega**. Complementa [T05](../../../tasks/clinic-crm/todo.md) e a [correção de nome/telefone](../../reviews/2026-11-03/contact-corrections/IMPLEMENTATION.md).
+Data da especificação: 03/11/2026. Estado em05/11: **T05b implementada localmente pelas fatias1–4b**, sem publicação/carga real. [Banco/API de estado](../../reviews/2026-11-05/contact-link-state/IMPLEMENTATION.md) e [interface final](../../reviews/2026-11-05/contact-link-state-ui/IMPLEMENTATION.md). Os complementos abaixo registram a sequência histórica; pendências de cada fatia foram resolvidas pelas posteriores. Complementa [T05](../../../tasks/clinic-crm/todo.md) e a [correção de nome/telefone](../../reviews/2026-11-03/contact-corrections/IMPLEMENTATION.md).
 
 ## Objetivo e premissas
 
@@ -34,7 +34,7 @@ Uma revogação neste módulo não representa uma proibição global de uma pess
 
 ## Modelo e contratos propostos
 
-`revision` e carimbo/ator de atualização foram adicionados em T05b/3, preservando chave, FKs e confirmação original. `active` ainda será adicionado no ciclo de suspensão; o estado atual é implicitamente ativo. Não inventar autor/evento retroativo. Gravação direta por cliente continua proibida; trigger protege identidade e metadata também contra escritores privilegiados.
+`revision` e carimbo/ator de atualização foram adicionados em T05b/3, preservando chave, FKs e confirmação original. `active` foi materializado em T05b/4a, sem inventar autor/evento retroativo. Gravação direta por cliente continua proibida; trigger protege identidade e metadata também contra escritores privilegiados.
 
 Editor administrativo separado dos RPCs atuais, para preservar formatos estritos:
 
@@ -61,7 +61,7 @@ Para um beneficiário errado: suspender o vínculo incorreto e confirmar o corre
 
 Admin abre os vínculos do contato, confere nome/nascimento/médico, escolhe a operação e confirma sua consequência. Suspender deixa explícito que o histórico permanece e que futuras reservas por esse vínculo serão recusadas. Reativar exige nova conferência. Erro de versão preserva o preenchimento e oferece recuperação explícita do servidor.
 
-Seguir as guardas já verificadas no editor de contato: preservar estado em falha de refetch, congelar revisão-base, bloquear saída durante gravação/recuperação e renovar conferência ao mudar a seleção. Manter marca/escala 150% e testar 390/768/1280/1920 px.
+Seguir as guardas já verificadas no editor de contato: preservar estado em falha de refetch, congelar revisão-base, bloquear saída durante gravação/recuperação e renovar conferência ao mudar a seleção. Manter marca/escala135% atual e testar 390/768/1280/1920px (também375px em T05b/4b).
 
 ## Verificação antes de publicar
 

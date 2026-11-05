@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
 import type { LinkEdit } from './contracts';
 import { LinkRelationshipDialog } from './LinkRelationshipDialog';
+import { LinkStateDialog } from './LinkStateDialog';
 import { relationshipLabels } from './linkRelationships';
 import { ReceptionNotice } from './ReceptionNotice';
 
@@ -17,7 +18,8 @@ export function ContactLinksDialog(props: Props) {
   return <LinkList key={`${access.actorId}:${access.clinic.id}:${props.contactId}`} {...props} actorId={access.actorId} clinicId={access.clinic.id} />;
 }
 function LinkList({ actorId, clinicId, contactId, contactName, onClose }: Props & { actorId: string; clinicId: string }) {
-  const [editing, setEditing] = useState<LinkEdit | null>(null), [saved, setSaved] = useState(false);
+  const client = useQueryClient();
+  const [editing, setEditing] = useState<LinkEdit | null>(null), [changingState, setChangingState] = useState<LinkEdit | null>(null), [saved, setSaved] = useState<string | null>(null);
   const page = useInfiniteQuery({
     queryKey: ['reception', actorId, 'contact-links', clinicId, contactId],
     initialPageParam: null as string | null,
@@ -31,12 +33,13 @@ function LinkList({ actorId, clinicId, contactId, contactName, onClose }: Props 
   });
   const verified = page.isSuccess && page.isFetchedAfterMount;
   const rows = verified ? page.data.pages.flatMap(value => value.items) : [];
-  if (editing) return <LinkRelationshipDialog contactId={contactId} patientId={editing.patientId} doctorId={editing.doctorId} contactName={contactName} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setSaved(true); }} />;
+  if (editing) return <LinkRelationshipDialog contactId={contactId} patientId={editing.patientId} doctorId={editing.doctorId} contactName={contactName} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setSaved('Relação administrativa corrigida.'); }} />;
+  if (changingState) return <LinkStateDialog contactId={contactId} patientId={changingState.patientId} doctorId={changingState.doctorId} contactName={contactName} targetActive={!changingState.active} onClose={() => { setChangingState(null); void client.invalidateQueries({ queryKey: ['reception'] }); }} onSaved={() => { setChangingState(null); setSaved(changingState.active ? 'Vínculo suspenso. Histórico preservado.' : 'Vínculo reativado.'); }} />;
   return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
     <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
-      <DialogHeader><DialogTitle>Vínculos do contato</DialogTitle><DialogDescription>Confira o beneficiário, o médico e a relação antes de fazer uma correção.</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>Vínculos do contato</DialogTitle><DialogDescription>Confira o beneficiário, o médico e a relação antes de corrigir, suspender ou reativar um vínculo.</DialogDescription></DialogHeader>
       <p className="break-words text-sm font-medium">Contato: {contactName}</p>
-      {saved && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">Relação administrativa corrigida.</p>}
+      {saved && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">{saved}</p>}
       <ReceptionNotice loading={page.isPending || (!page.isFetchedAfterMount && page.isFetching)} error={page.error} onRetry={() => void page.refetch()} />
       {verified && <>
         {!rows.length && <p className="rounded-lg border bg-muted/30 p-4 text-sm">Nenhum vínculo administrativo neste contato.</p>}
@@ -48,7 +51,10 @@ function LinkList({ actorId, clinicId, contactId, contactName, onClose }: Props 
             <div><dt className="text-xs text-muted-foreground">Relação do contato</dt><dd>{relationshipLabels[row.relationship]}</dd></div>
           </dl>
           {(!row.active || !row.patientAvailable || !row.doctorActive) && <p className="text-xs text-muted-foreground">{[!row.active && 'Vínculo indisponível', !row.patientAvailable && 'Paciente indisponível', !row.doctorActive && 'Médico indisponível'].filter(Boolean).join(' · ')}</p>}
-          <Button type="button" variant="outline" size="sm" className="h-auto min-h-11 max-w-full whitespace-normal text-left" disabled={page.isFetching || !row.active || !row.patientAvailable || !row.doctorActive} onClick={() => { setSaved(false); setEditing(row); }}>Corrigir relação de {row.patientName}</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" className="h-auto min-h-11 max-w-full whitespace-normal text-left" disabled={page.isFetching || !row.active || !row.patientAvailable || !row.doctorActive} onClick={() => { setSaved(null); setEditing(row); }}>Corrigir relação de {row.patientName}</Button>
+            <Button type="button" variant="outline" size="sm" className="h-auto min-h-11 max-w-full whitespace-normal text-left" disabled={page.isFetching || (!row.active && (!row.patientAvailable || !row.doctorActive))} onClick={() => { setSaved(null); setChangingState(row); }}>{row.active ? 'Suspender' : 'Reativar'} vínculo de {row.patientName}</Button>
+          </div>
         </li>)}</ul>
         <p className="text-xs text-muted-foreground">{rows.length} {rows.length === 1 ? 'vínculo carregado' : 'vínculos carregados'}</p>
       </>}

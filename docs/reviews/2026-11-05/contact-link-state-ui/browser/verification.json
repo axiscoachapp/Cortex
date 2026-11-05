@@ -1,0 +1,370 @@
+{
+  "syntheticOnly": true,
+  "realPagesAndApi": true,
+  "realSql": false,
+  "checks": [
+    "human review with exact IDs/revision/target",
+    "suspension and reactivation reflected in list",
+    "lost response recovery has no automatic retry or reversed target",
+    "conflict recovery resets human confirmation",
+    "pending write blocks Escape and duplicate submission",
+    "suspension allowed with unavailable patient/physician, reactivation disabled",
+    "375px dialog title and footer reachable at app scale",
+    "390/768/1280/1920px resize preserves review and reachable action",
+    "staff has no administrative entrypoint"
+  ],
+  "scenarios": [
+    {
+      "admin": true,
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_contacts",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_search": "",
+            "p_before": null
+          }
+        },
+        {
+          "name": "reception_contact_links",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_set_link_active",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_revision": 1,
+            "p_active": false
+          }
+        },
+        {
+          "name": "reception_contacts",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_search": "",
+            "p_before": null
+          }
+        },
+        {
+          "name": "reception_contact_links",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_set_link_active",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_revision": 2,
+            "p_active": true
+          }
+        },
+        {
+          "name": "reception_contacts",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_search": "",
+            "p_before": null
+          }
+        },
+        {
+          "name": "reception_contact_links",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_set_link_active",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_revision": 3,
+            "p_active": false
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_contacts",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_search": "",
+            "p_before": null
+          }
+        },
+        {
+          "name": "reception_contact_links",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_set_link_active",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_revision": 4,
+            "p_active": true
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_set_link_active",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_revision": 5,
+            "p_active": true
+          }
+        },
+        {
+          "name": "reception_contacts",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_search": "",
+            "p_before": null
+          }
+        },
+        {
+          "name": "reception_contact_links",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_set_link_active",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_revision": 6,
+            "p_active": false
+          }
+        }
+      ]
+    },
+    {
+      "unavailable": true,
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_contacts",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_search": "",
+            "p_before": null
+          }
+        },
+        {
+          "name": "reception_contact_links",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_set_link_active",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_revision": 1,
+            "p_active": false
+          }
+        },
+        {
+          "name": "reception_contacts",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_search": "",
+            "p_before": null
+          }
+        },
+        {
+          "name": "reception_contact_links",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        }
+      ]
+    },
+    {
+      "admin": false,
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_contacts",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_search": "",
+            "p_before": null
+          }
+        }
+      ]
+    }
+  ],
+  "pageErrors": [],
+  "sources": [
+    {
+      "path": "src/features/reception/ContactsPage.tsx",
+      "sha256": "9af3c75e2b37a3b0d729bd31842966851439f1cdf7222bfb379229b8d998f6fc"
+    },
+    {
+      "path": "src/features/reception/ContactLinksDialog.tsx",
+      "sha256": "6b21617454639efe05150b3b58d6b032079db77ec0d96ae0ba802e58ab5246cd"
+    },
+    {
+      "path": "src/features/reception/LinkStateDialog.tsx",
+      "sha256": "93c975954cb66fd933d9d21497f0c0fe453b8fd579ea3cb5efb6750be343fcd8"
+    },
+    {
+      "path": "src/features/reception/LinkRelationshipDialog.tsx",
+      "sha256": "a64a7ca74177f1ffe9ec2fe03fce944be6a0ad9f2fd7267d10f7f21506c91309"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "6abb15cf334767817f37f62c0308c432bb40bbf6bcf81f8fd300007ab3d0ed59"
+    },
+    {
+      "path": "src/features/reception/contracts.ts",
+      "sha256": "8c5f7f329416fd0e5b8dcdb155f99721015606699ce5fb5f9de07599640047a7"
+    },
+    {
+      "path": "src/features/reception/linkRelationships.ts",
+      "sha256": "f3308b7cd8ee89231d5bd5aaa1e0d51de16f58de7fde7cbbabc8a164c51d8636"
+    },
+    {
+      "path": "src/hooks/useUnsavedChanges.ts",
+      "sha256": "1a124ebb7fd75d09621ff4c85574257cb8436370960f47f0a0b32c8c7c9a6e23"
+    },
+    {
+      "path": "scripts/fixtures/contact-links-ui-page.tsx",
+      "sha256": "dfa627495964a40c07fdcf63d87873ab96a8429f6202ddb975dbb5aa5c7c4c07"
+    },
+    {
+      "path": "scripts/test-contact-link-state-ui-browser.mjs",
+      "sha256": "846ad4aa7b7819db1a6b7ca5c03f26f81db06c22cc34448a656599cd488ecd0f"
+    }
+  ],
+  "cleanupVerified": true
+}
