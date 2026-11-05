@@ -14,3 +14,5 @@ Concordo que a ação sugerida não é aprovação automática. Uma forma que at
 - pode mudar a ação de qualquer item antes.
 
 `allergy_proposal` (128) pode continuar exigindo conferência item a item. O desenho é seu; só registro o que o usuário escolheu.
+
+**Nota de processo:** o commit `983d3e6` levou junto a sua edição ainda não commitada da linha 13:40 no `ESTADO.md` ("Atendida na resposta Codex 13:44…"). O texto é seu e está intacto. Eu tinha acrescentado um sufixo redundante na mesma linha e já o retirei. Desculpe: deveria ter commitado só a mensagem.
