@@ -20,6 +20,7 @@ const linkMode = process.argv.includes('--link') || setupVerifyMode;
 assert.ok(!(setupVerifyMode && process.argv.includes('--link')), 'Choose one recovery proof');
 const setupOrderMode = process.argv.includes('--setup-order');
 const setupFenceMode = process.argv.includes('--setup-fence');
+const setupInflightMode = process.argv.includes('--setup-inflight');
 const setupMode = process.argv.includes('--setup-cas') || setupOrderMode || setupFenceMode;
 assert.ok([setupOrderMode, setupFenceMode, process.argv.includes('--setup-cas')].filter(Boolean).length <= 1, 'Choose one setup proof');
 const identityMode = process.argv.includes('--provision-identity');
@@ -35,7 +36,7 @@ const confirmationBoundary=process.argv.includes('--confirmation-boundary');
 const atomicInstall=process.argv.includes('--atomic-install'),atomicRed=process.argv.includes('--atomic-red');
 const pendingReceipt=process.argv.includes('--pending-receipt');
 const clinicSourceArg=process.argv.slice(2).find(arg=>arg.startsWith('--source='));
-assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding', '--link', '--setup-cas','--setup-order','--setup-verify','--setup-fence','--provision-identity','--provision-intent','--provision-clinic','--red','--ledger','--session-fixture','--birth-producer','--birth-producer-red','--reservation-keys','--reservation-red','--confirmation-producer','--confirmation-red','--creation-producer','--creation-red','--confirmation-boundary','--atomic-install','--atomic-red','--pending-receipt'].includes(arg)||/^--source=[0-9a-f]{40}$/.test(arg)||/^--auth-version=v2\.(197|189)\.0$/.test(arg)), 'Unknown lab option');
+assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding', '--link', '--setup-cas','--setup-order','--setup-verify','--setup-fence','--setup-inflight','--provision-identity','--provision-intent','--provision-clinic','--red','--ledger','--session-fixture','--birth-producer','--birth-producer-red','--reservation-keys','--reservation-red','--confirmation-producer','--confirmation-red','--creation-producer','--creation-red','--confirmation-boundary','--atomic-install','--atomic-red','--pending-receipt'].includes(arg)||/^--source=[0-9a-f]{40}$/.test(arg)||/^--auth-version=v2\.(197|189)\.0$/.test(arg)), 'Unknown lab option');
 assert.ok([bindingMode, linkMode, setupMode,identityMode,intentMode,clinicMode].filter(Boolean).length <= 1, 'Choose one credential lab');
 assert.ok(!clinicRed||(clinicMode&&!process.argv.includes('--all')),'RED is a single clinic composition run');
 assert.ok(!ledgerMode||(clinicMode&&!clinicRed),'Ledger bindings extend only the composed clinic proof');
@@ -52,6 +53,7 @@ assert.ok(!confirmationBoundary||(creationProducer&&!creationRed),'Server bounda
 assert.ok(!atomicInstall||confirmationBoundary,'Atomic installation extends the server boundary proof');
 assert.ok(!pendingReceipt||(atomicInstall&&!atomicRed),'Pending receipt proof requires the complete atomic protocol');
 assert.ok(!atomicRed||(atomicInstall&&!process.argv.includes('--all')),'Atomic RED is one explicit partial-installation counterexample');
+assert.ok(!setupInflightMode||setupFenceMode,'In-flight setup proof requires the composed session fence');
 assert.ok(!clinicSourceArg||clinicMode,'Source snapshot belongs to the clinic lab');
 assert.ok(process.argv.slice(2).filter(arg=>arg.startsWith('--source=')).length<=1,'Choose one source snapshot');
 assert.ok(!(cleanupCheck && (process.argv.includes('--all') || bindingMode || linkMode || setupMode || identityMode || intentMode || clinicMode)), 'Choose normal lab or cleanup diagnostic');
@@ -71,9 +73,10 @@ const setupOrderModule = setupOrderMode ? await import('data:text/javascript;bas
 const setupVerifyPaths = ['scripts/test-initial-password-auth.mjs','scripts/test-initial-setup-verify.mjs','supabase/tests/prototypes/initial-password-auth.sql','supabase/tests/prototypes/single-use-setup.sql'];
 const setupVerifyInputs = new Map((setupVerifyMode ? setupVerifyPaths : []).map(path => [path, readFileSync(path, 'utf8')]));
 const setupVerifyModule = setupVerifyMode ? await import('data:text/javascript;base64,' + Buffer.from(setupVerifyInputs.get('scripts/test-initial-setup-verify.mjs')).toString('base64')) : null;
-const setupFencePaths = ['scripts/test-initial-password-auth.mjs','scripts/test-initial-setup-session-fence.mjs','supabase/tests/prototypes/initial-password-auth.sql','supabase/tests/prototypes/initial-setup-cas.sql','supabase/tests/prototypes/initial-setup-session-fence.sql'];
+const setupFencePaths = ['scripts/test-initial-password-auth.mjs','scripts/test-initial-setup-session-fence.mjs','supabase/tests/prototypes/initial-password-auth.sql','supabase/tests/prototypes/initial-setup-cas.sql','supabase/tests/prototypes/initial-setup-session-fence.sql',...(setupInflightMode?['scripts/test-initial-setup-session-inflight.mjs']:[])];
 const setupFenceInputs = new Map((setupFenceMode ? setupFencePaths : []).map(path => [path, readFileSync(path, 'utf8')]));
 const setupFenceModule = setupFenceMode ? await import('data:text/javascript;base64,' + Buffer.from(setupFenceInputs.get('scripts/test-initial-setup-session-fence.mjs')).toString('base64')) : null;
+const setupInflightModule = setupInflightMode ? await import('data:text/javascript;base64,' + Buffer.from(setupFenceInputs.get('scripts/test-initial-setup-session-inflight.mjs')).toString('base64')) : null;
 const identitySources = (setupFenceMode ? setupFencePaths : setupVerifyMode ? setupVerifyPaths : setupOrderMode ? setupOrderPaths : identityMode ? identityPaths : intentMode ? intentPaths : clinicMode?clinicPaths:[]).map(path => ({path,sha256:identityHash(path)}));
 let clinicInputs,clinicModule,reservationModule,confirmationModule,creationModule,boundaryModule,boundaryFactory,atomicModule,pendingModule;
 if(clinicMode){
@@ -273,11 +276,12 @@ for (const { version, fault } of runs) {
         : identityMode ? (await import('./test-provisioning-auth-identity.mjs')).exerciseProvisioningAuthIdentity
         : setupVerifyMode ? setupVerifyModule.exerciseInitialSetupVerify
         : bindingMode ? (await import('./test-credential-binding.mjs')).exerciseCredentialBinding
+        : setupInflightMode ? setupInflightModule.exerciseInitialSetupSessionInflight
         : setupFenceMode ? setupFenceModule.exerciseInitialSetupSessionFence
         : setupOrderMode ? setupOrderModule.exerciseInitialSetupOrder
         : setupMode ? (await import('./test-initial-setup-cas.mjs')).exerciseInitialSetupCas
         : (await import('./test-single-use-setup.mjs')).exerciseSingleUseSetup;
-      report = await exercise({ auth, rest, adminJwt, version, call, sql, asyncHttp, restartAuth: extra => restartAuth({ ...(bindingMode ? hookEnv : {}), ...extra }),
+      report = await exercise({ auth, rest, adminJwt, version, call, sql, asyncHttp, exerciseBase: setupFenceModule?.exerciseInitialSetupSessionFence, restartAuth: extra => restartAuth({ ...(bindingMode ? hookEnv : {}), ...extra }),
         pause, syntheticSecrets,preparation:clinicPreparation,red:clinicRed,ledger:ledgerMode,birthProducer,birthProducerRed,reservationCheck:reservationModule?.exerciseReservationKeys,reservationRed,confirmationCheck:confirmationModule?.exerciseConfirmationProducer,confirmationRed,creationCheck:creationModule?.exerciseCreationProducer,creationRed,creationInstalled:!!clinicInputs?.creationProducer,boundaryCheck:boundaryModule?.exerciseConfirmationBoundary,boundaryFactory,pendingCheck:pendingModule?.exercisePendingReceipt,rawSql,holderSession: () => {
           const child = spawn('docker', dockerArgs(['exec', '-i', names.db, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1']), { env: dockerEnvironment, windowsHide: true });
           observeChild(child); child.stderr.resume(); return child;
@@ -485,7 +489,7 @@ for (const { version, fault } of runs) {
   report.cleanupVerified = true;
   report.localDockerEndpoint = dockerEndpoint.startsWith('npipe:') ? 'verified local named pipe' : 'verified local Unix socket';
   report.network = 'owned internal network, no published ports or external route';
-  const artifacts = resolve(setupFenceMode?'docs/reviews/2026-11-05/initial-setup-session-fence':setupVerifyMode?'docs/reviews/2026-11-05/initial-setup-verify':setupOrderMode?'docs/reviews/2026-11-05/initial-setup-order':pendingReceipt?'docs/reviews/2026-11-05/provisioning-pending-receipt':atomicInstall?'docs/reviews/2026-11-05/provisioning-atomic-install':confirmationBoundary?'docs/reviews/2026-11-05/provisioning-confirmation-boundary':creationProducer?'docs/reviews/2026-11-05/provisioning-creation-producer':confirmationProducer?'docs/reviews/2026-11-05/provisioning-confirmation-producer':reservationKeys?'docs/reviews/2026-11-05/provisioning-reservation-keys':birthProducer?'docs/reviews/2026-11-05/native-birth-producer':sessionFixture?'docs/reviews/2026-11-05/native-session-fixture':'docs/reviews/2026-11-04/' + (ledgerMode?'provisioning-ledger-bindings':clinicMode?'provisioning-clinic-authority':intentMode ? 'provisioning-human-intent' : identityMode ? 'provisioning-auth-identity' : setupMode ? 'initial-setup-cas' : linkMode ? 'single-use-setup' : bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
+  const artifacts = resolve(setupInflightMode?'docs/reviews/2026-11-05/initial-setup-session-inflight':setupFenceMode?'docs/reviews/2026-11-05/initial-setup-session-fence':setupVerifyMode?'docs/reviews/2026-11-05/initial-setup-verify':setupOrderMode?'docs/reviews/2026-11-05/initial-setup-order':pendingReceipt?'docs/reviews/2026-11-05/provisioning-pending-receipt':atomicInstall?'docs/reviews/2026-11-05/provisioning-atomic-install':confirmationBoundary?'docs/reviews/2026-11-05/provisioning-confirmation-boundary':creationProducer?'docs/reviews/2026-11-05/provisioning-creation-producer':confirmationProducer?'docs/reviews/2026-11-05/provisioning-confirmation-producer':reservationKeys?'docs/reviews/2026-11-05/provisioning-reservation-keys':birthProducer?'docs/reviews/2026-11-05/native-birth-producer':sessionFixture?'docs/reviews/2026-11-05/native-session-fixture':'docs/reviews/2026-11-04/' + (ledgerMode?'provisioning-ledger-bindings':clinicMode?'provisioning-clinic-authority':intentMode ? 'provisioning-human-intent' : identityMode ? 'provisioning-auth-identity' : setupMode ? 'initial-setup-cas' : linkMode ? 'single-use-setup' : bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
   mkdirSync(artifacts, { recursive: true });
   writeFileSync(resolve(artifacts, (clinicRed||birthProducerRed||reservationRed||confirmationRed||creationRed||atomicRed?'RED-':'')+version + '.json'), JSON.stringify(report, null, 2) + '\n');
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');

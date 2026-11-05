@@ -1,0 +1,69 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.197.0",
+  "checks": [
+    "native initial OTP and refresh remain repair; editable metadata cannot grant access",
+    "reserved native password commit advances private generation once, revokes sessions/bindings and keeps data closed",
+    "new personal login and post-password OTP bind to the same generation with distinct immutable purposes, still pending completion",
+    "private completion requires live password binding, operation and CAS; retry does not mutate; repair/client roles cannot conclude",
+    "DB-only purpose-removal control admits current repair and refresh; exact predicate restoration denies both again",
+    "native local logout denies old unexpired JWT/refresh; new password login works; owned expiry fixture closes read and completion",
+    "observed in-flight verify stays paused through reserved password commit and private personal-session completion",
+    "specific stale-marker/XID guard is observed; delayed native verify rolls back without a session, binding or authority change",
+    "a fresh native recovery remains usable as repair with denied data and denied refresh data after the delayed rollback",
+    "old/wrong-operation worker cannot overwrite the reserved password or reset completed generation; winning login still reads"
+  ],
+  "privateCompletionOnly": true,
+  "productionIntegration": false,
+  "purposeRemovalControlReadRows": 1,
+  "restoredRepairReadRows": 0,
+  "notCovered": [
+    "MFA completion admission and upgrades",
+    "verified HTTP/Edge context boundary",
+    "two-connection completion races",
+    "crypto maintenance and existing/reset accounts",
+    "app integration and hosted configuration",
+    "PKCE exchange in flight",
+    "other in-flight native paths and metadata variants"
+  ],
+  "inFlightComposition": true,
+  "lateVerifyStatus": 500,
+  "deferredStaleMarkerGuardObserved": true,
+  "latePersistedSessionCount": 0,
+  "freshRepairReadRows": 0,
+  "freshRepairRefreshReadRows": 0,
+  "personalReadRows": 1,
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "3267b52179bbd9a1db359db565fbe393a9e20f9cc5f76bd3abb89a912cdeeae9"
+    },
+    {
+      "path": "scripts/test-initial-setup-session-fence.mjs",
+      "sha256": "5a2a8c62c6287f976fc338ddee13d2f1934c849e11f90e9bc34977b50f0be330"
+    },
+    {
+      "path": "supabase/tests/prototypes/initial-password-auth.sql",
+      "sha256": "6e43c2859c484901b927a85421bfde7e61b97f896b294d4f4f76b5618548012f"
+    },
+    {
+      "path": "supabase/tests/prototypes/initial-setup-cas.sql",
+      "sha256": "8ac8010c28cef05279068269cb7fe58c7ceb03ec2ecbb159659d3ce2c021c36c"
+    },
+    {
+      "path": "supabase/tests/prototypes/initial-setup-session-fence.sql",
+      "sha256": "9b6e9d50d6295f4f8f00452c6eff96095fc4e062add42e129d81a3779dd62c4f"
+    },
+    {
+      "path": "scripts/test-initial-setup-session-inflight.mjs",
+      "sha256": "fbd55231f2a253305836330646ed7d9b1a4fc5f55f7b5eb9b72b4d4ca119c848"
+    }
+  ],
+  "postgresImage": "pgvector/pgvector:pg16",
+  "restImage": "public.ecr.aws/supabase/postgrest:v16.5",
+  "authImage": "public.ecr.aws/supabase/gotrue:v2.197.0",
+  "cleanupVerified": true,
+  "localDockerEndpoint": "verified local named pipe",
+  "network": "owned internal network, no published ports or external route"
+}

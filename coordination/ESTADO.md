@@ -1,6 +1,8 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-05 17:56 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-05 18:06 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+
+**T31/3b/2c/3b, recovery em andamento composto ensaiado:** [provas](../docs/reviews/2026-11-05/initial-setup-session-inflight/IMPLEMENTATION.md). Dez grupos por Auth197/189 (seis base+quatro novos), seis fontes/hash/cleanup. Verify observado antes da escrita e na condição deferred de metadata antiga/XID diferente; guarda existente recusa500, sem sessão/binding tardios ou mudança no estado autorizado. Pessoal1, nova repair/refresh0, senha/operação erradas não sobrescrevem. Observer só pausa, SQLs/base intactos; sintaxe/lintNode/trêsflags/diff/revisão aprovados. Próximo conclusão/revogação em duas conexões; PKCE/MFA/contexto/reset/integração/T31 abertos. Sem migration/endpoint/prod/hosted/push/carga/Claude/SaaS; nenhuma mensagem nova1340/1348 já atendidas1344/1354.
 
 **T31/3b/2c/3a, vínculo básico composto no laboratório:** [provas](../docs/reviews/2026-11-05/initial-setup-session-fence/IMPLEMENTATION.md). Overlay somente em prototypes; seis grupos por Auth197/189, cinco fontes/hash/cleanup. Reserva nativa gera autoridade privada nova, hook fixa password/repair; conclusão privada/CAS/retry só por password, repair/refresh0 e controle de propósito removido1/restaurado0. ACL, metadata, logout e expiração cobertos; sintaxe/lintNode/trêsflags/diff/revisão local aprovados. Base/histórico intactos, sem produção/endpoint/migration. Próximo ensaiar verify em andamento composto e depois PKCE/MFA/contexto/concorrência; T31 inteira aberta. Claude/SaaS/PersonalMed preservados; sem hosted/push/carga. Nenhuma mensagem nova1340/1348 já atendidas1344/1354.
 

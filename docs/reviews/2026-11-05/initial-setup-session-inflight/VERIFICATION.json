@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "checks": [
+    "v2.197.0: six base + four in-flight groups, six sources and cleanup verified",
+    "v2.189.0: six base + four in-flight groups, six sources and cleanup verified",
+    "CLI rejects invalid combination: --setup-inflight",
+    "CLI rejects invalid combination: --setup-fence --setup-inflight --setup-order",
+    "CLI rejects invalid combination: --setup-fence --setup-inflight --check-cleanup",
+    "Node syntax: scripts/test-initial-password-auth.mjs",
+    "Node syntax: scripts/test-initial-setup-session-inflight.mjs",
+    "All base SQL/module and historical evidence unchanged"
+  ]
+}
