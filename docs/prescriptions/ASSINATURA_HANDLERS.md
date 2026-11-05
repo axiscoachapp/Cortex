@@ -2,6 +2,8 @@
 
 Status: **proposta, sem código**. Revisão do Codex antes de qualquer handler.
 
+O Codex recebeu a versão de `690df17` (22:38), mas não a aprovou. Esta revisão incorpora as posições dele; a revisão integral vem depois da correção que o usuário pediu a ele.
+
 Não inclui provedor real, deploy, certificado nem migration aplicada em banco hospedado.
 
 Base:
@@ -22,13 +24,17 @@ Base:
 
 `requireUser` já verifica o bearer no Auth (`getUser`) e só então lê os claims assinados.
 
-**Pedido ao Codex** (arquivo compartilhado, mudança aditiva): `requireUser` passa a devolver também o que já validou:
+**Contexto tipado validado.** O Codex faz um helper compartilhado (posição de 22:38). Eu não edito `auth.ts` nem o bootstrap.
+- O helper devolve o que já validou:
 
-```ts
-{ userId: string; sessionId: string; aal: 'aal1' | 'aal2'; exp: number /* segundos, do JWT verificado */ }
-```
+  ```ts
+  { userId: string; sessionId: string; aal: 'aal1' | 'aal2'; exp: number /* segundos, do JWT verificado */ }
+  ```
 
-As chamadas atuais continuam iguais. Se o Codex preferir não mexer, um `requireSignatureUser` no meu domínio chama `requireUser` e relê os claims do mesmo token já verificado. Prefiro a mudança no lugar certo.
+- Os handlers não fazem parsing próprio de claims.
+- O próprio helper, com testes do Codex, garante:
+  - a compatibilidade das chamadas existentes;
+  - a validação estrita de `session_id` (UUID), `aal` e `exp` (inteiro positivo).
 
 **Regras da assinatura no handler, antes de qualquer RPC:**
 - conta clínica, não recepção (já está em `requireUser`);
@@ -36,6 +42,14 @@ As chamadas atuais continuam iguais. Se o Codex preferir não mexer, um `require
 - margem do token: `exp − agora ≥ 120 s`. Com menos que isso, a resposta é 401 "renove a sessão", e o cliente renova antes de começar. Isso só evita trabalho inútil: a cerca de verdade fica no banco (§3).
 
 O handler passa ao banco `p_auth = {sessionId, aal, exp}`, montado só desse contexto.
+
+**Validação de `p_auth` no banco** (antes de qualquer trava):
+- objeto JSON com exatamente as chaves `sessionId` (texto UUID), `aal` (`'aal2'`) e `exp` (inteiro positivo, em segundos);
+- chave a mais, chave faltando, `null` ou tipo errado é recusado com 22023;
+- o parâmetro é obrigatório, sem default;
+- as funções antigas, sem `p_auth`, deixam de existir. A migration ainda não foi aplicada em lugar nenhum, então a assinatura muda no próprio arquivo, sem overload.
+
+Os tipos gerados continuam com o Codex.
 
 ## 3. Cerca de sessão do Cortex no ponto autorizativo
 
@@ -46,13 +60,18 @@ Uma consulta HTTP ao Auth antes do RPC não fecha um logout que aconteça entre 
 1. `select … from auth.sessions where id = p_auth.sessionId and user_id = p_user for share nowait`.
    - Linha ocupada (logout ou exclusão em andamento) vira 40001.
    - Linha ausente (logout já feito) vira **P4011** ("sessão do Cortex encerrada").
-2. A sessão precisa de `aal = 'aal2'` e `factor_id is not null`, e o `aal` informado precisa ser `aal2`.
+2. A sessão precisa de `aal = 'aal2'`, e o `aal` informado também. **`factor_id` não nulo não prova um fator atual** (Codex, 22:38). Por isso:
+   - a cerca também trava `auth.mfa_factors` FOR SHARE NOWAIT pelo `factor_id` da sessão;
+   - o fator precisa ser do mesmo usuário e estar com `status = 'verified'`;
+   - um fator removido ou trocado leva a P4011, e um fator em alteração vira 40001.
 3. **Depois de todas as travas da função** (contas, epochs e linhas), com `clock_timestamp()`:
    - `agora < to_timestamp(p_auth.exp)`, do JWT verificado: `not_after` sozinho não limita o token (prova do Codex com bearer de oito segundos);
    - `not_after is null or agora < not_after`.
 
 **Ordem das travas** (inventário completo na migration):
-125 → 123 → `auth.users` (share) → **`auth.sessions` (share)** → epochs → linhas, na ordem sessão de assinatura → operação → receita → objeto do Storage.
+125 → 123 → `auth.users` (share) → **`auth.sessions` (share) → `auth.mfa_factors` (share)** → epochs → linhas, na ordem sessão de assinatura → operação → receita → objeto do Storage.
+
+**O relógio é a última coisa.** Travar a linha da sessão não para o relógio. `exp` e `not_after` são lidos com `clock_timestamp()` depois da última trava da função, e também imediatamente antes de escrever o efeito: na conclusão, antes de marcar a receita como assinada. Assim, um `not_after` que vence dentro da cerca final recusa mesmo com o JWT e a intenção ainda válidos (prova do Codex de 22:38).
 
 Sobre essa ordem:
 - **Exclusão de conta:** apaga `auth.users` e, em cascata, `auth.sessions`, na mesma ordem.
@@ -66,7 +85,8 @@ Cada uma é travada e conferida na mesma transação, com o relógio lido depois
 | Referência | Trava | Conferência | `reserve` | `session_token` | `advance` prepared/psc_requested/stored | `complete` |
 |---|---|---|---|---|---|---|
 | Conta do médico | `auth.users` FOR SHARE NOWAIT, 123 | existe, não é recepção, sem pedido de exclusão | ✓ | ✓ | ✓ | ✓ |
-| Sessão do Cortex | `auth.sessions` FOR SHARE NOWAIT | existe, AAL2, fator, `exp` e `not_after` depois das travas | ✓ | ✓ | ✓ | ✓ |
+| Sessão do Cortex | `auth.sessions` FOR SHARE NOWAIT | existe, AAL2, `exp` e `not_after` depois de todas as travas | ✓ | ✓ | ✓ | ✓ |
+| Fator da sessão | `auth.mfa_factors` FOR SHARE NOWAIT | mesmo usuário, `verified` | ✓ | ✓ | ✓ | ✓ |
 | Sessão de assinatura (PSC) | linha FOR UPDATE NOWAIT | ativa, mesma `generation`, `expires_at` | ✓ | ✓ | ✓ | ✓ |
 | Operação | linha FOR UPDATE NOWAIT | estado e tentativa (P4094) | — | — | ✓ | ✓ |
 | Receita | linha NOWAIT (share; update na conclusão) | dona, `generated`, hash do snapshot, sem caminho assinado | ✓ | — | ✓ | ✓ |
@@ -129,27 +149,34 @@ Esta é a única mudança de contrato do banco neste desenho, junto com a confer
 
 - O banco só aceita repetir a partir de `ambiguous`, com até 5 tentativas por operação e o limite de 60 operações por hora. Toda repetição exige a cerca da §3 (sessão viva com AAL2).
 - `humanRetry` vem da ação explícita "tentar de novo" na tela. Ele não é prova de anuência; a prova é o pedido autenticado e cercado.
-- **A decidir com o Codex** (política de MFA): exigir segundo fator recente, por exemplo 5 minutos, para cada repetição. **Proposta: não exigir agora.** O risco de repetição está limitado pelo teto de tentativas e pela assinatura determinística, que produz os mesmos bytes. Se a política mudar, muda só o handler.
+- **Segundo fator recente:** não é exigido nesta rodada (Codex, 22:38). Vale o AAL2 do contrato existente, sem prazo novo de MFA por inferência. O risco de repetição está limitado pelo teto de tentativas e pela assinatura determinística, que produz os mesmos bytes.
 
-## 7. Fixture `auth.sessions` (bootstrap, dono: Codex)
+## 7. Fixtures `auth.sessions` e `auth.mfa_factors` (bootstrap, dono: Codex)
 
 Para o Codex incluir no bootstrap quando este desenho estiver alinhado, com a nulabilidade nativa do Auth:
 
 | Coluna | Tipo | Nulo |
 |---|---|---|
 | `id` | uuid, PK | não |
-| `user_id` | uuid → `auth.users(id) on delete cascade` | sim no Auth nativo; os testes sempre preenchem |
+| `user_id` | uuid → `auth.users(id) on delete cascade` | não |
 | `aal` | `auth.aal_level` (`aal1`, `aal2`, `aal3`) | sim |
 | `factor_id` | uuid | sim |
 | `not_after` | timestamptz | sim |
 | `created_at`, `updated_at`, `refreshed_at` | timestamps | sim |
 
-O adaptador do Auth nativo omite essa tabela mock, como o Codex descreveu. Eu não edito o bootstrap.
+A cerca do fator também precisa de `auth.mfa_factors`, no mínimo com:
+- `id` uuid, PK;
+- `user_id` uuid → `auth.users(id) on delete cascade`;
+- `status` (`auth.factor_status`: `unverified` ou `verified`);
+- `factor_type`.
+
+O Codex confere a nulabilidade nativa ao montar as duas tabelas. O adaptador do Auth nativo omite essas tabelas mock, como o Codex descreveu. Eu não edito o bootstrap.
 
 ## 8. Provas, em vermelho antes do código
 
 **SQL, numa conexão:**
-- sessão ausente, `aal1`, sem fator, `exp` vencido e `not_after` vencido, em cada função da tabela da §3;
+- sessão ausente, `aal1`, sem fator, fator `unverified`, fator de outro usuário, `exp` vencido e `not_after` vencido, em cada função da tabela da §3;
+- `p_auth` com chave a mais, chave faltando, `null`, tipo errado ou `aal1`; nenhuma função antiga sem `p_auth` sobrou;
 - logout entre a reserva e a conclusão leva a `cancelled` com `auth_session_ended` e limpeza;
 - objeto assinado ausente na conclusão.
 
@@ -157,16 +184,31 @@ O adaptador do Auth nativo omite essa tabela mock, como o Codex descreveu. Eu n�
 - logout (DELETE de `auth.sessions`) contra `signature_complete`, nas duas ordens, em RC e em RR;
 - exclusão de conta contra a cerca de sessão;
 - `exp` vencendo enquanto a função espera o 123: a recusa vem pelo relógio lido depois das travas;
+- `not_after` vencendo dentro da cerca final, com JWT e intenção ainda válidos: a conclusão recusa, sem publicar (Codex, 22:38);
+- fator removido ou trocado contra a conclusão, nas duas ordens;
 - controle que retira a cerca na base descartável e precisa falhar.
 
 **Fluxo:** portas com `p_auth`; o mapeamento HTTP da §5; os passos de fechamento funcionam sem sessão.
 
 **Handlers:** clientes simulados, conferindo que nada do corpo vira ator, sessão ou `exp`, e o pedido sem AAL2 ou com margem curta.
 
-## 9. Ordem
+## 9. Reconciliação sob a cerca
+
+`signature_pending_work` já lista o trabalho. O executor, no Edge e sem sessão de usuário, só pode **fechar**:
+- **`remove_candidate`:** remove o objeto do caminho da operação e chama `signature_cleanup_done`. A lista nunca traz uma operação concluída.
+- **`stuck` em `reserved` ou `prepared`** (nenhuma chamada ao PSC): `failed` com o código `abandoned`.
+- **`stuck` em `psc_requested`:** o pedido que chamou o PSC morreu. Vira `ambiguous` com a tentativa atual, e só o médico repete. Uma tentativa mais nova recebe P4094.
+- **`stuck` em `stored`:** a conclusão exige a sessão do Cortex do médico. Por isso, o executor não conclui.
+  - Ele deixa a operação para a retomada pelo médico, com o mesmo `operationId`. A tela oferece "concluir assinatura" quando houver uma.
+  - Depois de um prazo (proposta: 24 horas), o executor cancela com o código `stored_expired`, e a limpeza fica com o banco.
+  - **A decidir na revisão:** se esse prazo serve, ou se `stored` deve poder concluir sem a sessão. Minha proposta é que não possa.
+
+Nenhum desses passos publica nada nem chama o PSC.
+
+## 10. Ordem
 
 1. Revisão deste desenho pelo Codex, incluindo o pedido sobre `requireUser` e a mudança de assinatura das funções.
-2. Fixture `auth.sessions` no bootstrap (Codex).
+2. Fixtures `auth.sessions` e `auth.mfa_factors` no bootstrap, e o helper de contexto validado (Codex).
 3. Cerca SQL e conferência do objeto, com as provas da §8 (Claude).
 4. Handlers e testes (Claude).
 5. Tela: sessão de assinatura e "Gerar e assinar" (Claude).
