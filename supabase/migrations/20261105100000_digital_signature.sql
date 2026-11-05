@@ -491,14 +491,16 @@ create function public.signature_begin_authorization(p_user uuid,p_psc text,p_st
 language plpgsql volatile security definer set search_path='' as $$
 declare deadline timestamptz;created timestamptz;
 begin
+ perform cortex_private.signature_auth_shape(p_auth);
  perform cortex_private.signature_lock(p_user);
  deadline:=cortex_private.signature_session_fence(p_user,p_auth);
  if not exists(select 1 from public.user_settings where user_id=p_user and prescriber_cpf is not null) then
   raise exception 'Informe o seu CPF em Configurações para assinar.' using errcode='P4031';end if;
  if not cortex_private.signature_session_live(deadline) then
   raise exception 'Sessão do Cortex encerrada. Entre de novo.' using errcode='P4011';end if;
+ -- Nothing after the fence may wait (Codex 05/11 03:24, R1): no purge of
+ -- expired states here (signature_expire_sessions does it), only the insert.
  created:=clock_timestamp();
- delete from cortex_private.signature_oauth_states where user_id=p_user and expires_at<=created;
  insert into cortex_private.signature_oauth_states(state_hash,user_id,psc,verifier,created_at,expires_at)
   values(p_state_hash,p_user,p_psc,p_verifier,created,created+interval '10 minutes');
  return created+interval '10 minutes';
@@ -509,6 +511,7 @@ create function public.signature_consume_authorization(p_user uuid,p_psc text,p_
 language plpgsql volatile security definer set search_path='' as $$
 declare deadline timestamptz;st cortex_private.signature_oauth_states;
 begin
+ perform cortex_private.signature_auth_shape(p_auth);
  perform cortex_private.signature_lock(p_user);
  deadline:=cortex_private.signature_session_fence(p_user,p_auth);
  select * into st from cortex_private.signature_oauth_states
@@ -530,8 +533,12 @@ create function public.signature_activate_session(p_user uuid,p_psc text,p_sessi
 language plpgsql volatile security definer set search_path='' as $$
 declare deadline timestamptz;created timestamptz;
 begin
+ perform cortex_private.signature_auth_shape(p_auth);
  perform cortex_private.signature_lock(p_user);
  deadline:=cortex_private.signature_session_fence(p_user,p_auth);
+ -- The session it replaces, NOWAIT (signature_expire_sessions may hold it):
+ -- every row is held before the final clock, nothing waits after the fence.
+ perform 1 from cortex_private.signature_sessions where user_id=p_user and status='active' for update nowait;
  created:=clock_timestamp();
  if p_session is null or p_expires_at is null or p_expires_at<=created or p_expires_at>created+interval '12 hours' then
   raise exception 'Invalid signature session' using errcode='22023';end if;
@@ -542,6 +549,8 @@ begin
  insert into cortex_private.signature_sessions(id,user_id,psc,status,generation,cert_sha256,token,created_at,expires_at)
   values(p_session,p_user,p_psc,'active',1,p_cert_sha256,p_token,created,p_expires_at);
  return jsonb_build_object('sessionId',p_session,'generation',1,'expiresAt',p_expires_at);
+exception when lock_not_available then
+ raise exception 'Sessão de assinatura em uso por outra operação; tente de novo.' using errcode='40001';
 end $$;
 
 -- Local revocation is canonical and immediate; the PSC is told afterwards.
@@ -561,6 +570,7 @@ create function public.signature_session_token(p_user uuid,p_session uuid,p_gene
 language plpgsql volatile security definer set search_path='' as $$
 declare s cortex_private.signature_sessions;deadline timestamptz;
 begin
+ perform cortex_private.signature_auth_shape(p_auth);
  perform cortex_private.signature_lock(p_user);
  deadline:=cortex_private.signature_session_fence(p_user,p_auth);
  select * into s from cortex_private.signature_sessions where id=p_session and user_id=p_user for update nowait;
@@ -577,8 +587,8 @@ create function public.signature_reserve(p_user uuid,p_operation uuid,p_prescrip
 language plpgsql volatile security definer set search_path='' as $$
 declare o cortex_private.signature_operations;s cortex_private.signature_sessions;r public.prescriptions;recent integer;deadline timestamptz;
 begin
- perform cortex_private.signature_lock(p_user);
  perform cortex_private.signature_auth_shape(p_auth);
+ perform cortex_private.signature_lock(p_user);
  if p_operation is null or p_prescription is null or p_shown_sha256 !~ '^[0-9a-f]{64}$' then
   raise exception 'Invalid signature request' using errcode='22023';end if;
  select * into o from cortex_private.signature_operations where operation_id=p_operation;
@@ -648,6 +658,7 @@ begin
  if p_to is null or p_to not in ('prepared','psc_requested','stored') then
   raise exception 'Invalid signature step' using errcode='22023';end if;
  if p_data is null or jsonb_typeof(p_data)<>'object' then raise exception 'Invalid signature step data' using errcode='22023';end if;
+ perform cortex_private.signature_auth_shape(p_auth);
  perform cortex_private.signature_lock(p_user);
  deadline:=cortex_private.signature_session_fence(p_user,p_auth);
  select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user;
@@ -657,27 +668,22 @@ begin
  select * into s from cortex_private.signature_sessions where id=o.session_id for update nowait;
  select * into o from cortex_private.signature_operations where operation_id=p_operation for update nowait;
  perform 1 from public.prescriptions where id=o.prescription_id for share nowait;
- -- Revocation or expiry of the PSC session wins every step before the commit
- -- point, a stored answer included. Once the PSC was called a candidate may
- -- exist, so the cleanup is scheduled whatever the caller says.
- if s.generation<>o.session_generation or not cortex_private.signature_session_usable(s) then
-  if o.state in ('reserved','prepared','psc_requested','ambiguous','stored') then
-   update cortex_private.signature_operations set state='cancelled_by_revocation',
-    cleanup_pending=(p_to='stored' or o.state in ('psc_requested','ambiguous','stored') or coalesce((p_data->>'uploaded')::boolean,false))
-    where operation_id=p_operation returning * into o;
-  end if;
-  return to_jsonb(o)-'staged_path';
- end if;
- -- Is the step still pertinent to this operation? Otherwise nothing changes.
+ -- 1. Is the step still pertinent to this operation (Codex 05/11 03:24, R2
+ -- and R3)? Decided before anything else: a step that no longer applies
+ -- never changes the operation, whatever the sessions say. An attempt step
+ -- gets P4094; any other step gets the operation back as it is (history).
  if p_to='prepared' then
   if o.state='prepared' then
    if (o.prepared_pdf_sha256,o.to_be_signed_sha256,o.policy_oid)
     is distinct from (p_data->>'preparedSha256',p_data->>'toBeSignedSha256',p_data->>'policyOid') then
     raise exception 'Prepared signature data is immutable' using errcode='22023';end if;
   elsif o.state<>'reserved' then
-   raise exception 'Signature operation not ready to prepare' using errcode='22023';
+   return to_jsonb(o)-'staged_path';
   end if;
  elsif p_to='psc_requested' then
+  if o.state in ('stored','completed','failed','cancelled','cancelled_by_revocation') then
+   return to_jsonb(o)-'staged_path';
+  end if;
   -- One permission per PSC call. An attempt already in flight is never
   -- authorized again: its caller reconciles it as ambiguous first, and only
   -- a new explicit human action resumes from there.
@@ -701,7 +707,16 @@ begin
   if o.state='stored' and (o.staged_path,o.signed_pdf_sha256) is distinct from (p_data->>'stagedPath',p_data->>'signedSha256') then
    raise exception 'Stored signature data is immutable' using errcode='22023';end if;
  end if;
- -- Pertinent. The Cortex session, last, right before the effect.
+ -- 2. Pertinent. Revocation or expiry of the PSC session ends it, a stored
+ -- answer included; once the PSC was called a candidate may exist, so the
+ -- cleanup is scheduled whatever the caller says.
+ if s.generation<>o.session_generation or not cortex_private.signature_session_usable(s) then
+  update cortex_private.signature_operations set state='cancelled_by_revocation',
+   cleanup_pending=(p_to='stored' or o.state in ('psc_requested','ambiguous','stored') or coalesce((p_data->>'uploaded')::boolean,false))
+   where operation_id=p_operation returning * into o;
+  return to_jsonb(o)-'staged_path';
+ end if;
+ -- 3. The Cortex session, last, right before the effect.
  if not cortex_private.signature_session_live(deadline) then
   update cortex_private.signature_operations set state='cancelled',error_code='auth_session_ended',
    cleanup_pending=(o.staged_path is not null or o.state in ('psc_requested','ambiguous','stored') or p_to='stored')
@@ -769,8 +784,8 @@ create function public.signature_complete(p_user uuid,p_operation uuid,p_cert_se
 language plpgsql volatile security definer set search_path='' as $$
 declare o cortex_private.signature_operations;s cortex_private.signature_sessions;r public.prescriptions;deadline timestamptz;has_object boolean;
 begin
- perform cortex_private.signature_lock(p_user);
  perform cortex_private.signature_auth_shape(p_auth);
+ perform cortex_private.signature_lock(p_user);
  select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user;
  if not found then raise exception 'Signature operation unavailable' using errcode='42501';end if;
  -- Already completed: history, nothing new (no fence).
@@ -783,7 +798,9 @@ begin
  -- The signed object must be there, held while the prescription points to it.
  select true into has_object from storage.objects
   where bucket_id='prescriptions' and name=o.staged_path for share nowait;
- if o.state='completed' then return to_jsonb(o);end if;
+ -- An operation that already ended is returned as it is (history, Codex
+ -- 05/11 03:24 R3); one that never reached stored is not ready.
+ if o.state in ('completed','failed','cancelled','cancelled_by_revocation') then return to_jsonb(o);end if;
  if o.state<>'stored' then raise exception 'Signature operation not ready' using errcode='P4093';end if;
  if s.generation<>o.session_generation or not cortex_private.signature_session_usable(s) then
   update cortex_private.signature_operations set state='cancelled_by_revocation',cleanup_pending=true

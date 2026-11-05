@@ -626,6 +626,65 @@ do $$ begin
  assert (select status='generated' and signed_storage_path is null from public.prescriptions where id='d1720000-0000-4000-8000-000000000068'),'Reconciliation published';
 end $$;
 
+-- Codex 05/11 03:24, R2 and R3: pertinence is decided before any session
+-- check, and a step that no longer applies returns the operation as it is.
+select pg_temp.rx(('d1720000-0000-4000-8000-00000000007'||n)::uuid,'d1700000-0000-4000-8000-000000000006','d1710000-0000-4000-8000-000000000006')
+ from generate_series(1,3) n;
+set local role service_role;
+do $$ declare u uuid:='d1700000-0000-4000-8000-000000000006';op uuid:='d1740000-0000-4000-8000-000000000071';
+ t jsonb:=jsonb_build_object('v',1,'keyId','k1','nonce','bm9uY2U=','ciphertext','dG9rZW4=');
+ d jsonb:=jsonb_build_object('preparedSha256',repeat('d',64),'toBeSignedSha256',repeat('e',64),'policyOid','2.16.76.1.7.1.11.1.1');
+ r jsonb;
+ p72 text:='rx/d1700000-0000-4000-8000-000000000006/d1720000-0000-4000-8000-000000000072/signed-d1740000-0000-4000-8000-000000000072.pdf';
+ p73 text:='rx/d1700000-0000-4000-8000-000000000006/d1720000-0000-4000-8000-000000000073/signed-d1740000-0000-4000-8000-000000000073.pdf';
+begin
+ perform public.signature_activate_session(u,'vidaas','d1730000-0000-4000-8000-000000000071',now()+interval '8 hours',repeat('c',64),t,pg_temp.a(u));
+ -- R2: attempt 2 without answer; the PSC session is revoked; the late answer
+ -- of attempt 1 is refused without touching attempt 2.
+ perform public.signature_reserve(u,op,'d1720000-0000-4000-8000-000000000071',repeat('a',64),pg_temp.a(u));
+ perform public.signature_advance(u,op,'prepared',d,pg_temp.a(u));
+ perform public.signature_advance(u,op,'psc_requested',d||jsonb_build_object('attempt',0),pg_temp.a(u));
+ perform public.signature_close(u,op,'ambiguous',jsonb_build_object('attempt',1));
+ perform public.signature_advance(u,op,'psc_requested',d||'{"humanRetry":true}'||jsonb_build_object('attempt',1),pg_temp.a(u));
+ perform public.signature_close(u,op,'ambiguous',jsonb_build_object('attempt',2));
+ perform public.signature_revoke_session(u);
+ begin perform public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath','x','signedSha256',repeat('f',64),'attempt',1),pg_temp.a(u));
+  raise exception 'Late answer after a PSC revocation ended the newer attempt';exception when sqlstate 'P4094' then null;end;
+ assert (pg_temp.op(op)).state='ambiguous' and (pg_temp.op(op)).psc_attempts=2 and not (pg_temp.op(op)).cleanup_pending,'Newer attempt touched by a stale answer';
+ -- R3: prepare over ambiguous/2 is history, not an error, with or without a session.
+ r:=public.signature_advance(u,op,'prepared',d,pg_temp.a(u));
+ assert r->>'state'='ambiguous' and r->>'psc_attempts'='2','Prepare over a newer attempt did not return it';
+ r:=public.signature_advance(u,op,'prepared',d,pg_temp.a(u,'d1790000-0000-4000-8000-0000000000ff'));
+ assert r->>'state'='ambiguous','Prepare with an ended session changed a no longer pertinent operation';
+
+ -- R3 at the commit point: an operation already ended is returned as it is.
+ perform public.signature_activate_session(u,'vidaas','d1730000-0000-4000-8000-000000000072',now()+interval '8 hours',repeat('c',64),t,pg_temp.a(u));
+ op:='d1740000-0000-4000-8000-000000000072';
+ perform public.signature_reserve(u,op,'d1720000-0000-4000-8000-000000000072',repeat('a',64),pg_temp.a(u));
+ perform public.signature_advance(u,op,'prepared',d,pg_temp.a(u));
+ perform public.signature_advance(u,op,'psc_requested',d||jsonb_build_object('attempt',0),pg_temp.a(u));
+ insert into storage.objects(bucket_id,name) values('prescriptions',p72);
+ perform public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath',p72,'signedSha256',repeat('f',64),'attempt',1),pg_temp.a(u));
+ perform public.signature_revoke_session(u);
+ assert public.signature_complete(u,op,'01','CN=AC Sintetica',pg_temp.a(u))->>'state'='cancelled_by_revocation','Revocation lost at the commit point';
+ r:=public.signature_complete(u,op,'01','CN=AC Sintetica',pg_temp.a(u));
+ assert r->>'state'='cancelled_by_revocation','Ended operation not returned at the commit point';
+ -- A PSC permission over a completed operation returns it (the replay of a late request).
+ perform public.signature_activate_session(u,'vidaas','d1730000-0000-4000-8000-000000000073',now()+interval '8 hours',repeat('c',64),t,pg_temp.a(u));
+ op:='d1740000-0000-4000-8000-000000000073';
+ perform public.signature_reserve(u,op,'d1720000-0000-4000-8000-000000000073',repeat('a',64),pg_temp.a(u));
+ perform public.signature_advance(u,op,'prepared',d,pg_temp.a(u));
+ perform public.signature_advance(u,op,'psc_requested',d||jsonb_build_object('attempt',0),pg_temp.a(u));
+ insert into storage.objects(bucket_id,name) values('prescriptions',p73);
+ perform public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath',p73,'signedSha256',repeat('f',64),'attempt',1),pg_temp.a(u));
+ assert public.signature_complete(u,op,'01','CN=AC Sintetica',pg_temp.a(u))->>'state'='completed','Commit point refused';
+ r:=public.signature_advance(u,op,'psc_requested',d||jsonb_build_object('attempt',0),pg_temp.a(u));
+ assert r->>'state'='completed','PSC permission over a completed operation did not return it';
+ r:=public.signature_advance(u,op,'prepared',d,pg_temp.a(u));
+ assert r->>'state'='completed','Prepare over a completed operation did not return it';
+end $$;
+reset role;
+
 -- The API: every productive function needs the verified context, without
 -- default or overload; only the closing and service functions have none.
 do $$ declare fn record;begin

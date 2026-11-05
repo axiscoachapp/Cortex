@@ -98,6 +98,22 @@ Uma consulta HTTP ao Auth antes do RPC não fecha um logout que aconteça entre 
 - Travar a linha da sessão não para o relógio. Um `not_after` que vence dentro da cerca final recusa mesmo com o JWT e a intenção ainda válidos (Codex, 22:38).
 - `now()` não guarda nenhum prazo destes caminhos. Isso inclui o prazo do estado OAuth (§3.4) e o da sessão de assinatura, que hoje usa `now()` em `signature_session_usable` e passa a usar `clock_timestamp()` depois das travas.
 
+**Correções da revisão do Codex de 05/11 03:24:**
+- **R1 — nada espera depois da cerca:**
+  - `begin_authorization` deixou de apagar estados vencidos; quem apaga é `signature_expire_sessions`;
+  - `activate_session` trava a sessão que substitui com FOR UPDATE NOWAIT antes do relógio final.
+
+  Toda linha é obtida com recusa por contenção antes da última leitura do relógio.
+- **R2 — a pertinência vem primeiro:** em `advance`, a pertinência (estado e tentativa) é decidida **antes** da sessão do PSC e da sessão do Cortex. Um passo antigo recebe P4094 mesmo com a sessão do PSC revogada, e a tentativa mais nova não é tocada. A revogação só encerra um passo pertinente.
+- **R3 — passo que deixou de valer devolve a operação como está:**
+  - `prepared` fora de `reserved`/`prepared`;
+  - `psc_requested` sobre `stored` ou sobre uma operação terminal;
+  - `complete` sobre uma operação terminal.
+
+  Nenhum deles muda nada. Um passo de tentativa com tentativa diferente continua com P4094; um pedido fora de ordem antes do tempo (por exemplo, `complete` antes de `stored`) continua com P4093.
+- **R4 — corridas observam a espera:** as corridas de contenção acompanham a espera (`watchCall`). Três controles retiram só uma proteção e precisam ser vistos esperando: a limpeza depois da cerca, o NOWAIT de `auth.sessions` e o NOWAIT de `auth.mfa_factors`.
+- **R5 — forma antes de qualquer trava:** a forma de `p_auth` é conferida antes de `signature_lock` nas sete funções produtivas.
+
 ### 3.3 Efeito de uma sessão encerrada ou vencida
 
 **Nunca lançar depois de um UPDATE.** Uma exceção desfaz o efeito do próprio RPC (Codex, 22:53). Por isso:

@@ -146,6 +146,37 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     assert.ok(s.closed(), 'completion neither refused nor waited');
     return { s, waited: false };
   };
+  /**
+   * Runs `text` on an open connection and watches it until it finishes
+   * (psql exits on error, or prints CALL_DONE): any lock wait seen at any
+   * point is reported (Codex 05/11 03:24, R1/R4: a refusal must come from
+   * NOWAIT or from not waiting at all, never from lock_timeout).
+   */
+  const watchCall = async (text) => {
+    const s = session(container);
+    s.send(`select 'PID='||pg_backend_pid();`);
+    await s.wait('PID=');
+    const pid = backendPid(s);
+    s.send(`${text}\n\\echo CALL_DONE`);
+    for (let i = 0; i < 400 && !s.closed() && !s.output().includes('CALL_DONE'); i++) {
+      if (sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock') return { s, waited: true };
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    assert.ok(s.closed() || s.output().includes('CALL_DONE'), 'call neither finished nor waited');
+    return { s, waited: false };
+  };
+  /** Disposable database only: runs fn with one function rewritten, then restores it exactly. */
+  const withMutated = async (signature, site, replacement, fn) => {
+    const original = sql(`select pg_get_functiondef('${signature}'::regprocedure)`);
+    assert.equal(original.split(site).length, 2, `control: site not found in ${signature}`);
+    sql(original.replace(site, replacement) + ';');
+    try {
+      await fn();
+    } finally {
+      sql(original + ';');
+    }
+    assert.equal(sql(`select pg_get_functiondef('${signature}'::regprocedure)`), original, `control: ${signature} not restored`);
+  };
 
   // 1. P1: two overlapping permissions for the same prepared operation.
   await check('overlapping permission (P1)', async () => {
@@ -590,7 +621,9 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
         const logout = session(container);
         logout.send(`begin;delete from auth.sessions where id='${f.cortexSession}';\n\\echo LOGGING_OUT`);
         await logout.wait('LOGGING_OUT');
-        const busy = psql(`begin isolation level ${isolation};${service}select ${complete(f)};commit;`);
+        const watched = await watchCall(`begin isolation level ${isolation};${service}select ${complete(f)};commit;`);
+        const busy = await watched.s.finish('');
+        assert.equal(watched.waited, false, 'Commit point waited on the session held by the logout');
         assert.notEqual(busy.status, 0, 'Completed while the logout held the session');
         assert.match(busy.stderr, /40001/, busy.stderr);
         assert.equal(state(f), 'stored', 'Contention changed the operation');
@@ -638,7 +671,9 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
       const removal = session(container);
       removal.send(`begin;delete from auth.mfa_factors where id='${f.factor}';\n\\echo REMOVING`);
       await removal.wait('REMOVING');
-      const busy = psql(`begin;${service}select ${complete(f)};commit;`);
+      const watched = await watchCall(`begin;${service}select ${complete(f)};commit;`);
+      const busy = await watched.s.finish('');
+      assert.equal(watched.waited, false, 'Commit point waited on the factor being removed');
       assert.notEqual(busy.status, 0, 'Completed while the factor was being removed');
       assert.match(busy.stderr, /40001/, busy.stderr);
       await removal.finish('commit;');
@@ -701,6 +736,91 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     }
     assert.equal(sql(`select pg_get_functiondef('public.signature_complete(uuid,uuid,text,text,jsonb)'::regprocedure)`), original, 'control: signature_complete not restored');
     results.sessionFenceControl = 'publication detected without the session check';
+  }
+  // Codex 05/11 03:24. R1: nothing after the session fence may wait. R5: a
+  // malformed context is refused before any lock. R4: the controls below
+  // remove only one NOWAIT and must be seen waiting.
+  const holdingExpiredState = async (f) => {
+    sql(`insert into cortex_private.signature_oauth_states(state_hash,user_id,psc,verifier,created_at,expires_at)
+      values(repeat('9',64),'${f.user}','vidaas',${SEALED},now()-interval '20 minutes',now()-interval '15 minutes')`);
+    const holder = session(container);
+    holder.send(`begin;${service}select public.signature_expire_sessions();\n\\echo PURGING`);
+    await holder.wait('PURGING');
+    return holder;
+  };
+  const beginWatched = (f, hash) => watchCall(`begin;${service}select public.signature_begin_authorization('${f.user}','vidaas',repeat('${hash}',64),${SEALED},${auth(f)}) is not null;commit;`);
+  await check('authorization never waits on expired states purged elsewhere (R1)', async () => {
+    const f = fixture();
+    const holder = await holdingExpiredState(f);
+    const watched = await beginWatched(f, '8');
+    await holder.finish('commit;');
+    const r = await watched.s.finish('');
+    assert.equal(watched.waited, false, 'begin_authorization waited after the session fence');
+    assert.equal(r.status, 0, r.stderr);
+    results.authorizationBesidePurge = 'no wait after the fence';
+  });
+  await check('session activation never waits on the session it replaces (R1)', async () => {
+    const f = fixture();
+    const holder = session(container);
+    holder.send(`begin;select 1 from cortex_private.signature_sessions where user_id='${f.user}' and status='active' for update;\n\\echo HELD`);
+    await holder.wait('HELD');
+    const watched = await watchCall(`begin;${service}select public.signature_activate_session('${f.user}','vidaas','${f.session.slice(0, -1)}a',now()+interval '1 hour',repeat('c',64),${SEALED},${auth(f)});commit;`);
+    const r = await watched.s.finish('');
+    await holder.finish('commit;');
+    assert.equal(watched.waited, false, 'activate_session waited on the replaced session');
+    assert.notEqual(r.status, 0, 'Activated while the replaced session was held');
+    assert.match(r.stderr, /40001/, r.stderr);
+    results.activationBesideHeldSession = '40001 at once';
+  });
+  await check('malformed context refused before the barrier (R5)', async () => {
+    const f = fixture();
+    const holder = session(container);
+    holder.send(`begin;select pg_advisory_xact_lock(hashtextextended('signature:${f.user}',125));\n\\echo HOLDS_125`);
+    await holder.wait('HOLDS_125');
+    const watched = await watchCall(`begin;${service}select public.signature_reserve('${f.user}','${f.op}','${f.rx}',${A64},'{"aal":"aal1"}'::jsonb);commit;`);
+    const r = await watched.s.finish('');
+    await holder.finish('commit;');
+    assert.equal(watched.waited, false, 'Malformed context waited on the barrier');
+    assert.match(r.stderr, /22023/, r.stderr);
+    results.malformedContextBeforeBarrier = '22023 without waiting';
+  });
+  if (!beforeFix) {
+    // R1 control: the purge put back after the fence must be seen waiting.
+    await withMutated('public.signature_begin_authorization(uuid,text,text,jsonb,jsonb)', ' created:=clock_timestamp();\n insert into',
+      ' created:=clock_timestamp();\n delete from cortex_private.signature_oauth_states where user_id=p_user and expires_at<=created;\n insert into', async () => {
+        const f = fixture();
+        const holder = await holdingExpiredState(f);
+        const watched = await beginWatched(f, '7');
+        await holder.finish('commit;');
+        await watched.s.finish('');
+        assert.equal(watched.waited, true, 'control: a purge after the fence was not seen waiting');
+      });
+    // R4 controls: only the NOWAIT of auth.sessions, then only that of auth.mfa_factors.
+    await withMutated('cortex_private.signature_session_fence(uuid,jsonb)', "where id=(p_auth->>'sessionId')::uuid and user_id=p_user for share nowait",
+      "where id=(p_auth->>'sessionId')::uuid and user_id=p_user for share", async () => {
+        const f = fixture();
+        toStored(f);
+        const logout = session(container);
+        logout.send(`begin;delete from auth.sessions where id='${f.cortexSession}';\n\\echo LOGGING_OUT`);
+        await logout.wait('LOGGING_OUT');
+        const watched = await watchCall(`begin;${service}select ${complete(f)};commit;`);
+        await logout.finish('commit;');
+        await watched.s.finish('');
+        assert.equal(watched.waited, true, 'control: the session lock without NOWAIT was not seen waiting');
+      });
+    await withMutated('cortex_private.signature_session_fence(uuid,jsonb)', 'where id=v_session.factor_id and user_id=p_user for share nowait',
+      'where id=v_session.factor_id and user_id=p_user for share', async () => {
+        const f = fixture();
+        toStored(f);
+        const removal = session(container);
+        removal.send(`begin;delete from auth.mfa_factors where id='${f.factor}';\n\\echo REMOVING`);
+        await removal.wait('REMOVING');
+        const watched = await watchCall(`begin;${service}select ${complete(f)};commit;`);
+        await removal.finish('commit;');
+        await watched.s.finish('');
+        assert.equal(watched.waited, true, 'control: the factor lock without NOWAIT was not seen waiting');
+      });
+    results.authNowaitControls = 'purge after the fence, session and factor locks without NOWAIT: all seen waiting';
   }
   if (beforeFix) process.stdout.write(`RED cases (${red.length}):\n${red.map((r) => '  - ' + r).join('\n')}\n`);
   else process.stdout.write(`Signature races: ${JSON.stringify(results)}\n`);

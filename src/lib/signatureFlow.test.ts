@@ -103,18 +103,14 @@ function fakeDb(original: Uint8Array) {
         const to = a.p_to as string;
         const data = (a.p_data ?? {}) as Record<string, unknown>;
         if (!['prepared', 'psc_requested', 'stored'].includes(to)) throw rpcError('22023', 'not a productive step');
-        if (!usable(op)) {
-          if (['reserved', 'prepared', 'psc_requested', 'ambiguous', 'stored'].includes(op.state)) {
-            set(op, { state: 'cancelled_by_revocation', cleanup_pending: to === 'stored' || ['psc_requested', 'ambiguous', 'stored'].includes(op.state) || data.uploaded === true });
-          }
-          return out(op);
-        }
-        // Pertinence (no effect otherwise), as in the SQL.
+        const ended = ['completed', 'failed', 'cancelled', 'cancelled_by_revocation'];
+        // 1. Pertinence first (no effect otherwise), as in the SQL.
         if (to === 'prepared') {
           if (op.state === 'prepared') {
             if (op.prepared_pdf_sha256 !== data.preparedSha256 || op.to_be_signed_sha256 !== data.toBeSignedSha256) throw rpcError('22023', 'prepared immutable');
-          } else if (op.state !== 'reserved') throw rpcError('22023', 'not ready to prepare');
+          } else if (op.state !== 'reserved') return out(op); // no longer pertinent: history
         } else if (to === 'psc_requested') {
+          if (op.state === 'stored' || ended.includes(op.state)) return out(op);
           if (op.state === 'psc_requested') throw rpcError('P4093', 'in flight');
           if (op.state === 'ambiguous' && data.humanRetry !== true) throw rpcError('P4093', 'human retry only');
           if (!['prepared', 'ambiguous'].includes(op.state)) throw rpcError('P4093');
@@ -124,7 +120,12 @@ function fakeDb(original: Uint8Array) {
           if (data.attempt !== op.psc_attempts || !['psc_requested', 'stored'].includes(op.state)) throw rpcError('P4094', 'superseded attempt');
           if (op.state === 'stored' && (op.staged_path !== data.stagedPath || op.signed_pdf_sha256 !== data.signedSha256)) throw rpcError('22023', 'stored immutable');
         }
-        // The Cortex session, last, before the effect: a pertinent step ends.
+        // 2. Pertinent: the PSC session revoked or expired ends it.
+        if (!usable(op)) {
+          set(op, { state: 'cancelled_by_revocation', cleanup_pending: to === 'stored' || ['psc_requested', 'ambiguous', 'stored'].includes(op.state) || data.uploaded === true });
+          return out(op);
+        }
+        // 3. The Cortex session, last, before the effect: a pertinent step ends.
         if (!db.cortexLive) {
           set(op, { state: 'cancelled', error_code: 'auth_session_ended', cleanup_pending: op.staged_path !== null || ['psc_requested', 'ambiguous', 'stored'].includes(op.state) || to === 'stored' });
           return out(op);
@@ -156,7 +157,7 @@ function fakeDb(original: Uint8Array) {
       }
       case 'signature_complete': {
         if (!op) throw rpcError('42501');
-        if (op.state === 'completed') return out(op, true);
+        if (['completed', 'failed', 'cancelled', 'cancelled_by_revocation'].includes(op.state)) return out(op, true); // history
         if (op.state !== 'stored') throw rpcError('P4093');
         if (!usable(op)) { set(op, { state: 'cancelled_by_revocation', cleanup_pending: true }); return out(op, true); }
         if (db.doc.status !== 'generated' || db.doc.signedPath || db.doc.pdfSha256 !== op.shown_pdf_sha256) {
@@ -562,6 +563,39 @@ describe('signDocument: the Cortex session (contract v3.1)', () => {
     world.ports.rpc = async (name, a) => { if (name === 'signature_advance' && a.p_to === 'psc_requested') sent.push(a.p_data); return rpc(name, a); };
     expect((await signDocument(world.ports, { ...world.request, humanRetry: true })).status).toBe('completed');
     expect(sent).toEqual([expect.objectContaining({ attempt: 1, humanRetry: true })]);
+  });
+});
+
+describe('signDocument: a step that no longer applies (Codex 05/11 03:24, R3)', () => {
+  it('a late request whose twin completed the same operation gets the history, not an error', async () => {
+    const a = gate();
+    let first = true;
+    world.beforeOriginal = async () => { if (first) { first = false; await a.wait; } };
+    const late = signDocument(world.ports, world.request);
+    await until(() => !first); // A reserved and is downloading the original
+    expect((await signDocument(world.ports, world.request)).status).toBe('completed'); // B, same operation
+    a.open();
+    expect((await late).status).toBe('completed');
+    expect(world.pscCalls).toBe(1);
+    expect(world.db.audit).toHaveLength(1);
+  });
+
+  it('a late answer of attempt 1 after a PSC revocation never ends attempt 2 (R2)', async () => {
+    const a = gate();
+    const b = gate();
+    world.psc.answer = async (call) => { await (call === 1 ? a : b).wait; return 'sign'; };
+    const first = signDocument(world.ports, world.request);
+    await until(() => world.pscCalls === 1);
+    const second = signDocument(world.ports, { ...world.request, humanRetry: true });
+    await until(() => world.pscCalls === 2); // attempt 2 in flight
+    world.db.session.active = false; // the doctor revokes the PSC session
+    world.db.session.generation++;
+    a.open(); // attempt 1 answers late: its upload is allowed (psc_requested), its store is stale
+    expect(await first).toEqual({ status: 'in_progress' }); // P4094, attempt 2 untouched
+    expect(opOf()).toMatchObject({ state: 'psc_requested', psc_attempts: 2 });
+    b.open(); // attempt 2 is pertinent: the revocation ends it
+    expect(await second).toEqual({ status: 'cancelled_by_revocation', code: null });
+    expect(world.storage.size).toBe(0);
   });
 });
 
