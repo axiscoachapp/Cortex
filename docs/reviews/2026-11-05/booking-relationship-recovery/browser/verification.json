@@ -1,0 +1,186 @@
+{
+  "syntheticOnly": true,
+  "realPagesAndApi": true,
+  "realSql": false,
+  "checks": [
+    "stale confirmation refused without booking",
+    "explicit recovery preserves beneficiary and slot",
+    "fresh human confirmation required",
+    "ambiguous booking retries same request and payload",
+    "recovery with permission withdrawn blocks writers",
+    "375px top and review reachable inside viewport"
+  ],
+  "scenarios": [
+    {
+      "denied": false,
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        },
+        {
+          "name": "reception_contact",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777"
+          }
+        },
+        {
+          "name": "reception_link_patient",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_doctor": "88888888-8888-4888-8888-888888888888",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_relationship": "guardian"
+          }
+        },
+        {
+          "name": "reception_contact",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777"
+          }
+        },
+        {
+          "name": "reception_link_patient",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_doctor": "88888888-8888-4888-8888-888888888888",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_relationship": "family"
+          }
+        },
+        {
+          "name": "reception_book_appointment",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_details": {
+              "doctorId": "88888888-8888-4888-8888-888888888888",
+              "contactId": "77777777-7777-4777-8777-777777777777",
+              "patientId": "22222222-2222-4222-8222-222222222222",
+              "caseId": "99999999-9999-4999-8999-999999999999",
+              "startTime": "2099-11-03T17:00:00.000Z",
+              "endTime": "2099-11-03T17:30:00.000Z",
+              "type": "retorno"
+            },
+            "p_request": "0b2797fa-3222-4380-8458-15b67c53fab5"
+          }
+        },
+        {
+          "name": "reception_contact",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777"
+          }
+        },
+        {
+          "name": "reception_link_patient",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_doctor": "88888888-8888-4888-8888-888888888888",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_relationship": "family"
+          }
+        },
+        {
+          "name": "reception_book_appointment",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_details": {
+              "doctorId": "88888888-8888-4888-8888-888888888888",
+              "contactId": "77777777-7777-4777-8777-777777777777",
+              "patientId": "22222222-2222-4222-8222-222222222222",
+              "caseId": "99999999-9999-4999-8999-999999999999",
+              "startTime": "2099-11-03T17:00:00.000Z",
+              "endTime": "2099-11-03T17:30:00.000Z",
+              "type": "retorno"
+            },
+            "p_request": "0b2797fa-3222-4380-8458-15b67c53fab5"
+          }
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        },
+        {
+          "name": "reception_contact",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777"
+          }
+        }
+      ],
+      "uniqueBookings": 1
+    },
+    {
+      "denied": true,
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        },
+        {
+          "name": "reception_contact",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777"
+          }
+        },
+        {
+          "name": "reception_contact",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777"
+          }
+        }
+      ]
+    }
+  ],
+  "pageErrors": [],
+  "sources": [
+    {
+      "path": "src/features/reception/BookingDialog.tsx",
+      "sha256": "8ef9a4d99d113723415caed4a840be339a3c756c92aa778b5a49d227896ece25"
+    },
+    {
+      "path": "src/features/reception/CaseWorkspace.tsx",
+      "sha256": "7cf2515133f3ca9777505e530da1b5a337c50207dad8704fcf364e80a98c3698"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "dda848f7c3a6df45f1feb122c008a2542ac39cd17ef16e1ecb332b1664384736"
+    },
+    {
+      "path": "src/features/reception/contracts.ts",
+      "sha256": "36e8c7bd7c08875b79d551a3a047c907b808e0bdb73b191b4276f3a63ddb354d"
+    },
+    {
+      "path": "src/features/reception/useRequestId.ts",
+      "sha256": "58b8b120b12f327061b848d6eb67711a62386abdf8220ced96fbf1b1798d9f8d"
+    },
+    {
+      "path": "src/hooks/useUnsavedChanges.ts",
+      "sha256": "1a124ebb7fd75d09621ff4c85574257cb8436370960f47f0a0b32c8c7c9a6e23"
+    },
+    {
+      "path": "src/features/reception/linkRelationships.ts",
+      "sha256": "f3308b7cd8ee89231d5bd5aaa1e0d51de16f58de7fde7cbbabc8a164c51d8636"
+    },
+    {
+      "path": "scripts/fixtures/link-relationship-editor-page.tsx",
+      "sha256": "55779f5504f4d1438c3311ae9c7ec6991fff76b191596053269d0589a087b59b"
+    }
+  ],
+  "cleanupVerified": true
+}

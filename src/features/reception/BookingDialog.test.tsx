@@ -78,10 +78,10 @@ describe('reception booking relationship confirmation', () => {
     mocks.contact.mockResolvedValue({ ...snapshot, beneficiaries: [{ ...snapshot.beneficiaries[0], relationship: 'family' }] });
     await act(async () => { await client.invalidateQueries({ queryKey: ['reception'] }); });
     expect(relationship()).toHaveValue('guardian');
-    mocks.link.mockRejectedValue(new Error('Confira o cadastro antes de reservar.'));
-    confirm();
+    await screen.findByText(/O vínculo selecionado mudou/);
+    expect(screen.getByRole('button', { name: 'Confirmar agendamento' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar agendamento' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Confira o cadastro');
+    expect(mocks.link).not.toHaveBeenCalled();
     expect(mocks.book).not.toHaveBeenCalled();
   });
   it('blocks session exit until the in-flight confirmation finishes', async () => {

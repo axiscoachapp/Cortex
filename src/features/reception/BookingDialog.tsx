@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { ContactSearch } from './ContactSearch';
 import { useRequestId } from './useRequestId';
 import type { ContactOption } from './NewCaseDialog';
 import type { BookingDetails, ReceptionCase, PatientOption } from './contracts';
+import { relationshipLabels } from './linkRelationships';
 
 export function BookingDialog({
   receptionCase,
@@ -48,16 +49,27 @@ export function BookingDialog({
   const [type, setType] = useState<BookingDetails['type']>('retorno');
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const [recoveryRequired, setRecoveryRequired] = useState(false);
+  const pending = useRef(false), mounted = useRef(true);
+  const reviewEpoch = useRef(0);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const working = busy || recovering;
   const [error, setError] = useState<unknown>(null);
   const [touched, setTouched] = useState(false);
   const guard = useUnsavedChanges(
-    touched,
+    touched || working,
     'Há um agendamento não confirmado. Deseja sair e descartar o preenchimento?',
-    { blocking: busy },
+    { blocking: working },
   );
   const snapshot = useQuery({
     queryKey: ['reception', access?.actorId, 'contact', contact?.id],
-    queryFn: () => receptionApi.contact(contact!.id),
+    queryFn: async () => {
+      const value = await receptionApi.contact(contact!.id);
+      if (value.id !== contact!.id || value.clinicId !== access?.clinic?.id)
+        throw new Error('O contato não corresponde à clínica selecionada. Atualize a página.');
+      return value;
+    },
     enabled: !!contact,
     retry: false,
   });
@@ -71,9 +83,32 @@ export function BookingDialog({
     setTouched(true);
     setConfirmed(false);
   }
+  const currentLink = snapshot.data?.beneficiaries.find(p => p.id === patient?.id && p.doctorId === doctor);
+  const selectionDiffers = (link: typeof currentLink) => (relationshipLocked && !link) || (!!link && (
+    link.relationship !== relationship || link.name !== patient?.name || link.dateOfBirth !== patient?.dateOfBirth
+  ));
+  const linkNeedsReview = mode === 'existing' && !!patient && (recoveryRequired || snapshot.isError || (!!snapshot.data && selectionDiffers(currentLink)));
+  useLayoutEffect(() => {
+    if (linkNeedsReview) { reviewEpoch.current += 1; setConfirmed(false); }
+  }, [linkNeedsReview]);
+  async function recoverLink() {
+    if (pending.current || working || mode !== 'existing' || !patient || !contact || !doctor) return;
+    pending.current = true; setRecovering(true); setRecoveryRequired(true); setConfirmed(false); setError(null);
+    try {
+      const result = await snapshot.refetch();
+      if (!mounted.current) return;
+      if (result.error) return;
+      const link = result.data?.beneficiaries.find(p => p.id === patient.id && p.doctorId === doctor);
+      if (!link) throw new Error('O vínculo selecionado não está disponível. Confira o cadastro com a administração antes de reservar.');
+      setPatient(link); setRelationship(link.relationship); setRelationshipLocked(true); setRecoveryRequired(false);
+    } catch (failure) { if (mounted.current) setError(failure); }
+    finally { pending.current = false; if (mounted.current) setRecovering(false); }
+  }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (busy || !confirmed || !contact || !doctor || !access?.clinic || !snapshot.data || snapshot.isFetching || snapshot.isError) return;
+    if (pending.current || working || linkNeedsReview || !confirmed || !contact || !doctor || !access?.clinic || !snapshot.data || snapshot.isFetching || snapshot.isError) return;
+    pending.current = true;
+    const confirmedEpoch = reviewEpoch.current;
     setBusy(true);
     setError(null);
     try {
@@ -93,11 +128,18 @@ export function BookingDialog({
         throw new Error('O término deve ser depois do início.');
       if (mode === 'existing') {
         await receptionApi.linkPatient(contact.id, doctor, patient!.id, relationship);
-        // This confirmation may have committed even if the subsequent slot fails.
-        setRelationshipLocked(true);
-        await client.cancelQueries({ queryKey: ['reception', access.actorId, 'contact', contact.id], exact: true });
+        if (!mounted.current) return;
+        const contactKey = ['reception', access.actorId, 'contact', contact.id];
+        await client.cancelQueries({ queryKey: contactKey, exact: true });
+        if (!mounted.current) return;
+        const latest = client.getQueryData<NonNullable<typeof snapshot.data>>(contactKey);
+        const latestLink = latest?.beneficiaries.find(p => p.id === patient!.id && p.doctorId === doctor);
+        if (reviewEpoch.current !== confirmedEpoch || !latest || client.getQueryState(contactKey)?.status === 'error' || selectionDiffers(latestLink)) {
+          setRelationshipLocked(true); setRecoveryRequired(true); setConfirmed(false);
+          throw new Error('O vínculo selecionado mudou ou ficou indisponível durante a confirmação. Recupere o vínculo antes de reservar.');
+        }
         client.setQueryData<NonNullable<typeof snapshot.data>>(
-          ['reception', access.actorId, 'contact', contact.id],
+          contactKey,
           (current) => current && ({
             ...current,
             beneficiaries: [
@@ -106,16 +148,23 @@ export function BookingDialog({
             ],
           }),
         );
+        // Publish the confirmed link before locking a previously unlinked selection.
+        // The link remains confirmed even if the following slot reservation fails.
+        setRelationshipLocked(true);
       }
+      if (!mounted.current) return;
       await receptionApi.book(access.clinic.id, details, request(details));
+      if (!mounted.current) return;
       await client.invalidateQueries({ queryKey: ['reception'] });
       await client.invalidateQueries({ queryKey: ['appointments'] });
+      if (!mounted.current) return;
       toast({ title: 'Agendamento confirmado', description: 'O horário foi reservado na agenda do médico.' });
       onClose();
     } catch (err) {
-      setError(err);
+      if (mounted.current) setError(err);
     } finally {
-      setBusy(false);
+      pending.current = false;
+      if (mounted.current) setBusy(false);
     }
   }
   const selectPatient = (value: typeof patient) => {
@@ -124,13 +173,14 @@ export function BookingDialog({
     setPatient(value);
     setRelationship(link?.relationship ?? 'self');
     setRelationshipLocked(!!link);
+    setRecoveryRequired(false);
     edited();
   };
   return (
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open && !busy && guard(false)) onClose();
+        if (!open && !pending.current && !working && guard(false)) onClose();
       }}
     >
       <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
@@ -145,7 +195,7 @@ export function BookingDialog({
         </p>
         <ReceptionNotice error={error} />
         <form onSubmit={submit} className="space-y-4">
-          <fieldset disabled={busy} className="space-y-4">
+          <fieldset disabled={working} className="space-y-4">
             {!contact ? (
               <ContactSearch
                 onSelect={(value) => {
@@ -329,16 +379,17 @@ export function BookingDialog({
                       edited();
                     }}
                   >
-                    <option value="self">É o próprio paciente</option>
-                    <option value="guardian">Responsável</option>
-                    <option value="family">Familiar</option>
-                    <option value="other">Outra relação confirmada</option>
+                    {Object.entries(relationshipLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                   {relationshipLocked && (
                     <p id={field + 'relationship-hint'} className="text-xs text-muted-foreground mt-1">
                       Relação já confirmada. Este agendamento preserva o vínculo registrado.
                     </p>
                   )}
+                  {mode === 'existing' && patient && (relationshipLocked || currentLink) && <div className="mt-2 space-y-2">
+                    {linkNeedsReview && <p role="status" className="text-sm">O vínculo selecionado mudou ou precisa de conferência. Recupere o vínculo e confirme novamente antes de reservar.</p>}
+                    <Button type="button" variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" onClick={() => void recoverLink()}>{recovering ? 'Recuperando vínculo…' : 'Recuperar vínculo selecionado'}</Button>
+                  </div>}
                 </div>
               </>
             )}
@@ -356,7 +407,7 @@ export function BookingDialog({
                   }}
                 />
               </div>
-              <div>
+              <div className="col-span-2 sm:col-span-1">
                 <Label htmlFor={field + 'start'}>Início</Label>
                 <Input
                   id={field + 'start'}
@@ -369,7 +420,7 @@ export function BookingDialog({
                   }}
                 />
               </div>
-              <div>
+              <div className="col-span-2 sm:col-span-1">
                 <Label htmlFor={field + 'end'}>Término</Label>
                 <Input
                   id={field + 'end'}
@@ -408,6 +459,7 @@ export function BookingDialog({
               <label className="flex items-start gap-2">
                 <input
                   type="checkbox"
+                  disabled={linkNeedsReview || snapshot.isFetching || snapshot.isError}
                   checked={confirmed}
                   onChange={(e) => setConfirmed(e.target.checked)}
                   className="mt-1 accent-primary"
@@ -420,7 +472,7 @@ export function BookingDialog({
             <Button
               type="button"
               variant="outline"
-              disabled={busy}
+              disabled={working}
               onClick={() => {
                 if (guard(false)) onClose();
               }}
@@ -430,7 +482,7 @@ export function BookingDialog({
             <Button
               type="submit"
               disabled={
-                busy || !confirmed || !contact || !doctor || !snapshot.data || snapshot.isFetching || snapshot.isError || (mode === 'existing' && !patient)
+                working || linkNeedsReview || !confirmed || !contact || !doctor || !snapshot.data || snapshot.isFetching || snapshot.isError || (mode === 'existing' && !patient)
               }
             >
               {busy ? 'Confirmando…' : 'Confirmar agendamento'}
