@@ -1,0 +1,39 @@
+{
+  "reference": "0a2607b",
+  "syntheticOnly": true,
+  "scope": "five frozen real components/AuthProvider/SessionAssurance and fixture router/HTTP; no PSC, hosted or SQL",
+  "checks": [
+    "Verify never repeats; confirmed retry retains operation/document/hash and reaches signed state",
+    "375px no badge intersection, overflow or clipped controls",
+    "Configured MFA403 exposes security recovery link and never signs",
+    "Quota failure refuses new operation before any signing call"
+  ],
+  "layout": {
+    "intersections": 0,
+    "overflow": 0,
+    "clipped": 0
+  },
+  "pageErrors": [],
+  "sources": [
+    {
+      "path": "src/lib/signatureClient.ts",
+      "sha256": "0875de155eca57be56ed3baee801faa6263d6f3aeb8cbad39c76fda9a41a0db1"
+    },
+    {
+      "path": "src/components/SignatureControls.tsx",
+      "sha256": "ed44eb76f344b6a810b2cf64c99e78075c034b4e79d719b61843764f125ac39e"
+    },
+    {
+      "path": "src/hooks/useSignatureSession.ts",
+      "sha256": "bcfa1cf49089ccf752f34258adae717da2c51c5230c45d367dfa497a2977c3a2"
+    },
+    {
+      "path": "src/components/PrescriptionList.tsx",
+      "sha256": "99ac84004e34dfbc7483f1a9f35fcb10b486c3a8ff5bba544ec87209fb1f4d41"
+    },
+    {
+      "path": "src/pages/SignatureReturn.tsx",
+      "sha256": "33f62af26bedf51885d4592ae2d7f5cf167c543a3e7e5609f3bb5d0050288bf2"
+    }
+  ]
+}

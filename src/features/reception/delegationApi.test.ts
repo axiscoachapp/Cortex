@@ -45,4 +45,16 @@ describe('authenticated delegation API', () => {
     await expect(delegationApi.change({ requestId: operation, revision: 1, action: 'approve', operationId: operation })).rejects.toMatchObject({ code: '40001', message: expect.stringContaining('Atualize') });
     expect(mocks.rpc).toHaveBeenCalledTimes(1);
   });
+  it('binds the staff provenance reader to explicit clinic/staff and a bounded cursor',async()=>{
+    answer({items:[{doctorId:doctor,doctorName:'Médico sintético',source:'legacy',requestId:null,effective:true}],nextCursor:doctor});
+    const result=await delegationApi.permissions({clinicId:clinic,staffId:staff,after:doctor});
+    expect(result.items[0].source).toBe('legacy');
+    expect(mocks.rpc).toHaveBeenCalledWith('reception_staff_permissions',{p_clinic:clinic,p_staff:staff,p_after:doctor,p_limit:50});
+  });
+  it('refuses a proven-approval projection without its exact request and rejects actor injection',async()=>{
+    await expect(delegationApi.permissions({clinicId:clinic,staffId:staff,actorId:doctor} as never)).rejects.toThrow();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    answer({items:[{doctorId:doctor,doctorName:'Médico sintético',source:'physician_approval',requestId:null,effective:true}],nextCursor:null});
+    await expect(delegationApi.permissions({clinicId:clinic,staffId:staff})).rejects.toMatchObject({code:'INVALID_RESPONSE'});
+  });
 });

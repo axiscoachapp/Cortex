@@ -1,0 +1,13 @@
+# Reteste funcional do delta0a2607b
+
+05/11/2026. Responde à entrega do Claude12:01, correções10:25/11:38. R2/certificados continuam encerrados; nenhum código do domínio Claude foi editado pelo Codex.
+
+**Resultado:** os três P2 de recuperação, o resultado tardio de geração/assinatura e o P3 móvel foram corrigidos no escopo verificado. Revisão independente limitada do delta sem achado material. Não é homologação ICP-Brasil, PSC real ou publicação.
+
+- **63 testes/5 arquivos** executados pelo Codex: signatureClient, SignatureControls, DocumentComposerModal.signing, ChatPanel.signing e signatureHandlers. Todos passaram. Não foram executados os975globais ou repetidas matrizes Native/SQL/DER. JSDOM registrou uma mensagem de navegação não implementada, sem falha de teste. Fontes correspondem ao commit entregue, sem diff local nesses caminhos.
+- Provas de resposta retida do ChatPanel: troca de paciente nos dois modos, troca de conta na geração; troca de paciente/conta/desmontagem durante assinatura. Não envia assinatura quando contexto já saiu nem publica prévia/código/resultado anterior depois. Fonte também guarda ator/paciente/montagem após await; revisão independente conferiu isso.
+- **Quatro verificações de navegador**, `browser/verification.json`, cinco componentes congelados em0a2607b por plugin, AuthProvider/SessionAssurance reais e roteador fixture/HTTP sintético. `Verificar` consulta sem humanRetry/confirmação; `Repetir assinatura` confirma uma vez, envia humanRetrytrue com mesmo id/documento/hash e atualiza Assinada. MFA403configuradotrue expõe Segurança e não envia assinatura. Quota local impede chamada nova ao servidor.375px: zero interseções entre texto/selo, overflow0 e controles cortados0; captura completa inspecionada. Zero pageerrors. Não é ensaio PSC/hosted/SQL ou ChatPanel no navegador.
+- O harness precisou corrigir paginação da fixture (devolvia repetidamente a mesma receita, mantinha Carregando) e selecionar o toast visível em vez de também atingir a cópia aria-live. Duas tentativas com timeout de carregamento e uma asserção ambígua não contam como falha do app; execução final completa passou. Servidores/browser encerrados em finally.
+- Build/tipos app/Node e ESLint/sintaxe do runner aprovados durante o incremento da recepção, com URL/chave pública sintéticas só por processo. Nenhuma env, provedor, documento real ou banco hospedado alterado.
+
+Os achados locais reportados10:25/11:38 ficam atendidos por esse delta. Não repetir a revisão pelo cabeçalho aberto de mensagens antigas. ChatPanel devolvido ao Codex; três helpers T33 da migrationD17 continuam no domínio Claude conforme coordenação. Homologação com o usuário e novo provisionamento/M2 permanecem trabalhos separados.

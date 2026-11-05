@@ -16,11 +16,19 @@ const page = z.object({ canManage: z.boolean(), items: z.array(item).max(100), n
 const listInput = z.object({ clinicId: uuid.nullish(), cursor: cursor.nullish(), limit: z.number().int().min(1).max(100).default(50) }).strict();
 const requestInput = z.object({ clinicId: uuid, staffId: uuid, doctorId: uuid, operationId: uuid }).strict();
 const changeInput = z.object({ requestId: uuid, revision, action: z.enum(['approve', 'deny', 'cancel', 'revoke']), operationId: uuid }).strict();
+const permissionFields = { doctorId: uuid, doctorName: z.string(), effective: z.boolean() };
+const permission = z.discriminatedUnion('source', [
+  z.object({ ...permissionFields, source: z.literal('physician_approval'), requestId: uuid }).strict(),
+  z.object({ ...permissionFields, source: z.literal('legacy'), requestId: z.null() }).strict(),
+  z.object({ ...permissionFields, source: z.literal('unverified'), requestId: z.null() }).strict(),
+]);
+const permissionsPage = z.object({ items: z.array(permission).max(100), nextCursor: uuid.nullable() }).strict();
+const permissionsInput = z.object({ clinicId: uuid, staffId: uuid, after: uuid.nullish(), limit: z.number().int().min(1).max(100).default(50) }).strict();
 export type DelegationRequest = z.infer<typeof item>;
 export type DelegationCursor = z.infer<typeof cursor>;
 export type DelegationAction = z.infer<typeof changeInput>['action'];
 
-type RpcName = 'reception_delegation_requests' | 'reception_request_delegation' | 'reception_decide_delegation' | 'reception_cancel_delegation' | 'reception_revoke_delegation';
+type RpcName = 'reception_delegation_requests' | 'reception_request_delegation' | 'reception_decide_delegation' | 'reception_cancel_delegation' | 'reception_revoke_delegation' | 'reception_staff_permissions';
 async function rpc<T>(name: RpcName, args: Record<string, unknown>, schema: z.ZodType<T>): Promise<T> {
   const { data, error } = await supabase.rpc(name as never, args as never).abortSignal(AbortSignal.timeout(20_000));
   if (error) throw new ReceptionError(
@@ -34,6 +42,10 @@ async function rpc<T>(name: RpcName, args: Record<string, unknown>, schema: z.Zo
   return parsed.data;
 }
 export const delegationApi = {
+  async permissions(input: z.input<typeof permissionsInput>) {
+    const value = permissionsInput.parse(input);
+    return rpc('reception_staff_permissions', { p_clinic: value.clinicId, p_staff: value.staffId, p_after: value.after ?? null, p_limit: value.limit }, permissionsPage);
+  },
   async list(input: z.input<typeof listInput> = {}) {
     const value = listInput.parse(input);
     return rpc('reception_delegation_requests', { p_clinic: value.clinicId ?? null, p_after: value.cursor?.createdAt ?? null, p_after_id: value.cursor?.id ?? null, p_limit: value.limit }, page);

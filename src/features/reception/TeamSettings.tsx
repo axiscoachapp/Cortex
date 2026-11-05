@@ -11,6 +11,7 @@ import { functionErrorMessage } from '@/lib/functionErrors';
 import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
 import { ReceptionNotice } from './ReceptionNotice';
+import { StaffAccessProvenance } from './StaffAccessProvenance';
 
 export default function TeamSettings() {
   const access = useClinicAccess();
@@ -150,6 +151,7 @@ export default function TeamSettings() {
           <StaffCard
             key={staff.id + JSON.stringify(staff.doctorIds) + staff.active}
             staff={staff}
+            provenance={access.clinic ? <StaffAccessProvenance actorId={access.actorId} clinicId={access.clinic.id} staffId={staff.id} staffName={staff.name} /> : null}
             doctors={teamDoctors}
             scopesReady={directory.isSuccess}
             busy={busy}
@@ -192,6 +194,7 @@ export default function TeamSettings() {
 
 function StaffCard({
   staff,
+  provenance,
   doctors,
   busy,
   scopesReady,
@@ -200,6 +203,7 @@ function StaffCard({
   onDeactivate,
 }: {
   staff: { id: string; name: string; active: boolean; doctorIds: string[] };
+  provenance: React.ReactNode;
   doctors: { id: string; name: string }[];
   busy: boolean;
   scopesReady: boolean;
@@ -242,6 +246,7 @@ function StaffCard({
           </Button>
         )}
       </div>
+      {provenance}
     </article>
   );
 }

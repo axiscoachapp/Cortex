@@ -1,0 +1,89 @@
+{
+  "syntheticOnly": true,
+  "realPagesAndApi": true,
+  "realSql": false,
+  "checks": [
+    "lazy fetch",
+    "legacy and proven approval remain distinct",
+    "composite staff scope and cursor",
+    "375px no overflow",
+    "denied refresh hides rows and retry recovers",
+    "no mutation and explicit withdrawal-workflow link"
+  ],
+  "calls": [
+    {
+      "name": "clinic_access",
+      "body": {}
+    },
+    {
+      "name": "reception_team_doctors",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666"
+      }
+    },
+    {
+      "name": "reception_staff_permissions",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_staff": "77777777-7777-4777-8777-777777777777",
+        "p_after": null,
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "reception_staff_permissions",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_staff": "77777777-7777-4777-8777-777777777777",
+        "p_after": "88888888-8888-4888-8888-888888888888",
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "reception_staff_permissions",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_staff": "77777777-7777-4777-8777-777777777777",
+        "p_after": null,
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "reception_staff_permissions",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_staff": "77777777-7777-4777-8777-777777777777",
+        "p_after": null,
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "reception_staff_permissions",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_staff": "77777777-7777-4777-8777-777777777777",
+        "p_after": "88888888-8888-4888-8888-888888888888",
+        "p_limit": 50
+      }
+    }
+  ],
+  "pageErrors": [],
+  "sources": [
+    {
+      "path": "src/features/reception/TeamSettings.tsx",
+      "sha256": "962d530404c83e29544cb2bf5457144ecbb66f8705c077a83a8986a5ad6f8098"
+    },
+    {
+      "path": "src/features/reception/StaffAccessProvenance.tsx",
+      "sha256": "5829e62474e34edbbc8c614b977d1e2cf7538391758b3a7ada4b89f01cdcd1cb"
+    },
+    {
+      "path": "src/features/reception/delegationApi.ts",
+      "sha256": "c3f56b4b95d8c77ed9922aad7ba24ec051f2b21849bd699b671c69d6562457d5"
+    },
+    {
+      "path": "scripts/fixtures/reception-reactivation-page.tsx",
+      "sha256": "894b69922a8471d383a6bfb316d74da64cf0724332d50443ec8d47cab39147f8"
+    }
+  ]
+}

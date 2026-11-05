@@ -7,6 +7,7 @@ import { ClinicAccessContext } from './accessContext';
 import type { ClinicAccess } from './contracts';
 const mocks=vi.hoisted(()=>({teamDoctors:vi.fn(),updateStaff:vi.fn(),invoke:vi.fn()}));
 vi.mock('./api',()=>({receptionApi:{teamDoctors:mocks.teamDoctors,updateStaff:mocks.updateStaff}}));
+vi.mock('./StaffAccessProvenance',()=>({StaffAccessProvenance:()=>null}));
 vi.mock('@/integrations/supabase/client',()=>({supabase:{functions:{invoke:mocks.invoke}}}));
 const a={id:'11111111-1111-4111-8111-111111111111',name:'Doutor A sintético',specialty:null};
 const b={id:'22222222-2222-4222-8222-222222222222',name:'Doutor B sintético',specialty:null};

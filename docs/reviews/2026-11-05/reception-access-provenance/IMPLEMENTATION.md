@@ -1,0 +1,17 @@
+# Origem dos acessos administrativos
+
+05/11/2026, T28/2b/3b. [Contrato](../../../product/clinic-crm/RECEPTION_ACCESS_PROVENANCE.md). Entrega local, sem publicação ou reconciliação de grants.
+
+A gestão pode expandir o cartão de cada conta para conferir os acessos atuais. A consulta separa **aprovação médica vinculada**, **legado com anuência não comprovada** e referência não validada; mostra a efetividade operacional separadamente. Um legado ativo não recebe selo de consentimento. Link leva à página existente de pedidos/revogações, que revalida autoridade e revisão antes de agir. Carregamento sob demanda evita uma chamada por integrante ao abrir a equipe; páginas de no máximo100 e cursor por médico, cache por ator/clínica/conta, atualização negada esconde a projeção anterior.
+
+Migration05210000 foi reservada no ESTADO antes do arquivo e acrescenta somente `reception_staff_permissions`. Autoridade privada existente, administrador ativo, recepção da mesma clínica, locks NOWAIT de autoridade/conta, DTO com cinco campos administrativos. Aprovação requer identidade/capacidade/estado exatos; NULL é legado, outra referência é não validada. `effective` usa o predicado operacional canônico. Não concede ledger/EXECUTE a anon ou serviço, não modifica escritor, custódia, capacidade, grants, prontuários ou domínio do Claude.
+
+Verificação:
+
+- `RED.json`:70migrations anteriores, chamada ausente42883. `SQL.json`:71migrations/nove suítes aprovadas, fontes69congeladasf716e68 e dois overlays próprios. Prova específica de legado e aprovação simultâneos, campos exatos, cursores/limites, leitura sem escrita, médico/recepção/estranho negados, ACL e inativação. Suítes de pedidos/decisões/provisionamento/API/lifecycle e catálogo de fronteiras repetidas. Claims/SET ROLE são fixtures SQL, não Native Auth. Containers/rede internos sem portas/pull, ownership e ausência após cleanup conferidos.
+- Tipos públicos regenerados no banco descartável: somente nove linhas da nova RPC.
+- **31 testes/4 arquivos**: detalhes sob demanda, classificação separada de efetividade, retorno estrito (aprovação exige requestId), rejeição de ator injetado, cursor, negativa oculta cache, caminho de retirada; regressões de equipe/pedidos/API preservadas. RED do módulo ausente e dois testes de API sem método antes da implementação, oito testes anteriores da API verdes.
+- **Seis verificações de navegador**, `browser/verification.json`, páginas reais de equipe e clientes/DTO com AuthProvider/HTTP sintético e clínica por fixture. Consulta preguiçosa, paginação, distinção legado/aprovação,375px sem overflow, negativa/retry e ausência de mutações; zero pageerrors. Hashes de quatro fontes conferidos, captura completa móvel inspecionada, escala135% preservada. Não é browser contra SQL ou App inteiro.
+- Revisão independente de autoridade, classificação, DTO/cache/UI sem achado material. Build Vite, tipos app/Node, ESLint dos arquivos próprios e sintaxe aprovados; build com backend público sintético por processo, sem env persistido.
+
+Não foram repetidos Native Auth, corridas históricas ou ensaios de certificados; não há paciente real, chamada paga, push/deploy ou alteração hospedada. Projeção de aprovação sem requestId é recusada por DTO; ramo `unverified` é fallback de leitura, sem contornar as guardas que impedem produzir esse estado. M2 permanece aberta para provisionamento integrado, corte/reconciliação do legado, credencial e piloto.
