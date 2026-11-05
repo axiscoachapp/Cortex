@@ -1,0 +1,40 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "4f691181f22a34a54c87965f3c08fc2c4abfcaae",
+  "unitPassed": 64,
+  "unitFiles": 3,
+  "unitExitCode": 0,
+  "deno": {
+    "version": "2.9.6",
+    "cachedOnly": true,
+    "entrypoints": [
+      "validate-prescription",
+      "generate-prescription"
+    ],
+    "exitCode": 0
+  },
+  "sources": [
+    {
+      "path": "supabase/functions/validate-prescription/index.ts",
+      "sha256": "719bec45add9b7110924a3e2098bb4b07e5ffd0384cb056c42d85393c872ddc6"
+    },
+    {
+      "path": "supabase/functions/generate-prescription/index.ts",
+      "sha256": "224c1ed6d54367b79f0dddf3951d3d83d1a9ae7efa6289c0d3b0c1eced45b45a"
+    },
+    {
+      "path": "src/lib/securityHandlers.test.ts",
+      "sha256": "6414ccb729c0f080f9b8da4d3380038c49347411f1a7b9416f622350e6065c84"
+    },
+    {
+      "path": "src/lib/privacyHandlers.test.ts",
+      "sha256": "ce9fd304e6a968099bd0ea25d4a6dcac35b8b4d1d0b6cfdbcac61ab7e4159947"
+    },
+    {
+      "path": "src/lib/prescriptionDocuments.test.ts",
+      "sha256": "00fdfc0f7bf5bd79596568ae0ff8a5f1b0d78114015048f03394021b4689474c"
+    }
+  ],
+  "reviewResolved": false,
+  "realValidarCalls": false
+}

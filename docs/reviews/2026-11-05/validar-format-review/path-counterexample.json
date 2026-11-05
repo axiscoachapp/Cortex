@@ -1,0 +1,29 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "4f691181f22a34a54c87965f3c08fc2c4abfcaae",
+  "scope": "isolated actual signedFileOf helper; producer UUID acceptance reviewed by schema inspection",
+  "httpIntegration": false,
+  "externalCalls": false,
+  "ownSource": {
+    "path": "scripts/test-validate-contract-review.mjs",
+    "sha256": "bedfbca22cd30021412f80b296ec8f46ac046ba28a99ac52f6ffce01e8f549cf"
+  },
+  "source": {
+    "path": "supabase/functions/validate-prescription/index.ts",
+    "sha256": "719bec45add9b7110924a3e2098bb4b07e5ffd0384cb056c42d85393c872ddc6"
+  },
+  "cases": [
+    {
+      "operation": "44444444-4444-4444-8444-444444444444",
+      "canonicalHexUuid": true,
+      "accepted": true,
+      "refusal": null
+    },
+    {
+      "operation": "44444444-4444-4444-4444-444444444444",
+      "canonicalHexUuid": true,
+      "accepted": false,
+      "refusal": "SignatureIncomplete"
+    }
+  ]
+}
