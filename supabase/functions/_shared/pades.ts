@@ -192,11 +192,23 @@ function strictTree(buf: Uint8Array, node: DerNode, depth = 0): void {
 }
 
 const UTF8 = new TextDecoder('utf-8', { fatal: true });
-/** The content of a universal primitive value, by its type (X.690 DER). */
+/** BMPString (UCS-2) or UniversalString (UCS-4): whole code points, no surrogate, at most U+10FFFF. */
+function ucsContent(c: Uint8Array, width: 2 | 4): boolean {
+  if (c.length % width) return false;
+  for (let i = 0; i < c.length; i += width) {
+    const cp = width === 2 ? c[i] * 0x100 + c[i + 1] : c[i] * 0x1000000 + c[i + 1] * 0x10000 + c[i + 2] * 0x100 + c[i + 3];
+    if ((cp >= 0xd800 && cp <= 0xdfff) || cp > 0x10ffff) return false;
+  }
+  return true;
+}
+/**
+ * The content of a universal primitive value, by its type (X.690 DER). An
+ * explicit list (Codex 05/11 08:30): any other universal form, including a
+ * primitive SEQUENCE or SET, is refused.
+ */
 function primitiveOk(buf: Uint8Array, n: DerNode): boolean {
   const c = content(buf, n);
   switch (n.tag) {
-    case 0x00: return false; // end-of-contents: BER only
     case 0x01: return c.length === 1 && (c[0] === 0x00 || c[0] === 0xff); // BOOLEAN
     case 0x02: case 0x0a: return integerContent(c); // INTEGER, ENUMERATED
     case 0x03: return c.length >= 1 && c[0] <= 7 && !(c.length === 1 && c[0] !== 0) // BIT STRING, unused bits zero
@@ -205,9 +217,14 @@ function primitiveOk(buf: Uint8Array, n: DerNode): boolean {
     case 0x06: return oidContent(c);
     case 0x0c: try { UTF8.decode(c); return true; } catch { return false; } // UTF8String
     case 0x17: case 0x18: return derTime(buf, n) !== null; // UTCTime, GeneralizedTime
-    case 0x1c: return c.length % 4 === 0; // UniversalString (UCS-4)
-    case 0x1e: return c.length % 2 === 0; // BMPString (UCS-2)
-    default: return true;
+    case 0x04: return true; // OCTET STRING (extension values, read by whoever uses them)
+    // Byte strings of names: Numeric, Printable, T61, Videotex, IA5, Graphic,
+    // Visible, General. Their character sets are not imposed, as OpenSSL does
+    // not impose them while parsing.
+    case 0x12: case 0x13: case 0x14: case 0x15: case 0x16: case 0x19: case 0x1a: case 0x1b: return true;
+    case 0x1c: return ucsContent(c, 4); // UniversalString
+    case 0x1e: return ucsContent(c, 2); // BMPString
+    default: return false; // end-of-contents, primitive SEQUENCE/SET and any other form
   }
 }
 

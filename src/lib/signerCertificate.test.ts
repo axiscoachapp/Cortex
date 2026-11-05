@@ -92,6 +92,7 @@ async function fullCertificate() {
     DER.setOf(DER.seq(DER.oid('2.5.4.6'), tlv(0x13, ascii('BR')))),
     DER.setOf(DER.seq(DER.oid('2.5.4.10'), DER.utf8('ICP-Brasil Sintética'))),
     DER.setOf(DER.seq(DER.oid('2.5.4.11'), bmp('Unidade'))),
+    DER.setOf(DER.seq(DER.oid('2.5.4.7'), tlv(0x1c, Uint8Array.from([...'Curitiba'].flatMap((ch) => [0, 0, 0, ch.charCodeAt(0)]))))),
     DER.setOf(DER.seq(DER.oid('1.2.840.113549.1.9.1'), tlv(0x16, ascii('sintetica@example.invalid')))),
     DER.setOf(DER.seq(DER.oid('2.5.4.3'), DER.utf8(cn))),
   );
@@ -169,7 +170,14 @@ function variants(der: Uint8Array): Array<[string, Uint8Array]> {
       if (n.tag === 0x02 || n.tag === 0x06) mutate('lead', path, (x) => { x.body = Uint8Array.from([n.tag === 0x02 ? 0 : 0x80, ...x.body!]); });
       if (n.tag === 0x03) for (const bits of [1, 7, 8, 255]) mutate(`unused${bits}`, path, (x) => { x.body![0] = bits; });
     }
+    if (n.children) {
+      // The primitive form of a constructed node (SEQUENCE 30 -> 10, SET 31 -> 11, [n] a0 -> 80).
+      mutate('primitive form', path, (x) => { x.body = Uint8Array.from(x.children!.flatMap((c) => [...encode(c)])); x.children = undefined; x.tag &= ~0x20; });
+    }
+    if (n.tag === 0x1e) mutate('surrogate', path, (x) => { x.body = Uint8Array.of(0xdc, 0x00); });
+    if (n.tag === 0x1c) for (const cp of [[0, 0, 0xdf, 0xff], [0, 0x11, 0, 0]]) mutate(`code point ${cp.join(' ')}`, path, (x) => { x.body = Uint8Array.from(cp); });
     if (n.body && !(n.tag & 0xc0)) {
+      for (const tag of [0x10, 0x11]) mutate(`as tag ${tag.toString(16)}`, path, (x) => { x.tag = tag; });
       mutate('content FF', path, (x) => { x.body = Uint8Array.of(0xff); });
       mutate('content 00', path, (x) => { x.body = Uint8Array.of(0x00); });
       mutate('content C3', path, (x) => { x.body = Uint8Array.of(0xc3); }); // a UTF-8 sequence cut short
@@ -263,6 +271,12 @@ describe('signerCertificateProblem: the X.509 shape (Codex 05/11 06:35, R2)', ()
       ['BMPString of one byte in the issuer', withIssuerValue(tlv(0x1e, Uint8Array.of(0x00)))],
       ['UniversalString of three bytes in the issuer', withIssuerValue(tlv(0x1c, Uint8Array.of(0x00, 0x00, 0x41)))],
       ['end-of-contents as parameters', withParameters(Uint8Array.of(0x00, 0x00))],
+      // Codex 05/11 08:30: primitive SEQUENCE/SET and invalid code points.
+      ['primitive SEQUENCE as parameters', withParameters(Uint8Array.of(0x10, 0x00))],
+      ['primitive SET as parameters', withParameters(Uint8Array.of(0x11, 0x00))],
+      ['BMPString with a lone surrogate in the issuer', withIssuerValue(tlv(0x1e, Uint8Array.of(0xd8, 0x00)))],
+      ['UniversalString with a surrogate in the issuer', withIssuerValue(tlv(0x1c, Uint8Array.of(0x00, 0x00, 0xd8, 0x00)))],
+      ['UniversalString above U+10FFFF in the issuer', withIssuerValue(tlv(0x1c, Uint8Array.of(0x00, 0x11, 0x00, 0x00)))],
     ];
     for (const [label, der] of cases) {
       expect([label, openssl(der)]).toEqual([label, false]);
@@ -277,12 +291,18 @@ describe('signerCertificateProblem: the X.509 shape (Codex 05/11 06:35, R2)', ()
       ['OID with a padded arc', Uint8Array.of(0x06, 0x02, 0x80, 0x01)],
       ['UTCTime without seconds', tlv(0x17, ascii('2601010000Z'))],
       ['constructed OCTET STRING', Uint8Array.of(0x24, 0x03, 0x04, 0x01, 0x00)],
+      // Universal forms outside the explicit list.
+      ['ObjectDescriptor', Uint8Array.of(0x07, 0x00)],
+      ['REAL', Uint8Array.of(0x09, 0x00)],
+      ['RELATIVE-OID', Uint8Array.of(0x0d, 0x01, 0x01)],
     ];
     for (const [label, parameters] of strict) {
       expect([label, await signerCertificateProblem(withParameters(parameters), NOW)]).toEqual([label, 'certificate_invalid']);
     }
-    // Valid forms still pass: NULL parameters (the usual) and no parameters.
-    for (const der of [withParameters(DER.null), withParameters(null)]) {
+    // Valid forms still pass: NULL parameters (the usual), no parameters, and
+    // whole code points at the edges (U+FFFD in BMP, U+10FFFF in UCS-4).
+    for (const der of [withParameters(DER.null), withParameters(null), withIssuerValue(tlv(0x1e, Uint8Array.of(0xff, 0xfd))),
+      withIssuerValue(tlv(0x1c, Uint8Array.of(0x00, 0x10, 0xff, 0xff)))]) {
       expect(openssl(der)).toBe(true);
       expect(await signerCertificateProblem(der, NOW)).toBeNull();
     }

@@ -73,6 +73,13 @@ Versões:
     - BMPString par e UniversalString múltipla de 4.
 
     String construída (BER) é recusada. O conjunto de caracteres de PrintableString e IA5String não é imposto, como no OpenSSL.
+  - **R2, lista explícita (08:30):** um valor primitivo universal fora da lista conferida é recusado, inclusive SEQUENCE ou SET em forma primitiva. A lista:
+    - BOOLEAN, INTEGER e ENUMERATED;
+    - BIT STRING, OCTET STRING, NULL e OID;
+    - UTF8String;
+    - as strings de byte dos nomes;
+    - os horários;
+    - BMPString e UniversalString, que só aceitam pontos de código inteiros, sem surrogate e até U+10FFFF.
   - **R4, download real:** o storage-js 2.86 devolve a ausência no download como `StorageUnknownError` com a `Response` crua (`noResolveJson`). `storageErrorKind` lê esse corpo até 4 KiB e só aceita JSON com `statusCode` 404 em HTTP 400/404 como ausência. Gateway sem `statusCode`, HTML, 5xx e rede são indisponibilidade. `storageAdapter(bucket)` saiu de `signatureDeps.ts` para ser testado com o `StorageClient` real.
 - **R5, corpo:** o limite de 8 KiB é aplicado na leitura:
   - um `Content-Length` maior é recusado antes de ler;
