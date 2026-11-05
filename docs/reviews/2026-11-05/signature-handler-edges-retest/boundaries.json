@@ -1,0 +1,254 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "876875c8930806ff04310bf1928fe0f33a4119b4",
+  "realHandlersAndAdapters": true,
+  "authSdkAndProviderInMemory": true,
+  "nativeAuthHttp": false,
+  "sqlIntegration": false,
+  "externalCalls": false,
+  "aal1VerifiedFactorRoutes": [
+    {
+      "route": "state",
+      "status": 403,
+      "mfaRequired": true,
+      "rpcCalls": 0
+    },
+    {
+      "route": "revoke",
+      "status": 403,
+      "mfaRequired": true,
+      "rpcCalls": 0
+    }
+  ],
+  "aal2RouteControls": [
+    {
+      "route": "state",
+      "status": 200,
+      "rpcCalls": 1,
+      "jwtRemainingSeconds": 60
+    },
+    {
+      "route": "revoke",
+      "status": 200,
+      "rpcCalls": 1,
+      "jwtRemainingSeconds": 60
+    }
+  ],
+  "storageClassification": [
+    {
+      "statusCode": "404",
+      "returnedNull": true,
+      "threw": false
+    },
+    {
+      "statusCode": "503",
+      "returnedNull": false,
+      "threw": true
+    },
+    {
+      "statusCode": "500",
+      "returnedNull": false,
+      "threw": true
+    }
+  ],
+  "certificate": {
+    "emptyHttpStatus": 409,
+    "emptyCertificateActivated": false,
+    "validRsaControlHttpStatus": 200
+  },
+  "malformedCertificates": [
+    {
+      "name": "control",
+      "helperProblem": null,
+      "x509Parsed": true,
+      "completeStatus": 200,
+      "activationCalled": true
+    },
+    {
+      "name": "emptyOuterAlgorithm",
+      "helperProblem": "certificate_invalid",
+      "x509Parsed": false,
+      "completeStatus": 409,
+      "activationCalled": false
+    },
+    {
+      "name": "emptySignatureValue",
+      "helperProblem": "certificate_invalid",
+      "x509Parsed": false,
+      "completeStatus": 409,
+      "activationCalled": false
+    },
+    {
+      "name": "invalidUnusedBits",
+      "helperProblem": "certificate_invalid",
+      "x509Parsed": false,
+      "completeStatus": 409,
+      "activationCalled": false
+    }
+  ],
+  "realStorageSdk": {
+    "version": "2.86.0",
+    "fetchInMemory": true,
+    "cases": [
+      {
+        "httpStatus": 400,
+        "errorName": "StorageUnknownError",
+        "structuredStatusAbsent": true,
+        "originalResponseStatus": 400,
+        "adapterThrows": false,
+        "returnedNull": true
+      },
+      {
+        "httpStatus": 404,
+        "errorName": "StorageUnknownError",
+        "structuredStatusAbsent": true,
+        "originalResponseStatus": 404,
+        "adapterThrows": false,
+        "returnedNull": true
+      },
+      {
+        "httpStatus": 500,
+        "errorName": "StorageUnknownError",
+        "structuredStatusAbsent": true,
+        "originalResponseStatus": 500,
+        "adapterThrows": true,
+        "returnedNull": false
+      }
+    ],
+    "sources": [
+      {
+        "path": "node_modules/@supabase/storage-js/package.json",
+        "sha256": "33e892abd3a8a59eeae27d4eb5a3d14265d2a277ac0ba2ec2d2a0fe35057eb53"
+      },
+      {
+        "path": "node_modules/@supabase/storage-js/dist/main/StorageClient.js",
+        "sha256": "b758251586bf604a24718b812c959fea1822cf832b6845fe012d6be66e1b8fcc"
+      },
+      {
+        "path": "node_modules/@supabase/storage-js/dist/main/packages/StorageFileApi.js",
+        "sha256": "e7a08972b2b8d6647431a83f3c79c8186cee47bb361f3f3e4b89b336555e173c"
+      },
+      {
+        "path": "node_modules/@supabase/storage-js/dist/main/packages/BlobDownloadBuilder.js",
+        "sha256": "b1bacd23b42b6c125052fc472977af081a94216555daf21c13286ed2580188d1"
+      },
+      {
+        "path": "node_modules/@supabase/storage-js/dist/main/lib/fetch.js",
+        "sha256": "0f4d696533e690ccfc8e475073b1230703e3c5d4c9b1625541bdda432b6238d4"
+      },
+      {
+        "path": "node_modules/@supabase/storage-js/dist/main/lib/errors.js",
+        "sha256": "65ff9b36e8a679903e4bfaf3d4e73d0d8d84d7f7884e474a253ffb715ff76f3e"
+      }
+    ]
+  },
+  "remainingDerCases": [
+    {
+      "name": "nullWithContent",
+      "helperProblem": null,
+      "x509Parsed": false,
+      "completeStatus": 200,
+      "activationCalled": true
+    },
+    {
+      "name": "emptyInteger",
+      "helperProblem": null,
+      "x509Parsed": false,
+      "completeStatus": 200,
+      "activationCalled": true
+    },
+    {
+      "name": "nonminimalInteger",
+      "helperProblem": null,
+      "x509Parsed": false,
+      "completeStatus": 200,
+      "activationCalled": true
+    },
+    {
+      "name": "invalidUtf8Name",
+      "helperProblem": null,
+      "x509Parsed": false,
+      "completeStatus": 200,
+      "activationCalled": true
+    },
+    {
+      "name": "oddBmpName",
+      "helperProblem": null,
+      "x509Parsed": false,
+      "completeStatus": 200,
+      "activationCalled": true
+    }
+  ],
+  "bodyLimit": {
+    "advertisedBytes": 8192,
+    "bytesPulledIncludingPrefetch": 10240,
+    "cancelled": true,
+    "httpStatus": 400
+  },
+  "resumeWithEndedPsc": {
+    "rpcBranchesMirroredFromSql": true,
+    "cases": [
+      {
+        "observed": "prepared",
+        "status": 409,
+        "response": {
+          "status": "cancelled_by_revocation"
+        },
+        "mirroredStateAfter": "cancelled_by_revocation",
+        "steps": [
+          "signature_reserve",
+          "signature_session_token",
+          "signature_close"
+        ]
+      },
+      {
+        "observed": "ambiguous",
+        "status": 409,
+        "response": {
+          "status": "cancelled_by_revocation"
+        },
+        "mirroredStateAfter": "cancelled_by_revocation",
+        "steps": [
+          "signature_reserve",
+          "signature_session_token",
+          "signature_close",
+          "signature_cleanup_done"
+        ]
+      }
+    ]
+  },
+  "sources": [
+    {
+      "path": "supabase/functions/_shared/signatureDeps.ts",
+      "sha256": "d3000bd240683b6f2426f8f79f17d653d7c337f87f9c4bbfdd65b582e16d2b70"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureHandlers.ts",
+      "sha256": "fd7e3273f202a968956f17df31ee92cde0637c2b7a259d8af4e66bb558510c85"
+    },
+    {
+      "path": "supabase/functions/_shared/auth.ts",
+      "sha256": "4d9e2ca5b79c7ceb836ee298e9c661795e1dd86874ca35c13c5ff0761d1a5f56"
+    },
+    {
+      "path": "supabase/functions/_shared/pades.ts",
+      "sha256": "d2f475bec00ec384f901504ae213dc62f4a552621ee8bdc7f902382960a2877b"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "sha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureFlow.ts",
+      "sha256": "162c63d03997f956b3f598848e5b90858457270d40b2c417a114b59de70316be"
+    },
+    {
+      "path": "src/test/syntheticPki.ts",
+      "sha256": "17279d2e00d44ec5a8ac1f64a970e83c5f9e0df6b259e6917ed1f0e4972f5ff7"
+    }
+  ],
+  "ownSource": {
+    "path": "scripts/test-signature-handler-boundaries.mjs",
+    "sha256": "05f01eb3624c0bed8a96ab6d10b801016586ceedb489b7ec1d4fc195deea22df"
+  }
+}

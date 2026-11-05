@@ -6,8 +6,8 @@ import {registerHooks} from 'node:module';
 import ts from 'typescript';
 
 // Review only: real frozen handlers/adapters, in-memory Auth/SDK/PSC seams.
-const options=process.argv.slice(2),arg=options.find(a=>a.startsWith('--source=')),fixed=options.includes('--fixed');
-assert.ok(arg&&/^--source=[0-9a-f]{40}$/.test(arg)&&options.length===(fixed?2:1)&&options.every(a=>a===arg||a==='--fixed'));
+const options=process.argv.slice(2),arg=options.find(a=>a.startsWith('--source=')),edgesFixed=options.includes('--edges-fixed'),fixed=options.includes('--fixed')||edgesFixed;
+assert.ok(arg&&/^--source=[0-9a-f]{40}$/.test(arg)&&options.length===(fixed?2:1)&&options.every(a=>a===arg||a==='--fixed'||a==='--edges-fixed'));
 const baseline=arg.slice(9),ownPath='scripts/test-signature-handler-boundaries.mjs';
 const hash=s=>createHash('sha256').update(s).digest('hex'),ownHash=hash(readFileSync(ownPath));
 const get=path=>{const r=spawnSync('git',['show',baseline+':'+path],{encoding:'utf8',windowsHide:true,timeout:10000,maxBuffer:8*1024*1024});assert.equal(r.status,0);return r.stdout;};
@@ -70,8 +70,10 @@ try{
    const client=new StorageClient('https://storage.synthetic.invalid',{},async input=>{assert.ok(String(input).startsWith('https://storage.synthetic.invalid/'));return Response.json({statusCode:'404',message:'Object not found'},{status});});
    const {error}=await client.from('prescriptions').download('missing.pdf');assert.ok(error);assert.equal(error.name,'StorageUnknownError');
    assert.equal(error.status,undefined);assert.equal(error.statusCode,undefined);assert.equal(error.originalError.status,status);
-   storageError=error;await assert.rejects(()=>signatureDeps().storage.download('rx/synthetic.pdf'),/Storage indisponível/);
-   cases.push({httpStatus:status,errorName:error.name,structuredStatusAbsent:true,originalResponseStatus:error.originalError.status,adapterThrows:true});
+   storageError=error;
+   if(edgesFixed&&status!==500)assert.equal(await signatureDeps().storage.download('rx/synthetic.pdf'),null);
+   else await assert.rejects(()=>signatureDeps().storage.download('rx/synthetic.pdf'),/Storage indisponível/);
+   cases.push({httpStatus:status,errorName:error.name,structuredStatusAbsent:true,originalResponseStatus:error.originalError.status,adapterThrows:!edgesFixed||status===500,...(edgesFixed?{returnedNull:status!==500}:{})});
   }
   const sdkPaths=[packagePath,...['StorageClient.js','packages/StorageFileApi.js','packages/BlobDownloadBuilder.js','lib/fetch.js','lib/errors.js'].map(p=>'node_modules/@supabase/storage-js/dist/main/'+p)];
   realStorageSdk={version:'2.86.0',fetchInMemory:true,cases,sources:sdkPaths.map(path=>({path,sha256:hash(readFileSync(path))}))};
@@ -81,7 +83,7 @@ try{
  const state=new URL((await started.json()).authorizeUrl).searchParams.get('state');
  const completed=await signatureSessionHandler(req('complete','aal2',{state,code:'synthetic'}),signatureDeps());assert.equal(completed.status,fixed?409:200);
  const activation=calls.find(c=>c.name==='signature_activate_session');
- let certificate,malformedCertificates;
+ let certificate,malformedCertificates,remainingDerCases;
  if(fixed){
   assert.equal(activation,undefined);assert.equal((await completed.json()).code,'certificate_invalid');
   const {RSA,syntheticCertificate}=await import('cortex-boundary:/src/test/syntheticPki.ts');
@@ -93,13 +95,34 @@ try{
   malformedCertificates=[];
   for(const [name,bytes] of Object.entries({control:der,emptyOuterAlgorithm:DER.seq(tbs.bytes,DER.seq(),signature.bytes),emptySignatureValue:DER.seq(tbs.bytes,algorithm.bytes,tlv(0x03)),invalidUnusedBits:DER.seq(tbs.bytes,algorithm.bytes,badBits)})){
    const problem=await signerCertificateProblem(bytes,new Date());let x509Parsed=true;try{new X509Certificate(bytes);}catch{x509Parsed=false;}
-   assert.equal(problem,null);assert.equal(x509Parsed,name==='control');
+   assert.equal(problem,edgesFixed&&name!=='control'?'certificate_invalid':null);assert.equal(x509Parsed,name==='control');
    providerCertificate=Buffer.from(bytes).toString('base64');calls=[];
    const malformedStart=await signatureSessionHandler(req('start'),signatureDeps());assert.equal(malformedStart.status,200);
    const malformedState=new URL((await malformedStart.json()).authorizeUrl).searchParams.get('state');
    const malformedComplete=await signatureSessionHandler(req('complete','aal2',{state:malformedState,code:'synthetic'}),signatureDeps());
-   assert.equal(malformedComplete.status,200);assert.equal(calls.find(c=>c.name==='signature_activate_session')?.args.p_cert_sha256,hash(bytes));
-   malformedCertificates.push({name,helperProblem:problem,x509Parsed,completeStatus:malformedComplete.status,activationCalled:true});
+   const refused=edgesFixed&&name!=='control';assert.equal(malformedComplete.status,refused?409:200);
+   if(refused)assert.equal(calls.find(c=>c.name==='signature_activate_session'),undefined);
+   else assert.equal(calls.find(c=>c.name==='signature_activate_session')?.args.p_cert_sha256,hash(bytes));
+   malformedCertificates.push({name,helperProblem:problem,x509Parsed,completeStatus:malformedComplete.status,activationCalled:!refused});
+  }
+  if(edgesFixed){
+   const fields=derChildren(der,tbs),offset=fields[0].tag===0xa0?1:0;remainingDerCases=[];
+   for(const [name,parameter,badName] of [
+    ['nullWithContent',tlv(0x05,Uint8Array.of(0)),null],['emptyInteger',tlv(0x02),null],['nonminimalInteger',tlv(0x02,Uint8Array.of(0,1)),null],
+    ['invalidUtf8Name',null,tlv(0x0c,Uint8Array.of(0xff))],['oddBmpName',null,tlv(0x1e,Uint8Array.of(0))],
+   ]){
+    const parts=fields.map(n=>n.bytes),alg=parameter?DER.seq(DER.oid('1.2.840.113549.1.1.11'),parameter):algorithm.bytes;
+    parts[offset+1]=alg;if(badName)parts[offset+2]=DER.seq(DER.setOf(DER.seq(DER.oid('2.5.4.3'),badName)));
+    const changedTbs=DER.seq(...parts),signed=new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key.privateKey,changedTbs));
+    const bytes=DER.seq(changedTbs,alg,tlv(0x03,Uint8Array.of(0),signed));let x509Parsed=true;try{new X509Certificate(bytes);}catch{x509Parsed=false;}
+    const problem=await signerCertificateProblem(bytes,new Date());assert.equal(problem,null);assert.equal(x509Parsed,false);
+    providerCertificate=Buffer.from(bytes).toString('base64');calls=[];
+    const started=await signatureSessionHandler(req('start'),signatureDeps());assert.equal(started.status,200);
+    const state=new URL((await started.json()).authorizeUrl).searchParams.get('state');
+    const response=await signatureSessionHandler(req('complete','aal2',{state,code:'synthetic'}),signatureDeps());assert.equal(response.status,200);
+    assert.equal(calls.find(c=>c.name==='signature_activate_session')?.args.p_cert_sha256,hash(bytes));
+    remainingDerCases.push({name,helperProblem:problem,x509Parsed,completeStatus:response.status,activationCalled:true});
+   }
   }
   providerCertificate=Buffer.from(der).toString('base64');calls=[];
   const retryStart=await signatureSessionHandler(req('start'),signatureDeps());assert.equal(retryStart.status,200);
@@ -133,12 +156,12 @@ try{
   resumed.push({observed,status:response.status,response:await response.json(),mirroredStateAfter:operation.state,steps});
  }
  report={syntheticOnly:true,sourceBaseline:baseline,realHandlersAndAdapters:true,authSdkAndProviderInMemory:true,nativeAuthHttp:false,sqlIntegration:false,externalCalls:false,
-  aal1VerifiedFactorRoutes:aal1,aal2RouteControls:aal2Control,storageClassification:storage,certificate,...(fixed?{malformedCertificates,realStorageSdk}:{}),bodyLimit:{advertisedBytes:8192,...(fixed?{bytesPulledIncludingPrefetch:pulled*1024}:{bytesConsumed:pulled*1024}),cancelled,httpStatus:oversizedResponse.status},
+  aal1VerifiedFactorRoutes:aal1,aal2RouteControls:aal2Control,storageClassification:storage,certificate,...(fixed?{malformedCertificates,realStorageSdk}:{}),...(edgesFixed?{remainingDerCases}:{}),bodyLimit:{advertisedBytes:8192,...(fixed?{bytesPulledIncludingPrefetch:pulled*1024}:{bytesConsumed:pulled*1024}),cancelled,httpStatus:oversizedResponse.status},
   resumeWithEndedPsc:{rpcBranchesMirroredFromSql:true,cases:resumed},sources:[...sources].map(([path,source])=>({path,sha256:hash(source)})),ownSource:{path:ownPath,sha256:ownHash}};
 }finally{hooks.deregister();globalThis.fetch=originalGlobals.fetch;
  if(originalGlobals.Deno===undefined)delete globalThis.Deno;else globalThis.Deno=originalGlobals.Deno;
  if(originalGlobals.sdk===undefined)delete globalThis.cortexReviewSdk;else globalThis.cortexReviewSdk=originalGlobals.sdk;
 }
 assert.equal(hash(readFileSync(ownPath)),ownHash);
-const directory='docs/reviews/2026-11-05/'+(fixed?'signature-handler-retest':'signature-handler-boundaries');mkdirSync(directory,{recursive:true});writeFileSync(directory+'/'+(fixed?'boundaries.json':'counterexamples.json'),JSON.stringify(report,null,2)+'\n');
+const directory='docs/reviews/2026-11-05/'+(edgesFixed?'signature-handler-edges-retest':fixed?'signature-handler-retest':'signature-handler-boundaries');mkdirSync(directory,{recursive:true});writeFileSync(directory+'/'+(fixed?'boundaries.json':'counterexamples.json'),JSON.stringify(report,null,2)+'\n');
 process.stdout.write(JSON.stringify({aal1Routes:report.aal1VerifiedFactorRoutes,aal2Controls:report.aal2RouteControls,storage:report.storageClassification,certificate:report.certificate,bodyLimit:report.bodyLimit,resume:report.resumeWithEndedPsc.cases})+'\n');

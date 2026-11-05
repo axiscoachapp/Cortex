@@ -1,0 +1,112 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "876875c8930806ff04310bf1928fe0f33a4119b4",
+  "unitTests": {
+    "signatureAndAuthPassed": 139,
+    "skipped": 1,
+    "files": 6,
+    "exitCode": 0
+  },
+  "combinedSelection": {
+    "passed": 174,
+    "skipped": 1,
+    "files": 7,
+    "includesNewBoundaryTests": 35
+  },
+  "deno": {
+    "version": "2.9.6",
+    "entrypoints": 2,
+    "offline": true,
+    "cachedOnly": true,
+    "exitCode": 0
+  },
+  "typecheck": {
+    "exitCode": 1,
+    "errors": 13,
+    "code": "TS2322",
+    "path": "src/lib/signatureHandlers.test.ts",
+    "lines": "337-349",
+    "cause": "expected strings typed as ReturnType of now-async storageErrorKind"
+  },
+  "sourceWorktreeMatchesFrozenIgnoringCrLf": true,
+  "sources": [
+    {
+      "path": "src/lib/signatureFlow.test.ts",
+      "worktreeSha256": "561c149df16399d8d189608224aa77cc0ae860744a36d5f249cbbae07871fa92",
+      "frozenSha256": "41e335cf81f2582e7be52cf27a773fb2e5b09a1cce79a910c323139614ca1713"
+    },
+    {
+      "path": "src/lib/signatureHandlers.test.ts",
+      "worktreeSha256": "af46dc37ff031c08dcefe9395f89c343f61822a22824b7661364cb8489ba1682",
+      "frozenSha256": "c498018b7250fd188d8c825e5a8b0064b2ea588a71b5c8a970325753ae2f6db9"
+    },
+    {
+      "path": "src/lib/signerCertificate.test.ts",
+      "worktreeSha256": "953ccb07e1c179f4f6a9aa2dfdc69ead9734aa7af73326053aea084bd926b57f",
+      "frozenSha256": "953ccb07e1c179f4f6a9aa2dfdc69ead9734aa7af73326053aea084bd926b57f"
+    },
+    {
+      "path": "src/lib/pades.test.ts",
+      "worktreeSha256": "5d3f124b1387e9addb3afa3275828f0ed1faa21db65f821006ba69dbd1141127",
+      "frozenSha256": "5d3f124b1387e9addb3afa3275828f0ed1faa21db65f821006ba69dbd1141127"
+    },
+    {
+      "path": "src/lib/psc.test.ts",
+      "worktreeSha256": "439a2756ccf8d470e3e6e1f3ccc78c4d4ec62616b1382279625e3f0e7d220a36",
+      "frozenSha256": "439a2756ccf8d470e3e6e1f3ccc78c4d4ec62616b1382279625e3f0e7d220a36"
+    },
+    {
+      "path": "src/lib/authAssurance.test.ts",
+      "worktreeSha256": "fc732b021f8742cab5785457120c39659fcdd8b1d1fe1d36dd4f7574424e0978",
+      "frozenSha256": "305216ce739e84d722d8a4f0aaa6dea4df95824b003a2023f19d7054685b28dd"
+    },
+    {
+      "path": "src/test/syntheticPki.ts",
+      "worktreeSha256": "17279d2e00d44ec5a8ac1f64a970e83c5f9e0df6b259e6917ed1f0e4972f5ff7",
+      "frozenSha256": "17279d2e00d44ec5a8ac1f64a970e83c5f9e0df6b259e6917ed1f0e4972f5ff7"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureDeps.ts",
+      "worktreeSha256": "99c82b0d8262dcaae511dd78959b761e75e55eb8b51fa5bfc721ff97bf335b99",
+      "frozenSha256": "d3000bd240683b6f2426f8f79f17d653d7c337f87f9c4bbfdd65b582e16d2b70"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureHandlers.ts",
+      "worktreeSha256": "07061a621a7a481204d2f079f3d5706e468edd37c12461f272e6bfadce437d74",
+      "frozenSha256": "fd7e3273f202a968956f17df31ee92cde0637c2b7a259d8af4e66bb558510c85"
+    },
+    {
+      "path": "supabase/functions/_shared/auth.ts",
+      "worktreeSha256": "7ad19b9c7173ea41a516a0d4018a3ad772b5a047fc9b47c6bfa6c4e10e09eeeb",
+      "frozenSha256": "4d9e2ca5b79c7ceb836ee298e9c661795e1dd86874ca35c13c5ff0761d1a5f56"
+    },
+    {
+      "path": "supabase/functions/_shared/pades.ts",
+      "worktreeSha256": "3fe69f8fabc724e9948e2fd594492e096900e2683b22923a607729bd2cf4e96a",
+      "frozenSha256": "d2f475bec00ec384f901504ae213dc62f4a552621ee8bdc7f902382960a2877b"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "worktreeSha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71",
+      "frozenSha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureFlow.ts",
+      "worktreeSha256": "f3c76666e0544c8c80e9b89f25552d617f4963be854505231f6f9e7c03fb59cc",
+      "frozenSha256": "162c63d03997f956b3f598848e5b90858457270d40b2c417a114b59de70316be"
+    },
+    {
+      "path": "supabase/functions/signature-session/index.ts",
+      "worktreeSha256": "5be3e98c2de14a18f5000ac6b21aebe2f8f337a036a3c71615cde12f25b881b3",
+      "frozenSha256": "5be3e98c2de14a18f5000ac6b21aebe2f8f337a036a3c71615cde12f25b881b3"
+    },
+    {
+      "path": "supabase/functions/sign-document/index.ts",
+      "worktreeSha256": "b9647bdb0bf4db18d8a17316e1b7aea5e5c130225de13f94fa31b62ce9ce972d",
+      "frozenSha256": "b9647bdb0bf4db18d8a17316e1b7aea5e5c130225de13f94fa31b62ce9ce972d"
+    }
+  ],
+  "sqlOrConcurrencyRepeated": false,
+  "fullAppSuiteRepeated": false,
+  "frontendBuildRepeated": false
+}

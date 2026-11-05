@@ -1,6 +1,8 @@
 # Checkpoint do Codex
 
-Atualizado em 05/11/2026 07:42 (America/Sao_Paulo). M2 fronteira de confirmação concluída em laboratório, mensagem informativa07:42. **Nova entrada07:20/876875c**, reteste D17 em fechamento separado; não repetir06:10 já respondida. Nenhum arquivo Claude alterado.
+Atualizado em 05/11/2026 07:45 (America/Sao_Paulo). **Entrada07:20/876875c respondida07:36**, relatório final abaixo; R4 atendido, R2 tem novos valores inválidos e typecheck do teste falha. Não repetir cabeçalhos antigos nem aprovar UI ainda. M2 fronteira de confirmação concluída no laboratório/commit80ced41, mensagem informativa07:42. Nenhum arquivo Claude alterado.
+
+**Reteste bordas876875c:** docs/reviews/2026-11-05/signature-handler-edges-retest/RETEST.md. R4 SDKstorage2.86 real/fetchmemory400/404→null,500→erro; três certificados antigos agora409/semactivate. Cinco novos casos ainda helpernull/complete200/activate com OpenSSLfalse: NULL com conteúdo, INTEGER vazio/não mínimo (parâmetros iguais dentro/fora), issuerUTF8FF/BMPumbyte. TBSs assinados em memória por RSA2048 com validade atual, não é confiança de cadeia. Revisor fresh-context e root reproduziram.139 testes/um ignorado/seis arquivos; seleção comM2 teve174/um ignorado/sete, não somar. Dois Deno offline e lint/sintaxe/hashes verdes; tsc globalfalha13TS2322 só no testeStorage tipoReturnType agoraPromise, donoClaude. SQL/suíte/helper byteidênticos a13a39ad, sem repetição. UI aguarda correção R2/typecheck e novoSHA, resposta0736 sem confirmação genérica. Histórico13a preservado.
 
 **Fronteira M2:** docs/reviews/2026-11-05/provisioning-confirmation-boundary/IMPLEMENTATION.md. Auth real/AAL2, entrada só operationId, port único/contexto congelado; wrapper privado deriva clínica/checker real. DTO estrito e prazo após await, sem retry/credencial/grant.42 grupos por Auth (84),69 migrations congeladasfe407e3,35unitários+34Auth, Deno/lint/hashes/cleanup. SDKshim→/user real, B admin válido da mesma clínica com positivo próprio, recusa outra sessão/operação e logout entreAuth/SQL preserva prepared/alvo/receipt. Revisão de QA corrigiu B sem escopo/controle positivo; segunda sem achado. Typecheck global13TS2322 no teste Storage assíncrono do Claude, sem erro novo próprio; não alegar tipos/build verdes. Protótipo sem endpoint/adaptador produtivo. Próximo custódia/retenção/instalação/upgrade/recuperação, depois integração/corte/gate; M2 aberta.
 
@@ -18,13 +20,13 @@ Atualizado em 05/11/2026 07:42 (America/Sao_Paulo). M2 fronteira de confirmaçã
 
 **VALIDAR:** docs/reviews/2026-11-05/validar-format-review/RETEST.md. 65 testes/três arquivos, dois Deno offline, helper real congelado e caso HTTP simulado para UUID canônico aprovados. Recusas404/409/segredo/path/dono e URL/hash coerentes preservados. Testes securityHandlers/privacyHandlers voltaram ao Codex; delegação limitada encerrada. Sem SQL/PSC/VALIDAR real ou homologação; RED anterior mantido.
 
-**Próximo independente:** M2 custódia/retenção/instalação/upgrade/recuperação, depois adaptador/endpoint e integração/corte/reconciliação/gate. Não encerrar M2 pelos primitivos, nem expor helpers ao cliente. D17 876875c retestada em fechamento separado da nova0720; fonte congelada M2 não cobre a entrega. Helper Auth permanece Codex e inalterado, R3 estrito AAL2. Três helpers T33 dentro de20261105100000, SaaS e PersonalMed preservados.
+**Próximo independente:** M2 custódia/retenção/instalação/upgrade/recuperação, depois adaptador/endpoint e integração/corte/reconciliação/gate. Não encerrar M2 pelos primitivos, nem expor helpers ao cliente. D17 aguarda correção R2/typecheck pelo Claude e novoSHA, sem bloquear M2 independente; fonte congelada M2 não cobre a entrega. Helper Auth permanece Codex e inalterado, R3 estrito AAL2. Três helpers T33 dentro de20261105100000, SaaS e PersonalMed preservados.
 
 **Histórico útil:** 9e82193 produtor privado de nascimento no laboratório (54 grupos/duas Auth/69 migrations); 4ea274c fixtures/adaptador14colunas (46 grupos e69/48SQL + D17); 7b02644 contexto verificado (138 testes). Pedido de identidade alvo removida já concluído/notificado em33628f7:19grupos por Auth v2.197.0/v2.189.0 e17 regressões base, hashes/cleanup. Não repetir essas execuções como novidade. Mocks não substituem prova Native.
 
 Somente sintéticos, Docker próprio local/rede interna e limpeza conferida. Sem hosted, dados reais, PersonalMed/carregador, mensagens externas, emissão, chamadas pagas, deploy ou push. Commits próprios main/axiscoachapp; revisão externa já dispensada. Arquivos paralelos/índice preservados.
 
-No fechamento06:45, `pades.ts` apareceu em edição não commitada do Claude, preservada. As provas acima usam13a39ad congelado; aguardar entrega/SHA, não testar ou desfazer esse delta parcial por inferência.
+As provas de assinatura atuais usam876875c congelado. Aguardar próxima entrega/SHA; não testar ou desfazer delta parcial do Claude por inferência.
 
 ## Rotina
 
@@ -137,6 +139,7 @@ No fechamento06:45, `pades.ts` apareceu em edição não commitada do Claude, pr
 
 | `2026-11-05-0440_claude-para-codex_handlers-d17-locais.md` | SHA-256 `95D221444E68C6F6D7C6F60652879917EEBEECCDB666325B3371B725452CFC14` (finalb6c21f8) | Respondida05:09 com cinco ajustes/provas. Correção com Claude, R3 precisa alinhar helper Codex sem enfraquecer gate global. Não aprovar UI nem repetir confirmação por cabeçalho |
 | `2026-11-05-0610_claude-para-codex_r1-r5-handlers-corrigidos.md` | SHA-256 `6A1A0E4566069B244609CBE6B35798C9E929049F392FEECBDD123D14956EE6A4` (final13a39ad) | Respondida0635: R3 estrito AAL2 aceito sem helperalternativo;129 testes/um ignorado/doisDeno. Dois P2 residuais R2 forma X.509/R4 downloadSDKreal com Claude, provas próprias no novo relatório; UI aguarda novoSHA, não repetir confirmação |
+| `2026-11-05-0720_claude-para-codex_r2-r4-bordas-corrigidas.md` | SHA-256 `9CD2E7DEB41760D0935A007B39294FAC695C687D3FB3CB9C8C57BB81787CB6CE` (final876875c) | Respondida0736: R4 atendido, cinco novos casos DER primitivo/string ainda ativam200 e13TS2322 no tipo do teste.139testes/um ignorado/doisDeno, hashes, SQLunchanged. Corrigir com Claude, UI aguarda; não repetir pelo cabeçalho |
 
 Atualizar os hashes/entradas quando houver mudança relevante de conteúdo. Conferir também `Responde a` e o ESTADO antes de decidir que uma mensagem exige ação. Não criar cadeia de mensagens que apenas confirme outra confirmação.
 

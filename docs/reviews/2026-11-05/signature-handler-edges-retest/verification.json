@@ -1,0 +1,66 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "876875c8930806ff04310bf1928fe0f33a4119b4",
+  "reviewResolved": false,
+  "originalThreeMalformedCertificatesRefused": true,
+  "emptyCertificateRefused": true,
+  "validRsaControlPassed": true,
+  "realStorageSdkDownloadAbsenceResolved": true,
+  "sdkVersion": "2.86.0",
+  "sdkFetchInMemory": true,
+  "remainingFindings": [
+    {
+      "severity": "P2",
+      "issue": "AlgorithmIdentifier primitive DER values invalid",
+      "counterexamples": 3
+    },
+    {
+      "severity": "P2",
+      "issue": "Name string encoding invalid",
+      "counterexamples": 2
+    },
+    {
+      "severity": "P2",
+      "issue": "global TypeScript check fails in async Storage test table",
+      "errors": 13,
+      "path": "src/lib/signatureHandlers.test.ts"
+    }
+  ],
+  "unitTests": {
+    "signatureAndAuthPassed": 139,
+    "skipped": 1,
+    "files": 6,
+    "exitCode": 0
+  },
+  "combinedSelection": {
+    "passed": 174,
+    "skipped": 1,
+    "files": 7,
+    "includesNewBoundaryTests": 35
+  },
+  "deno": {
+    "version": "2.9.6",
+    "entrypoints": 2,
+    "offline": true,
+    "cachedOnly": true,
+    "exitCode": 0
+  },
+  "typecheck": {
+    "exitCode": 1,
+    "errors": 13,
+    "code": "TS2322",
+    "path": "src/lib/signatureHandlers.test.ts",
+    "lines": "337-349",
+    "cause": "expected strings typed as ReturnType of now-async storageErrorKind"
+  },
+  "syntaxAndLintExitCode": 0,
+  "frozenSourceHashesVerified": true,
+  "sqlAndConcurrencySourcesUnchangedFrom": "13a39adc59b423cb3207d45f24d6358a66a60f7b",
+  "sqlOrConcurrencyRepeated": false,
+  "review": "fresh-context findings reproduced by root through the complete handler, not only helper",
+  "externalReview": "dispensed by user",
+  "historical13aEvidencePreserved": true,
+  "nativeAuthHttp": false,
+  "externalServicesUsed": false,
+  "implementationFilesOfClaudeChanged": false
+}
