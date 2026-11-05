@@ -89,6 +89,14 @@ describe('controlled substances by Portaria 344 list (D8)', () => {
     // ("1<ZWSP>50 mg" is 150 mg read joined, 50 mg read split).
     expect(forms('Tramadol 1\u200b50 mg')).toEqual(['tramadol:A2:notificacao_a']);
     expect(forms('Tramadol 50\u200bmg')).toEqual(['tramadol:A2:receita_controle_especial']);
+    // Codex 20:55: an invisible character next to the decimal separator never
+    // shortens the number to its last fragment.
+    expect(forms('Tramadol 150\u200b.0 mg')).toEqual(['tramadol:A2:notificacao_a']);
+    expect(forms('Tramadol 150.\u200b0 mg')).toEqual(['tramadol:A2:notificacao_a']);
+    expect(forms('Tramadol 150\u200b,0 mg')).toEqual(['tramadol:A2:notificacao_a']);
+    expect(forms('Code\u00edna 1\u00ad20,\u200b5 mg')).toEqual(['codeina:A2:notificacao_a']);
+    expect(forms('Tramadol 150.0 mg')).toEqual(['tramadol:A2:notificacao_a']); // control without Cf
+    expect(forms('Tramadol 50\u200b.0 mg')).toEqual(['tramadol:A2:receita_controle_especial']);
   });
   it('keeps notification-only lists and hospital-only misoprostol out of the RCE', () => {
     expect(forms('Rivotril 2mg')).toEqual(['clonazepam:B1:notificacao_b']);

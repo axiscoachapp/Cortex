@@ -149,12 +149,15 @@ export interface ControlledFinding {
 
 /**
  * Highest "N mg" in the item text; null when no dose is written. An invisible
- * character inside a number is joined, as the eye reads it ("1<ZWSP>50 mg"
- * is 150 mg), and may stand between the number and "mg".
+ * character inside a number, also next to the decimal separator, is joined
+ * as the eye reads it ("1<ZWSP>50 mg" is 150 mg, "150<ZWSP>.0 mg" is 150 mg),
+ * and may stand between the number and "mg".
  */
 function maxMg(name: string): number | null {
   const text = normalize(name.replace(/\p{Cf}/gu, MARK)).replace(/,/g, '.');
-  const doses = [...text.matchAll(/(\d(?:\u0001*\d)*(?:\.\d(?:\u0001*\d)*)?)[\s\u0001]*mg(?![a-z0-9_])/g)]
+  // The old pattern (\d+(?:\.\d+)?) with MARK allowed between any two of its
+  // characters, the decimal point included (Codex 20:55: "150<ZWSP>.0 mg").
+  const doses = [...text.matchAll(/(\d(?:\u0001*\d)*(?:\u0001*\.\u0001*\d(?:\u0001*\d)*)?)[\s\u0001]*mg(?![a-z0-9_])/g)]
     .map((m) => Number(m[1].replace(/\u0001/g, '')));
   return doses.length ? Math.max(...doses) : null;
 }

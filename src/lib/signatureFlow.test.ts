@@ -100,9 +100,12 @@ function fakeDb(original: Uint8Array) {
           }
           return out(op);
         }
+        // A terminal operation is never rewritten by a late step.
+        if (['completed', 'failed', 'cancelled', 'cancelled_by_revocation'].includes(op.state) && (to === 'failed' || to === 'cancelled')) return out(op);
         // Steps after a PSC call name their attempt (P4094 for an older one).
-        if (to === 'ambiguous' || to === 'stored' || (to === 'failed' && op.state === 'psc_requested')) {
-          if (data.attempt !== op.psc_attempts || !['psc_requested', to].includes(op.state)) throw rpcError('P4094', 'superseded attempt');
+        if (to === 'ambiguous' || to === 'stored' || (to === 'failed' && ['psc_requested', 'ambiguous'].includes(op.state))) {
+          const allowed = op.state === 'psc_requested' || op.state === to || (to === 'failed' && op.state === 'ambiguous');
+          if (data.attempt !== op.psc_attempts || !allowed) throw rpcError('P4094', 'superseded attempt');
         }
         if (to === 'prepared') {
           if (op.state === 'prepared' && op.prepared_pdf_sha256 === data.preparedSha256 && op.to_be_signed_sha256 === data.toBeSignedSha256) return out(op);
@@ -157,8 +160,10 @@ interface World {
     lose?: boolean; reject?: boolean; corrupt?: boolean; certificates?: PscCertificate[]; onSign?: () => void;
     /** Per call (1, 2, ...): may wait, then sign, lose the answer or refuse. */
     answer?: (call: number) => Promise<'sign' | 'lose' | 'reject'>;
+    uploadFails?: () => boolean;
   };
   original: Uint8Array;
+  beforeOriginal?: () => Promise<void>;
 }
 
 let world: World;
@@ -174,8 +179,16 @@ beforeEach(async () => {
   const w = { db, storage, pscCalls: 0, psc: {}, original } as World;
   w.ports = {
     rpc,
-    downloadOriginal: async () => w.original,
-    uploadSigned: async (path, pdf) => { if (storage.has(path)) return 'exists'; storage.set(path, pdf.slice()); return 'created'; },
+    downloadOriginal: async () => { await w.beforeOriginal?.(); return w.original; },
+    // storage_parent_is_live: a candidate only while its operation stores it or completed.
+    uploadSigned: async (path, pdf) => {
+      const owner = [...db.ops.values()].find((o) => signedPathOf(o) === path);
+      if (!owner || !['psc_requested', 'stored', 'completed'].includes(owner.state)) throw new Error('Storage object requires a live owned parent');
+      if (w.psc.uploadFails?.()) throw new Error('connection reset during upload');
+      if (storage.has(path)) return 'exists';
+      storage.set(path, pdf.slice());
+      return 'created';
+    },
     downloadSigned: async (path) => storage.get(path) ?? null,
     removeSigned: async (path) => { storage.delete(path); },
     psc: {
@@ -381,6 +394,69 @@ describe('signDocument: attempts and resumption (Codex 04/11 19:49)', () => {
     expect((await second).status).toBe('completed');
     expect(world.storage.get(path())).toEqual(uploadedByFirst); // same bytes (deterministic RSA)
     expect(opOf().signed_pdf_sha256).toBe(hex(await sha256(uploadedByFirst)));
+  });
+});
+
+describe('signDocument: late answers and stored files (Codex 04/11 20:55)', () => {
+  it('a late answer after the newer attempt failed and was cleaned leaves no file and keeps the failure', async () => {
+    const a = gate();
+    world.psc.answer = async (call) => { if (call === 1) { await a.wait; return 'sign'; } return 'reject'; };
+    const first = signDocument(world.ports, world.request);
+    await until(() => world.pscCalls === 1);
+    expect(await signDocument(world.ports, { ...world.request, humanRetry: true })).toEqual({ status: 'failed', code: 'psc_rejected' });
+    expect(opOf()).toMatchObject({ state: 'failed', cleanup_pending: false });
+    a.open(); // attempt 1 answers now: its upload is refused, and it cannot touch the failure
+    expect(await first).toEqual({ status: 'in_progress' });
+    expect(world.storage.size).toBe(0);
+    expect(opOf()).toMatchObject({ state: 'failed', error_code: 'psc_rejected', psc_attempts: 2, cleanup_pending: false });
+    expect(world.db.audit).toHaveLength(0);
+  });
+
+  it('a late answer while the newer attempt is being prepared stays reconciled, and the newer one completes', async () => {
+    const a = gate();
+    const b = gate();
+    world.psc.answer = async (call) => { if (call === 1) await a.wait; return 'sign'; };
+    const first = signDocument(world.ports, world.request);
+    await until(() => world.pscCalls === 1);
+    world.beforeOriginal = () => b.wait;
+    const second = signDocument(world.ports, { ...world.request, humanRetry: true });
+    await until(() => opOf().state === 'ambiguous'); // B reconciled attempt 1 and is preparing
+    a.open();
+    expect(await first).toEqual({ status: 'ambiguous' }); // upload refused: attempt 1 stays without answer
+    expect(world.storage.size).toBe(0);
+    world.beforeOriginal = undefined;
+    b.open();
+    expect((await second).status).toBe('completed');
+    expect(world.db.audit).toEqual([expect.objectContaining({ attempts: 2 })]);
+  });
+
+  it('a late refusal of the older attempt never ends the newer attempt that is without answer', async () => {
+    const a = gate();
+    world.psc.answer = async (call) => { if (call === 1) { await a.wait; return 'reject'; } return 'lose'; };
+    const first = signDocument(world.ports, world.request);
+    await until(() => world.pscCalls === 1);
+    expect(await signDocument(world.ports, { ...world.request, humanRetry: true })).toEqual({ status: 'ambiguous' });
+    expect(opOf()).toMatchObject({ state: 'ambiguous', psc_attempts: 2 });
+    a.open();
+    expect(await first).toEqual({ status: 'in_progress' });
+    expect(opOf()).toMatchObject({ state: 'ambiguous', psc_attempts: 2 }); // still the doctor's to retry
+  });
+
+  it('an upload lost in transit leaves the attempt without answer; the doctor retries with the same bytes', async () => {
+    let fails = 1;
+    world.psc.uploadFails = () => fails-- > 0;
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'ambiguous' });
+    expect(opOf()).toMatchObject({ state: 'ambiguous', psc_attempts: 1 });
+    expect((await signDocument(world.ports, { ...world.request, humanRetry: true })).status).toBe('completed');
+    expect(opOf().psc_attempts).toBe(2);
+  });
+
+  it('a reason containing "/ByteRange" does not stop a stored answer from being resumed', async () => {
+    world.request = { ...world.request, reason: 'Prescricao /ByteRange medica' };
+    world.db.throwOnce.set('signature_complete', [rpcError('40001'), rpcError('40001'), rpcError('40001'), rpcError('40001')]);
+    await expect(signDocument(world.ports, world.request)).rejects.toMatchObject({ code: '40001' });
+    expect((await signDocument(world.ports, world.request)).status).toBe('completed');
+    expect(world.pscCalls).toBe(1);
   });
 });
 

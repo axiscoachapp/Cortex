@@ -570,13 +570,18 @@ begin
    return to_jsonb(o)-'staged_path';
   end if;
  end if;
- -- What follows a PSC call belongs to one attempt (Codex 04/11 19:49): a late
- -- timeout, answer or failure of an older attempt never moves the operation,
- -- checked here under the row lock. The same step of the current attempt is
+ -- A terminal operation is never rewritten by a late step (Codex 04/11 20:55).
+ if o.state in ('completed','failed','cancelled','cancelled_by_revocation') and p_to in ('failed','cancelled') then
+  return to_jsonb(o)-'staged_path';
+ end if;
+ -- What follows a PSC call belongs to one attempt (Codex 04/11 19:49 and
+ -- 20:55): a late timeout, answer or failure of an older attempt never moves
+ -- the operation, also when the newer attempt is without answer. Checked
+ -- here under the row lock. The same step of the current attempt is
  -- idempotent.
- if p_to in ('ambiguous','stored') or (p_to='failed' and o.state='psc_requested') then
+ if p_to in ('ambiguous','stored') or (p_to='failed' and o.state in ('psc_requested','ambiguous')) then
   if coalesce(p_data->>'attempt','') !~ '^[0-9]{1,2}$' or (p_data->>'attempt')::integer<>o.psc_attempts
-   or o.state not in ('psc_requested',p_to) then
+   or not (o.state='psc_requested' or o.state=p_to or (p_to='failed' and o.state='ambiguous')) then
    raise exception 'Tentativa substituída por outra mais recente.' using errcode='P4094';
   end if;
  end if;
@@ -665,11 +670,16 @@ create function public.signature_pending_work(p_limit integer default 100) retur
 language sql volatile security definer set search_path='' as $$
  select coalesce(jsonb_agg(w order by w->>'updatedAt'),'[]'::jsonb) from (
   select jsonb_build_object('operationId',o.operation_id,'userId',o.user_id,'prescriptionId',o.prescription_id,'state',o.state,
-   'kind',case when o.cleanup_pending then 'remove_candidate' else 'stuck' end,
+   'kind',case when o.state in ('reserved','prepared','psc_requested','stored') and not o.cleanup_pending then 'stuck' else 'remove_candidate' end,
    'candidatePath','rx/'||o.user_id::text||'/'||o.prescription_id::text||'/signed-'||o.operation_id::text||'.pdf',
    'signedSha256',o.signed_pdf_sha256,'updatedAt',o.updated_at) w
   from cortex_private.signature_operations o
   where o.cleanup_pending or (o.state in ('reserved','prepared','psc_requested','stored') and o.updated_at<now()-interval '15 minutes')
+   -- A candidate still in Storage for an operation that ended without
+   -- completing (Codex 04/11 20:55), whatever the cleanup flag says.
+   or (o.state in ('failed','cancelled','cancelled_by_revocation') and exists(select 1 from storage.objects so
+    where so.bucket_id='prescriptions'
+     and so.name='rx/'||o.user_id::text||'/'||o.prescription_id::text||'/signed-'||o.operation_id::text||'.pdf'))
   order by o.updated_at limit least(greatest(coalesce(p_limit,100),1),500)) x;
 $$;
 

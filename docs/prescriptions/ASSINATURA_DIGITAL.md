@@ -201,6 +201,19 @@ O fluxo de uma assinatura está em `_shared/signatureFlow.ts` (`signDocument(por
     - Depois do CMS, `/Contents` só pode ter zeros.
     - Um objeto já existente no caminho da operação só é aceito se passar nessa conferência.
 
+### Resíduos da revisão do Codex de 04/11 20:55
+
+14. **Falha antiga contra tentativa nova sem resposta.** A cerca de tentativa também vale para `failed` quando a operação está em `ambiguous`. Desistir de uma operação sem resposta exige o número da tentativa atual.
+15. **Operação encerrada não é reescrita.** `failed` ou `cancelled` sobre uma operação já terminal devolve a operação como está, sem trocar o código de erro.
+16. **Arquivo tardio.**
+    - Uma resposta que não pôde ser gravada deixa a tentativa sem resposta (`ambiguous`), e não falha a operação. Isso vale para envio recusado ou perdido no caminho. Uma tentativa antiga recebe P4094.
+    - **No banco real:** a guarda do Storage (`guard_storage_write`) toma o 123 do médico e lê o estado da operação sob ele. Por isso, um candidato só entra enquanto a operação está em `psc_requested`, `stored` ou `completed`.
+      - Se o envio vem antes do fim, o fim espera o commit e marca a limpeza.
+      - Se o fim vem antes, o envio é recusado.
+      - O ensaio de corridas prova as duas ordens.
+    - `signature_pending_work` também lista como `remove_candidate` uma operação encerrada sem concluir cujo candidato ainda está em `storage.objects`, mesmo com `cleanup_pending` falso. O arquivo de uma operação concluída nunca entra nessa lista.
+17. **"/ByteRange" dentro de um texto.** `signatureCertificates` testa cada ocorrência, a partir do fim. Só vale a que cobre o arquivo e emoldura um CMS legível. Um motivo com "/ByteRange" não faz descartar uma assinatura válida.
+
 **Descoberta para reconciliação:** `signature_pending_work(limite)` (só serviço) lista os candidatos a remover e as operações paradas há mais de 15 minutos. **A execução da reconciliação ainda não existe.** Ela vai ficar na função do Edge, com estas regras:
 - confere o hash do objeto existente antes de qualquer ação;
 - nunca remove o arquivo de uma operação concluída;

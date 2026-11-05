@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   AD_RB_V1_1, DER, HEALTH_OIDS, certificateSummary, derChildren, finalizePades, preparePades, readDer, sha256, signedContent, tlv,
-  verifyPadesArtifact, verifyRawSignature,
+  signatureCertificates, verifyPadesArtifact, verifyRawSignature,
   type PadesOptions,
 } from '../../supabase/functions/_shared/pades';
 
@@ -237,6 +237,26 @@ describe('final check before storing a signed PDF', () => {
     const zeroed = signed.slice();
     zeroed.fill('0'.charCodeAt(0), prepared.contentsStart + 1, prepared.contentsEnd - 1);
     expect(await verifyPadesArtifact(zeroed, prepared)).not.toBeNull();
+  });
+});
+
+describe('certificates of a stored signature', () => {
+  it('reads them from the real signature dictionary, whatever the reason text says (Codex 20:55)', async () => {
+    for (const reason of ['Prescrição médica', 'Prescricao /ByteRange medica', 'x /ByteRange [0 1 2 3] y', '/ByteRange [0 10 20 30]']) {
+      const prepared = await preparePades(minimalPdf(), { ...options, reason });
+      const signature = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', doctor.privateKey, prepared.signedAttributes));
+      const signed = finalizePades(prepared, signature);
+      const hexes = (list: Uint8Array[]) => list.map((c) => Buffer.from(c).toString('hex')).sort();
+      expect(hexes(signatureCertificates(signed)), reason).toEqual(hexes([doctorCert, caCert]));
+    }
+  });
+
+  it('returns nothing for a PDF without a signature or with a broken one', async () => {
+    expect(signatureCertificates(minimalPdf())).toEqual([]);
+    const { prepared, signed } = await signedPdf();
+    const broken = signed.slice();
+    broken.fill('0'.charCodeAt(0), prepared.contentsStart + 1, prepared.contentsEnd - 1);
+    expect(signatureCertificates(broken)).toEqual([]);
   });
 });
 

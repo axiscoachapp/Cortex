@@ -522,29 +522,32 @@ function commonName(name: Uint8Array): string {
 }
 
 /**
- * Certificates carried by the last signature of a PDF (its /ByteRange names
- * /Contents), or [] when there is none or it cannot be read. Used to resume a
- * stored answer without asking the PSC again; the caller checks the file's
- * hash first and picks the certificate by its SHA-256.
+ * Certificates carried by the last signature of a PDF, or [] when there is
+ * none or it cannot be read. Used to resume a stored answer without asking
+ * the PSC again; the caller checks the file's hash first and picks the
+ * certificate by its SHA-256. The text "/ByteRange" may also appear inside a
+ * string (a reason, a name), so every occurrence is tried from the end and
+ * only one whose range covers the file and frames a readable CMS counts.
  */
 export function signatureCertificates(pdf: Uint8Array): Uint8Array[] {
   const text = new TextDecoder('latin1').decode(pdf);
-  const at = text.lastIndexOf('/ByteRange');
-  const range = at < 0 ? null : /^\/ByteRange\s*\[\s*0\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/.exec(text.slice(at, at + 96));
-  if (!range) return [];
-  const [b, c, d] = range.slice(1).map(Number);
-  if (c + d !== pdf.length || b >= c || pdf[b] !== 0x3c || pdf[c - 1] !== 0x3e) return [];
-  const hexText = text.slice(b + 1, c - 1);
-  if (!/^[0-9A-Fa-f]+$/.test(hexText) || hexText.length % 2) return [];
-  try {
-    const contents = Uint8Array.from(hexText.match(/../g)!.map((h) => parseInt(h, 16)));
-    const cms = contents.subarray(0, readDer(contents).end);
-    const signedData = derChildren(cms, derChildren(cms, readDer(cms))[1])[0];
-    const certificates = derChildren(cms, signedData).find((n) => n.tag === 0xa0);
-    return certificates ? derChildren(cms, certificates).map((n) => n.bytes.slice()) : [];
-  } catch {
-    return [];
+  const ranges = [...text.matchAll(/\/ByteRange\s*\[\s*0\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/g)].reverse();
+  for (const range of ranges) {
+    const [b, c, d] = range.slice(1).map(Number);
+    if (c + d !== pdf.length || b >= c || pdf[b] !== 0x3c || pdf[c - 1] !== 0x3e) continue;
+    const hexText = text.slice(b + 1, c - 1);
+    if (!/^[0-9A-Fa-f]+$/.test(hexText) || hexText.length % 2) continue;
+    try {
+      const contents = Uint8Array.from(hexText.match(/../g)!.map((h) => parseInt(h, 16)));
+      const cms = contents.subarray(0, readDer(contents).end);
+      const signedData = derChildren(cms, derChildren(cms, readDer(cms))[1])[0];
+      const certificates = derChildren(cms, signedData).find((n) => n.tag === 0xa0);
+      if (certificates) return derChildren(cms, certificates).map((n) => n.bytes.slice());
+    } catch {
+      // not this one
+    }
   }
+  return [];
 }
 
 /** What the audit keeps about the signer certificate (never the CPF). */

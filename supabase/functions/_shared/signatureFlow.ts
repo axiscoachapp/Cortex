@@ -249,7 +249,11 @@ async function run(ports: SignaturePorts, req: SignatureRequest): Promise<Signat
   try {
     placed = await ports.uploadSigned(path, signed);
   } catch {
-    return fail('upload_failed');
+    // Refused (the operation moved on) or lost in transit: the answer is not
+    // stored, so this attempt is reconciled as without answer. An older
+    // attempt gets P4094 instead and never ends the newer one.
+    log('signature_upload_failed', { operationId: req.operationId, attempt });
+    return finish(await advance('ambiguous', { attempt }));
   }
   if (placed === 'exists') {
     const existing = await ports.downloadSigned(path);

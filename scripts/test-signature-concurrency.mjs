@@ -519,6 +519,41 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     results.doubleReservation = (/ERROR:\s+(\w+):/.exec(rb.stderr) || [])[1];
   }
   });
+  // Codex 04/11 20:55: a candidate upload and the end of its operation, in both
+  // orders. The Storage guard takes the doctor's 123 and reads the state under
+  // it, so an object is either committed before the end (and then scheduled
+  // for cleanup and discovered) or refused after it.
+  await check('candidate upload against the end of its operation', async () => {
+    const f = fixture();
+    call(f, reserve(f));
+    call(f, advance(f, 'prepared'));
+    call(f, advance(f, 'psc_requested'));
+    const path = `rx/${f.user}/${f.rx}/signed-${f.op}.pdf`;
+    const upload = session(container);
+    upload.send(`begin;set local role service_role;insert into storage.objects(bucket_id,name) values('prescriptions','${path}');\n\\echo UPLOADED`);
+    await upload.wait('UPLOADED');
+    // The end waits for the upload to commit (123), then schedules the cleanup.
+    const ending = await startBlocked(`begin;${service}select ${advance(f, 'failed', `jsonb_build_object('code','invalid_signature','attempt',1)`)};commit;`, 'end of the operation');
+    const uploaded = await upload.finish('commit;');
+    const ended = await ending.finish('');
+    assert.equal(uploaded.status, 0, uploaded.stderr);
+    assert.equal(ended.status, 0, ended.stderr);
+    assert.equal(sql(`select state||':'||cleanup_pending from cortex_private.signature_operations where operation_id='${f.op}'`), 'failed:true');
+    const work = sql(`begin;${service}select public.signature_pending_work(500)::text;commit;`);
+    assert.ok(work.includes(f.op) && work.includes('remove_candidate'), 'Committed candidate of an ended operation not discovered');
+    // Inverse order: the operation already ended, the upload is refused.
+    const g = fixture();
+    call(g, reserve(g));
+    call(g, advance(g, 'prepared'));
+    call(g, advance(g, 'psc_requested'));
+    call(g, advance(g, 'failed', `jsonb_build_object('code','psc_rejected','attempt',1)`));
+    const late = docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'],
+      `${bounds}begin;set local role service_role;insert into storage.objects(bucket_id,name) values('prescriptions','rx/${g.user}/${g.rx}/signed-${g.op}.pdf');commit;`);
+    assert.notEqual(late.status, 0, 'Candidate accepted after its operation ended');
+    assert.match(late.stderr, /live owned parent|42501/, late.stderr);
+    assert.equal(Number(sql(`select count(*) from storage.objects where name='rx/${g.user}/${g.rx}/signed-${g.op}.pdf'`)), 0);
+    results.candidateUploadVsEnd = 'upload first: end waited, cleanup scheduled and discovered; end first: upload refused';
+  });
   if (beforeFix) process.stdout.write(`RED cases (${red.length}):\n${red.map((r) => '  - ' + r).join('\n')}\n`);
   else process.stdout.write(`Signature races: ${JSON.stringify(results)}\n`);
 }

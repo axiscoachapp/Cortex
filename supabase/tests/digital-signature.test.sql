@@ -324,6 +324,67 @@ do $$ begin
  assert (select status='generated' from public.prescriptions where id='d1720000-0000-4000-8000-000000000044'),'Revoked stored operation published';
 end $$;
 
+-- Codex 04/11 20:55: a late failure of an older attempt never ends a newer
+-- one without answer; a terminal operation is never rewritten; no candidate
+-- appears after the end; a leftover object of a terminal operation is found.
+select pg_temp.rx(('d1720000-0000-4000-8000-00000000005'||n)::uuid,'d1700000-0000-4000-8000-000000000001','d1710000-0000-4000-8000-000000000001')
+ from generate_series(1,3) n;
+set local role service_role;
+do $$ declare u uuid:='d1700000-0000-4000-8000-000000000001';op uuid:='d1740000-0000-4000-8000-000000000051';
+ d jsonb:=jsonb_build_object('preparedSha256',repeat('d',64),'toBeSignedSha256',repeat('e',64),'policyOid','2.16.76.1.7.1.11.1.1');
+ t jsonb:=jsonb_build_object('v',1,'keyId','k1','nonce','bm9uY2U=','ciphertext','dG9rZW4=');
+ r jsonb;begin
+ perform public.signature_activate_session(u,'vidaas','d1730000-0000-4000-8000-000000000051',now()+interval '8 hours',repeat('c',64),t);
+ perform public.signature_reserve(u,op,'d1720000-0000-4000-8000-000000000051',repeat('a',64));
+ perform public.signature_advance(u,op,'prepared',d);
+ perform public.signature_advance(u,op,'psc_requested',d);                                  -- attempt 1
+ perform public.signature_advance(u,op,'ambiguous',jsonb_build_object('attempt',1));
+ perform public.signature_advance(u,op,'psc_requested',d||'{"humanRetry":true}');          -- attempt 2
+ perform public.signature_advance(u,op,'ambiguous',jsonb_build_object('attempt',2));       -- attempt 2 without answer
+ begin perform public.signature_advance(u,op,'failed',jsonb_build_object('code','psc_rejected','attempt',1));
+  raise exception 'Late failure of attempt 1 ended attempt 2 without answer';exception when sqlstate 'P4094' then null;end;
+ begin perform public.signature_advance(u,op,'failed',jsonb_build_object('code','abandoned'));
+  raise exception 'Ambiguous operation ended without naming its attempt';exception when sqlstate 'P4094' then null;end;
+ r:=public.signature_advance(u,op,'failed',jsonb_build_object('code','abandoned','attempt',2)); -- the doctor gives up on attempt 2
+ assert r->>'state'='failed' and r->>'error_code'='abandoned' and (r->>'cleanup_pending')::boolean,'Current attempt could not be ended';
+ -- A terminal operation is never rewritten by a late step.
+ r:=public.signature_advance(u,op,'failed',jsonb_build_object('code','upload_failed','attempt',1));
+ assert r->>'state'='failed' and r->>'error_code'='abandoned','Terminal failure rewritten';
+ r:=public.signature_advance(u,op,'cancelled',jsonb_build_object('code','other'));
+ assert r->>'state'='failed' and r->>'error_code'='abandoned','Terminal operation cancelled again';
+ perform public.signature_cleanup_done(u,op);
+end $$;
+reset role;
+-- No candidate is accepted once its operation ended.
+do $$ begin
+ insert into storage.objects(bucket_id,name) values
+  ('prescriptions','rx/d1700000-0000-4000-8000-000000000001/d1720000-0000-4000-8000-000000000051/signed-d1740000-0000-4000-8000-000000000051.pdf');
+ raise exception 'Candidate stored after its operation ended';
+exception when insufficient_privilege then null;end $$;
+-- A leftover object of a terminal operation is found even after cleanup_done.
+set local role service_role;
+do $$ declare u uuid:='d1700000-0000-4000-8000-000000000001';op uuid:='d1740000-0000-4000-8000-000000000052';
+ d jsonb:=jsonb_build_object('preparedSha256',repeat('d',64),'toBeSignedSha256',repeat('e',64),'policyOid','2.16.76.1.7.1.11.1.1');
+ begin
+ perform public.signature_reserve(u,op,'d1720000-0000-4000-8000-000000000052',repeat('a',64));
+ perform public.signature_advance(u,op,'prepared',d);
+ perform public.signature_advance(u,op,'psc_requested',d);
+end $$;
+reset role;
+insert into storage.objects(bucket_id,name) values
+ ('prescriptions','rx/d1700000-0000-4000-8000-000000000001/d1720000-0000-4000-8000-000000000052/signed-d1740000-0000-4000-8000-000000000052.pdf');
+set local role service_role;
+do $$ declare u uuid:='d1700000-0000-4000-8000-000000000001';op uuid:='d1740000-0000-4000-8000-000000000052';w jsonb;begin
+ perform public.signature_advance(u,op,'failed',jsonb_build_object('code','invalid_signature','attempt',1));
+ perform public.signature_cleanup_done(u,op); -- marked done although the object is still there
+ w:=public.signature_pending_work(500);
+ assert exists(select 1 from jsonb_array_elements(w) e where e->>'operationId'=op::text and e->>'kind'='remove_candidate'),
+  'Leftover object of a terminal operation not found';
+ assert not exists(select 1 from jsonb_array_elements(w) e where e->>'operationId'='d1740000-0000-4000-8000-000000000051'),
+  'Terminal operation without object listed';
+end $$;
+reset role;
+
 -- Account deletion intent: neither the sealed token nor the OAuth verifier leaves.
 insert into public.user_settings(user_id,prescriber_cpf) values('d1700000-0000-4000-8000-000000000004','52998224725')
  on conflict(user_id) do update set prescriber_cpf=excluded.prescriber_cpf;
