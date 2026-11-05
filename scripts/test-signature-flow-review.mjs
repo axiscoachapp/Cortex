@@ -6,8 +6,9 @@ import {registerHooks} from 'node:module';
 import ts from 'typescript';
 
 // In-memory counterexamples over an immutable source tree, no services or keys saved.
-assert.ok(process.argv.length===3&&/^--source=[0-9a-f]{40}$/.test(process.argv[2]));
-const baseline=process.argv[2].slice(9),ownPath='scripts/test-signature-flow-review.mjs';
+const options=process.argv.slice(2),resolved=options.includes('--resolved'),sourceArg=options.find(a=>a.startsWith('--source='));
+assert.ok(sourceArg&&/^--source=[0-9a-f]{40}$/.test(sourceArg)&&options.every(a=>a===sourceArg||a==='--resolved')&&new Set(options).size===options.length);
+const baseline=sourceArg.slice(9),ownPath='scripts/test-signature-flow-review.mjs';
 const hash=s=>createHash('sha256').update(s).digest('hex'),ownHash=hash(readFileSync(ownPath));
 const paths=['src/lib/signatureFlow.test.ts','src/test/syntheticPki.ts',...['pades','psc','signatureFlow'].map(n=>'supabase/functions/_shared/'+n+'.ts')];
 const sources=new Map(paths.map(path=>{const r=spawnSync('git',['show',baseline+':'+path],{encoding:'utf8',windowsHide:true,maxBuffer:8*1024*1024});assert.equal(r.status,0,r.stderr);return [path,r.stdout];}));
@@ -39,7 +40,17 @@ try{await signDocument(world.ports,world.request);}catch(e){interrupted=e.code;}
 const stored={state:opOf().state,objects:world.storage.size,pscCalls:world.pscCalls};
 const resumed=await signDocument(world.ports,world.request);
 const removed={state:opOf().state,objects:world.storage.size,pscCalls:world.pscCalls,audit:world.db.audit.length};
-export const review={positive:positive.status,lateAnswer:{secondResult,before,firstResult,after},reasonByteRange:{interrupted,stored,resumed,removed}};
+${resolved?`
+await initializeWorld();
+const delayed=gate();let downloads=0;
+world.beforeOriginal=async()=>{if(++downloads===1)await delayed.wait;};
+const oldRequest=signDocument(world.ports,world.request).then(outcome=>({outcome}),error=>({error:error.code}));
+await until(()=>downloads===1);
+const newerCompleted=await signDocument(world.ports,world.request);
+delayed.open();const olderPrepared=await oldRequest;
+const terminalRace={newerCompleted:newerCompleted.status,olderPrepared,finalState:opOf().state,pscCalls:world.pscCalls,audit:world.db.audit.length};
+`:''}
+export const review={positive:positive.status,lateAnswer:{secondResult,before,firstResult,after},reasonByteRange:{interrupted,stored,resumed,removed}${resolved?',terminalRace':''}};
 `;
 // Only the test prefix is adapted. Imported implementation/PKI bytes come from git.
 const modules=new Map([...sources].map(([path,source])=>['cortex-review:/'+path,source]));
@@ -59,12 +70,17 @@ const hooks=registerHooks({
 });
 let review;try{({review}=await import('cortex-review:/'+testPath));}finally{hooks.deregister();}
 assert.deepEqual(review.lateAnswer.before,{state:'failed',attempt:2,cleanup:false,objects:0});
-assert.deepEqual(review.lateAnswer.after,{state:'failed',attempt:2,cleanup:false,objects:1,audit:0});
+assert.deepEqual(review.lateAnswer.after,{state:'failed',attempt:2,cleanup:false,objects:resolved?0:1,audit:0});
 assert.equal(review.reasonByteRange.interrupted,'40001');assert.equal(review.reasonByteRange.stored.state,'stored');
-assert.equal(review.reasonByteRange.resumed.code,'stored_object_invalid');assert.equal(review.reasonByteRange.removed.objects,0);
+if(resolved){
+ assert.equal(review.reasonByteRange.resumed.status,'completed');assert.equal(review.reasonByteRange.removed.objects,1);
+ assert.equal(review.terminalRace.newerCompleted,'completed');assert.deepEqual(review.terminalRace.olderPrepared,{error:'22023'});
+ assert.equal(review.terminalRace.finalState,'completed');assert.equal(review.terminalRace.pscCalls,1);assert.equal(review.terminalRace.audit,1);
+}else {assert.equal(review.reasonByteRange.resumed.code,'stored_object_invalid');assert.equal(review.reasonByteRange.removed.objects,0);}
 assert.equal(hash(readFileSync(ownPath)),ownHash);
-const report={syntheticOnly:true,sourceBaseline:baseline,reviewResolved:false,realDatabaseIntegration:false,externalCalls:false,
+const report={syntheticOnly:true,sourceBaseline:baseline,reviewResolved:false,priorCounterexamplesResolved:resolved,realDatabaseIntegration:false,externalCalls:false,
  ownSource:{path:ownPath,sha256:ownHash},sources:[...sources].map(([path,source])=>({path,sha256:hash(source)})),...review};
-mkdirSync('docs/reviews/2026-11-04/signature-delta-review',{recursive:true});
-writeFileSync('docs/reviews/2026-11-04/signature-delta-review/memory.json',JSON.stringify(report,null,2)+'\n');
+const directory=resolved?'docs/reviews/2026-11-05/signature-session-fence-review':'docs/reviews/2026-11-04/signature-delta-review';
+mkdirSync(directory,{recursive:true});
+writeFileSync(directory+'/memory.json',JSON.stringify(report,null,2)+'\n');
 process.stdout.write(JSON.stringify(review,null,2)+'\n');

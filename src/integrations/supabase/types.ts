@@ -2703,6 +2703,7 @@ export type Database = {
       show_trgm: { Args: { "": string }; Returns: string[] }
       signature_activate_session: {
         Args: {
+          p_auth: Json
           p_cert_sha256: string
           p_expires_at: string
           p_psc: string
@@ -2714,7 +2715,8 @@ export type Database = {
       }
       signature_advance: {
         Args: {
-          p_data?: Json
+          p_auth: Json
+          p_data: Json
           p_operation: string
           p_to: string
           p_user: string
@@ -2723,6 +2725,7 @@ export type Database = {
       }
       signature_begin_authorization: {
         Args: {
+          p_auth: Json
           p_psc: string
           p_state_hash: string
           p_user: string
@@ -2734,8 +2737,18 @@ export type Database = {
         Args: { p_operation: string; p_user: string }
         Returns: undefined
       }
+      signature_close: {
+        Args: {
+          p_data: Json
+          p_operation: string
+          p_to: string
+          p_user: string
+        }
+        Returns: Json
+      }
       signature_complete: {
         Args: {
+          p_auth: Json
           p_cert_issuer: string
           p_cert_serial: string
           p_operation: string
@@ -2744,13 +2757,28 @@ export type Database = {
         Returns: Json
       }
       signature_consume_authorization: {
-        Args: { p_psc: string; p_state_hash: string; p_user: string }
+        Args: {
+          p_auth: Json
+          p_psc: string
+          p_state_hash: string
+          p_user: string
+        }
         Returns: Json
       }
       signature_expire_sessions: { Args: never; Returns: number }
       signature_pending_work: { Args: { p_limit?: number }; Returns: Json }
+      signature_reconcile: {
+        Args: {
+          p_expected_attempt: number
+          p_expected_state: string
+          p_operation: string
+          p_user: string
+        }
+        Returns: Json
+      }
       signature_reserve: {
         Args: {
+          p_auth: Json
           p_operation: string
           p_prescription: string
           p_shown_sha256: string
@@ -2761,7 +2789,12 @@ export type Database = {
       signature_revoke_session: { Args: { p_user: string }; Returns: number }
       signature_session_state: { Args: { p_user: string }; Returns: Json }
       signature_session_token: {
-        Args: { p_generation: number; p_session: string; p_user: string }
+        Args: {
+          p_auth: Json
+          p_generation: number
+          p_session: string
+          p_user: string
+        }
         Returns: Json
       }
       storage_parent_is_live: {

@@ -1,0 +1,47 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "a10919d5773ef06e5946ad5f053addcfd51d48c4",
+  "unitPassed": 59,
+  "unitSkipped": 1,
+  "unitFiles": 3,
+  "unitExitCode": 0,
+  "appAndNodeTypecheckExitCode": 0,
+  "deno": {
+    "version": "2.9.6",
+    "entrypoint": "supabase/functions/_shared/signatureFlow.ts",
+    "cachedOnly": true,
+    "exitCode": 0
+  },
+  "frontendBuildRun": false,
+  "reviewResolved": false,
+  "sources": [
+    {
+      "path": "src/lib/signatureFlow.test.ts",
+      "sha256": "d17ab0b17ffb2cb3f9ffec0dac9d7d846d33b32c2276be0f40eda8da58aaedb8"
+    },
+    {
+      "path": "src/lib/pades.test.ts",
+      "sha256": "5d3f124b1387e9addb3afa3275828f0ed1faa21db65f821006ba69dbd1141127"
+    },
+    {
+      "path": "src/lib/psc.test.ts",
+      "sha256": "439a2756ccf8d470e3e6e1f3ccc78c4d4ec62616b1382279625e3f0e7d220a36"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureFlow.ts",
+      "sha256": "b146c9fef2151dc7e0fa0e1cf6322188705fc7ff9962d7d1e560dfaca6a309a6"
+    },
+    {
+      "path": "supabase/functions/_shared/pades.ts",
+      "sha256": "23f2d6ea4b67ce135db59f934b32fe1c346beef0833da48a2340768687b4259e"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "sha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71"
+    },
+    {
+      "path": "src/integrations/supabase/types.ts",
+      "sha256": "53c0e7ced41b534e32524e83bb9a61c1366d7fa0655eac84a82dc6b5a457ae6e"
+    }
+  ]
+}
