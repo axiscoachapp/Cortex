@@ -9,6 +9,7 @@ import {
   contactSchema,
   contactEditSchema,
   linkEditSchema,
+  contactLinksPageSchema,
   caseSchema,
   patientSchema,
   appointmentsSchema,
@@ -39,6 +40,7 @@ type RpcName =
   | 'reception_contact_edit'
   | 'reception_update_contact'
   | 'reception_link_edit'
+  | 'reception_contact_links'
   | 'reception_update_link_relationship'
   | 'reception_update_case'
   | 'reception_add_note'
@@ -93,6 +95,9 @@ export const receptionApi = {
   contactEdit: (id: string) => rpc('reception_contact_edit', { p_contact: id }, contactEditSchema),
   linkEdit: (contact: string, patient: string) =>
     rpc('reception_link_edit', { p_contact: contact, p_patient: patient }, linkEditSchema),
+  contactLinks: (clinic: string, contact: string, after: string | null = null, limit = 50) =>
+    rpc('reception_contact_links', { p_clinic: clinic, p_contact: contact, p_after: after, p_limit: limit },
+      contactLinksPageSchema.refine(page => page.items.length <= limit && page.items.every(item => item.contactId === contact && (after === null || item.patientId > after)))),
   updateLinkRelationship: (contact: string, patient: string, expected: number, relationship: LinkEdit['relationship']) =>
     rpc('reception_update_link_relationship', { p_contact: contact, p_patient: patient, p_revision: expected, p_relationship: relationship }, revision),
   updateContact: (id: string, expected: number, name: string, phone: string) =>

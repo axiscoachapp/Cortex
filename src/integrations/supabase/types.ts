@@ -2540,6 +2540,15 @@ export type Database = {
         Returns: boolean
       }
       reception_contact_edit: { Args: { p_contact: string }; Returns: Json }
+      reception_contact_links: {
+        Args: {
+          p_after?: string
+          p_clinic: string
+          p_contact: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
       reception_contacts: {
         Args: { p_before?: string; p_clinic: string; p_search?: string }
         Returns: Json

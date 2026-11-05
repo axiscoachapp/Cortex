@@ -71,6 +71,12 @@ export const linkEditSchema = z.object({
   patientAvailable: z.boolean(), doctorActive: z.boolean(),
 }).strict();
 export type LinkEdit = z.infer<typeof linkEditSchema>;
+export const contactLinksPageSchema = z.object({ items: z.array(linkEditSchema).max(50), nextCursor: id.nullable() }).strict().superRefine((page, context) => {
+  if (page.nextCursor !== null && page.nextCursor !== page.items[page.items.length - 1]?.patientId)
+    context.addIssue({ code: 'custom', message: 'Invalid link page cursor' });
+  if (page.items.some((item, index) => index > 0 && page.items[index - 1].patientId >= item.patientId))
+    context.addIssue({ code: 'custom', message: 'Unordered or repeated link page' });
+});
 export const contactSchema = z
   .object({
     id,

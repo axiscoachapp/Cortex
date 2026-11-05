@@ -1,0 +1,382 @@
+{
+  "passed": true,
+  "suites": [
+    "supabase/tests/reception-contact-links-page.test.sql",
+    "supabase/tests/reception-delegation-requests.test.sql",
+    "supabase/tests/reception-delegation-decisions.test.sql",
+    "supabase/tests/reception-provisioning-requests.test.sql",
+    "supabase/tests/reception-function-boundaries.test.sql",
+    "supabase/tests/reception-delegation-api.test.sql",
+    "supabase/tests/reception-staff-reactivation.test.sql",
+    "supabase/tests/reception-staff-lifecycle.test.sql",
+    "supabase/tests/reception-scope-lifecycle.test.sql",
+    "supabase/tests/reception-access-provenance.test.sql",
+    "supabase/tests/reception-card-withdrawal.test.sql",
+    "supabase/tests/reception-link-corrections.test.sql"
+  ],
+  "concurrency": [
+    "read committed: authority held first refuses immediately with 40001, then succeeds after release",
+    "read committed: account held first refuses immediately with 40001, then succeeds after release",
+    "contact NOWAIT removal is detected by statement cancellation control",
+    "read committed: contact held first refuses immediately with 40001, then succeeds after release",
+    "repeatable read: authority held first refuses immediately with 40001, then succeeds after release",
+    "repeatable read: account held first refuses immediately with 40001, then succeeds after release",
+    "repeatable read: contact held first refuses immediately with 40001, then succeeds after release",
+    "RR old authority snapshot refuses; new transaction cannot read after admin role removal"
+  ],
+  "generatedTypes": true,
+  "syntheticOnly": true,
+  "baseline": "f716e6892d482024234e606af0850fcfc939526a",
+  "migrations": 73,
+  "sources": [
+    {
+      "path": "supabase/migrations/20251202010825_ef944f56-ea3e-477a-a69c-5aa7568cc610.sql",
+      "sha256": "0f855d7820750b90d82c5da27c4d187c551859d97d212f76407625a6398e27b3"
+    },
+    {
+      "path": "supabase/migrations/20251202010938_c18b88ee-067b-4874-acfe-fa2c70c4b8e1.sql",
+      "sha256": "941d5e7f174b1f5ec6db08557c58026bca2fedd5e45975daaa11114692d6f6b3"
+    },
+    {
+      "path": "supabase/migrations/20251202011629_a6f41da4-2fa8-4167-96b2-179e23c81df2.sql",
+      "sha256": "4cdf5908519b6635fb0dfe3fcb69e9a9a783f945b53af68747c8891f1c760afe"
+    },
+    {
+      "path": "supabase/migrations/20260516000000_calendar_consultations_patient_fields.sql",
+      "sha256": "bd76a56b015dbb4c8ccbcbf4beef87b2196e06b8af1a25ad154fdfd5db052a6d"
+    },
+    {
+      "path": "supabase/migrations/20260517000000_add_performance_indexes.sql",
+      "sha256": "2156caff079cd059fc2481fa86ceee580f19a39b505a48475b2e2162f12f6862"
+    },
+    {
+      "path": "supabase/migrations/20260517000001_create_audio_recordings_bucket.sql",
+      "sha256": "bfe3fbdab9e40e5c6fd7649be16b0c546ddd40cc853a5fc2cf0719197b546953"
+    },
+    {
+      "path": "supabase/migrations/20260518000000_patient_files.sql",
+      "sha256": "3497baf7f10ef2a8bc5ac8d8ad82f1aebd867ea8871067b78666f463482d8e58"
+    },
+    {
+      "path": "supabase/migrations/20260519000000_usage_quota.sql",
+      "sha256": "9546edc09b43c6548fe909cff7e29b62a15f96953402d161b93f9b8c8881e404"
+    },
+    {
+      "path": "supabase/migrations/20260529000000_secure_user_integrations.sql",
+      "sha256": "587616a96819c17e65a5ddb80a5956d30b0300923e0b91174cd4e09feeb204b9"
+    },
+    {
+      "path": "supabase/migrations/20260530000000_add_specialty_to_user_settings.sql",
+      "sha256": "66734592d3e434853d343df5c31a9185f9cc75ee6c459215e8df73713d73fba6"
+    },
+    {
+      "path": "supabase/migrations/20260601000000_add_live_copilot_setting.sql",
+      "sha256": "e5257e18a7567738ca46f413143ed3c6c699b880e05bce25c886b1ff30ea4cb0"
+    },
+    {
+      "path": "supabase/migrations/20260602000000_patient_files_ai_summary.sql",
+      "sha256": "8aaaaa6ba161f27fbd29d66dee460e234204bd2e576e3a8acea2e8b8ed751b0c"
+    },
+    {
+      "path": "supabase/migrations/20260603000000_prescriptions.sql",
+      "sha256": "f9b2393de3ee79c526437e3caa0a73e75301c5ef2fb0190aeae1abf6f06198f1"
+    },
+    {
+      "path": "supabase/migrations/20260604000000_medication_catalog.sql",
+      "sha256": "7d242ca74c409fdde078ec25280d3942dcfd44f5ffce0219a220c28044355ac6"
+    },
+    {
+      "path": "supabase/migrations/20260605000000_exam_requests.sql",
+      "sha256": "ab8dec8fad09da56eb501e39b6e4c7d4c4d96968b32170939c73daafef6b4e08"
+    },
+    {
+      "path": "supabase/migrations/20260606000000_document_templates.sql",
+      "sha256": "774989d6f9938cdecc90e69f41dc3097f7699325d53f57368ade6a0f941a97e5"
+    },
+    {
+      "path": "supabase/migrations/20260607000000_knowledge_base.sql",
+      "sha256": "69f1741d44e7d229dd2772faae11576c22dfdb3626e18a62d0340f2f97ae9809"
+    },
+    {
+      "path": "supabase/migrations/20261028000000_security_boundaries.sql",
+      "sha256": "c82355fd2cff053e0490859be8cb7da00ceae4be3ebf39f1706bf26d3edc55fa"
+    },
+    {
+      "path": "supabase/migrations/20261028000100_clinical_durability.sql",
+      "sha256": "98e90e2c9557d79c107fee753a3cfe72dc55652739e71bb66f611ea8533a5b58"
+    },
+    {
+      "path": "supabase/migrations/20261028000200_atomic_quota.sql",
+      "sha256": "1c17a6493cebfddee81285c82c5016e94c3e2bffcc5a19b41564becd93aa579b"
+    },
+    {
+      "path": "supabase/migrations/20261028000300_storage_deletion_guards.sql",
+      "sha256": "410e7fd1bf315b4617eedb48d89d318cf2af2cbbcdc2a0c88fcdee521a65ce4a"
+    },
+    {
+      "path": "supabase/migrations/20261028000400_atomic_document_review.sql",
+      "sha256": "268c0f83f25f8fa5683f562e494f347f6cf7a7f0fab4cfc2430243f5d598f371"
+    },
+    {
+      "path": "supabase/migrations/20261028000500_verified_signature_metadata.sql",
+      "sha256": "6919a1348028bdf688359d9285f2a61c130dca8297ad25aa895d3ad386ab1c61"
+    },
+    {
+      "path": "supabase/migrations/20261028000600_legacy_deletion_preflight.sql",
+      "sha256": "030f6bf917ffbcae1c848d767888e188bac603a33153d66f4be6f10b45473128"
+    },
+    {
+      "path": "supabase/migrations/20261028000700_live_storage_parents.sql",
+      "sha256": "bf50d7f1770da0de42a6742d1ca96f774b692de914ece1a2110c951edbd62fe1"
+    },
+    {
+      "path": "supabase/migrations/20261028000800_verified_issuance.sql",
+      "sha256": "fb4b2124d2039260dd160a74da3ef3053016c5eb943cde937a7378c0c190c4de"
+    },
+    {
+      "path": "supabase/migrations/20261029000100_privacy_integrity.sql",
+      "sha256": "dd2d6a48d117ca15542d0074d6b063b9004841d40638c8b6abba45c4ec87bdf1"
+    },
+    {
+      "path": "supabase/migrations/20261029000200_clinical_integrity.sql",
+      "sha256": "710ea156e5513f96fec1cecca5241994091a8527903df52b4deb45e40ae235fe"
+    },
+    {
+      "path": "supabase/migrations/20261029000300_selective_sharing.sql",
+      "sha256": "156b5fee12c7fd9f7a13c8463c735c83db817431c02db6881acab76fd6c78bfe"
+    },
+    {
+      "path": "supabase/migrations/20261029001000_clinical_workspace.sql",
+      "sha256": "e689a2a101ece85921cbc220f105a1d3cdfed3e43a19068618af1b3e5ac52512"
+    },
+    {
+      "path": "supabase/migrations/20261029001100_proposal_acceptance.sql",
+      "sha256": "bf5c47f05cfa52b13b60ab558903f86a38f9e32e8c233be21db5afa3a50b4e08"
+    },
+    {
+      "path": "supabase/migrations/20261029001200_reviewed_knowledge.sql",
+      "sha256": "e6ac50c4ed3fc78311f4c9db1e2466bce08779eb2f7a5b5679e3fdb5c01c3182"
+    },
+    {
+      "path": "supabase/migrations/20261029001300_operation_controls.sql",
+      "sha256": "b0d4055b8bbf2482f5de16032991190d84997c9c56253a31cfb98e32bdb17d63"
+    },
+    {
+      "path": "supabase/migrations/20261029001400_session_assurance.sql",
+      "sha256": "20ff2f29c5c2af5f96c7b273756319de70ff9684fcd1df0dce1baaf7a2be8ddf"
+    },
+    {
+      "path": "supabase/migrations/20261029001500_clinic_specialties.sql",
+      "sha256": "2d68a9b25a666084323c015b17893d762bce2aedcd44b931a18670316d9c0032"
+    },
+    {
+      "path": "supabase/migrations/20261029001600_workspace_directory.sql",
+      "sha256": "7b75e0123e390f1097402d755ed03f3532bbd5440d990549df936c757928767e"
+    },
+    {
+      "path": "supabase/migrations/20261029001700_medication_reconciliation.sql",
+      "sha256": "e85feae83264d581fde6186725bfa1a037edbc4b9f087d0c3bdd2963d21306d4"
+    },
+    {
+      "path": "supabase/migrations/20261029001800_encounter_completion.sql",
+      "sha256": "b6fe9a2ec2559916ba8d12a0a175da4157ab6d7350b9deac25d014569bd9e135"
+    },
+    {
+      "path": "supabase/migrations/20261029001900_shared_protocols.sql",
+      "sha256": "8e8b7745540d0536c0014e65f4d425e23f71af08f00eaba6c2e89fe41b363120"
+    },
+    {
+      "path": "supabase/migrations/20261101000000_review_hardening.sql",
+      "sha256": "1c3c45c320f144c0b812924bc4bc6b2da8e31d1c2177171432ef1d75eba9214d"
+    },
+    {
+      "path": "supabase/migrations/20261103000100_patient_conversations.sql",
+      "sha256": "16f71de063d03da3ea60fbcde03de635356936d67e68753e25ff07544ea3f8dd"
+    },
+    {
+      "path": "supabase/migrations/20261103000200_patient_registration.sql",
+      "sha256": "c5c30eba289b20800d5f15d92a280ba06d5ef1cc21f3e0e75d8f96a48f79aa97"
+    },
+    {
+      "path": "supabase/migrations/20261103001000_reception_access.sql",
+      "sha256": "33881d1ef93b8f068a4d6ba98fd13306df975f478d30b6680a7e8deee5362b69"
+    },
+    {
+      "path": "supabase/migrations/20261103002000_reception_workflow.sql",
+      "sha256": "4051c2ae01ae2a7bad08c1731df67689753dc1c825629132a5298d8b2297fca2"
+    },
+    {
+      "path": "supabase/migrations/20261103003000_reception_calendar.sql",
+      "sha256": "d636630c7f42b9346f5dd124f4d66a6800f87f4220081f60dd49073938d5613e"
+    },
+    {
+      "path": "supabase/migrations/20261103003500_reception_contact_corrections.sql",
+      "sha256": "0c6d1c50f5bff91585678db8a9e3568806460a6a30943bad0243d3bb62fc2aab"
+    },
+    {
+      "path": "supabase/migrations/20261103003600_reception_appointment_identity.sql",
+      "sha256": "df702ac95994df3889026f11a11993c1fa8c93dec78f1dc940f22ac5e1e46d87"
+    },
+    {
+      "path": "supabase/migrations/20261103003700_reception_link_confirmation.sql",
+      "sha256": "4ce16f5d67ee69d80799563d5b8078690f87adfa02985984c94b0e0530f65be3"
+    },
+    {
+      "path": "supabase/migrations/20261103003800_reception_link_corrections.sql",
+      "sha256": "06cc5221192c49a8a90816f26d52673e2b0fb4155de14fd37a6c1e999293529a"
+    },
+    {
+      "path": "supabase/migrations/20261104001000_reception_deletion_custody.sql",
+      "sha256": "0c02e92d54906470ee5019207f6db67995b9a2843d1b97d0a75808c5337c6ebb"
+    },
+    {
+      "path": "supabase/migrations/20261104002000_reception_deletion_barrier.sql",
+      "sha256": "a0e58b70d88b06a9008e3c7939ddaf8d383e79d896f0e578d45017d6a1320ab6"
+    },
+    {
+      "path": "supabase/migrations/20261104003000_reception_admin_scopes.sql",
+      "sha256": "c8d538da3d042bd8cfdfd9ca5cdc8a80ec41b90365c66125501c1e004439037e"
+    },
+    {
+      "path": "supabase/migrations/20261104004000_reception_scope_lifecycle.sql",
+      "sha256": "7b15b19b22d412006f5cb6d76c97def5ffb3c30534ac08c8e5109364a8cc1051"
+    },
+    {
+      "path": "supabase/migrations/20261104006000_reception_appointment_changes.sql",
+      "sha256": "40512f514242b41e72fc5cacbc9650c90f9a1d8e8b81b3c2dbe7ea962d764d8e"
+    },
+    {
+      "path": "supabase/migrations/20261104100000_prescriber_contact.sql",
+      "sha256": "9f271ebb2b51ba794f6f3f6c7cc985fd06a0a83b0b2d1dd166c3727415e8336a"
+    },
+    {
+      "path": "supabase/migrations/20261104110000_document_snippets.sql",
+      "sha256": "74c8fbeb5fb808bc04636e55d83a99a3ea0bd21b1b4f254c2f9d80400389e8c1"
+    },
+    {
+      "path": "supabase/migrations/20261104120000_document_snippets_custody_epoch.sql",
+      "sha256": "4a61940b8f71ad36ca98e2a50ec6ff61b0a603ef6d23b2c9b63c9780b59e5875"
+    },
+    {
+      "path": "supabase/migrations/20261104130000_controlled_prescription.sql",
+      "sha256": "e1fd575feb2f6ccdfab3be83066c604f4c992af35b1b3c59e148bce4f21da3e7"
+    },
+    {
+      "path": "supabase/migrations/20261104200000_reception_scoped_custody.sql",
+      "sha256": "e91b0659630a76fa64140b497393da2c7973dba7a7ddfdf265833a7b5e079ac9"
+    },
+    {
+      "path": "supabase/migrations/20261104210000_reception_clinic_calendar.sql",
+      "sha256": "5991f161fd4cbec58835112b5f34f310316663a290e49a8f8ebfb964f227b54b"
+    },
+    {
+      "path": "supabase/migrations/20261104220000_reception_staff_scope_lifecycle.sql",
+      "sha256": "789e9046d50ce32adfc590a0dee98870556963429b4f85608ce7fb41df949ee5"
+    },
+    {
+      "path": "supabase/migrations/20261104230000_reception_delegation_requests.sql",
+      "sha256": "5c608613823e49a77e43999d104c248d136c84ac597b5ef0d388d0167ccfd6f4"
+    },
+    {
+      "path": "supabase/migrations/20261104240000_reception_delegation_decisions.sql",
+      "sha256": "fe4707f4a9ccde4e8c414e48ef74f13c1596f6d18e73be9dd2f71ca3d219cc4f"
+    },
+    {
+      "path": "supabase/migrations/20261104250000_reception_legacy_array_guard.sql",
+      "sha256": "68da15a42d258695d6aa21ea8e586fc596f07da43ae8a4e170c36149f1b7a830"
+    },
+    {
+      "path": "supabase/migrations/20261105000000_reception_authenticated_scope_cut.sql",
+      "sha256": "1b66162bdbb01764ec004af33c14311e574793d5b3e662bbdefe71c931c75679"
+    },
+    {
+      "path": "supabase/migrations/20261105010000_reception_legacy_scope_identity.sql",
+      "sha256": "8a4ae16b0c6dcdbe72490b3e85ca2f2d2c68f4ba81c8a8f4ef249f07098cf8ac"
+    },
+    {
+      "path": "supabase/migrations/20261105020000_reception_provisioning_requests.sql",
+      "sha256": "e2e0346aa78e2c0d2d77581f64f8f4b9735b4636a43b0581241a71c9ca405543"
+    },
+    {
+      "path": "supabase/migrations/20261105100000_digital_signature.sql",
+      "sha256": "86640327fd7f41a56a450687698d7a1e823ccaa7f9c0fcdca6297cc63ab2ada3"
+    },
+    {
+      "path": "supabase/migrations/20261105110000_reference_catalogs.sql",
+      "sha256": "aa08445826a9c563069c28b75e039df8e7d1cbf6812adf135599fd36babdaf04"
+    },
+    {
+      "path": "supabase/tests/bootstrap.sql",
+      "sha256": "c4f30822f25d8c8fa6b489068d8dd16f33205ec57dd62fd95324ca80af6b0fc7"
+    },
+    {
+      "path": "supabase/tests/reception-contact-links-page.test.sql",
+      "sha256": "a7ddfe3db1f220fbf5a81a10a82fac19091238fb5cdac82a8070c7bff1ef2f47"
+    },
+    {
+      "path": "supabase/migrations/20261105200000_reception_delegation_api.sql",
+      "sha256": "9342f74001ba1df59dbbbd9f6d0128b8c7d1343a5dda18b8f51218742fc05320"
+    },
+    {
+      "path": "supabase/migrations/20261105210000_reception_access_provenance.sql",
+      "sha256": "bc914b43f20464ef1d7c52c5a6197bf18b821db1f1553684b35be5909644027a"
+    },
+    {
+      "path": "supabase/migrations/20261105220000_reception_card_withdrawal.sql",
+      "sha256": "a421cce237ed63100620699ef5e19bfe5ffd79d32bf4a54258adbf6596cce252"
+    },
+    {
+      "path": "supabase/migrations/20261105230000_reception_contact_links_page.sql",
+      "sha256": "3392a57e93510915d80e1ad6ea72c56f37b1f0ec077c773e9aa4d465d52243b7"
+    },
+    {
+      "path": "scripts/test-contact-links-page-concurrency.mjs",
+      "sha256": "0d9cb14576e21378a53870e872b15e5764a2425dc932871cddd5ee00f72f4765"
+    },
+    {
+      "path": "supabase/tests/reception-delegation-requests.test.sql",
+      "sha256": "7408ed558b1a98913090d47a6f5d75ddf96b9ca0587b921b0b8dbb0b984fa270"
+    },
+    {
+      "path": "supabase/tests/reception-delegation-decisions.test.sql",
+      "sha256": "e5ba39b409a47d4b76f149a1870086171841cc054996b948a70bb18ff3541d91"
+    },
+    {
+      "path": "supabase/tests/reception-provisioning-requests.test.sql",
+      "sha256": "a7b7e43d25ecf68a0bb1b6b1a94425bc1c0d5393af75a39f8a4cba2da6be32f2"
+    },
+    {
+      "path": "supabase/tests/reception-function-boundaries.test.sql",
+      "sha256": "1b2ff34006681d642db01f07af9b248a446c76d27bea6bb09db3222b83144b98"
+    },
+    {
+      "path": "supabase/tests/reception-delegation-api.test.sql",
+      "sha256": "e6d290ce37d3966215f9c9cc80e51799a4d24933e79b504ddcaa690c960f1162"
+    },
+    {
+      "path": "supabase/tests/reception-staff-reactivation.test.sql",
+      "sha256": "987cc2daea21c5659aa225f5c96cf05dfeb07816de362c26f9e1ef415ebc29c2"
+    },
+    {
+      "path": "supabase/tests/reception-staff-lifecycle.test.sql",
+      "sha256": "b272e8a83856ff6a80e7863be0f96aae9889e7a332ac397663e4fc812a5ba7a8"
+    },
+    {
+      "path": "supabase/tests/reception-scope-lifecycle.test.sql",
+      "sha256": "da5379efedeb704b84e38a795e09934cbc1f28c81cae4b5de61e3d2745961692"
+    },
+    {
+      "path": "supabase/tests/reception-access-provenance.test.sql",
+      "sha256": "1d92b267476ba0b9ab7f69ff2fc4b68dbde476ad78044e9311dba01fd224396d"
+    },
+    {
+      "path": "supabase/tests/reception-card-withdrawal.test.sql",
+      "sha256": "7143f52df1f5bf179288728e480d228e1d677de1231db6bc0b9e4394684c1f53"
+    },
+    {
+      "path": "supabase/tests/reception-link-corrections.test.sql",
+      "sha256": "597db5912373424cc49d8593a4fea74146fe2406c89485f719b7f49115dfa829"
+    }
+  ],
+  "cleanupVerified": true
+}
