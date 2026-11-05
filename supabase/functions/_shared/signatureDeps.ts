@@ -10,7 +10,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { AuthError, authResponse, requireUserContext } from "./auth.ts";
 import { fetchWithDeadline } from "./http.ts";
 import { certificateDiscovery, exchangeCode, parseKeyList, signHash } from "./psc.ts";
-import { readSignatureConfig, storageErrorKind, type HandlerDeps } from "./signatureHandlers.ts";
+import { readSignatureConfig, storageAdapter, type HandlerDeps } from "./signatureHandlers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
@@ -18,17 +18,16 @@ const corsHeaders = {
   'Vary': 'Origin',
 };
 
-// Storage errors are classified by their structured status only
-// (storageErrorKind, Codex 05/11 05:09 R4): an unavailable Storage throws and
-// is never read as an absent or existing object. The same for the database
-// reads below: an error is not an absent row.
+// Storage errors are classified by their structured answer only
+// (storageAdapter/storageErrorKind, Codex 05/11 05:09 and 06:35 R4): an
+// unavailable Storage throws and is never read as an absent or existing
+// object. The same for the database reads below: an error is not an absent row.
 export function signatureDeps(): HandlerDeps {
   const service = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     { global: { fetch: fetchWithDeadline } },
   );
-  const bucket = () => service.storage.from('prescriptions');
   return {
     authenticate: (req) => requireUserContext(req),
     authFailure: (error) => (error instanceof AuthError ? authResponse(error, corsHeaders) : null),
@@ -38,24 +37,7 @@ export function signatureDeps(): HandlerDeps {
       if (error) throw Object.assign(new Error(error.message), { code: error.code });
       return data;
     },
-    storage: {
-      download: async (path) => {
-        const { data, error } = await bucket().download(path);
-        if (error && storageErrorKind(error) === 'not_found') return null;
-        if (error || !data) throw new Error('Storage indisponível');
-        return new Uint8Array(await data.arrayBuffer());
-      },
-      upload: async (path, pdf) => {
-        const { error } = await bucket().upload(path, pdf, { contentType: 'application/pdf', upsert: false });
-        if (error && storageErrorKind(error) === 'exists') return 'exists';
-        if (error) throw new Error('Storage indisponível');
-        return 'created';
-      },
-      remove: async (path) => {
-        const { error } = await bucket().remove([path]);
-        if (error) throw new Error('Storage indisponível');
-      },
-    },
+    storage: storageAdapter(service.storage.from('prescriptions')),
     psc: {
       exchangeCode: (cfg, p) => exchangeCode(cfg, p),
       discovery: (cfg, token) => certificateDiscovery(cfg, token),

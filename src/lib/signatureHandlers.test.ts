@@ -1,11 +1,12 @@
 // Edge handlers of the digital signature (D17) with injected dependencies.
 // Synthetic only: the PSC, Storage and database are fakes; no real provider,
 // certificate or deploy.
+import { StorageClient } from '@supabase/storage-js';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { AD_RB_V1_1, sha256 } from '../../supabase/functions/_shared/pades';
 import { base64url, openSecret, parseKeyList, tokenBinding, verifierBinding, type SealedSecret } from '../../supabase/functions/_shared/psc';
 import {
-  readSignatureConfig, signDocumentHandler, signatureSessionHandler, storageErrorKind, type HandlerDeps, type SignerContext,
+  readSignatureConfig, signDocumentHandler, signatureSessionHandler, storageAdapter, storageErrorKind, type HandlerDeps, type SignerContext,
 } from '../../supabase/functions/_shared/signatureHandlers';
 import type { SignatureOutcome, SignaturePorts, SignatureRequest } from '../../supabase/functions/_shared/signatureFlow';
 import { RSA, syntheticCertificate } from '../test/syntheticPki';
@@ -331,7 +332,7 @@ describe('signature-session handler', () => {
 
 describe('Storage errors (Codex 05/11 05:09, R4)', () => {
   const api = (status: number, statusCode: string, message: string) => Object.assign(new Error(message), { name: 'StorageApiError', status, statusCode });
-  it('only the structured status says absent or already there; any other error is unavailable', () => {
+  it('only the structured status says absent or already there; any other error is unavailable', async () => {
     const table: Array<[unknown, ReturnType<typeof storageErrorKind>]> = [
       [api(404, '404', 'Object not found'), 'not_found'],
       [api(400, '404', 'Object not found'), 'not_found'], // older Storage: HTTP 400, body statusCode 404
@@ -347,7 +348,69 @@ describe('Storage errors (Codex 05/11 05:09, R4)', () => {
       [new Error('fetch failed: object not found'), 'unavailable'],
       [null, 'unavailable'],
     ];
-    for (const [error, kind] of table) expect([error, storageErrorKind(error)]).toEqual([error, kind]);
+    for (const [error, kind] of table) expect([error, await storageErrorKind(error)]).toEqual([error, kind]);
+  });
+});
+
+describe('Storage adapter over the real storage-js client, fetch in memory (Codex 05/11 06:35, R4)', () => {
+  const json = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  const notFound = { statusCode: '404', error: 'not_found', message: 'Object not found' };
+  /** A bucket whose every request gets `answer`; network failures are thrown by `answer`. */
+  function bucket(answer: () => Response | Promise<Response>) {
+    const requests: string[] = [];
+    const fetchFake = async (input: RequestInfo | URL, init?: RequestInit) => {
+      requests.push(`${init?.method ?? 'GET'} ${new URL(String(input)).pathname}`);
+      return answer();
+    };
+    const client = new StorageClient('https://storage.synthetic.invalid/storage/v1', {}, fetchFake as typeof fetch);
+    return { storage: storageAdapter(client.from('prescriptions')), requests };
+  }
+  const path = `rx/${USER}/${RX}/signed-${OP}.pdf`;
+
+  it('download: only a structured 404 is absent (HTTP 404, or the older 400, with statusCode 404 in the body)', async () => {
+    const ok = bucket(() => new Response(Uint8Array.of(37, 80, 68, 70), { status: 200 }));
+    expect(await ok.storage.download(path)).toEqual(Uint8Array.of(37, 80, 68, 70));
+    expect(ok.requests).toEqual([`GET /storage/v1/object/prescriptions/${path}`]);
+    expect(await bucket(() => json(404, notFound)).storage.download(path)).toBeNull();
+    expect(await bucket(() => json(400, notFound)).storage.download(path)).toBeNull();
+  });
+
+  it('download: anything else throws, whatever its text', async () => {
+    const answers: Array<() => Response | Promise<Response>> = [
+      () => json(500, { statusCode: '500', error: 'internal', message: 'Upstream object route not found' }),
+      () => json(500, notFound), // the body says 404, the answer is 500
+      () => json(503, { statusCode: '503', message: 'Service unavailable' }),
+      () => new Response('<html>Not Found</html>', { status: 404, headers: { 'Content-Type': 'text/html' } }),
+      () => json(404, { message: 'no Route matched with those values' }), // a gateway, not Storage
+      () => json(404, { statusCode: '400', error: 'invalid', message: 'not found' }),
+      () => json(400, { statusCode: '400', error: 'InvalidRequest', message: 'Object not found' }),
+      () => json(404, { ...notFound, padding: 'x'.repeat(5000) }), // over the 4 KiB read
+      () => json(404, [notFound]),
+      () => json(409, notFound), // statusCode 404 under another HTTP status
+      () => { throw new TypeError('fetch failed'); },
+    ];
+    for (const answer of answers) {
+      await expect(bucket(answer).storage.download(path)).rejects.toThrow('Storage indisponível');
+    }
+  });
+
+  it('upload: only a structured 409 is already there; anything else throws', async () => {
+    expect(await bucket(() => json(200, { Key: `prescriptions/${path}`, Id: OP })).storage.upload(path, Uint8Array.of(1))).toBe('created');
+    expect(await bucket(() => json(409, { statusCode: '409', error: 'Duplicate', message: 'The resource already exists' })).storage.upload(path, Uint8Array.of(1))).toBe('exists');
+    expect(await bucket(() => json(400, { statusCode: '409', error: 'Duplicate', message: 'The resource already exists' })).storage.upload(path, Uint8Array.of(1))).toBe('exists');
+    for (const answer of [
+      () => json(500, { statusCode: '500', message: 'The resource already exists' }),
+      () => new Response('<html>Bad gateway</html>', { status: 502 }),
+      () => json(404, notFound),
+    ]) {
+      await expect(bucket(answer).storage.upload(path, Uint8Array.of(1))).rejects.toThrow('Storage indisponível');
+    }
+  });
+
+  it('remove: any error throws', async () => {
+    await expect(bucket(() => json(200, [])).storage.remove(path)).resolves.toBeUndefined();
+    await expect(bucket(() => json(500, { statusCode: '500', message: 'internal' })).storage.remove(path)).rejects.toThrow('Storage indisponível');
   });
 });
 

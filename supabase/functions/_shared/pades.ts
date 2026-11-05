@@ -147,44 +147,166 @@ function derTime(buf: Uint8Array, node: DerNode): number | null {
   return t;
 }
 
+// X.509 shape (RFC 5280 §4.1) in strict DER, checked before any trust
+// decision (Codex 05/11 06:35, R2): every header minimal, every constructed
+// node exactly filled by its children, and the mandatory parts present with
+// their content. Anything else is not a certificate.
+
+/** DER header: low tag form and the shortest length encoding. */
+function minimalHeader(buf: Uint8Array, n: DerNode): boolean {
+  if ((buf[n.start] & 0x1f) === 0x1f) return false;
+  const length = n.end - n.contentStart;
+  let bytes = 0;
+  for (let v = length; v > 0; v = Math.floor(v / 256)) bytes++;
+  return n.contentStart - n.start === (length < 0x80 ? 2 : 2 + bytes);
+}
+
+/** Children that exactly fill a constructed node, each with a minimal header. */
+function strictChildren(buf: Uint8Array, node: DerNode): DerNode[] {
+  if (!(node.tag & 0x20)) throw new Error('DER inválido.');
+  const out: DerNode[] = [];
+  for (let at = node.contentStart; at < node.end;) {
+    const child = readDer(buf, at);
+    if (child.end > node.end || !minimalHeader(buf, child)) throw new Error('DER inválido.');
+    out.push(child);
+    at = child.end;
+  }
+  return out;
+}
+
+/** Every constructed node below `node`, recursively, in strict DER. */
+function strictTree(buf: Uint8Array, node: DerNode, depth = 0): void {
+  if (depth > 24) throw new Error('DER profundo demais.');
+  if (node.tag & 0x20) for (const child of strictChildren(buf, node)) strictTree(buf, child, depth + 1);
+}
+
+const content = (buf: Uint8Array, n: DerNode) => buf.subarray(n.contentStart, n.end);
+const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((x, i) => x === b[i]);
+/** INTEGER, not empty, minimal two's complement. */
+function isInteger(buf: Uint8Array, n: DerNode): boolean {
+  const c = content(buf, n);
+  return n.tag === 0x02 && c.length > 0 && !(c.length > 1 && ((c[0] === 0 && c[1] < 0x80) || (c[0] === 0xff && c[1] >= 0x80)));
+}
+/** OBJECT IDENTIFIER: not empty, each arc minimal and terminated. */
+function isOid(buf: Uint8Array, n: DerNode): boolean {
+  const c = content(buf, n);
+  if (n.tag !== 0x06 || !c.length || c[c.length - 1] & 0x80) return false;
+  return c.every((x, i) => !(x === 0x80 && (i === 0 || !(c[i - 1] & 0x80))));
+}
+/** BIT STRING (or its IMPLICIT [n]): unused bits 0..7, none when empty, none when `whole`. */
+function isBitString(buf: Uint8Array, n: DerNode, tag: number, whole: boolean, minBytes = 0): boolean {
+  const c = content(buf, n);
+  return n.tag === tag && c.length >= 1 + minBytes && c[0] <= 7 && !((c.length === 1 || whole) && c[0] !== 0);
+}
+/** AlgorithmIdentifier: SEQUENCE { OID, parameters ANY OPTIONAL }. */
+function isAlgorithm(buf: Uint8Array, n: DerNode): boolean {
+  if (n.tag !== 0x30) return false;
+  const parts = strictChildren(buf, n);
+  return (parts.length === 1 || parts.length === 2) && isOid(buf, parts[0]);
+}
+/** Attribute values of a Name: the directory string types (UTF8String, PrintableString, IA5String and the others). */
+const NAME_STRING_TAGS = new Set([0x0c, 0x12, 0x13, 0x14, 0x15, 0x16, 0x19, 0x1a, 0x1b, 0x1c, 0x1e]);
+/** Name: SEQUENCE OF SET (1..n) OF SEQUENCE { OID, string value }. */
+function isName(buf: Uint8Array, n: DerNode): boolean {
+  if (n.tag !== 0x30) return false;
+  return strictChildren(buf, n).every((rdn) => {
+    if (rdn.tag !== 0x31) return false;
+    const atvs = strictChildren(buf, rdn);
+    return atvs.length > 0 && atvs.every((atv) => {
+      if (atv.tag !== 0x30) return false;
+      const pair = strictChildren(buf, atv);
+      return pair.length === 2 && isOid(buf, pair[0]) && NAME_STRING_TAGS.has(pair[1].tag);
+    });
+  });
+}
+/** Extensions: [3] { SEQUENCE (1..n) OF SEQUENCE { OID, BOOLEAN OPTIONAL, OCTET STRING } }, ids unique. */
+function isExtensions(buf: Uint8Array, n: DerNode): boolean {
+  if (n.tag !== 0xa3) return false;
+  const [list, ...rest] = strictChildren(buf, n);
+  if (!list || rest.length || list.tag !== 0x30) return false;
+  const ids = new Set<string>();
+  const items = strictChildren(buf, list);
+  return items.length > 0 && items.every((ext) => {
+    if (ext.tag !== 0x30) return false;
+    const parts = strictChildren(buf, ext);
+    const critical = parts.length === 3 ? parts[1] : null;
+    const value = parts[parts.length - 1];
+    if ((parts.length !== 2 && parts.length !== 3) || !isOid(buf, parts[0]) || value.tag !== 0x04) return false;
+    if (critical && !(critical.tag === 0x01 && critical.end - critical.contentStart === 1 && [0x00, 0xff].includes(buf[critical.contentStart]))) return false;
+    const id = Array.from(content(buf, parts[0])).join('.');
+    if (ids.has(id)) return false;
+    ids.add(id);
+    return true;
+  });
+}
+
+/**
+ * The shape of one certificate, or null: Certificate ::= SEQUENCE {
+ * tbsCertificate, signatureAlgorithm (the same as the TBS signature field),
+ * signatureValue BIT STRING (not empty, no unused bits) } with nothing after
+ * it, and a TBSCertificate with version 1..3, serial, algorithm, issuer,
+ * validity, subject, key and only [1], [2], [3] after it, in order.
+ */
+function certificateShape(der: Uint8Array): { spki: Uint8Array; notBefore: number; notAfter: number } | null {
+  const cert = readDer(der);
+  if (cert.tag !== 0x30 || cert.end !== der.length || !minimalHeader(der, cert)) return null;
+  strictTree(der, cert);
+  const parts = strictChildren(der, cert);
+  if (parts.length !== 3) return null;
+  const [tbs, algorithm, signature] = parts;
+  if (tbs.tag !== 0x30 || !isBitString(der, signature, 0x03, true, 1)) return null;
+  const fields = strictChildren(der, tbs);
+  let at = 0;
+  if (fields[0]?.tag === 0xa0) {
+    const version = strictChildren(der, fields[0]);
+    if (version.length !== 1 || !isInteger(der, version[0]) || version[0].end - version[0].contentStart !== 1 || der[version[0].contentStart] > 2) return null;
+    at = 1;
+  }
+  const [serial, tbsAlgorithm, issuer, validity, subject, spki, ...optional] = fields.slice(at);
+  if (!serial || !isInteger(der, serial) || !tbsAlgorithm || !isAlgorithm(der, tbsAlgorithm) || !sameBytes(tbsAlgorithm.bytes, algorithm.bytes)) return null;
+  if (!issuer || !isName(der, issuer) || !subject || !isName(der, subject) || validity?.tag !== 0x30 || spki?.tag !== 0x30) return null;
+  const keyParts = strictChildren(der, spki);
+  if (keyParts.length !== 2 || !isAlgorithm(der, keyParts[0]) || !isBitString(der, keyParts[1], 0x03, true, 1)) return null;
+  let last = 0;
+  for (const field of optional) {
+    const order = field.tag === 0x81 ? 1 : field.tag === 0x82 ? 2 : field.tag === 0xa3 ? 3 : 0;
+    if (order <= last) return null;
+    if (order < 3 ? !isBitString(der, field, field.tag, false) : !isExtensions(der, field)) return null;
+    last = order;
+  }
+  const times = strictChildren(der, validity);
+  if (times.length !== 2) return null;
+  const notBefore = derTime(der, times[0]);
+  const notAfter = derTime(der, times[1]);
+  if (notBefore === null || notAfter === null || notBefore > notAfter) return null;
+  return { spki: spki.bytes, notBefore, notAfter };
+}
+
 /**
  * Whether a certificate can open a signature session or sign (Codex 05/11
- * 05:09, R2): exactly one DER X.509 certificate (nothing after it, the three
- * parts of RFC 5280 §4.1), an RSA key WebCrypto imports for
- * RSASSA-PKCS1-v1_5 with at least 2048 bits, and `at` inside its validity
- * (inclusive). Returns null when all of it holds, or the reason. Trust in the
- * chain is for the PSC and the validator (ICP-Brasil), not decided here.
+ * 05:09 and 06:35, R2): exactly one X.509 certificate of the strict shape
+ * above, an RSA key WebCrypto imports for RSASSA-PKCS1-v1_5 with at least
+ * 2048 bits, and `at` inside its validity (inclusive). Returns null when all
+ * of it holds, or the reason. Trust in the chain is for the PSC and the
+ * validator (ICP-Brasil), not decided here.
  */
 export async function signerCertificateProblem(der: Uint8Array, at: Date): Promise<'certificate_invalid' | 'certificate_expired' | null> {
-  let spki: Uint8Array;
-  let notBefore: number | null;
-  let notAfter: number | null;
+  let shape: ReturnType<typeof certificateShape>;
   try {
-    const cert = readDer(der);
-    if (cert.tag !== 0x30 || cert.end !== der.length) return 'certificate_invalid';
-    const parts = derChildren(der, cert);
-    if (parts.length !== 3 || parts[0].tag !== 0x30 || parts[1].tag !== 0x30 || parts[2].tag !== 0x03) return 'certificate_invalid';
-    const fields = derChildren(der, parts[0]);
-    const validity = fields[(fields[0]?.tag === 0xa0 ? 1 : 0) + 3];
-    if (validity?.tag !== 0x30) return 'certificate_invalid';
-    const times = derChildren(der, validity);
-    if (times.length !== 2) return 'certificate_invalid';
-    notBefore = derTime(der, times[0]);
-    notAfter = derTime(der, times[1]);
-    ({ spki } = parseCertificate(der));
+    shape = certificateShape(der);
   } catch {
     return 'certificate_invalid';
   }
-  if (notBefore === null || notAfter === null || notBefore > notAfter) return 'certificate_invalid';
+  if (!shape) return 'certificate_invalid';
   try {
-    const key = await crypto.subtle.importKey('spki', new Uint8Array(spki), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    const key = await crypto.subtle.importKey('spki', new Uint8Array(shape.spki), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
     if (!((key.algorithm as RsaHashedKeyAlgorithm).modulusLength >= 2048)) return 'certificate_invalid';
   } catch {
     return 'certificate_invalid';
   }
   const t = at.getTime();
-  if (t > notAfter) return 'certificate_expired';
-  if (t < notBefore) return 'certificate_invalid';
+  if (t > shape.notAfter) return 'certificate_expired';
+  if (t < shape.notBefore) return 'certificate_invalid';
   return null;
 }
 

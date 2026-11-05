@@ -1,10 +1,12 @@
 // Sign-document flow (D17) against a fake PSC and an in-memory copy of the
 // database state machine (same transitions and checks as
 // 20261105100000_digital_signature.sql). Synthetic material only.
+import { StorageClient } from '@supabase/storage-js';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AD_RB_V1_1, sha256 } from '../../supabase/functions/_shared/pades';
 import { PscAmbiguousError, PscRejectedError, parseKeyList, sealSecret, tokenBinding, type PscCertificate } from '../../supabase/functions/_shared/psc';
 import { signDocument, signedPathOf, type SignatureOperation, type SignaturePorts, type SignatureRequest } from '../../supabase/functions/_shared/signatureFlow';
+import { storageAdapter } from '../../supabase/functions/_shared/signatureHandlers';
 import { RSA, minimalPdf, rawRsaSign, syntheticCertificate } from '../test/syntheticPki';
 
 const USER = '11111111-1111-4111-8111-111111111111';
@@ -746,6 +748,21 @@ describe('signDocument: Storage unavailable is not absence (Codex 05/11 05:09, R
     expect(world.storage.has(path())).toBe(true);
     expect(removed).toEqual([]);
     expect(world.db.calls.slice(before).filter((c) => c.startsWith('close:'))).toEqual([]);
+  });
+
+  it('through the real storage-js client: a structured 404 cancels the stored answer, a 500 leaves it stored (06:35)', async () => {
+    const realDownload = (status: number, body: unknown) => storageAdapter(new StorageClient('https://storage.synthetic.invalid/storage/v1', {},
+      (async () => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })) as typeof fetch).from('prescriptions')).download;
+    world.db.throwOnce.set('signature_complete', [rpcError('40001'), rpcError('40001'), rpcError('40001'), rpcError('40001')]);
+    await expect(signDocument(world.ports, world.request)).rejects.toMatchObject({ code: '40001' });
+    // Storage down (500 whose text says "not found"): error, nothing closed.
+    world.ports.downloadSigned = realDownload(500, { statusCode: '500', message: 'Upstream object route not found' });
+    await expect(signDocument(world.ports, world.request)).rejects.toThrow('Storage indisponível');
+    expect(opOf()).toMatchObject({ state: 'stored', cleanup_pending: false });
+    // The object is gone (structured 404): cancelled as invalid, never completed.
+    world.ports.downloadSigned = realDownload(404, { statusCode: '404', error: 'not_found', message: 'Object not found' });
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'cancelled', code: 'stored_object_invalid' });
+    expect(world.db.audit).toHaveLength(0);
   });
 
   it('an object already at the path while Storage is down for the read closes and removes nothing', async () => {

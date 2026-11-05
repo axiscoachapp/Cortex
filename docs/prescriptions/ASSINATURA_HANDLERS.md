@@ -51,6 +51,18 @@ Versões:
   - **indisponível:** todo o resto, qualquer que seja o texto. O adaptador lança, e nada é fechado nem removido por isso.
 
   Erro de leitura do banco (receita, CPF) também lança, em vez de virar "ausente".
+- **Bordas do reteste de 06:35 (Codex):**
+  - **R2, forma X.509 completa** (RFC 5280 §4.1, DER estrito), conferida antes de qualquer confiança:
+    - todo cabeçalho com o comprimento mínimo, e todo nó construído preenchido exatamente pelos filhos;
+    - `signatureAlgorithm` externo igual ao campo `signature` do TBS;
+    - `signatureValue` com pelo menos 1 byte e sem bits sobrando;
+    - versão 1 a 3, serial e OIDs mínimos;
+    - nomes com valores de tipo string;
+    - extensões únicas;
+    - só `[1]`, `[2]` e `[3]` depois da chave, nessa ordem.
+
+    Um teste diferencial gera centenas de variantes corrompidas e confere que nenhuma recusada pelo OpenSSL (`node:crypto.X509Certificate`) passa aqui.
+  - **R4, download real:** o storage-js 2.86 devolve a ausência no download como `StorageUnknownError` com a `Response` crua (`noResolveJson`). `storageErrorKind` lê esse corpo até 4 KiB e só aceita JSON com `statusCode` 404 em HTTP 400/404 como ausência. Gateway sem `statusCode`, HTML, 5xx e rede são indisponibilidade. `storageAdapter(bucket)` saiu de `signatureDeps.ts` para ser testado com o `StorageClient` real.
 - **R5, corpo:** o limite de 8 KiB é aplicado na leitura:
   - um `Content-Length` maior é recusado antes de ler;
   - sem ele, o stream é lido em pedaços e cancelado ao passar do limite;

@@ -87,21 +87,9 @@ export function readSignatureConfig(env: (name: string) => string | undefined, p
 /** Largest request body the handlers read. */
 export const MAX_BODY_BYTES = 8 * 1024;
 
-/**
- * The JSON object of a small body (Codex 05/11 05:09, R5). A declared
- * Content-Length over the limit is refused before reading; otherwise the
- * stream is read piece by piece and cancelled as soon as it passes the limit,
- * so a large or growing body is never buffered. Invalid UTF-8 or JSON, or
- * anything but an object, is null.
- */
-async function readBody(req: Request, maxBytes = MAX_BODY_BYTES): Promise<Record<string, unknown> | null> {
-  const declared = req.headers.get('content-length');
-  if (declared !== null && !(/^\d{1,9}$/.test(declared) && Number(declared) <= maxBytes)) {
-    await req.body?.cancel().catch(() => {});
-    return null;
-  }
-  if (!req.body) return null;
-  const reader = req.body.getReader();
+/** A stream read piece by piece, cancelled as soon as it passes `maxBytes`; null then or on any error. */
+async function readCapped(stream: ReadableStream<Uint8Array>, maxBytes: number): Promise<Uint8Array | null> {
+  const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
   try {
@@ -121,6 +109,25 @@ async function readBody(req: Request, maxBytes = MAX_BODY_BYTES): Promise<Record
   const bytes = new Uint8Array(size);
   let at = 0;
   for (const chunk of chunks) { bytes.set(chunk, at); at += chunk.byteLength; }
+  return bytes;
+}
+
+/**
+ * The JSON object of a small body (Codex 05/11 05:09, R5). A declared
+ * Content-Length over the limit is refused before reading; otherwise the
+ * stream is read piece by piece and cancelled as soon as it passes the limit,
+ * so a large or growing body is never buffered. Invalid UTF-8 or JSON, or
+ * anything but an object, is null.
+ */
+async function readBody(req: Request, maxBytes = MAX_BODY_BYTES): Promise<Record<string, unknown> | null> {
+  const declared = req.headers.get('content-length');
+  if (declared !== null && !(/^\d{1,9}$/.test(declared) && Number(declared) <= maxBytes)) {
+    await req.body?.cancel().catch(() => {});
+    return null;
+  }
+  if (!req.body) return null;
+  const bytes = await readCapped(req.body, maxBytes);
+  if (!bytes) return null;
   try {
     const value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
     return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -129,21 +136,81 @@ async function readBody(req: Request, maxBytes = MAX_BODY_BYTES): Promise<Record
   }
 }
 
-/**
- * How a Storage error reads (Codex 05/11 05:09, R4). Only the structured
- * answer of storage-js (StorageApiError: HTTP status 4xx and the body's
- * statusCode) says that an object is absent or already there; the older
- * Storage answers HTTP 400 with statusCode 404/409. Anything else, whatever
- * its text, is an unavailable Storage: the caller throws and nothing is
- * closed or removed because of it.
- */
-export function storageErrorKind(error: unknown): 'not_found' | 'exists' | 'unavailable' {
-  const e = error as { status?: unknown; statusCode?: unknown } | null;
-  const status = typeof e?.status === 'number' ? e.status : NaN;
-  const code = String(e?.statusCode);
+/** Largest Storage error body read to classify it. */
+const MAX_STORAGE_ERROR_BYTES = 4 * 1024;
+
+const storageKind = (status: number, statusCode: unknown): 'not_found' | 'exists' | 'unavailable' => {
+  const code = typeof statusCode === 'string' || typeof statusCode === 'number' ? String(statusCode) : '';
   if (code === '404' && (status === 400 || status === 404)) return 'not_found';
   if (code === '409' && (status === 400 || status === 409)) return 'exists';
   return 'unavailable';
+};
+
+/**
+ * How a Storage error reads (Codex 05/11 05:09 and 06:35, R4). Only a
+ * structured answer says that an object is absent or already there: HTTP 400
+ * or 404 with statusCode 404 (400 is the older Storage), HTTP 400 or 409 with
+ * statusCode 409. storage-js 2.86 gives it in two shapes:
+ * - StorageApiError (JSON answers, e.g. upload): status and statusCode;
+ * - StorageUnknownError around the HTTP answer itself (download, which asks
+ *   for the raw body): its status and a small JSON body (at most 4 KiB) whose
+ *   own statusCode must agree; a body without it (a gateway's 404, HTML) is
+ *   not an answer about the object.
+ * Anything else, whatever its text (500, 503, network), is an unavailable
+ * Storage: the caller throws and nothing is closed or removed because of it.
+ */
+export async function storageErrorKind(error: unknown): Promise<'not_found' | 'exists' | 'unavailable'> {
+  const e = error as { status?: unknown; statusCode?: unknown; originalError?: unknown } | null;
+  if (typeof e?.status === 'number') return storageKind(e.status, e.statusCode);
+  const response = e?.originalError as { status?: unknown; bodyUsed?: unknown; body?: unknown } | null | undefined;
+  if (typeof response?.status !== 'number' || response.bodyUsed) return 'unavailable';
+  const body = response.body as ReadableStream<Uint8Array> | null | undefined;
+  if (!body || typeof body.getReader !== 'function') return 'unavailable';
+  const bytes = await readCapped(body, MAX_STORAGE_ERROR_BYTES);
+  if (!bytes) return 'unavailable';
+  try {
+    const parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return 'unavailable';
+    return storageKind(response.status, (parsed as { statusCode: unknown }).statusCode);
+  } catch {
+    return 'unavailable';
+  }
+}
+
+/** The part of a storage-js bucket (supabase-js storage.from) the handlers use. */
+export interface StorageBucket {
+  download(path: string): PromiseLike<{ data: Blob | null; error: unknown }>;
+  upload(path: string, body: Uint8Array, options: { contentType: string; upsert: boolean }): PromiseLike<{ error: unknown }>;
+  remove(paths: string[]): PromiseLike<{ error: unknown }>;
+}
+
+/**
+ * The handlers' Storage over a storage-js bucket: absent and already there
+ * only by storageErrorKind; every other error throws, so an unavailable
+ * Storage never reads as a missing or existing object.
+ */
+export function storageAdapter(bucket: StorageBucket): HandlerDeps['storage'] {
+  return {
+    download: async (path) => {
+      const { data, error } = await bucket.download(path);
+      if (error) {
+        if ((await storageErrorKind(error)) === 'not_found') return null;
+        throw new Error('Storage indisponível');
+      }
+      if (!data) throw new Error('Storage indisponível');
+      return new Uint8Array(await data.arrayBuffer());
+    },
+    upload: async (path, pdf) => {
+      const { error } = await bucket.upload(path, pdf, { contentType: 'application/pdf', upsert: false });
+      if (!error) return 'created';
+      if ((await storageErrorKind(error)) === 'exists') return 'exists';
+      throw new Error('Storage indisponível');
+    },
+    remove: async (path) => {
+      const { error } = await bucket.remove([path]);
+      if (error) throw new Error('Storage indisponível');
+    },
+  };
 }
 
 function responder(deps: HandlerDeps) {
