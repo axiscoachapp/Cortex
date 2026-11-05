@@ -1,0 +1,69 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "2dd77a045232585bb3bbbfc787a46f2622d96e9d",
+  "states": 37,
+  "navigationStates": 23,
+  "navigationKeyboardVerified": true,
+  "sourceHashesVerified": true,
+  "cleanupVerified": true,
+  "layouts": [
+    {
+      "width": 320,
+      "states": 1,
+      "minGap": 5.390625,
+      "minTargetWidth": 44.8125,
+      "minTargetHeight": 86.390625
+    },
+    {
+      "width": 375,
+      "states": 10,
+      "minGap": 11.734375,
+      "minTargetWidth": 65.921875,
+      "minTargetHeight": 86.390625
+    },
+    {
+      "width": 390,
+      "states": 1,
+      "minGap": 13.609375,
+      "minTargetWidth": 69.671875,
+      "minTargetHeight": 86.390625
+    },
+    {
+      "width": 768,
+      "states": 1,
+      "minGap": 86.4375,
+      "minTargetWidth": 147.125,
+      "minTargetHeight": 86.390625
+    },
+    {
+      "width": 1280,
+      "states": 10,
+      "minGap": 188.828125,
+      "minTargetWidth": 249.53125,
+      "minTargetHeight": 86.390625
+    }
+  ],
+  "visibleAlerts": [
+    {
+      "path": "/permissoes-recepcao",
+      "width": 375,
+      "alerts": [
+        "A resposta não pôde ser validada. Atualize a lista.Tentar novamente"
+      ]
+    },
+    {
+      "path": "/permissoes-recepcao",
+      "width": 1280,
+      "alerts": [
+        "A resposta não pôde ser validada. Atualize a lista.Tentar novamente"
+      ]
+    }
+  ],
+  "checks": {
+    "nodeSyntax": true,
+    "eslintComponent": true,
+    "eslintNodeBrowser": true,
+    "incompatibleFlagsRejected": true
+  }
+}

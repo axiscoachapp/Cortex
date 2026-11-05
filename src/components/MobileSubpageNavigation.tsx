@@ -20,9 +20,9 @@ export function MobileSubpageNavigation() {
     {to:'/seguranca',label:'Conta',icon:Shield},
   ]:main;
   return <nav aria-label="Navegação principal" className="xl:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-background/95 backdrop-blur-sm" style={{height:'calc(4rem + env(safe-area-inset-bottom))',paddingBottom:'env(safe-area-inset-bottom)'}}>
-    <div className="flex h-16 items-stretch px-1">
-      {items.map(({to,label,icon:Icon})=><NavLink key={to} to={to} end={to==='/'||to==='/recepcao'} className={({isActive})=>cn('flex-1 flex flex-col items-center justify-center gap-1 rounded-lg text-[0.6875rem] min-h-11',isActive?'bg-primary/10 text-primary':'text-muted-foreground')}><Icon className="h-4 w-4"/>{label}</NavLink>)}
-      {!reception&&<DropdownMenu><DropdownMenuTrigger className="flex-1 flex flex-col items-center justify-center gap-1 rounded-lg text-[0.6875rem] text-muted-foreground min-h-11" aria-label="Mais páginas"><Menu className="h-4 w-4"/>Mais</DropdownMenuTrigger>
+    <div className="flex h-16 items-stretch gap-1 px-1">
+      {items.map(({to,label,icon:Icon})=><NavLink key={to} to={to} end={to==='/'||to==='/recepcao'} className={({isActive})=>cn('flex-1 flex flex-col items-center justify-center gap-1 rounded-lg text-[0.625rem] min-h-11',isActive?'bg-primary/10 text-primary':'text-muted-foreground')}><Icon className="h-4 w-4"/>{label}</NavLink>)}
+      {!reception&&<DropdownMenu><DropdownMenuTrigger className="flex-1 flex flex-col items-center justify-center gap-1 rounded-lg text-[0.625rem] text-muted-foreground min-h-11" aria-label="Mais páginas"><Menu className="h-4 w-4"/>Mais</DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="end">{more.map(({to,label,icon:Icon})=><DropdownMenuItem key={to} asChild><NavLink to={to}><Icon className="h-4 w-4 mr-2"/>{label}</NavLink></DropdownMenuItem>)}</DropdownMenuContent>
       </DropdownMenu>}
     </div>

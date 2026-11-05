@@ -14,12 +14,14 @@ import { startClinicFixture } from './fixtures/clinic-review-api.mjs';
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|check-time-layout)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|check-time-layout|check-mobile-navigation)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
+const checkMobileNavigation = args.includes('--check-mobile-navigation');
+assert.ok(!timeOnly || !checkMobileNavigation, 'Mobile navigation checks require the full route audit');
 const git = options => { const result = spawnSync('git', options, { encoding: 'utf8', windowsHide: true, maxBuffer: 20 * 1024 * 1024 }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); };
 const baseline = args.find(arg => arg.startsWith('--baseline='))?.slice(11) || git(['rev-parse', 'HEAD']);
 const overlays = args.filter(arg => arg.startsWith('--overlay=')).map(arg => arg.slice(10));
-const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/BottomNavigation\.tsx)$/;
+const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation)\.tsx)$/;
 for (const path of overlays) assert.match(path, allowed, 'Overlay must be in the Codex audit scope');
 const run = args.find(arg => arg.startsWith('--run='))?.slice(6) || 'baseline';
 const folder = resolve('docs/reviews/2026-11-05/reception-app-audit', run);
@@ -49,7 +51,7 @@ const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/c
 const ownHashes = await Promise.all(ownPaths.map(async path => ({ path, sha256: createHash('sha256').update(await readFile(path)).digest('hex') })));
 const apps = [], apis = [], contexts = [], errors = [], blocked = [], consoleErrors = [], screens = [], failedRequests = [], errorResponses = [];
 const cacheOwner = randomUUID();
-let browser, temporaryCache, failure, cleanupVerified = false;
+let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false;
 async function appFor(api) {
   process.env.VITE_SUPABASE_URL = api.origin; process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'synthetic-public-key';
   process.env.VITE_BYPASS_EMAIL = ''; process.env.VITE_BYPASS_PASSWORD = '';
@@ -93,8 +95,15 @@ async function capture(page, app, role, path, width, action, variant = '') {
     const missingLabels = [...document.querySelectorAll('input,select,textarea')].filter(visible).filter(element => !['hidden', 'submit', 'button', 'reset'].includes(element.type)).filter(element => !name(element)).map(element => ({ tag: element.tagName, type: element.type, placeholder: element.getAttribute('placeholder'), html: element.outerHTML.slice(0, 600) }));
     const dialogElement = document.querySelector('[role="dialog"],[role="alertdialog"]'), dialog = dialogElement?.getBoundingClientRect();
     const dialogOutsideViewport = dialog ? dialog.left < -1 || dialog.top < -1 || dialog.right > innerWidth + 1 || dialog.bottom > innerHeight + 1 : false;
+    const navigationLabels = [...document.querySelectorAll('nav[aria-label="Navegação principal"] > div > a, nav[aria-label="Navegação principal"] > div > button')].filter(visible).map(element => {
+      const text = [...element.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      if (!text) return null;
+      const range = document.createRange(); range.selectNode(text);
+      const rect = range.getBoundingClientRect(), target = element.getBoundingClientRect();
+      return { label: text.textContent.trim(), left: rect.left, right: rect.right, targetLeft: target.left, targetRight: target.right, targetHeight: target.height };
+    }).filter(Boolean);
     return { fontSize: getComputedStyle(document.documentElement).fontSize, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, dialogOutsideViewport, dialogHorizontalOverflow: dialogElement ? dialogElement.scrollWidth - dialogElement.clientWidth : 0,
-      missingButtons, missingLabels, visibleAlerts: [...document.querySelectorAll('[role="alert"]')].filter(visible).map(element => element.textContent.trim()),
+      missingButtons, missingLabels, navigationLabels, visibleAlerts: [...document.querySelectorAll('[role="alert"]')].filter(visible).map(element => element.textContent.trim()),
       timeControls: [...document.querySelectorAll('input[type="time"]')].filter(visible).map(element => { const rect = element.getBoundingClientRect(); return { id: element.id, value: element.value, width: rect.width, top: rect.top, bottom: rect.bottom }; }),
       brokenText: document.body.innerText.match(/\bundefined\b|\bNaN\b|\[object Object\]/g) ?? [], headings: [...document.querySelectorAll('h1,h2')].filter(visible).map(element => element.textContent.trim()) };
   });
@@ -116,6 +125,13 @@ async function capture(page, app, role, path, width, action, variant = '') {
   const actionScreenshot = dialogActions.length ? file.replace('.png', '-actions.png') : undefined;
   if (actionScreenshot) await page.screenshot({ path: resolve(folder, actionScreenshot), fullPage: true, animations: 'disabled' });
   screens.push({ role, path, variant, actualPath: new URL(page.url()).pathname, width, dialogActions, dialogActionReachable, recoveryScreen: measurement.headings.includes('Não foi possível exibir esta tela'), ...measurement, screenshot: file, actionScreenshot });
+  if (checkMobileNavigation && !variant && role !== 'anonymous') {
+    assert.equal(measurement.navigationLabels.length, role === 'staff' ? 4 : 5, 'Expected role-specific navigation labels');
+    for (const [index, label] of measurement.navigationLabels.entries()) {
+      assert.ok(label.targetHeight >= 44 && label.targetRight - label.targetLeft >= 44 && label.left >= label.targetLeft - 1 && label.right <= label.targetRight + 1, 'Navigation label must fit its touch target of at least 44px');
+      if (index) assert.ok(label.left - measurement.navigationLabels[index - 1].right >= (width < 375 ? 4 : 8), 'Mobile navigation labels need at least 8px of separation at 375px and above, or 4px on smaller phones');
+    }
+  }
   if (checkTimeLayout && ['reschedule-dialog', 'block-time-dialog'].includes(variant)) {
     const [start, end] = measurement.timeControls;
     assert.equal(measurement.timeControls.length, 2);
@@ -134,6 +150,21 @@ try {
   const doctor = await scene(doctorApp, 'review', '/agenda');
   for (const path of ['/agenda', '/compartilhamento', '/trabalho', '/seguranca', '/privacidade', '/permissoes-recepcao'])
     for (const width of [375, 1280]) await capture(doctor, doctorApp, 'clinical', path, width);
+  if (checkMobileNavigation) {
+    for (const width of [320, 390, 768]) await capture(doctor, doctorApp, 'clinical', '/agenda', width);
+    const nav = doctor.getByRole('navigation', { name: 'Navegação principal' });
+    await nav.getByRole('link', { name: 'Pendências', exact: true }).focus(); await doctor.keyboard.press('Enter');
+    await expect(doctor).toHaveURL(doctorApp.origin + '/trabalho');
+    await expect(nav.getByRole('link', { name: 'Pendências', exact: true })).toHaveAttribute('aria-current', 'page');
+    await nav.getByRole('button', { name: 'Mais páginas', exact: true }).focus(); await doctor.keyboard.press('Enter');
+    await expect(doctor.getByRole('menuitem', { name: 'Assistente', exact: true })).toBeFocused();
+    await doctor.keyboard.press('ArrowDown');
+    await expect(doctor.getByRole('menuitem', { name: 'Modelos', exact: true })).toBeFocused();
+    await doctor.keyboard.press('ArrowDown');
+    await expect(doctor.getByRole('menuitem', { name: 'Conhecimento', exact: true })).toBeFocused();
+    await doctor.keyboard.press('Enter'); await expect(doctor).toHaveURL(doctorApp.origin + '/conhecimento');
+    await expect(doctor.getByRole('menu')).toHaveCount(0); navigationKeyboardVerified = true;
+  }
   for (const width of [375, 1280]) await capture(doctor, doctorApp, 'clinical', '/privacidade', width, async page => {
     await page.getByRole('button', { name: 'Excluir minha conta', exact: true }).click();
     await expect(page.getByRole('alertdialog')).toBeVisible();
@@ -173,7 +204,8 @@ try {
     await expect(page.getByRole('dialog')).toBeVisible();
   }, 'block-time-dialog');
   for (const source of [...ownHashes, ...overlayHashes]) assert.equal(createHash('sha256').update(await readFile(source.path)).digest('hex'), source.sha256, 'Audit source changed during run');
-  for (const path of ['src/App.tsx', 'src/pages/Auth.tsx', 'src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
+  for (const path of ['src/App.tsx', 'src/pages/Auth.tsx', 'src/features/reception/ReceptionCalendar.tsx', ...overlays, ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
+  if (checkMobileNavigation) assert.equal(navigationKeyboardVerified, true, 'Keyboard navigation did not complete');
 } catch (error) {
   failure = { name: error.name, message: error.message };
 } finally {
@@ -190,7 +222,7 @@ try {
   }
   cleanupVerified = true;
 }
-const report = { completed: !failure, failure, timeOnly, checkTimeLayout, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
+const report = { completed: !failure, failure, timeOnly, checkTimeLayout, checkMobileNavigation, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
   frozenLoads: [...frozenLoads].sort(), screens, errors, consoleErrors, failedRequests, errorResponses, blockedExternalRequests: blocked, cleanupVerified };
 await writeFile(resolve(folder, 'AUDIT.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify({ baseline, screens: screens.length, errors: errors.length, consoleErrors: consoleErrors.length,
