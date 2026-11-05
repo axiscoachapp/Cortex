@@ -26,7 +26,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { assertPrescriptionPath } from "../_shared/storage.ts";
 
 const ITI_FORMAT = 'application/validador-iti+json';
-const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
+// Any canonical UUID, as the producer accepts it (signature_reserve and the
+// staged_path CHECK); version and variant bits are not restricted.
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 
 /**
  * The signed PDF of a validly signed document, or null when the document is

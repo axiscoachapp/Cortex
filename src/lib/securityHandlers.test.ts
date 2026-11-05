@@ -451,6 +451,14 @@ describe('security endpoint regressions', () => {
     });
     const iti = '&_format=application%2Fvalidador-iti%2Bjson';
 
+    it('accepts any canonical operation UUID, as the producer does (Codex 05/11 03:39)', async () => {
+      const canonical = `rx/${user}/${rxId}/signed-44444444-4444-4444-4444-444444444444.pdf`;
+      const db = fakeDatabase({ prescriptions: [row({ signed_storage_path: canonical })] });
+      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&_secretCode=ABC${iti}`));
+      expect(response.status).toBe(200);
+      expect(db.createSignedUrl).toHaveBeenCalledWith(canonical, 300);
+    });
+
     it('answers exactly the official structure with a short URL of the signed PDF', async () => {
       const db = fakeDatabase({ prescriptions: [row()] });
       const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&_secretCode=ABC${iti}`));
