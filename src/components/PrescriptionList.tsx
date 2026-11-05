@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllRows } from '@/lib/pagination';
 import { functionErrorMessage } from '@/lib/functionErrors';
+import { SIGNABLE_TYPES } from '@/lib/signatureClient';
+import { SignDocumentButton, SignatureSessionBar } from '@/components/SignatureControls';
+import { useSignatureSession } from '@/hooks/useSignatureSession';
 
 interface PrescriptionRow {
   id: string;
@@ -18,7 +21,19 @@ interface PrescriptionRow {
   expires_at: string;
   signature_verified_at?: string | null;
   issuance_verified_at?: string | null;
+  /** The issued document; pdf_sha256 is the hash of the PDF the doctor saw. */
+  issuance_snapshot?: { pdf_sha256?: unknown } | null;
 }
+
+const HEX64 = /^[0-9a-f]{64}$/;
+/** A generated, verified, unexpired document of a type signed in this phase, and its hash. */
+function signableHash(rx: PrescriptionRow, expired: boolean): string | null {
+  const hash = rx.issuance_snapshot?.pdf_sha256;
+  return rx.status === 'generated' && !!rx.issuance_verified_at && !expired && SIGNABLE_TYPES.has(rx.doc_type)
+    && typeof hash === 'string' && HEX64.test(hash) ? hash : null;
+}
+const isExpired = (rx: PrescriptionRow) =>
+  (typeof rx.doc_type !== 'string' || rx.doc_type.startsWith('receita')) && new Date(rx.expires_at).getTime() <= Date.now();
 
 const TYPE_LABELS: Record<PrescriptionRow['doc_type'], string> = {
   receita_simples: 'Receita simples',
@@ -60,6 +75,10 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
     enabled: !!patientId && !!user,
     staleTime: 30_000,
   });
+  const anySignable = rows.some((rx) => signableHash(rx, isExpired(rx)) !== null);
+  const { data: signature } = useSignatureSession(anySignable);
+  const signing = signature?.available && signature.configured ? signature : null;
+  const refreshRows = () => queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patientId] });
 
   const handleRevoke = async (rx: PrescriptionRow) => {
     if (!window.confirm('Revogar este documento? Farmácias não conseguirão mais validá-lo.')) return;
@@ -93,6 +112,7 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
         <FileSignature className="w-4 h-4 text-medical-blue" />
         Receitas & Atestados
         <span className="text-[0.625rem] text-muted-foreground font-normal">{rows.length}</span>
+        {signing && anySignable && <span className="ml-auto"><SignatureSessionBar state={signing} /></span>}
       </h3>
       <div className="space-y-1.5">
         {rows.slice(0, visibleCount).map(rx => {
@@ -103,8 +123,8 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
               ? {label:'Assinatura não verificada',cls:'bg-amber-100 text-amber-700'} : STATUS_META[rx.status];
           // Same rule as validate-prescription: only prescriptions have a
           // dispensing window; sick notes and exam requests stay valid.
-          const expires = typeof rx.doc_type !== 'string' || rx.doc_type.startsWith('receita');
-          const expired = expires && new Date(rx.expires_at).getTime() <= Date.now();
+          const expired = isExpired(rx);
+          const signHash = signing ? signableHash(rx, expired) : null;
           return (
             <div key={rx.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border/60 bg-card">
               <div className="flex-1 min-w-0">
@@ -119,6 +139,9 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
                 {trusted && expired && rx.status !== 'revoked' ? 'Expirada' : meta.label}
               </span>
               <div className="flex items-center gap-0.5 shrink-0">
+                {signHash && signing && (
+                  <SignDocumentButton prescriptionId={rx.id} pdfSha256={signHash} sessionActive={signing.active} onSigned={refreshRows} />
+                )}
                 <Button
                   size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground"
                   title="Copiar código de acesso"

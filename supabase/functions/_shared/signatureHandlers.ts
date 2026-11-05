@@ -359,7 +359,8 @@ export async function signatureSessionHandler(req: Request, deps: HandlerDeps): 
 
   try {
     if (route === 'revoke') return json(200, { revoked: Number(await deps.rpc('signature_revoke_session', { p_user: ctx.userId })) > 0 });
-    if (route === 'state') return json(200, (await deps.rpc('signature_session_state', { p_user: ctx.userId })) as Record<string, unknown>);
+    // `configured` lets the screen hide signing until Phase 0 (SIGNATURE_* set).
+    if (route === 'state') return json(200, { ...((await deps.rpc('signature_session_state', { p_user: ctx.userId })) as Record<string, unknown>), configured: deps.config !== null });
     if (!deps.config) return json(503, { error: 'Assinatura digital ainda não configurada.', code: 'not_configured' });
     const config = deps.config;
     const auth = authOf(ctx);

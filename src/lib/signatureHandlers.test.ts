@@ -216,8 +216,11 @@ describe('signature-session handler', () => {
     }
     expect(low.deps.rpc).not.toHaveBeenCalled();
     const { deps, calls } = makeDeps({ ctx: { exp: NOW / 1000 + 60 } });
-    expect(await (await signatureSessionHandler(req('state', 'GET'), deps)).json()).toEqual({ active: true });
+    expect(await (await signatureSessionHandler(req('state', 'GET'), deps)).json()).toEqual({ active: true, configured: true });
     expect(await (await signatureSessionHandler(req('revoke'), deps)).json()).toEqual({ revoked: true });
+    // Without SIGNATURE_* the state still answers, saying it is not configured.
+    const bare = makeDeps({ config: null });
+    expect(await (await signatureSessionHandler(req('state', 'GET'), bare.deps)).json()).toEqual({ active: true, configured: false });
     expect(calls.map(([name, args]) => [name, args])).toEqual([
       ['signature_session_state', { p_user: USER }], ['signature_revoke_session', { p_user: USER }],
     ]);

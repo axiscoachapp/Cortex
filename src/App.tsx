@@ -22,6 +22,7 @@ const PrivacyNotice = lazy(() => import('./pages/PrivacyNotice'));
 const PatientManagement = lazy(() => import("./pages/PatientManagement"));
 const CalendarPage = lazy(() => import("./pages/Calendar"));
 const GoogleOAuthCallback = lazy(() => import("./pages/GoogleOAuthCallback"));
+const SignatureReturn = lazy(() => import("./pages/SignatureReturn"));
 const DataPrivacy = lazy(() => import("./pages/DataPrivacy"));
 const TemplatesPage = lazy(() => import("./pages/Templates"));
 const KnowledgeBasePage = lazy(() => import("./pages/KnowledgeBase"));
@@ -97,6 +98,7 @@ const router = createBrowserRouter([
     { path: '/gerenciar-pacientes', element: <PatientManagement /> },
     { path: '/agenda', element: <CalendarPage /> },
     { path: '/google-oauth-callback', element: <GoogleOAuthCallback /> },
+    { path: '/assinatura/retorno', element: <SignatureReturn /> },
     { path: '/privacidade', element: <DataPrivacy /> },
     { path: '/modelos', element: <TemplatesPage /> },
     { path: '/conhecimento', element: <KnowledgeBasePage /> },

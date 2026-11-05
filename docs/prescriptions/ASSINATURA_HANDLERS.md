@@ -88,6 +88,22 @@ Versões:
 
   Nenhuma RPC nem chamada ao PSC acontece depois da recusa.
 
+**Tela (05/11, decisão do usuário de priorizar entregas):**
+- **Lista de documentos (`PrescriptionList`):**
+  - no cabeçalho, "Abrir sessão de assinatura", ou "Assinatura digital ativa até HH:MM · Encerrar";
+  - em cada documento gerado, verificado, não vencido e de tipo da Fase 1, o botão "Assinar digitalmente".
+- **Sem resposta do PSC:** o botão vira "Tentar de novo", que pede confirmação e reenvia a mesma operação com `humanRetry`.
+- **Em andamento:** "Verificar assinatura" reenvia a mesma operação sem `humanRetry`.
+- **Id da operação:** fica neste aparelho (`localStorage`, só o uuid) até a operação terminar.
+- **Retorno do PSC:** `/assinatura/retorno` (o `SIGNATURE_PSC_REDIRECT_URI` aponta para cá) consome o código uma vez e volta à página de origem, só um caminho deste app.
+- **`GET state`** devolve `configured`: sem os `SIGNATURE_*`, a tela não mostra nada de assinatura.
+- **Arquivos:**
+  - `src/lib/signatureClient.ts` (mapeamento de cada resposta);
+  - `src/hooks/useSignatureSession.ts`;
+  - `src/components/SignatureControls.tsx`;
+  - `src/pages/SignatureReturn.tsx`.
+- **Falta:** "Gerar e assinar" num clique só, no fluxo de geração (`ChatPanel`), e a homologação real com o PSC (Fase 0).
+
 **Configuração (Fase 0).** Sem ela, a resposta é 503 `not_configured`:
 - `SIGNATURE_PSC_BASE_URL` (origem https, sem caminho);
 - `SIGNATURE_PSC_CLIENT_ID` e `SIGNATURE_PSC_CLIENT_SECRET`;
