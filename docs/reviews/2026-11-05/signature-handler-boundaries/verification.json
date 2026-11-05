@@ -1,0 +1,91 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "b6c21f8cf46363e109a4a63afa700a01e118b5e5",
+  "sourceSnapshotMatchesGit": true,
+  "unitPassed": 110,
+  "unitPending": 1,
+  "unitFiles": 5,
+  "unitFailed": 0,
+  "unitExitCode": 0,
+  "deno": {
+    "version": "2.9.6",
+    "cachedOnly": true,
+    "offline": true,
+    "entrypoints": [
+      "sign-document",
+      "signature-session"
+    ],
+    "exitCode": 0
+  },
+  "sources": [
+    {
+      "path": "src/lib/signatureHandlers.test.ts",
+      "sha256": "9dd6e9030b8a652925139efa57fdadd09247678b3bf18ac24bf1c1c50bcf2ada"
+    },
+    {
+      "path": "src/lib/signatureFlow.test.ts",
+      "sha256": "1177918a1866915dd8bfea648772ea2ee0736fbdbe40f4ca8c3acd0b796daff5"
+    },
+    {
+      "path": "src/lib/pades.test.ts",
+      "sha256": "5d3f124b1387e9addb3afa3275828f0ed1faa21db65f821006ba69dbd1141127"
+    },
+    {
+      "path": "src/lib/psc.test.ts",
+      "sha256": "439a2756ccf8d470e3e6e1f3ccc78c4d4ec62616b1382279625e3f0e7d220a36"
+    },
+    {
+      "path": "src/lib/authAssurance.test.ts",
+      "sha256": "fc732b021f8742cab5785457120c39659fcdd8b1d1fe1d36dd4f7574424e0978"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureHandlers.ts",
+      "sha256": "238147f44cc9a0770ccbd49c5ffca10775920ee18b8ca0a731d46195bc78149e"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureDeps.ts",
+      "sha256": "a23946df28e1d1b63fab770bf30e6ea1a164d36552d1bbca3f1406f746388d15"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureFlow.ts",
+      "sha256": "b146c9fef2151dc7e0fa0e1cf6322188705fc7ff9962d7d1e560dfaca6a309a6"
+    },
+    {
+      "path": "supabase/functions/_shared/auth.ts",
+      "sha256": "7ad19b9c7173ea41a516a0d4018a3ad772b5a047fc9b47c6bfa6c4e10e09eeeb"
+    },
+    {
+      "path": "supabase/functions/_shared/pades.ts",
+      "sha256": "23f2d6ea4b67ce135db59f934b32fe1c346beef0833da48a2340768687b4259e"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "sha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71"
+    },
+    {
+      "path": "supabase/functions/sign-document/index.ts",
+      "sha256": "b9647bdb0bf4db18d8a17316e1b7aea5e5c130225de13f94fa31b62ce9ce972d"
+    },
+    {
+      "path": "supabase/functions/signature-session/index.ts",
+      "sha256": "5be3e98c2de14a18f5000ac6b21aebe2f8f337a036a3c71615cde12f25b881b3"
+    }
+  ],
+  "reviewResolved": false,
+  "realAuthStorageOrPscCalls": false,
+  "fullAppSuiteOrBuildRun": false,
+  "lint": {
+    "scripts": [
+      "test-signature-handler-boundaries.mjs",
+      "test-signature-handler-sql.mjs"
+    ],
+    "exitCode": 0
+  },
+  "sql": {
+    "migrations": 69,
+    "rootSuites": 0,
+    "probes": 2,
+    "cleanupVerified": true
+  },
+  "finalProofHashesVerified": true
+}

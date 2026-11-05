@@ -1,0 +1,38 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "b6c21f8cf46363e109a4a63afa700a01e118b5e5",
+  "migrations": 69,
+  "sqlSuitesRun": 0,
+  "sqlSourceDigest": "bf25a16aee37a33aaa532bd6d2ef0ab14e59e28a5fd84266779c4dc5a5dc68ec",
+  "ownSources": [
+    {
+      "path": "scripts/test-signature-handler-sql.mjs",
+      "sha256": "2759da28845857ae40edef3e2cd3fab52393eb9c66edba616d89526c2b8920ad"
+    },
+    {
+      "path": "supabase/tests/prototypes/signature-handler-resume.sql",
+      "sha256": "f5be3699be23a20adea0d0718b101f7eba9d24108b2aa88dfbf4f57de604e6c4"
+    }
+  ],
+  "rows": [
+    {
+      "observed": "ambiguous",
+      "state_after": "ambiguous",
+      "token_refusal": "P4031",
+      "advance_refusal": null,
+      "new_reservation_refusal": "P4093"
+    },
+    {
+      "observed": "prepared",
+      "state_after": "prepared",
+      "token_refusal": "P4031",
+      "advance_refusal": "22023",
+      "new_reservation_refusal": "P4093"
+    }
+  ],
+  "cleanupVerified": true,
+  "ownedInternalNetwork": true,
+  "publishedPorts": false,
+  "nativeAuthHttp": false,
+  "realProvider": false
+}
