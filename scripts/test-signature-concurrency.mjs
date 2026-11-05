@@ -63,12 +63,14 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
   const sql = (source) => required(docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'], bounds + source));
   const results = {};
   let n = 0;
+  /** The context the Edge would have verified for the doctor's Cortex session (never a body). */
+  const auth = (f) => `jsonb_build_object('sessionId','${f.cortexSession}','aal','aal2','exp',floor(extract(epoch from clock_timestamp()+interval '1 hour'))::bigint)`;
   /** A doctor with CPF, a patient, a generated prescription and an active session. */
   function fixture({ minutes = 60, consultationOfOtherPatient = false } = {}) {
     n++;
     const id = (prefix) => `${prefix}-0000-4000-8000-${String(n).padStart(12, '0')}`;
     const f = { user: id('e1700000'), patient: id('e1710000'), rx: id('e1720000'), session: id('e1730000'), op: id('e1740000'),
-      other: id('e1760000'), consultation: id('e1770000') };
+      other: id('e1760000'), consultation: id('e1770000'), cortexSession: id('e1790000'), factor: id('e1780000') };
     // Schema-valid legacy shape: the prescription's consultation belongs to
     // another patient of the same doctor (not corrected here by inference).
     const other = consultationOfOtherPatient
@@ -77,21 +79,29 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
       : '';
     sql(`insert into auth.users(id,email) values('${f.user}','race-${n}@example.invalid');
      insert into public.user_settings(user_id,prescriber_cpf) values('${f.user}','52998224725');
+     insert into auth.mfa_factors(id,user_id,status,factor_type) values('${f.factor}','${f.user}','verified','totp');
+     insert into auth.sessions(id,user_id,factor_id,aal) values('${f.cortexSession}','${f.user}','${f.factor}','aal2');
      insert into public.patients(id,user_id,name,age,last_visit,status) values('${f.patient}','${f.user}','Paciente sintética ${n}',30,current_date,'novo');
      ${other}
      insert into public.prescriptions(id,user_id,patient_id,consultation_id,storage_path,secret_code,expires_at,issuance_snapshot)
       values('${f.rx}','${f.user}','${f.patient}',${consultationOfOtherPatient ? `'${f.consultation}'` : 'null'},'rx/${f.user}/${f.rx}.pdf','synthetic',now()+interval '30 days',
        jsonb_build_object('prescriber','{}'::jsonb,'patient','{}'::jsonb,'pdf_sha256',${A64},'template_version','test','issued_at',now()));
-     begin;${service}select public.signature_activate_session('${f.user}','vidaas','${f.session}',now()+interval '${minutes} minutes',repeat('c',64),${SEALED});commit;`);
+     begin;${service}select public.signature_activate_session('${f.user}','vidaas','${f.session}',now()+interval '${minutes} minutes',repeat('c',64),${SEALED},${auth(f)});commit;`);
     return f;
   }
   const call = (f, expr) => sql(`begin;${service}select ${expr};commit;`);
-  const reserve = (f, op = f.op) => `public.signature_reserve('${f.user}','${op}','${f.rx}',${A64})`;
-  const advance = (f, to, data = PREP, op = f.op) => `public.signature_advance('${f.user}','${op}','${to}',${data})`;
+  const reserve = (f, op = f.op) => `public.signature_reserve('${f.user}','${op}','${f.rx}',${A64},${auth(f)})`;
+  // Productive steps carry the verified context; closing steps go to signature_close.
+  const advance = (f, to, data = PREP, op = f.op) => ['ambiguous', 'failed', 'cancelled'].includes(to)
+    ? `public.signature_close('${f.user}','${op}','${to}',${data})`
+    : `public.signature_advance('${f.user}','${op}','${to}',${to === 'psc_requested' && data === PREP ? `${PREP}||jsonb_build_object('attempt',0)` : data},${auth(f)})`;
+  const complete = (f) => `public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica',${auth(f)})`;
   const toStored = (f) => {
     call(f, reserve(f));
     call(f, advance(f, 'prepared'));
     call(f, advance(f, 'psc_requested'));
+    // The signed object exists before its answer is stored (the commit point checks it).
+    sql(`insert into storage.objects(bucket_id,name) values('prescriptions','rx/${f.user}/${f.rx}/signed-${f.op}.pdf')`);
     call(f, advance(f, 'stored', `jsonb_build_object('stagedPath','rx/${f.user}/${f.rx}/signed-${f.op}.pdf','signedSha256',repeat('f',64),'attempt',1)`));
   };
   const state = (f) => sql(`select state from cortex_private.signature_operations where operation_id='${f.op}'`);
@@ -128,7 +138,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     s.send(`select 'PID='||pg_backend_pid();`);
     await s.wait('PID=');
     const pid = backendPid(s);
-    s.send(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica');`);
+    s.send(`begin;${service}select ${complete(f)};`);
     for (let i = 0; i < 400 && !s.closed(); i++) {
       if (sql(`select coalesce(wait_event_type,'') from pg_stat_activity where pid=${pid}`) === 'Lock') return { s, waited: true };
       await new Promise((r) => setTimeout(r, 20));
@@ -185,7 +195,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     assert.equal(signed(f), 'generated');
     // Retry after the row is free: the clock decides.
     if (expect !== 'completed') await new Promise((r) => setTimeout(r, seconds * 1000 + 200));
-    call(f, `public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')`);
+    call(f, `${complete(f)}`);
     assert.equal(state(f), expect, `${label}: wrong outcome on retry`);
     assert.equal(signed(f), expect === 'completed' ? 'signed' : 'generated', `${label}: prescription status`);
     assert.equal(audits(f), expect === 'completed' ? 1 : 0, `${label}: audit rows`);
@@ -196,7 +206,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
   if (!beforeFix) {
     const f = fixture({ minutes: 5 });
     toStored(f);
-    const original = sql(`select pg_get_functiondef('public.signature_complete(uuid,uuid,text,text)'::regprocedure)`);
+    const original = sql(`select pg_get_functiondef('public.signature_complete(uuid,uuid,text,text,jsonb)'::regprocedure)`);
     const site = 'from public.prescriptions where id=o.prescription_id for update nowait';
     assert.equal(original.split(site).length, 2, 'control: NOWAIT site not found in signature_complete');
     sql(original.replace(site, 'from public.prescriptions where id=o.prescription_id for update') + ';');
@@ -211,7 +221,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     } finally {
       sql(original + ';');
     }
-    assert.equal(sql(`select pg_get_functiondef('public.signature_complete(uuid,uuid,text,text)'::regprocedure)`), original, 'control: signature_complete not restored');
+    assert.equal(sql(`select pg_get_functiondef('public.signature_complete(uuid,uuid,text,text,jsonb)'::regprocedure)`), original, 'control: signature_complete not restored');
     results.rowBusyControl = 'wait detected without NOWAIT';
   }
   });
@@ -238,7 +248,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
       }
       assert.ok(observed, 'The clinical update did not wait on 123');
       // Now the signature asks for the tuple the updater already holds.
-      const signed1 = await signer.finish(`${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica');commit;`);
+      const signed1 = await signer.finish(`${service}select ${complete(f)};commit;`);
       const updated = await updater.finish('');
       const all = signed1.stderr + updated.stderr;
       assert.doesNotMatch(all, /40P01|deadlock/i, all);
@@ -247,7 +257,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
       assert.equal(updated.status, 0, updated.stderr);
       assert.equal(state(f), 'stored');
       // The same completion afterwards succeeds.
-      call(f, `public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')`);
+      call(f, `${complete(f)}`);
       assert.equal(state(f), 'completed');
       results[`clinicalUpdateFirst_${isolation.replace(' ', '_')}`] = 'signature 40001 at once, update committed, no deadlock';
     });
@@ -258,7 +268,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     const updater = session(container);
     updater.send(`begin;set local request.jwt.claim.role='service_role';update public.prescriptions set expires_at=expires_at where id='${f.rx}';\n\\echo UPDATER_HOLDS`);
     await updater.wait('UPDATER_HOLDS');
-    const signer = await startBlocked(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`, 'signature behind the clinical update');
+    const signer = await startBlocked(`begin;${service}select ${complete(f)}->>'state';commit;`, 'signature behind the clinical update');
     const up = await updater.finish('commit;');
     const done = await signer.finish('');
     assert.doesNotMatch(done.stderr + up.stderr, /40P01|deadlock/i);
@@ -311,14 +321,14 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
   await check('account intent, old RR snapshot (P4)', async () => {
   for (const label of ['token', 'verifier']) {
     const f = fixture();
-    sql(`begin;${service}select public.signature_begin_authorization('${f.user}','vidaas',repeat('${n % 10}',64),${SEALED});commit;`);
+    sql(`begin;${service}select public.signature_begin_authorization('${f.user}','vidaas',repeat('${n % 10}',64),${SEALED},${auth(f)});commit;`);
     const reader = session(container);
     reader.send(`begin isolation level repeatable read;select count(*) from public.account_deletion_requests;\n\\echo SNAPSHOT`);
     await reader.wait('SNAPSHOT');
     sql(`begin;set local request.jwt.claim.role='service_role';insert into public.account_deletion_requests(user_id) values('${f.user}');commit;`);
     const expr = label === 'token'
-      ? `public.signature_session_token('${f.user}','${f.session}',1)`
-      : `public.signature_consume_authorization('${f.user}','vidaas',repeat('${n % 10}',64))`;
+      ? `public.signature_session_token('${f.user}','${f.session}',1,${auth(f)})`
+      : `public.signature_consume_authorization('${f.user}','vidaas',repeat('${n % 10}',64),${auth(f)})`;
     const r = await reader.finish(`${service}select ${expr};commit;`);
     assert.notEqual(r.status, 0, `Stale snapshot read the ${label} after the account deletion intent`);
     assert.match(r.stderr, /40001|42501/, r.stderr);
@@ -334,7 +344,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     const revoker = session(container);
     revoker.send(`begin;${service}select public.signature_revoke_session('${f.user}');\n\\echo REVOKED`);
     await revoker.wait('REVOKED');
-    const completer = await startBlocked(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`, 'completion behind the revocation');
+    const completer = await startBlocked(`begin;${service}select ${complete(f)}->>'state';commit;`, 'completion behind the revocation');
     await revoker.finish('commit;');
     const r = await completer.finish('');
     assert.equal(r.status, 0, r.stderr);
@@ -348,7 +358,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     const f = fixture();
     toStored(f);
     const completer = session(container);
-    completer.send(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';\n\\echo COMPLETED`);
+    completer.send(`begin;${service}select ${complete(f)}->>'state';\n\\echo COMPLETED`);
     await completer.wait('COMPLETED');
     const revoker = await startBlocked(`begin;${service}select public.signature_revoke_session('${f.user}');commit;`, 'revocation behind the completion');
     await completer.finish('commit;');
@@ -371,7 +381,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
       const holder = session(container);
       holder.send(`begin;select pg_advisory_xact_lock(hashtextextended('${f.user}',123));\n\\echo LEGACY_HELD`);
       await holder.wait('LEGACY_HELD');
-      const completer = await startBlocked(`begin;${service}select public.signature_complete('${f.user}','${f.op}','01','CN=AC Sintetica')->>'state';commit;`, `${label}: completion`);
+      const completer = await startBlocked(`begin;${service}select ${complete(f)}->>'state';commit;`, `${label}: completion`);
       const observed = true;
       // Expiry case: keep the lock until the session's deadline has passed, by the database clock.
       if (expect !== 'completed') {
@@ -493,7 +503,7 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     reader.send(`begin isolation level repeatable read;select count(*) from auth.users;\n\\echo SNAPSHOT`);
     await reader.wait('SNAPSHOT');
     sql(`update auth.users set raw_app_meta_data=raw_app_meta_data||'{"account_type":"reception"}'::jsonb where id='${f.user}'`);
-    const r = await reader.finish(`${service}select public.signature_session_token('${f.user}','${f.session}',1);commit;`);
+    const r = await reader.finish(`${service}select public.signature_session_token('${f.user}','${f.session}',1,${auth(f)});commit;`);
     assert.notEqual(r.status, 0, 'Stale snapshot read the token of an account reclassified as reception');
     assert.match(r.stderr, /40001|42501/, r.stderr);
     // And after the change committed (RC): refused as reception.
@@ -554,6 +564,144 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     assert.equal(Number(sql(`select count(*) from storage.objects where name='rx/${g.user}/${g.rx}/signed-${g.op}.pdf'`)), 0);
     results.candidateUploadVsEnd = 'upload first: end waited, cleanup scheduled and discovered; end first: upload refused';
   });
+  // Cortex session fence (ASSINATURA_HANDLERS.md v3.1 §3 and §8) against the
+  // commit point: logout, factor removal and not_after, in both orders and in
+  // RC/RR. Contention is a 40001 without effect; a confirmed end is returned.
+  const psql = (text) => docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose'], `${bounds}${text}`);
+  const outcome = (f) => `(select coalesce(r->>'error_code',r->>'state') from (select ${complete(f)} r) x)`;
+  for (const isolation of ['read committed', 'repeatable read']) {
+    await check(`logout against the commit point (${isolation})`, async () => {
+      // Logout committed first: the commit point ends the operation and returns it.
+      {
+        const f = fixture();
+        toStored(f);
+        sql(`delete from auth.sessions where id='${f.cortexSession}'`);
+        const r = psql(`begin isolation level ${isolation};${service}select ${outcome(f)};commit;`);
+        assert.equal(r.status, 0, r.stderr);
+        assert.equal(r.stdout.trim(), 'auth_session_ended');
+        assert.equal(state(f), 'cancelled');
+        assert.equal(signed(f), 'generated');
+      }
+      // Logout in progress (session row held): refused at once without effect;
+      // after the logout commits, the operation is ended.
+      {
+        const f = fixture();
+        toStored(f);
+        const logout = session(container);
+        logout.send(`begin;delete from auth.sessions where id='${f.cortexSession}';\n\\echo LOGGING_OUT`);
+        await logout.wait('LOGGING_OUT');
+        const busy = psql(`begin isolation level ${isolation};${service}select ${complete(f)};commit;`);
+        assert.notEqual(busy.status, 0, 'Completed while the logout held the session');
+        assert.match(busy.stderr, /40001/, busy.stderr);
+        assert.equal(state(f), 'stored', 'Contention changed the operation');
+        const done = await logout.finish('commit;');
+        assert.equal(done.status, 0, done.stderr);
+        assert.equal(sql(`begin;${service}select ${outcome(f)};commit;`), 'auth_session_ended');
+      }
+      // Commit point first (holding the session row): the logout waits, the
+      // signature is published, then the logout commits.
+      {
+        const f = fixture();
+        toStored(f);
+        const signer = session(container);
+        signer.send(`begin isolation level ${isolation};${service}select ${outcome(f)};\n\\echo SIGNED`);
+        await signer.wait('SIGNED');
+        const logout = await startBlocked(`begin;delete from auth.sessions where id='${f.cortexSession}';commit;`, 'logout behind the commit point');
+        const rs = await signer.finish('commit;');
+        const rl = await logout.finish('');
+        assert.equal(rs.status, 0, rs.stderr);
+        assert.match(rs.stdout, /completed/, rs.stdout);
+        assert.equal(rl.status, 0, rl.stderr);
+        assert.equal(signed(f), 'signed');
+      }
+      // RR snapshot older than the logout: 40001, no effect.
+      if (isolation === 'repeatable read') {
+        const f = fixture();
+        toStored(f);
+        const reader = session(container);
+        reader.send(`begin isolation level repeatable read;select count(*) from auth.sessions;\n\\echo SNAPSHOT`);
+        await reader.wait('SNAPSHOT');
+        sql(`delete from auth.sessions where id='${f.cortexSession}'`);
+        const r = await reader.finish(`${service}select ${complete(f)};commit;`);
+        assert.notEqual(r.status, 0, 'Old RR snapshot completed after the logout');
+        assert.match(r.stderr, /40001/, r.stderr);
+        assert.equal(state(f), 'stored');
+      }
+      results[`logoutVsCommit_${isolation.replace(' ', '_')}`] = 'logout first: ended and returned; in progress: 40001 then ended; commit first: published, logout waited';
+    });
+  }
+
+  await check('factor removed against the commit point', async () => {
+    {
+      const f = fixture();
+      toStored(f);
+      const removal = session(container);
+      removal.send(`begin;delete from auth.mfa_factors where id='${f.factor}';\n\\echo REMOVING`);
+      await removal.wait('REMOVING');
+      const busy = psql(`begin;${service}select ${complete(f)};commit;`);
+      assert.notEqual(busy.status, 0, 'Completed while the factor was being removed');
+      assert.match(busy.stderr, /40001/, busy.stderr);
+      await removal.finish('commit;');
+      assert.equal(sql(`begin;${service}select ${outcome(f)};commit;`), 'auth_session_ended');
+      assert.equal(signed(f), 'generated');
+    }
+    {
+      const f = fixture();
+      toStored(f);
+      const signer = session(container);
+      signer.send(`begin;${service}select ${outcome(f)};\n\\echo SIGNED`);
+      await signer.wait('SIGNED');
+      const removal = await startBlocked(`begin;delete from auth.mfa_factors where id='${f.factor}';commit;`, 'factor removal behind the commit point');
+      const rs = await signer.finish('commit;');
+      await removal.finish('');
+      assert.match(rs.stdout, /completed/, rs.stdout);
+      assert.equal(signed(f), 'signed');
+    }
+    results.factorVsCommit = 'removal in progress: 40001 then ended; commit first: published, removal waited';
+  });
+
+  // not_after passes while the commit point waits on 123 (JWT and intent
+  // still valid): the clock is read after the last lock, so it is refused.
+  await check('not_after passing during the wait for the commit point', async () => {
+    for (const [label, seconds, expect] of [['not_after-expires', 2, 'auth_session_ended'], ['not_after-control', 120, 'completed']]) {
+      const f = fixture();
+      toStored(f);
+      sql(`update auth.sessions set not_after=now()+interval '${seconds} seconds' where id='${f.cortexSession}'`);
+      const holder = session(container);
+      holder.send(`begin;select pg_advisory_xact_lock(hashtextextended('${f.user}',123));\n\\echo HOLDS_123`);
+      await holder.wait('HOLDS_123');
+      const completer = await startBlocked(`begin;${service}select ${outcome(f)};commit;`, `${label}: commit point behind 123`);
+      if (expect !== 'completed') {
+        for (let i = 0; i < 100 && sql(`select clock_timestamp()>not_after from auth.sessions where id='${f.cortexSession}'`) !== 't'; i++) {
+          await new Promise((r) => setTimeout(r, 100));
+        }
+      }
+      await holder.finish('commit;');
+      const r = await completer.finish('');
+      assert.equal(r.status, 0, r.stderr);
+      assert.match(r.stdout, new RegExp(expect), `${label}: ${r.stdout}`);
+      results[label] = expect;
+    }
+  });
+
+  // Control (disposable database only): without the session check the
+  // logout-first case must be seen publishing.
+  if (!beforeFix) {
+    const f = fixture();
+    toStored(f);
+    const original = sql(`select pg_get_functiondef('public.signature_complete(uuid,uuid,text,text,jsonb)'::regprocedure)`);
+    const site = 'if not cortex_private.signature_session_live(deadline) then';
+    assert.equal(original.split(site).length, 2, 'control: session check not found in signature_complete');
+    sql(original.replace(site, 'if false then') + ';');
+    try {
+      sql(`delete from auth.sessions where id='${f.cortexSession}'`);
+      assert.equal(sql(`begin;${service}select ${outcome(f)};commit;`), 'completed', 'control: completion without the session check was not seen publishing');
+    } finally {
+      sql(original + ';');
+    }
+    assert.equal(sql(`select pg_get_functiondef('public.signature_complete(uuid,uuid,text,text,jsonb)'::regprocedure)`), original, 'control: signature_complete not restored');
+    results.sessionFenceControl = 'publication detected without the session check';
+  }
   if (beforeFix) process.stdout.write(`RED cases (${red.length}):\n${red.map((r) => '  - ' + r).join('\n')}\n`);
   else process.stdout.write(`Signature races: ${JSON.stringify(results)}\n`);
 }

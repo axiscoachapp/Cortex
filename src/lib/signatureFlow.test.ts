@@ -32,8 +32,8 @@ const rpcError = (code: string, message = code) => Object.assign(new Error(messa
 const ALLOWED = new Set([
   'reserved>prepared', 'reserved>failed', 'reserved>cancelled', 'reserved>cancelled_by_revocation',
   'prepared>psc_requested', 'prepared>failed', 'prepared>cancelled', 'prepared>cancelled_by_revocation',
-  'psc_requested>ambiguous', 'psc_requested>stored', 'psc_requested>failed', 'psc_requested>cancelled_by_revocation',
-  'ambiguous>psc_requested', 'ambiguous>failed', 'ambiguous>cancelled_by_revocation',
+  'psc_requested>ambiguous', 'psc_requested>stored', 'psc_requested>failed', 'psc_requested>cancelled', 'psc_requested>cancelled_by_revocation',
+  'ambiguous>psc_requested', 'ambiguous>failed', 'ambiguous>cancelled', 'ambiguous>cancelled_by_revocation',
   'stored>completed', 'stored>cancelled', 'stored>cancelled_by_revocation',
 ]);
 
@@ -48,6 +48,8 @@ function fakeDb(original: Uint8Array) {
     states: [] as string[],
     throwOnce: new Map<string, Error[]>(), // rpc name -> errors to throw before running
     recent: 0,
+    cortexLive: true, // the doctor's Cortex session (the fence of signature_session_fence)
+    hasObject: (_path: string | null) => true, // storage.objects, wired to the fake Storage
   };
   const out = (o: SignatureOperation & { staged_path: string | null }, keepPath = false) => {
     const { staged_path, ...rest } = structuredClone(o);
@@ -65,16 +67,21 @@ function fakeDb(original: Uint8Array) {
   };
   const usable = (o: SignatureOperation) => db.session.active && db.session.generation === o.session_generation;
   const rpc = async (name: string, a: Record<string, unknown>): Promise<unknown> => {
-    db.calls.push(name === 'signature_advance' ? `advance:${a.p_to}` : name);
+    db.calls.push(name === 'signature_advance' ? `advance:${a.p_to}` : name === 'signature_close' ? `close:${a.p_to}` : name);
     const queued = db.throwOnce.get(name)?.shift();
     if (queued) throw queued;
     const op = db.ops.get(a.p_operation as string);
     switch (name) {
       case 'signature_reserve': {
-        if (op) return out(op);
+        if (op) {
+          if (['completed', 'failed', 'cancelled', 'cancelled_by_revocation'].includes(op.state)) return out(op); // history, no fence
+          if (!db.cortexLive) throw rpcError('P4011');
+          return out(op);
+        }
         if (!db.session.active) throw rpcError('P4031');
         if (db.doc.status !== 'generated' || db.doc.pdfSha256 !== a.p_shown_sha256) throw rpcError('P4093');
         if ([...db.ops.values()].some((o) => ['reserved', 'prepared', 'psc_requested', 'ambiguous', 'stored'].includes(o.state))) throw rpcError('P4093');
+        if (!db.cortexLive) throw rpcError('P4011');
         if (db.recent >= 60) { db.session.active = false; db.session.generation++; return { error: 'rate_limited' }; }
         const created = {
           operation_id: a.p_operation as string, user_id: USER, prescription_id: RX, session_id: SESSION, session_generation: db.session.generation,
@@ -89,41 +96,62 @@ function fakeDb(original: Uint8Array) {
       }
       case 'signature_session_token':
         if (!db.session.active || db.session.generation !== a.p_generation) throw rpcError('P4031');
+        if (!db.cortexLive) throw rpcError('P4011');
         return db.session.sealed;
       case 'signature_advance': {
         if (!op) throw rpcError('42501');
         const to = a.p_to as string;
         const data = (a.p_data ?? {}) as Record<string, unknown>;
-        if (['prepared', 'psc_requested', 'stored'].includes(to) && !usable(op)) {
+        if (!['prepared', 'psc_requested', 'stored'].includes(to)) throw rpcError('22023', 'not a productive step');
+        if (!usable(op)) {
           if (['reserved', 'prepared', 'psc_requested', 'ambiguous', 'stored'].includes(op.state)) {
             set(op, { state: 'cancelled_by_revocation', cleanup_pending: to === 'stored' || ['psc_requested', 'ambiguous', 'stored'].includes(op.state) || data.uploaded === true });
           }
           return out(op);
         }
-        // A terminal operation is never rewritten by a late step.
-        if (['completed', 'failed', 'cancelled', 'cancelled_by_revocation'].includes(op.state) && (to === 'failed' || to === 'cancelled')) return out(op);
-        // Steps after a PSC call name their attempt (P4094 for an older one).
-        if (to === 'ambiguous' || to === 'stored' || (to === 'failed' && ['psc_requested', 'ambiguous'].includes(op.state))) {
-          const allowed = op.state === 'psc_requested' || op.state === to || (to === 'failed' && op.state === 'ambiguous');
-          if (data.attempt !== op.psc_attempts || !allowed) throw rpcError('P4094', 'superseded attempt');
-        }
+        // Pertinence (no effect otherwise), as in the SQL.
         if (to === 'prepared') {
-          if (op.state === 'prepared' && op.prepared_pdf_sha256 === data.preparedSha256 && op.to_be_signed_sha256 === data.toBeSignedSha256) return out(op);
-          set(op, { state: 'prepared', prepared_pdf_sha256: data.preparedSha256 as string, to_be_signed_sha256: data.toBeSignedSha256 as string, policy_oid: data.policyOid as string });
+          if (op.state === 'prepared') {
+            if (op.prepared_pdf_sha256 !== data.preparedSha256 || op.to_be_signed_sha256 !== data.toBeSignedSha256) throw rpcError('22023', 'prepared immutable');
+          } else if (op.state !== 'reserved') throw rpcError('22023', 'not ready to prepare');
         } else if (to === 'psc_requested') {
           if (op.state === 'psc_requested') throw rpcError('P4093', 'in flight');
           if (op.state === 'ambiguous' && data.humanRetry !== true) throw rpcError('P4093', 'human retry only');
           if (!['prepared', 'ambiguous'].includes(op.state)) throw rpcError('P4093');
+          if (data.attempt !== op.psc_attempts) throw rpcError('P4094', 'observed attempt superseded');
           if (op.to_be_signed_sha256 !== data.toBeSignedSha256) throw rpcError('22023');
-          set(op, { state: 'psc_requested', psc_attempts: op.psc_attempts + 1 });
-        } else if (to === 'ambiguous') {
-          set(op, { state: 'ambiguous' });
-        } else if (to === 'stored') {
+        } else {
+          if (data.attempt !== op.psc_attempts || !['psc_requested', 'stored'].includes(op.state)) throw rpcError('P4094', 'superseded attempt');
           if (op.state === 'stored' && (op.staged_path !== data.stagedPath || op.signed_pdf_sha256 !== data.signedSha256)) throw rpcError('22023', 'stored immutable');
+        }
+        // The Cortex session, last, before the effect: a pertinent step ends.
+        if (!db.cortexLive) {
+          set(op, { state: 'cancelled', error_code: 'auth_session_ended', cleanup_pending: op.staged_path !== null || ['psc_requested', 'ambiguous', 'stored'].includes(op.state) || to === 'stored' });
+          return out(op);
+        }
+        if (to === 'prepared') {
+          if (op.state === 'reserved') set(op, { state: 'prepared', prepared_pdf_sha256: data.preparedSha256 as string, to_be_signed_sha256: data.toBeSignedSha256 as string, policy_oid: data.policyOid as string });
+        } else if (to === 'psc_requested') {
+          set(op, { state: 'psc_requested', psc_attempts: op.psc_attempts + 1 });
+        } else if (op.state === 'psc_requested') {
           set(op, { state: 'stored', staged_path: data.stagedPath as string, signed_pdf_sha256: data.signedSha256 as string });
-        } else if (to === 'failed' || to === 'cancelled') {
-          set(op, { state: to, error_code: (data.code as string) ?? null, cleanup_pending: op.staged_path !== null || ['psc_requested', 'ambiguous'].includes(op.state) || data.uploaded === true });
-        } else throw rpcError('22023');
+        }
+        return out(op);
+      }
+      case 'signature_close': {
+        if (!op) throw rpcError('42501');
+        const to = a.p_to as string;
+        const data = (a.p_data ?? {}) as Record<string, unknown>;
+        if (!['ambiguous', 'failed', 'cancelled'].includes(to)) throw rpcError('22023', 'not a closing step');
+        // A terminal operation is never rewritten by a late step.
+        if (['completed', 'failed', 'cancelled', 'cancelled_by_revocation'].includes(op.state) && (to === 'failed' || to === 'cancelled')) return out(op);
+        // Steps after a PSC call name their attempt (P4094 for an older one).
+        if (to === 'ambiguous' || (to === 'failed' && ['psc_requested', 'ambiguous'].includes(op.state))) {
+          const allowed = op.state === 'psc_requested' || op.state === to || (to === 'failed' && op.state === 'ambiguous');
+          if (data.attempt !== op.psc_attempts || !allowed) throw rpcError('P4094', 'superseded attempt');
+        }
+        if (to === 'ambiguous') set(op, { state: 'ambiguous' });
+        else set(op, { state: to as 'failed', error_code: (data.code as string) ?? null, cleanup_pending: op.staged_path !== null || ['psc_requested', 'ambiguous'].includes(op.state) || data.uploaded === true });
         return out(op);
       }
       case 'signature_complete': {
@@ -133,6 +161,14 @@ function fakeDb(original: Uint8Array) {
         if (!usable(op)) { set(op, { state: 'cancelled_by_revocation', cleanup_pending: true }); return out(op, true); }
         if (db.doc.status !== 'generated' || db.doc.signedPath || db.doc.pdfSha256 !== op.shown_pdf_sha256) {
           set(op, { state: 'cancelled', error_code: 'document_changed', cleanup_pending: true });
+          return out(op, true);
+        }
+        if (!db.hasObject(op.staged_path)) {
+          set(op, { state: 'cancelled', error_code: 'stored_object_missing', cleanup_pending: true });
+          return out(op, true);
+        }
+        if (!db.cortexLive) {
+          set(op, { state: 'cancelled', error_code: 'auth_session_ended', cleanup_pending: true });
           return out(op, true);
         }
         db.doc = { ...db.doc, status: 'signed', signedPath: op.staged_path };
@@ -177,6 +213,7 @@ beforeEach(async () => {
   db.session.sealed = await sealSecret(keyList, 'synthetic-psc-token', tokenBinding(SESSION, USER, 1));
   const storage = new Map<string, Uint8Array>();
   const w = { db, storage, pscCalls: 0, psc: {}, original } as World;
+  db.hasObject = (p) => p !== null && storage.has(p);
   w.ports = {
     rpc,
     downloadOriginal: async () => { await w.beforeOriginal?.(); return w.original; },
@@ -457,6 +494,74 @@ describe('signDocument: late answers and stored files (Codex 04/11 20:55)', () =
     await expect(signDocument(world.ports, world.request)).rejects.toMatchObject({ code: '40001' });
     expect((await signDocument(world.ports, world.request)).status).toBe('completed');
     expect(world.pscCalls).toBe(1);
+  });
+});
+
+describe('signDocument: the Cortex session (contract v3.1)', () => {
+  it('a session ended before the reservation refuses without an operation (P4011 for the handler)', async () => {
+    world.db.cortexLive = false;
+    await expect(signDocument(world.ports, world.request)).rejects.toMatchObject({ code: 'P4011' });
+    expect(world.db.ops.size).toBe(0);
+    expect(world.pscCalls).toBe(0);
+  });
+
+  it('a session ended after the reservation ends the operation at its next step, returned, without a PSC call', async () => {
+    const rpc = world.ports.rpc;
+    world.ports.rpc = async (name, a) => {
+      if (name === 'signature_advance' && a.p_to === 'prepared') world.db.cortexLive = false;
+      return rpc(name, a);
+    };
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'cancelled', code: 'auth_session_ended' });
+    expect(world.pscCalls).toBe(0);
+    expect(opOf()).toMatchObject({ state: 'cancelled', cleanup_pending: false });
+  });
+
+  it('a session ended while the PSC signs: the answer is not published and its file is removed', async () => {
+    world.psc.onSign = () => { world.db.cortexLive = false; };
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'cancelled', code: 'auth_session_ended' });
+    expect(world.pscCalls).toBe(1);
+    expect(world.storage.size).toBe(0);
+    expect(opOf().cleanup_pending).toBe(false); // cleanup done
+    expect(world.db.audit).toHaveLength(0);
+    expect(world.db.doc.status).toBe('generated');
+  });
+
+  it('a session ended between storing and completing: nothing is published', async () => {
+    const rpc = world.ports.rpc;
+    world.ports.rpc = async (name, a) => {
+      if (name === 'signature_complete') world.db.cortexLive = false;
+      return rpc(name, a);
+    };
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'cancelled', code: 'auth_session_ended' });
+    expect(world.storage.size).toBe(0);
+    expect(world.db.doc.status).toBe('generated');
+  });
+
+  it('the completed replay works without a live session (history only)', async () => {
+    expect((await signDocument(world.ports, world.request)).status).toBe('completed');
+    world.db.cortexLive = false;
+    expect((await signDocument(world.ports, world.request)).status).toBe('completed');
+  });
+
+  it('a stored answer whose object vanished before the commit is cancelled, not published', async () => {
+    const rpc = world.ports.rpc;
+    world.ports.rpc = async (name, a) => {
+      if (name === 'signature_complete') world.storage.clear();
+      return rpc(name, a);
+    };
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'cancelled', code: 'stored_object_missing' });
+    expect(world.db.doc.status).toBe('generated');
+  });
+
+  it('the retry names the attempt it observed', async () => {
+    world.psc.lose = true;
+    await signDocument(world.ports, world.request);
+    world.psc.lose = false;
+    const sent: unknown[] = [];
+    const rpc = world.ports.rpc;
+    world.ports.rpc = async (name, a) => { if (name === 'signature_advance' && a.p_to === 'psc_requested') sent.push(a.p_data); return rpc(name, a); };
+    expect((await signDocument(world.ports, { ...world.request, humanRetry: true })).status).toBe('completed');
+    expect(sent).toEqual([expect.objectContaining({ attempt: 1, humanRetry: true })]);
   });
 });
 

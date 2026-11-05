@@ -48,7 +48,9 @@ export interface SignatureOperation {
 export interface RpcError extends Error { code?: string }
 
 export interface SignaturePorts {
-  /** Service-role RPC; throws an RpcError carrying the SQLSTATE. */
+  /** Service-role RPC; throws an RpcError carrying the SQLSTATE. The handler
+   *  adds p_auth (the verified session context, never from the body) to the
+   *  productive functions: reserve, session_token, advance and complete. */
   rpc(name: string, args: Record<string, unknown>): Promise<unknown>;
   /** The generated PDF the doctor saw (private bucket). */
   downloadOriginal(op: SignatureOperation): Promise<Uint8Array>;
@@ -107,8 +109,13 @@ async function run(ports: SignaturePorts, req: SignatureRequest): Promise<Signat
   const log = ports.log ?? (() => {});
   const sleep = ports.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const base = { p_user: req.userId, p_operation: req.operationId };
-  const advance = async (to: string, data: Record<string, unknown> = {}) =>
+  // Productive steps (prepared, psc_requested, stored) and closing steps
+  // (ambiguous, failed, cancelled) are separate functions; only the
+  // productive ones carry the verified session context, added by the handler.
+  const advance = async (to: 'prepared' | 'psc_requested' | 'stored', data: Record<string, unknown> = {}) =>
     (await ports.rpc('signature_advance', { ...base, p_to: to, p_data: data })) as SignatureOperation;
+  const close = async (to: 'ambiguous' | 'failed' | 'cancelled', data: Record<string, unknown> = {}) =>
+    (await ports.rpc('signature_close', { ...base, p_to: to, p_data: data })) as SignatureOperation;
   // After the PSC answered, a busy row (40001, NOWAIT) must not cost another
   // PSC call: these idempotent database steps are retried a few times.
   const settled = async <T>(step: () => Promise<T>): Promise<T> => {
@@ -164,7 +171,7 @@ async function run(ports: SignaturePorts, req: SignatureRequest): Promise<Signat
     const certificate = stored && hex(await sha256(stored)) === op.signed_pdf_sha256
       ? await certificateOf(signatureCertificates(stored), op.cert_sha256)
       : undefined;
-    if (!certificate) return finish(await advance('cancelled', { code: 'stored_object_invalid' }));
+    if (!certificate) return finish(await close('cancelled', { code: 'stored_object_invalid' }));
     return complete(certificate);
   }
 
@@ -172,12 +179,12 @@ async function run(ports: SignaturePorts, req: SignatureRequest): Promise<Signat
     // Another request may still be waiting for the PSC. Only the doctor
     // decides that it is lost; then that attempt is reconciled as ambiguous.
     if (!req.humanRetry) return { status: 'in_progress' };
-    op = await advance('ambiguous', { attempt: op.psc_attempts });
+    op = await close('ambiguous', { attempt: op.psc_attempts });
   }
   if (op.state === 'ambiguous' && !req.humanRetry) return { status: 'ambiguous' };
   // The attempt this request last saw; every step after a PSC call names it.
   let attempt = op.psc_attempts;
-  const fail = async (code: string) => finish(await advance('failed', { code, attempt }));
+  const fail = async (code: string) => finish(await close('failed', { code, attempt }));
 
   // 2. Session token, sealed to this session, account and generation.
   let accessToken: string;
@@ -218,7 +225,9 @@ async function run(ports: SignaturePorts, req: SignatureRequest): Promise<Signat
   }
 
   // 4. One authorized PSC call, under its own attempt number.
-  op = await advance('psc_requested', { toBeSignedSha256, humanRetry: op.state === 'ambiguous' });
+  // The attempt observed when deciding: 0 from prepared, the unanswered one
+  // from ambiguous. A newer attempt made meanwhile gets P4094 here.
+  op = await advance('psc_requested', { toBeSignedSha256, humanRetry: op.state === 'ambiguous', attempt: op.psc_attempts });
   if (op.state !== 'psc_requested') return finish(op);
   attempt = op.psc_attempts;
   let signature: Uint8Array;
@@ -228,7 +237,7 @@ async function run(ports: SignaturePorts, req: SignatureRequest): Promise<Signat
     if (error instanceof PscRejectedError) return fail('psc_rejected');
     // Lost answer or anything unknown: the PSC may have signed. Never retried here.
     log('signature_psc_ambiguous', { operationId: req.operationId, error: error instanceof PscAmbiguousError ? 'ambiguous' : 'unknown' });
-    return finish(await advance('ambiguous', { attempt }));
+    return finish(await close('ambiguous', { attempt }));
   }
 
   // 5. Checks before anything is published.
@@ -253,7 +262,7 @@ async function run(ports: SignaturePorts, req: SignatureRequest): Promise<Signat
     // stored, so this attempt is reconciled as without answer. An older
     // attempt gets P4094 instead and never ends the newer one.
     log('signature_upload_failed', { operationId: req.operationId, attempt });
-    return finish(await advance('ambiguous', { attempt }));
+    return finish(await close('ambiguous', { attempt }));
   }
   if (placed === 'exists') {
     const existing = await ports.downloadSigned(path);

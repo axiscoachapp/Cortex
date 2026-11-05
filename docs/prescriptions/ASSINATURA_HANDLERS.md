@@ -13,7 +13,17 @@ Versões:
 
   e também a regra de `stored` com `stored_at`.
 
-Ainda sem código.
+- **v3.1:** inclui os dois casos de 23:29 (tentativa observada em `psc_requested` e reserva terminal sem cerca).
+
+**Implementação SQL (05/11), na própria migration `20261105100000`, sem migration nova.** Entrou o que Codex liberou às 00:32:
+- a cerca de sessão (`signature_auth_shape`, `signature_session_fence` e `signature_session_live`);
+- a divisão entre `signature_advance` e `signature_close`;
+- a tentativa observada em `psc_requested` e o retorno terminal da reserva;
+- o objeto conferido na conclusão;
+- `stored_at`;
+- `signature_reconcile`.
+
+Os handlers continuam sem código, à espera da revisão desta parte.
 
 Não inclui provedor real, deploy, certificado nem migration aplicada em banco hospedado.
 

@@ -62,13 +62,16 @@ create table cortex_private.signature_operations(
  psc_attempts integer not null default 0 check(psc_attempts between 0 and 5),
  staged_path text,
  signed_pdf_sha256 text check(signed_pdf_sha256 ~ '^[0-9a-f]{64}$'),
+ -- When the answer was first stored (once, immutable): the 24 h technical
+ -- deadline of a stored candidate counts from here, never from updated_at.
+ stored_at timestamptz,
  cleanup_pending boolean not null default false,
  error_code text check(error_code ~ '^[a-z_]{1,40}$'),
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now(),
  check(staged_path is null or staged_path='rx/'||user_id::text||'/'||prescription_id::text||'/signed-'||operation_id::text||'.pdf'),
  check(state not in ('prepared','psc_requested','ambiguous','stored','completed') or (prepared_pdf_sha256 is not null and to_be_signed_sha256 is not null and policy_oid is not null)),
- check(state not in ('stored','completed') or (staged_path is not null and signed_pdf_sha256 is not null))
+ check(state not in ('stored','completed') or (staged_path is not null and signed_pdf_sha256 is not null and stored_at is not null))
 );
 -- An unreconciled attempt (ambiguous included) blocks any new operation id
 -- on the same document.
@@ -119,7 +122,7 @@ begin
  if tg_op='DELETE' then return old;end if; -- only cascades reach here (no grants)
  if tg_op='INSERT' then
   if new.state<>'reserved' or new.psc_attempts<>0 or new.prepared_pdf_sha256 is not null or new.staged_path is not null
-   or new.cleanup_pending then raise exception 'Signature operation must start reserved' using errcode='22023';end if;
+   or new.cleanup_pending or new.stored_at is not null then raise exception 'Signature operation must start reserved' using errcode='22023';end if;
   return new;
  end if;
  if (new.operation_id,new.user_id,new.prescription_id,new.session_id,new.session_generation,new.shown_pdf_sha256,new.cert_sha256,new.signing_time,new.created_at)
@@ -131,11 +134,14 @@ begin
  then raise exception 'Prepared signature data is immutable' using errcode='22023';end if;
  if old.signed_pdf_sha256 is not null and (new.staged_path,new.signed_pdf_sha256) is distinct from (old.staged_path,old.signed_pdf_sha256)
  then raise exception 'Stored signature data is immutable' using errcode='22023';end if;
+ if old.stored_at is not null and new.stored_at is distinct from old.stored_at
+  or old.stored_at is null and new.stored_at is not null and new.state<>'stored'
+ then raise exception 'stored_at is set once, on the transition to stored' using errcode='22023';end if;
  allowed:=new.state=old.state or (old.state,new.state) in (
   ('reserved','prepared'),('reserved','failed'),('reserved','cancelled'),('reserved','cancelled_by_revocation'),
   ('prepared','psc_requested'),('prepared','failed'),('prepared','cancelled'),('prepared','cancelled_by_revocation'),
-  ('psc_requested','ambiguous'),('psc_requested','stored'),('psc_requested','failed'),('psc_requested','cancelled_by_revocation'),
-  ('ambiguous','psc_requested'),('ambiguous','failed'),('ambiguous','cancelled_by_revocation'),
+  ('psc_requested','ambiguous'),('psc_requested','stored'),('psc_requested','failed'),('psc_requested','cancelled'),('psc_requested','cancelled_by_revocation'),
+  ('ambiguous','psc_requested'),('ambiguous','failed'),('ambiguous','cancelled'),('ambiguous','cancelled_by_revocation'),
   ('stored','completed'),('stored','cancelled'),('stored','cancelled_by_revocation'));
  if not allowed then raise exception 'Signature operation transition % -> % refused',old.state,new.state using errcode='22023';end if;
  -- Terminal states only clear the cleanup flag.
@@ -397,6 +403,58 @@ end $$;
 --    guard_clinical_write; its custody triggers touch epochs NOWAIT.
 --  * oauth state rows: private, written only under the same doctor's 125.
 
+-- ---------------------------------------------------------------------------
+-- Cortex session fence (contract docs/prescriptions/ASSINATURA_HANDLERS.md §3).
+-- signature_lock stays the common barrier (revoke and cleanup included); the
+-- fence is called explicitly, after it, in every productive branch.
+
+-- Exactly {sessionId, aal, exp} from the context the Edge verified, never
+-- from a request body: sessionId a UUID string, aal 'aal2', exp a positive
+-- integer (seconds). Anything else is refused before any lock.
+create function cortex_private.signature_auth_shape(p_auth jsonb) returns void
+language plpgsql immutable set search_path='' as $$
+begin
+ if p_auth is null or jsonb_typeof(p_auth)<>'object'
+  or (select count(*) from jsonb_object_keys(p_auth))<>3
+  or jsonb_typeof(p_auth->'sessionId') is distinct from 'string'
+  or (p_auth->>'sessionId') !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+  or jsonb_typeof(p_auth->'aal') is distinct from 'string' or p_auth->>'aal'<>'aal2'
+  or jsonb_typeof(p_auth->'exp') is distinct from 'number' or (p_auth->>'exp') !~ '^[1-9][0-9]{0,11}$' then
+  raise exception 'Invalid signature auth context' using errcode='22023';
+ end if;
+end $$;
+
+-- The Cortex session of the verified context and its factor, FOR SHARE
+-- NOWAIT: contention is a 40001 without effect. Returns the deadline (the
+-- JWT exp, or not_after when earlier) when the session is aal2 and points to
+-- a live verified factor of this user, NULL when it is confirmed ended. The
+-- factor_id of a session has no FK: only the live factor row counts. This
+-- proves the factor is current and verified now, not that it never changed.
+-- The caller compares the clock after its last lock, right before its effect.
+create function cortex_private.signature_session_fence(p_user uuid,p_auth jsonb) returns timestamptz
+language plpgsql volatile security definer set search_path='' as $$
+declare v_session auth.sessions;v_factor auth.mfa_factors;
+begin
+ perform cortex_private.signature_auth_shape(p_auth);
+ begin
+  select * into v_session from auth.sessions where id=(p_auth->>'sessionId')::uuid and user_id=p_user for share nowait;
+  if found and v_session.factor_id is not null then
+   select * into v_factor from auth.mfa_factors where id=v_session.factor_id and user_id=p_user for share nowait;
+  end if;
+ exception when lock_not_available then
+  raise exception 'Sessão em alteração por outra operação; tente de novo.' using errcode='40001';
+ end;
+ if v_session.id is null or v_session.aal is distinct from 'aal2' or v_factor.id is null or v_factor.status<>'verified' then
+  return null;
+ end if;
+ return least(to_timestamp((p_auth->>'exp')::bigint),coalesce(v_session.not_after,'infinity'::timestamptz));
+end $$;
+
+create function cortex_private.signature_session_live(p_deadline timestamptz) returns boolean
+language sql volatile set search_path='' as $$
+ select p_deadline is not null and clock_timestamp()<p_deadline;
+$$;
+
 -- Authoritative check of the document's parents, after their T33 barriers:
 -- prescription identity first, then its patient and consultation. Never
 -- blocks (the touches are NOWAIT); a confirmed deletion intent refuses.
@@ -429,43 +487,60 @@ language sql volatile set search_path='' as $$
  select s.status='active' and s.expires_at>clock_timestamp();
 $$;
 
-create function public.signature_begin_authorization(p_user uuid,p_psc text,p_state_hash text,p_verifier jsonb) returns timestamptz
+create function public.signature_begin_authorization(p_user uuid,p_psc text,p_state_hash text,p_verifier jsonb,p_auth jsonb) returns timestamptz
 language plpgsql volatile security definer set search_path='' as $$
-declare expires timestamptz:=now()+interval '10 minutes';
+declare deadline timestamptz;created timestamptz;
 begin
  perform cortex_private.signature_lock(p_user);
+ deadline:=cortex_private.signature_session_fence(p_user,p_auth);
  if not exists(select 1 from public.user_settings where user_id=p_user and prescriber_cpf is not null) then
   raise exception 'Informe o seu CPF em Configurações para assinar.' using errcode='P4031';end if;
- delete from cortex_private.signature_oauth_states where user_id=p_user and expires_at<=now();
- insert into cortex_private.signature_oauth_states(state_hash,user_id,psc,verifier,expires_at)
-  values(p_state_hash,p_user,p_psc,p_verifier,expires);
- return expires;
+ if not cortex_private.signature_session_live(deadline) then
+  raise exception 'Sessão do Cortex encerrada. Entre de novo.' using errcode='P4011';end if;
+ created:=clock_timestamp();
+ delete from cortex_private.signature_oauth_states where user_id=p_user and expires_at<=created;
+ insert into cortex_private.signature_oauth_states(state_hash,user_id,psc,verifier,created_at,expires_at)
+  values(p_state_hash,p_user,p_psc,p_verifier,created,created+interval '10 minutes');
+ return created+interval '10 minutes';
 end $$;
 
 -- Single use: the row is deleted while it is read.
-create function public.signature_consume_authorization(p_user uuid,p_psc text,p_state_hash text) returns jsonb
+create function public.signature_consume_authorization(p_user uuid,p_psc text,p_state_hash text,p_auth jsonb) returns jsonb
 language plpgsql volatile security definer set search_path='' as $$
-declare v jsonb;
+declare deadline timestamptz;st cortex_private.signature_oauth_states;
 begin
  perform cortex_private.signature_lock(p_user);
- delete from cortex_private.signature_oauth_states
-  where state_hash=p_state_hash and user_id=p_user and psc=p_psc and expires_at>now()
-  returning verifier into v;
- if v is null then raise exception 'Autorização vencida ou já usada. Inicie de novo.' using errcode='P4031';end if;
- return v;
+ deadline:=cortex_private.signature_session_fence(p_user,p_auth);
+ select * into st from cortex_private.signature_oauth_states
+  where state_hash=p_state_hash and user_id=p_user and psc=p_psc for update nowait;
+ -- Every check after the locks, with the current clock; any refusal leaves
+ -- the state in place (single use only once everything holds).
+ if not found or st.expires_at<=clock_timestamp() then
+  raise exception 'Autorização vencida ou já usada. Inicie de novo.' using errcode='P4031';end if;
+ if not cortex_private.signature_session_live(deadline) then
+  raise exception 'Sessão do Cortex encerrada. Entre de novo.' using errcode='P4011';end if;
+ delete from cortex_private.signature_oauth_states where state_hash=st.state_hash;
+ return st.verifier;
+exception when lock_not_available then
+ raise exception 'Autorização em uso por outra operação; tente de novo.' using errcode='40001';
 end $$;
 
 create function public.signature_activate_session(p_user uuid,p_psc text,p_session uuid,p_expires_at timestamptz,
- p_cert_sha256 text,p_token jsonb) returns jsonb
+ p_cert_sha256 text,p_token jsonb,p_auth jsonb) returns jsonb
 language plpgsql volatile security definer set search_path='' as $$
+declare deadline timestamptz;created timestamptz;
 begin
  perform cortex_private.signature_lock(p_user);
- if p_session is null or p_expires_at is null or p_expires_at<=now() or p_expires_at>now()+interval '12 hours' then
+ deadline:=cortex_private.signature_session_fence(p_user,p_auth);
+ created:=clock_timestamp();
+ if p_session is null or p_expires_at is null or p_expires_at<=created or p_expires_at>created+interval '12 hours' then
   raise exception 'Invalid signature session' using errcode='22023';end if;
+ if not cortex_private.signature_session_live(deadline) then
+  raise exception 'Sessão do Cortex encerrada. Entre de novo.' using errcode='P4011';end if;
  update cortex_private.signature_sessions set status='replaced',generation=generation+1,token=null,ended_at=now()
   where user_id=p_user and status='active';
  insert into cortex_private.signature_sessions(id,user_id,psc,status,generation,cert_sha256,token,created_at,expires_at)
-  values(p_session,p_user,p_psc,'active',1,p_cert_sha256,p_token,now(),p_expires_at);
+  values(p_session,p_user,p_psc,'active',1,p_cert_sha256,p_token,created,p_expires_at);
  return jsonb_build_object('sessionId',p_session,'generation',1,'expiresAt',p_expires_at);
 end $$;
 
@@ -482,24 +557,28 @@ begin
 end $$;
 
 -- The sealed token, only for the active session in the asked generation.
-create function public.signature_session_token(p_user uuid,p_session uuid,p_generation integer) returns jsonb
+create function public.signature_session_token(p_user uuid,p_session uuid,p_generation integer,p_auth jsonb) returns jsonb
 language plpgsql volatile security definer set search_path='' as $$
-declare s cortex_private.signature_sessions;
+declare s cortex_private.signature_sessions;deadline timestamptz;
 begin
  perform cortex_private.signature_lock(p_user);
+ deadline:=cortex_private.signature_session_fence(p_user,p_auth);
  select * into s from cortex_private.signature_sessions where id=p_session and user_id=p_user for update nowait;
  if not found or s.generation<>p_generation or not cortex_private.signature_session_usable(s) then
   raise exception 'Sessão de assinatura encerrada. Abra uma nova no aplicativo do certificado.' using errcode='P4031';end if;
+ if not cortex_private.signature_session_live(deadline) then
+  raise exception 'Sessão do Cortex encerrada. Entre de novo.' using errcode='P4011';end if;
  return s.token;
 exception when lock_not_available then
  raise exception 'Documento ou sessão em uso por outra operação; tente de novo.' using errcode='40001';
 end $$;
 
-create function public.signature_reserve(p_user uuid,p_operation uuid,p_prescription uuid,p_shown_sha256 text) returns jsonb
+create function public.signature_reserve(p_user uuid,p_operation uuid,p_prescription uuid,p_shown_sha256 text,p_auth jsonb) returns jsonb
 language plpgsql volatile security definer set search_path='' as $$
-declare o cortex_private.signature_operations;s cortex_private.signature_sessions;r public.prescriptions;recent integer;
+declare o cortex_private.signature_operations;s cortex_private.signature_sessions;r public.prescriptions;recent integer;deadline timestamptz;
 begin
  perform cortex_private.signature_lock(p_user);
+ perform cortex_private.signature_auth_shape(p_auth);
  if p_operation is null or p_prescription is null or p_shown_sha256 !~ '^[0-9a-f]{64}$' then
   raise exception 'Invalid signature request' using errcode='22023';end if;
  select * into o from cortex_private.signature_operations where operation_id=p_operation;
@@ -507,8 +586,17 @@ begin
   -- The same operation must carry the same payload; it never counts twice.
   if o.user_id<>p_user or o.prescription_id<>p_prescription or o.shown_pdf_sha256<>p_shown_sha256 then
    raise exception 'Signature operation mismatch' using errcode='22023';end if;
+  -- Terminal: history only (Codex 04/11 23:29). No session fence and no
+  -- productive check, which a signed prescription no longer meets; nothing
+  -- new is authorized and no URL is issued here.
+  if o.state in ('completed','failed','cancelled','cancelled_by_revocation') then return to_jsonb(o)-'staged_path';end if;
+  -- Not terminal: the caller continues, so the session must be alive.
+  deadline:=cortex_private.signature_session_fence(p_user,p_auth);
+  if not cortex_private.signature_session_live(deadline) then
+   raise exception 'Sessão do Cortex encerrada. Entre de novo.' using errcode='P4011';end if;
   return to_jsonb(o)-'staged_path';
  end if;
+ deadline:=cortex_private.signature_session_fence(p_user,p_auth);
  -- Barriers (NOWAIT) before row locks; row locks in the order session, prescription.
  perform cortex_private.signature_document(p_user,p_prescription);
  select * into s from cortex_private.signature_sessions where user_id=p_user and status='active' for update nowait;
@@ -526,6 +614,9 @@ begin
  if exists(select 1 from cortex_private.signature_operations where prescription_id=p_prescription
   and state in ('reserved','prepared','psc_requested','ambiguous','stored')) then
   raise exception 'Há uma assinatura em andamento ou sem resposta para este documento.' using errcode='P4093';end if;
+ -- The Cortex session, last, right before any effect.
+ if not cortex_private.signature_session_live(deadline) then
+  raise exception 'Sessão do Cortex encerrada. Entre de novo.' using errcode='P4011';end if;
  select count(*) into recent from cortex_private.signature_operations where user_id=p_user and created_at>now()-interval '60 minutes';
  if recent>=60 then
   -- Over the limit: suspend the session (committed), then refuse.
@@ -543,55 +634,49 @@ end $$;
 
 -- One step of the state machine. Barriers first, then session, operation and
 -- prescription rows, then every check with the current clock.
-create function public.signature_advance(p_user uuid,p_operation uuid,p_to text,p_data jsonb default '{}'::jsonb) returns jsonb
+-- Productive steps only (prepared, psc_requested, stored); closing steps are
+-- signature_close, without a session. Barriers and the session fence first,
+-- then session, operation and prescription rows; the step is validated
+-- against the state (no effect when it is no longer pertinent), and the
+-- Cortex session is read last, right before the effect. An ended session
+-- ends only the operation whose step is still pertinent, returned (never
+-- raised after the UPDATE, which would undo it).
+create function public.signature_advance(p_user uuid,p_operation uuid,p_to text,p_data jsonb,p_auth jsonb) returns jsonb
 language plpgsql volatile security definer set search_path='' as $$
-declare o cortex_private.signature_operations;s cortex_private.signature_sessions;
+declare o cortex_private.signature_operations;s cortex_private.signature_sessions;deadline timestamptz;
 begin
+ if p_to is null or p_to not in ('prepared','psc_requested','stored') then
+  raise exception 'Invalid signature step' using errcode='22023';end if;
+ if p_data is null or jsonb_typeof(p_data)<>'object' then raise exception 'Invalid signature step data' using errcode='22023';end if;
  perform cortex_private.signature_lock(p_user);
+ deadline:=cortex_private.signature_session_fence(p_user,p_auth);
  select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user;
  if not found then raise exception 'Signature operation unavailable' using errcode='42501';end if;
- if p_to in ('prepared','psc_requested','stored') then
-  -- A document whose patient or account is going away never reaches the PSC.
-  perform cortex_private.signature_document(p_user,o.prescription_id);
- end if;
+ -- A document whose patient or account is going away never reaches the PSC.
+ perform cortex_private.signature_document(p_user,o.prescription_id);
  select * into s from cortex_private.signature_sessions where id=o.session_id for update nowait;
  select * into o from cortex_private.signature_operations where operation_id=p_operation for update nowait;
- if p_to in ('prepared','psc_requested','stored') then
-  perform 1 from public.prescriptions where id=o.prescription_id for share nowait;
-  -- Revocation or expiry wins every step before the commit point, a stored
-  -- answer included. Once the PSC was called a candidate may exist, so the
-  -- cleanup is scheduled whatever the caller says.
-  if s.generation<>o.session_generation or not cortex_private.signature_session_usable(s) then
-   if o.state in ('reserved','prepared','psc_requested','ambiguous','stored') then
-    update cortex_private.signature_operations set state='cancelled_by_revocation',
-     cleanup_pending=(p_to='stored' or o.state in ('psc_requested','ambiguous','stored') or coalesce((p_data->>'uploaded')::boolean,false))
-     where operation_id=p_operation returning * into o;
-   end if;
-   return to_jsonb(o)-'staged_path';
+ perform 1 from public.prescriptions where id=o.prescription_id for share nowait;
+ -- Revocation or expiry of the PSC session wins every step before the commit
+ -- point, a stored answer included. Once the PSC was called a candidate may
+ -- exist, so the cleanup is scheduled whatever the caller says.
+ if s.generation<>o.session_generation or not cortex_private.signature_session_usable(s) then
+  if o.state in ('reserved','prepared','psc_requested','ambiguous','stored') then
+   update cortex_private.signature_operations set state='cancelled_by_revocation',
+    cleanup_pending=(p_to='stored' or o.state in ('psc_requested','ambiguous','stored') or coalesce((p_data->>'uploaded')::boolean,false))
+    where operation_id=p_operation returning * into o;
   end if;
- end if;
- -- A terminal operation is never rewritten by a late step (Codex 04/11 20:55).
- if o.state in ('completed','failed','cancelled','cancelled_by_revocation') and p_to in ('failed','cancelled') then
   return to_jsonb(o)-'staged_path';
  end if;
- -- What follows a PSC call belongs to one attempt (Codex 04/11 19:49 and
- -- 20:55): a late timeout, answer or failure of an older attempt never moves
- -- the operation, also when the newer attempt is without answer. Checked
- -- here under the row lock. The same step of the current attempt is
- -- idempotent.
- if p_to in ('ambiguous','stored') or (p_to='failed' and o.state in ('psc_requested','ambiguous')) then
-  if coalesce(p_data->>'attempt','') !~ '^[0-9]{1,2}$' or (p_data->>'attempt')::integer<>o.psc_attempts
-   or not (o.state='psc_requested' or o.state=p_to or (p_to='failed' and o.state='ambiguous')) then
-   raise exception 'Tentativa substituída por outra mais recente.' using errcode='P4094';
-  end if;
- end if;
+ -- Is the step still pertinent to this operation? Otherwise nothing changes.
  if p_to='prepared' then
-  if o.state='prepared' and (o.prepared_pdf_sha256,o.to_be_signed_sha256,o.policy_oid)
-   is not distinct from (p_data->>'preparedSha256',p_data->>'toBeSignedSha256',p_data->>'policyOid') then
-   return to_jsonb(o)-'staged_path';
+  if o.state='prepared' then
+   if (o.prepared_pdf_sha256,o.to_be_signed_sha256,o.policy_oid)
+    is distinct from (p_data->>'preparedSha256',p_data->>'toBeSignedSha256',p_data->>'policyOid') then
+    raise exception 'Prepared signature data is immutable' using errcode='22023';end if;
+  elsif o.state<>'reserved' then
+   raise exception 'Signature operation not ready to prepare' using errcode='22023';
   end if;
-  update cortex_private.signature_operations set state='prepared',prepared_pdf_sha256=p_data->>'preparedSha256',
-   to_be_signed_sha256=p_data->>'toBeSignedSha256',policy_oid=p_data->>'policyOid' where operation_id=p_operation returning * into o;
  elsif p_to='psc_requested' then
   -- One permission per PSC call. An attempt already in flight is never
   -- authorized again: its caller reconciles it as ambiguous first, and only
@@ -602,21 +687,76 @@ begin
    raise exception 'Tentativa sem resposta: só o médico pode repetir.' using errcode='P4093';end if;
   if o.state not in ('prepared','ambiguous') then
    raise exception 'Signature operation not ready for the PSC' using errcode='P4093';end if;
+  -- The attempt the caller observed when it decided (Codex 04/11 23:29): 0
+  -- from prepared, the unanswered one from ambiguous. A newer attempt made
+  -- meanwhile (another device) is never promoted nor cancelled from here.
+  if coalesce(p_data->>'attempt','') !~ '^[0-9]{1,2}$' or (p_data->>'attempt')::integer<>o.psc_attempts then
+   raise exception 'Tentativa substituída por outra mais recente.' using errcode='P4094';end if;
   if o.to_be_signed_sha256 is distinct from p_data->>'toBeSignedSha256' then
    raise exception 'Prepared signature data changed' using errcode='22023';end if;
+ else -- stored: the answer of one attempt (Codex 04/11 19:49 and 20:55)
+  if coalesce(p_data->>'attempt','') !~ '^[0-9]{1,2}$' or (p_data->>'attempt')::integer<>o.psc_attempts
+   or o.state not in ('psc_requested','stored') then
+   raise exception 'Tentativa substituída por outra mais recente.' using errcode='P4094';end if;
+  if o.state='stored' and (o.staged_path,o.signed_pdf_sha256) is distinct from (p_data->>'stagedPath',p_data->>'signedSha256') then
+   raise exception 'Stored signature data is immutable' using errcode='22023';end if;
+ end if;
+ -- Pertinent. The Cortex session, last, right before the effect.
+ if not cortex_private.signature_session_live(deadline) then
+  update cortex_private.signature_operations set state='cancelled',error_code='auth_session_ended',
+   cleanup_pending=(o.staged_path is not null or o.state in ('psc_requested','ambiguous','stored') or p_to='stored')
+   where operation_id=p_operation returning * into o;
+  return to_jsonb(o)-'staged_path';
+ end if;
+ if p_to='prepared' then
+  if o.state='reserved' then
+   update cortex_private.signature_operations set state='prepared',prepared_pdf_sha256=p_data->>'preparedSha256',
+    to_be_signed_sha256=p_data->>'toBeSignedSha256',policy_oid=p_data->>'policyOid' where operation_id=p_operation returning * into o;
+  end if;
+ elsif p_to='psc_requested' then
   update cortex_private.signature_operations set state='psc_requested',psc_attempts=psc_attempts+1
    where operation_id=p_operation returning * into o;
- elsif p_to='ambiguous' then
+ elsif o.state='psc_requested' then
+  update cortex_private.signature_operations set state='stored',staged_path=p_data->>'stagedPath',signed_pdf_sha256=p_data->>'signedSha256',
+   stored_at=clock_timestamp() where operation_id=p_operation returning * into o;
+ end if;
+ return to_jsonb(o)-'staged_path';
+exception when lock_not_available then
+ raise exception 'Documento ou sessão em uso por outra operação; tente de novo.' using errcode='40001';
+end $$;
+
+-- Closing steps (ambiguous, failed, cancelled): no session, so a lost answer,
+-- giving up or a refusal can be recorded after a logout. They only close.
+create function public.signature_close(p_user uuid,p_operation uuid,p_to text,p_data jsonb) returns jsonb
+language plpgsql volatile security definer set search_path='' as $$
+declare o cortex_private.signature_operations;
+begin
+ if p_to is null or p_to not in ('ambiguous','failed','cancelled') then
+  raise exception 'Invalid signature closing step' using errcode='22023';end if;
+ if p_data is null or jsonb_typeof(p_data)<>'object' then raise exception 'Invalid signature step data' using errcode='22023';end if;
+ perform cortex_private.signature_lock(p_user);
+ select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user for update nowait;
+ if not found then raise exception 'Signature operation unavailable' using errcode='42501';end if;
+ -- A terminal operation is never rewritten by a late step (Codex 04/11 20:55).
+ if o.state in ('completed','failed','cancelled','cancelled_by_revocation') and p_to in ('failed','cancelled') then
+  return to_jsonb(o)-'staged_path';
+ end if;
+ -- What follows a PSC call belongs to one attempt: a late timeout or failure
+ -- of an older attempt never moves the operation, also when the newer
+ -- attempt is without answer. The same step of the current attempt is
+ -- idempotent.
+ if p_to='ambiguous' or (p_to='failed' and o.state in ('psc_requested','ambiguous')) then
+  if coalesce(p_data->>'attempt','') !~ '^[0-9]{1,2}$' or (p_data->>'attempt')::integer<>o.psc_attempts
+   or not (o.state='psc_requested' or o.state=p_to or (p_to='failed' and o.state='ambiguous')) then
+   raise exception 'Tentativa substituída por outra mais recente.' using errcode='P4094';
+  end if;
+ end if;
+ if p_to='ambiguous' then
   update cortex_private.signature_operations set state='ambiguous' where operation_id=p_operation returning * into o;
- elsif p_to='stored' then
-  update cortex_private.signature_operations set state='stored',staged_path=p_data->>'stagedPath',signed_pdf_sha256=p_data->>'signedSha256'
-   where operation_id=p_operation returning * into o;
- elsif p_to in ('failed','cancelled') then
+ else
   update cortex_private.signature_operations set state=p_to,error_code=p_data->>'code',
    cleanup_pending=(o.staged_path is not null or o.state in ('psc_requested','ambiguous') or coalesce((p_data->>'uploaded')::boolean,false))
    where operation_id=p_operation returning * into o;
- else
-  raise exception 'Invalid signature step' using errcode='22023';
  end if;
  return to_jsonb(o)-'staged_path';
 exception when lock_not_available then
@@ -625,18 +765,24 @@ end $$;
 
 -- Commit point. Barriers, then session, operation and prescription rows; the
 -- session's state and the clock are read only after all of them are held.
-create function public.signature_complete(p_user uuid,p_operation uuid,p_cert_serial text,p_cert_issuer text) returns jsonb
+create function public.signature_complete(p_user uuid,p_operation uuid,p_cert_serial text,p_cert_issuer text,p_auth jsonb) returns jsonb
 language plpgsql volatile security definer set search_path='' as $$
-declare o cortex_private.signature_operations;s cortex_private.signature_sessions;r public.prescriptions;
+declare o cortex_private.signature_operations;s cortex_private.signature_sessions;r public.prescriptions;deadline timestamptz;has_object boolean;
 begin
  perform cortex_private.signature_lock(p_user);
+ perform cortex_private.signature_auth_shape(p_auth);
  select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user;
  if not found then raise exception 'Signature operation unavailable' using errcode='42501';end if;
+ -- Already completed: history, nothing new (no fence).
  if o.state='completed' then return to_jsonb(o);end if;
+ deadline:=cortex_private.signature_session_fence(p_user,p_auth);
  perform cortex_private.signature_document(p_user,o.prescription_id);
  select * into s from cortex_private.signature_sessions where id=o.session_id for update nowait;
  select * into o from cortex_private.signature_operations where operation_id=p_operation for update nowait;
  select * into r from public.prescriptions where id=o.prescription_id for update nowait;
+ -- The signed object must be there, held while the prescription points to it.
+ select true into has_object from storage.objects
+  where bucket_id='prescriptions' and name=o.staged_path for share nowait;
  if o.state='completed' then return to_jsonb(o);end if;
  if o.state<>'stored' then raise exception 'Signature operation not ready' using errcode='P4093';end if;
  if s.generation<>o.session_generation or not cortex_private.signature_session_usable(s) then
@@ -647,6 +793,17 @@ begin
  if r.id is null or r.user_id<>p_user or r.status<>'generated' or r.signed_storage_path is not null
   or r.issuance_snapshot->>'pdf_sha256' is distinct from o.shown_pdf_sha256 then
   update cortex_private.signature_operations set state='cancelled',error_code='document_changed',cleanup_pending=true
+   where operation_id=p_operation returning * into o;
+  return to_jsonb(o);
+ end if;
+ if has_object is not true then
+  update cortex_private.signature_operations set state='cancelled',error_code='stored_object_missing',cleanup_pending=true
+   where operation_id=p_operation returning * into o;
+  return to_jsonb(o);
+ end if;
+ -- The Cortex session, last, right before publishing.
+ if not cortex_private.signature_session_live(deadline) then
+  update cortex_private.signature_operations set state='cancelled',error_code='auth_session_ended',cleanup_pending=true
    where operation_id=p_operation returning * into o;
   return to_jsonb(o);
  end if;
@@ -692,6 +849,35 @@ begin
   where operation_id=p_operation and user_id=p_user and cleanup_pending;
 end $$;
 
+-- Reconciliation of one discovered operation (service only, no user session).
+-- signature_pending_work only discovers: this CAS rechecks state and attempt
+-- under the barrier and the row lock, with the clock read last, and only
+-- closes. A stored answer is never completed here (no human context); its
+-- temporary candidate ends 24 h after stored_at.
+create function public.signature_reconcile(p_user uuid,p_operation uuid,p_expected_state text,p_expected_attempt integer) returns jsonb
+language plpgsql volatile security definer set search_path='' as $$
+declare o cortex_private.signature_operations;
+begin
+ perform cortex_private.signature_lock(p_user);
+ select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user for update nowait;
+ if not found then raise exception 'Signature operation unavailable' using errcode='42501';end if;
+ if o.state is distinct from p_expected_state or o.psc_attempts is distinct from p_expected_attempt then
+  return to_jsonb(o)-'staged_path';
+ end if;
+ if o.state in ('reserved','prepared') and o.updated_at<clock_timestamp()-interval '15 minutes' then
+  update cortex_private.signature_operations set state='failed',error_code='abandoned'
+   where operation_id=p_operation returning * into o;
+ elsif o.state='psc_requested' and o.updated_at<clock_timestamp()-interval '15 minutes' then
+  update cortex_private.signature_operations set state='ambiguous' where operation_id=p_operation returning * into o;
+ elsif o.state='stored' and o.stored_at<clock_timestamp()-interval '24 hours' then
+  update cortex_private.signature_operations set state='cancelled',error_code='stored_expired',cleanup_pending=true
+   where operation_id=p_operation returning * into o;
+ end if;
+ return to_jsonb(o)-'staged_path';
+exception when lock_not_available then
+ raise exception 'Documento ou sessão em uso por outra operação; tente de novo.' using errcode='40001';
+end $$;
+
 -- Ends expired sessions and drops expired authorization states.
 create function public.signature_expire_sessions() returns integer
 language plpgsql volatile security definer set search_path='' as $$
@@ -718,16 +904,18 @@ begin
  return jsonb_build_object('active',true,'expiresAt',s.expires_at,'psc',s.psc);
 end $$;
 
-revoke all on function public.signature_begin_authorization(uuid,text,text,jsonb),public.signature_consume_authorization(uuid,text,text),
- public.signature_activate_session(uuid,text,uuid,timestamptz,text,jsonb),public.signature_revoke_session(uuid),
- public.signature_session_token(uuid,uuid,integer),public.signature_reserve(uuid,uuid,uuid,text),
- public.signature_advance(uuid,uuid,text,jsonb),public.signature_complete(uuid,uuid,text,text),
+revoke all on function public.signature_begin_authorization(uuid,text,text,jsonb,jsonb),public.signature_consume_authorization(uuid,text,text,jsonb),
+ public.signature_activate_session(uuid,text,uuid,timestamptz,text,jsonb,jsonb),public.signature_revoke_session(uuid),
+ public.signature_session_token(uuid,uuid,integer,jsonb),public.signature_reserve(uuid,uuid,uuid,text,jsonb),
+ public.signature_advance(uuid,uuid,text,jsonb,jsonb),public.signature_close(uuid,uuid,text,jsonb),
+ public.signature_complete(uuid,uuid,text,text,jsonb),public.signature_reconcile(uuid,uuid,text,integer),
  public.signature_cleanup_done(uuid,uuid),public.signature_expire_sessions(),public.signature_session_state(uuid),
  public.signature_pending_work(integer) from public,anon,authenticated;
-grant execute on function public.signature_begin_authorization(uuid,text,text,jsonb),public.signature_consume_authorization(uuid,text,text),
- public.signature_activate_session(uuid,text,uuid,timestamptz,text,jsonb),public.signature_revoke_session(uuid),
- public.signature_session_token(uuid,uuid,integer),public.signature_reserve(uuid,uuid,uuid,text),
- public.signature_advance(uuid,uuid,text,jsonb),public.signature_complete(uuid,uuid,text,text),
+grant execute on function public.signature_begin_authorization(uuid,text,text,jsonb,jsonb),public.signature_consume_authorization(uuid,text,text,jsonb),
+ public.signature_activate_session(uuid,text,uuid,timestamptz,text,jsonb,jsonb),public.signature_revoke_session(uuid),
+ public.signature_session_token(uuid,uuid,integer,jsonb),public.signature_reserve(uuid,uuid,uuid,text,jsonb),
+ public.signature_advance(uuid,uuid,text,jsonb,jsonb),public.signature_close(uuid,uuid,text,jsonb),
+ public.signature_complete(uuid,uuid,text,text,jsonb),public.signature_reconcile(uuid,uuid,text,integer),
  public.signature_cleanup_done(uuid,uuid),public.signature_expire_sessions(),public.signature_session_state(uuid),
  public.signature_pending_work(integer) to service_role;
 revoke all on all functions in schema cortex_private from public,anon,authenticated,service_role;
