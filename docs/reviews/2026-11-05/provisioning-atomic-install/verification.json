@@ -1,0 +1,72 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "sourceBaseline": "1d5eacc6e0d3fdb18f290fa2c257c6fc80be49a4",
+  "versions": [
+    {
+      "authVersion": "v2.197.0",
+      "migrations": 69,
+      "previousProtocolGroups": 42,
+      "installationGroups": 4,
+      "cleanupVerified": true
+    },
+    {
+      "authVersion": "v2.189.0",
+      "migrations": 69,
+      "previousProtocolGroups": 42,
+      "installationGroups": 4,
+      "cleanupVerified": true
+    }
+  ],
+  "totalGroups": 92,
+  "red": {
+    "authVersion": "v2.197.0",
+    "completedOverlays": 6,
+    "remainingOverlays": 4,
+    "lateFailure": "P4110",
+    "partialProtocolPersisted": true,
+    "cleanupVerified": true
+  },
+  "sameFinalSourceManifests": true,
+  "sourceHashesVerified": true,
+  "allTenOverlaysPinnedAndSingleTransaction": true,
+  "appMigrationsInsideAtomicTransaction": false,
+  "authorizingBodiesVerifiedInsideTransaction": true,
+  "actualAuthInsertAndMemberUpdateHolders": true,
+  "nowaitMessageNotTimeout": true,
+  "headerWaitsObservedWithRelationModeAndQuery": true,
+  "repeatWithHistoryRefused42P06": true,
+  "unitTests": {
+    "atomicInstaller": 15,
+    "confirmationBoundary": 35,
+    "auth": 34,
+    "total": 84,
+    "files": 3,
+    "exitCode": 0
+  },
+  "combinedSelection": {
+    "passed": 190,
+    "skipped": 1,
+    "files": 8,
+    "includesThe84Tests": true
+  },
+  "globalTypecheckExitCode": 0,
+  "syntaxAndLintExitCode": 0,
+  "review": {
+    "contractFindings": 0,
+    "codeAndProofCycles": 2,
+    "fixed": [
+      "atomicRed omitted from distinct artifact filename",
+      "55P03 assertion could accept timeout; now requires NOWAIT wording and header relation/mode/query",
+      "gate-order unit assertion allowed index -1",
+      "unit replaceAll unsupported by ES2020 lib"
+    ],
+    "finalConcreteFindings": 0,
+    "externalReview": "dispensed by user"
+  },
+  "intermediateRunsExcludedFromCounts": true,
+  "rootSqlSuitesOrFrontendBuildRepeated": false,
+  "productionInstallationOrUpgradeImplemented": false,
+  "retentionPolicyChosen": false,
+  "externalCalls": false
+}

@@ -1,0 +1,39 @@
+{
+  "syntheticOnly": true,
+  "unitTests": {
+    "atomicInstaller": 15,
+    "confirmationBoundary": 35,
+    "auth": 34,
+    "total": 84,
+    "files": 3,
+    "exitCode": 0
+  },
+  "finalCombinedSelection": {
+    "passed": 190,
+    "skipped": 1,
+    "files": 8,
+    "includesThe84Tests": true
+  },
+  "globalTypecheckExitCode": 0,
+  "syntaxAndLintExitCode": 0,
+  "typecheckRecovery": "Own test used String.replaceAll outside ES2020 lib; replaced with regex after reproducing TS2550. Claude async Storage type corrected in7310e2f.",
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "d0793a71744258c8931017eda5ed51325784fe280717f3a6e23f1c5051bd1ca9"
+    },
+    {
+      "path": "scripts/test-provisioning-clinic-authority.mjs",
+      "sha256": "1fffe522265d37eddb2972b8d0e6af855d75d95a95e723bf0c56a0fd85120232"
+    },
+    {
+      "path": "scripts/test-provisioning-atomic-install.mjs",
+      "sha256": "fa7b61385ae79a3dadda3959978c75dff9b180de71c526eedb75a3b9d3cd161d"
+    },
+    {
+      "path": "src/lib/provisioningAtomicInstall.test.ts",
+      "sha256": "44778692a14f0bbad50ac6dc714ad2db30e4b52ec4ecda98f2055fb2d7e2b66a"
+    }
+  ],
+  "frontendBuildOrBrowserRepeated": false
+}

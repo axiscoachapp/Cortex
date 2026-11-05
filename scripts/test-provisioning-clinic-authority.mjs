@@ -40,7 +40,7 @@ export function assertAuthFixtureProjection(sql){
  assert.deepEqual(actual,expected,'Auth session/factor fixture projection differs');
  return actual;
 }
-export function installClinicSchema({sql,inputs,red}){
+export async function installClinicSchema({sql,inputs,red,atomicInstaller}){
  const columnsQuery=`select md5(string_agg(c.relname||':'||c.relowner::text||':'||coalesce(c.relacl::text,'')||':'||c.relrowsecurity::text||':'||c.relforcerowsecurity::text||':'||a.attnum::text||':'||a.attname||':'||format_type(a.atttypid,a.atttypmod)||':'||a.attnotnull::text||':'||coalesce(a.attacl::text,''),'|' order by c.relname,a.attnum)) from pg_class c join pg_namespace n on n.oid=c.relnamespace join pg_attribute a on a.attrelid=c.oid and a.attnum>0 and not a.attisdropped where n.nspname='auth' and c.relname in ('users','sessions','mfa_factors')`;
  const columns=()=>sql(columnsQuery);
  const clientReadsQuery="select bool_and(not has_table_privilege(r,t,'select') and not has_any_column_privilege(r,t,'select')) from unnest(array['anon','authenticated','service_role']) r cross join unnest(array['auth.users','auth.sessions','auth.mfa_factors']) t";
@@ -50,6 +50,11 @@ export function installClinicSchema({sql,inputs,red}){
  const projection=inputs.sessionFixture?assertAuthFixtureProjection(sql):undefined;
  const bootstrap=nativeApplicationBootstrap(inputs.bootstrap);sql(bootstrap);
  for(const {path,source} of inputs.migrations){try{sql(source);}catch(error){throw new Error('Application snapshot install failed at '+path,{cause:error});}}
+ let atomic;
+ if(atomicInstaller){
+  atomic=await atomicInstaller();
+  if(atomic.atomicInstallRedOnly)return {sourceBaseline:inputs.baseline,migrations:inputs.migrations.length,...atomic};
+ }else{
  sql(inputs.identity);sql(inputs.intent);sql(inputs.membership);
  if(!red)sql(inputs.composed);
  if(inputs.ledger)sql(inputs.ledger);
@@ -65,6 +70,7 @@ export function installClinicSchema({sql,inputs,red}){
   sql(inputs.creationProducer);assert.equal(sql(body),before.replace(site,'provision_identity_lab.target_exists(p_planned)'),'Creation changed authorization beyond the minimal reader');
  }
  if(inputs.confirmationBoundary)sql(inputs.confirmationBoundary);
+ }
  assert.equal(columns(),beforeColumns,'Native Auth core columns/owners/table or column ACL/RLS flags changed');assert.equal(functions(),beforeFunctions,'Native identity helper definition or owner changed');
  assert.equal(enums(),beforeEnums,'Native Auth enum definition/owner/ACL changed');
  assert.equal(sql(clientReadsQuery),'t','Native Auth table or column became readable by a client role');
@@ -83,7 +89,7 @@ export function installClinicSchema({sql,inputs,red}){
  return {sourceBaseline:inputs.baseline,migrations:inputs.migrations.length,nativeCoreColumnsOwnersAndTableAclUnchanged:true,nativeIdentityHelpersUnchanged:true,
   nativeTablesUnavailableToClientRoles:true,nativeColumnAclUnchanged:true,nativeColumnAclControlPassed:true,nativeEnumsOwnersAndAclUnchanged:true,nativeTableRlsFlagsUnchanged:true,ledgerBindingsInstalled:!!inputs.ledger,birthProducerInstalled:!!inputs.birthProducer,
   ...(inputs.sessionFixture?{fixtureProjectionVerified:true,fixtureProjection:projection,bootstrapOverlaySha256:createHash('sha256').update(inputs.bootstrap).digest('hex')}:{}),
-  confirmationBoundaryInstalled:!!inputs.confirmationBoundary,creationProducerInstalled:!!inputs.creationProducer,confirmationProducerInstalled:!!inputs.confirmationProducer,...(inputs.confirmationProducer?{confirmationAuthorizingBodyUnchanged:true}:{}),reservationKeysInstalled:!!inputs.reservationKeys,sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
+  confirmationBoundaryInstalled:!!inputs.confirmationBoundary,creationProducerInstalled:!!inputs.creationProducer,confirmationProducerInstalled:!!inputs.confirmationProducer,...(inputs.confirmationProducer?{confirmationAuthorizingBodyUnchanged:true}:{}),reservationKeysInstalled:!!inputs.reservationKeys,sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex'),...atomic};
 }
 
 export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,birthProducer,birthProducerRed,reservationCheck,reservationRed,confirmationCheck,confirmationRed,creationCheck,creationRed,creationInstalled,boundaryCheck,boundaryFactory,asyncHttp,pause,holderSession,restartAuth}){
