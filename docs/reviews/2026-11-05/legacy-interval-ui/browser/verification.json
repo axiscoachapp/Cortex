@@ -1,0 +1,136 @@
+{
+  "syntheticOnly": true,
+  "realSql": false,
+  "realCalendarAndApi": true,
+  "checks": [
+    "invalid start does not crash or inherit selected clinic date",
+    "zero/reversed/infinite intervals warn and disable other actions",
+    "cancel requires human consent, preserves exact ID/revision and original timestamps",
+    "conflict reads new revision without automatic retry; pending cancellation locks buttons",
+    "valid and microsecond intervals keep actions and valid reschedule defaults in clinic timezone",
+    "closed records remain historical; layouts375/768/1280/1920px without overflow"
+  ],
+  "calls": [
+    {
+      "name": "clinic_access",
+      "body": {}
+    },
+    {
+      "name": "reception_appointments",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_start": "2026-11-05T03:00:00.000Z",
+        "p_end": "2026-11-06T03:00:00.000Z",
+        "p_doctor": null
+      }
+    },
+    {
+      "name": "reception_change_appointment",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_appointment": "aaaaaaaa-aaaa-4aaa-8aaa-000000000004",
+        "p_revision": 3,
+        "p_action": "cancel",
+        "p_start": null,
+        "p_end": null
+      }
+    },
+    {
+      "name": "reception_appointments",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_start": "2026-11-05T03:00:00.000Z",
+        "p_end": "2026-11-06T03:00:00.000Z",
+        "p_doctor": null
+      }
+    },
+    {
+      "name": "reception_change_appointment",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_appointment": "aaaaaaaa-aaaa-4aaa-8aaa-000000000004",
+        "p_revision": 4,
+        "p_action": "cancel",
+        "p_start": null,
+        "p_end": null
+      }
+    },
+    {
+      "name": "reception_appointments",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_start": "2026-11-05T03:00:00.000Z",
+        "p_end": "2026-11-06T03:00:00.000Z",
+        "p_doctor": null
+      }
+    },
+    {
+      "name": "reception_change_appointment",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_appointment": "aaaaaaaa-aaaa-4aaa-8aaa-000000000003",
+        "p_revision": 3,
+        "p_action": "cancel",
+        "p_start": null,
+        "p_end": null
+      }
+    },
+    {
+      "name": "reception_appointments",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_start": "2026-11-05T03:00:00.000Z",
+        "p_end": "2026-11-06T03:00:00.000Z",
+        "p_doctor": null
+      }
+    }
+  ],
+  "pageErrors": [],
+  "fixtureMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0
+  },
+  "sources": [
+    {
+      "path": "src/features/reception/ReceptionCalendar.tsx",
+      "sha256": "05641fb3ddc68273a33786631859fd7e4ed2dec852b9661f4c8792a7b246ece9"
+    },
+    {
+      "path": "src/features/reception/ReceptionAppointmentCard.tsx",
+      "sha256": "7bee2ad5e7c6b7f3b24b2c69323f6e2b99289f5e0da0633fa1cb081da10044f4"
+    },
+    {
+      "path": "src/features/reception/appointmentTiming.ts",
+      "sha256": "1fd3a92a602265f2d7e1343fc167c16cd9fc302c071c37837825d399c8fb450a"
+    },
+    {
+      "path": "src/features/reception/dates.ts",
+      "sha256": "a7bdb3544b2d20afe9dcff177c17cb9c97a35c12e29c76bdefb3739e89e35587"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "6abb15cf334767817f37f62c0308c432bb40bbf6bcf81f8fd300007ab3d0ed59"
+    },
+    {
+      "path": "src/features/reception/contracts.ts",
+      "sha256": "8c5f7f329416fd0e5b8dcdb155f99721015606699ce5fb5f9de07599640047a7"
+    },
+    {
+      "path": "scripts/fixtures/legacy-calendar-page.tsx",
+      "sha256": "455bb1096ff61f11fd749ff7431f5a1592d0f2e8f4786e8fad968fc5039a9580"
+    },
+    {
+      "path": "scripts/fixtures/legacy-calendar.html",
+      "sha256": "1497c28930d4bdfeee26c45cea98c59d8e9e5e49583b87c3bb4d1b17adc2c343"
+    },
+    {
+      "path": "scripts/test-legacy-interval-ui-browser.mjs",
+      "sha256": "ad055621684310daf8a373676a88578b37e328a661ea6a80ac1a7e09f1d3e5c8"
+    }
+  ],
+  "cleanupVerified": true
+}

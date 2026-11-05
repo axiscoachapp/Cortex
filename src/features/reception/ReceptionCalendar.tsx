@@ -12,8 +12,9 @@ import type { ReceptionAppointment } from './contracts';
 import { ReceptionNotice } from './ReceptionNotice';
 import { BookingDialog } from './BookingDialog';
 import { useRequestId } from './useRequestId';
+import { appointmentTiming } from './appointmentTiming';
+import { ReceptionAppointmentCard } from './ReceptionAppointmentCard';
 
-const statusLabels = { agendado: 'Agendado', confirmado: 'Confirmado', cancelado: 'Cancelado', realizado: 'Realizado' };
 export default function ReceptionCalendar() {
   const access = useClinicAccess();
   const client = useQueryClient();
@@ -55,6 +56,9 @@ export default function ReceptionCalendar() {
     }
   }
   const days = day ? Array.from({ length: view === 'day' ? 1 : 7 }, (_, i) => nextClinicDay(day, i)) : [];
+  const timed = appointments.data?.items.map(appointment => ({ appointment, day: appointmentTiming(appointment).day })) ?? [];
+  const undated = timed.filter(item => item.day === null);
+  const renderAppointment = (appointment: ReceptionAppointment) => <ReceptionAppointmentCard key={appointment.id} appointment={appointment} pending={change.isPending} onAction={action => change.mutate({ appointment, action })} onEdit={() => setEditing(appointment)} />;
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap justify-between gap-3">
@@ -149,9 +153,14 @@ export default function ReceptionCalendar() {
         onRetry={() => void appointments.refetch()}
       />
       {!day && <p className="text-sm text-muted-foreground">Selecione uma data para consultar a agenda.</p>}
+      {!!undated.length && <section aria-labelledby="reception-undated-heading" className="space-y-3">
+        <h2 id="reception-undated-heading" className="font-semibold text-base">Reservas sem data válida de início</h2>
+        <p className="text-sm text-muted-foreground">Estas reservas não foram atribuídas a um dia. Confira o cadastro antes de criar outra.</p>
+        <div className="grid lg:grid-cols-2 gap-3">{undated.map(item => renderAppointment(item.appointment))}</div>
+      </section>}
       {appointments.data &&
         days.map((date) => {
-          const items = appointments.data.items.filter((a) => clinicDay(a.startTime) === date);
+          const items = timed.filter(item => item.day === date).map(item => item.appointment);
           const blocks = appointments.data.blocks.filter(
             (b) => clinicDay(b.startTime) <= date && clinicDay(b.endTime) >= date,
           );
@@ -185,80 +194,7 @@ export default function ReceptionCalendar() {
                 </p>
               )}
               <div className="grid lg:grid-cols-2 gap-3">
-                {items.map((a) => (
-                  <article
-                    key={a.id}
-                    className={`rounded-xl border bg-card p-4 space-y-3 ${a.status === 'cancelado' ? 'opacity-65' : ''}`}
-                  >
-                    <div className="flex flex-wrap justify-between gap-2">
-                      <span className="font-semibold text-sm tabular-nums">
-                        {clinicTime(a.startTime)}–{clinicTime(a.endTime)}
-                      </span>
-                      <span className="text-xs">
-                        {a.checkedInAt ? 'Chegada registrada · ' : ''}
-                        {statusLabels[a.status]}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold break-words">{a.patientName}</h3>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {access?.doctors.find((d) => d.id === a.doctorId)?.name ?? 'Médico'} ·{' '}
-                        {a.type === 'novo'
-                          ? 'Primeira consulta'
-                          : a.type === 'retorno'
-                            ? 'Retorno'
-                            : a.type === 'seguimento'
-                              ? 'Seguimento'
-                              : 'Encaixe'}
-                      </p>
-                    </div>
-                    {['pending', 'failed'].includes(a.googleSyncStatus) && (
-                      <p className="text-xs text-muted-foreground">
-                        Sincronização externa pendente. A reserva está registrada no Cortex.
-                      </p>
-                    )}
-                    {!['cancelado', 'realizado'].includes(a.status) && (
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={change.isPending}
-                          onClick={() => change.mutate({ appointment: a, action: 'confirm' })}
-                        >
-                          Confirmar presença
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={change.isPending}
-                          onClick={() =>
-                            change.mutate({ appointment: a, action: a.checkedInAt ? 'undo_check_in' : 'check_in' })
-                          }
-                        >
-                          {a.checkedInAt ? 'Desfazer chegada' : 'Registrar chegada'}
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditing(a)}>
-                          Remarcar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={change.isPending}
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `Cancelar o agendamento de ${a.patientName} às ${clinicTime(a.startTime)}?`,
-                              )
-                            )
-                              change.mutate({ appointment: a, action: 'cancel' });
-                          }}
-                        >
-                          Cancelar agendamento
-                        </Button>
-                      </div>
-                    )}
-                  </article>
-                ))}
+                {items.map(renderAppointment)}
               </div>
             </section>
           );
