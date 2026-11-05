@@ -135,8 +135,12 @@ export function parseCertificate(der: Uint8Array): ParsedCertificate {
 // ---------------------------------------------------------------------------
 // Hashes and verification (WebCrypto)
 
+// WebCrypto and the compression streams take bytes over a plain ArrayBuffer
+// (TS 5.7+ / Deno types); a copy never aliases a shared buffer.
+const owned = (bytes: Uint8Array): Uint8Array<ArrayBuffer> => new Uint8Array(bytes);
+
 export async function sha256(data: Uint8Array): Promise<Uint8Array> {
-  return new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', owned(data)));
 }
 
 /**
@@ -147,11 +151,11 @@ export async function verifyRawSignature(certificate: Uint8Array, signedData: Ui
   const { spki } = parseCertificate(certificate);
   let key: CryptoKey;
   try {
-    key = await crypto.subtle.importKey('spki', spki, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    key = await crypto.subtle.importKey('spki', owned(spki), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
   } catch {
     throw new Error('Só certificados RSA são aceitos nesta versão.');
   }
-  return crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, signature, signedData);
+  return crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, owned(signature), owned(signedData));
 }
 
 // ---------------------------------------------------------------------------

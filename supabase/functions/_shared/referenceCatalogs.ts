@@ -52,8 +52,12 @@ function columns(header: string[], wanted: Record<string, RegExp>): Record<strin
 // ---------------------------------------------------------------------------
 // ZIP (stored or deflate; no ZIP64, no encryption)
 
+// WebCrypto and the compression streams take bytes over a plain ArrayBuffer
+// (TS 5.7+ / Deno types); a copy never aliases a shared buffer.
+const owned = (bytes: Uint8Array): Uint8Array<ArrayBuffer> => new Uint8Array(bytes);
+
 async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
-  const source = new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(data); controller.close(); } });
+  const source = new ReadableStream<Uint8Array<ArrayBuffer>>({ start(controller) { controller.enqueue(owned(data)); controller.close(); } });
   const reader = source.pipeThrough(new DecompressionStream('deflate-raw')).getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -292,7 +296,7 @@ export async function refreshCatalog(source: CatalogSource, ports: RefreshPorts)
   const url = source === 'dcb' ? await resolveDcbUrl(ports.download) : CATALOG_URLS[source];
   if (!/^https?:\/\/[a-z0-9.-]+\.gov\.br\//.test(url)) throw new Error(`Fonte fora de gov.br: ${url}`);
   const bytes = await ports.download(url);
-  const sha256 = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
+  const sha256 = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', owned(bytes))));
   if ((await ports.version(source))?.sha256 === sha256) return { source, status: 'unchanged', rows: 0, skipped: 0, url };
   const refreshedAt = ports.now().toISOString();
   let rows: Record<string, unknown>[] = [];

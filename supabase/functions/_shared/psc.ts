@@ -41,12 +41,15 @@ type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export const base64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const base64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
-function fromBase64(text: string): Uint8Array {
+function fromBase64(text: string): Uint8Array<ArrayBuffer> {
   const clean = text.replace(/-/g, '+').replace(/_/g, '/').replace(/\s+/g, '');
   const bin = atob(clean + '='.repeat((4 - (clean.length % 4)) % 4));
   return Uint8Array.from(bin, (c) => c.charCodeAt(0));
 }
 const randomBytes = (n: number) => crypto.getRandomValues(new Uint8Array(n));
+// WebCrypto and the compression streams take bytes over a plain ArrayBuffer
+// (TS 5.7+ / Deno types); a copy never aliases a shared buffer.
+const owned = (bytes: Uint8Array): Uint8Array<ArrayBuffer> => new Uint8Array(bytes);
 
 function assertConfig(cfg: PscConfig) {
   const url = new URL(cfg.baseUrl);
@@ -206,7 +209,7 @@ export async function stateHash(state: string): Promise<string> {
 
 async function importKey(rawKey: Uint8Array): Promise<CryptoKey> {
   if (!(rawKey instanceof Uint8Array) || rawKey.length !== 32) throw new Error('A chave de cifra deve ter 32 bytes.');
-  return crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['encrypt', 'decrypt']);
+  return crypto.subtle.importKey('raw', owned(rawKey), 'AES-GCM', false, ['encrypt', 'decrypt']);
 }
 
 /**
