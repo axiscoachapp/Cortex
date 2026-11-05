@@ -64,6 +64,8 @@ Nem toda conversa vira agendamento. Encerrar como informação prestada, desist�
 
 Regras iniciais determinísticas, com motivo visível: (1) profissional solicitado explicitamente; (2) vínculo administrativo e continuidade confirmados; (3) serviço e profissionais habilitados na configuração da clínica; (4) regras de convênio/faixa etária, quando cadastradas e aprovadas; (5) disponibilidade e preferência do paciente. Empate ou ausência de regra vão para seleção humana.
 
+**Implementado localmente em T08/1:** pedido/vínculos entre agendas autorizadas. Se o médico indicado está indisponível, informar a limitação e exigir escolha humana, sem fallback silencioso. Vários vínculos mostram opções sem preferência; selecionar só preenche o campo e Encaminhar confirma separadamente. Agenda removida não pode ser enviada e pendência bloqueia os controles. [Provas](../../reviews/2026-11-05/doctor-routing/IMPLEMENTATION.md). Catálogo/habilitações e regras por serviço/convênio continuam dependentes de configuração aprovada; nenhuma inferência por especialidade ou conteúdo clínico.
+
 Não inferir diagnóstico a partir da mensagem nem consultar a evolução clínica para escolher um profissional. Pedidos assistenciais são encaminhados à equipe médica pelo procedimento da clínica. Uma marcação de possível urgência não deve ser vendida como triagem médica ou garantia de resposta emergencial.
 
 ### Fila de atendimento

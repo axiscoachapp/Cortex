@@ -1,0 +1,163 @@
+{
+  "syntheticOnly": true,
+  "realSql": false,
+  "realCaseAndApi": true,
+  "checks": [
+    "unavailable indicated doctor never silently replaced",
+    "linked family choices only fill the form after human selection",
+    "scope loss refuses unsent doctor and manual correction uses exact allowed identity",
+    "pending route locks suggestions/select/submit",
+    "new person and other-owner case cause no automatic routing",
+    "375px long names wrap without horizontal overflow"
+  ],
+  "scenarios": [
+    {
+      "kind": "unavailable-indicated",
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        },
+        {
+          "name": "reception_update_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_revision": 1,
+            "p_action": "route",
+            "p_value": {
+              "doctorId": "88888888-8888-4888-8888-888888888888"
+            }
+          }
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        }
+      ]
+    },
+    {
+      "kind": "family-scope-loss-and-human-correction",
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        },
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        },
+        {
+          "name": "reception_update_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_revision": 1,
+            "p_action": "route",
+            "p_value": {
+              "doctorId": "88888888-8888-4888-8888-888888888888"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "kind": "new-person",
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        }
+      ]
+    },
+    {
+      "kind": "other-owner",
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        }
+      ]
+    }
+  ],
+  "pageErrors": [],
+  "fixtureMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0
+  },
+  "sources": [
+    {
+      "path": "src/features/reception/CaseWorkspace.tsx",
+      "sha256": "dd05d775a824153e0ca8c5d134a6031e97952942676395207e25fd891ea48374"
+    },
+    {
+      "path": "src/features/reception/DoctorSuggestion.tsx",
+      "sha256": "1cedaab433dfe89cbc48b460ab2764afd3218a50e3cd78d8f291f86618997980"
+    },
+    {
+      "path": "src/features/reception/routing.ts",
+      "sha256": "e9483b8d379ecb30cea66566308515b7ed3ba0e9828a7bc39f56574916bfc46d"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "6abb15cf334767817f37f62c0308c432bb40bbf6bcf81f8fd300007ab3d0ed59"
+    },
+    {
+      "path": "src/features/reception/contracts.ts",
+      "sha256": "8c5f7f329416fd0e5b8dcdb155f99721015606699ce5fb5f9de07599640047a7"
+    },
+    {
+      "path": "src/features/reception/useCaseDraft.ts",
+      "sha256": "b80b793ed11f1d5755a27f0c991bb0ab4833c5b070cfe2f4bca7c4e6ce7b17c1"
+    },
+    {
+      "path": "scripts/fixtures/link-relationship-editor-page.tsx",
+      "sha256": "55779f5504f4d1438c3311ae9c7ec6991fff76b191596053269d0589a087b59b"
+    },
+    {
+      "path": "scripts/test-doctor-routing-browser.mjs",
+      "sha256": "04a7a238a2890809c339889be532f5d09485a1c28fa06a6c0a6744eee8507b8b"
+    }
+  ],
+  "cleanupVerified": true
+}

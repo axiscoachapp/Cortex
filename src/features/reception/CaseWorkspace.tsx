@@ -33,6 +33,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
   const [olderBusy, setOlderBusy] = useState(false);
   const mine = data.assignedTo === access?.actorId;
   const editable = mine || !!access?.admin;
+  const doctorAuthorized = !!doctor && !!access?.doctors.some(option => option.id === doctor);
   const closed = ['resolved', 'cancelled'].includes(data.status);
   const change = useMutation({
     mutationFn: ({ action, value }: { action: string; value?: Record<string, unknown> }) =>
@@ -133,7 +134,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
         <ReceptionNotice error={change.error} />
         {!closed && editable && (
           <section className="space-y-3">
-            <DoctorSuggestion doctors={access?.doctors ?? []} receptionCase={data} onSelect={setDoctor} />
+            <DoctorSuggestion doctors={access?.doctors ?? []} receptionCase={data} onSelect={setDoctor} disabled={change.isPending} />
             <div className="grid lg:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor={'case-doctor-' + data.id}>Encaminhar para médico</Label>
@@ -141,6 +142,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
                   id={'case-doctor-' + data.id}
                   className="w-full rounded-md border bg-background p-2 text-xs"
                   value={doctor}
+                  disabled={change.isPending}
                   onChange={(e) => setDoctor(e.target.value)}
                 >
                   <option value="">Selecione uma agenda</option>
@@ -150,12 +152,13 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
                     </option>
                   ))}
                 </select>
+                {doctor && !doctorAuthorized && <p role="alert" className="mt-2 text-xs">A agenda selecionada deixou de estar disponível. Escolha outra agenda autorizada antes de encaminhar.</p>}
                 <Button
                   className="mt-2"
                   size="sm"
                   variant="outline"
-                  disabled={!doctor || change.isPending}
-                  onClick={() => change.mutate({ action: 'route', value: { doctorId: doctor } })}
+                  disabled={!doctorAuthorized || change.isPending}
+                  onClick={() => { if (doctorAuthorized && !change.isPending) change.mutate({ action: 'route', value: { doctorId: doctor } }); }}
                 >
                   Encaminhar
                 </Button>

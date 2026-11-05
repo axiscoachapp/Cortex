@@ -28,4 +28,16 @@ describe('administrative doctor suggestions', () => {
   it('does not guess a specialty from a new contact', () => {
     expect(suggestDoctor(doctors, { doctorId: null, beneficiaries: [] }).doctorId).toBeNull();
   });
+  it('does not silently replace an unavailable indicated doctor with another continuity link', () => {
+    const suggestion=suggestDoctor(doctors,{doctorId:'revoked',beneficiaries:[patient('a')]});
+    expect(suggestion.doctorId).toBeNull();expect(suggestion.reason).toMatch(/indicado.*indisponível/);expect(suggestion.candidateIds).toEqual([]);
+  });
+  it('lists all permitted linked options without resolving a family tie', () => {
+    const suggestion=suggestDoctor(doctors,{doctorId:null,beneficiaries:[patient('a'),patient('b'),patient('revoked')]});
+    expect(suggestion.doctorId).toBeNull();expect(suggestion.candidateIds).toEqual(['a','b']);
+  });
+  it('explains the absence of authorized agendas without inferring a service or specialty', () => {
+    const suggestion=suggestDoctor([],{doctorId:null,beneficiaries:[patient('a')]});
+    expect(suggestion.doctorId).toBeNull();expect(suggestion.candidateIds).toEqual([]);expect(suggestion.reason).toMatch(/Nenhuma agenda autorizada/);
+  });
 });

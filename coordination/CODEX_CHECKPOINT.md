@@ -1,5 +1,13 @@
 # Checkpoint do Codex
 
+Atualizado em05/11/2026 15:45. **T08/1 entregue localmente:** [provas](../docs/reviews/2026-11-05/doctor-routing/IMPLEMENTATION.md). Pedido/vínculo apenas; indicado ausente das agendas autorizadas não recebe fallback por continuidade. Vários médicos vinculados aparecem sem preferência e só preenchem campo; Encaminhar separado. Agenda removida bloqueia envio do rascunho e write trava campo/sugestões. Nenhum diagnóstico, seleção automática ou agendamento.
+
+RED6/13 de regras/UI e2/4 do workspace; GREEN17testes/3arquivos (8regras+5sugestão+4workspace), seis checksEdgeisolado375px, oitofontes/hash/cleanup/zero pageerror, lint7/sintaxe/typecheckappNode/build sintético aprovados. Revisão independente sem achado concreto; captura135% inspecionada. Erro de tipo em opção de teste corrigido e verificação repetida. Sem DTO/RPC/DDL/SQL/Native/D17 novo, grants ou hosted/push. T08 inteira aberta para catálogo/habilitações e regras aprovadas; não inventar regras por specialty/texto/idade. M2/corte/piloto separados.
+
+**Próxima candidata independente:** T32/L6, reproduzir cancelamento de reserva legada com intervalo inválido sem permitir INSERT/remarcação/reabertura inválidos; inspecionar writers/contratos atuais e reservar número no ESTADO antes de DDL se necessário. Sem importação/alteração de identidade. Ler Git/coordenação antes;1340/1348 atendidas1344/1354,4ff89be sóstatus. Claude/PersonalMed/SaaS/trêshelpersT33 preservados; pm-v2/D6A/D7A não autorizam schema/carregador/carga por inferência. R2/D17/DER/Native encerrados, não reabrir. Commit local main/axiscoachapp, sem push.
+
+---
+
 Atualizado em05/11/2026 15:34. **T38 concluída localmente:** [provas](../docs/reviews/2026-11-05/calendar-week-mobile/IMPLEMENTATION.md). Cabeçalhos semanais concisos com nome completo acessível, lista móvel da semana selecionada com título/intervalo completos e abertura humana do modal existente pelo objeto exato. Dia/Mês, permissões, datas/horários e visão escolhida no resize preservados; sem nova consulta/gravação/IA. Grade estreita usa lista para leitura completa.
 
 11testes/2arquivos (7componente+4breakpoint), cinco grupos browser/sete larguras375/390/768/1036/1037/1280/1920, oito fontes congeladas/cleanup;13checks T37 em nova pasta --t38, lint5/sintaxe/typecheckappNode/build sintético aprovados. RED390 e fonte/padding herdados corrigidos (também375 e1037); revisão identificou âncora escondida em lista alta, scroll-margin ajustado e prova com seis reservas. Medição visual exclui sr-only; última leitura sem regressão concreta. Capturas135% inspecionadas. Sem SQL/Native/D17 novos, API/DDL/grants ou hosted/push. T05b eT38 implementadas localmente; M2/corte/piloto continuam abertos.

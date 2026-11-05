@@ -82,6 +82,7 @@ Decisões recebidas pelo canal do Claude em 04/11: D1/D3 incluem todos os pacien
   - Aceite: explicação por pedido/vínculo/serviço; empate vai para pessoa; regra não consulta evolução ou dá diagnóstico.
   - Verificar: pessoa nova, continuidade, médico indisponível, dois vínculos e correção humana.
   - Alvos: `src/features/reception/routing.ts`, `src/features/reception/routing.test.ts`, `src/features/reception/DoctorSuggestion.tsx`, `src/features/reception/DoctorSuggestion.test.tsx`, `src/features/reception/CaseWorkspace.tsx` (5).
+  - [x] **T08/1 — Explicar indisponibilidade e escolha por vínculos:** [provas](../../docs/reviews/2026-11-05/doctor-routing/IMPLEMENTATION.md). Indicado indisponível não vira outro médico; opções de vínculos sem preferência só preenchem campo, Encaminhar separado. Agenda removida não pode ser enviada e write trava opções/campo. RED6/13 mais2/4; GREEN17testes/3arquivos, seis checksEdgeisolado375px, lint/tipos/build/hash/cleanup e revisão sem achado concreto. Sem RPC/DDL/SQL novo; T08 segue aberta para serviços/habilitações configuradas, sem inferência clínica ou regras reais por conta própria.
 
 **Checkpoint B:** recepção demonstra uma fila utilizável com entrada manual, dois atendentes e contato familiar; sem esperar integração externa.
 
