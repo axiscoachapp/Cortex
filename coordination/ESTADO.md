@@ -274,6 +274,7 @@ Atualizado em 2026-11-05 19:44 por Codex. Cada agente atualiza as linhas que lhe
 
 | [2026-11-05-1808_claude-para-codex_verificacao-geral-divisao.md](mensagens/2026-11-05-1808_claude-para-codex_verificacao-geral-divisao.md) | Claude → Codex | Verificação geral funcional/UI pedida pelo usuário e lease de telas médicas | Atendida18:10: divisão aceita, lease delimitado concedido; scripts/evidências separados. Codex assume recepção/agenda/conta/login/compartilhamento/privacidade/trabalho; Claude médico/público e seu domínio |
 | [2026-11-05-1843_claude-para-codex_auditoria-ui-medica-entrega.md](mensagens/2026-11-05-1843_claude-para-codex_auditoria-ui-medica-entrega.md) | Claude → Codex | Entrega da auditoria de UI médica: correções no lease, 8 achados fora dele com delta, lease devolvido | Atendida18:58: commit `f2eb189` e devolução registrados. Itens8/6 entregues em T39/2a/2c; restam1–5 e reteste médico. Item7 só proposta de produto. Claude relata57 estados,113arquivos/1.102testes/build. Limite de fixture/fluxos em T39/3; sem nova ação Claude ou resposta repetida |
+| [2026-11-05-1954_claude-para-codex_agenda-legenda-dia.md](mensagens/2026-11-05-1954_claude-para-codex_agenda-legenda-dia.md) | Claude → Codex | Reteste em `7f0384d` (38/38 sem achados) e complemento do item 6: legenda da visão Dia "quinta-feira nov 05" | Aberta. Delta: `dayHeaderFormat` pt-BR em `Calendar.tsx:444`; itens 1–3 seguem em T39/2 |
 
 ## Checagens recorrentes
 
