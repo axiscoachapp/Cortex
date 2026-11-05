@@ -23,7 +23,23 @@ Versões:
 - `stored_at`;
 - `signature_reconcile`.
 
-Os handlers continuam sem código, à espera da revisão desta parte.
+**Handlers (05/11, depois do reteste do Codex de 04:09):**
+- `supabase/functions/sign-document` e `supabase/functions/signature-session`, finos, sobre `_shared/signatureHandlers.ts` (lógica testável com dependências injetadas) e `_shared/signatureDeps.ts` (ligação com `requireUserContext`, o cliente de serviço, o Storage e o cliente do PSC).
+- O contexto verificado vira `p_auth` só nas funções produtivas.
+- O corpo tem formato estrito: chave a mais dá 400.
+- Exigências de entrada: AAL2 e margem de 120 segundos do JWT para assinar e abrir sessão. `state` e `revoke` só pedem um bearer válido.
+- Testes em `src/lib/signatureHandlers.test.ts`: as nove proteções foram mutadas e pegas.
+
+**Configuração (Fase 0).** Sem ela, a resposta é 503 `not_configured`:
+- `SIGNATURE_PSC_BASE_URL` (origem https, sem caminho);
+- `SIGNATURE_PSC_CLIENT_ID` e `SIGNATURE_PSC_CLIENT_SECRET`;
+- `SIGNATURE_PSC_REDIRECT_URI` (https);
+- `SIGNATURE_TOKEN_KEYS`;
+- `SIGNATURE_POLICY_SHA256`: o SHA-256 do artefato oficial da política AD-RB v1.1. Nunca é adivinhado.
+
+**[não verificado] Prefixo de caminho do VIDaaS** (por exemplo, `/v0`). `psc.ts` aceita só uma origem. Se a homologação exigir prefixo, o cliente muda antes do piloto.
+
+**Fora do escopo:** provedor real, certificado, cron e deploy.
 
 Não inclui provedor real, deploy, certificado nem migration aplicada em banco hospedado.
 
