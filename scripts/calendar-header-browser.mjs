@@ -13,13 +13,14 @@ import { INTERFACE_SCALE } from '../src/lib/interfaceScale.ts';
 
 const red = process.argv.includes('--red');
 const probeSideEffects = process.argv.includes('--probe-side-effects');
-assert.ok(process.argv.slice(2).every(arg => ['--red', '--probe-side-effects'].includes(arg)) && process.argv.length <= 3, 'No external target accepted');
-const artifacts = resolve('docs/reviews/2026-11-04/calendar-header');
+const t38 = process.argv.includes('--t38');
+assert.ok(process.argv.slice(2).every(arg => ['--red', '--probe-side-effects', '--t38'].includes(arg)) && process.argv.length <= 3, 'No external target accepted');
+const artifacts = resolve(t38 ? 'docs/reviews/2026-11-05/calendar-week-mobile/header-regression' : 'docs/reviews/2026-11-04/calendar-header');
 mkdirSync(artifacts, { recursive: true });
 const baseline = spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', windowsHide: true });
 assert.equal(baseline.status, 0);
 const report = { syntheticOnly: true, red, probeSideEffects, sourceBaseline: baseline.stdout.trim(), checks: [], layouts: [], pageErrors: [], forbiddenRequests: [],
-  sources: ['src/index.css', 'src/pages/Calendar.tsx', 'scripts/calendar-header-browser.mjs', 'scripts/fixtures/clinic-review-api.mjs']
+  sources: ['src/index.css', 'src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx', 'scripts/calendar-header-browser.mjs', 'scripts/fixtures/clinic-review-api.mjs']
     .map(path => ({ path, sha256: createHash('sha256').update(readFileSync(path)).digest('hex') })) };
 let api, app, browser, failure;
 try {
@@ -58,8 +59,10 @@ try {
   const views = page.getByRole('group', { name: 'Visualização da agenda' });
   await expect(views.getByRole('button', { name: 'Semana', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const measure = selector => page.locator(selector).evaluateAll(headers => headers.map(header => {
-    const range = document.createRange(); range.selectNodeContents(header);
-    const text = range.getBoundingClientRect(), box = header.getBoundingClientRect(), style = getComputedStyle(header);
+    const visible = [...header.querySelectorAll('[aria-hidden="true"]')];
+    const ranges = (visible.length ? visible : [header]).map(node => { const range = document.createRange(); range.selectNodeContents(node); return range.getBoundingClientRect(); });
+    const text = { top: Math.min(...ranges.map(box => box.top)), bottom: Math.max(...ranges.map(box => box.bottom)) };
+    const box = header.getBoundingClientRect(), style = getComputedStyle(header);
     return { label: header.textContent, height: box.height, clientHeight: header.clientHeight, scrollHeight: header.scrollHeight,
       fontSize: style.fontSize, lineHeight: style.lineHeight, padding: style.padding, overflow: style.overflow,
       top: text.top - box.top, bottom: text.bottom - box.top,

@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Appointment, Patient } from '@/types/patient';
 import { mapPatientRow } from '@/lib/patientMapper';
 import { AppointmentModal } from '@/components/AppointmentModal';
+import { CalendarWeekDetails, CompactWeekHeader } from '@/components/CalendarWeekDetails';
 import { useToast } from '@/hooks/use-toast';
 import { fetchAllRows } from '@/lib/pagination';
 import type { Tables } from '@/integrations/supabase/types';
@@ -227,11 +228,12 @@ export default function CalendarPage() {
     setModalOpen(true);
   }, []);
 
-  const handleSelectEvent = useCallback((event: CalendarEvent) => {
-    setSelectedAppointment(event.resource);
+  const handleSelectAppointment = useCallback((appointment: Appointment) => {
+    setSelectedAppointment(appointment);
     setDefaultSlot(null);
     setModalOpen(true);
   }, []);
+  const handleSelectEvent = useCallback((event: CalendarEvent) => handleSelectAppointment(event.resource), [handleSelectAppointment]);
 
   const handleNewAppointment = () => {
     setSelectedAppointment(null);
@@ -418,6 +420,7 @@ export default function CalendarPage() {
         )}
       {/* Calendar */}
       <main className="flex-1 container mx-auto px-2 md:px-4 py-3 md:py-6">
+        {isMobile && view === 'week' && !isLoading && !isError && <a href="#calendar-week-details" className="mb-3 inline-block text-sm text-primary underline underline-offset-4">Ver horários e títulos completos</a>}
         <div
           className="bg-background rounded-xl border border-border shadow-sm overflow-hidden"
           style={{ height: isMobile ? 'calc(100dvh - 110px)' : 'calc(100vh - 140px)' }}
@@ -439,6 +442,8 @@ export default function CalendarPage() {
               localizer={localizer}
               events={events}
               view={view}
+              className={view === 'week' ? 'calendar-compact-week' : undefined}
+              components={view === 'week' ? { header: CompactWeekHeader } : undefined}
               views={isMobile ? ['day', 'week', 'month'] : ['month', 'week', 'day']}
               date={date}
               onView={setView}
@@ -453,6 +458,7 @@ export default function CalendarPage() {
             />
           )}
         </div>
+        {isMobile && view === 'week' && !isLoading && !isError && <CalendarWeekDetails date={date} appointments={appointments} onSelect={handleSelectAppointment} />}
       </main>
 
       <AppointmentModal

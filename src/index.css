@@ -206,6 +206,11 @@
 .rbc-time-view .rbc-header {
   min-height: min-content;
 }
+/* Compact week labels need the full column at phone widths; the library's
+   3px inline padding otherwise clips the first day even with short text. */
+.calendar-compact-week .rbc-time-header-content .rbc-header {
+  padding-inline: 0;
+}
 .rbc-month-view,
 .rbc-time-view,
 .rbc-agenda-view {

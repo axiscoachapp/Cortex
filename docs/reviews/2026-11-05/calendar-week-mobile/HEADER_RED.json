@@ -1,0 +1,82 @@
+{
+  "syntheticOnly": true,
+  "realSql": false,
+  "red": false,
+  "sources": [
+    {
+      "path": "src/pages/Calendar.tsx",
+      "sha256": "e52865facbb7fe52040aaf0ddde42d8e03b5be46fe18dc07a4ffcc6272239b55"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "acfb08674737e91d42ac9b63f8455be67382ac753da0437e099beb9c5933dc8b"
+    },
+    {
+      "path": "src/components/CalendarWeekDetails.tsx",
+      "sha256": "5e6e0564eb57601291ace46c1f535ef377a14f2662a0d860a677eee8221ab55b"
+    },
+    {
+      "path": "src/hooks/use-mobile.tsx",
+      "sha256": "f38c402eb4ce5378e8423e6bdfdb7d1ee7e52ba296e753cc9d5c1564be0eb2e0"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "scripts/calendar-week-mobile-browser.mjs",
+      "sha256": "3f9ecce90369e32cd4a2eb65ef2824f12eee77bcade253af4c639c992400d06f"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "2c56404a59be9aa5e25813722848a1437de02f2cab8d877ef4b71916ada53c0e"
+    }
+  ],
+  "layouts": [
+    {
+      "width": 390,
+      "labels": [
+        {
+          "label": "DOM06domingo, 6 de dezembro de 2026",
+          "width": 38.5,
+          "clipped": true
+        },
+        {
+          "label": "SEG07segunda-feira, 7 de dezembro de 2026",
+          "width": 39.515625,
+          "clipped": true
+        },
+        {
+          "label": "TER08terça-feira, 8 de dezembro de 2026",
+          "width": 39.5,
+          "clipped": true
+        },
+        {
+          "label": "QUA09quarta-feira, 9 de dezembro de 2026",
+          "width": 39.5,
+          "clipped": true
+        },
+        {
+          "label": "QUI10quinta-feira, 10 de dezembro de 2026",
+          "width": 39.5,
+          "clipped": true
+        },
+        {
+          "label": "SEX11sexta-feira, 11 de dezembro de 2026",
+          "width": 39.5,
+          "clipped": true
+        },
+        {
+          "label": "SÁB12sábado, 12 de dezembro de 2026",
+          "width": 39.5,
+          "clipped": true
+        }
+      ]
+    }
+  ],
+  "checks": [],
+  "pageErrors": [],
+  "forbiddenRequests": [],
+  "failure": "Week day/date text clipped at 390",
+  "cleanupVerified": true
+}

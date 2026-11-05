@@ -1,5 +1,13 @@
 # Checkpoint do Codex
 
+Atualizado em05/11/2026 15:34. **T38 concluída localmente:** [provas](../docs/reviews/2026-11-05/calendar-week-mobile/IMPLEMENTATION.md). Cabeçalhos semanais concisos com nome completo acessível, lista móvel da semana selecionada com título/intervalo completos e abertura humana do modal existente pelo objeto exato. Dia/Mês, permissões, datas/horários e visão escolhida no resize preservados; sem nova consulta/gravação/IA. Grade estreita usa lista para leitura completa.
+
+11testes/2arquivos (7componente+4breakpoint), cinco grupos browser/sete larguras375/390/768/1036/1037/1280/1920, oito fontes congeladas/cleanup;13checks T37 em nova pasta --t38, lint5/sintaxe/typecheckappNode/build sintético aprovados. RED390 e fonte/padding herdados corrigidos (também375 e1037); revisão identificou âncora escondida em lista alta, scroll-margin ajustado e prova com seis reservas. Medição visual exclui sr-only; última leitura sem regressão concreta. Capturas135% inspecionadas. Sem SQL/Native/D17 novos, API/DDL/grants ou hosted/push. T05b eT38 implementadas localmente; M2/corte/piloto continuam abertos.
+
+**Próxima candidata independente:** T08, verificar implementação atual de routing/sugestões e pendênciasT00; só regras administrativas/explicação/empate humano, sem diagnóstico ou seleção automática. Ler Git/coordenação antes;1340/1348 atendidas1344/1354,4ff89be sóstatus. Claude/PersonalMed/SaaS/trêshelpersT33 preservados; pm-v2/D6A/D7A não autorizam schema/carregador/carga por inferência. R2/D17/DER/Native encerrados, não reabrir. Commit somente local main/axiscoachapp.
+
+---
+
 Atualizado em05/11/2026 15:16. **T05b/4b entregue e T05b implementada localmente:** [provas](../docs/reviews/2026-11-05/contact-link-state-ui/IMPLEMENTATION.md). Admin consulta vínculo e confirma suspensão/reativação por IDs/revisão/alvo congelados; recuperação explícita pede nova conferência e não repete/inverte resultado perdido. Write/recovery protegem saídas/duplicatas/retry; suspensão aceita indisponibilidade, reativação exige ambos disponíveis. Aviso de histórico/agenda e invalidação operacional no sucesso/retorno.
 
 38testes/3arquivos (14estado+12lista+12relação), nove checksEdgeisolado375/390/768/1280/1920px, dezfontes congeladas/zero pageerror/cleanup; lint5/sintaxe/typecheckappNode/build sintético aprovados. Revisão nova identificou bypass pelo Retry superior em read-error durante write, controleRED reproduzido e recoverCheck comum corrigiu; última leitura sem achado material. Capturas inspecionadas135%. Nenhuma alteração RPC/DDL/grant ou nova execuçãoSQL/Native/D17; base82fcbf1 e74migrations/19SQL/14cenários inalteradas. M2/corte/piloto abertos.

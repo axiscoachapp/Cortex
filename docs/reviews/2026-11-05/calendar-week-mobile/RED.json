@@ -1,0 +1,78 @@
+{
+  "syntheticOnly": true,
+  "realSql": false,
+  "red": true,
+  "sources": [
+    {
+      "path": "src/pages/Calendar.tsx",
+      "sha256": "b4b38f050d79fed55286d2d64614e15403feb6e7f10ced2d4a543562dc092383"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "acfb08674737e91d42ac9b63f8455be67382ac753da0437e099beb9c5933dc8b"
+    },
+    {
+      "path": "src/hooks/use-mobile.tsx",
+      "sha256": "f38c402eb4ce5378e8423e6bdfdb7d1ee7e52ba296e753cc9d5c1564be0eb2e0"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "scripts/calendar-week-mobile-browser.mjs",
+      "sha256": "0c9baaba266256714f10ad1154113bf71cd7272df30a5ba9eaeed2eb2c1c2682"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "2c56404a59be9aa5e25813722848a1437de02f2cab8d877ef4b71916ada53c0e"
+    }
+  ],
+  "layouts": [
+    {
+      "width": 390,
+      "labels": [
+        {
+          "label": "06 domingo",
+          "width": 38.5,
+          "clipped": true
+        },
+        {
+          "label": "07 segunda",
+          "width": 39.515625,
+          "clipped": true
+        },
+        {
+          "label": "08 terça",
+          "width": 39.5,
+          "clipped": true
+        },
+        {
+          "label": "09 quarta",
+          "width": 39.5,
+          "clipped": true
+        },
+        {
+          "label": "10 quinta",
+          "width": 39.5,
+          "clipped": true
+        },
+        {
+          "label": "11 sexta",
+          "width": 39.5,
+          "clipped": true
+        },
+        {
+          "label": "12 sábado",
+          "width": 39.5,
+          "clipped": true
+        }
+      ]
+    }
+  ],
+  "checks": [],
+  "pageErrors": [],
+  "forbiddenRequests": [],
+  "failure": "Week day/date text clipped at 390",
+  "cleanupVerified": true
+}

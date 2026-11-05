@@ -1,0 +1,339 @@
+{
+  "syntheticOnly": true,
+  "realSql": false,
+  "red": false,
+  "sources": [
+    {
+      "path": "src/pages/Calendar.tsx",
+      "sha256": "ccff9e315aa10652e90788be6d4dae2f91e8c28339ad4f58852fa0de74b46c89"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "01d9baccc9af5e52549faaeb45e3129095b53cde517d09488ae6683be2268dc4"
+    },
+    {
+      "path": "src/components/CalendarWeekDetails.tsx",
+      "sha256": "a8f48fb19115f31ad95757c274b6487c9edd456e4c5d890f7d10b5a0b2a4e0b0"
+    },
+    {
+      "path": "src/hooks/use-mobile.tsx",
+      "sha256": "f38c402eb4ce5378e8423e6bdfdb7d1ee7e52ba296e753cc9d5c1564be0eb2e0"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "scripts/calendar-week-mobile-browser.mjs",
+      "sha256": "8c4a5a99b9690b7388d9bb3489c377c44c843a3a73422b3e4bbbcb92460090fe"
+    },
+    {
+      "path": "scripts/calendar-header-browser.mjs",
+      "sha256": "54bead6d9f299d264d12ed4a482e51b988e35ae74882733284df6a6736813be5"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "2c56404a59be9aa5e25813722848a1437de02f2cab8d877ef4b71916ada53c0e"
+    }
+  ],
+  "layouts": [
+    {
+      "width": 390,
+      "labels": [
+        {
+          "label": "DOM06domingo, 6 de dezembro de 2026",
+          "width": 38.5,
+          "clipped": false
+        },
+        {
+          "label": "SEG07segunda-feira, 7 de dezembro de 2026",
+          "width": 39.515625,
+          "clipped": false
+        },
+        {
+          "label": "TER08terça-feira, 8 de dezembro de 2026",
+          "width": 39.5,
+          "clipped": false
+        },
+        {
+          "label": "QUA09quarta-feira, 9 de dezembro de 2026",
+          "width": 39.5,
+          "clipped": false
+        },
+        {
+          "label": "QUI10quinta-feira, 10 de dezembro de 2026",
+          "width": 39.5,
+          "clipped": false
+        },
+        {
+          "label": "SEX11sexta-feira, 11 de dezembro de 2026",
+          "width": 39.5,
+          "clipped": false
+        },
+        {
+          "label": "SÁB12sábado, 12 de dezembro de 2026",
+          "width": 39.5,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "width": 375,
+      "labels": [
+        {
+          "label": "DOM06domingo, 6 de dezembro de 2026",
+          "width": 36.359375,
+          "clipped": false
+        },
+        {
+          "label": "SEG07segunda-feira, 7 de dezembro de 2026",
+          "width": 37.359375,
+          "clipped": false
+        },
+        {
+          "label": "TER08terça-feira, 8 de dezembro de 2026",
+          "width": 37.359375,
+          "clipped": false
+        },
+        {
+          "label": "QUA09quarta-feira, 9 de dezembro de 2026",
+          "width": 37.359375,
+          "clipped": false
+        },
+        {
+          "label": "QUI10quinta-feira, 10 de dezembro de 2026",
+          "width": 37.359375,
+          "clipped": false
+        },
+        {
+          "label": "SEX11sexta-feira, 11 de dezembro de 2026",
+          "width": 37.359375,
+          "clipped": false
+        },
+        {
+          "label": "SÁB12sábado, 12 de dezembro de 2026",
+          "width": 37.359375,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "labels": [
+        {
+          "label": "DOM06domingo, 6 de dezembro de 2026",
+          "width": 92.5,
+          "clipped": false
+        },
+        {
+          "label": "SEG07segunda-feira, 7 de dezembro de 2026",
+          "width": 93.515625,
+          "clipped": false
+        },
+        {
+          "label": "TER08terça-feira, 8 de dezembro de 2026",
+          "width": 93.5,
+          "clipped": false
+        },
+        {
+          "label": "QUA09quarta-feira, 9 de dezembro de 2026",
+          "width": 93.5,
+          "clipped": false
+        },
+        {
+          "label": "QUI10quinta-feira, 10 de dezembro de 2026",
+          "width": 93.5,
+          "clipped": false
+        },
+        {
+          "label": "SEX11sexta-feira, 11 de dezembro de 2026",
+          "width": 93.5,
+          "clipped": false
+        },
+        {
+          "label": "SÁB12sábado, 12 de dezembro de 2026",
+          "width": 93.5,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "width": 1036,
+      "labels": [
+        {
+          "label": "DOM06domingo, 6 de dezembro de 2026",
+          "width": 130.78125,
+          "clipped": false
+        },
+        {
+          "label": "SEG07segunda-feira, 7 de dezembro de 2026",
+          "width": 131.796875,
+          "clipped": false
+        },
+        {
+          "label": "TER08terça-feira, 8 de dezembro de 2026",
+          "width": 131.78125,
+          "clipped": false
+        },
+        {
+          "label": "QUA09quarta-feira, 9 de dezembro de 2026",
+          "width": 131.796875,
+          "clipped": false
+        },
+        {
+          "label": "QUI10quinta-feira, 10 de dezembro de 2026",
+          "width": 131.78125,
+          "clipped": false
+        },
+        {
+          "label": "SEX11sexta-feira, 11 de dezembro de 2026",
+          "width": 131.796875,
+          "clipped": false
+        },
+        {
+          "label": "SÁB12sábado, 12 de dezembro de 2026",
+          "width": 131.78125,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "width": 1037,
+      "labels": [
+        {
+          "label": "DOM06domingo, 6 de dezembro de 2026",
+          "width": 127.84375,
+          "clipped": false
+        },
+        {
+          "label": "SEG07segunda-feira, 7 de dezembro de 2026",
+          "width": 128.859375,
+          "clipped": false
+        },
+        {
+          "label": "TER08terça-feira, 8 de dezembro de 2026",
+          "width": 128.84375,
+          "clipped": false
+        },
+        {
+          "label": "QUA09quarta-feira, 9 de dezembro de 2026",
+          "width": 128.84375,
+          "clipped": false
+        },
+        {
+          "label": "QUI10quinta-feira, 10 de dezembro de 2026",
+          "width": 128.84375,
+          "clipped": false
+        },
+        {
+          "label": "SEX11sexta-feira, 11 de dezembro de 2026",
+          "width": 128.84375,
+          "clipped": false
+        },
+        {
+          "label": "SÁB12sábado, 12 de dezembro de 2026",
+          "width": 128.84375,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "labels": [
+        {
+          "label": "DOM06domingo, 6 de dezembro de 2026",
+          "width": 162.546875,
+          "clipped": false
+        },
+        {
+          "label": "SEG07segunda-feira, 7 de dezembro de 2026",
+          "width": 163.5625,
+          "clipped": false
+        },
+        {
+          "label": "TER08terça-feira, 8 de dezembro de 2026",
+          "width": 163.5625,
+          "clipped": false
+        },
+        {
+          "label": "QUA09quarta-feira, 9 de dezembro de 2026",
+          "width": 163.5625,
+          "clipped": false
+        },
+        {
+          "label": "QUI10quinta-feira, 10 de dezembro de 2026",
+          "width": 163.5625,
+          "clipped": false
+        },
+        {
+          "label": "SEX11sexta-feira, 11 de dezembro de 2026",
+          "width": 163.5625,
+          "clipped": false
+        },
+        {
+          "label": "SÁB12sábado, 12 de dezembro de 2026",
+          "width": 163.5625,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "width": 1920,
+      "labels": [
+        {
+          "label": "DOM06domingo, 6 de dezembro de 2026",
+          "width": 179.703125,
+          "clipped": false
+        },
+        {
+          "label": "SEG07segunda-feira, 7 de dezembro de 2026",
+          "width": 180.703125,
+          "clipped": false
+        },
+        {
+          "label": "TER08terça-feira, 8 de dezembro de 2026",
+          "width": 180.703125,
+          "clipped": false
+        },
+        {
+          "label": "QUA09quarta-feira, 9 de dezembro de 2026",
+          "width": 180.703125,
+          "clipped": false
+        },
+        {
+          "label": "QUI10quinta-feira, 10 de dezembro de 2026",
+          "width": 180.703125,
+          "clipped": false
+        },
+        {
+          "label": "SEX11sexta-feira, 11 de dezembro de 2026",
+          "width": 180.703125,
+          "clipped": false
+        },
+        {
+          "label": "SÁB12sábado, 12 de dezembro de 2026",
+          "width": 180.703125,
+          "clipped": false
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "seven readable day/date headers, full mobile titles/times, no overflow at seven widths; selected future week and times retained",
+    "jump heading clears sticky header; keyboard opens exact appointment with original title/date/time; no save on open",
+    "concise header retains accessible keyboard drilldown to correct Sunday",
+    "day/month have no supplementary week rows and resize never changes chosen view",
+    "135% scale, zero writes/AI/pageerrors, source hashes unchanged"
+  ],
+  "pageErrors": [],
+  "forbiddenRequests": [],
+  "fixtureMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0
+  },
+  "cleanupVerified": true
+}
