@@ -1,0 +1,46 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "sourceBaseline": "851b64c8a00e3917138ac5a44ad49c717cc70dfe",
+  "versions": [
+    {
+      "authVersion": "v2.197.0",
+      "regressionGroups": 27,
+      "reservationGroups": 5,
+      "migrations": 69,
+      "cleanupVerified": true
+    },
+    {
+      "authVersion": "v2.189.0",
+      "regressionGroups": 27,
+      "reservationGroups": 5,
+      "migrations": 69,
+      "cleanupVerified": true
+    }
+  ],
+  "totalGroups": 64,
+  "red": {
+    "authVersion": "v2.197.0",
+    "independentNativeAdmins": true,
+    "independentNativeClinics": true,
+    "uniqueIndexWaitObserved": true,
+    "refusalAfterHolderCommit": "23505",
+    "cleanupVerified": true
+  },
+  "sameSourceManifestsAcrossVersions": true,
+  "finalSourceHashesVerified": true,
+  "triggerRemovalWaitControlsPerVersion": 2,
+  "syntaxAndLintExitCode": 0,
+  "review": {
+    "cycles": 2,
+    "actionableFindingsFixed": [
+      "intent trigger must run before binding guard",
+      "UPDATE including no-op and Native birth must participate"
+    ],
+    "finalConcreteFindings": 0,
+    "externalReview": "dispensed by user"
+  },
+  "productionAuthorizationImplemented": false,
+  "rootSqlSuitesOrAppTestsRepeated": false,
+  "externalCalls": false
+}

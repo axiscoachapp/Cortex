@@ -54,6 +54,7 @@ export function installClinicSchema({sql,inputs,red}){
  if(!red)sql(inputs.composed);
  if(inputs.ledger)sql(inputs.ledger);
  if(inputs.birthProducer)sql(inputs.birthProducer);
+ if(inputs.reservationKeys)sql(inputs.reservationKeys);
  assert.equal(columns(),beforeColumns,'Native Auth core columns/owners/table or column ACL/RLS flags changed');assert.equal(functions(),beforeFunctions,'Native identity helper definition or owner changed');
  assert.equal(enums(),beforeEnums,'Native Auth enum definition/owner/ACL changed');
  assert.equal(sql(clientReadsQuery),'t','Native Auth table or column became readable by a client role');
@@ -72,10 +73,10 @@ export function installClinicSchema({sql,inputs,red}){
  return {sourceBaseline:inputs.baseline,migrations:inputs.migrations.length,nativeCoreColumnsOwnersAndTableAclUnchanged:true,nativeIdentityHelpersUnchanged:true,
   nativeTablesUnavailableToClientRoles:true,nativeColumnAclUnchanged:true,nativeColumnAclControlPassed:true,nativeEnumsOwnersAndAclUnchanged:true,nativeTableRlsFlagsUnchanged:true,ledgerBindingsInstalled:!!inputs.ledger,birthProducerInstalled:!!inputs.birthProducer,
   ...(inputs.sessionFixture?{fixtureProjectionVerified:true,fixtureProjection:projection,bootstrapOverlaySha256:createHash('sha256').update(inputs.bootstrap).digest('hex')}:{}),
-  sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
+  reservationKeysInstalled:!!inputs.reservationKeys,sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
 }
 
-export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,birthProducer,birthProducerRed,asyncHttp,pause,holderSession,restartAuth}){
+export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,birthProducer,birthProducerRed,reservationCheck,reservationRed,asyncHttp,pause,holderSession,restartAuth}){
  const password=randomBytes(24).toString('hex');syntheticSecrets.push(password);
  const created=await call(auth,'/admin/users',adminJwt,{email:'clinic-authority@example.invalid',password,email_confirm:true});assert.equal(created.status,200);
  const login=await call(auth,'/token?grant_type=password',adminJwt,{email:'clinic-authority@example.invalid',password});assert.equal(login.status,200);
@@ -211,6 +212,11 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
   assert.equal(begin(positive,ctx).expires_at,initial.expires_at);
   checks.push('ALWAYS guards reject replica DML; disabling only the lab guard exposes deadline replacement, rollback restores the original valid replay');
  }
+ let reservation;
+ if(reservationCheck){
+  reservation=await reservationCheck({auth,rest,adminJwt,call,sql,syntheticSecrets,holderSession,pause,ctx,clinic,fixture,args,red:reservationRed});
+  if(reservationRed)return {...report,checks,...reservation,compositionProofPassed:false};
+ }
  const actorState=()=>sql(`select u.xmin::text||':'||s.xmin::text||':'||m.xmin::text||':'||e.revision::text from auth.users u join auth.sessions s on s.user_id=u.id join public.clinic_members m on m.user_id=u.id and m.clinic_id='${clinic}' join cortex_private.account_custody_epochs e on e.user_id=u.id where u.id='${ctx.sub}' and s.id='${ctx.session_id}'`);
  // Start with RR/deletion: this is the regression that the old receipt read missed.
  for(const [isolation,change] of [['repeatable read','delete'],['read committed','delete'],['repeatable read','metadata'],['read committed','metadata']]){
@@ -327,5 +333,5 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
  assert.equal(sql('select count(*) from public.staff_doctor_scopes'),'0');
  checks.push('Private composition stays absent from Data API and creates no target clinic/staff/chart memberships or scopes');
  assert.equal(checks.length,19+(ledger?4:0)+(birthProducer?4:0));
- return {...report,checks,compositionProofPassed:true,...(ledger?{ledgerBindingsProofPassed:true}:{}),...(birthProducer?{birthProducerProofPassed:true}:{}),notCovered:['authority of reservation/intent INSERT and human confirmation writers; UUID reservation races','production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
+ return {...report,checks,compositionProofPassed:true,...reservation,...(ledger?{ledgerBindingsProofPassed:true}:{}),...(birthProducer?{birthProducerProofPassed:true}:{}),notCovered:['authority of reservation/intent INSERT and human confirmation writers'+(reservationCheck?'':'; UUID reservation races'),'production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
 }

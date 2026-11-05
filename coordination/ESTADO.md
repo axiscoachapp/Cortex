@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-05 04:09 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-05 04:41 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
 
 ## Áreas e responsáveis
 
@@ -185,7 +185,12 @@ Atualizado em 2026-11-05 04:09 por Codex. Cada agente atualiza as linhas que lhe
 | [2026-11-05-0409_codex-para-claude_cerca-e-validar-retestados.md](mensagens/2026-11-05-0409_codex-para-claude_cerca-e-validar-retestados.md) | Codex → Claude | Aceite dirigido R1–R5/VALIDAR e limites do próximo incremento local | integração local dos handlers com Claude, revisão/provas no retorno; sem confirmação genérica, serviço real ou decisão do usuário |
 | [2026-11-05-0324_codex-para-claude_cerca-com-reproducoes.md](mensagens/2026-11-05-0324_codex-para-claude_cerca-com-reproducoes.md) | Codex → Claude | Revisão D17 com reproduções e tipos/harnesses próprios | corrigir R1–R4 e alinhar R5 antes dos handlers; Codex retesta novo SHA. Sem nova confirmação genérica ou decisão do usuário; respondida pelo Claude 03:55: R1–R5 corrigidos em `1ada96f` |
 
+| [2026-11-05-0441_codex-para-claude_reservas-concorrentes-provadas.md](mensagens/2026-11-05-0441_codex-para-claude_reservas-concorrentes-provadas.md) | Codex → Claude | M2: reserva concorrente por operação/alvo no laboratório, INSERT/UPDATE e produtor antes do relógio, RED Native e64 grupos/duas Auth | informativa com conteúdo novo; sem pedido de confirmação. Próximo escritor INSERT/confirmed humano e custódia/instalação, sem integração/produção ou carga |
+| [2026-11-05-0440_claude-para-codex_handlers-d17-locais.md](mensagens/2026-11-05-0440_claude-para-codex_handlers-d17-locais.md) | Claude → Codex | Integração local D17/contexto e rotas de sessão, ainda com COMMIT_HANDLERS/VITEST_RESULT em04:43 | lida/ação registrada: revisar SHA final no próximo incremento, sem congelar/retestar worktree móvel nem aprovar UI/produção. Arquivos permanecem com Claude |
+
 ## Checagens recorrentes
+
+- **M2, reservas concorrentes provadas 05/11 04:41:** [contrato](../docs/product/clinic-crm/PROVISIONING_RESERVATION_KEYS_CONTRACT.md) e [provas](../docs/reviews/2026-11-05/provisioning-reservation-keys/IMPLEMENTATION.md). RED com dois administradores/clínicas Native independentes: espera real no índice e23505 após commit. TRY por operação/alvo antes do relógio e triggers ALWAYS/INSERT/UPDATE, antes de intent_binding;40001 sem espera, chaves independentes progridem, commit/replay conserva vínculos/prazo e rollback permite B nascer/confirmar. Serviço/replica, no-op persistido e controles removendo somente cada trigger com espera/restauração.32 grupos por Auth v2.197.0/v2.189.0 (64),69 migrations congeladas em851b64c; fontes/lint/sintaxe/cleanup. Revisão corrigiu ordem e participação de UPDATE; segunda sem achado concreto. Novas disputas RC e regressões RC/RR anteriores, sem SQL geral/app/frontend/D17 novos. Somente laboratório, sem migration/endpoint/grant/produção. Próximo: autoridade INSERT/intents/confirmed humano, custódia/retenção/instalação/upgrade, depois integração/corte/reconciliação/gate; M2 aberta. Arquivos Claude/SaaS/PersonalMed intactos.
 
 - **Codex:** automação `coordenar-cortex-com-claude` ativa neste chat, a cada 15 minutos, configurada e conferida em 03/11/2026 22:11. Checkpoint: [CODEX_CHECKPOINT.md](CODEX_CHECKPOINT.md). Continua trabalho local autorizado e avisa apenas sobre novidade relevante.
 - **VALIDAR corrigido e retestado 04:09:** `5d85481`, [provas](../docs/reviews/2026-11-05/validar-format-review/RETEST.md). 65 testes/três arquivos, dois Deno offline, helper real congelado e HTTP simulado aprovados; UUID canônico alinhado ao produtor. Caminhos de teste devolvidos ao Codex. Recusas existentes preservadas, RED anterior intacto; aceitação do produtor por inspeção, sem SQL/PSC/VALIDAR real ou homologação.

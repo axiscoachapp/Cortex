@@ -1,0 +1,212 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.189.0",
+  "sourceBaseline": "851b64c8a00e3917138ac5a44ad49c717cc70dfe",
+  "migrations": 69,
+  "nativeCoreColumnsOwnersAndTableAclUnchanged": true,
+  "nativeIdentityHelpersUnchanged": true,
+  "nativeTablesUnavailableToClientRoles": true,
+  "nativeColumnAclUnchanged": true,
+  "nativeColumnAclControlPassed": true,
+  "nativeEnumsOwnersAndAclUnchanged": true,
+  "nativeTableRlsFlagsUnchanged": true,
+  "ledgerBindingsInstalled": true,
+  "birthProducerInstalled": true,
+  "fixtureProjectionVerified": true,
+  "fixtureProjection": [
+    {
+      "type": "timestamp with time zone",
+      "table": "mfa_factors",
+      "column": "created_at",
+      "nullable": false
+    },
+    {
+      "type": "auth.factor_type",
+      "table": "mfa_factors",
+      "column": "factor_type",
+      "nullable": false
+    },
+    {
+      "type": "uuid",
+      "table": "mfa_factors",
+      "column": "id",
+      "nullable": false
+    },
+    {
+      "type": "auth.factor_status",
+      "table": "mfa_factors",
+      "column": "status",
+      "nullable": false
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "mfa_factors",
+      "column": "updated_at",
+      "nullable": false
+    },
+    {
+      "type": "uuid",
+      "table": "mfa_factors",
+      "column": "user_id",
+      "nullable": false
+    },
+    {
+      "type": "auth.aal_level",
+      "table": "sessions",
+      "column": "aal",
+      "nullable": true
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "sessions",
+      "column": "created_at",
+      "nullable": true
+    },
+    {
+      "type": "uuid",
+      "table": "sessions",
+      "column": "factor_id",
+      "nullable": true
+    },
+    {
+      "type": "uuid",
+      "table": "sessions",
+      "column": "id",
+      "nullable": false
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "sessions",
+      "column": "not_after",
+      "nullable": true
+    },
+    {
+      "type": "timestamp without time zone",
+      "table": "sessions",
+      "column": "refreshed_at",
+      "nullable": true
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "sessions",
+      "column": "updated_at",
+      "nullable": true
+    },
+    {
+      "type": "uuid",
+      "table": "sessions",
+      "column": "user_id",
+      "nullable": false
+    }
+  ],
+  "bootstrapOverlaySha256": "41750e297ffb18f256ccde334bd6773799be6ad0c5d2cb6c3a6885a25b6aefbe",
+  "reservationKeysInstalled": true,
+  "sqlSourceDigest": "aaecc77713e6325f654c7719d3f7f476530aebc8fdedef046761a621d5259464",
+  "nativeTotpAal2": true,
+  "clinicCreatedByAuthenticatedDataApi": true,
+  "productionAuthorizationImplemented": false,
+  "checks": [
+    "Native Auth schema/helpers preserved; real TOTP/AAL2 actor creates the real clinic through authenticated Data API",
+    "Captured AAL1 context cannot reserve a real-clinic intent after account factor verification",
+    "Native birth receipt and original real membership generation confirm; exact replay keeps identity and deadline",
+    "Owner and temporarily granted service DML cannot forge birth phases/XID for a preexisting Native identity; no-op survives",
+    "Native deferred metadata mismatch/unreserved marker roll back Auth user and captured transition; legitimate retry still confirms",
+    "Private producer has no login/membership/DDL/Auth-table access; missing reader row stays absent and skipping a phase is refused",
+    "ALWAYS producer guard rejects replica/GUC spoofing; disabling only that guard exposes the forgery and rollback restores refusal",
+    "Owner and temporarily granted service writers cannot replace any captured intent binding or identity/XID; no-op writes remain valid",
+    "Direct INSERT cannot start with a confirmed intent/birth receipt or attach an intent to a different reserved UUID",
+    "Owner and temporarily granted service DELETE/TRUNCATE cannot erase either ledger for replacement",
+    "ALWAYS guards reject replica DML; disabling only the lab guard exposes deadline replacement, rollback restores the original valid replay",
+    "Native target delete after an established repeatable read snapshot refuses confirmation without changing actor authority",
+    "Native target delete after an established read committed snapshot refuses confirmation without changing actor authority",
+    "Native target metadata after an established repeatable read snapshot refuses confirmation without changing actor authority",
+    "Native target metadata after an established read committed snapshot refuses confirmation without changing actor authority",
+    "A confirmed history cannot be returned as current after native target delete, by check or begin replay",
+    "A confirmed history cannot be returned as current after native target metadata, by check or begin replay",
+    "Confirmation-first ordering actually fences the native DELETE; replay after deletion refuses",
+    "Native session not_after expiring inside the target fence refuses both confirmation and confirmed begin replay with bearer and intent still valid",
+    "Role loss and real membership ABA refuse the original intent while the same native session/factor stay live",
+    "Real membership status ABA cannot restore a native-context intent",
+    "A no-op membership write cannot change the captured generation or invalidate a valid native-context intent",
+    "A new genuine AAL2 native session cannot adopt the old session-bound operation",
+    "Native logout after real-clinic Auth birth refuses confirmation and preserves the identity receipt",
+    "Observed in-flight native birth after real membership ABA keeps the new identity but refuses administrative confirmation",
+    "Observed in-flight native birth after actual bearer expiry refuses confirmation even with the native session still present",
+    "Private composition stays absent from Data API and creates no target clinic/staff/chart memberships or scopes"
+  ],
+  "compositionProofPassed": true,
+  "reservationProofPassed": true,
+  "reservationChecks": [
+    "Independent Native admins/clinics: same target and same operation refuse40001 while holder stays open; independent keys commit; exact replay preserves bindings/deadline and cross-actor adoption is denied",
+    "Holder rollback releases both keys; the other genuine administrator reserves, obtains a Native birth receipt, confirms and replays without renewing the deadline",
+    "Temporarily granted service INSERTs into both ledgers refuse40001, including an invisible parent and replica; no Auth SELECT grant is needed",
+    "Permitted no-op UPDATEs of committed operations and intents also hold reservation keys; duplicate INSERT refuses40001 instead of waiting on xmax",
+    "Disabling only each new trigger exposes an observed unique-index wait on committed-row UPDATE; restoring ALWAYS restores40001; null keys and client EXECUTE remain denied"
+  ],
+  "independentNativeAdmins": true,
+  "independentNativeClinics": true,
+  "unrelatedKeysProgressWhileHolderOpen": true,
+  "updateAndReplicaParticipation": true,
+  "uniqueIndexWaitControlsObserved": 2,
+  "ledgerBindingsProofPassed": true,
+  "birthProducerProofPassed": true,
+  "notCovered": [
+    "authority of reservation/intent INSERT and human confirmation writers",
+    "production intent custody/install/upgrade",
+    "credential or historical Auth event generation and recovery",
+    "team membership, consent requests, legacy service cutover and app APIs/UI"
+  ],
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "05b24da06caaa29391c0242d519cc72402c05cc720f49525a6187864e431dd7a"
+    },
+    {
+      "path": "scripts/test-provisioning-clinic-authority.mjs",
+      "sha256": "99b58da258c9f7c1d1bd425cac51864b5a0cd4591b252b79d09e67cdb8bad438"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-human-intent.sql",
+      "sha256": "380f9e8cb6358aa0d30eceef09f4beadbc63f8812954021904b326e411181457"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-auth-identity.sql",
+      "sha256": "dc1e5690b14126912bfee987d8f3078454477e46cee13f193abaa26b3023f7de"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-membership-generation.sql",
+      "sha256": "0d56096dd8f560db70fba89f8162137b20fb77774d897426f02822542c1ecf95"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-clinic-intent.sql",
+      "sha256": "56c61155d82d712dfa055b835362d0ce4b1ac4afde1a2a6ae279f9186528b2f2"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-ledger-bindings.sql",
+      "sha256": "456e781366034032dcf76ddd93f5d503aa0700a65b9db8c23055ecbe49f8ffcc"
+    },
+    {
+      "path": "supabase/tests/bootstrap.sql",
+      "sha256": "41750e297ffb18f256ccde334bd6773799be6ad0c5d2cb6c3a6885a25b6aefbe"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-birth-producer.sql",
+      "sha256": "66df4cf7709623f44eeec1ef7f5e19da73713f4c51d47f24dce464ea88ac235c"
+    },
+    {
+      "path": "scripts/test-provisioning-reservation-keys.mjs",
+      "sha256": "d4a465ebc2b035783ad9b740b97b0c2ca021a638844054ad894b9b282873a4b3"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-reservation-keys.sql",
+      "sha256": "be82e4da2d53a19f781cb552414581eab5f01de30b127fefa80f0aa4c02a72c9"
+    }
+  ],
+  "postgresImage": "pgvector/pgvector:pg16",
+  "restImage": "public.ecr.aws/supabase/postgrest:v16.5",
+  "authImage": "public.ecr.aws/supabase/gotrue:v2.189.0",
+  "cleanupVerified": true,
+  "localDockerEndpoint": "verified local named pipe",
+  "network": "owned internal network, no published ports or external route"
+}
