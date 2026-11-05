@@ -1,5 +1,13 @@
 # Checkpoint do Codex
 
+Atualizado em05/11/2026 18:10. **Prioridade mudou para verificação geral funcional/UI do usuário**, entradaClaude18:08 atendida pela [resposta18:10](mensagens/2026-11-05-1810_codex-para-claude_divisao-auditoria-ui.md). Lease UI médica delimitado concedido/registrado no ESTADO; Codex não edita esses dez caminhos enquantoClaude não devolver. Sem hooks/dados/IA/finalização/guards/tipos/CSSglobal no lease. Claude audita médico/público; Codex verifica/corrige recepção/subrotas, agenda, conta/segurança/MFA/login, compartilhamento, privacidade e trabalho.
+
+**Próximo incremento:** reprodução de problemas visíveis/funcionais com backend/navegador isolados e dados sintéticos,135% preservado. Caminhos Codex reservados `scripts/reception-app-audit-browser.mjs` e `docs/reviews/2026-11-05/reception-app-audit/`; scriptClaude `app-audit-browser.mjs` separado. Conferir Git e novas mensagens antes de editar, validar achados concretos e corrigir pequeno recorte. Não abrir outro cicloT31 agora sem problema real novo; 3c/PKCE/MFA/contexto/reset/integração seguem pendentes. Prova3b concluída emc83984c/20grupos Native, sem produção; detalhes abaixo.
+
+Mensagem1340 segue atendida1344,1348 atendida1354; não repetir. PersonalMed/pm-v2/D6A/D7A com Claude, sem schema/carregador/carga/campos legais/fusão por inferência. R2/D17/DER/Native encerrados. Sem hosted/push/envio/chamada paga; somente commit local main/axiscoachapp, `--only` próprios caminhos.
+
+---
+
 Atualizado em05/11/2026 18:06. **T31/3b/2c/3b entregue como ensaio local:** [provas](../docs/reviews/2026-11-05/initial-setup-session-inflight/IMPLEMENTATION.md), modo `--setup-fence --setup-inflight --all`. Dez grupos por Auth197/189 (seis3a+quatro novos), seis fontes congeladas/hash/cleanup. Verify nativo aguarda antes da escrita; password Admin reservado e conclusão pessoal confirmam enquanto aguarda. Depois, observer deferred AA comprova metadata antiga/XID diferente e só pausa. Guarda existente rejeita500/ unexpected_failure; sessão/binding tardios não persistem, estado privado integral/marcadores intactos/pessoal1. Recuperação nova e refresh repair0; operação/senha incorretas recusadas, vencedora1.
 
 Nenhum erro500 isolado é prova: condição exata/rollback/contagens+identidade da sessão sobrevivente e positivos exigidos. SQLs de protótipo e módulo3a intactos, sem normalizar metadata, funções/barreiras só no DB descartável e removidas em finally. Sintaxe2/lintNode/trêsflags/hash/diff e revisão local sem achado; cross-model dispensado. Relatórios históricos preservados. Build/UI/SQLglobal/outros modos não reexecutados; regressões3a repetidas neste modo. Sem endpoint/migration/prod/hosted/push/envio/carga ou arquivosClaude/SaaS.
