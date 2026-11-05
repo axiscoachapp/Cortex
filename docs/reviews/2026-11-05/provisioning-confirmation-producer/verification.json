@@ -1,0 +1,49 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "sourceBaseline": "6c29f1c2a3136054d456c1af7939f338b0338994",
+  "versions": [
+    {
+      "authVersion": "v2.197.0",
+      "migrations": 69,
+      "compositionAndBirthGroups": 27,
+      "reservationGroups": 5,
+      "confirmationGroups": 3,
+      "cleanupVerified": true
+    },
+    {
+      "authVersion": "v2.189.0",
+      "migrations": 69,
+      "compositionAndBirthGroups": 27,
+      "reservationGroups": 5,
+      "confirmationGroups": 3,
+      "cleanupVerified": true
+    }
+  ],
+  "totalGroups": 70,
+  "red": {
+    "authVersion": "v2.197.0",
+    "directConfirmationWithoutIdentityOrReceiptAccepted": true,
+    "ownerAndTemporarilyGrantedService": true,
+    "authorizedProcedureRefused": "40001",
+    "cleanupVerified": true
+  },
+  "sameSourceManifestsAcrossVersions": true,
+  "finalSourceHashesVerified": true,
+  "authorizingFunctionBodyUnchanged": true,
+  "aclNegativeControlsPerVersion": 2,
+  "nullSequenceMutationControlPassed": true,
+  "syntaxAndLintExitCode": 0,
+  "review": {
+    "cycles": 3,
+    "actionableFindingsFixed": [
+      "effective EXECUTE and UPDATE allowlist missing from proof",
+      "NULL sequence fell through to NOT NULL constraint"
+    ],
+    "finalConcreteFindings": 0,
+    "externalReview": "dispensed by user"
+  },
+  "rootSqlSuitesOrAppTestsRepeated": false,
+  "productionAuthorizationImplemented": false,
+  "externalCalls": false
+}
