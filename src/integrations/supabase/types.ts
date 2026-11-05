@@ -1098,6 +1098,7 @@ export type Database = {
       }
       patient_contact_links: {
         Row: {
+          active: boolean
           clinic_id: string
           confirmed_at: string
           confirmed_by: string
@@ -1110,6 +1111,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          active?: boolean
           clinic_id: string
           confirmed_at?: string
           confirmed_by: string
@@ -1122,6 +1124,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          active?: boolean
           clinic_id?: string
           confirmed_at?: string
           confirmed_by?: string
@@ -2641,6 +2644,15 @@ export type Database = {
       reception_scope_ok: {
         Args: { p_clinic: string; p_doctor?: string }
         Returns: boolean
+      }
+      reception_set_link_active: {
+        Args: {
+          p_active: boolean
+          p_contact: string
+          p_patient: string
+          p_revision: number
+        }
+        Returns: number
       }
       reception_staff_permissions: {
         Args: {

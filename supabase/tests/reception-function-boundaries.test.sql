@@ -63,6 +63,7 @@ insert into reviewed_definer_api values
  ('public.reception_save_draft(uuid,text,integer)', 'reception'),
  ('public.reception_team_doctors(uuid)', 'administration'),
  ('public.reception_contact_links(uuid,uuid,uuid,integer)', 'administration'),
+ ('public.reception_set_link_active(uuid,uuid,integer,boolean)', 'administration'),
  ('public.reception_staff_permissions(uuid,uuid,uuid,integer)', 'administration'),
  ('public.reception_delegation_withdrawal(uuid)', 'administration'),
  ('public.reception_delegation_requests(uuid,timestamp with time zone,uuid,integer)', 'administration'),

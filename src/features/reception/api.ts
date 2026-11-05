@@ -41,6 +41,7 @@ type RpcName =
   | 'reception_update_contact'
   | 'reception_link_edit'
   | 'reception_contact_links'
+  | 'reception_set_link_active'
   | 'reception_update_link_relationship'
   | 'reception_update_case'
   | 'reception_add_note'
@@ -100,6 +101,8 @@ export const receptionApi = {
       contactLinksPageSchema.refine(page => page.items.length <= limit && page.items.every(item => item.contactId === contact && (after === null || item.patientId > after)))),
   updateLinkRelationship: (contact: string, patient: string, expected: number, relationship: LinkEdit['relationship']) =>
     rpc('reception_update_link_relationship', { p_contact: contact, p_patient: patient, p_revision: expected, p_relationship: relationship }, revision),
+  setLinkActive: (contact: string, patient: string, expected: number, active: boolean) =>
+    rpc('reception_set_link_active', { p_contact: contact, p_patient: patient, p_revision: expected, p_active: active }, revision),
   updateContact: (id: string, expected: number, name: string, phone: string) =>
     rpc('reception_update_contact', { p_contact: id, p_revision: expected, p_name: name, p_phone: phone }, revision),
   createContact: (clinic: string, name: string, phone: string, request: string) =>

@@ -1,0 +1,10 @@
+{
+  "syntheticOnly": true,
+  "isolatedHolder": "patient_contact_links FOR SHARE without writes or custody-epoch contention",
+  "expectedSqlstate": "40001",
+  "observationsBeforeFix": [
+    { "function": "public.reception_link_patient(uuid,uuid,uuid,text)", "actualSqlstate": "57014", "waitingStatement": "select * from public.patient_contact_links where contact_id=c.id and patient_id=p_patient for update" },
+    { "function": "public.reception_update_link_relationship(uuid,uuid,integer,text)", "actualSqlstate": "57014", "waitingStatement": "select * from public.patient_contact_links where contact_id=p_contact and patient_id=p_patient for update" }
+  ],
+  "fix": "Both acquisitions now use NOWAIT with lock_not_available mapped to 40001; final SQL.json is the post-fix proof."
+}

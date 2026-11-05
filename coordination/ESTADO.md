@@ -1,6 +1,8 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-05 14:14 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-05 14:55 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+
+**T05b/4a, estado auditado banco/API entregue localmente:** [provas](../docs/reviews/2026-11-05/contact-link-state/IMPLEMENTATION.md). Reserva05240000prévia14:22; comando admin/CAS e active persistido, confirmação antiga sem reativação, guarda ALWAYS de INSERT/reabertura/intervalo CRM, histórico/identidade e órfão/caso preservados. Leitores operacionais cercados/RR recusado e POSTs VOLATILE compatíveis com READ WRITE; DTOs intactos.74migrations/19SQL/14cenários-controles,28testes/4arquivos, tipos12linhas/lint/build/hash/cleanup aprovados; duas esperas legadas reproduzidas/corrigidas, revisão final sem achado. Próxima fatia: UI de estado com conferência/recuperação/aviso de histórico; T05b inteira/M2/piloto continuam abertos. Sem hosted/push/PersonalMed/SaaS/trêshelpersClaude.4ff89be só encerra mensagem D7 já atendida, sem nova resposta.
 
 **T05b/3d, lista visual nos contatos entregue localmente:** [provas](../docs/reviews/2026-11-05/contact-links-ui/IMPLEMENTATION.md). Entrada admin sob demanda, páginas50, campos mínimos/indisponibilidade e editor existente por IDs exatos, modais alternados. Cache por ator/clínica/contato só após leitura fresca; erro esconde linhas/ações. Revisão identificou P2 de reuso de promessa após remontar mesma chave, reproduzido/corrigido consumindo signal; segunda leitura sem achado.22testes/2arquivos, sete verificações de navegador50+1/dirty/recusa/admin/móvel, lint/tipos/build/hash/cleanup aprovados. API/DDL/escritores/permissões intactos; sem SQL novo, hosted/push ou arquivosClaude/PersonalMed/SaaS. Próximo recorte: suspensão/reativação com guardas de todos os escritores/reserva de migration; T05b inteira/M2/corte/piloto continuam abertas. Nenhuma mensagem nova dirigida ao Codex; não repetir respostas13:44/13:54.
 
@@ -48,6 +50,7 @@ Atualizado em 2026-11-05 14:14 por Codex. Cada agente atualiza as linhas que lhe
 
 | Número | Assunto | Dono | Situação |
 |---|---|---|---|
+| `20261105240000` | T05b/4a: estado auditado do vínculo e guardas de confirmação/reserva | Codex | Reserva14:22 preservada; implementada/verificada:74migrations/19SQL/14cenários-controles,28testes/4arquivos, tipos12linhas/lint/build/hash/cleanup. Sem UI de estado, carga, campos legais ou domínioClaude |
 | `20261105230000` | T05b/3c: leitura administrativa paginada dos vínculos por contato | Codex | Reserva prévia13:37 preservada. Implementada/verificada:73migrations/12SQL, oito checks concorrentes,21testes/3arquivos, tipos9linhas/lint/build/hash/cleanup; sem estados/escritores/importação ou domínioClaude |
 | `20261105220000` | T28/2b/3c: revisão atual para retirada explícita de aprovação no cartão | Codex | Reserva prévia05/11 12:26 preservada. Implementada/verificada:72migrations/dezSQL,40testes/5arquivos, seis verificações de navegador/tipos/build/lint/hash/cleanup; escritor/CAS/DTOs anteriores preservados, sem tocar domínioClaude |
 | `20261105210000` | T28/2b/3b: leitura administrativa da proveniência dos acessos atuais | Codex | Reserva prévia05/11 12:03 preservada. Implementada/verificada:71migrations/noveSQL,31testes/4arquivos, seis verificações de navegador, tipos/lint/build/hash/cleanup; sem alterar grants/consentimento/retirada ou domínioClaude |
