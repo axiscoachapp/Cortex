@@ -50,7 +50,7 @@ begin
    raise exception 'Clinic intent binding changed' using errcode='22023';end if;
   if i.factor_id is distinct from supporting or i.membership_generation is distinct from generation then
    raise exception 'Clinic intent authority replaced or expired' using errcode='42501';end if;
-  if i.phase='confirmed' then perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id);end if;
+  perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id,i.phase='confirmed');
   perform provision_intent_lab.assert_final_deadlines(p_actor,p_session,p_exp,i.expires_at);
   return to_jsonb(i);
  end if;
@@ -74,7 +74,7 @@ begin
  perform provision_identity_lab.acquire_reservation_keys(i.operation_id,i.planned_user_id);
  if i.factor_id is distinct from supporting or i.membership_generation is distinct from generation then
   raise exception 'Clinic intent authority replaced or expired' using errcode='42501';end if;
- if p_finish or i.phase='confirmed' then perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id);end if;
+ perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id,p_finish or i.phase='confirmed');
  perform provision_intent_lab.assert_final_deadlines(p_actor,p_session,p_exp,i.expires_at);
  if p_finish then
   update provision_intent_lab.intents set phase='confirmed' where operation_id=p_operation returning * into i;

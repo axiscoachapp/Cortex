@@ -22,7 +22,7 @@ $$;
 revoke all on function provision_identity_lab.target_exists(uuid) from public,anon,authenticated,service_role;
 grant execute on function provision_identity_lab.target_exists(uuid),
  provision_intent_lab.assert_context(uuid,uuid,uuid,text,bigint),provision_membership_lab.current_generation(uuid,uuid),
- provision_identity_lab.acquire_reservation_keys(uuid,uuid),provision_intent_lab.fence_current_receipt(uuid,uuid),
+ provision_identity_lab.acquire_reservation_keys(uuid,uuid),provision_intent_lab.fence_current_receipt(uuid,uuid,boolean),
  provision_intent_lab.assert_final_deadlines(uuid,uuid,bigint,timestamptz) to provision_create_writer_lab;
 
 create or replace function provision_intent_lab.begin_intent(p_operation uuid,p_planned uuid,p_actor uuid,p_session uuid,p_clinic uuid,p_aal text,p_exp bigint) returns jsonb
@@ -38,7 +38,7 @@ begin
    raise exception 'Clinic intent binding changed' using errcode='22023';end if;
   if i.factor_id is distinct from supporting or i.membership_generation is distinct from generation then
    raise exception 'Clinic intent authority replaced or expired' using errcode='42501';end if;
-  if i.phase='confirmed' then perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id);end if;
+  perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id,i.phase='confirmed');
   perform provision_intent_lab.assert_final_deadlines(p_actor,p_session,p_exp,i.expires_at);
   return to_jsonb(i);
  end if;

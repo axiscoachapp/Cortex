@@ -1,0 +1,23 @@
+{
+  "unit": {
+    "command": "npx vitest run src/lib/provisioningAtomicInstall.test.ts src/lib/provisioningConfirmationBoundary.test.ts",
+    "passed": 50,
+    "files": 2,
+    "exitCode": 0
+  },
+  "eslint": {
+    "scripts": 6,
+    "exitCode": 0,
+    "parentRecheckedAfterAddingVersionSelector": true
+  },
+  "nodeSyntax": {
+    "scripts": 6,
+    "exitCode": 0
+  },
+  "versionSelectorFailFast": {
+    "passed": 3,
+    "cases": ["unknown version", "explicit version with --all", "duplicate selectors"],
+    "beforeDockerInitialization": true
+  },
+  "notRun": ["global frontend suite", "build", "typecheck", "Deno", "general SQL suite", "browser"]
+}

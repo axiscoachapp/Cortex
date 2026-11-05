@@ -46,7 +46,7 @@ export async function exerciseConfirmationProducer({sql,fixture,begin,birth,quer
  for(const role of ['anon','authenticated','service_role'])assert.equal(sql(`select has_function_privilege('${role}','provision_intent_lab.check_intent(uuid,uuid,uuid,uuid,text,bigint,boolean)','execute') or pg_has_role('${role}','provision_confirm_writer_lab','member')`),'f');
  const allowedFunctions=['provision_intent_lab.check_intent(uuid,uuid,uuid,uuid,text,bigint,boolean)',
   'provision_intent_lab.assert_context(uuid,uuid,uuid,text,bigint)','provision_membership_lab.current_generation(uuid,uuid)',
-  'provision_identity_lab.acquire_reservation_keys(uuid,uuid)','provision_intent_lab.fence_current_receipt(uuid,uuid)',
+  'provision_identity_lab.acquire_reservation_keys(uuid,uuid)','provision_intent_lab.fence_current_receipt(uuid,uuid,boolean)',
   'provision_intent_lab.assert_final_deadlines(uuid,uuid,bigint,timestamptz)'];
  const acl=`(select array_agg(p.oid order by p.oid) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   where n.nspname in ('provision_intent_lab','provision_identity_lab','provision_membership_lab') and has_function_privilege('provision_confirm_writer_lab',p.oid,'execute'))

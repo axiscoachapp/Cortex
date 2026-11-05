@@ -15,7 +15,7 @@ grant update(phase) on provision_intent_lab.intents to provision_confirm_writer_
 grant execute on function provision_intent_lab.assert_context(uuid,uuid,uuid,text,bigint),
  provision_membership_lab.current_generation(uuid,uuid),
  provision_identity_lab.acquire_reservation_keys(uuid,uuid),
- provision_intent_lab.fence_current_receipt(uuid,uuid),
+ provision_intent_lab.fence_current_receipt(uuid,uuid,boolean),
  provision_intent_lab.assert_final_deadlines(uuid,uuid,bigint,timestamptz) to provision_confirm_writer_lab;
 
 -- The body still performs every native context/receipt/deadline check. The

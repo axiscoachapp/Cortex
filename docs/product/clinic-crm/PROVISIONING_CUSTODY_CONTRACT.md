@@ -1,6 +1,6 @@
 # M2: custódia do histórico de provisionamento
 
-Data: 05/11/2026. **Contrato de aceite para o próximo laboratório; não implementado.** Complementa [instalação atômica](PROVISIONING_ATOMIC_INSTALL_CONTRACT.md), [fronteira de confirmação](PROVISIONING_CONFIRMATION_BOUNDARY_CONTRACT.md) e [pedidos privados](PROVISIONING_REQUESTS_CONTRACT.md). Não define política jurídica de retenção nem libera produção.
+Data: 05/11/2026. **Contrato de aceite da integração de custódia, ainda não implementada; pré-requisito de recibo corrigido no laboratório conforme relatório abaixo.** Complementa [instalação atômica](PROVISIONING_ATOMIC_INSTALL_CONTRACT.md), [fronteira de confirmação](PROVISIONING_CONFIRMATION_BOUNDARY_CONTRACT.md) e [pedidos privados](PROVISIONING_REQUESTS_CONTRACT.md). Não define política jurídica de retenção nem libera produção.
 
 ## Problema e limite
 
@@ -13,7 +13,7 @@ Os nomes `provision_identity_lab` e `provision_intent_lab` abaixo são os atuais
 | Registro/referência | Significado e tratamento exigido | Cobertura atual |
 |---|---|---|
 | `operations.operation_id`, `revision`, `phase`, `birth_transaction` | Identidade/resultado técnico imutável; XID não contém credencial e não prova sozinho a existência atual da conta. | Guardas privadas dos produtores; ainda sem integração T33/preflight deste ledger. |
-| `operations.planned_user_id` | Reserva de identidade, inclusive antes do INSERT Auth; depois, alvo histórico. A conta pode estar ausente. | Chave de reserva e cerca de recibo atual na confirmação e nos caminhos já confirmados, sem FK Auth propositalmente. Caminhos ainda `prepared` precisam da prova adicional descrita abaixo. |
+| `operations.planned_user_id` | Reserva de identidade, inclusive antes do INSERT Auth; depois, alvo histórico. A conta pode estar ausente. | Chave de reserva e cerca da operação antes da distinção de estado; recibo atual depois do nascimento, inclusive intenção ainda `prepared`. Correção de laboratório provada no relatório abaixo; sem FK Auth propositalmente. Integração T33/preflight permanece pendente. |
 | `intents.operation_id`, `planned_user_id` | Par exato com a operação; não pode ser reatribuído ou adotado por outra tentativa. | Guardas de vínculo/imutabilidade; sem T33/preflight deste ledger. |
 | `intents.actor_id` | Autor humano histórico; para executar novamente, administrador atual e disponível na mesma clínica. | Verificação Auth/filiação/T33 no caminho autorizativo, mas ainda sem preflight que conte a intenção como custódia do ator. |
 | `clinic_id`, `membership_generation` | Contexto e geração da autoridade original. Reativar ou recriar filiação não restaura a geração anterior. | Geração e verificação atual da filiação real no laboratório. |
@@ -67,14 +67,14 @@ Usar fontes congeladas, banco descartável, duas versões Auth já suportadas e 
 | Regressões | Produtores, guardas INSERT/phase/vínculo, relógio final e fronteira do servidor continuam válidos; sem pedido aprovado ou grant automático. Privacidade clínica preservada. |
 | Instalação | Falha tardia/lock ocupado reverte catálogo, privilégios e dados sem DROP de reparo. Upgrade sobre histórico e tratamento da repetição têm evidência própria antes da migration produtiva. |
 
-**Lacuna encontrada por leitura na revisão:** `check_intent(...,false)` em `provisioning-reservation-keys.sql` e replay de `begin_intent` em `provisioning-creation-producer.sql` cercam o recibo quando a intenção já é `confirmed`; o primeiro também o cerca ao confirmar. Isso não cobre automaticamente a linha "Nascido, ainda não confirmado". O teste de remoção em `test-provisioning-clinic-authority.mjs` confirma a intenção antes de remover o alvo. A nova linha exige RED e correção próprios antes de alegar cobertura completa. Não foi reproduzida em Native nesta fatia.
+**Lacuna inicial da revisão, agora corrigida no laboratório:** os ramos antigos cercavam o recibo na confirmação ou com intenção já `confirmed`; o teste antigo confirmava antes de remover. [RED e correção](../../reviews/2026-11-05/provisioning-pending-receipt/IMPLEMENTATION.md) provaram a recusa também após nascimento com intenção ainda pendente, nas duas Auth, preservando o positivo antes do nascimento. A cerca da operação fecha ainda o snapshot RR anterior ao nascimento; controles removendo apenas o predicado ou o lock reproduzem a aceitação antiga. São16 grupos novos por versão dentro de124 totais; não é prova da integração T33/preflight ou de retenção.
 
 Os testes de instalação de overlays já existentes não substituem essas provas de custódia. Este documento é resultado de leitura e revisão do contrato, não relatório de testes executados.
 
 ## Fontes locais e próximos passos
 
-Base de leitura: `b0d4c4b`; arquivos de laboratório `provisioning-auth-identity.sql`, `provisioning-human-intent.sql`, `provisioning-clinic-intent.sql`, `provisioning-membership-generation.sql` e overlays de produtores; migrations `20261104002000`, `20261104200000`, `20261104230000`, `20261105020000`; `delete-user-data` e `delete-patient`.
+Base da leitura inicial: `b0d4c4b`; arquivos de laboratório `provisioning-auth-identity.sql`, `provisioning-human-intent.sql`, `provisioning-clinic-intent.sql`, `provisioning-membership-generation.sql` e overlays de produtores; migrations `20261104002000`, `20261104200000`, `20261104230000`, `20261105020000`; `delete-user-data` e `delete-patient`. A cobertura do recibo foi atualizada pela implementação posterior e suas fontes congeladas, registradas no relatório vinculado.
 
 1. Revisar este contrato e os acoplamentos das guardas de produtor antes de desenhar o overlay.
-2. Priorizar RED/controle positivo do nascimento ainda não confirmado e remoção, depois as corridas conta/recurso em laboratório pequeno; compor com Native Auth nas duas versões. Preservar provas anteriores.
-3. Integrar instalação/upgrade e política de retenção quando seus contratos estiverem resolvidos. M2 continua aberta; não iniciar API/UI ou corte produtivo com base apenas neste documento.
+2. RED/correção do nascimento ainda não confirmado concluídos nas duas versões ([provas](../../reviews/2026-11-05/provisioning-pending-receipt/IMPLEMENTATION.md)). As corridas conta/recurso/T33 ficam para a integração do novo provisionamento; preservar as provas e não alegar esse trabalho concluído.
+3. Integrar instalação/upgrade e política de retenção quando seus contratos estiverem resolvidos. M2 continua aberta; este documento não libera API/UI do **novo provisionamento** ou corte produtivo. Por orientação do usuário repassada em 05/11 09:11, o fluxo utilizável de pedidos/decisão de permissão para **contas existentes** tem prioridade e pode avançar separadamente, conservando as autorizações e custódias já implementadas. Não deixar toda a interface aguardando o laboratório do novo provisionamento.

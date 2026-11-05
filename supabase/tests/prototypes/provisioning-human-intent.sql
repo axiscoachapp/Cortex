@@ -14,9 +14,16 @@ revoke all on all tables in schema provision_intent_lab from public,anon,authent
 
 -- Shared by the native-only and real-clinic gates. A historical snapshot is
 -- not evidence of a currently existing target. Fence the reserved identity.
-create function provision_intent_lab.fence_current_receipt(p_operation uuid,p_target uuid) returns void
+create function provision_intent_lab.fence_current_receipt(p_operation uuid,p_target uuid,p_require_birth boolean default true) returns void
 language plpgsql volatile security definer set search_path='' as $$
+declare receipt_operation provision_identity_lab.operations;
 begin
+ -- Fence the phase even when Auth has not been born yet. An old RR snapshot
+ -- must not mistake a subsequently born/deleted identity for an unused UUID.
+ select * into receipt_operation from provision_identity_lab.operations
+  where operation_id=p_operation and planned_user_id=p_target for share nowait;
+ if not found then raise exception 'Identity reservation unavailable' using errcode='40001';end if;
+ if not p_require_birth and receipt_operation.phase='prepared' and receipt_operation.birth_transaction is null then return;end if;
  perform 1 from auth.users u join provision_identity_lab.operations o on o.planned_user_id=u.id
   where u.id=p_target and o.operation_id=p_operation for share of u nowait;
  if not found or not provision_identity_lab.has_birth_receipt(p_operation) then
@@ -78,7 +85,7 @@ begin
   if (i.planned_user_id,i.actor_id,i.session_id,i.clinic_id) is distinct from (p_planned,p_actor,p_session,p_clinic) then
    raise exception 'Human intent binding changed' using errcode='22023';end if;
   if i.factor_id is distinct from supporting then raise exception 'Human intent supporting factor changed' using errcode='42501';end if;
-  if i.phase='confirmed' then perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id);end if;
+  perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id,i.phase='confirmed');
   perform provision_intent_lab.assert_final_deadlines(p_actor,p_session,p_exp,i.expires_at);
   return to_jsonb(i);
  end if;
@@ -99,7 +106,7 @@ begin
  if not found or (i.actor_id,i.session_id,i.clinic_id) is distinct from (p_actor,p_session,p_clinic) then
   raise exception 'Human intent unavailable' using errcode='42501';end if;
  if i.factor_id is distinct from supporting then raise exception 'Human intent supporting factor changed' using errcode='42501';end if;
- if p_finish or i.phase='confirmed' then perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id);end if;
+ perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id,p_finish or i.phase='confirmed');
  perform provision_intent_lab.assert_final_deadlines(p_actor,p_session,p_exp,i.expires_at);
  if p_finish then
   update provision_intent_lab.intents set phase='confirmed' where operation_id=p_operation returning * into i;

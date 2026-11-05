@@ -1,0 +1,47 @@
+{
+  "sourceBaseline": "fd8eed00d9d2760ca011445aba99aadd0341d059",
+  "migrationsPerInstallation": 69,
+  "versions": [
+    {
+      "authVersion": "v2.197.0",
+      "groups": {
+        "checks": 27,
+        "reservationChecks": 5,
+        "confirmationChecks": 3,
+        "creationChecks": 3,
+        "confirmationBoundaryChecks": 4,
+        "atomicInstallChecks": 4,
+        "pendingReceiptChecks": 16
+      },
+      "total": 62,
+      "cleanupVerified": true
+    },
+    {
+      "authVersion": "v2.189.0",
+      "groups": {
+        "checks": 27,
+        "reservationChecks": 5,
+        "confirmationChecks": 3,
+        "creationChecks": 3,
+        "confirmationBoundaryChecks": 4,
+        "atomicInstallChecks": 4,
+        "pendingReceiptChecks": 16
+      },
+      "total": 62,
+      "cleanupVerified": true
+    }
+  ],
+  "totalNativeGroups": 124,
+  "newPendingGroupsTotal": 32,
+  "protocolAndSupportSourcesIdentical": 20,
+  "onlySourceDifference": "runner: explicit Auth version selector",
+  "firstRunnerReconstructedExactlyWithoutSelector": true,
+  "allFinalSourceHashesMatchRetry": true,
+  "redPaths": [
+    "check",
+    "begin"
+  ],
+  "redCleanupVerified": true,
+  "failedInitializationExcludedFromPassingCounts": true,
+  "productionAuthorizationImplemented": false
+}

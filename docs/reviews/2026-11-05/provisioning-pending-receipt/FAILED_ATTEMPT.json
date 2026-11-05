@@ -1,0 +1,15 @@
+{
+  "authVersion": "v2.189.0",
+  "phase": "initial Native account HTTP client, before protocol cases",
+  "result": "No functional test result; internal Docker client spawnSync returned null status",
+  "automaticCleanupFailures": 2,
+  "remainingResources": "owned rest container and network",
+  "manualCleanup": {
+    "ownershipLabelsVerified": true,
+    "onlyFailedAttemptResourcesRemoved": true,
+    "containerAndNetworkAbsenceVerified": true,
+    "timeLocal": "2026-11-05 09:34 America/Sao_Paulo"
+  },
+  "countsAsPassingProof": false,
+  "retry": "same protocol sources; explicit --auth-version=v2.189.0 selector added to avoid repeating completed version"
+}

@@ -49,7 +49,7 @@ export async function exerciseCreationProducer({sql,fixture,begin,birth,query,ct
  }
  const allowedFunctions=['provision_intent_lab.begin_intent(uuid,uuid,uuid,uuid,uuid,text,bigint)',
   'provision_intent_lab.assert_context(uuid,uuid,uuid,text,bigint)','provision_membership_lab.current_generation(uuid,uuid)',
-  'provision_identity_lab.acquire_reservation_keys(uuid,uuid)','provision_intent_lab.fence_current_receipt(uuid,uuid)',
+  'provision_identity_lab.acquire_reservation_keys(uuid,uuid)','provision_intent_lab.fence_current_receipt(uuid,uuid,boolean)',
   'provision_intent_lab.assert_final_deadlines(uuid,uuid,bigint,timestamptz)','provision_identity_lab.target_exists(uuid)'];
  const inserts=['operations.operation_id','operations.planned_user_id','intents.operation_id','intents.planned_user_id','intents.actor_id','intents.session_id','intents.clinic_id','intents.factor_id','intents.expires_at','intents.membership_generation'].sort();
  const columnsSql=privilege=>`select coalesce(jsonb_agg(c.relname||'.'||a.attname order by c.relname||'.'||a.attname),'[]') from pg_attribute a join pg_class c on c.oid=a.attrelid where c.oid in ('provision_identity_lab.operations'::regclass,'provision_intent_lab.intents'::regclass) and a.attnum>0 and not a.attisdropped and has_column_privilege('provision_create_writer_lab',c.oid,a.attnum,'${privilege}')`;

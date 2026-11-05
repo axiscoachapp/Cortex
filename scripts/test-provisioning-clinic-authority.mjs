@@ -92,7 +92,7 @@ export async function installClinicSchema({sql,inputs,red,atomicInstaller}){
   confirmationBoundaryInstalled:!!inputs.confirmationBoundary,creationProducerInstalled:!!inputs.creationProducer,confirmationProducerInstalled:!!inputs.confirmationProducer,...(inputs.confirmationProducer?{confirmationAuthorizingBodyUnchanged:true}:{}),reservationKeysInstalled:!!inputs.reservationKeys,sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex'),...atomic};
 }
 
-export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,birthProducer,birthProducerRed,reservationCheck,reservationRed,confirmationCheck,confirmationRed,creationCheck,creationRed,creationInstalled,boundaryCheck,boundaryFactory,asyncHttp,pause,holderSession,restartAuth}){
+export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,birthProducer,birthProducerRed,reservationCheck,reservationRed,confirmationCheck,confirmationRed,creationCheck,creationRed,creationInstalled,pendingCheck,rawSql,boundaryCheck,boundaryFactory,asyncHttp,pause,holderSession,restartAuth}){
  const password=randomBytes(24).toString('hex');syntheticSecrets.push(password);
  const created=await call(auth,'/admin/users',adminJwt,{email:'clinic-authority@example.invalid',password,email_confirm:true});assert.equal(created.status,200);
  const login=await call(auth,'/token?grant_type=password',adminJwt,{email:'clinic-authority@example.invalid',password});assert.equal(login.status,200);
@@ -140,6 +140,7 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
   const outcome=JSON.parse(trusted(query(f,ctx)));
   return {...report,realGenerationChanged:true,sameNativeSessionAndFactorStillLive:true,nativeBirthReceipt:true,fixtureOnlyCandidateAccepted:outcome.phase==='confirmed',compositionProofPassed:false};
  }
+ const pending=pendingCheck?await pendingCheck({auth,adminJwt,version,call,sql,rawSql,fixture,begin,birth,ctx,args,query,trusted,refused,holderSession,asyncHttp,pause,report}):undefined;
  const checks=['Native Auth schema/helpers preserved; real TOTP/AAL2 actor creates the real clinic through authenticated Data API'];
  const deniedAal1=fixture();refused(`select provision_intent_lab.begin_intent('${deniedAal1.op}','${deniedAal1.id}',${args(aal1)})`);
  checks.push('Captured AAL1 context cannot reserve a real-clinic intent after account factor verification');
@@ -294,7 +295,7 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
  // Inject a delay only into our private lab function, after assert_context.
  {
   const session=await fresh();assert.equal(sql(`select not_after is null from auth.sessions where id='${session.session_id}'`),'t');
-  const original=sql("select pg_get_functiondef('provision_intent_lab.fence_current_receipt(uuid,uuid)'::regprocedure)");
+  const original=sql("select pg_get_functiondef('provision_intent_lab.fence_current_receipt(uuid,uuid,boolean)'::regprocedure)");
   sql('create sequence provision_intent_lab.deadline_fence_probe;');
   try{
    for(const mode of ['check','begin']){
@@ -310,7 +311,7 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
     sql(original);sql(`update auth.sessions set not_after=null where id='${session.session_id}';`);
    }
   }finally{sql(original);sql(`update auth.sessions set not_after=null where id='${session.session_id}';`);}
-  assert.equal(sql("select pg_get_functiondef('provision_intent_lab.fence_current_receipt(uuid,uuid)'::regprocedure)"),original);
+  assert.equal(sql("select pg_get_functiondef('provision_intent_lab.fence_current_receipt(uuid,uuid,boolean)'::regprocedure)"),original);
   checks.push('Native session not_after expiring inside the target fence refuses both confirmation and confirmed begin replay with bearer and intent still valid');
  }
  const aba=fixture(),old=begin(aba,ctx);await birth(aba);
@@ -361,5 +362,5 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
  checks.push('Private composition stays absent from Data API and creates no target clinic/staff/chart memberships or scopes');
  assert.equal(checks.length,19+(ledger?4:0)+(birthProducer?4:0));
  const boundary=boundaryCheck?await boundaryCheck({auth,adminJwt,call,sql,syntheticSecrets,fixture,begin,birth,fresh,factory:boundaryFactory}):undefined;
- return {...report,checks,compositionProofPassed:true,...reservation,...confirmation,...creation,...boundary,...(ledger?{ledgerBindingsProofPassed:true}:{}),...(birthProducer?{birthProducerProofPassed:true}:{}),notCovered:[(creationCheck?'production creation API':'authority of reservation/intent INSERT')+(confirmationCheck?'; production confirmation API':' and human confirmation writers')+(reservationCheck?'':'; UUID reservation races'),'production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
+ return {...report,checks,compositionProofPassed:true,...reservation,...confirmation,...creation,...boundary,...pending,...(ledger?{ledgerBindingsProofPassed:true}:{}),...(birthProducer?{birthProducerProofPassed:true}:{}),notCovered:[(creationCheck?'production creation API':'authority of reservation/intent INSERT')+(confirmationCheck?'; production confirmation API':' and human confirmation writers')+(reservationCheck?'':'; UUID reservation races'),'production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
 }
