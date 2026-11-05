@@ -1,0 +1,1196 @@
+{
+  "completed": false,
+  "failure": {
+    "name": "AssertionError",
+    "message": "Calendar title must fit without overlapping its controls"
+  },
+  "timeOnly": false,
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": true,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "229d173b91f55fa72ca3f31c1ee3dda50bdf7447",
+  "overlays": [],
+  "frozenTextSourceCount": 289,
+  "frozenTextSourceDigest": "48475c2cf82c0a28e8cad4141f92248e64b01d5195e75986d2b9bff12dcc38dd",
+  "tailwindRawContentCount": 287,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "79971464cf02502e9e4ff9d3ed66d866fb72c44455e22eb4904be7e3b86cc8ca"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "2c56404a59be9aa5e25813722848a1437de02f2cab8d877ef4b71916ada53c0e"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/AppointmentModal.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/CalendarWeekDetails.tsx",
+    "src/components/ClinicalMarkdown.tsx",
+    "src/components/ClinicalWorkEditor.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/alert-dialog.tsx",
+    "src/components/ui/badge.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/calendar.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/popover.tsx",
+    "src/components/ui/select.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/DelegationPermissions.tsx",
+    "src/features/reception/ReceptionNotice.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/features/reception/delegationApi.ts",
+    "src/features/reception/useRequestId.ts",
+    "src/hooks/use-mobile.tsx",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/clinicalWorkspace.ts",
+    "src/lib/dataExport.ts",
+    "src/lib/dates.ts",
+    "src/lib/functionErrors.ts",
+    "src/lib/interfaceScale.ts",
+    "src/lib/mfa.ts",
+    "src/lib/pagination.ts",
+    "src/lib/patientMapper.ts",
+    "src/lib/sharing.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/AccountSecurity.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/Calendar.tsx",
+    "src/pages/ClinicalWorkspace.tsx",
+    "src/pages/DataPrivacy.tsx",
+    "src/pages/Sharing.tsx"
+  ],
+  "screens": [
+    {
+      "role": "anonymous",
+      "path": "/auth",
+      "variant": "",
+      "actualPath": "/auth",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Bem-vindo ao Cortex"
+      ],
+      "screenshot": "anonymous--auth-375.png"
+    },
+    {
+      "role": "anonymous",
+      "path": "/auth",
+      "variant": "",
+      "actualPath": "/auth",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Bem-vindo ao Cortex"
+      ],
+      "screenshot": "anonymous--auth-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "",
+      "actualPath": "/agenda",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda"
+      ],
+      "screenshot": "clinical--agenda-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 111.9375,
+          "right": 148.375,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 352.15625,
+          "right": 418,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 613.359375,
+          "right": 666.625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 855.453125,
+          "right": 934.375,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1134.296875,
+          "right": 1165.375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda"
+      ],
+      "screenshot": "clinical--agenda-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/compartilhamento",
+      "variant": "",
+      "actualPath": "/compartilhamento",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Compartilhamento entre médicos",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar ao consultório",
+              "width": 30.078125,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Compartilhamento entre médicos",
+        "Vincular equipe médica",
+        "Compartilhados comigo",
+        "Acessos que concedi"
+      ],
+      "screenshot": "clinical--compartilhamento-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/compartilhamento",
+      "variant": "",
+      "actualPath": "/compartilhamento",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 111.9375,
+          "right": 148.375,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 352.15625,
+          "right": 418,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 613.359375,
+          "right": 666.625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 855.453125,
+          "right": 934.375,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1134.296875,
+          "right": 1165.375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Compartilhamento entre médicos",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar ao consultório",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Compartilhamento entre médicos",
+        "Vincular equipe médica",
+        "Compartilhados comigo",
+        "Acessos que concedi"
+      ],
+      "screenshot": "clinical--compartilhamento-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho",
+      "variant": "",
+      "actualPath": "/trabalho",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Trabalho pendente",
+        "Abrir paciente privado",
+        "Áudios e revisões recuperáveis"
+      ],
+      "screenshot": "clinical--trabalho-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho",
+      "variant": "",
+      "actualPath": "/trabalho",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 111.9375,
+          "right": 148.375,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 352.15625,
+          "right": 418,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 613.359375,
+          "right": 666.625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 855.453125,
+          "right": 934.375,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1134.296875,
+          "right": 1165.375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Trabalho pendente",
+        "Abrir paciente privado",
+        "Áudios e revisões recuperáveis"
+      ],
+      "screenshot": "clinical--trabalho-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/seguranca",
+      "variant": "",
+      "actualPath": "/seguranca",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Segurança da conta"
+      ],
+      "screenshot": "clinical--seguranca-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/seguranca",
+      "variant": "",
+      "actualPath": "/seguranca",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 111.9375,
+          "right": 148.375,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 352.15625,
+          "right": 418,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 613.359375,
+          "right": 666.625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 855.453125,
+          "right": 934.375,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1134.296875,
+          "right": 1165.375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Segurança da conta"
+      ],
+      "screenshot": "clinical--seguranca-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/privacidade",
+      "variant": "",
+      "actualPath": "/privacidade",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Privacidade & Dados",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 52.203125,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Privacidade & Dados",
+        "Seus direitos — LGPD",
+        "Exportar meus dados",
+        "Excluir conta e dados"
+      ],
+      "screenshot": "clinical--privacidade-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/privacidade",
+      "variant": "",
+      "actualPath": "/privacidade",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 111.9375,
+          "right": 148.375,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 352.15625,
+          "right": 418,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 613.359375,
+          "right": 666.625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 855.453125,
+          "right": 934.375,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1134.296875,
+          "right": 1165.375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Privacidade & Dados",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Privacidade & Dados",
+        "Seus direitos — LGPD",
+        "Exportar meus dados",
+        "Excluir conta e dados"
+      ],
+      "screenshot": "clinical--privacidade-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/permissoes-recepcao",
+      "variant": "",
+      "actualPath": "/permissoes-recepcao",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Permissões da recepção",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Atualizar lista",
+              "width": 174.15625,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "visibleAlerts": [
+        "A resposta não pôde ser validada. Atualize a lista.Tentar novamente"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Permissões da recepção"
+      ],
+      "screenshot": "clinical--permissoes-recepcao-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/permissoes-recepcao",
+      "variant": "",
+      "actualPath": "/permissoes-recepcao",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 111.9375,
+          "right": 148.375,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 352.15625,
+          "right": 418,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 613.359375,
+          "right": 666.625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 855.453125,
+          "right": 934.375,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1134.296875,
+          "right": 1165.375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Permissões da recepção",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Atualizar lista",
+              "width": 174.15625,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "visibleAlerts": [
+        "A resposta não pôde ser validada. Atualize a lista.Tentar novamente"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Permissões da recepção"
+      ],
+      "screenshot": "clinical--permissoes-recepcao-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "",
+      "actualPath": "/agenda",
+      "width": 320,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 9.578125,
+          "right": 46.015625,
+          "targetLeft": 5.390625,
+          "targetRight": 50.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 55.59375,
+          "right": 121.4375,
+          "targetLeft": 55.59375,
+          "targetRight": 121.4375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 126.828125,
+          "right": 180.09375,
+          "targetLeft": 126.828125,
+          "targetRight": 180.09375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 185.484375,
+          "right": 264.40625,
+          "targetLeft": 185.484375,
+          "targetRight": 264.40625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 276.65625,
+          "right": 307.734375,
+          "targetLeft": 269.796875,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": true,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 42.125,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": true
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda"
+      ],
+      "screenshot": "clinical--agenda-320.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "errorResponses": [],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

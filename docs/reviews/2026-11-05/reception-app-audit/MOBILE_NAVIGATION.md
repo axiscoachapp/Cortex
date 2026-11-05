@@ -38,7 +38,7 @@ Não houve achado concreto novo na última revisão do delta. Revisão externa d
 
 Os estados de erro da fixture em `/permissoes-recepcao` continuam sendo erro de DTO conhecido, sem validar o fluxo positivo. MFA só é visitado no estado inicial, e nenhuma reserva, gravação clínica, exclusão ou envio é submetido. Não há teste SQL/Auth nativo, build global ou aprovação de piloto neste recorte. Não foram criados testes que apenas espelham classes CSS.
 
-A captura de 320 px também mostrou o título Agenda encostando nos botões do cabeçalho; fica registrado para reprodução/correção em outro recorte. Essa região não é modificada aqui. Restam os itens 1–6 e o reteste independente dos cinco arquivos médicos da entrega `f2eb189`.
+A captura de 320 px também mostrou o título Agenda encostando nos botões do cabeçalho; esse achado foi reproduzido e [corrigido em T39/2b](CALENDAR_HEADER.md). Essa região não é modificada por T39/2a. Restam os itens 1–6 e o reteste independente dos cinco arquivos médicos da entrega `f2eb189`.
 
 ## Reexecutar
 

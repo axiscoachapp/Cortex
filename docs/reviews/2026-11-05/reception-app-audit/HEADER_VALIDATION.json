@@ -1,0 +1,189 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "229d173b91f55fa72ca3f31c1ee3dda50bdf7447",
+  "states": 37,
+  "headerWidths": [
+    320,
+    375,
+    390,
+    768,
+    1280
+  ],
+  "before": {
+    "text": "Agenda",
+    "clipped": true,
+    "controls": [
+      {
+        "name": "Voltar",
+        "width": 42.125,
+        "height": 54,
+        "overlapsTitle": false
+      },
+      {
+        "name": "Conectar Google Calendar",
+        "width": 55.96875,
+        "height": 48.59375,
+        "overlapsTitle": true
+      },
+      {
+        "name": "Novo Agendamento",
+        "width": 53.96875,
+        "height": 48.59375,
+        "overlapsTitle": false
+      }
+    ]
+  },
+  "after": [
+    {
+      "width": 320,
+      "text": "Agenda",
+      "clipped": false,
+      "controls": [
+        {
+          "name": "Voltar",
+          "width": 54,
+          "height": 54,
+          "overlapsTitle": false
+        },
+        {
+          "name": "Conectar Google Calendar",
+          "width": 55.96875,
+          "height": 48.59375,
+          "overlapsTitle": false
+        },
+        {
+          "name": "Novo Agendamento",
+          "width": 53.96875,
+          "height": 48.59375,
+          "overlapsTitle": false
+        }
+      ]
+    },
+    {
+      "width": 375,
+      "text": "Agenda",
+      "clipped": false,
+      "controls": [
+        {
+          "name": "Voltar",
+          "width": 54,
+          "height": 54,
+          "overlapsTitle": false
+        },
+        {
+          "name": "Conectar Google Calendar",
+          "width": 55.96875,
+          "height": 48.59375,
+          "overlapsTitle": false
+        },
+        {
+          "name": "Novo Agendamento",
+          "width": 53.96875,
+          "height": 48.59375,
+          "overlapsTitle": false
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "text": "Agenda",
+      "clipped": false,
+      "controls": [
+        {
+          "name": "Voltar",
+          "width": 54,
+          "height": 54,
+          "overlapsTitle": false
+        },
+        {
+          "name": "Conectar Google Calendar",
+          "width": 55.96875,
+          "height": 48.59375,
+          "overlapsTitle": false
+        },
+        {
+          "name": "Novo Agendamento",
+          "width": 53.96875,
+          "height": 48.59375,
+          "overlapsTitle": false
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "text": "Agenda",
+      "clipped": false,
+      "controls": [
+        {
+          "name": "Voltar",
+          "width": 54,
+          "height": 54,
+          "overlapsTitle": false
+        },
+        {
+          "name": "Conectar Google Calendar",
+          "width": 55.96875,
+          "height": 48.59375,
+          "overlapsTitle": false
+        },
+        {
+          "name": "Novo Agendamento",
+          "width": 53.96875,
+          "height": 48.59375,
+          "overlapsTitle": false
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "text": "Agenda",
+      "clipped": false,
+      "controls": [
+        {
+          "name": "Voltar",
+          "width": 54,
+          "height": 54,
+          "overlapsTitle": false
+        },
+        {
+          "name": "Conectar Google Calendar",
+          "width": 224.546875,
+          "height": 48.59375,
+          "overlapsTitle": false
+        },
+        {
+          "name": "Novo Agendamento",
+          "width": 255.8125,
+          "height": 48.59375,
+          "overlapsTitle": false
+        }
+      ]
+    }
+  ],
+  "navigationKeyboardVerified": true,
+  "sourceHashesVerified": true,
+  "cleanupVerified": true,
+  "visibleAlerts": [
+    {
+      "path": "/permissoes-recepcao",
+      "width": 375,
+      "alerts": [
+        "A resposta não pôde ser validada. Atualize a lista.Tentar novamente"
+      ]
+    },
+    {
+      "path": "/permissoes-recepcao",
+      "width": 1280,
+      "alerts": [
+        "A resposta não pôde ser validada. Atualize a lista.Tentar novamente"
+      ]
+    }
+  ],
+  "checks": {
+    "nodeSyntax": true,
+    "eslintCalendar": true,
+    "eslintNodeBrowser": true,
+    "incompatibleFlagsRejected": true
+  }
+}

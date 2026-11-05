@@ -14,10 +14,12 @@ import { startClinicFixture } from './fixtures/clinic-review-api.mjs';
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|check-time-layout|check-mobile-navigation)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|check-time-layout|check-mobile-navigation|check-calendar-header)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const checkMobileNavigation = args.includes('--check-mobile-navigation');
 assert.ok(!timeOnly || !checkMobileNavigation, 'Mobile navigation checks require the full route audit');
+const checkCalendarHeader = args.includes('--check-calendar-header');
+assert.ok(!timeOnly || !checkCalendarHeader, 'Calendar header checks require the full route audit');
 const git = options => { const result = spawnSync('git', options, { encoding: 'utf8', windowsHide: true, maxBuffer: 20 * 1024 * 1024 }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); };
 const baseline = args.find(arg => arg.startsWith('--baseline='))?.slice(11) || git(['rev-parse', 'HEAD']);
 const overlays = args.filter(arg => arg.startsWith('--overlay=')).map(arg => arg.slice(10));
@@ -95,6 +97,16 @@ async function capture(page, app, role, path, width, action, variant = '') {
     const missingLabels = [...document.querySelectorAll('input,select,textarea')].filter(visible).filter(element => !['hidden', 'submit', 'button', 'reset'].includes(element.type)).filter(element => !name(element)).map(element => ({ tag: element.tagName, type: element.type, placeholder: element.getAttribute('placeholder'), html: element.outerHTML.slice(0, 600) }));
     const dialogElement = document.querySelector('[role="dialog"],[role="alertdialog"]'), dialog = dialogElement?.getBoundingClientRect();
     const dialogOutsideViewport = dialog ? dialog.left < -1 || dialog.top < -1 || dialog.right > innerWidth + 1 || dialog.bottom > innerHeight + 1 : false;
+    const headerTitles = [...document.querySelectorAll('header h1')].filter(visible).map(element => {
+      const range = document.createRange(); range.selectNodeContents(element);
+      const text = range.getBoundingClientRect(), bounds = element.getBoundingClientRect();
+      const controls = [...element.closest('header').querySelectorAll('button,a')].filter(visible).map(control => {
+        const rect = control.getBoundingClientRect();
+        return { name: name(control) || control.textContent.trim(), width: rect.width, height: rect.height,
+          overlapsTitle: text.left < rect.right && text.right > rect.left && text.top < rect.bottom && text.bottom > rect.top };
+      });
+      return { text: element.textContent.trim(), clipped: text.left < bounds.left - 1 || text.right > bounds.right + 1 || text.top < bounds.top - 1 || text.bottom > bounds.bottom + 1, controls };
+    });
     const navigationLabels = [...document.querySelectorAll('nav[aria-label="Navegação principal"] > div > a, nav[aria-label="Navegação principal"] > div > button')].filter(visible).map(element => {
       const text = [...element.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
       if (!text) return null;
@@ -103,7 +115,7 @@ async function capture(page, app, role, path, width, action, variant = '') {
       return { label: text.textContent.trim(), left: rect.left, right: rect.right, targetLeft: target.left, targetRight: target.right, targetHeight: target.height };
     }).filter(Boolean);
     return { fontSize: getComputedStyle(document.documentElement).fontSize, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, dialogOutsideViewport, dialogHorizontalOverflow: dialogElement ? dialogElement.scrollWidth - dialogElement.clientWidth : 0,
-      missingButtons, missingLabels, navigationLabels, visibleAlerts: [...document.querySelectorAll('[role="alert"]')].filter(visible).map(element => element.textContent.trim()),
+      missingButtons, missingLabels, navigationLabels, headerTitles, visibleAlerts: [...document.querySelectorAll('[role="alert"]')].filter(visible).map(element => element.textContent.trim()),
       timeControls: [...document.querySelectorAll('input[type="time"]')].filter(visible).map(element => { const rect = element.getBoundingClientRect(); return { id: element.id, value: element.value, width: rect.width, top: rect.top, bottom: rect.bottom }; }),
       brokenText: document.body.innerText.match(/\bundefined\b|\bNaN\b|\[object Object\]/g) ?? [], headings: [...document.querySelectorAll('h1,h2')].filter(visible).map(element => element.textContent.trim()) };
   });
@@ -125,6 +137,14 @@ async function capture(page, app, role, path, width, action, variant = '') {
   const actionScreenshot = dialogActions.length ? file.replace('.png', '-actions.png') : undefined;
   if (actionScreenshot) await page.screenshot({ path: resolve(folder, actionScreenshot), fullPage: true, animations: 'disabled' });
   screens.push({ role, path, variant, actualPath: new URL(page.url()).pathname, width, dialogActions, dialogActionReachable, recoveryScreen: measurement.headings.includes('Não foi possível exibir esta tela'), ...measurement, screenshot: file, actionScreenshot });
+  if (checkCalendarHeader && role === 'clinical' && path === '/agenda' && !variant) {
+    assert.equal(measurement.headerTitles.length, 1);
+    const [title] = measurement.headerTitles;
+    assert.equal(title.text, 'Agenda');
+    assert.ok(!title.clipped && title.controls.every(control => !control.overlapsTitle), 'Calendar title must fit without overlapping its controls');
+    assert.deepEqual(title.controls.map(control => control.name), ['Voltar', 'Conectar Google Calendar', 'Novo Agendamento']);
+    assert.ok(title.controls.every(control => control.width >= 44 && control.height >= 44), 'Calendar header controls need 44px touch targets');
+  }
   if (checkMobileNavigation && !variant && role !== 'anonymous') {
     assert.equal(measurement.navigationLabels.length, role === 'staff' ? 4 : 5, 'Expected role-specific navigation labels');
     for (const [index, label] of measurement.navigationLabels.entries()) {
@@ -150,8 +170,10 @@ try {
   const doctor = await scene(doctorApp, 'review', '/agenda');
   for (const path of ['/agenda', '/compartilhamento', '/trabalho', '/seguranca', '/privacidade', '/permissoes-recepcao'])
     for (const width of [375, 1280]) await capture(doctor, doctorApp, 'clinical', path, width);
-  if (checkMobileNavigation) {
+  if (checkMobileNavigation || checkCalendarHeader) {
     for (const width of [320, 390, 768]) await capture(doctor, doctorApp, 'clinical', '/agenda', width);
+  }
+  if (checkMobileNavigation) {
     const nav = doctor.getByRole('navigation', { name: 'Navegação principal' });
     await nav.getByRole('link', { name: 'Pendências', exact: true }).focus(); await doctor.keyboard.press('Enter');
     await expect(doctor).toHaveURL(doctorApp.origin + '/trabalho');
@@ -222,7 +244,7 @@ try {
   }
   cleanupVerified = true;
 }
-const report = { completed: !failure, failure, timeOnly, checkTimeLayout, checkMobileNavigation, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
+const report = { completed: !failure, failure, timeOnly, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
   frozenLoads: [...frozenLoads].sort(), screens, errors, consoleErrors, failedRequests, errorResponses, blockedExternalRequests: blocked, cleanupVerified };
 await writeFile(resolve(folder, 'AUDIT.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify({ baseline, screens: screens.length, errors: errors.length, consoleErrors: consoleErrors.length,

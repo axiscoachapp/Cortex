@@ -44,7 +44,7 @@ Em `/permissoes-recepcao`, a fixture clínica antiga não fornece o DTO válido 
 
 MFA foi visitado no estado inicial, sem cadastrar fatores ou capturar segredos. Compartilhamento, gravações, cancelamentos, exclusão real, fluxos completos de erro/recuperação e RLS/Auth nativos não são aprovados por esta passagem. Não houve novo build global, typecheck das edições médicas paralelas, SQL ou teste de produção.
 
-A entrega médica do Claude18:43 foi registrada em `f2eb189`. O [item8 foi corrigido em T39/2a](MOBILE_NAVIGATION.md): rótulos da navegação inferior separados, 37 estados e teclado verificados. Os itens1–6 e o reteste independente dos cinco arquivos seguem como próximos recortes do Codex. A proposta de unificar navegação é decisão de produto separada. T39 inteira e piloto continuam abertos.
+A entrega médica do Claude18:43 foi registrada em `f2eb189`. O [item8 foi corrigido em T39/2a](MOBILE_NAVIGATION.md): rótulos da navegação inferior separados, 37 estados e teclado verificados. O [cabeçalho em320px foi corrigido em T39/2b](CALENDAR_HEADER.md), também com37 estados. Os itens1–6 e o reteste independente dos cinco arquivos seguem como próximos recortes do Codex. A proposta de unificar navegação é decisão de produto separada. T39 inteira e piloto continuam abertos.
 
 ## Reexecutar sem sobrescrever evidência
 

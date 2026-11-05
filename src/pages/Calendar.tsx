@@ -308,10 +308,10 @@ export default function CalendarPage() {
       <header className="bg-background border-b sticky top-0 z-10">
         <div className="container mx-auto px-3 md:px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
+            <Button variant="ghost" size="icon" className="shrink-0" aria-label="Voltar" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <CalendarDays className="h-5 w-5 md:h-6 md:w-6 text-medical-blue shrink-0" />
+            <CalendarDays className="hidden min-[375px]:block h-5 w-5 md:h-6 md:w-6 text-medical-blue shrink-0" />
             <div className="min-w-0">
               <h1 className="text-base md:text-lg font-semibold text-foreground leading-tight">Agenda</h1>
               <p className="text-xs text-muted-foreground hidden sm:block">{todayLabel}</p>
