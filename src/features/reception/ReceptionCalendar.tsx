@@ -266,7 +266,7 @@ function RescheduleDialog({ appointment, onClose }: { appointment: ReceptionAppo
                 }}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="reschedule-start">Novo início</Label>
                 <Input
@@ -375,7 +375,7 @@ function BlockDialog({ day: initialDay, onClose }: { day: string; onClose: () =>
               <Label htmlFor="block-date">Data do bloqueio</Label>
               <Input id="block-date" type="date" required value={day} onChange={(e) => setDay(e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="block-start">Início do bloqueio</Label>
                 <Input id="block-start" type="time" required value={start} onChange={(e) => setStart(e.target.value)} />

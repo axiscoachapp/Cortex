@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "6c90f44eb5025273da20e10340c7e5a400ab5031",
+  "redFailure": "Time controls need separate full-width rows on mobile and the same row on desktop",
+  "greenStates": 34,
+  "visibleAlerts": [
+    {
+      "path": "/permissoes-recepcao",
+      "width": 375,
+      "alerts": [
+        "A resposta não pôde ser validada. Atualize a lista.Tentar novamente"
+      ]
+    },
+    {
+      "path": "/permissoes-recepcao",
+      "width": 1280,
+      "alerts": [
+        "A resposta não pôde ser validada. Atualize a lista.Tentar novamente"
+      ]
+    }
+  ],
+  "unit": {
+    "command": "vitest run src/features/reception/ReceptionCalendar.test.tsx",
+    "files": 1,
+    "tests": 9,
+    "exitCode": 0
+  },
+  "cleanupVerified": true
+}

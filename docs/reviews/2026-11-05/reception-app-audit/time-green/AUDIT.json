@@ -1,0 +1,298 @@
+{
+  "completed": true,
+  "timeOnly": true,
+  "checkTimeLayout": true,
+  "syntheticOnly": true,
+  "baseline": "6c90f44eb5025273da20e10340c7e5a400ab5031",
+  "overlays": [
+    {
+      "path": "src/features/reception/ReceptionCalendar.tsx",
+      "sha256": "2bd5f54e1eb0f7f99c2a9b3fd297cb1fc073717bf9beffa4b03e1b9c4c670813"
+    }
+  ],
+  "frozenTextSourceCount": 289,
+  "frozenTextSourceDigest": "9c856161d6e1dfcae403a454b223136de6ec0d969abd726e9eb3f1aac1fdace9",
+  "tailwindRawContentCount": 287,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "1045222d0c05f5331997bf04712149073ff87ff53484f3374406911545da7fa0"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "2c56404a59be9aa5e25813722848a1437de02f2cab8d877ef4b71916ada53c0e"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/BookingDialog.tsx",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/ContactSearch.tsx",
+    "src/features/reception/ReceptionAppointmentCard.tsx",
+    "src/features/reception/ReceptionCalendar.tsx",
+    "src/features/reception/ReceptionLayout.tsx",
+    "src/features/reception/ReceptionNotice.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/appointmentTiming.ts",
+    "src/features/reception/contracts.ts",
+    "src/features/reception/dates.ts",
+    "src/features/reception/linkRelationships.ts",
+    "src/features/reception/useRequestId.ts",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/mfa.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx"
+  ],
+  "screens": [
+    {
+      "role": "staff",
+      "path": "/recepcao/agenda",
+      "variant": "reschedule-dialog",
+      "actualPath": "/recepcao/agenda",
+      "width": 375,
+      "dialogActions": [
+        {
+          "name": "Confirmar remarcação",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": "reschedule-start",
+          "value": "09:00",
+          "width": 308.21875,
+          "top": 482.453125,
+          "bottom": 536.453125
+        },
+        {
+          "id": "reschedule-end",
+          "value": "09:30",
+          "width": 308.21875,
+          "top": 585.03125,
+          "bottom": 639.03125
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Remarcar consulta"
+      ],
+      "screenshot": "staff--recepcao-agenda-reschedule-dialog-375.png",
+      "actionScreenshot": "staff--recepcao-agenda-reschedule-dialog-375-actions.png"
+    },
+    {
+      "role": "staff",
+      "path": "/recepcao/agenda",
+      "variant": "reschedule-dialog",
+      "actualPath": "/recepcao/agenda",
+      "width": 1280,
+      "dialogActions": [
+        {
+          "name": "Confirmar remarcação",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": "reschedule-start",
+          "value": "09:00",
+          "width": 304.109375,
+          "top": 531.0390625,
+          "bottom": 585.0390625
+        },
+        {
+          "id": "reschedule-end",
+          "value": "09:30",
+          "width": 304.109375,
+          "top": 531.0390625,
+          "bottom": 585.0390625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Remarcar consulta"
+      ],
+      "screenshot": "staff--recepcao-agenda-reschedule-dialog-1280.png",
+      "actionScreenshot": "staff--recepcao-agenda-reschedule-dialog-1280-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/agenda",
+      "variant": "block-time-dialog",
+      "actualPath": "/recepcao/agenda",
+      "width": 375,
+      "dialogActions": [
+        {
+          "name": "Confirmar bloqueio",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": "block-start",
+          "value": "12:00",
+          "width": 308.21875,
+          "top": 474.34375,
+          "bottom": 528.34375
+        },
+        {
+          "id": "block-end",
+          "value": "13:00",
+          "width": 308.21875,
+          "top": 576.921875,
+          "bottom": 630.921875
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Bloquear horário"
+      ],
+      "screenshot": "admin--recepcao-agenda-block-time-dialog-375.png",
+      "actionScreenshot": "admin--recepcao-agenda-block-time-dialog-375-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/agenda",
+      "variant": "block-time-dialog",
+      "actualPath": "/recepcao/agenda",
+      "width": 1280,
+      "dialogActions": [
+        {
+          "name": "Confirmar bloqueio",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": "block-start",
+          "value": "12:00",
+          "width": 304.109375,
+          "top": 525.6328125,
+          "bottom": 579.6328125
+        },
+        {
+          "id": "block-end",
+          "value": "13:00",
+          "width": 304.109375,
+          "top": 525.6328125,
+          "bottom": 579.6328125
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Bloquear horário"
+      ],
+      "screenshot": "admin--recepcao-agenda-block-time-dialog-1280.png",
+      "actionScreenshot": "admin--recepcao-agenda-block-time-dialog-1280-actions.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "errorResponses": [],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}
