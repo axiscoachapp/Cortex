@@ -2,11 +2,11 @@
 import http from 'node:http';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [] } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null } = {}) {
   const now=new Date().toISOString();
   const user={id:uid,email:'review@example.invalid',aud:'authenticated',role:'authenticated',created_at:now,email_confirmed_at:now,app_metadata:{provider:'email'},user_metadata:{},factors:[]};
   const token=[{alg:'HS256',typ:'JWT'},{sub:uid,role:'authenticated',aud:'authenticated',aal:'aal1',exp:Math.floor(Date.now()/1000)+86400,iat:Math.floor(Date.now()/1000)}].map(value=>Buffer.from(JSON.stringify(value)).toString('base64url')).join('.')+'.synthetic-signature';
-  const patients=[{id:patientId,user_id:uid,name:'Paciente Exemplo A',age:0,date_of_birth:null,revision:0,profession:'',last_visit:null,status:'retorno',diagnoses:[],medications:[],allergies:[],clinical_notes:'',medical_history:'',social_anamnesis:'',phone:null,email:null,cpf:null,sex:null,health_insurance:null,archived_at:null}];
+  const patients=[{id:patientId,user_id:uid,name:'Paciente Exemplo A',age:0,date_of_birth:null,revision:0,profession:'',last_visit:lastVisit,status:'retorno',diagnoses:[],medications:[],allergies:[],clinical_notes:'',medical_history:'',social_anamnesis:'',phone:null,email:null,cpf:null,sex:null,health_insurance:null,archived_at:null}];
   const templates=[{id:'44444444-4444-4444-8444-444444444444',user_id:null,name:'Modelo sintético SOAP',description:'Estrutura para revisão visual',content:'**S (Subjetivo):** relato\n\n**O (Objetivo):** achados\n\n**A:** avaliação\n\n**P:** plano',created_at:now}];
   const settings={user_id:uid,specialty:'geral',daily_credit_limit:1500,live_copilot_enabled:false,doctor_name:'Profissional de Demonstração',crm_number:'00000',crm_uf:'PR',professional_address:'Ambiente sintético',active_template_id:null};
   const visits=[{id:'55555555-5555-4555-8555-555555555555',patient_id:patientId,user_id:uid,created_at:now,chief_complaint:'Consulta sintética',soap_note:'**S (Subjetivo):** relato sintético\n\n- Item revisado',revision:0}];

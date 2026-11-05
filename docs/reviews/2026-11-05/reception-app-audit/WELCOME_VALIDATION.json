@@ -1,0 +1,260 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "7f0384d576e731a9e5d45fe3dde26a2d0f14da3f",
+  "states": 9,
+  "weekRegressionStates": 10,
+  "unit": {
+    "tests": 8,
+    "files": 1,
+    "exitCode": 0
+  },
+  "checks": {
+    "appTypes": true,
+    "applicationLint": true,
+    "runnerFixtureLint": true,
+    "nodeSyntax": true,
+    "hashes": true,
+    "cleanup": true,
+    "keyboard": true
+  },
+  "welcomeMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0
+  },
+  "widths": [
+    320,
+    375,
+    1280
+  ],
+  "networkObservations": {
+    "red": [
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      },
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      }
+    ],
+    "green": [
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      },
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      },
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      },
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      },
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      },
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      },
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      },
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      },
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      },
+      {
+        "method": "HEAD",
+        "path": "/rest/v1/patients",
+        "status": 200,
+        "reason": "net::ERR_ABORTED"
+      }
+    ],
+    "classification": "Only HEAD /rest/v1/patients with observed HTTP200 and ERR_ABORTED; raw events retained; no claim of clean network or browser cause"
+  },
+  "before": [
+    {
+      "label": "Assistente",
+      "fullWidth": 84.328125,
+      "availableWidth": 66.234375,
+      "width": 133,
+      "height": 50.59375,
+      "clipped": true
+    },
+    {
+      "label": "Modelos",
+      "fullWidth": 69.65625,
+      "availableWidth": 66.25,
+      "width": 133.015625,
+      "height": 50.59375,
+      "clipped": true
+    },
+    {
+      "label": "Conhecimento",
+      "fullWidth": 121.90625,
+      "availableWidth": 66.234375,
+      "width": 133,
+      "height": 50.59375,
+      "clipped": true
+    },
+    {
+      "label": "Pacientes",
+      "fullWidth": 80.203125,
+      "availableWidth": 66.25,
+      "width": 133.015625,
+      "height": 50.59375,
+      "clipped": true
+    }
+  ],
+  "after": [
+    {
+      "width": 320,
+      "shortcuts": [
+        {
+          "label": "Assistente",
+          "fullWidth": 84.328125,
+          "availableWidth": 84.328125,
+          "width": 133,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Modelos",
+          "fullWidth": 69.65625,
+          "availableWidth": 69.65625,
+          "width": 133.015625,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Conhecimento",
+          "fullWidth": 121.90625,
+          "availableWidth": 121.90625,
+          "width": 133,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Pacientes",
+          "fullWidth": 80.203125,
+          "availableWidth": 80.203125,
+          "width": 133.015625,
+          "height": 76.234375,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "width": 375,
+      "shortcuts": [
+        {
+          "label": "Assistente",
+          "fullWidth": 84.328125,
+          "availableWidth": 84.328125,
+          "width": 160.5,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Modelos",
+          "fullWidth": 69.65625,
+          "availableWidth": 69.65625,
+          "width": 160.515625,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Conhecimento",
+          "fullWidth": 121.90625,
+          "availableWidth": 121.90625,
+          "width": 160.5,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Pacientes",
+          "fullWidth": 80.203125,
+          "availableWidth": 80.203125,
+          "width": 160.515625,
+          "height": 76.234375,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "shortcuts": [
+        {
+          "label": "Assistente",
+          "fullWidth": 84.328125,
+          "availableWidth": 84.328125,
+          "width": 197.09375,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Modelos",
+          "fullWidth": 69.65625,
+          "availableWidth": 69.65625,
+          "width": 197.109375,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Conhecimento",
+          "fullWidth": 121.90625,
+          "availableWidth": 121.90625,
+          "width": 197.109375,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Pacientes",
+          "fullWidth": 80.203125,
+          "availableWidth": 80.203125,
+          "width": 197.109375,
+          "height": 76.234375,
+          "clipped": false
+        }
+      ]
+    }
+  ]
+}

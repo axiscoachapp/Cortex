@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -92,5 +92,28 @@ describe('WhatsApp reminder preparation', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Lembrar' }));
     expect(screen.getByRole('heading', { name: /lembretes pendentes/i })).toBeInTheDocument();
     expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Erro ao enviar lembrete' }));
+  });
+});
+
+describe('dashboard date labels', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-05T15:00:00Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it.each([
+    ['2026-10-06', 'há 1 mês'],
+    ['2026-09-07', 'há 1 mês'],
+    ['2026-09-06', 'há 2 meses'],
+    ['2026-10-07', 'há 4 sem.'],
+  ])('labels a visit on %s as %s', (lastVisit, expected) => {
+    renderDashboard({ ...patient, status: 'novo', phone: undefined, lastVisit });
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
+  it('capitalizes only the start of the date sentence', () => {
+    renderDashboard();
+    expect(screen.getByText('Quinta-feira, 5 de novembro')).toBeInTheDocument();
   });
 });

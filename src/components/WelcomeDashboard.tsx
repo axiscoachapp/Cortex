@@ -76,7 +76,8 @@ function relativeDate(dateString: string | null): string {
   if (days === 1) return 'ontem';
   if (days < 7) return `há ${days} dias`;
   if (days < 30) return `há ${Math.floor(days / 7)} sem.`;
-  return `há ${Math.floor(days / 30)} meses`;
+  const months = Math.floor(days / 30);
+  return `há ${months} ${months === 1 ? 'mês' : 'meses'}`;
 }
 
 function greeting(): string {
@@ -85,11 +86,12 @@ function greeting(): string {
 }
 
 function todayLabel(): string {
-  return new Date().toLocaleDateString('pt-BR', {
+  const label = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
   });
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function formatTime(iso: string): string {
@@ -213,7 +215,7 @@ export function WelcomeDashboard({
         <div className="flex items-start justify-between gap-2">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{greeting()}</h1>
-            <p className="text-muted-foreground mt-0.5 capitalize">{todayLabel()}</p>
+            <p className="text-muted-foreground mt-0.5">{todayLabel()}</p>
           </div>
           <SpecialtySettingsSheet />
         </div>
@@ -247,10 +249,10 @@ export function WelcomeDashboard({
             <button
               key={to}
               onClick={() => navigate(to)}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border/50 bg-white hover:border-medical-blue/30 hover:bg-medical-blue-light/20 transition-all"
+              className="flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border border-border/50 bg-white hover:border-medical-blue/30 hover:bg-medical-blue-light/20 transition-all"
             >
               <Icon className="w-4 h-4 text-medical-blue shrink-0" />
-              <span className="text-xs font-medium text-foreground truncate">{label}</span>
+              <span className="text-xs font-medium text-foreground whitespace-normal leading-tight text-center">{label}</span>
             </button>
           ))}
         </div>
