@@ -174,25 +174,51 @@ function strictChildren(buf: Uint8Array, node: DerNode): DerNode[] {
   return out;
 }
 
-/** Every constructed node below `node`, recursively, in strict DER. */
+/**
+ * Every node below `node`, recursively, in strict DER (Codex 05/11 07:36):
+ * constructed universal nodes only as SEQUENCE or SET (DER has no
+ * constructed strings), and every universal primitive value valid for its
+ * type, wherever it is (algorithm parameters, names).
+ */
 function strictTree(buf: Uint8Array, node: DerNode, depth = 0): void {
   if (depth > 24) throw new Error('DER profundo demais.');
-  if (node.tag & 0x20) for (const child of strictChildren(buf, node)) strictTree(buf, child, depth + 1);
+  const universal = (node.tag & 0xc0) === 0;
+  if (node.tag & 0x20) {
+    if (universal && node.tag !== 0x30 && node.tag !== 0x31) throw new Error('DER inválido.');
+    for (const child of strictChildren(buf, node)) strictTree(buf, child, depth + 1);
+  } else if (universal && !primitiveOk(buf, node)) {
+    throw new Error('DER inválido.');
+  }
+}
+
+const UTF8 = new TextDecoder('utf-8', { fatal: true });
+/** The content of a universal primitive value, by its type (X.690 DER). */
+function primitiveOk(buf: Uint8Array, n: DerNode): boolean {
+  const c = content(buf, n);
+  switch (n.tag) {
+    case 0x00: return false; // end-of-contents: BER only
+    case 0x01: return c.length === 1 && (c[0] === 0x00 || c[0] === 0xff); // BOOLEAN
+    case 0x02: case 0x0a: return integerContent(c); // INTEGER, ENUMERATED
+    case 0x03: return c.length >= 1 && c[0] <= 7 && !(c.length === 1 && c[0] !== 0) // BIT STRING, unused bits zero
+      && (c.length === 1 || (c[c.length - 1] & ((1 << c[0]) - 1)) === 0);
+    case 0x05: return c.length === 0; // NULL
+    case 0x06: return oidContent(c);
+    case 0x0c: try { UTF8.decode(c); return true; } catch { return false; } // UTF8String
+    case 0x17: case 0x18: return derTime(buf, n) !== null; // UTCTime, GeneralizedTime
+    case 0x1c: return c.length % 4 === 0; // UniversalString (UCS-4)
+    case 0x1e: return c.length % 2 === 0; // BMPString (UCS-2)
+    default: return true;
+  }
 }
 
 const content = (buf: Uint8Array, n: DerNode) => buf.subarray(n.contentStart, n.end);
 const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((x, i) => x === b[i]);
-/** INTEGER, not empty, minimal two's complement. */
-function isInteger(buf: Uint8Array, n: DerNode): boolean {
-  const c = content(buf, n);
-  return n.tag === 0x02 && c.length > 0 && !(c.length > 1 && ((c[0] === 0 && c[1] < 0x80) || (c[0] === 0xff && c[1] >= 0x80)));
-}
-/** OBJECT IDENTIFIER: not empty, each arc minimal and terminated. */
-function isOid(buf: Uint8Array, n: DerNode): boolean {
-  const c = content(buf, n);
-  if (n.tag !== 0x06 || !c.length || c[c.length - 1] & 0x80) return false;
-  return c.every((x, i) => !(x === 0x80 && (i === 0 || !(c[i - 1] & 0x80))));
-}
+/** INTEGER content: not empty, minimal two's complement. */
+const integerContent = (c: Uint8Array) => c.length > 0 && !(c.length > 1 && ((c[0] === 0 && c[1] < 0x80) || (c[0] === 0xff && c[1] >= 0x80)));
+/** OBJECT IDENTIFIER content: not empty, each arc minimal and terminated. */
+const oidContent = (c: Uint8Array) => c.length > 0 && !(c[c.length - 1] & 0x80) && c.every((x, i) => !(x === 0x80 && (i === 0 || !(c[i - 1] & 0x80))));
+const isInteger = (buf: Uint8Array, n: DerNode) => n.tag === 0x02 && integerContent(content(buf, n));
+const isOid = (buf: Uint8Array, n: DerNode) => n.tag === 0x06 && oidContent(content(buf, n));
 /** BIT STRING (or its IMPLICIT [n]): unused bits 0..7, none when empty, none when `whole`. */
 function isBitString(buf: Uint8Array, n: DerNode, tag: number, whole: boolean, minBytes = 0): boolean {
   const c = content(buf, n);

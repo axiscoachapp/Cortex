@@ -87,9 +87,12 @@ describe('signerCertificateProblem', () => {
 async function fullCertificate() {
   const spki = new Uint8Array(await crypto.subtle.exportKey('spki', doctor.publicKey));
   const algorithm = DER.seq(DER.oid('1.2.840.113549.1.1.11'), DER.null);
+  const bmp = (text: string) => tlv(0x1e, Uint8Array.from([...text].flatMap((ch) => [0, ch.charCodeAt(0)])));
   const name = (cn: string) => DER.seq(
     DER.setOf(DER.seq(DER.oid('2.5.4.6'), tlv(0x13, ascii('BR')))),
     DER.setOf(DER.seq(DER.oid('2.5.4.10'), DER.utf8('ICP-Brasil Sintética'))),
+    DER.setOf(DER.seq(DER.oid('2.5.4.11'), bmp('Unidade'))),
+    DER.setOf(DER.seq(DER.oid('1.2.840.113549.1.9.1'), tlv(0x16, ascii('sintetica@example.invalid')))),
     DER.setOf(DER.seq(DER.oid('2.5.4.3'), DER.utf8(cn))),
   );
   const extensions = DER.ctx(3, DER.seq(
@@ -136,11 +139,19 @@ const nodeAt = (root: Node, path: number[]) => path.reduce((n, i) => n.children!
 function variants(der: Uint8Array): Array<[string, Uint8Array]> {
   const root = tree(der);
   const out: Array<[string, Uint8Array]> = [];
+  // Inside an AlgorithmIdentifier, the same change is also made to the other
+  // copy (TBS 0.2 and outer 1), so the equality of the two does not hide it.
+  const inAlgorithm = (path: number[]) => (path[0] === 0 && path[1] === 2 && path.length > 2) || (path[0] === 1 && path.length > 1);
   const mutate = (label: string, path: number[], change: (n: Node, parent: Node | null, index: number) => void) => {
     const copy = clone(root);
     const parent = path.length ? nodeAt(copy, path.slice(0, -1)) : null;
     change(nodeAt(copy, path), parent, path[path.length - 1]);
     out.push([`${label} @${path.join('.') || 'root'}`, encode(copy)]);
+    if (inAlgorithm(path)) {
+      if (path[0] === 0) copy.children![1] = clone(nodeAt(copy, [0, 2]));
+      else copy.children![0].children![2] = clone(copy.children![1]);
+      out.push([`${label} (both algorithms) @${path.join('.')}`, encode(copy)]);
+    }
   };
   for (const path of paths(root)) {
     const n = nodeAt(root, path);
@@ -157,6 +168,12 @@ function variants(der: Uint8Array): Array<[string, Uint8Array]> {
       mutate('pad', path, (x) => { x.body = Uint8Array.from([...x.body!, 0]); });
       if (n.tag === 0x02 || n.tag === 0x06) mutate('lead', path, (x) => { x.body = Uint8Array.from([n.tag === 0x02 ? 0 : 0x80, ...x.body!]); });
       if (n.tag === 0x03) for (const bits of [1, 7, 8, 255]) mutate(`unused${bits}`, path, (x) => { x.body![0] = bits; });
+    }
+    if (n.body && !(n.tag & 0xc0)) {
+      mutate('content FF', path, (x) => { x.body = Uint8Array.of(0xff); });
+      mutate('content 00', path, (x) => { x.body = Uint8Array.of(0x00); });
+      mutate('content C3', path, (x) => { x.body = Uint8Array.of(0xc3); }); // a UTF-8 sequence cut short
+      mutate('content 0001', path, (x) => { x.body = Uint8Array.of(0x00, 0x01); });
     }
     for (const kind of ['long', 'overrun'] as const) {
       const copy = clone(root);
@@ -222,6 +239,53 @@ describe('signerCertificateProblem: the X.509 shape (Codex 05/11 06:35, R2)', ()
     cases.push(['non-minimal length inside the algorithm parameters', DER.seq(DER.seq(...fields), algorithm, encode(root.children![2]))]);
     for (const [label, der] of cases) expect([label, await signerCertificateProblem(der, NOW)]).toEqual([label, 'certificate_invalid']);
     expect(await signerCertificateProblem(full, NOW)).toBeNull();
+  });
+
+  it('refuses invalid primitive contents: algorithm parameters and name strings (Codex 05/11 07:36)', async () => {
+    const full = await fullCertificate();
+    const root = tree(full);
+    // The same parameters inside and outside the TBS, so the equality holds.
+    const withParameters = (parameters: Uint8Array | null) => {
+      const algorithm = parameters ? DER.seq(DER.oid('1.2.840.113549.1.1.11'), parameters) : DER.seq(DER.oid('1.2.840.113549.1.1.11'));
+      const fields = root.children![0].children!.map((n, i) => (i === 2 ? algorithm : encode(n)));
+      return DER.seq(DER.seq(...fields), algorithm, encode(root.children![2]));
+    };
+    const withIssuerValue = (value: Uint8Array) => {
+      const copy = tree(full);
+      nodeAt(copy, [0, 3]).children!.push(tree(DER.setOf(DER.seq(DER.oid('2.5.4.11'), value))));
+      return encode(copy);
+    };
+    const cases: Array<[string, Uint8Array]> = [
+      ['NULL parameters with content', withParameters(Uint8Array.of(0x05, 0x01, 0x00))],
+      ['empty INTEGER parameters', withParameters(Uint8Array.of(0x02, 0x00))],
+      ['non-minimal INTEGER parameters', withParameters(Uint8Array.of(0x02, 0x02, 0x00, 0x01))],
+      ['UTF8String with FF in the issuer', withIssuerValue(tlv(0x0c, Uint8Array.of(0xff)))],
+      ['BMPString of one byte in the issuer', withIssuerValue(tlv(0x1e, Uint8Array.of(0x00)))],
+      ['UniversalString of three bytes in the issuer', withIssuerValue(tlv(0x1c, Uint8Array.of(0x00, 0x00, 0x41)))],
+      ['end-of-contents as parameters', withParameters(Uint8Array.of(0x00, 0x00))],
+    ];
+    for (const [label, der] of cases) {
+      expect([label, openssl(der)]).toEqual([label, false]);
+      expect([label, await signerCertificateProblem(der, NOW)]).toEqual([label, 'certificate_invalid']);
+    }
+    // A constructed string is BER, which OpenSSL parses; DER forbids it.
+    expect(await signerCertificateProblem(withIssuerValue(tlv(0x2c, tlv(0x0c, ascii('a')))), NOW)).toBe('certificate_invalid');
+    // What DER forbids in any value, here as algorithm parameters (in both copies).
+    const strict: Array<[string, Uint8Array]> = [
+      ['BOOLEAN other than 00/FF', Uint8Array.of(0x01, 0x01, 0x05)],
+      ['BIT STRING with a set unused bit', Uint8Array.of(0x03, 0x02, 0x01, 0x01)],
+      ['OID with a padded arc', Uint8Array.of(0x06, 0x02, 0x80, 0x01)],
+      ['UTCTime without seconds', tlv(0x17, ascii('2601010000Z'))],
+      ['constructed OCTET STRING', Uint8Array.of(0x24, 0x03, 0x04, 0x01, 0x00)],
+    ];
+    for (const [label, parameters] of strict) {
+      expect([label, await signerCertificateProblem(withParameters(parameters), NOW)]).toEqual([label, 'certificate_invalid']);
+    }
+    // Valid forms still pass: NULL parameters (the usual) and no parameters.
+    for (const der of [withParameters(DER.null), withParameters(null)]) {
+      expect(openssl(der)).toBe(true);
+      expect(await signerCertificateProblem(der, NOW)).toBeNull();
+    }
   });
 
   it('never accepts a corrupted variant that OpenSSL refuses', async () => {

@@ -62,6 +62,17 @@ Versões:
     - só `[1]`, `[2]` e `[3]` depois da chave, nessa ordem.
 
     Um teste diferencial gera centenas de variantes corrompidas e confere que nenhuma recusada pelo OpenSSL (`node:crypto.X509Certificate`) passa aqui.
+  - **R2, conteúdo dos valores (07:36):** todo valor primitivo universal, onde quer que esteja (parâmetros de algoritmo, nomes), tem conteúdo válido para o tipo:
+    - BOOLEAN `00`/`FF`;
+    - INTEGER mínimo;
+    - BIT STRING com bits sobrando zerados;
+    - NULL vazio;
+    - OID mínimo;
+    - UTF8String válida;
+    - horários estritos;
+    - BMPString par e UniversalString múltipla de 4.
+
+    String construída (BER) é recusada. O conjunto de caracteres de PrintableString e IA5String não é imposto, como no OpenSSL.
   - **R4, download real:** o storage-js 2.86 devolve a ausência no download como `StorageUnknownError` com a `Response` crua (`noResolveJson`). `storageErrorKind` lê esse corpo até 4 KiB e só aceita JSON com `statusCode` 404 em HTTP 400/404 como ausência. Gateway sem `statusCode`, HTML, 5xx e rede são indisponibilidade. `storageAdapter(bucket)` saiu de `signatureDeps.ts` para ser testado com o `StorageClient` real.
 - **R5, corpo:** o limite de 8 KiB é aplicado na leitura:
   - um `Content-Length` maior é recusado antes de ler;

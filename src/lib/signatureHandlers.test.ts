@@ -333,7 +333,7 @@ describe('signature-session handler', () => {
 describe('Storage errors (Codex 05/11 05:09, R4)', () => {
   const api = (status: number, statusCode: string, message: string) => Object.assign(new Error(message), { name: 'StorageApiError', status, statusCode });
   it('only the structured status says absent or already there; any other error is unavailable', async () => {
-    const table: Array<[unknown, ReturnType<typeof storageErrorKind>]> = [
+    const table: Array<[unknown, Awaited<ReturnType<typeof storageErrorKind>>]> = [
       [api(404, '404', 'Object not found'), 'not_found'],
       [api(400, '404', 'Object not found'), 'not_found'], // older Storage: HTTP 400, body statusCode 404
       [api(409, '409', 'The resource already exists'), 'exists'],
