@@ -1,0 +1,55 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "1c02436b1e3ec9717fbe17ee5bf24752ac7c5137",
+  "sources": [
+    {
+      "path": "supabase/migrations/20261105100000_digital_signature.sql",
+      "sha256": "3df726b66b3070e2ef2fd82836013fe7da31dc3089cf7be3a00f3034ac8dc872"
+    },
+    {
+      "path": "supabase/functions/_shared/auth.ts",
+      "sha256": "116adbca9900cadd2b87e908e4955b2792b9c5b89b90bb377894783a46327b1f"
+    },
+    {
+      "path": "supabase/functions/_shared/pades.ts",
+      "sha256": "a14b2cf404f2aa26f0a728462c62661257d63b183e970c0ce423587fd4fe959c"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "sha256": "127570625b19e72403f207fad14494565260e01f90874161fed68645083f5772"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureFlow.ts",
+      "sha256": "3af8cc2c7394c57c5f79b0dc424e620df26bb71864d532dfb6af4cd36c8f170e"
+    },
+    {
+      "path": "supabase/functions/_shared/regulatedMedications.ts",
+      "sha256": "3d8d6c907d9de9060143630ae6983759984b83f93c3c1d7e4509d5e8f8ef577c"
+    },
+    {
+      "path": "src/lib/pades.test.ts",
+      "sha256": "5d3f124b1387e9addb3afa3275828f0ed1faa21db65f821006ba69dbd1141127"
+    },
+    {
+      "path": "src/lib/signatureFlow.test.ts",
+      "sha256": "d778bba4b3f434734169c47de586e0f44a4d08f6b0ca5cb1e5a649e55233800d"
+    },
+    {
+      "path": "src/lib/regulatedMedications.test.ts",
+      "sha256": "84f259751e37453f147087ee98cf105b3638bfe2dbdca5d54c6f996d66dc5267"
+    },
+    {
+      "path": "src/components/DocumentComposerModal.test.tsx",
+      "sha256": "4cc38017b7aa1344735ba1e3eafda0246c40ce45838c45bc71d2940cfa769c3e"
+    }
+  ],
+  "unitFiles": 4,
+  "unitPassed": 93,
+  "unitSkipped": 1,
+  "unitFailed": 0,
+  "sqlSuitesRun": 0,
+  "nativeAuthRuns": 0,
+  "productionChanges": false,
+  "sourceHashesUnchanged": true,
+  "previousAttemptDiscarded": "Design document changed concurrently; executable source hashes are the attested unit-test inputs in this final run."
+}
