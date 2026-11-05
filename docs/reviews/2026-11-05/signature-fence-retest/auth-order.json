@@ -1,0 +1,34 @@
+{
+  "sourceBaseline": "1ada96f1847dfe5d7c2e507692e47d6b183c1d2c",
+  "scope": "static order check, not a runtime proof of all seven functions",
+  "functions": [
+    {
+      "function": "signature_begin_authorization",
+      "shapeBeforeBarrier": true
+    },
+    {
+      "function": "signature_consume_authorization",
+      "shapeBeforeBarrier": true
+    },
+    {
+      "function": "signature_activate_session",
+      "shapeBeforeBarrier": true
+    },
+    {
+      "function": "signature_session_token",
+      "shapeBeforeBarrier": true
+    },
+    {
+      "function": "signature_reserve",
+      "shapeBeforeBarrier": true
+    },
+    {
+      "function": "signature_advance",
+      "shapeBeforeBarrier": true
+    },
+    {
+      "function": "signature_complete",
+      "shapeBeforeBarrier": true
+    }
+  ]
+}

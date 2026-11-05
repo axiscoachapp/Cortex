@@ -1,0 +1,29 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "5d85481c16c92621c4a1edc1a613956eee9c7b4f",
+  "scope": "isolated actual signedFileOf helper; producer UUID acceptance reviewed by schema inspection",
+  "httpIntegration": false,
+  "externalCalls": false,
+  "ownSource": {
+    "path": "scripts/test-validate-contract-review.mjs",
+    "sha256": "bedfbca22cd30021412f80b296ec8f46ac046ba28a99ac52f6ffce01e8f549cf"
+  },
+  "source": {
+    "path": "supabase/functions/validate-prescription/index.ts",
+    "sha256": "5017176e74e2698c5525547088820d230a7897eec1c0690b0702b515c3b7e350"
+  },
+  "cases": [
+    {
+      "operation": "44444444-4444-4444-8444-444444444444",
+      "canonicalHexUuid": true,
+      "accepted": true,
+      "refusal": null
+    },
+    {
+      "operation": "44444444-4444-4444-4444-444444444444",
+      "canonicalHexUuid": true,
+      "accepted": true,
+      "refusal": null
+    }
+  ]
+}

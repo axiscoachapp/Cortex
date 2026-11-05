@@ -1,0 +1,45 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "5d85481c16c92621c4a1edc1a613956eee9c7b4f",
+  "sourceSnapshotMatchesGit": true,
+  "unitPassed": 65,
+  "unitFiles": 3,
+  "unitFailed": 0,
+  "unitPending": 0,
+  "unitExitCode": 0,
+  "deno": {
+    "version": "2.9.6",
+    "cachedOnly": true,
+    "offline": true,
+    "entrypoints": [
+      "validate-prescription",
+      "generate-prescription"
+    ],
+    "exitCode": 0
+  },
+  "sources": [
+    {
+      "path": "supabase/functions/validate-prescription/index.ts",
+      "sha256": "5017176e74e2698c5525547088820d230a7897eec1c0690b0702b515c3b7e350"
+    },
+    {
+      "path": "supabase/functions/generate-prescription/index.ts",
+      "sha256": "224c1ed6d54367b79f0dddf3951d3d83d1a9ae7efa6289c0d3b0c1eced45b45a"
+    },
+    {
+      "path": "src/lib/securityHandlers.test.ts",
+      "sha256": "df9d814a31edc939d2db1b88504b5c8d4f9d2e4408fa71c64b1c1f5fd49318e0"
+    },
+    {
+      "path": "src/lib/privacyHandlers.test.ts",
+      "sha256": "ce9fd304e6a968099bd0ea25d4a6dcac35b8b4d1d0b6cfdbcac61ab7e4159947"
+    },
+    {
+      "path": "src/lib/prescriptionDocuments.test.ts",
+      "sha256": "00fdfc0f7bf5bd79596568ae0ff8a5f1b0d78114015048f03394021b4689474c"
+    }
+  ],
+  "canonicalUuidMismatchResolved": true,
+  "realValidarCalls": false,
+  "sqlOrPscIntegrationRun": false
+}

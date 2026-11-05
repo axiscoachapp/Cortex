@@ -6,8 +6,8 @@ import {registerHooks} from 'node:module';
 import ts from 'typescript';
 
 // In-memory counterexamples over an immutable source tree, no services or keys saved.
-const options=process.argv.slice(2),resolved=options.includes('--resolved'),sourceArg=options.find(a=>a.startsWith('--source='));
-assert.ok(sourceArg&&/^--source=[0-9a-f]{40}$/.test(sourceArg)&&options.every(a=>a===sourceArg||a==='--resolved')&&new Set(options).size===options.length);
+const options=process.argv.slice(2),fenceFixed=options.includes('--fence-fixed'),resolved=options.includes('--resolved')||fenceFixed,sourceArg=options.find(a=>a.startsWith('--source='));
+assert.ok(sourceArg&&/^--source=[0-9a-f]{40}$/.test(sourceArg)&&options.every(a=>a===sourceArg||a==='--resolved'||a==='--fence-fixed')&&new Set(options).size===options.length);
 const baseline=sourceArg.slice(9),ownPath='scripts/test-signature-flow-review.mjs';
 const hash=s=>createHash('sha256').update(s).digest('hex'),ownHash=hash(readFileSync(ownPath));
 const paths=['src/lib/signatureFlow.test.ts','src/test/syntheticPki.ts',...['pades','psc','signatureFlow'].map(n=>'supabase/functions/_shared/'+n+'.ts')];
@@ -74,13 +74,15 @@ assert.deepEqual(review.lateAnswer.after,{state:'failed',attempt:2,cleanup:false
 assert.equal(review.reasonByteRange.interrupted,'40001');assert.equal(review.reasonByteRange.stored.state,'stored');
 if(resolved){
  assert.equal(review.reasonByteRange.resumed.status,'completed');assert.equal(review.reasonByteRange.removed.objects,1);
- assert.equal(review.terminalRace.newerCompleted,'completed');assert.deepEqual(review.terminalRace.olderPrepared,{error:'22023'});
+ assert.equal(review.terminalRace.newerCompleted,'completed');
+ if(fenceFixed)assert.equal(review.terminalRace.olderPrepared.outcome?.status,'completed');
+ else assert.deepEqual(review.terminalRace.olderPrepared,{error:'22023'});
  assert.equal(review.terminalRace.finalState,'completed');assert.equal(review.terminalRace.pscCalls,1);assert.equal(review.terminalRace.audit,1);
 }else {assert.equal(review.reasonByteRange.resumed.code,'stored_object_invalid');assert.equal(review.reasonByteRange.removed.objects,0);}
 assert.equal(hash(readFileSync(ownPath)),ownHash);
 const report={syntheticOnly:true,sourceBaseline:baseline,reviewResolved:false,priorCounterexamplesResolved:resolved,realDatabaseIntegration:false,externalCalls:false,
- ownSource:{path:ownPath,sha256:ownHash},sources:[...sources].map(([path,source])=>({path,sha256:hash(source)})),...review};
-const directory=resolved?'docs/reviews/2026-11-05/signature-session-fence-review':'docs/reviews/2026-11-04/signature-delta-review';
+ fenceFixesPassed:fenceFixed,ownSource:{path:ownPath,sha256:ownHash},sources:[...sources].map(([path,source])=>({path,sha256:hash(source)})),...review};
+const directory=fenceFixed?'docs/reviews/2026-11-05/signature-fence-retest':resolved?'docs/reviews/2026-11-05/signature-session-fence-review':'docs/reviews/2026-11-04/signature-delta-review';
 mkdirSync(directory,{recursive:true});
 writeFileSync(directory+'/memory.json',JSON.stringify(report,null,2)+'\n');
 process.stdout.write(JSON.stringify(review,null,2)+'\n');

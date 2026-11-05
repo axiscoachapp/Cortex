@@ -1,0 +1,90 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "1ada96f1847dfe5d7c2e507692e47d6b183c1d2c",
+  "reviewResolved": false,
+  "priorCounterexamplesResolved": true,
+  "realDatabaseIntegration": false,
+  "externalCalls": false,
+  "fenceFixesPassed": true,
+  "ownSource": {
+    "path": "scripts/test-signature-flow-review.mjs",
+    "sha256": "c4e7336afc3b7009c19db05c60803a8a9a46d86c7e0c0ce6f3462cf04f266b48"
+  },
+  "sources": [
+    {
+      "path": "src/lib/signatureFlow.test.ts",
+      "sha256": "1177918a1866915dd8bfea648772ea2ee0736fbdbe40f4ca8c3acd0b796daff5"
+    },
+    {
+      "path": "src/test/syntheticPki.ts",
+      "sha256": "43d94efe73d4f3d78702642d0c54ca0dae4ca06c79446410e329dc88d4b824fa"
+    },
+    {
+      "path": "supabase/functions/_shared/pades.ts",
+      "sha256": "23f2d6ea4b67ce135db59f934b32fe1c346beef0833da48a2340768687b4259e"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "sha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureFlow.ts",
+      "sha256": "b146c9fef2151dc7e0fa0e1cf6322188705fc7ff9962d7d1e560dfaca6a309a6"
+    }
+  ],
+  "positive": "completed",
+  "lateAnswer": {
+    "secondResult": {
+      "status": "failed",
+      "code": "psc_rejected"
+    },
+    "before": {
+      "state": "failed",
+      "attempt": 2,
+      "cleanup": false,
+      "objects": 0
+    },
+    "firstResult": {
+      "status": "in_progress"
+    },
+    "after": {
+      "state": "failed",
+      "attempt": 2,
+      "cleanup": false,
+      "objects": 0,
+      "audit": 0
+    }
+  },
+  "reasonByteRange": {
+    "interrupted": "40001",
+    "stored": {
+      "state": "stored",
+      "objects": 1,
+      "pscCalls": 1
+    },
+    "resumed": {
+      "status": "completed",
+      "signedPath": "rx/11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/signed-44444444-4444-4444-8444-000000000003.pdf",
+      "signedSha256": "b655bb8ec53aac68c66dec360d667bade3999f46b71fda72257fd29e1b3bee3e"
+    },
+    "removed": {
+      "state": "completed",
+      "objects": 1,
+      "pscCalls": 1,
+      "audit": 1
+    }
+  },
+  "terminalRace": {
+    "newerCompleted": "completed",
+    "olderPrepared": {
+      "outcome": {
+        "status": "completed",
+        "signedPath": "rx/11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/signed-44444444-4444-4444-8444-000000000004.pdf",
+        "signedSha256": "b463f0a407d06708adf2287fa675879e05930e6750eccff791c7aff4e11155d2"
+      }
+    },
+    "finalState": "completed",
+    "pscCalls": 1,
+    "audit": 1
+  }
+}

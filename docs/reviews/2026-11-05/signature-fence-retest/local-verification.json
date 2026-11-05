@@ -1,0 +1,68 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "1ada96f1847dfe5d7c2e507692e47d6b183c1d2c",
+  "sourceSnapshotMatchesGit": true,
+  "unitPassed": 61,
+  "unitFiles": 3,
+  "unitPending": 1,
+  "unitFailed": 0,
+  "unitExitCode": 0,
+  "deno": {
+    "version": "2.9.6",
+    "cachedOnly": true,
+    "offline": true,
+    "entrypoints": [
+      "_shared/signatureFlow.ts"
+    ],
+    "exitCode": 0
+  },
+  "lint": {
+    "scripts": [
+      "test-signature-delta-review.mjs",
+      "test-signature-flow-review.mjs",
+      "test-signature-fence-review.mjs",
+      "test-validate-contract-review.mjs"
+    ],
+    "exitCode": 0
+  },
+  "sources": [
+    {
+      "path": "supabase/migrations/20261105100000_digital_signature.sql",
+      "sha256": "3fde8ba26d8c3cb7513d06fe3dbc4252bfbc5ff80fb010c33a0bc06b207a28ac"
+    },
+    {
+      "path": "scripts/test-signature-concurrency.mjs",
+      "sha256": "69c01cef31438327224067074c2b466fec48f227eff2a6e3f27d2f5001efddb0"
+    },
+    {
+      "path": "src/test/syntheticPki.ts",
+      "sha256": "43d94efe73d4f3d78702642d0c54ca0dae4ca06c79446410e329dc88d4b824fa"
+    },
+    {
+      "path": "src/lib/signatureFlow.test.ts",
+      "sha256": "1177918a1866915dd8bfea648772ea2ee0736fbdbe40f4ca8c3acd0b796daff5"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureFlow.ts",
+      "sha256": "b146c9fef2151dc7e0fa0e1cf6322188705fc7ff9962d7d1e560dfaca6a309a6"
+    },
+    {
+      "path": "src/lib/pades.test.ts",
+      "sha256": "5d3f124b1387e9addb3afa3275828f0ed1faa21db65f821006ba69dbd1141127"
+    },
+    {
+      "path": "supabase/functions/_shared/pades.ts",
+      "sha256": "23f2d6ea4b67ce135db59f934b32fe1c346beef0833da48a2340768687b4259e"
+    },
+    {
+      "path": "src/lib/psc.test.ts",
+      "sha256": "439a2756ccf8d470e3e6e1f3ccc78c4d4ec62616b1382279625e3f0e7d220a36"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "sha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71"
+    }
+  ],
+  "browserBuildOrFullUnitSuiteRun": false,
+  "externalCalls": false
+}

@@ -16,7 +16,7 @@ function session(container,context){
  });
  const send=q=>child.stdin.write(q+'\n');
  send("set statement_timeout='15s';set lock_timeout='12s';");
- return {send,diagnostic:()=>errors.split('\n').find(l=>l.startsWith('ERROR:'))??'No SQL error received',wait:async marker=>{
+ return {send,contains:marker=>output.includes(marker),diagnostic:()=>errors.split('\n').find(l=>l.startsWith('ERROR:'))??'No SQL error received',wait:async marker=>{
   const end=Date.now()+10000;let match;
   while(!(match=output.match(new RegExp(marker+'(\\d+)')))){assert.ok(!closed&&Date.now()<end,'OAuth marker unavailable: '+errors);await pause();}
   return Number(match[1]);
@@ -67,4 +67,42 @@ export async function reviewOauthFence({sql,container,context}){
   }
  }
  return results;
+}
+
+// Repeat the same expired-state cleanup holder after R1. The request must
+// finish while that transaction is still open, not after a lock timeout.
+export async function reviewOauthFenceFixed({sql,container,context}){
+ const user=randomUUID(),factor=randomUUID(),authSession=randomUUID(),tag='oauth-fixed-'+randomUUID();
+ sql(`insert into auth.users(id,email) values('${user}','oauth-fixed@example.invalid');
+  insert into public.user_settings(user_id,prescriber_cpf) values('${user}','52998224725') on conflict(user_id) do update set prescriber_cpf=excluded.prescriber_cpf;
+  insert into auth.mfa_factors(id,user_id,status,factor_type) values('${factor}','${user}','verified','totp');
+  insert into auth.sessions(id,user_id,factor_id,aal,not_after) values('${authSession}','${user}','${factor}','aal2',clock_timestamp()+interval '60 seconds');
+  insert into cortex_private.signature_oauth_states(state_hash,user_id,psc,verifier,created_at,expires_at)
+   select repeat('5',64),'${user}','vidaas',${sealed},t,t+interval '10 minutes' from (select clock_timestamp()-interval '11 minutes' t) x;`);
+ const holder=session(container,context);let worker;
+ try{
+  holder.send(`begin;${service}select public.signature_expire_sessions();select 'OAUTH_FIXED_HOLDER='||pg_backend_pid();`);
+  const pid=await holder.wait('OAUTH_FIXED_HOLDER=');
+  worker=session(container,context);
+  worker.send(`set application_name='${tag}';begin;${service}
+   select public.signature_begin_authorization('${user}','vidaas',repeat('6',64),${sealed},
+    jsonb_build_object('sessionId','${authSession}','aal','aal2','exp',floor(extract(epoch from clock_timestamp()))::bigint+3600));
+   select 'OAUTH_FIXED_FINISHED=1';`);
+  let blocked=false;
+  const end=Date.now()+5000;
+  while(!worker.contains('OAUTH_FIXED_FINISHED=1')&&Date.now()<end){
+   if(sql(`select exists(select 1 from pg_stat_activity where application_name='${tag}' and ${pid}=any(pg_blocking_pids(pid)))`)==='t'){blocked=true;break;}
+   await pause();
+  }
+  assert.equal(blocked,false,'OAuth request still waits on the expired-state cleanup');
+  assert.ok(worker.contains('OAUTH_FIXED_FINISHED=1'),'OAuth request did not finish while cleanup was held: '+worker.diagnostic());
+  assert.equal(sql(`select exists(select 1 from pg_stat_activity where pid=${pid} and xact_start is not null and state='idle in transaction')`),'t');
+  assert.equal((await worker.end('commit;')).status,0);
+  const outcome=JSON.parse(sql(`select jsonb_build_object('created',exists(select 1 from cortex_private.signature_oauth_states where state_hash=repeat('6',64)),'stillLive',not_after>clock_timestamp()) from auth.sessions where id='${authSession}'`));
+  assert.deepEqual(outcome,{created:true,stillLive:true});
+  assert.equal((await holder.end('rollback;')).status,0);
+  return {expiredStateCleanupHolderStillOpenAtCompletion:true,blockedOnExpiredOauthRow:false,authorizationCreated:true,liveDeadlineAtCompletion:true};
+ }finally{
+  if(worker)await worker.end('rollback;');await holder.end('rollback;');
+ }
 }

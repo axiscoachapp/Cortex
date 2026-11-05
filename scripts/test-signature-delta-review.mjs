@@ -8,8 +8,9 @@ import {pathToFileURL} from 'node:url';
 import ts from 'typescript';
 
 // A bounded review, never a production test target or a global GREEN verdict.
-const options=process.argv.slice(2),authFixture=options.includes('--auth-fixture'),fenceReview=options.includes('--session-fence'),generateTypes=options.includes('--generate-types'),resolved=options.includes('--resolved')||authFixture||fenceReview;
-assert.ok(options.every(a=>['--resolved','--auth-fixture','--session-fence','--generate-types'].includes(a)||/^--source=[0-9a-f]{40}$/.test(a))&&new Set(options).size===options.length);
+const options=process.argv.slice(2),authFixture=options.includes('--auth-fixture'),fenceReview=options.includes('--session-fence'),fenceFixed=options.includes('--fence-fixed'),generateTypes=options.includes('--generate-types'),resolved=options.includes('--resolved')||authFixture||fenceReview;
+assert.ok(options.every(a=>['--resolved','--auth-fixture','--session-fence','--fence-fixed','--generate-types'].includes(a)||/^--source=[0-9a-f]{40}$/.test(a))&&new Set(options).size===options.length);
+assert.ok(!fenceFixed||fenceReview);
 assert.ok(!generateTypes||fenceReview);assert.ok(!(fenceReview&&authFixture));
 const sourceArgs=options.filter(a=>a.startsWith('--source='));assert.ok(sourceArgs.length<=1);
 assert.ok(!process.env.DOCKER_HOST,'Refusing inherited Docker target');
@@ -20,7 +21,7 @@ const baseline=git(['rev-parse',sourceArgs[0]?.slice(9)||'HEAD']);assert.match(b
 const get=path=>git(['show',baseline+':'+path]);
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const typesPath='src/integrations/supabase/types.ts',typesBeforeHash=generateTypes?hash(readFileSync(typesPath)):null;
-const runnerPath='scripts/test-signature-delta-review.mjs',probePath='supabase/tests/prototypes/signature-late-failure.sql';
+const runnerPath='scripts/test-signature-delta-review.mjs',probePath=fenceFixed?'supabase/tests/prototypes/signature-fence-fixed.sql':'supabase/tests/prototypes/signature-late-failure.sql';
 const runnerHash=hash(readFileSync(runnerPath)),probeWorktreeHash=hash(readFileSync(probePath)),probe=fenceReview?readFileSync(probePath,'utf8'):get(probePath);
 const racePath='scripts/test-signature-fence-review.mjs',raceSource=fenceReview?readFileSync(racePath,'utf8'):null;
 const fenceModule=fenceReview?await import('data:text/javascript;base64,'+Buffer.from(raceSource).toString('base64')):null;
@@ -88,13 +89,17 @@ try{
   : {destination:'ambiguous',refusal:null,resulting_state:'failed',attempts:2,cleanup:true});
  assert.deepEqual(lateFailure.find(r=>r.destination==='stored'),{destination:'stored',refusal:'22023',resulting_state:'stored',attempts:2,cleanup:false});
  if(fenceReview){
-  for(const expected of [
+  for(const expected of fenceFixed?[
+   {destination:'ambiguous_psc_revoked',refusal:'P4094',resulting_state:'ambiguous',attempts:2,cleanup:false},
+   {destination:'prepared_after_ambiguous',refusal:null,resulting_state:'ambiguous',attempts:2,cleanup:false},
+   {destination:'complete_after_cancelled',refusal:null,resulting_state:'cancelled_by_revocation',attempts:2,cleanup:true},
+  ]:[
    {destination:'ambiguous_psc_revoked',refusal:null,resulting_state:'cancelled_by_revocation',attempts:2,cleanup:true},
    {destination:'prepared_after_ambiguous',refusal:'22023',resulting_state:'ambiguous',attempts:2,cleanup:false},
    {destination:'complete_after_cancelled',refusal:'P4093',resulting_state:'cancelled_by_revocation',attempts:2,cleanup:true},
   ])assert.deepEqual(lateFailure.find(r=>r.destination===expected.destination),expected,'Frozen fence counterexample changed');
  }
- const oauth=fenceReview?await fenceModule.reviewOauthFence({sql,container,context}):undefined;
+ const oauth=fenceReview?await (fenceFixed?fenceModule.reviewOauthFenceFixed:fenceModule.reviewOauthFence)({sql,container,context}):undefined;
  await testSignatureConcurrency(container);
  if(generateTypes){
   metaPlanned=true;
@@ -108,7 +113,7 @@ try{
   helperSha256:hash(helper),regulatedSourceSha256:hash(regulated),probeSource:{path:probePath,sha256:hash(probe),origin:fenceReview?'worktree':'git baseline'},ownSources:[{path:runnerPath,sha256:runnerHash},...(fenceReview?[{path:probePath,sha256:hash(probe)},{path:racePath,sha256:hash(raceSource)}]:[]),...fixtureSources],
   detectorPriorBaseline:git(['rev-parse','7f699c4']),detectorProbes,lateFailure,signatureConcurrencyPassed:true,
   fullSqlMatrixRun:false,allSqlSuitesRun:authFixture||fenceReview,lateFailureResolved:resolved,reviewResolved:false,ownedInternalNetwork:true,publishedPorts:false,
-  ...(fenceReview?{oauthFenceReview:oauth,staleAttemptAfterPscRevocation:lateFailure.find(r=>r.destination==='ambiguous_psc_revoked'),...(types?{generatedTypesSha256:hash(types+'\n'),typesDestinationBeforeSha256:typesBeforeHash}:{} )}:{}),
+  ...(fenceReview?{fenceFixesPassed:fenceFixed,oauthFenceReview:oauth,staleAttemptAfterPscRevocation:lateFailure.find(r=>r.destination==='ambiguous_psc_revoked'),...(types?{generatedTypesSha256:hash(types+'\n'),typesDestinationBeforeSha256:typesBeforeHash}:{} )}:{}),
   ...(authFixture?{fixtureProjectionVerified:true,fixtureProjection,fixtureColumnAclNegativeControlPassed:true,bootstrapOverlaySha256:hash(bootstrap),fixtureStatementTimeoutSeconds:45}:{} )};
 }catch(error){failure=error;}finally{
  for(const [kind,name,planned] of [['container',meta,metaPlanned],['container',container,containerPlanned],['network',network,networkPlanned]]){
@@ -128,7 +133,7 @@ assert.equal(hash(readFileSync(probePath)),probeWorktreeHash,'Probe changed duri
 if(fenceReview)assert.equal(hash(readFileSync(racePath,'utf8')),hash(raceSource),'Fence probe changed during execution');
 for(const source of fixtureSources)assert.equal(hash(readFileSync(source.path)),source.sha256,'Fixture source changed during execution');
 report.cleanupVerified=true;
-const artifactDirectory=fenceReview?'docs/reviews/2026-11-05/signature-session-fence-review':authFixture?'docs/reviews/2026-11-05/native-session-fixture':resolved?'docs/reviews/2026-11-04/signature-handlers-review':'docs/reviews/2026-11-04/signature-delta-review';
+const artifactDirectory=fenceFixed?'docs/reviews/2026-11-05/signature-fence-retest':fenceReview?'docs/reviews/2026-11-05/signature-session-fence-review':authFixture?'docs/reviews/2026-11-05/native-session-fixture':resolved?'docs/reviews/2026-11-04/signature-handlers-review':'docs/reviews/2026-11-04/signature-delta-review';
 mkdirSync(artifactDirectory,{recursive:true});
 if(types){assert.equal(hash(readFileSync(typesPath)),typesBeforeHash,'Types destination changed during review; refusing overwrite');writeFileSync(typesPath,types+'\n');}
 writeFileSync(join(artifactDirectory,resolved?'sql-verification.json':'verification.json'),JSON.stringify(report,null,2)+'\n');
