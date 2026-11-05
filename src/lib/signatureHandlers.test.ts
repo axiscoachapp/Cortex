@@ -1,13 +1,14 @@
 // Edge handlers of the digital signature (D17) with injected dependencies.
 // Synthetic only: the PSC, Storage and database are fakes; no real provider,
 // certificate or deploy.
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { AD_RB_V1_1, sha256 } from '../../supabase/functions/_shared/pades';
 import { base64url, openSecret, parseKeyList, tokenBinding, verifierBinding, type SealedSecret } from '../../supabase/functions/_shared/psc';
 import {
-  readSignatureConfig, signDocumentHandler, signatureSessionHandler, type HandlerDeps, type SignerContext,
+  readSignatureConfig, signDocumentHandler, signatureSessionHandler, storageErrorKind, type HandlerDeps, type SignerContext,
 } from '../../supabase/functions/_shared/signatureHandlers';
 import type { SignatureOutcome, SignaturePorts, SignatureRequest } from '../../supabase/functions/_shared/signatureFlow';
+import { RSA, syntheticCertificate } from '../test/syntheticPki';
 
 const USER = '11111111-1111-4111-8111-111111111111';
 const SESSION = '22222222-2222-4222-8222-222222222222';
@@ -16,6 +17,18 @@ const OP = '44444444-4444-4444-8444-444444444444';
 const NOW = Date.parse('2026-11-05T12:00:00Z');
 const keys = parseKeyList(`k1:${Buffer.from(new Uint8Array(32).fill(5)).toString('base64')}`);
 const hex = (b: Uint8Array) => Buffer.from(b).toString('hex');
+
+// Synthetic signer certificates (valid at NOW, and one expired by then).
+let validCert: Uint8Array;
+let expiredCert: Uint8Array;
+beforeAll(async () => {
+  const ca = (await crypto.subtle.generateKey(RSA, true, ['sign', 'verify'])) as CryptoKeyPair;
+  const doctor = (await crypto.subtle.generateKey(RSA, true, ['sign', 'verify'])) as CryptoKeyPair;
+  validCert = await syntheticCertificate('Médica Sintética', 'AC Sintética', doctor, ca.privateKey, 11,
+    { notBefore: new Date('2026-01-01T00:00:00Z'), notAfter: new Date(Date.now() + 365 * 86400_000) });
+  expiredCert = await syntheticCertificate('Médica Sintética', 'AC Sintética', doctor, ca.privateKey, 12,
+    { notBefore: new Date('2025-01-01T00:00:00Z'), notAfter: new Date('2026-11-01T00:00:00Z') });
+}, 30_000);
 
 class FakeAuthError extends Error {}
 const rpcError = (code: string, message = code) => Object.assign(new Error(message), { code });
@@ -41,7 +54,7 @@ function makeDeps(over: Partial<HandlerDeps> & { ctx?: Partial<SignerContext>; a
     storage: { download: vi.fn(async () => new Uint8Array([1])), upload: vi.fn(async () => 'created' as const), remove: vi.fn(async () => {}) },
     psc: {
       exchangeCode: vi.fn(async () => ({ accessToken: 'synthetic-psc-token', expiresAt: new Date(NOW + 13 * 3600_000), authorizedCpf: '52998224725' })),
-      discovery: vi.fn(async () => [{ alias: 'a', certificate: new Uint8Array([9, 9, 9]), chain: [] }]),
+      discovery: vi.fn(async () => [{ alias: 'a', certificate: validCert, chain: [] }]),
       sign: vi.fn(async () => new Uint8Array([1])),
     },
     prescription: vi.fn(async () => ({ doc_type: 'receita_simples', crm: '00000', uf: 'PR', specialty: 'Ginecologia e Obstetrícia' })),
@@ -193,8 +206,15 @@ describe('signature-session handler', () => {
     expect((await signatureSessionHandler(req('state', 'POST'), deps)).status).toBe(405);
   });
 
-  it('state and revoke need only a valid bearer (aal1 included)', async () => {
-    const { deps, calls } = makeDeps({ ctx: { aal: 'aal1' } });
+  it('state and revoke need AAL2, as every route (Codex 05/11 05:09, R3), but not the token margin', async () => {
+    const low = makeDeps({ ctx: { aal: 'aal1' } });
+    for (const [route, method] of [['state', 'GET'], ['revoke', 'POST']]) {
+      const response = await signatureSessionHandler(req(route, method), low.deps);
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ mfaRequired: true });
+    }
+    expect(low.deps.rpc).not.toHaveBeenCalled();
+    const { deps, calls } = makeDeps({ ctx: { exp: NOW / 1000 + 60 } });
     expect(await (await signatureSessionHandler(req('state', 'GET'), deps)).json()).toEqual({ active: true });
     expect(await (await signatureSessionHandler(req('revoke'), deps)).json()).toEqual({ revoked: true });
     expect(calls.map(([name, args]) => [name, args])).toEqual([
@@ -252,10 +272,37 @@ describe('signature-session handler', () => {
     const activate = calls.find(([n]) => n === 'signature_activate_session')![1];
     expect(consume.p_state_hash).toBe(hex(await sha256(new TextEncoder().encode(state))));
     expect(deps.psc.exchangeCode).toHaveBeenCalledWith(deps.config!.psc, expect.objectContaining({ code: 'synthetic-code' }));
-    expect(activate.p_cert_sha256).toBe(hex(await sha256(new Uint8Array([9, 9, 9]))));
+    expect(activate.p_cert_sha256).toBe(hex(await sha256(validCert)));
     expect(await openSecret(keys, activate.p_token as SealedSecret, tokenBinding(activate.p_session as string, USER, 1))).toBe('synthetic-psc-token');
     expect(Date.parse(activate.p_expires_at as string)).toBeLessThanOrEqual(NOW + 12 * 3600_000);
     expect(activate.p_auth).toMatchObject({ sessionId: SESSION, aal: 'aal2' });
+  });
+
+  it('complete activates only a certificate that can sign (Codex 05/11 05:09, R2)', async () => {
+    const table: Array<[() => Array<{ alias: string; certificate: Uint8Array; chain: Uint8Array[] }>, number, string?]> = [
+      [() => [], 409, 'no_certificate'],
+      [() => [{ alias: 'a', certificate: new Uint8Array(0), chain: [] }], 409, 'certificate_invalid'],
+      [() => [{ alias: 'a', certificate: Uint8Array.of(9, 9, 9), chain: [] }], 409, 'certificate_invalid'],
+      [() => [{ alias: 'a', certificate: expiredCert, chain: [] }], 409, 'certificate_expired'],
+      [() => [{ alias: 'a', certificate: new Uint8Array(0), chain: [] }, { alias: 'b', certificate: validCert, chain: [] }], 200],
+    ];
+    for (const [certificates, status, code] of table) {
+      const { deps, calls, state, sealed } = await started();
+      (deps.rpc as ReturnType<typeof vi.fn>).mockImplementation(async (name: string, args: Record<string, unknown>) => {
+        calls.push([name, args]);
+        return name === 'signature_consume_authorization' ? sealed : { sessionId: args.p_session };
+      });
+      (deps.psc.discovery as ReturnType<typeof vi.fn>).mockResolvedValue(certificates());
+      const response = await signatureSessionHandler(req('complete', 'POST', { code: 'synthetic-code', state }), deps);
+      expect(response.status).toBe(status);
+      const activate = calls.find(([n]) => n === 'signature_activate_session');
+      if (code) {
+        expect(await response.json()).toMatchObject({ code });
+        expect(activate).toBeUndefined();
+      } else {
+        expect(activate![1].p_cert_sha256).toBe(hex(await sha256(validCert)));
+      }
+    }
   });
 
   it('complete refuses another CPF without activating anything', async () => {
@@ -279,6 +326,90 @@ describe('signature-session handler', () => {
     (d2.rpc as ReturnType<typeof vi.fn>).mockImplementation(async (name: string, args: Record<string, unknown>) => { calls.push([name, args]); return sealed; });
     (d2.psc.exchangeCode as ReturnType<typeof vi.fn>).mockRejectedValue(Object.assign(new Error('recusado'), { name: 'PscRejectedError', status: 400 }));
     expect((await signatureSessionHandler(req('complete', 'POST', { code: 'c', state }), d2)).status).toBe(502);
+  });
+});
+
+describe('Storage errors (Codex 05/11 05:09, R4)', () => {
+  const api = (status: number, statusCode: string, message: string) => Object.assign(new Error(message), { name: 'StorageApiError', status, statusCode });
+  it('only the structured status says absent or already there; any other error is unavailable', () => {
+    const table: Array<[unknown, ReturnType<typeof storageErrorKind>]> = [
+      [api(404, '404', 'Object not found'), 'not_found'],
+      [api(400, '404', 'Object not found'), 'not_found'], // older Storage: HTTP 400, body statusCode 404
+      [api(409, '409', 'The resource already exists'), 'exists'],
+      [api(400, '409', 'Duplicate'), 'exists'],
+      [api(500, '500', 'Upstream object route not found'), 'unavailable'],
+      [api(503, '503', 'Service unavailable'), 'unavailable'],
+      [api(500, '404', 'Object not found'), 'unavailable'],
+      [api(502, '409', 'already exists'), 'unavailable'],
+      [api(403, '403', 'not found'), 'unavailable'],
+      [Object.assign(new Error('not found'), { name: 'StorageUnknownError' }), 'unavailable'],
+      [{ statusCode: '404', message: 'Object not found' }, 'unavailable'], // no HTTP status: not structural
+      [new Error('fetch failed: object not found'), 'unavailable'],
+      [null, 'unavailable'],
+    ];
+    for (const [error, kind] of table) expect([error, storageErrorKind(error)]).toEqual([error, kind]);
+  });
+});
+
+describe('request bodies (Codex 05/11 05:09, R5)', () => {
+  const signUrl = 'https://edge.invalid/functions/v1/sign-document';
+  /** A body streamed in 4 KiB chunks, counting pulls and cancellation. */
+  function streamed(chunks: Uint8Array[]) {
+    const seen = { pulled: 0, cancelled: false };
+    let i = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) { seen.pulled++; if (i < chunks.length) controller.enqueue(chunks[i++]); else controller.close(); },
+      cancel() { seen.cancelled = true; },
+    });
+    return { body, seen };
+  }
+  const postStream = (url: string, body: ReadableStream<Uint8Array>, headers: Record<string, string> = {}) =>
+    new Request(url, { method: 'POST', body, headers: { Authorization: 'Bearer synthetic', ...headers }, duplex: 'half' } as RequestInit);
+
+  it('stops reading a streamed body past 8 KiB without Content-Length, cancels it and calls nothing', async () => {
+    const { body, seen } = streamed(Array.from({ length: 25 }, () => new Uint8Array(4096).fill(0x20))); // 100 KiB
+    const { deps } = makeDeps();
+    const response = await signDocumentHandler(postStream(signUrl, body), deps);
+    expect(response.status).toBe(400);
+    expect(seen.cancelled).toBe(true);
+    expect(seen.pulled).toBeLessThanOrEqual(4);
+    expect(deps.rpc).not.toHaveBeenCalled();
+    expect(deps.prescription).not.toHaveBeenCalled();
+    expect(deps.sign).not.toHaveBeenCalled();
+  });
+
+  it('refuses a declared Content-Length over the limit before reading', async () => {
+    const { body, seen } = streamed([new Uint8Array(4096)]);
+    const { deps } = makeDeps();
+    const response = await signDocumentHandler(postStream(signUrl, body, { 'Content-Length': String(100 * 1024) }), deps);
+    expect(response.status).toBe(400);
+    expect(seen.pulled).toBeLessThanOrEqual(1);
+    expect(deps.rpc).not.toHaveBeenCalled();
+  });
+
+  it('the session complete route has the same limit, before consuming the state', async () => {
+    const { body, seen } = streamed(Array.from({ length: 25 }, () => new Uint8Array(4096).fill(0x20)));
+    const { deps } = makeDeps();
+    const response = await signatureSessionHandler(postStream('https://edge.invalid/functions/v1/signature-session/complete', body), deps);
+    expect(response.status).toBe(400);
+    expect(seen.cancelled).toBe(true);
+    expect(deps.rpc).not.toHaveBeenCalled();
+    expect(deps.psc.exchangeCode).not.toHaveBeenCalled();
+  });
+
+  it('reads a small body streamed in pieces (control) and refuses invalid UTF-8', async () => {
+    const text = new TextEncoder().encode(JSON.stringify(signBody));
+    const { body } = streamed([text.subarray(0, 10), text.subarray(10)]);
+    const ok = makeDeps();
+    expect((await signDocumentHandler(postStream(signUrl, body), ok.deps)).status).toBe(200);
+    // Invalid UTF-8 inside a field that would pass once replaced by U+FFFD.
+    const bad = makeDeps();
+    const raw = new TextEncoder().encode(JSON.stringify({ code: 'cX', state: 'x'.repeat(43) }));
+    raw[raw.indexOf(0x58)] = 0xff; // the "X" becomes a lone 0xFF byte
+    const invalid = streamed([raw]);
+    const response = await signatureSessionHandler(postStream('https://edge.invalid/functions/v1/signature-session/complete', invalid.body), bad.deps);
+    expect(response.status).toBe(400);
+    expect(bad.deps.rpc).not.toHaveBeenCalled();
   });
 });
 

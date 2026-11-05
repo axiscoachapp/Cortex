@@ -27,8 +27,36 @@ Versões:
 - `supabase/functions/sign-document` e `supabase/functions/signature-session`, finos, sobre `_shared/signatureHandlers.ts` (lógica testável com dependências injetadas) e `_shared/signatureDeps.ts` (ligação com `requireUserContext`, o cliente de serviço, o Storage e o cliente do PSC).
 - O contexto verificado vira `p_auth` só nas funções produtivas.
 - O corpo tem formato estrito: chave a mais dá 400.
-- Exigências de entrada: AAL2 e margem de 120 segundos do JWT para assinar e abrir sessão. `state` e `revoke` só pedem um bearer válido.
+- Exigências de entrada: AAL2 em todas as rotas; margem de 120 segundos do JWT para assinar e abrir sessão.
 - Testes em `src/lib/signatureHandlers.test.ts`: as nove proteções foram mutadas e pegas.
+
+**Correções da revisão do Codex de 05/11, 05:09:**
+- **R1, retomada com a sessão PSC encerrada:** o fluxo não manda mais `advance('prepared', {})`. Com P4031 no token, ele chama `signature_close(…, 'cancelled_by_revocation', {expectedState, attempt})`:
+  - é um passo de fechamento, sem `p_auth`;
+  - o banco decide pela linha da sessão: encerrada, substituída ou vencida nunca volta a valer, e a geração só cresce;
+  - fecha só no estado e na tentativa observados (CAS); fora disso, ou com a sessão viva, devolve a operação como está;
+  - conserva os dados preparados e agenda a limpeza quando o PSC já foi chamado.
+
+  `signature_reserve` de uma operação nova também fecha, logo antes do INSERT, uma operação aberta do mesmo documento cuja sessão PSC acabou. A linha é travada NOWAIT. Uma operação aberta na sessão viva continua bloqueando (P4093).
+- **R2, certificado:** `signerCertificateProblem` (`pades.ts`) exige:
+  - um certificado DER X.509 completo, sem bytes a mais;
+  - chave RSA de pelo menos 2048 bits, importável para RSASSA-PKCS1-v1_5;
+  - o instante dentro da validade.
+
+  `complete` ativa o primeiro certificado descoberto que passa. Sem nenhum, responde 409 `no_certificate`, `certificate_invalid` ou `certificate_expired`, sem chamar `signature_activate_session`. O fluxo confere de novo na hora da assinatura (`signing_time`) e falha com o mesmo código antes do PSC.
+- **R3, `state` e `revoke`:** passam a exigir AAL2, como todas as rotas. É a exigência efetiva do gate de MFA de `requireUserContext`, sem caminho mais fraco e sem mudar o helper. A margem do JWT continua só para abrir sessão e assinar.
+- **R4, Storage:** `storageErrorKind` classifica só pela resposta estruturada do storage-js:
+  - **ausente:** HTTP 400 ou 404 com `statusCode` 404;
+  - **já existe:** HTTP 400 ou 409 com `statusCode` 409;
+  - **indisponível:** todo o resto, qualquer que seja o texto. O adaptador lança, e nada é fechado nem removido por isso.
+
+  Erro de leitura do banco (receita, CPF) também lança, em vez de virar "ausente".
+- **R5, corpo:** o limite de 8 KiB é aplicado na leitura:
+  - um `Content-Length` maior é recusado antes de ler;
+  - sem ele, o stream é lido em pedaços e cancelado ao passar do limite;
+  - UTF-8 inválido dá 400.
+
+  Nenhuma RPC nem chamada ao PSC acontece depois da recusa.
 
 **Configuração (Fase 0).** Sem ela, a resposta é 503 `not_configured`:
 - `SIGNATURE_PSC_BASE_URL` (origem https, sem caminho);
@@ -188,7 +216,7 @@ Sobre a ordem:
 
 - `signature_advance` hoje mistura passos produtivos e de fechamento, e tem `p_data jsonb default '{}'`. Por isso vira duas funções, sem default:
   - `signature_advance(p_user, p_operation, p_to, p_data, p_auth)`, só para `prepared`, `psc_requested` e `stored`. Outro valor de `p_to` dá 22023;
-  - `signature_close(p_user, p_operation, p_to, p_data)`, só para `ambiguous`, `failed` e `cancelled`.
+  - `signature_close(p_user, p_operation, p_to, p_data)`, só para `ambiguous`, `failed`, `cancelled` e `cancelled_by_revocation`. O último exige `p_data = {expectedState, attempt}` (R1 de 05:09).
 - `begin_authorization`, `consume_authorization`, `activate_session`, `session_token`, `reserve` e `complete` ganham `p_auth jsonb` obrigatório.
 - As assinaturas antigas desaparecem no próprio arquivo da migration, que ainda não foi aplicada em lugar nenhum. Não fica overload nem default.
 - Um teste confere em `pg_proc` que não sobrou função pública de assinatura sem `p_auth` fora da lista de fechamento.
@@ -199,9 +227,9 @@ Sobre a ordem:
 | Rota | Entrada | Faz | Saída |
 |---|---|---|---|
 | `POST start` | — | cerca da §2; cria `state` e PKCE; `signature_begin_authorization(…, p_auth)` | URL de autorização (só da lista fixa do servidor) |
-| `POST complete` | `{code, state}` | `signature_consume_authorization(…, p_auth)` (CAS do estado sob a cerca, §3.4); troca o código; confere o CPF autorizado contra `prescriber_cpf`; descobre o certificado; sela o token; `signature_activate_session(…, p_auth)` | `{active, expiresAt}` |
-| `POST revoke` | — | `signature_revoke_session` (só JWT válido) | `{revoked}` |
-| `GET state` | — | `signature_session_state` | `{active, expiresAt}`, nunca o token |
+| `POST complete` | `{code, state}` | `signature_consume_authorization(…, p_auth)` (CAS do estado sob a cerca, §3.4); troca o código; confere o CPF autorizado contra `prescriber_cpf`; descobre o certificado e só aceita um que possa assinar (R2 de 05:09); sela o token; `signature_activate_session(…, p_auth)` | `{active, expiresAt}`, ou 409 `no_certificate` / `certificate_invalid` / `certificate_expired` |
+| `POST revoke` | — | `signature_revoke_session` (AAL2, sem margem do JWT) | `{revoked}` |
+| `GET state` | — | `signature_session_state` (AAL2, sem margem do JWT) | `{active, expiresAt}`, nunca o token |
 
 ## 5. `sign-document`
 

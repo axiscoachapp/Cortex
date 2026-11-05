@@ -6,7 +6,11 @@ export const RSA = { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExpon
 
 const name = (cn: string) => DER.seq(DER.setOf(DER.seq(DER.oid('2.5.4.3'), DER.utf8(cn))));
 
-export async function syntheticCertificate(subject: string, issuer: string, key: CryptoKeyPair, issuerKey: CryptoKey, serial: number) {
+/** Valid from 30 days ago to one year ahead unless a window is given. */
+export async function syntheticCertificate(
+  subject: string, issuer: string, key: CryptoKeyPair, issuerKey: CryptoKey, serial: number,
+  validity: { notBefore: Date; notAfter: Date } = { notBefore: new Date(Date.now() - 30 * 86400_000), notAfter: new Date(Date.now() + 365 * 86400_000) },
+) {
   const spki = new Uint8Array(await crypto.subtle.exportKey('spki', key.publicKey));
   const algorithm = DER.seq(DER.oid('1.2.840.113549.1.1.11'), DER.null);
   const tbs = DER.seq(
@@ -14,7 +18,7 @@ export async function syntheticCertificate(subject: string, issuer: string, key:
     DER.int(serial),
     algorithm,
     name(issuer),
-    DER.seq(DER.utcTime(new Date('2026-01-01T00:00:00Z')), DER.utcTime(new Date('2027-01-01T00:00:00Z'))),
+    DER.seq(DER.utcTime(validity.notBefore), DER.utcTime(validity.notAfter)),
     name(subject),
     spki,
   );

@@ -586,6 +586,7 @@ end $$;
 create function public.signature_reserve(p_user uuid,p_operation uuid,p_prescription uuid,p_shown_sha256 text,p_auth jsonb) returns jsonb
 language plpgsql volatile security definer set search_path='' as $$
 declare o cortex_private.signature_operations;s cortex_private.signature_sessions;r public.prescriptions;recent integer;deadline timestamptz;
+ stale uuid[]:='{}';
 begin
  perform cortex_private.signature_auth_shape(p_auth);
  perform cortex_private.signature_lock(p_user);
@@ -621,9 +622,17 @@ begin
   raise exception 'Este tipo de documento ainda não é assinado digitalmente.' using errcode='P4093';end if;
  if r.issuance_snapshot is null or r.issuance_snapshot->>'pdf_sha256' is distinct from p_shown_sha256 then
   raise exception 'O documento mudou depois de mostrado. Abra de novo antes de assinar.' using errcode='P4093';end if;
- if exists(select 1 from cortex_private.signature_operations where prescription_id=p_prescription
-  and state in ('reserved','prepared','psc_requested','ambiguous','stored')) then
-  raise exception 'Há uma assinatura em andamento ou sem resposta para este documento.' using errcode='P4093';end if;
+ -- An open operation of this document blocks a new one only while its PSC
+ -- session is this live one (Codex 05/11 05:09, R1). Any other session
+ -- ended for good (one active per doctor, never active again, generation
+ -- only grows): that operation can never finish, so it is closed below,
+ -- right before the new one, instead of holding the document.
+ for o in select * from cortex_private.signature_operations where prescription_id=p_prescription
+  and state in ('reserved','prepared','psc_requested','ambiguous','stored') order by operation_id for update nowait loop
+  if o.session_id=s.id and o.session_generation=s.generation then
+   raise exception 'Há uma assinatura em andamento ou sem resposta para este documento.' using errcode='P4093';end if;
+  stale:=stale||o.operation_id;
+ end loop;
  -- The Cortex session, last, right before any effect.
  if not cortex_private.signature_session_live(deadline) then
   raise exception 'Sessão do Cortex encerrada. Entre de novo.' using errcode='P4011';end if;
@@ -633,6 +642,10 @@ begin
   update cortex_private.signature_sessions set status='suspended',generation=generation+1,token=null,ended_at=now() where id=s.id;
   return jsonb_build_object('error','rate_limited');
  end if;
+ -- Once the PSC was called a candidate may exist: its cleanup is scheduled.
+ update cortex_private.signature_operations set state='cancelled_by_revocation',
+  cleanup_pending=(staged_path is not null or state in ('psc_requested','ambiguous','stored'))
+  where operation_id=any(stale);
  insert into cortex_private.signature_operations(operation_id,user_id,prescription_id,session_id,session_generation,
   shown_pdf_sha256,cert_sha256,signing_time,state)
   values(p_operation,p_user,p_prescription,s.id,s.generation,p_shown_sha256,s.cert_sha256,date_trunc('second',clock_timestamp()),'reserved')
@@ -740,16 +753,39 @@ exception when lock_not_available then
  raise exception 'Documento ou sessão em uso por outra operação; tente de novo.' using errcode='40001';
 end $$;
 
--- Closing steps (ambiguous, failed, cancelled): no session, so a lost answer,
--- giving up or a refusal can be recorded after a logout. They only close.
+-- Closing steps (ambiguous, failed, cancelled, cancelled_by_revocation): no
+-- Cortex session, so a lost answer, giving up, a refusal or an ended PSC
+-- session can be recorded after a logout. They only close.
 create function public.signature_close(p_user uuid,p_operation uuid,p_to text,p_data jsonb) returns jsonb
 language plpgsql volatile security definer set search_path='' as $$
-declare o cortex_private.signature_operations;
+declare o cortex_private.signature_operations;s cortex_private.signature_sessions;
 begin
- if p_to is null or p_to not in ('ambiguous','failed','cancelled') then
+ if p_to is null or p_to not in ('ambiguous','failed','cancelled','cancelled_by_revocation') then
   raise exception 'Invalid signature closing step' using errcode='22023';end if;
  if p_data is null or jsonb_typeof(p_data)<>'object' then raise exception 'Invalid signature step data' using errcode='22023';end if;
  perform cortex_private.signature_lock(p_user);
+ -- The operation's PSC session ended (Codex 05/11 05:09, R1): the caller only
+ -- reports the state and attempt it saw; the database decides from the
+ -- session row (an ended session never comes back) and closes only that
+ -- state and attempt (CAS). Anything else returns the operation as it is.
+ if p_to='cancelled_by_revocation' then
+  if coalesce(p_data->>'expectedState','') not in ('reserved','prepared','psc_requested','ambiguous','stored')
+   or coalesce(p_data->>'attempt','') !~ '^[0-9]{1,2}$' then
+   raise exception 'Invalid signature step data' using errcode='22023';end if;
+  select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user;
+  if not found then raise exception 'Signature operation unavailable' using errcode='42501';end if;
+  -- Rows in the order of signature_advance: session, then operation.
+  select * into s from cortex_private.signature_sessions where id=o.session_id for update nowait;
+  select * into o from cortex_private.signature_operations where operation_id=p_operation for update nowait;
+  if o.state is distinct from p_data->>'expectedState' or o.psc_attempts<>(p_data->>'attempt')::integer
+   or (s.id is not null and s.generation=o.session_generation and cortex_private.signature_session_usable(s)) then
+   return to_jsonb(o)-'staged_path';
+  end if;
+  update cortex_private.signature_operations set state='cancelled_by_revocation',
+   cleanup_pending=(o.staged_path is not null or o.state in ('psc_requested','ambiguous','stored'))
+   where operation_id=p_operation returning * into o;
+  return to_jsonb(o)-'staged_path';
+ end if;
  select * into o from cortex_private.signature_operations where operation_id=p_operation and user_id=p_user for update nowait;
  if not found then raise exception 'Signature operation unavailable' using errcode='42501';end if;
  -- A terminal operation is never rewritten by a late step (Codex 04/11 20:55).

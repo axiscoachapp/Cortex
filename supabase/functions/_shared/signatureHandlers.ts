@@ -8,7 +8,7 @@
 // session, the deadline or consent. Logs carry ids and codes only, never a
 // token, CPF, code, verifier, hash or document.
 
-import { AD_RB_V1_1, sha256 } from './pades.ts';
+import { AD_RB_V1_1, sha256, signerCertificateProblem } from './pades.ts';
 import {
   MAX_SESSION_SECONDS, authorizeUrl, newState, openSecret, pkcePair, sealSecret, stateHash, tokenBinding, verifierBinding,
   type PscCertificate, type PscConfig, type PscSession, type SealedSecret,
@@ -84,15 +84,66 @@ export function readSignatureConfig(env: (name: string) => string | undefined, p
   }
 }
 
-async function readBody(req: Request, maxBytes = 8 * 1024): Promise<Record<string, unknown> | null> {
+/** Largest request body the handlers read. */
+export const MAX_BODY_BYTES = 8 * 1024;
+
+/**
+ * The JSON object of a small body (Codex 05/11 05:09, R5). A declared
+ * Content-Length over the limit is refused before reading; otherwise the
+ * stream is read piece by piece and cancelled as soon as it passes the limit,
+ * so a large or growing body is never buffered. Invalid UTF-8 or JSON, or
+ * anything but an object, is null.
+ */
+async function readBody(req: Request, maxBytes = MAX_BODY_BYTES): Promise<Record<string, unknown> | null> {
+  const declared = req.headers.get('content-length');
+  if (declared !== null && !(/^\d{1,9}$/.test(declared) && Number(declared) <= maxBytes)) {
+    await req.body?.cancel().catch(() => {});
+    return null;
+  }
+  if (!req.body) return null;
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
   try {
-    const text = await req.text();
-    if (new TextEncoder().encode(text).length > maxBytes) return null;
-    const value = JSON.parse(text);
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      // Bytes only (ArrayBuffer.isView also holds across realms).
+      if (!ArrayBuffer.isView(value) || (size += value.byteLength) > maxBytes) {
+        await reader.cancel().catch(() => {});
+        return null;
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  }
+  const bytes = new Uint8Array(size);
+  let at = 0;
+  for (const chunk of chunks) { bytes.set(chunk, at); at += chunk.byteLength; }
+  try {
+    const value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
     return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * How a Storage error reads (Codex 05/11 05:09, R4). Only the structured
+ * answer of storage-js (StorageApiError: HTTP status 4xx and the body's
+ * statusCode) says that an object is absent or already there; the older
+ * Storage answers HTTP 400 with statusCode 404/409. Anything else, whatever
+ * its text, is an unavailable Storage: the caller throws and nothing is
+ * closed or removed because of it.
+ */
+export function storageErrorKind(error: unknown): 'not_found' | 'exists' | 'unavailable' {
+  const e = error as { status?: unknown; statusCode?: unknown } | null;
+  const status = typeof e?.status === 'number' ? e.status : NaN;
+  const code = String(e?.statusCode);
+  if (code === '404' && (status === 400 || status === 404)) return 'not_found';
+  if (code === '409' && (status === 400 || status === 409)) return 'exists';
+  return 'unavailable';
 }
 
 function responder(deps: HandlerDeps) {
@@ -115,17 +166,22 @@ function rpcFailure(json: ReturnType<typeof responder>, error: unknown): Respons
   }
 }
 
-/** Authentication shared by both functions: verified context, AAL2, enough token left. */
-async function signer(req: Request, deps: HandlerDeps, json: ReturnType<typeof responder>, needsAal2 = true): Promise<SignerContext | Response> {
+/**
+ * Authentication shared by both functions: verified context and AAL2 on
+ * every route (Codex 05/11 05:09, R3: the same requirement the global MFA
+ * gate of requireUserContext enforces once a factor is verified, without a
+ * weaker path for state or revoke). Starting a signature step also needs
+ * enough token left.
+ */
+async function signer(req: Request, deps: HandlerDeps, json: ReturnType<typeof responder>, needsMargin = true): Promise<SignerContext | Response> {
   let ctx: SignerContext;
   try {
     ctx = await deps.authenticate(req);
   } catch (error) {
     return deps.authFailure(error) ?? json(401, { error: 'Não autorizado' });
   }
-  if (!needsAal2) return ctx;
-  if (ctx.aal !== 'aal2') return json(403, { error: 'Confirme o segundo fator para assinar.', mfaRequired: true });
-  if (ctx.exp - (deps.now ?? Date.now)() / 1000 < MIN_TOKEN_SECONDS) return json(401, { error: 'Sua sessão vai expirar. Entre de novo antes de assinar.', code: 'renew_session' });
+  if (ctx.aal !== 'aal2') return json(403, { error: 'Confirme o segundo fator para continuar.', mfaRequired: true });
+  if (needsMargin && ctx.exp - (deps.now ?? Date.now)() / 1000 < MIN_TOKEN_SECONDS) return json(401, { error: 'Sua sessão vai expirar. Entre de novo antes de assinar.', code: 'renew_session' });
   return ctx;
 }
 
@@ -216,6 +272,12 @@ function outcomeResponse(json: ReturnType<typeof responder>, outcome: SignatureO
 // ---------------------------------------------------------------------------
 // signature-session: POST start | POST complete {code, state} | POST revoke | GET state
 
+const CERTIFICATE_REFUSED = {
+  no_certificate: 'O PSC não devolveu certificado para esta sessão.',
+  certificate_invalid: 'O certificado devolvido pelo PSC não pode assinar nesta versão (formato ou chave).',
+  certificate_expired: 'O certificado está vencido. Renove-o antes de assinar.',
+} as const;
+
 export async function signatureSessionHandler(req: Request, deps: HandlerDeps): Promise<Response> {
   const json = responder(deps);
   if (req.method === 'OPTIONS') return new Response(null, { headers: deps.corsHeaders });
@@ -224,8 +286,7 @@ export async function signatureSessionHandler(req: Request, deps: HandlerDeps): 
   if (!(route in allowed)) return json(404, { error: 'Rota desconhecida.' });
   if (req.method !== allowed[route]) return json(405, { error: 'Método não permitido.' });
 
-  // Ending or looking at the session needs only a valid bearer; opening one
-  // needs AAL2 and enough token left.
+  // Every route needs AAL2; opening a session also needs enough token left.
   const ctx = await signer(req, deps, json, route === 'start' || route === 'complete');
   if (ctx instanceof Response) return ctx;
 
@@ -263,11 +324,23 @@ export async function signatureSessionHandler(req: Request, deps: HandlerDeps): 
       deps.log?.('signature_session_cpf_mismatch', { userId: ctx.userId });
       return json(403, { error: 'O certificado autorizado não é do CPF cadastrado em Configurações.', code: 'cpf_mismatch' });
     }
-    const certificates = await deps.psc.discovery(config.psc, session.accessToken);
-    if (!certificates.length) return json(409, { error: 'O PSC não devolveu certificado para esta sessão.', code: 'no_certificate' });
-    const certSha256 = hex(await sha256(certificates[0].certificate));
-    const sessionId = crypto.randomUUID();
+    // Only a certificate that can sign opens the session (Codex 05/11 05:09,
+    // R2): the first one discovered that is a complete DER certificate with a
+    // supported RSA key, valid now. Nothing is activated otherwise.
     const now = (deps.now ?? Date.now)();
+    let certificate: PscCertificate | undefined;
+    let problem: keyof typeof CERTIFICATE_REFUSED = 'no_certificate';
+    for (const candidate of await deps.psc.discovery(config.psc, session.accessToken)) {
+      const found = await signerCertificateProblem(candidate.certificate, new Date(now));
+      if (!found) { certificate = candidate; break; }
+      if (problem === 'no_certificate') problem = found;
+    }
+    if (!certificate) {
+      deps.log?.('signature_session_certificate_refused', { userId: ctx.userId, code: problem });
+      return json(409, { error: CERTIFICATE_REFUSED[problem], code: problem });
+    }
+    const certSha256 = hex(await sha256(certificate.certificate));
+    const sessionId = crypto.randomUUID();
     const expiresAt = new Date(Math.min(session.expiresAt.getTime(), now + (MAX_SESSION_SECONDS - 60) * 1000));
     const sealedToken = await sealSecret(config.keys, session.accessToken, tokenBinding(sessionId, ctx.userId, 1));
     await deps.rpc('signature_activate_session', {

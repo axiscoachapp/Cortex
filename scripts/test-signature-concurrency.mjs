@@ -166,8 +166,12 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     return { s, waited: false };
   };
   /** Disposable database only: runs fn with one function rewritten, then restores it exactly. */
-  const withMutated = async (signature, site, replacement, fn) => {
+  const withMutated = async (signature, rawSite, rawReplacement, fn) => {
     const original = sql(`select pg_get_functiondef('${signature}'::regprocedure)`);
+    // The body keeps the line endings of the checkout (CRLF with autocrlf).
+    const eol = original.includes('\r\n') ? '\r\n' : '\n';
+    const site = rawSite.replaceAll('\n', eol);
+    const replacement = rawReplacement.replaceAll('\n', eol);
     assert.equal(original.split(site).length, 2, `control: site not found in ${signature}`);
     sql(original.replace(site, replacement) + ';');
     try {
@@ -784,6 +788,32 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
     assert.match(r.stderr, /22023/, r.stderr);
     results.malformedContextBeforeBarrier = '22023 without waiting';
   });
+  // Codex 05/11 05:09, R1: a new reservation closes the open operation of an
+  // ended PSC session, holding its row NOWAIT (nothing waits after the fence).
+  const staleBesideHeldRow = async (f) => {
+    call(f, reserve(f));
+    call(f, advance(f, 'prepared'));
+    call(f, `public.signature_activate_session('${f.user}','vidaas','${f.session.replace('e1730000', 'e173000a')}',now()+interval '1 hour',repeat('c',64),${SEALED},${auth(f)})`);
+    const holder = session(container);
+    holder.send(`begin;select 1 from cortex_private.signature_operations where operation_id='${f.op}' for update;\n\\echo HELD`);
+    await holder.wait('HELD');
+    const watched = await watchCall(`begin;${service}select ${reserve(f, f.op.replace('e1740000', 'e174000b'))};commit;`);
+    return { holder, watched };
+  };
+  await check('a new reservation never waits on the open operation it closes (R1 of 05:09)', async () => {
+    const f = fixture();
+    const { holder, watched } = await staleBesideHeldRow(f);
+    const r = await watched.s.finish('');
+    await holder.finish('commit;');
+    assert.equal(watched.waited, false, 'reserve waited on the stale operation row');
+    assert.notEqual(r.status, 0, 'Reserved while the stale operation was held');
+    assert.match(r.stderr, /40001/, r.stderr);
+    assert.equal(state(f), 'prepared', 'Stale operation closed by a refused reservation');
+    // Released: the retry closes the stale operation and reserves the new one.
+    call(f, reserve(f, f.op.replace('e1740000', 'e174000b')));
+    assert.equal(state(f), 'cancelled_by_revocation', 'Stale operation not closed on retry');
+    results.reserveBesideHeldStaleRow = '40001 at once, then closed on retry';
+  });
   if (!beforeFix) {
     // R1 control: the purge put back after the fence must be seen waiting.
     await withMutated('public.signature_begin_authorization(uuid,text,text,jsonb,jsonb)', ' created:=clock_timestamp();\n insert into',
@@ -821,6 +851,16 @@ export async function testSignatureConcurrency(container, { beforeFix = false } 
         assert.equal(watched.waited, true, 'control: the factor lock without NOWAIT was not seen waiting');
       });
     results.authNowaitControls = 'purge after the fence, session and factor locks without NOWAIT: all seen waiting';
+    // R1 of 05:09 control: the stale-operation lock without NOWAIT must be seen waiting.
+    await withMutated('public.signature_reserve(uuid,uuid,uuid,text,jsonb)', 'order by operation_id for update nowait loop',
+      'order by operation_id for update loop', async () => {
+        const f = fixture();
+        const { holder, watched } = await staleBesideHeldRow(f);
+        await holder.finish('commit;');
+        await watched.s.finish('');
+        assert.equal(watched.waited, true, 'control: the stale-operation lock without NOWAIT was not seen waiting');
+      });
+    results.staleRowNowaitControl = 'without NOWAIT: seen waiting';
   }
   if (beforeFix) process.stdout.write(`RED cases (${red.length}):\n${red.map((r) => '  - ' + r).join('\n')}\n`);
   else process.stdout.write(`Signature races: ${JSON.stringify(results)}\n`);

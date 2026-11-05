@@ -132,6 +132,62 @@ export function parseCertificate(der: Uint8Array): ParsedCertificate {
   return { der: cert.bytes, serial: serial.bytes, issuer: issuer.bytes, subject: subject.bytes, spki: spki.bytes };
 }
 
+/** DER UTCTime or GeneralizedTime, strict (seconds and Z), as epoch ms; null otherwise. */
+function derTime(buf: Uint8Array, node: DerNode): number | null {
+  const s = String.fromCharCode(...buf.subarray(node.contentStart, node.end));
+  const m = node.tag === 0x17 ? /^(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)Z$/.exec(s)
+    : node.tag === 0x18 ? /^(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)Z$/.exec(s) : null;
+  if (!m) return null;
+  const [y, mo, d, h, mi, se] = m.slice(1).map(Number);
+  const year = node.tag === 0x17 ? (y < 50 ? 2000 + y : 1900 + y) : y; // RFC 5280 §4.1.2.5.1
+  const t = Date.UTC(year, mo - 1, d, h, mi, se);
+  const back = new Date(t);
+  if (back.getUTCFullYear() !== year || back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d
+    || back.getUTCHours() !== h || back.getUTCMinutes() !== mi || back.getUTCSeconds() !== se) return null;
+  return t;
+}
+
+/**
+ * Whether a certificate can open a signature session or sign (Codex 05/11
+ * 05:09, R2): exactly one DER X.509 certificate (nothing after it, the three
+ * parts of RFC 5280 §4.1), an RSA key WebCrypto imports for
+ * RSASSA-PKCS1-v1_5 with at least 2048 bits, and `at` inside its validity
+ * (inclusive). Returns null when all of it holds, or the reason. Trust in the
+ * chain is for the PSC and the validator (ICP-Brasil), not decided here.
+ */
+export async function signerCertificateProblem(der: Uint8Array, at: Date): Promise<'certificate_invalid' | 'certificate_expired' | null> {
+  let spki: Uint8Array;
+  let notBefore: number | null;
+  let notAfter: number | null;
+  try {
+    const cert = readDer(der);
+    if (cert.tag !== 0x30 || cert.end !== der.length) return 'certificate_invalid';
+    const parts = derChildren(der, cert);
+    if (parts.length !== 3 || parts[0].tag !== 0x30 || parts[1].tag !== 0x30 || parts[2].tag !== 0x03) return 'certificate_invalid';
+    const fields = derChildren(der, parts[0]);
+    const validity = fields[(fields[0]?.tag === 0xa0 ? 1 : 0) + 3];
+    if (validity?.tag !== 0x30) return 'certificate_invalid';
+    const times = derChildren(der, validity);
+    if (times.length !== 2) return 'certificate_invalid';
+    notBefore = derTime(der, times[0]);
+    notAfter = derTime(der, times[1]);
+    ({ spki } = parseCertificate(der));
+  } catch {
+    return 'certificate_invalid';
+  }
+  if (notBefore === null || notAfter === null || notBefore > notAfter) return 'certificate_invalid';
+  try {
+    const key = await crypto.subtle.importKey('spki', new Uint8Array(spki), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    if (!((key.algorithm as RsaHashedKeyAlgorithm).modulusLength >= 2048)) return 'certificate_invalid';
+  } catch {
+    return 'certificate_invalid';
+  }
+  const t = at.getTime();
+  if (t > notAfter) return 'certificate_expired';
+  if (t < notBefore) return 'certificate_invalid';
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Hashes and verification (WebCrypto)
 

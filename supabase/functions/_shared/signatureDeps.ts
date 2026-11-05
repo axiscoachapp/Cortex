@@ -10,7 +10,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { AuthError, authResponse, requireUserContext } from "./auth.ts";
 import { fetchWithDeadline } from "./http.ts";
 import { certificateDiscovery, exchangeCode, parseKeyList, signHash } from "./psc.ts";
-import { readSignatureConfig, type HandlerDeps } from "./signatureHandlers.ts";
+import { readSignatureConfig, storageErrorKind, type HandlerDeps } from "./signatureHandlers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
@@ -18,11 +18,10 @@ const corsHeaders = {
   'Vary': 'Origin',
 };
 
-const notFound = (error: { message?: string; statusCode?: string | number } | null) =>
-  !!error && (String(error.statusCode) === '404' || /not.?found/i.test(error.message ?? ''));
-const alreadyThere = (error: { message?: string; statusCode?: string | number } | null) =>
-  !!error && (String(error.statusCode) === '409' || /already exists|duplicate/i.test(error.message ?? ''));
-
+// Storage errors are classified by their structured status only
+// (storageErrorKind, Codex 05/11 05:09 R4): an unavailable Storage throws and
+// is never read as an absent or existing object. The same for the database
+// reads below: an error is not an absent row.
 export function signatureDeps(): HandlerDeps {
   const service = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -42,13 +41,13 @@ export function signatureDeps(): HandlerDeps {
     storage: {
       download: async (path) => {
         const { data, error } = await bucket().download(path);
-        if (notFound(error as never)) return null;
+        if (error && storageErrorKind(error) === 'not_found') return null;
         if (error || !data) throw new Error('Storage indisponível');
         return new Uint8Array(await data.arrayBuffer());
       },
       upload: async (path, pdf) => {
         const { error } = await bucket().upload(path, pdf, { contentType: 'application/pdf', upsert: false });
-        if (alreadyThere(error as never)) return 'exists';
+        if (error && storageErrorKind(error) === 'exists') return 'exists';
         if (error) throw new Error('Storage indisponível');
         return 'created';
       },
@@ -63,8 +62,9 @@ export function signatureDeps(): HandlerDeps {
       sign: (cfg, token, p) => signHash(cfg, token, p),
     },
     prescription: async (userId, prescriptionId) => {
-      const { data } = await service.from('prescriptions').select('doc_type, issuance_snapshot')
+      const { data, error } = await service.from('prescriptions').select('doc_type, issuance_snapshot')
         .eq('id', prescriptionId).eq('user_id', userId).maybeSingle();
+      if (error) throw new Error('Banco indisponível');
       const prescriber = (data?.issuance_snapshot as { prescriber?: Record<string, unknown> } | null)?.prescriber;
       if (!data || typeof prescriber?.crm_number !== 'string' || typeof prescriber?.crm_uf !== 'string') return null;
       return {
@@ -75,7 +75,8 @@ export function signatureDeps(): HandlerDeps {
       };
     },
     prescriberCpf: async (userId) => {
-      const { data } = await service.from('user_settings').select('prescriber_cpf').eq('user_id', userId).maybeSingle();
+      const { data, error } = await service.from('user_settings').select('prescriber_cpf').eq('user_id', userId).maybeSingle();
+      if (error) throw new Error('Banco indisponível');
       return typeof data?.prescriber_cpf === 'string' ? data.prescriber_cpf : null;
     },
     corsHeaders,

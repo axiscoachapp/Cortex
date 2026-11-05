@@ -21,7 +21,8 @@
 // nothing in a request body (userId, humanRetry) is taken as that proof.
 
 import {
-  certificateSummary, finalizePades, preparePades, sha256, signatureCertificates, verifyPadesArtifact, verifyRawSignature, type PadesOptions,
+  certificateSummary, finalizePades, preparePades, sha256, signatureCertificates, signerCertificateProblem, verifyPadesArtifact, verifyRawSignature,
+  type PadesOptions,
 } from './pades.ts';
 import { PscAmbiguousError, PscRejectedError, openSecret, tokenBinding, type PscCertificate, type SealedSecret } from './psc.ts';
 
@@ -110,11 +111,12 @@ async function run(ports: SignaturePorts, req: SignatureRequest): Promise<Signat
   const sleep = ports.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const base = { p_user: req.userId, p_operation: req.operationId };
   // Productive steps (prepared, psc_requested, stored) and closing steps
-  // (ambiguous, failed, cancelled) are separate functions; only the
-  // productive ones carry the verified session context, added by the handler.
+  // (ambiguous, failed, cancelled, cancelled_by_revocation) are separate
+  // functions; only the productive ones carry the verified session context,
+  // added by the handler.
   const advance = async (to: 'prepared' | 'psc_requested' | 'stored', data: Record<string, unknown> = {}) =>
     (await ports.rpc('signature_advance', { ...base, p_to: to, p_data: data })) as SignatureOperation;
-  const close = async (to: 'ambiguous' | 'failed' | 'cancelled', data: Record<string, unknown> = {}) =>
+  const close = async (to: 'ambiguous' | 'failed' | 'cancelled' | 'cancelled_by_revocation', data: Record<string, unknown> = {}) =>
     (await ports.rpc('signature_close', { ...base, p_to: to, p_data: data })) as SignatureOperation;
   // After the PSC answered, a busy row (40001, NOWAIT) must not cost another
   // PSC call: these idempotent database steps are retried a few times.
@@ -193,9 +195,12 @@ async function run(ports: SignaturePorts, req: SignatureRequest): Promise<Signat
     accessToken = await openSecret(ports.keys, sealed, tokenBinding(op.session_id, req.userId, op.session_generation));
   } catch (error) {
     if ((error as RpcError)?.code !== 'P4031') throw error;
-    // Revoked or expired: the next step's own check cancels the operation
-    // (and schedules the cleanup when the PSC was ever called).
-    return finish(await advance('prepared'));
+    // The PSC session ended (revoked, expired or replaced; Codex 05/11 05:09,
+    // R1). The database confirms it from the session row and closes the
+    // operation only in the state and attempt seen here (CAS), scheduling the
+    // cleanup once the PSC was called; otherwise it returns the operation as
+    // it is. Prepared data is kept, and the document is free again.
+    return finish(await close('cancelled_by_revocation', { expectedState: op.state, attempt: op.psc_attempts }));
   }
 
   let certificate: PscCertificate | undefined;
@@ -203,6 +208,10 @@ async function run(ports: SignaturePorts, req: SignatureRequest): Promise<Signat
     if (hex(await sha256(c.certificate)) === op.cert_sha256) { certificate = c; break; }
   }
   if (!certificate) return fail('certificate_changed');
+  // Still a certificate that can sign at the signing time (R2): it may have
+  // expired since the session opened.
+  const certificateProblem = await signerCertificateProblem(certificate.certificate, new Date(op.signing_time));
+  if (certificateProblem) return fail(certificateProblem);
 
   // 3. Preparation over the exact bytes the doctor saw.
   const original = await ports.downloadOriginal(op);

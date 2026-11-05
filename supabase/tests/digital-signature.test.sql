@@ -685,6 +685,98 @@ begin
 end $$;
 reset role;
 
+-- Codex 05/11 05:09, R1: an operation whose PSC session ended is closed by
+-- the database (signature_close 'cancelled_by_revocation': a CAS on the state
+-- and attempt observed, decided by the session row), and its document is free
+-- for a new operation; an open one in the live session still blocks.
+select pg_temp.rx(('d1720000-0000-4000-8000-00000000008'||n)::uuid,'d1700000-0000-4000-8000-000000000006','d1710000-0000-4000-8000-000000000006')
+ from generate_series(1,4) n;
+set local role service_role;
+do $$ declare u uuid:='d1700000-0000-4000-8000-000000000006';
+ t jsonb:=jsonb_build_object('v',1,'keyId','k1','nonce','bm9uY2U=','ciphertext','dG9rZW4=');
+ d jsonb:=jsonb_build_object('preparedSha256',repeat('d',64),'toBeSignedSha256',repeat('e',64),'policyOid','2.16.76.1.7.1.11.1.1');
+ o81 uuid:='d1740000-0000-4000-8000-000000000081';o82 uuid:='d1740000-0000-4000-8000-000000000082';
+ o83 uuid:='d1740000-0000-4000-8000-000000000083';o84 uuid:='d1740000-0000-4000-8000-000000000084';
+ r jsonb;
+begin
+ perform public.signature_activate_session(u,'vidaas','d1730000-0000-4000-8000-000000000081',now()+interval '8 hours',repeat('c',64),t,pg_temp.a(u));
+ -- o81 prepared; o82 without answer (attempt 1); o83 in flight (attempt 1); o84 prepared.
+ perform public.signature_reserve(u,o81,'d1720000-0000-4000-8000-000000000081',repeat('a',64),pg_temp.a(u));
+ perform public.signature_advance(u,o81,'prepared',d,pg_temp.a(u));
+ perform public.signature_reserve(u,o82,'d1720000-0000-4000-8000-000000000082',repeat('a',64),pg_temp.a(u));
+ perform public.signature_advance(u,o82,'prepared',d,pg_temp.a(u));
+ perform public.signature_advance(u,o82,'psc_requested',d||jsonb_build_object('attempt',0),pg_temp.a(u));
+ perform public.signature_close(u,o82,'ambiguous',jsonb_build_object('attempt',1));
+ perform public.signature_reserve(u,o83,'d1720000-0000-4000-8000-000000000083',repeat('a',64),pg_temp.a(u));
+ perform public.signature_advance(u,o83,'prepared',d,pg_temp.a(u));
+ perform public.signature_advance(u,o83,'psc_requested',d||jsonb_build_object('attempt',0),pg_temp.a(u));
+ perform public.signature_reserve(u,o84,'d1720000-0000-4000-8000-000000000084',repeat('a',64),pg_temp.a(u));
+ perform public.signature_advance(u,o84,'prepared',d,pg_temp.a(u));
+ -- Live session: no effect, and the observed state is required and open.
+ assert public.signature_close(u,o81,'cancelled_by_revocation',jsonb_build_object('expectedState','prepared','attempt',0))->>'state'='prepared',
+  'Closed an operation whose session is live';
+ begin perform public.signature_close(u,o81,'cancelled_by_revocation','{"attempt":0}'::jsonb);
+  raise exception 'Revocation close without the observed state';exception when sqlstate '22023' then null;end;
+ begin perform public.signature_close(u,o81,'cancelled_by_revocation','{"expectedState":"completed","attempt":0}'::jsonb);
+  raise exception 'Revocation close expecting a terminal state';exception when sqlstate '22023' then null;end;
+ begin perform public.signature_close(u,o81,'cancelled_by_revocation','{"expectedState":"prepared"}'::jsonb);
+  raise exception 'Revocation close without the observed attempt';exception when sqlstate '22023' then null;end;
+ -- Live session: a new operation over an open one is still refused.
+ begin perform public.signature_reserve(u,'d1740000-0000-4000-8000-000000000085','d1720000-0000-4000-8000-000000000081',repeat('a',64),pg_temp.a(u));
+  raise exception 'New operation over one in the live session';exception when sqlstate 'P4093' then null;end;
+ -- A new PSC session replaces the old one.
+ perform public.signature_activate_session(u,'vidaas','d1730000-0000-4000-8000-000000000082',now()+interval '8 hours',repeat('c',64),t,pg_temp.a(u));
+ -- CAS: another state or attempt than the one held changes nothing.
+ assert public.signature_close(u,o81,'cancelled_by_revocation',jsonb_build_object('expectedState','reserved','attempt',0))->>'state'='prepared','CAS ignored the state';
+ assert public.signature_close(u,o82,'cancelled_by_revocation',jsonb_build_object('expectedState','ambiguous','attempt',0))->>'state'='ambiguous','CAS ignored the attempt';
+ -- Prepared: closed without cleanup, its prepared data kept.
+ r:=public.signature_close(u,o81,'cancelled_by_revocation',jsonb_build_object('expectedState','prepared','attempt',0));
+ assert r->>'state'='cancelled_by_revocation' and not (r->>'cleanup_pending')::boolean and r->>'prepared_pdf_sha256'=repeat('d',64),
+  'Prepared operation of a replaced session not closed';
+ -- Without answer: closed with the cleanup scheduled.
+ r:=public.signature_close(u,o82,'cancelled_by_revocation',jsonb_build_object('expectedState','ambiguous','attempt',1));
+ assert r->>'state'='cancelled_by_revocation' and (r->>'cleanup_pending')::boolean and r->>'psc_attempts'='1',
+  'Operation without answer of a replaced session not closed';
+ -- Terminal: history, for a repeated close and for a late failure.
+ assert public.signature_close(u,o82,'cancelled_by_revocation',jsonb_build_object('expectedState','ambiguous','attempt',1))->>'state'='cancelled_by_revocation',
+  'Repeated close not history';
+ r:=public.signature_close(u,o81,'failed','{"code":"late"}');
+ assert r->>'state'='cancelled_by_revocation' and r->>'error_code' is null,'Terminal operation rewritten';
+ -- The documents are free for new operations in the new session.
+ assert public.signature_reserve(u,'d1740000-0000-4000-8000-000000000085','d1720000-0000-4000-8000-000000000081',repeat('a',64),pg_temp.a(u))->>'state'='reserved',
+  'Document of the closed prepared operation not freed';
+ assert public.signature_reserve(u,'d1740000-0000-4000-8000-000000000086','d1720000-0000-4000-8000-000000000082',repeat('a',64),pg_temp.a(u))->>'state'='reserved',
+  'Document of the closed operation without answer not freed';
+ -- A new operation id closes an open operation of an ended session by
+ -- itself: in flight, with the cleanup scheduled.
+ assert public.signature_reserve(u,'d1740000-0000-4000-8000-000000000087','d1720000-0000-4000-8000-000000000083',repeat('a',64),pg_temp.a(u))->>'state'='reserved',
+  'Document of an in-flight operation of an ended session not freed';
+ assert (pg_temp.op(o83)).state='cancelled_by_revocation' and (pg_temp.op(o83)).cleanup_pending and (pg_temp.op(o83)).psc_attempts=1,
+  'In-flight operation of an ended session not closed with cleanup';
+ -- Its late answer never brings it back (an attempt step: P4094).
+ begin perform public.signature_advance(u,o83,'stored',jsonb_build_object('stagedPath','x','signedSha256',repeat('f',64),'attempt',1),pg_temp.a(u));
+  raise exception 'Late answer revived a closed operation';exception when sqlstate 'P4094' then null;end;
+ -- No PSC session: nothing is reserved nor closed.
+ perform public.signature_revoke_session(u);
+ begin perform public.signature_reserve(u,'d1740000-0000-4000-8000-000000000088','d1720000-0000-4000-8000-000000000084',repeat('a',64),pg_temp.a(u));
+  raise exception 'Reserved without a PSC session';exception when sqlstate 'P4031' then null;end;
+ assert (pg_temp.op(o84)).state='prepared','Closed by a reservation without a PSC session';
+ -- Cortex session ended: the refusal (P4011) takes the closing back with it.
+ perform public.signature_activate_session(u,'vidaas','d1730000-0000-4000-8000-000000000083',now()+interval '8 hours',repeat('c',64),t,pg_temp.a(u));
+ begin perform public.signature_reserve(u,'d1740000-0000-4000-8000-000000000088','d1720000-0000-4000-8000-000000000084',repeat('a',64),
+  pg_temp.a(u,'d1790000-0000-4000-8000-0000000000ff'));
+  raise exception 'Reserved after the Cortex session ended';exception when sqlstate 'P4011' then null;end;
+ assert (pg_temp.op(o84)).state='prepared','Closed by a reservation refused at the Cortex session';
+ -- A closing step: no Cortex session needed.
+ r:=public.signature_close(u,o84,'cancelled_by_revocation',jsonb_build_object('expectedState','prepared','attempt',0));
+ assert r->>'state'='cancelled_by_revocation' and not (r->>'cleanup_pending')::boolean,'Closing step refused';
+end $$;
+reset role;
+do $$ begin
+ assert not exists(select 1 from public.prescriptions where id::text like 'd1720000-0000-4000-8000-00000000008_' and status<>'generated'),
+  'A closed operation published';
+end $$;
+
 -- The API: every productive function needs the verified context, without
 -- default or overload; only the closing and service functions have none.
 do $$ declare fn record;begin

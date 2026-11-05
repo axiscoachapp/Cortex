@@ -17,14 +17,18 @@ let doctorJwk: JsonWebKey;
 let doctorCert: Uint8Array;
 let caCert: Uint8Array;
 let otherCert: Uint8Array;
+let expiredCert: Uint8Array;
+const VALID = { notBefore: new Date('2026-01-01T00:00:00Z'), notAfter: new Date(Date.now() + 365 * 86400_000) };
 
 beforeAll(async () => {
   const ca = (await crypto.subtle.generateKey(RSA, true, ['sign', 'verify'])) as CryptoKeyPair;
   const doctor = (await crypto.subtle.generateKey(RSA, true, ['sign', 'verify'])) as CryptoKeyPair;
   doctorJwk = await crypto.subtle.exportKey('jwk', doctor.privateKey);
-  caCert = await syntheticCertificate('AC Sintética', 'AC Sintética', ca, ca.privateKey, 1);
-  doctorCert = await syntheticCertificate('Médica Sintética:00000000000', 'AC Sintética', doctor, ca.privateKey, 0x2a17);
-  otherCert = await syntheticCertificate('Outra Sintética:11111111111', 'AC Sintética', ca, ca.privateKey, 5);
+  caCert = await syntheticCertificate('AC Sintética', 'AC Sintética', ca, ca.privateKey, 1, VALID);
+  doctorCert = await syntheticCertificate('Médica Sintética:00000000000', 'AC Sintética', doctor, ca.privateKey, 0x2a17, VALID);
+  otherCert = await syntheticCertificate('Outra Sintética:11111111111', 'AC Sintética', ca, ca.privateKey, 5, VALID);
+  expiredCert = await syntheticCertificate('Médica Sintética:00000000000', 'AC Sintética', doctor, ca.privateKey, 0x2a18,
+    { notBefore: new Date('2025-01-01T00:00:00Z'), notAfter: new Date('2026-11-04T00:00:00Z') });
 }, 30_000);
 
 const rpcError = (code: string, message = code) => Object.assign(new Error(message), { code });
@@ -80,9 +84,13 @@ function fakeDb(original: Uint8Array) {
         }
         if (!db.session.active) throw rpcError('P4031');
         if (db.doc.status !== 'generated' || db.doc.pdfSha256 !== a.p_shown_sha256) throw rpcError('P4093');
-        if ([...db.ops.values()].some((o) => ['reserved', 'prepared', 'psc_requested', 'ambiguous', 'stored'].includes(o.state))) throw rpcError('P4093');
+        // Open operations of the document: one in the live session blocks;
+        // one whose PSC session ended is closed right before the new one.
+        const open = [...db.ops.values()].filter((o) => ['reserved', 'prepared', 'psc_requested', 'ambiguous', 'stored'].includes(o.state));
+        if (open.some((o) => usable(o))) throw rpcError('P4093');
         if (!db.cortexLive) throw rpcError('P4011');
         if (db.recent >= 60) { db.session.active = false; db.session.generation++; return { error: 'rate_limited' }; }
+        for (const o of open) set(o, { state: 'cancelled_by_revocation', cleanup_pending: o.staged_path !== null || ['psc_requested', 'ambiguous', 'stored'].includes(o.state) });
         const created = {
           operation_id: a.p_operation as string, user_id: USER, prescription_id: RX, session_id: SESSION, session_generation: db.session.generation,
           shown_pdf_sha256: a.p_shown_sha256 as string, cert_sha256: db.session.certSha256, signing_time: '2026-11-04T21:00:00+00:00', state: 'reserved' as const,
@@ -143,7 +151,14 @@ function fakeDb(original: Uint8Array) {
         if (!op) throw rpcError('42501');
         const to = a.p_to as string;
         const data = (a.p_data ?? {}) as Record<string, unknown>;
-        if (!['ambiguous', 'failed', 'cancelled'].includes(to)) throw rpcError('22023', 'not a closing step');
+        if (!['ambiguous', 'failed', 'cancelled', 'cancelled_by_revocation'].includes(to)) throw rpcError('22023', 'not a closing step');
+        if (to === 'cancelled_by_revocation') {
+          // CAS on the state and attempt observed; only an ended session closes.
+          if (!['reserved', 'prepared', 'psc_requested', 'ambiguous', 'stored'].includes(data.expectedState as string) || typeof data.attempt !== 'number') throw rpcError('22023', 'observed state');
+          if (op.state !== data.expectedState || op.psc_attempts !== data.attempt || usable(op)) return out(op);
+          set(op, { state: 'cancelled_by_revocation', cleanup_pending: op.staged_path !== null || ['psc_requested', 'ambiguous', 'stored'].includes(op.state) });
+          return out(op);
+        }
         // A terminal operation is never rewritten by a late step.
         if (['completed', 'failed', 'cancelled', 'cancelled_by_revocation'].includes(op.state) && (to === 'failed' || to === 'cancelled')) return out(op);
         // Steps after a PSC call name their attempt (P4094 for an older one).
@@ -624,6 +639,125 @@ describe('signDocument: refusals before anything is published', () => {
     world.psc.certificates = [{ alias: 'outro', certificate: otherCert, chain: [] }];
     expect(await signDocument(world.ports, world.request)).toEqual({ status: 'failed', code: 'certificate_changed' });
     expect(world.pscCalls).toBe(0);
+  });
+});
+
+describe('signDocument: resuming after the PSC session ended (Codex 05/11 05:09, R1)', () => {
+  const revoke = () => { world.db.session.active = false; world.db.session.generation++; };
+  /** A new PSC session replaces the old one: same fake row, next generation. */
+  const replace = async () => {
+    world.db.session.active = true;
+    world.db.session.generation++;
+    world.db.session.sealed = await sealSecret(keyList, 'synthetic-psc-token', tokenBinding(SESSION, USER, world.db.session.generation));
+  };
+  /** Runs until the operation is prepared: the PSC permission finds the database busy once. */
+  const stopPrepared = async () => {
+    const rpc = world.ports.rpc;
+    let busy = true;
+    world.ports.rpc = async (name, a) => {
+      if (busy && name === 'signature_advance' && a.p_to === 'psc_requested') { busy = false; throw rpcError('40001'); }
+      return rpc(name, a);
+    };
+    await expect(signDocument(world.ports, world.request)).rejects.toMatchObject({ code: '40001' });
+    expect(opOf().state).toBe('prepared');
+  };
+  const nextOperation = () => {
+    opSeq++;
+    world.request = { ...world.request, operationId: `44444444-4444-4444-8444-${String(opSeq).padStart(12, '0')}` };
+  };
+
+  it('a prepared operation whose session was revoked is closed by the database, keeping its prepared data', async () => {
+    await stopPrepared();
+    const prepared = opOf().prepared_pdf_sha256;
+    revoke();
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'cancelled_by_revocation', code: null });
+    expect(opOf()).toMatchObject({ state: 'cancelled_by_revocation', cleanup_pending: false, prepared_pdf_sha256: prepared, psc_attempts: 0 });
+    expect(world.db.calls.slice(-2)).toEqual(['signature_session_token', 'close:cancelled_by_revocation']);
+    expect(world.pscCalls).toBe(0);
+  });
+
+  it('an operation without answer whose session was replaced is closed on the human retry, its candidate cleaned', async () => {
+    world.psc.lose = true;
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'ambiguous' });
+    await replace();
+    world.psc.lose = false;
+    expect(await signDocument(world.ports, { ...world.request, humanRetry: true })).toEqual({ status: 'cancelled_by_revocation', code: null });
+    expect(opOf()).toMatchObject({ state: 'cancelled_by_revocation', psc_attempts: 1, cleanup_pending: false });
+    expect(world.db.calls.slice(-3)).toEqual(['signature_session_token', 'close:cancelled_by_revocation', 'signature_cleanup_done']);
+    expect(world.pscCalls).toBe(1);
+    // The document is free: a new operation in the new session completes.
+    nextOperation();
+    expect((await signDocument(world.ports, world.request)).status).toBe('completed');
+    expect(world.pscCalls).toBe(2);
+  });
+
+  it('a new operation id frees the document whose open operation lost its session; a live one still blocks', async () => {
+    await stopPrepared();
+    const stale = world.request.operationId;
+    nextOperation();
+    await expect(signDocument(world.ports, world.request)).rejects.toMatchObject({ code: 'P4093' }); // live session: still open
+    await replace();
+    expect((await signDocument(world.ports, world.request)).status).toBe('completed');
+    expect(world.db.ops.get(stale)).toMatchObject({ state: 'cancelled_by_revocation', cleanup_pending: false });
+  });
+
+  it('an operation without answer closed by a new reservation keeps its cleanup for the reconciliation', async () => {
+    world.psc.lose = true;
+    await signDocument(world.ports, world.request);
+    const stale = world.request.operationId;
+    await replace();
+    world.psc.lose = false;
+    nextOperation();
+    expect((await signDocument(world.ports, world.request)).status).toBe('completed');
+    expect(world.db.ops.get(stale)).toMatchObject({ state: 'cancelled_by_revocation', psc_attempts: 1, cleanup_pending: true });
+  });
+
+  it('a twin that ended the operation first wins: the close returns its history', async () => {
+    await stopPrepared();
+    revoke();
+    const rpc = world.ports.rpc;
+    world.ports.rpc = async (name, a) => {
+      if (name === 'signature_close' && a.p_to === 'cancelled_by_revocation') await rpc('signature_close', { ...a, p_to: 'cancelled', p_data: { code: 'twin' } });
+      return rpc(name, a);
+    };
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'cancelled', code: 'twin' });
+    expect(opOf()).toMatchObject({ state: 'cancelled', error_code: 'twin' });
+  });
+
+  it('a certificate expired by the signing time fails before the PSC', async () => {
+    world.db.session.certSha256 = hex(await sha256(expiredCert));
+    world.psc.certificates = [{ alias: 'vidaas-1', certificate: expiredCert, chain: [caCert] }];
+    expect(await signDocument(world.ports, world.request)).toEqual({ status: 'failed', code: 'certificate_expired' });
+    expect(world.pscCalls).toBe(0);
+  });
+});
+
+describe('signDocument: Storage unavailable is not absence (Codex 05/11 05:09, R4)', () => {
+  it('resuming a stored answer while Storage is down closes and removes nothing', async () => {
+    world.db.throwOnce.set('signature_complete', [rpcError('40001'), rpcError('40001'), rpcError('40001'), rpcError('40001')]);
+    await expect(signDocument(world.ports, world.request)).rejects.toMatchObject({ code: '40001' });
+    expect(opOf().state).toBe('stored');
+    const removed: string[] = [];
+    world.ports.downloadSigned = async () => { throw new Error('Storage indisponível'); };
+    world.ports.removeSigned = async (p) => { removed.push(p); };
+    const before = world.db.calls.length;
+    await expect(signDocument(world.ports, world.request)).rejects.toThrow('Storage indisponível');
+    expect(opOf()).toMatchObject({ state: 'stored', cleanup_pending: false });
+    expect(world.storage.has(path())).toBe(true);
+    expect(removed).toEqual([]);
+    expect(world.db.calls.slice(before).filter((c) => c.startsWith('close:'))).toEqual([]);
+  });
+
+  it('an object already at the path while Storage is down for the read closes and removes nothing', async () => {
+    world.storage.set(path(), Uint8Array.of(1, 2, 3));
+    const removed: string[] = [];
+    world.ports.downloadSigned = async () => { throw new Error('Storage indisponível'); };
+    world.ports.removeSigned = async (p) => { removed.push(p); };
+    await expect(signDocument(world.ports, world.request)).rejects.toThrow('Storage indisponível');
+    expect(opOf()).toMatchObject({ state: 'psc_requested', cleanup_pending: false });
+    expect(world.storage.get(path())).toEqual(Uint8Array.of(1, 2, 3));
+    expect(removed).toEqual([]);
+    expect(world.db.calls.filter((c) => c.startsWith('close:'))).toEqual([]);
   });
 });
 
