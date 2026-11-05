@@ -33,7 +33,7 @@
   "sources": [
     {
       "path": "scripts/test-initial-password-auth.mjs",
-      "sha256": "7e7834e89d47eb3504a8b6993d03d6d982ad42ffbf32e1ae8752cee8c0795dbe"
+      "sha256": "9331215b5c76d9ecced84317a2c141b97b39d17932cdcf6362c263c2e8132849"
     },
     {
       "path": "scripts/test-provisioning-human-intent.mjs",
@@ -41,7 +41,7 @@
     },
     {
       "path": "supabase/tests/prototypes/provisioning-human-intent.sql",
-      "sha256": "6a4cf35e203cf9d45218265953103fd858b70be4c1daad7c94a8af27e468938d"
+      "sha256": "380f9e8cb6358aa0d30eceef09f4beadbc63f8812954021904b326e411181457"
     },
     {
       "path": "supabase/tests/prototypes/provisioning-auth-identity.sql",

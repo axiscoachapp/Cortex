@@ -38,6 +38,8 @@ Runner verifica endpoint Docker local, imagens já disponíveis (`--pull=never`)
 
 ## Limites e próxima etapa
 
+Atualização posterior desta data: a [composição com clínica real](../provisioning-clinic-authority/IMPLEMENTATION.md) centraliza neste protótipo a cerca da identidade Auth alvo em confirmação/check/replay e a checagem final de bearer/intenção/`not_after`. A regressão base v2.197.0 foi repetida: 17 grupos aprovados, relatório e hashes atualizados. O resultado base v2.189.0 acima é histórico, anterior a esse delta; a versão final é testada em ambas as versões no modo composto, com contagens próprias. Os limites seguintes descrevem o modo base, não negam a composição posterior.
+
 A filiação é uma fixture privada mínima; **não integra `clinic_members`, custódia T33, instalação ou todos os escritores privilegiados**. Confere papel atual, sem provar invalidação monotônica de mudanças históricas/ABA. Não escolhe a geração de credencial/evento MFA de cada JWT preexistente (T31), política final de MFA, recuperação após prazo/novo login/troca de fator, credential setup, PKCE ou reconciliação de identidade já criada.
 
 Próxima fatia: definir e provar essa fronteira com clínica/custódia reais e escritores, antes de integrar filiação/pedidos privados, cortar serviço/legado e abrir API/UI. A intenção confirmada não concede filiação, grant ou acesso clínico; M2/T31 continuam abertas. PersonalMed, helpers T33 temporariamente com Claude e produto SaaS preservados. Sem banco hospedado, carga real, envio, provedor pago, deploy ou push.

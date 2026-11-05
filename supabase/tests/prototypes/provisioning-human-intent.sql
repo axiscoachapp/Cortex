@@ -12,6 +12,36 @@ create table provision_intent_lab.intents(
 );
 revoke all on all tables in schema provision_intent_lab from public,anon,authenticated,service_role;
 
+-- Shared by the native-only and real-clinic gates. A historical snapshot is
+-- not evidence of a currently existing target. Fence the reserved identity.
+create function provision_intent_lab.fence_current_receipt(p_operation uuid,p_target uuid) returns void
+language plpgsql volatile security definer set search_path='' as $$
+begin
+ perform 1 from auth.users u join provision_identity_lab.operations o on o.planned_user_id=u.id
+  where u.id=p_target and o.operation_id=p_operation for share of u nowait;
+ if not found or not provision_identity_lab.has_birth_receipt(p_operation) then
+  raise exception 'Current identity receipt unavailable' using errcode='40001';
+ end if;
+exception when lock_not_available then raise exception 'Identity receipt busy' using errcode='40001';
+end $$;
+
+-- Read the clock after the final acquisition. Session time can elapse even
+-- while its row is fenced against concurrent changes.
+create function provision_intent_lab.assert_final_deadlines(p_actor uuid,p_session uuid,p_exp bigint,p_deadline timestamptz) returns timestamptz
+language plpgsql volatile security definer set search_path='' as $$
+declare session_deadline timestamptz;t timestamptz;
+begin
+ select not_after into session_deadline from auth.sessions where id=p_session and user_id=p_actor for share nowait;
+ if not found then raise exception 'Human intent session unavailable' using errcode='42501';end if;
+ t:=clock_timestamp();
+ if p_exp is null or to_timestamp(p_exp)<=t or (session_deadline is not null and session_deadline<=t)
+  or (p_deadline is not null and p_deadline<=t) then
+  raise exception 'Human intent expired' using errcode='42501';
+ end if;
+ return t;
+exception when lock_not_available then raise exception 'Human intent session busy' using errcode='40001';
+end $$;
+
 -- Context is trusted only after native bearer validation by the server.
 -- Recheck current native rows: cached verification is not authority forever.
 create function provision_intent_lab.assert_context(p_actor uuid,p_session uuid,p_clinic uuid,p_aal text,p_exp bigint) returns uuid
@@ -40,7 +70,7 @@ end $$;
 
 create function provision_intent_lab.begin_intent(p_operation uuid,p_planned uuid,p_actor uuid,p_session uuid,p_clinic uuid,p_aal text,p_exp bigint) returns jsonb
 language plpgsql security definer set search_path='' as $$
-declare i provision_intent_lab.intents;supporting uuid;
+declare i provision_intent_lab.intents;supporting uuid;t timestamptz;
 begin
  supporting:=provision_intent_lab.assert_context(p_actor,p_session,p_clinic,p_aal,p_exp);
  select * into i from provision_intent_lab.intents where operation_id=p_operation for update nowait;
@@ -48,13 +78,15 @@ begin
   if (i.planned_user_id,i.actor_id,i.session_id,i.clinic_id) is distinct from (p_planned,p_actor,p_session,p_clinic) then
    raise exception 'Human intent binding changed' using errcode='22023';end if;
   if i.factor_id is distinct from supporting then raise exception 'Human intent supporting factor changed' using errcode='42501';end if;
-  if i.expires_at<=clock_timestamp() then raise exception 'Human intent expired' using errcode='42501';end if;
+  if i.phase='confirmed' then perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id);end if;
+  perform provision_intent_lab.assert_final_deadlines(p_actor,p_session,p_exp,i.expires_at);
   return to_jsonb(i);
  end if;
  if exists(select 1 from auth.users where id=p_planned) then raise exception 'Existing identity is not a new intent' using errcode='42501';end if;
+ t:=provision_intent_lab.assert_final_deadlines(p_actor,p_session,p_exp,null);
  insert into provision_identity_lab.operations(operation_id,planned_user_id) values(p_operation,p_planned);
  insert into provision_intent_lab.intents(operation_id,planned_user_id,actor_id,session_id,clinic_id,factor_id,expires_at)
- values(p_operation,p_planned,p_actor,p_session,p_clinic,supporting,least(clock_timestamp()+interval '5 minutes',to_timestamp(p_exp))) returning * into i;
+ values(p_operation,p_planned,p_actor,p_session,p_clinic,supporting,least(t+interval '5 minutes',to_timestamp(p_exp))) returning * into i;
  return to_jsonb(i);
 end $$;
 
@@ -67,9 +99,9 @@ begin
  if not found or (i.actor_id,i.session_id,i.clinic_id) is distinct from (p_actor,p_session,p_clinic) then
   raise exception 'Human intent unavailable' using errcode='42501';end if;
  if i.factor_id is distinct from supporting then raise exception 'Human intent supporting factor changed' using errcode='42501';end if;
- if i.expires_at<=clock_timestamp() then raise exception 'Human intent expired' using errcode='42501';end if;
+ if p_finish or i.phase='confirmed' then perform provision_intent_lab.fence_current_receipt(p_operation,i.planned_user_id);end if;
+ perform provision_intent_lab.assert_final_deadlines(p_actor,p_session,p_exp,i.expires_at);
  if p_finish then
-  if not provision_identity_lab.has_birth_receipt(p_operation) then raise exception 'Identity receipt unavailable' using errcode='40001';end if;
   update provision_intent_lab.intents set phase='confirmed' where operation_id=p_operation returning * into i;
  end if;
  return to_jsonb(i);

@@ -1,0 +1,49 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.197.0",
+  "sourceBaseline": "a8aa43b3e4c9ec86e7329a633e8d566409225416",
+  "migrations": 69,
+  "nativeCoreColumnsOwnersAndTableAclUnchanged": true,
+  "nativeIdentityHelpersUnchanged": true,
+  "nativeTablesUnavailableToClientRoles": true,
+  "sqlSourceDigest": "b55acb7f4bb91a242aaa13b85cb074eeb01ece07557ee5c74f22701d78914b62",
+  "nativeTotpAal2": true,
+  "clinicCreatedByAuthenticatedDataApi": true,
+  "productionAuthorizationImplemented": false,
+  "receiptRedOnly": true,
+  "isolation": "repeatable read",
+  "change": "delete",
+  "nativeMutationStatus": 200,
+  "currentReceipt": false,
+  "actorGuardRowsUnchanged": true,
+  "staleConfirmationAccepted": true,
+  "compositionProofPassed": false,
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "9331215b5c76d9ecced84317a2c141b97b39d17932cdcf6362c263c2e8132849"
+    },
+    {
+      "path": "scripts/test-provisioning-clinic-authority.mjs",
+      "sha256": "594880aa65666833e5b1caa7841b1a1709a1f931f3a853afb8c565c05c695260"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-human-intent.sql",
+      "sha256": "6a4cf35e203cf9d45218265953103fd858b70be4c1daad7c94a8af27e468938d"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-auth-identity.sql",
+      "sha256": "dc1e5690b14126912bfee987d8f3078454477e46cee13f193abaa26b3023f7de"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-membership-generation.sql",
+      "sha256": "0d56096dd8f560db70fba89f8162137b20fb77774d897426f02822542c1ecf95"
+    },
+    {
+      "path": "supabase/tests/prototypes/provisioning-clinic-intent.sql",
+      "sha256": "1ac3c919e1a695ffb3d1222f8dc282b9bace977190021e3f2b20404dd23d9367"
+    }
+  ],
+  "cleanupVerified": true
+}

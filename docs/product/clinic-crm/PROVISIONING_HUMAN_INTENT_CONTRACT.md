@@ -14,6 +14,7 @@ A fixture de clínica é uma tabela privada mínima de papel/status. Não substi
 - Prazo limitado ao menor entre cinco minutos e a expiração do token inicialmente validado. Não armazenar token, e-mail, nome, senha ou cópia de hash.
 - Revalidar usuário atual, sessão viva/dono/not_after/AAL, fator verificado, papel/status e prazo ao iniciar, despachar e confirmar. Ler o relógio depois das travas. Aquisições de linhas sem espera e recusa de snapshot RR velho; não manter transação/trava durante HTTP.
 - Na confirmação, exigir também o receipt atual da identidade Auth. Confirmação da intenção é só evidência administrativa; não é autorização de prontuário nem substitui a aprovação médica.
+- Cercar a linha Auth alvo reservada antes de ler esse receipt, inclusive nos checks/replays que devolvam `confirmed`. DELETE/alteração depois de snapshot RR deve abortar; prazo/bearer/`session.not_after` são conferidos após a cerca final. O histórico confirmado não vira prova de identidade atual após remoção. A cerca é compartilhada com a composição de clínica real.
 - Revogação/expiração durante a chamada nativa pode deixar a identidade criada, mas a confirmação deve recusar. Preservar identidade/receipt para reconciliação; não excluir nem repetir a criação por inferência.
 - Revogação que conclui primeiro vence. Se a confirmação curta já cercou a sessão, a mutação nativa espera seu commit. O registro histórico pode persistir; replay depois da revogação precisa falhar.
 
@@ -27,4 +28,4 @@ Antes de produção faltam adaptação à clínica real/T33, endurecimento dos e
 
 Uma nova autorização humana poderá ser necessária para reconciliar identidade já criada após expiração. Essa reparação ainda não está implementada; não contornar por e-mail, novo usuário ou renovação silenciosa do prazo. PersonalMed e os três helpers T33 do Claude permanecem separados.
 
-Prova SQL posterior: [geração da filiação real](PROVISIONING_MEMBERSHIP_GENERATION_CONTRACT.md) recusa o vínculo antigo depois de ABA/recriação de `clinic_members`, com T33 real. Esse primitivo ainda não foi composto com o ensaio nativo de sessão/fator/receipt acima; não remove os limites de produção, histórico do Auth ou recuperação.
+Provas posteriores: [geração da filiação real](PROVISIONING_MEMBERSHIP_GENERATION_CONTRACT.md) recusa o vínculo antigo depois de ABA/recriação de `clinic_members`, com T33 real. A [composição nativa](PROVISIONING_CLINIC_AUTHORITY_CONTRACT.md) reúne esses primitivos no laboratório, incluindo a cerca da identidade alvo. Isso não remove os limites de produção, histórico do Auth ou recuperação.
