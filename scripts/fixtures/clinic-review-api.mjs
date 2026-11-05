@@ -2,7 +2,7 @@
 import http from 'node:http';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false } = {}) {
   const now=new Date().toISOString();
   const user={id:uid,email:'review@example.invalid',aud:'authenticated',role:'authenticated',created_at:now,email_confirmed_at:now,app_metadata:{provider:'email'},user_metadata:{},factors:[]};
   const token=[{alg:'HS256',typ:'JWT'},{sub:uid,role:'authenticated',aud:'authenticated',aal:'aal1',exp:Math.floor(Date.now()/1000)+86400,iat:Math.floor(Date.now()/1000)}].map(value=>Buffer.from(JSON.stringify(value)).toString('base64url')).join('.')+'.synthetic-signature';
@@ -10,7 +10,12 @@ export async function startClinicFixture({ appointments = [], lastVisit = null }
   const templates=[{id:'44444444-4444-4444-8444-444444444444',user_id:null,name:'Modelo sintético SOAP',description:'Estrutura para revisão visual',content:'**S (Subjetivo):** relato\n\n**O (Objetivo):** achados\n\n**A:** avaliação\n\n**P:** plano',created_at:now}];
   const settings={user_id:uid,specialty:'geral',daily_credit_limit:1500,live_copilot_enabled:false,doctor_name:'Profissional de Demonstração',crm_number:'00000',crm_uf:'PR',professional_address:'Ambiente sintético',active_template_id:null};
   const visits=[{id:'55555555-5555-4555-8555-555555555555',patient_id:patientId,user_id:uid,created_at:now,chief_complaint:'Consulta sintética',soap_note:'**S (Subjetivo):** relato sintético\n\n- Item revisado',revision:0}];
-  const turns=[];const knowledge=[];const metrics={briefings:0,checklists:0,chat:0,newSources:0,patientWrites:0,appointmentWrites:0};
+  const workItems=workspaceDates?[{id:'66666666-6666-4666-8666-666666666666',user_id:uid,patient_id:patientId,kind:'draft',status:'draft',title:'Registro sintético de horários',content:'Conteúdo sintético para revisão visual.',details:{},revision:1,due_date:null,updated_at:'2026-11-05T18:04:38Z'}]:[];
+  const workRevisions=workspaceDates?[{id:'77777777-7777-4777-8777-777777777777',user_id:uid,item_id:workItems[0].id,revision:1,snapshot:{title:'Registro sintético anterior',content:'Versão sintética anterior.'},created_at:'2026-11-05T16:02:49Z'}]:[];
+  const recordRevisions=workspaceDates?[{id:'88888888-8888-4888-8888-888888888888',patient_id:patientId,record_id:visits[0].id,revision:1,snapshot:{soap_note:'Versão sintética da consulta.'},created_at:'2026-11-05T19:05:51Z'}]:[];
+  const drafts=workspaceDates?[{id:'99999999-9999-4999-8999-999999999999',user_id:uid,patient_id:patientId,status:'error',chief_complaint:'Consulta sintética recuperável',audio_storage_path:null,content:{audioMimeType:'audio/webm'},updated_at:'2026-11-05T17:03:27Z'}]:[];
+  const displayData={workItems,workRevisions,recordRevisions,drafts};
+  const turns=[];const knowledge=[];const metrics={briefings:0,checklists:0,chat:0,newSources:0,patientWrites:0,appointmentWrites:0,...(workspaceDates?{workspaceWrites:0}:{})};
   const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,'http://127.0.0.1');let raw='';for await(const chunk of req)raw+=chunk;
     const input=raw?JSON.parse(raw):{};
@@ -39,8 +44,10 @@ export async function startClinicFixture({ appointments = [], lastVisit = null }
     }
     if(url.pathname.startsWith('/functions/'))return send({error:'Integração externa desativada no teste.'},503);
     const table=url.pathname.split('/').pop();
-    let rows=table==='patients'?patients:table==='appointments'?appointments:table==='consultations'?visits:table==='user_settings'?[settings]:table==='document_templates'?templates:table==='knowledge_documents'?knowledge:table==='usage_daily'?[{credits_used:0,calls:0}]:[];
-    for(const field of ['id','patient_id','revision']){const filter=url.searchParams.get(field);if(filter?.startsWith('eq.'))rows=rows.filter(row=>String(row[field])===filter.slice(3));}
+    const workspaceRows={clinical_work_items:workItems,clinical_work_revisions:workRevisions,clinical_record_revisions:recordRevisions,consultation_drafts:drafts};
+    if(workspaceDates && Object.hasOwn(workspaceRows,table) && !['GET','HEAD'].includes(req.method)){metrics.workspaceWrites++;return send({error:'Read-only display fixture'},405);}
+    let rows=workspaceRows[table]??(table==='patients'?patients:table==='appointments'?appointments:table==='consultations'?visits:table==='user_settings'?[settings]:table==='document_templates'?templates:table==='knowledge_documents'?knowledge:table==='usage_daily'?[{credits_used:0,calls:0}]:[]);
+    for(const field of ['id','patient_id','revision','item_id','record_id']){const filter=url.searchParams.get(field);if(filter?.startsWith('eq.'))rows=rows.filter(row=>String(row[field])===filter.slice(3));}
     if(table==='patients' && req.method==='PATCH'){metrics.patientWrites++;rows.forEach(row=>Object.assign(row,input,{revision:row.revision+1}));}
     if(table==='appointments' && req.method==='PATCH'){metrics.appointmentWrites++;rows.forEach(row=>Object.assign(row,input,{revision:row.revision+1}));}
     const offset=Number(url.searchParams.get('offset')??'0');const total=rows.length;rows=rows.slice(offset,offset+Number(url.searchParams.get('limit')??500));headers['content-range']=`0-${Math.max(0,rows.length-1)}/${total}`;
@@ -48,5 +55,5 @@ export async function startClinicFixture({ appointments = [], lastVisit = null }
     return send(req.headers.accept?.includes('application/vnd.pgrst.object+json')?(rows[0]??null):rows);
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  return {origin:`http://127.0.0.1:${server.address().port}`,metrics,close:()=>new Promise(resolve=>server.close(resolve))};
+  return {origin:`http://127.0.0.1:${server.address().port}`,metrics,displayData:workspaceDates?displayData:null,close:()=>new Promise(resolve=>server.close(resolve))};
 }

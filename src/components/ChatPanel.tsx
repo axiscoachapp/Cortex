@@ -1558,7 +1558,7 @@ export function ChatPanel({
         {rescued.map((entry) => (
           <div key={entry.id} role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm space-y-2">
             <p>
-              Uma gravação desta consulta foi interrompida em {new Date(entry.createdAt).toLocaleString('pt-BR')} (a
+              Uma gravação desta consulta foi interrompida em {new Date(entry.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} (a
               sessão foi encerrada) e ficou guardada neste navegador.
             </p>
             <div className="flex flex-wrap gap-2">

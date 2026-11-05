@@ -319,7 +319,7 @@ export default function ClinicalWorkspacePage() {
                           : d.status === 'error'
                             ? 'Nova tentativa necessária'
                             : 'Processamento pendente'}{' '}
-                        · {new Date(d.updated_at).toLocaleString('pt-BR')}
+                        · {new Date(d.updated_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                       </Link>
                     </li>
                   ))}
@@ -408,7 +408,7 @@ export default function ClinicalWorkspacePage() {
                         <p className="text-sm mt-1">{names.data?.[item.patient_id] ?? 'Paciente'}</p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">
-                        Atualizado em {new Date(item.updated_at).toLocaleString('pt-BR')}
+                        Atualizado em {new Date(item.updated_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                         {item.due_date ? ' · prazo ' + formatDateOnly(item.due_date) : ''}
                       </p>
                     </div>
@@ -449,7 +449,7 @@ export default function ClinicalWorkspacePage() {
                         priorWork.data?.map((version) => (
                           <details key={version.id}>
                             <summary className="cursor-pointer text-sm">
-                              Versão {version.revision} · {new Date(version.created_at).toLocaleString('pt-BR')}
+                              Versão {version.revision} · {new Date(version.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                             </summary>
                             <pre className="whitespace-pre-wrap text-xs bg-muted p-3 mt-2 rounded">
                               {workSnapshotText(version.snapshot)}
@@ -550,7 +550,7 @@ export default function ClinicalWorkspacePage() {
                         revisions.data.map((r) => (
                           <details key={r.id}>
                             <summary className="cursor-pointer text-sm">
-                              Versão {r.revision} · {new Date(r.created_at).toLocaleString('pt-BR')}
+                              Versão {r.revision} · {new Date(r.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                             </summary>
                             <pre className="text-sm whitespace-pre-wrap p-3 bg-muted rounded mt-2">
                               {typeof r.snapshot === 'object' && r.snapshot && !Array.isArray(r.snapshot)

@@ -10,19 +10,21 @@ import { createServer } from 'vite';
 import tailwindcss from 'tailwindcss';
 import loadConfig from 'tailwindcss/loadConfig.js';
 import autoprefixer from 'autoprefixer';
-import { startClinicFixture, patientId } from './fixtures/clinic-review-api.mjs';
+import { startClinicFixture, patientId, uid } from './fixtures/clinic-review-api.mjs';
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|check-time-layout|check-mobile-navigation|check-calendar-header)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|check-time-layout|check-mobile-navigation|check-calendar-header)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
-const welcomeOnly = args.includes('--only=welcome-dashboard'), focusedOnly = weekOnly || welcomeOnly || chatOnly;
+const timestampOnly = args.includes('--only=short-timestamps');
+const welcomeOnly = args.includes('--only=welcome-dashboard'), focusedOnly = weekOnly || welcomeOnly || chatOnly || timestampOnly;
 assert.ok(args.filter(arg => arg.startsWith('--only=')).length <= 1, 'Only one focused audit mode is supported');
 assert.ok(!weekOnly || !args.some(arg => arg.startsWith('--check-')), 'Week caption mode runs its own checks');
 assert.ok(!welcomeOnly || !args.some(arg => arg.startsWith('--check-')), 'Welcome mode runs its own checks');
 assert.ok(!chatOnly || !args.some(arg => arg.startsWith('--check-')), 'Chat prompt mode runs its own checks');
+assert.ok(!timestampOnly || !args.some(arg => arg.startsWith('--check-')), 'Timestamp mode runs its own checks');
 const checkMobileNavigation = args.includes('--check-mobile-navigation');
 assert.ok(!timeOnly || !checkMobileNavigation, 'Mobile navigation checks require the full route audit');
 const checkCalendarHeader = args.includes('--check-calendar-header');
@@ -60,7 +62,7 @@ const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/c
 const ownHashes = await Promise.all(ownPaths.map(async path => ({ path, sha256: createHash('sha256').update(await readFile(path)).digest('hex') })));
 const apps = [], apis = [], contexts = [], errors = [], blocked = [], consoleErrors = [], screens = [], failedRequests = [], errorResponses = [];
 const cacheOwner = randomUUID();
-let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false, draftPreserved = false;
+let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false, draftPreserved = false, timestampDataPreserved = false;
 async function appFor(api) {
   process.env.VITE_SUPABASE_URL = api.origin; process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'synthetic-public-key';
   process.env.VITE_BYPASS_EMAIL = ''; process.env.VITE_BYPASS_PASSWORD = '';
@@ -145,6 +147,7 @@ async function capture(page, app, role, path, width, action, variant = '') {
     }
     return { fontSize: getComputedStyle(document.documentElement).fontSize, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, dialogOutsideViewport, dialogHorizontalOverflow: dialogElement ? dialogElement.scrollWidth - dialogElement.clientWidth : 0,
       missingButtons, missingLabels, navigationLabels, headerTitles, calendarPeriod: periodElement?.textContent.trim(), calendarPeriodClipped, shortcuts, clinicalPrompt,
+      timestampLabels: [...document.querySelectorAll('a,p,summary')].filter(element => visible(element) && /\b05\/11\/2026/.test(element.textContent)).map(element => element.textContent.trim()),
       welcomeDate: dateLine ? { text: dateLine.textContent.trim(), transform: getComputedStyle(dateLine).textTransform } : null,
       visibleAlerts: [...document.querySelectorAll('[role="alert"]')].filter(visible).map(element => element.textContent.trim()),
       timeControls: [...document.querySelectorAll('input[type="time"]')].filter(visible).map(element => { const rect = element.getBoundingClientRect(); return { id: element.id, value: element.value, width: rect.width, top: rect.top, bottom: rect.bottom }; }),
@@ -195,12 +198,39 @@ try {
   await writeFile(join(temporaryCache, 'audit-owner'), cacheOwner);
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
   if (focusedOnly) {
-    const api = await startClinicFixture(welcomeOnly ? { lastVisit: '2026-10-01' } : {}); apis.push(api); const app = await appFor(api);
+    const api = await startClinicFixture(welcomeOnly ? { lastVisit: '2026-10-01' } : timestampOnly ? { workspaceDates: true } : {}); apis.push(api); const app = await appFor(api);
     const chatPath = '/?patient=' + patientId;
-    const doctor = await scene(app, 'review', chatOnly ? chatPath : welcomeOnly ? '/' : '/agenda');
+    const doctor = await scene(app, 'review', timestampOnly ? '/trabalho' : chatOnly ? chatPath : welcomeOnly ? '/' : '/agenda');
     await doctor.waitForLoadState('networkidle');
     await doctor.clock.setFixedTime(new Date('2026-11-05T15:00:00Z'));
-    if (chatOnly) {
+    if (timestampOnly) {
+      const originalData = JSON.stringify(api.displayData);
+      await doctor.evaluate(async ({ uid, patientId }) => {
+        const { saveRescuedRecording } = await import('/src/lib/recordingRescue.ts');
+        await saveRescuedRecording({ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', userId: uid, patientId, patientName: 'Paciente Exemplo A', mimeType: 'audio/webm', blob: new Blob(['synthetic unsubmitted bytes'], { type: 'audio/webm' }), comments: [], createdAt: '2026-11-05T20:06:59Z' });
+      }, { uid, patientId });
+      const cases = [
+        { variant: 'audio-list', path: '/trabalho', dates: ['05/11/2026, 14:03'], ready: async page => { const target = page.getByRole('link', { name: /Retomar consulta/ }); await expect(target).toBeVisible(); await target.scrollIntoViewIfNeeded(); } },
+        { variant: 'work-updated', path: '/trabalho', dates: ['05/11/2026, 15:04'], ready: async page => { const target = page.getByText(/^Atualizado em/); await expect(target).toBeVisible(); await target.scrollIntoViewIfNeeded(); } },
+        { variant: 'work-versions', path: '/trabalho?patient=' + patientId, dates: ['05/11/2026, 13:02'], ready: async page => { await page.getByRole('button', { name: 'Ver versões', exact: true }).click(); const target = page.locator('summary', { hasText: 'Versão 1' }); await expect(target).toBeVisible(); await target.scrollIntoViewIfNeeded(); } },
+        { variant: 'clinical-versions', path: '/trabalho?patient=' + patientId, dates: ['05/11/2026, 16:05'], ready: async page => { const timeline = page.getByRole('button', { name: 'Linha do tempo', exact: true }); await timeline.click(); await expect(timeline).toHaveAttribute('aria-pressed', 'true'); await page.getByRole('button', { name: 'Comparar revisões', exact: true }).click(); const target = page.locator('summary', { hasText: 'Versão 1' }); await expect(target).toBeVisible(); await target.scrollIntoViewIfNeeded(); } },
+        { variant: 'rescued-recording', path: chatPath, dates: ['05/11/2026, 17:06'], ready: async page => { const target = page.getByRole('status').filter({ hasText: 'Uma gravação desta consulta foi interrompida' }); await expect(target).toBeVisible(); await target.scrollIntoViewIfNeeded(); } },
+      ];
+      for (const width of [320, 375, 1280]) for (const entry of cases) {
+        await capture(doctor, app, 'clinical', entry.path, width, entry.ready, entry.variant);
+        const labels = screens.at(-1).timestampLabels;
+        for (const date of entry.dates) assert.ok(labels.some(label => label.includes(date)), 'Expected short timestamp: ' + date);
+        assert.ok(labels.every(label => !/\d{2}:\d{2}:\d{2}/.test(label)), 'Timestamp must omit seconds');
+      }
+      assert.equal(JSON.stringify(api.displayData), originalData, 'Display changed fixture data');
+      const rescuedDates = await doctor.evaluate(async uid => {
+        const { listRescuedRecordings } = await import('/src/lib/recordingRescue.ts');
+        return (await listRescuedRecordings(uid)).map(entry => ({ id: entry.id, createdAt: entry.createdAt }));
+      }, uid);
+      assert.deepEqual(rescuedDates, [{ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', createdAt: '2026-11-05T20:06:59Z' }], 'Display must retain the rescued recording and its original timestamp');
+      assert.ok(Object.values(api.metrics).every(value => value === 0), 'Display must not invoke AI or write data');
+      timestampDataPreserved = true;
+    } else if (chatOnly) {
       for (const width of [320, 375, 1280]) for (const mode of ['question', 'comment']) {
         const label = mode === 'question' ? 'Pergunta ao assistente clínico' : 'Comentário clínico para este paciente';
         await capture(doctor, app, 'clinical', chatPath, width, async page => {
@@ -329,7 +359,7 @@ try {
   }, 'block-time-dialog');
   }
   for (const source of [...ownHashes, ...overlayHashes]) assert.equal(createHash('sha256').update(await readFile(source.path)).digest('hex'), source.sha256, 'Audit source changed during run');
-  const requiredSources = chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
+  const requiredSources = timestampOnly ? ['src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/lib/recordingRescue.ts'] : chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
   for (const path of ['src/App.tsx', 'src/pages/Auth.tsx', ...overlays, ...requiredSources]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
   if (checkMobileNavigation || welcomeOnly) assert.equal(navigationKeyboardVerified, true, 'Keyboard navigation did not complete');
 } catch (error) {
@@ -348,7 +378,7 @@ try {
   }
   cleanupVerified = true;
 }
-const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, chatOnly, draftPreserved, welcomeMetrics: welcomeOnly || chatOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
+const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, chatOnly, timestampOnly, timestampDataPreserved, timestampMetrics: timestampOnly ? { ...apis[0]?.metrics } : null, draftPreserved, welcomeMetrics: welcomeOnly || chatOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
   frozenLoads: [...frozenLoads].sort(), screens, errors, consoleErrors, failedRequests, errorResponses, blockedExternalRequests: blocked, cleanupVerified };
 await writeFile(resolve(folder, 'AUDIT.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify({ baseline, screens: screens.length, errors: errors.length, consoleErrors: consoleErrors.length,

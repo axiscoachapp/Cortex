@@ -1,0 +1,202 @@
+{
+  "completed": false,
+  "failure": {
+    "name": "AssertionError",
+    "message": "Timestamp must omit seconds"
+  },
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": true,
+  "timestampDataPreserved": false,
+  "timestampMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "workspaceWrites": 0
+  },
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": "2026-11-05T15:00:00Z",
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "2fff1caf59a3adc193672b5c5280ecbeb13f32e3",
+  "overlays": [],
+  "frozenTextSourceCount": 291,
+  "frozenTextSourceDigest": "a72354c2284781520a6df4eb430500abcc01a5936e079bb4e2abba4fb20225bf",
+  "tailwindRawContentCount": 289,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "27a35cf6a168bd30a0d2ba4dac5410bfa814bbcf3353025903f9008a446e8dca"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "a5c1cf33d98326563962b8afa73f23ae6dff53eb221769e9a695b6958d0f37d1"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/ClinicalMarkdown.tsx",
+    "src/components/ClinicalWorkEditor.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/clinicalWorkspace.ts",
+    "src/lib/dates.ts",
+    "src/lib/mfa.ts",
+    "src/lib/recordingRescue.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/ClinicalWorkspace.tsx"
+  ],
+  "screens": [
+    {
+      "role": "clinical",
+      "path": "/trabalho",
+      "variant": "audio-list",
+      "actualPath": "/trabalho",
+      "width": 320,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 9.578125,
+          "right": 46.015625,
+          "targetLeft": 5.390625,
+          "targetRight": 50.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 55.59375,
+          "right": 121.4375,
+          "targetLeft": 55.59375,
+          "targetRight": 121.4375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 126.828125,
+          "right": 180.09375,
+          "targetLeft": 126.828125,
+          "targetRight": 180.09375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 185.484375,
+          "right": 264.40625,
+          "targetLeft": 185.484375,
+          "targetRight": 264.40625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 276.65625,
+          "right": 307.734375,
+          "targetLeft": 269.796875,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "timestampLabels": [
+        "Retomar consulta · Paciente Exemplo A · Nova tentativa necessária · 05/11/2026, 14:03:27",
+        "Atualizado em 05/11/2026, 15:04:38"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Trabalho pendente",
+        "Abrir paciente privado",
+        "Áudios e revisões recuperáveis",
+        "Registro sintético de horários"
+      ],
+      "screenshot": "clinical--trabalho-audio-list-320.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "errorResponses": [],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

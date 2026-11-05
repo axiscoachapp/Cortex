@@ -1,0 +1,90 @@
+{
+  "passed": true,
+  "scope": "Five timestamp display sites only; not full visual approval",
+  "syntheticOnly": true,
+  "baseline": "2fff1caf59a3adc193672b5c5280ecbeb13f32e3",
+  "browserStates": 15,
+  "widths": [
+    320,
+    375,
+    1280
+  ],
+  "timezone": "America/Sao_Paulo",
+  "expectedLabels": {
+    "audio-list": "05/11/2026, 14:03",
+    "work-updated": "05/11/2026, 15:04",
+    "work-versions": "05/11/2026, 13:02",
+    "clinical-versions": "05/11/2026, 16:05",
+    "rescued-recording": "05/11/2026, 17:06"
+  },
+  "dataPreserved": true,
+  "rescuedRecordingRetained": true,
+  "metrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "workspaceWrites": 0
+  },
+  "regression": {
+    "mode": "welcome-dashboard",
+    "states": 9,
+    "keyboard": true,
+    "defaultMetricShapePreserved": true
+  },
+  "unit": {
+    "files": 1,
+    "tests": 8,
+    "exitCode": 0
+  },
+  "checks": {
+    "appTypes": true,
+    "applicationLint": true,
+    "runnerAndFixtureLint": true,
+    "nodeSyntax": true,
+    "hashes": true,
+    "cleanup": true
+  },
+  "review": {
+    "actionableFinding": "Unconditional new metric broke existing welcome deepEqual contract",
+    "fixed": "workspaceWrites exists only with workspaceDates option",
+    "finalDelta": "Separate five cases and scroll targets before screenshots; no remaining defect",
+    "external": "Declined by user"
+  },
+  "network": {
+    "acceptedOnly": {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    "counts": {
+      "red": 0,
+      "green": 3,
+      "regression": 10
+    },
+    "causeInferred": false,
+    "otherFailures": 0
+  },
+  "overlays": [
+    {
+      "path": "src/pages/ClinicalWorkspace.tsx",
+      "sha256": "46ed9fada3396c387e202c3b8ca0f610439afb96d4fcbf7a3f84b8bcde005ed0"
+    },
+    {
+      "path": "src/components/ChatPanel.tsx",
+      "sha256": "5701041233ea9d8aeb0bef46eb123273420b7d0953b65868c026345450b9fef9"
+    }
+  ],
+  "openFinding": {
+    "task": "T39/2h",
+    "description": "Populated ClinicalWorkspace timeline clips horizontally at320px; document-level overflow scan misses contained clipping",
+    "visualApproval": false
+  },
+  "limits": [
+    "No audio capture, processing or discard",
+    "Synthetic browser fixture does not approve backend or pilot"
+  ]
+}
