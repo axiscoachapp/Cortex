@@ -53,6 +53,7 @@ export function installClinicSchema({sql,inputs,red}){
  sql(inputs.identity);sql(inputs.intent);sql(inputs.membership);
  if(!red)sql(inputs.composed);
  if(inputs.ledger)sql(inputs.ledger);
+ if(inputs.birthProducer)sql(inputs.birthProducer);
  assert.equal(columns(),beforeColumns,'Native Auth core columns/owners/table or column ACL/RLS flags changed');assert.equal(functions(),beforeFunctions,'Native identity helper definition or owner changed');
  assert.equal(enums(),beforeEnums,'Native Auth enum definition/owner/ACL changed');
  assert.equal(sql(clientReadsQuery),'t','Native Auth table or column became readable by a client role');
@@ -69,12 +70,12 @@ export function installClinicSchema({sql,inputs,red}){
  assert.match(control,/^\d+$/,'Column grant did not permit the expected synthetic count');
  assert.equal(columns(),beforeColumns,'Column ACL control did not roll back');assert.equal(sql(clientReadsQuery),'t');
  return {sourceBaseline:inputs.baseline,migrations:inputs.migrations.length,nativeCoreColumnsOwnersAndTableAclUnchanged:true,nativeIdentityHelpersUnchanged:true,
-  nativeTablesUnavailableToClientRoles:true,nativeColumnAclUnchanged:true,nativeColumnAclControlPassed:true,nativeEnumsOwnersAndAclUnchanged:true,nativeTableRlsFlagsUnchanged:true,ledgerBindingsInstalled:!!inputs.ledger,
+  nativeTablesUnavailableToClientRoles:true,nativeColumnAclUnchanged:true,nativeColumnAclControlPassed:true,nativeEnumsOwnersAndAclUnchanged:true,nativeTableRlsFlagsUnchanged:true,ledgerBindingsInstalled:!!inputs.ledger,birthProducerInstalled:!!inputs.birthProducer,
   ...(inputs.sessionFixture?{fixtureProjectionVerified:true,fixtureProjection:projection,bootstrapOverlaySha256:createHash('sha256').update(inputs.bootstrap).digest('hex')}:{}),
   sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
 }
 
-export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,asyncHttp,pause,holderSession,restartAuth}){
+export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,birthProducer,birthProducerRed,asyncHttp,pause,holderSession,restartAuth}){
  const password=randomBytes(24).toString('hex');syntheticSecrets.push(password);
  const created=await call(auth,'/admin/users',adminJwt,{email:'clinic-authority@example.invalid',password,email_confirm:true});assert.equal(created.status,200);
  const login=await call(auth,'/token?grant_type=password',adminJwt,{email:'clinic-authority@example.invalid',password});assert.equal(login.status,200);
@@ -128,6 +129,57 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
  const positive=fixture(),initial=begin(positive,ctx);assert.equal(initial.membership_generation,generation());await birth(positive);
  assert.equal(JSON.parse(trusted(query(positive,ctx))).phase,'confirmed');assert.equal(begin(positive,ctx).expires_at,initial.expires_at);
  checks.push('Native birth receipt and original real membership generation confirm; exact replay keeps identity and deadline');
+ if(birthProducer){
+  // An existing Native identity was not born in the later reservation's XID.
+  const preexisting=fixture();
+  assert.equal((await call(auth,'/admin/users',adminJwt,{id:preexisting.id,email:preexisting.email,email_confirm:true,app_metadata:{account_type:'reception'}})).status,200);
+  sql(`insert into provision_identity_lab.operations(operation_id,planned_user_id) values('${preexisting.op}','${preexisting.id}');`);
+  assert.equal((await call(auth,'/admin/users/'+preexisting.id,adminJwt,{app_metadata:{cortex_provision_operation:preexisting.op,cortex_provision_revision:1}},'PUT')).status,200);
+  assert.equal(sql(`select provision_identity_lab.has_birth_receipt('${preexisting.op}')`),'f');
+  const forge=`update provision_identity_lab.operations set phase='inserting',birth_transaction=pg_current_xact_id() where operation_id='${preexisting.op}';update provision_identity_lab.operations set phase='auth_created' where operation_id='${preexisting.op}';`;
+  if(birthProducerRed){
+   const accepted=sql(`begin;${forge}select provision_identity_lab.has_birth_receipt('${preexisting.op}');rollback;`);
+   assert.equal(accepted,'t','Producer RED did not reproduce a forged Native receipt');
+   return {...report,checks,nativeIdentityPredatedReservation:true,nativeMetadataUpdateStatus:200,receiptBeforeForge:false,forgedReceiptAccepted:true,birthProducerProofPassed:false,compositionProofPassed:false};
+  }
+  const tempService="grant usage on schema provision_identity_lab to service_role;grant select,update on provision_identity_lab.operations to service_role;set local role service_role;";
+  const deny=(statement,code='P4105',prefix='')=>sql(`begin;${prefix}do $$ begin begin ${statement.trim().replace(/;$/,'')};raise exception 'Expected birth producer refusal';exception when sqlstate '${code}' then null;end;end $$;rollback;`);
+  for(const prefix of ['',tempService]){
+   deny(forge,'P4105',prefix);
+   deny(`update provision_identity_lab.operations set phase='inserting' where operation_id='${positive.op}'`,'P4105',prefix);
+   sql(`begin;${prefix}update provision_identity_lab.operations set phase=phase,birth_transaction=birth_transaction where operation_id='${preexisting.op}';rollback;`);
+  }
+  assert.equal(sql(`select phase='prepared' and birth_transaction is null from provision_identity_lab.operations where operation_id='${preexisting.op}'`),'t');
+  assert.equal(sql(`select provision_identity_lab.has_birth_receipt('${preexisting.op}')`),'f');
+  checks.push('Owner and temporarily granted service DML cannot forge birth phases/XID for a preexisting Native identity; no-op survives');
+
+  const failed=fixture();begin(failed,ctx);
+  const mismatched=await call(auth,'/admin/users',adminJwt,{id:failed.id,email:failed.email,email_confirm:true,app_metadata:{account_type:'reception',cortex_provision_operation:failed.op,cortex_provision_revision:2}});
+  assert.equal(mismatched.status,500);
+  assert.equal(sql(`select count(*) from auth.users where id='${failed.id}'`),'0');
+  assert.equal(sql(`select phase='prepared' and birth_transaction is null from provision_identity_lab.operations where operation_id='${failed.op}'`),'t');
+  await birth(failed);assert.equal(JSON.parse(trusted(query(failed,ctx))).phase,'confirmed');
+  const unreserved=fixture();
+  assert.equal((await call(auth,'/admin/users',adminJwt,{id:unreserved.id,email:unreserved.email,email_confirm:true,app_metadata:{account_type:'reception',cortex_provision_operation:unreserved.op,cortex_provision_revision:1}})).status,500);
+  assert.equal(sql(`select count(*) from auth.users where id='${unreserved.id}'`),'0');
+  checks.push('Native deferred metadata mismatch/unreserved marker roll back Auth user and captured transition; legitimate retry still confirms');
+
+  assert.equal(sql("select not rolcanlogin and not rolinherit and not rolsuper and not rolcreatedb and not rolcreaterole and not rolreplication and not rolbypassrls from pg_roles where rolname='provision_birth_writer_lab'"),'t');
+  assert.equal(sql("select count(*) from pg_auth_members where roleid='provision_birth_writer_lab'::regrole or member='provision_birth_writer_lab'::regrole"),'0');
+  assert.equal(sql("select count(*) from pg_namespace where has_schema_privilege('provision_birth_writer_lab',oid,'create')"),'0');
+  assert.equal(sql("select has_any_column_privilege('provision_birth_writer_lab','auth.users','select,insert,update,references') or has_table_privilege('provision_birth_writer_lab','auth.users','delete,truncate,trigger') or has_table_privilege('provision_birth_writer_lab','provision_identity_lab.operations','insert,delete,truncate,trigger')"),'f');
+  for(const column of ['operation_id','planned_user_id','revision'])assert.equal(sql(`select has_column_privilege('provision_birth_writer_lab','provision_identity_lab.operations','${column}','update')`),'f');
+  for(const role of ['anon','authenticated','service_role'])assert.equal(sql(`select has_function_privilege('${role}','provision_identity_lab.read_birth_metadata(uuid)','execute') or pg_has_role('${role}','provision_birth_writer_lab','member')`),'f');
+  assert.equal(sql(`select count(*) from provision_identity_lab.read_birth_metadata('${unreserved.id}')`),'0');
+  deny(`update provision_identity_lab.operations set phase='auth_created',birth_transaction=pg_current_xact_id() where operation_id='${preexisting.op}'`,'P4106','set local role provision_birth_writer_lab;');
+  checks.push('Private producer has no login/membership/DDL/Auth-table access; missing reader row stays absent and skipping a phase is refused');
+
+  deny(forge,'P4105',"set local session_replication_role='replica';set local request.jwt.claim.role='provision_birth_writer_lab';");
+  assert.equal(sql(`begin;alter table provision_identity_lab.operations disable trigger operation_native_producer;${forge}select provision_identity_lab.has_birth_receipt('${preexisting.op}');rollback;`),'t');
+  assert.equal(sql("select tgenabled='A' from pg_trigger where tgrelid='provision_identity_lab.operations'::regclass and tgname='operation_native_producer'"),'t');
+  deny(forge);assert.equal(sql(`select provision_identity_lab.has_birth_receipt('${preexisting.op}')`),'f');
+  checks.push('ALWAYS producer guard rejects replica/GUC spoofing; disabling only that guard exposes the forgery and rollback restores refusal');
+ }
  if(ledger){
   const intentWhere=`operation_id='${positive.op}'`,opWhere=intentWhere;
   const temporaryWriter="grant usage on schema provision_identity_lab,provision_intent_lab to service_role;grant select,insert,update,delete,truncate on provision_identity_lab.operations,provision_intent_lab.intents to service_role;set local role service_role;";
@@ -274,6 +326,6 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
  for(const table of ['clinic_members','clinic_staff_members','patients','consultations'])assert.equal(sql(`select count(*) from public.${table} where user_id in (select planned_user_id from provision_intent_lab.intents)`),'0');
  assert.equal(sql('select count(*) from public.staff_doctor_scopes'),'0');
  checks.push('Private composition stays absent from Data API and creates no target clinic/staff/chart memberships or scopes');
- assert.equal(checks.length,19+(ledger?4:0));
- return {...report,checks,compositionProofPassed:true,...(ledger?{ledgerBindingsProofPassed:true}:{}),notCovered:['authority of privileged INSERT/phase writers and UUID reservation races','production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
+ assert.equal(checks.length,19+(ledger?4:0)+(birthProducer?4:0));
+ return {...report,checks,compositionProofPassed:true,...(ledger?{ledgerBindingsProofPassed:true}:{}),...(birthProducer?{birthProducerProofPassed:true}:{}),notCovered:['authority of reservation/intent INSERT and human confirmation writers; UUID reservation races','production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
 }
