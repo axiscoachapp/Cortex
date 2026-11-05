@@ -10,6 +10,8 @@ O médico mantém acesso à própria agenda sem clínica definida. Isso não é 
 
 `reception_appointments` mantém seu DTO e limites: exclui compromissos sem clínica para terceiros, inclusive da consulta agregada e do limite de itens. Não projeta esses registros como blocos, nem revela paciente, ID, título, notas ou horários. Não altera a projeção dos bloqueios explicitamente cadastrados na clínica. Paciente/contactId de um compromisso autorizado não autoriza mostrar outros compromissos.
 
+T32/1c acrescenta a leitura de intervalo inválido pelo início finito realmente cadastrado dentro de `[p_start,p_end)`, com status conhecido. O ramo anterior de sobreposição permanece; origem, médico e escopo continuam externos ao OR. Não há busca irrestrita ou atribuição de data/origem. Mesmos limites42dias/1000itens e recusa de excesso. [Contrato/provas](../../reviews/2026-11-05/calendar-window/IMPLEMENTATION.md), incluindo bordas,1000/1001 e negativos de outra clínica/médico/origem. StatusNULL não entra pelo novo fallback; a projeção histórica deNULL no ramo anterior não é alterada.
+
 `reception_change_appointment` aplica a mesma fronteira antes e depois de adquirir a linha. ID inexistente, outra clínica e origem não atribuída para terceiros recebem a mesma recusa `42501 / Agendamento indisponível`, inclusive para confirmar, chegada, desfazer chegada, cancelar e remarcar. Não muda revisão, lembrete, vínculo, autoria ou auditoria em recusa. Mantém MFA, escopo ativo, CAS e ordem de locks já corrigidos em T29. Assinaturas e acesso de `authenticated` preservados; execução por `anon`/`service_role` explicitamente negada.
 
 ## Disponibilidade e histórico

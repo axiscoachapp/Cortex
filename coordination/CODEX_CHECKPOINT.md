@@ -1,5 +1,13 @@
 # Checkpoint do Codex
 
+Atualizado em05/11/2026 16:49. **T32/1c entregue localmente:** [provas](../docs/reviews/2026-11-05/calendar-window/IMPLEMENTATION.md). Migration05260000/reserva16:35; OR estreito por início finito real em[p_start,p_end), status conhecido e fim inválido, mantendo sobreposição anterior. Origem/médico/escopo são AND externo; DTO/ACL/STABLE/SECDEF/search_path/blocos/42dias/1000itens intactos. Não atribui data/origem nem busca todo legado. NULL só é excluído do novo fallback, COALESCE anterior preservado.
+
+RED75/P0004 e GREEN76migrations/dezSQL/88fontes,1000itens aceitos/1001recusado, borda1us/janelas adjacentes, outra clínica/médico não delegado/origemNULL só dono/sem campos clínicos, lint/sintaxe/hash/cleanup aprovados. Matriz com setup/densidade5879ms, não benchmark de consulta. Revisão independente ajustou contagem intermediária1006 para fronteira exata e validou hash final; sem novo achado. Fixtures de não-admin e UUID corrigidas sem ampliar privilégios. Sem assinatura/tipos/frontend/build/UI/SQLglobal/duasconexões/HTTP/Native/D17 novos. T32 inteira/M2/corte/piloto abertos.
+
+**Próxima candidata:** localizar achado originalT32/L10 de leitura limitada por médicos autorizados; conferir contratos/limites já entregues e dependências antes de escolher novo recorte. Não inventar problema ou ampliar leitura sem prova. Ler Git/coordenação primeiro;1340/1348 atendidas1344/1354,4ff89be sóstatus, não repetir. PersonalMed/pm-v2/D6A/D7A com Claude, sem schema/carregador/carga por inferência; SaaS/trêshelpersT33 intactos. R2/D17/DER/Native encerrados. Commit local main/axiscoachapp, sem push/hosted/envio/chamada paga.
+
+---
+
 Atualizado em05/11/2026 16:29. **T32/1b entregue localmente:** [provas](../docs/reviews/2026-11-05/legacy-interval-ui/IMPLEMENTATION.md). ReceptionCalendar não quebra com início não finito e não infere dia; cartão extraído/seção sem data/aviso, cancela por confirmação humana com ID/revisão originais, sem datas substitutas. Invalidos sem confirmar/chegada/remarcar; válidos mantêm modal/ações e fechados preservam histórico. Só itens já devolvidos pela API da janela atual.
 
 REDRangeError e1microssegundo, GREEN25testes/3arquivos (9agenda+12tempo+4contratos), seis checksEdgeisolado375/768/1280/1920px com fusoAsiaTokyo/SãoPaulo, novefontes/hash/zero pageerror/cleanup, lint7/sintaxe/typecheckappNode/build sintético aprovados. Revisão identificou perda de microssegundos por Date.parse, corrigida com BigInt/testeRED; última leitura sem novo achado. Capturas135% inspecionadas; copy neutra Horário cadastrado inválido, sem inferir origem. Sem API/DTO/DDL/grants/SQL/Native/D17 novo; base906bade/75migrations/noveSQL preservada. T32 inteira/M2/corte/piloto abertos.

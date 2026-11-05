@@ -1,6 +1,8 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-05 16:29 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-05 16:49 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+
+**T32/1c entregue no banco local:** [provas](../docs/reviews/2026-11-05/calendar-window/IMPLEMENTATION.md). Migration05260000/reserva16:35; leitura de zero/invertido pelo início finito real dentro de[p_start,p_end), status conhecido. Sobreposição antiga/DTO/ACL/STABLE/blocos/42dias/1000itens preservados; origem/médico/escopo externos ao OR. RED75/P0004, GREEN76migrations/dezSQL/88fontes, fronteira exata1000/1001/negativos de clínica/delegação/origem, lint/sintaxe/hash/cleanup aprovados. Revisão corrigiu contagem1006 da fixture para1000aceito/1001recusado; última leitura sem novo achado. Sem frontend/tipos/HTTP/Native/D17 novo. Próximo localizar achadoT32/L10 original e contratos existentes antes de escolher recorte; T32/M2/corte/piloto abertos. Nenhuma mensagem nova1340/1348 já respondidas1344/1354. Claude/PersonalMed/SaaS/trêshelpers intactos, sem hosted/push/carga.
 
 **T32/1b entregue na interface local:** [provas](../docs/reviews/2026-11-05/legacy-interval-ui/IMPLEMENTATION.md). Início inválido não derruba lista nem herda data; seção própria/aviso, cancelamento humano mesmo ID/revisão/sem datas novas, demais ações bloqueadas. Válidos/fechados preservados; precisão PostgreSQL em microssegundos. REDRangeError/precisão, GREEN25testes/3arquivos, seis checksEdgeisolado375–1920px/fusoTokyo→SãoPaulo, novefontes/hash/cleanup, lint/tipos/build aprovados; revisão final sem novo achado. Sem API/DDL/grants/SQL/Native/D17 novo: só itens atuais autorizados pelo RPC, nenhuma busca completa do legado. Próxima candidataT32/1c verificar bordas SQL zero/invertido antes de ampliar leitura/reservar migration. T32/M2/corte/piloto abertos. Nenhuma mensagem nova1340/1348 já respondidas1344/1354; Claude/PersonalMed/SaaS/trêshelpers intactos, sem hosted/push/carga.
 
@@ -60,6 +62,7 @@ Atualizado em 2026-11-05 16:29 por Codex. Cada agente atualiza as linhas que lhe
 
 | Número | Assunto | Dono | Situação |
 |---|---|---|---|
+| `20261105260000` | T32/1c: leitura limitada de intervalos zero/invertidos nas bordas da janela | Codex | Reserva16:35 prévia preservada; implementada/verificada:RED75/P0004, GREEN76migrations/dezSQL/88fontes/1000→1001/negativos, lint/sintaxe/hash/cleanup. Mesmo DTO/limites/origem/escopos; sem frontend/tipos/hosted/importação ou domínioClaude |
 | `20261105250000` | T32/L6: cancelar reserva legada com intervalo inválido sem alterar sua identidade/intervalo | Codex | Reserva15:53 prévia preservada; implementada/verificada:RED74/22023, controlemetadadosP0004, GREEN75migrations/noveSQL, lint/sintaxe/hash/cleanup. Sem frontend/API/tipos/Native/hosted/carga/importação/campos legais ou domínioClaude |
 | `20261105240000` | T05b/4a: estado auditado do vínculo e guardas de confirmação/reserva | Codex | Reserva14:22 preservada; implementada/verificada:74migrations/19SQL/14cenários-controles,28testes/4arquivos, tipos12linhas/lint/build/hash/cleanup. Sem UI de estado, carga, campos legais ou domínioClaude |
 | `20261105230000` | T05b/3c: leitura administrativa paginada dos vínculos por contato | Codex | Reserva prévia13:37 preservada. Implementada/verificada:73migrations/12SQL, oito checks concorrentes,21testes/3arquivos, tipos9linhas/lint/build/hash/cleanup; sem estados/escritores/importação ou domínioClaude |
