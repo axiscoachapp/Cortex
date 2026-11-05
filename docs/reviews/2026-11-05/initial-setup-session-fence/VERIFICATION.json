@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "checks": [
+    "v2.197.0: six native groups, five source hashes and cleanup verified",
+    "v2.189.0: six native groups, five source hashes and cleanup verified",
+    "CLI rejects setup-fence with --setup-cas before Docker",
+    "CLI rejects setup-fence with --setup-verify before Docker",
+    "CLI rejects setup-fence with --check-cleanup before Docker",
+    "Node syntax: scripts/test-initial-password-auth.mjs",
+    "Node syntax: scripts/test-initial-setup-session-fence.mjs",
+    "Historical reports and base prototypes unchanged"
+  ]
+}

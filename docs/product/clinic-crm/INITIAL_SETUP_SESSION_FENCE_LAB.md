@@ -1,0 +1,14 @@
+# T31/3b/2c/3a — vínculo de sessão composto com a senha reservada
+
+Contrato de laboratório, 05/11/2026. Nenhum protocolo de produção escolhido; sem endpoint, migration ou liberação no aplicativo. O escopo é o cohort sintético explicitamente registrado no ledger de `initial-setup-cas.sql`.
+
+- A transição nativa reservada applying→password_set cria uma geração privada nova, na mesma transação. Não observar diferença de hash como liberação. O ledger anterior continua comprovando operação/revisão/XID e impedindo replay de escrita.
+- Hook nativo vincula sessão existente do mesmo usuário à geração e finalidade. Somente uma autenticação password com os marcadores da reserva confirmada pode criar vínculo password. OTP/recovery produzem repair. Refresh reutiliza vínculo; não o promove. Metadata editável não define propósito/geração.
+- Hook e conclusão privada adquirem o usuário antes do ledger, sem espera, para serializar com o escritor nativo. Sessão revogada/vencida e geração antiga não são admitidas. Bindings cascades acompanham sessões removidas.
+- Conclusão é função privada do servidor, sem EXECUTE para anon/authenticated/service_role. Recebe IDs de contexto autenticado verificado pelo servidor futuro; o laboratório chama como dono, sem alegar essa fronteira HTTP implementada. Revalida sessão viva, vínculo password, operação/revisão/geração e CAS; retry após confirmação não repete a mutação. Sem políticas novas para contas existentes/reset.
+- Só depois da conclusão, o leitor da fixture aceita sessão password viva da geração autorizada, com claim de geração correspondente. Repair e seu refresh permanecem sem acesso. A conclusão deste recorte recusa contas com fator MFA verificado: admissão MFA legítima e fronteira de contexto exigem prova própria, não uma inferência do AAL atual da sessão.
+- Sucesso da escrita password_set sozinho permanece fechado. Não criar cadastro/prontuário ou conceder agenda por este ensaio. Prontuários clínicos e compartilhamentos do aplicativo não participam.
+
+Aceite: Auth197/189 reais e locais; recuperação inicial, reserva e password Admin nativo com mudança de geração; login pessoal e OTP posterior; refresh mantendo finalidade; tentativa de metadata editável; conclusão por repair recusada e por password válida/CAS/idempotência; ACL privada; controle negativo retirando somente a condição de propósito do leitor dentro do DB descartável e restauração obrigatória. Snapshots/hashes/cleanup sem segredos.
+
+Limites explícitos: verify/recovery em andamento composto com CAS/hook, PKCE, MFA, manutenção criptográfica, reset/contas existentes, SQL de produção, Edge/RLS/storage/frontend e homologação permanecem pendentes. A prova anterior de sessão tardia refuta o gate simples; não basta para aprovar este candidato. Antes de integrar, ensaiar também sessões concorrentes e as guardas de contexto verificadas existentes.

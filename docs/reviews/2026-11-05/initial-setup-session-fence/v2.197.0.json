@@ -1,0 +1,53 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.197.0",
+  "checks": [
+    "native initial OTP and refresh remain repair; editable metadata cannot grant access",
+    "reserved native password commit advances private generation once, revokes sessions/bindings and keeps data closed",
+    "new personal login and post-password OTP bind to the same generation with distinct immutable purposes, still pending completion",
+    "private completion requires live password binding, operation and CAS; retry does not mutate; repair/client roles cannot conclude",
+    "DB-only purpose-removal control admits current repair and refresh; exact predicate restoration denies both again",
+    "native local logout denies old unexpired JWT/refresh; new password login works; owned expiry fixture closes read and completion"
+  ],
+  "privateCompletionOnly": true,
+  "productionIntegration": false,
+  "purposeRemovalControlReadRows": 1,
+  "restoredRepairReadRows": 0,
+  "notCovered": [
+    "in-flight verify/PKCE composition",
+    "MFA completion admission and upgrades",
+    "verified HTTP/Edge context boundary",
+    "two-connection completion races",
+    "crypto maintenance and existing/reset accounts",
+    "app integration and hosted configuration"
+  ],
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "cb15d651b0c26b7cc4d93d56a952db82bf9055aad4bdef151166614930bf168b"
+    },
+    {
+      "path": "scripts/test-initial-setup-session-fence.mjs",
+      "sha256": "5a2a8c62c6287f976fc338ddee13d2f1934c849e11f90e9bc34977b50f0be330"
+    },
+    {
+      "path": "supabase/tests/prototypes/initial-password-auth.sql",
+      "sha256": "6e43c2859c484901b927a85421bfde7e61b97f896b294d4f4f76b5618548012f"
+    },
+    {
+      "path": "supabase/tests/prototypes/initial-setup-cas.sql",
+      "sha256": "8ac8010c28cef05279068269cb7fe58c7ceb03ec2ecbb159659d3ce2c021c36c"
+    },
+    {
+      "path": "supabase/tests/prototypes/initial-setup-session-fence.sql",
+      "sha256": "9b6e9d50d6295f4f8f00452c6eff96095fc4e062add42e129d81a3779dd62c4f"
+    }
+  ],
+  "postgresImage": "pgvector/pgvector:pg16",
+  "restImage": "public.ecr.aws/supabase/postgrest:v16.5",
+  "authImage": "public.ecr.aws/supabase/gotrue:v2.197.0",
+  "cleanupVerified": true,
+  "localDockerEndpoint": "verified local named pipe",
+  "network": "owned internal network, no published ports or external route"
+}
