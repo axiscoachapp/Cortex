@@ -1,0 +1,641 @@
+{
+  "measurementOnly": true,
+  "before": {
+    "samples": [
+      {
+        "executionMs": 804.275,
+        "scopeCalls": 1023
+      },
+      {
+        "executionMs": 880.827,
+        "scopeCalls": 1023
+      },
+      {
+        "executionMs": 1161.547,
+        "scopeCalls": 1023
+      }
+    ],
+    "scans": [
+      {
+        "type": "Bitmap Heap Scan",
+        "actualRows": 21,
+        "rowsRemoved": 5002,
+        "sharedHitBlocks": 11954,
+        "sharedReadBlocks": 0
+      }
+    ],
+    "innerPlan": [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 452.74,
+          "Total Cost": 452.74,
+          "Plan Rows": 1,
+          "Plan Width": 209,
+          "Actual Startup Time": 787.078,
+          "Actual Total Time": 787.084,
+          "Actual Rows": 21,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 12002,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "Plans": [
+            {
+              "Node Type": "Sort",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 452.74,
+              "Total Cost": 452.74,
+              "Plan Rows": 1,
+              "Plan Width": 209,
+              "Actual Startup Time": 787.077,
+              "Actual Total Time": 787.08,
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Sort Key": [
+                "a.start_time",
+                "a.id"
+              ],
+              "Sort Method": "quicksort",
+              "Sort Space Used": 30,
+              "Sort Space Type": "Memory",
+              "Shared Hit Blocks": 12002,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "Nested Loop",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Join Type": "Left",
+                  "Startup Cost": 165.17,
+                  "Total Cost": 452.73,
+                  "Plan Rows": 1,
+                  "Plan Width": 209,
+                  "Actual Startup Time": 4.316,
+                  "Actual Total Time": 786.99,
+                  "Actual Rows": 21,
+                  "Actual Loops": 1,
+                  "Inner Unique": true,
+                  "Shared Hit Blocks": 11996,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0,
+                  "Plans": [
+                    {
+                      "Node Type": "Bitmap Heap Scan",
+                      "Parent Relationship": "Outer",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Relation Name": "appointments",
+                      "Alias": "a",
+                      "Startup Cost": 165.03,
+                      "Total Cost": 444.55,
+                      "Plan Rows": 1,
+                      "Plan Width": 129,
+                      "Actual Startup Time": 4.297,
+                      "Actual Total Time": 786.839,
+                      "Actual Rows": 21,
+                      "Actual Loops": 1,
+                      "Recheck Cond": "(((start_time < $3) AND (end_time > $2)) OR ((start_time >= $2) AND (start_time < $3)))",
+                      "Rows Removed by Index Recheck": 0,
+                      "Filter": "((($4 IS NULL) OR (user_id = $4)) AND ((end_time > $2) OR (isfinite(start_time) AND (start_time >= $2) AND (status IS NOT NULL) AND ((NOT isfinite(end_time)) OR (end_time <= start_time)))) AND ((clinic_id = $1) OR ((clinic_id IS NULL) AND (user_id = (NULLIF(current_setting('request.jwt.claim.sub'::text, true), ''::text))::uuid))) AND reception_scope_ok($1, user_id))",
+                      "Rows Removed by Filter": 5002,
+                      "Exact Heap Blocks": 109,
+                      "Lossy Heap Blocks": 0,
+                      "Shared Hit Blocks": 11954,
+                      "Shared Read Blocks": 0,
+                      "Shared Dirtied Blocks": 0,
+                      "Shared Written Blocks": 0,
+                      "Local Hit Blocks": 0,
+                      "Local Read Blocks": 0,
+                      "Local Dirtied Blocks": 0,
+                      "Local Written Blocks": 0,
+                      "Temp Read Blocks": 0,
+                      "Temp Written Blocks": 0,
+                      "Plans": [
+                        {
+                          "Node Type": "BitmapOr",
+                          "Parent Relationship": "Outer",
+                          "Parallel Aware": false,
+                          "Async Capable": false,
+                          "Startup Cost": 165.03,
+                          "Total Cost": 165.03,
+                          "Plan Rows": 583,
+                          "Plan Width": 0,
+                          "Actual Startup Time": 0.407,
+                          "Actual Total Time": 0.408,
+                          "Actual Rows": 0,
+                          "Actual Loops": 1,
+                          "Shared Hit Blocks": 14,
+                          "Shared Read Blocks": 0,
+                          "Shared Dirtied Blocks": 0,
+                          "Shared Written Blocks": 0,
+                          "Local Hit Blocks": 0,
+                          "Local Read Blocks": 0,
+                          "Local Dirtied Blocks": 0,
+                          "Local Written Blocks": 0,
+                          "Temp Read Blocks": 0,
+                          "Temp Written Blocks": 0,
+                          "Plans": [
+                            {
+                              "Node Type": "Bitmap Index Scan",
+                              "Parent Relationship": "Member",
+                              "Parallel Aware": false,
+                              "Async Capable": false,
+                              "Index Name": "reception_appointment_period",
+                              "Startup Cost": 0,
+                              "Total Cost": 82.51,
+                              "Plan Rows": 558,
+                              "Plan Width": 0,
+                              "Actual Startup Time": 0.249,
+                              "Actual Total Time": 0.249,
+                              "Actual Rows": 5023,
+                              "Actual Loops": 1,
+                              "Index Cond": "((start_time < $3) AND (end_time > $2))",
+                              "Shared Hit Blocks": 7,
+                              "Shared Read Blocks": 0,
+                              "Shared Dirtied Blocks": 0,
+                              "Shared Written Blocks": 0,
+                              "Local Hit Blocks": 0,
+                              "Local Read Blocks": 0,
+                              "Local Dirtied Blocks": 0,
+                              "Local Written Blocks": 0,
+                              "Temp Read Blocks": 0,
+                              "Temp Written Blocks": 0
+                            },
+                            {
+                              "Node Type": "Bitmap Index Scan",
+                              "Parent Relationship": "Member",
+                              "Parallel Aware": false,
+                              "Async Capable": false,
+                              "Index Name": "reception_appointment_period",
+                              "Startup Cost": 0,
+                              "Total Cost": 82.51,
+                              "Plan Rows": 25,
+                              "Plan Width": 0,
+                              "Actual Startup Time": 0.157,
+                              "Actual Total Time": 0.157,
+                              "Actual Rows": 5023,
+                              "Actual Loops": 1,
+                              "Index Cond": "((start_time >= $2) AND (start_time < $3))",
+                              "Shared Hit Blocks": 7,
+                              "Shared Read Blocks": 0,
+                              "Shared Dirtied Blocks": 0,
+                              "Shared Written Blocks": 0,
+                              "Local Hit Blocks": 0,
+                              "Local Read Blocks": 0,
+                              "Local Dirtied Blocks": 0,
+                              "Local Written Blocks": 0,
+                              "Temp Read Blocks": 0,
+                              "Temp Written Blocks": 0
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "Node Type": "Index Scan",
+                      "Parent Relationship": "Inner",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Scan Direction": "Forward",
+                      "Index Name": "idx_patients_user",
+                      "Relation Name": "patients",
+                      "Alias": "p",
+                      "Startup Cost": 0.14,
+                      "Total Cost": 8.16,
+                      "Plan Rows": 1,
+                      "Plan Width": 64,
+                      "Actual Startup Time": 0.004,
+                      "Actual Total Time": 0.004,
+                      "Actual Rows": 1,
+                      "Actual Loops": 21,
+                      "Index Cond": "(user_id = a.user_id)",
+                      "Rows Removed by Index Recheck": 0,
+                      "Filter": "(id = a.patient_id)",
+                      "Rows Removed by Filter": 0,
+                      "Shared Hit Blocks": 42,
+                      "Shared Read Blocks": 0,
+                      "Shared Dirtied Blocks": 0,
+                      "Shared Written Blocks": 0,
+                      "Local Hit Blocks": 0,
+                      "Local Read Blocks": 0,
+                      "Local Dirtied Blocks": 0,
+                      "Local Written Blocks": 0,
+                      "Temp Read Blocks": 0,
+                      "Temp Written Blocks": 0
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "Planning": {
+          "Shared Hit Blocks": 357,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning Time": 1.399,
+        "Triggers": [],
+        "Execution Time": 787.204
+      }
+    ]
+  },
+  "syntheticOnly": true,
+  "baseline": "be5b04ed81855b355a5fbb88d8bc5875d68158d6",
+  "fixture": {
+    "appointments": 5023,
+    "permitted": 21,
+    "undelegatedSameClinic": 1001,
+    "foreignPrivate": 4000
+  },
+  "migrations": 76,
+  "sources": [
+    {
+      "path": "supabase/migrations/20251202010825_ef944f56-ea3e-477a-a69c-5aa7568cc610.sql",
+      "sha256": "0f855d7820750b90d82c5da27c4d187c551859d97d212f76407625a6398e27b3"
+    },
+    {
+      "path": "supabase/migrations/20251202010938_c18b88ee-067b-4874-acfe-fa2c70c4b8e1.sql",
+      "sha256": "941d5e7f174b1f5ec6db08557c58026bca2fedd5e45975daaa11114692d6f6b3"
+    },
+    {
+      "path": "supabase/migrations/20251202011629_a6f41da4-2fa8-4167-96b2-179e23c81df2.sql",
+      "sha256": "4cdf5908519b6635fb0dfe3fcb69e9a9a783f945b53af68747c8891f1c760afe"
+    },
+    {
+      "path": "supabase/migrations/20260516000000_calendar_consultations_patient_fields.sql",
+      "sha256": "9eed88b1e04d295940f61aed6b7a99a36cefc6a84d62f8f720c711ffa15debee"
+    },
+    {
+      "path": "supabase/migrations/20260517000000_add_performance_indexes.sql",
+      "sha256": "95f81af3b2916b2738848f3f13a90cba364a8a3452084c6ba332c4c30d3fbb12"
+    },
+    {
+      "path": "supabase/migrations/20260517000001_create_audio_recordings_bucket.sql",
+      "sha256": "04b0dbb417fbf2300714bd11c7abd63d28990b588c2b6b5fcf458aad43d6ebd5"
+    },
+    {
+      "path": "supabase/migrations/20260518000000_patient_files.sql",
+      "sha256": "4d5b467c7a4b522ad74c98c9495059123934d97b53a6896376523a3ddf53706d"
+    },
+    {
+      "path": "supabase/migrations/20260519000000_usage_quota.sql",
+      "sha256": "287e38e6730f92f3fc84f900a83418678e3c601e9c0a2f0fd56888061a9d94de"
+    },
+    {
+      "path": "supabase/migrations/20260529000000_secure_user_integrations.sql",
+      "sha256": "2e5b2ef5788039a3434d67612bc6913140494c2ceef8f788ac0cf9d2ca9eb627"
+    },
+    {
+      "path": "supabase/migrations/20260530000000_add_specialty_to_user_settings.sql",
+      "sha256": "322d20b12c4f148de9a59e90e29929fec6e6b6109956791f9575f38bf79c9a3f"
+    },
+    {
+      "path": "supabase/migrations/20260601000000_add_live_copilot_setting.sql",
+      "sha256": "73a1a6f2d8da311884eb20452410bad6665d7794e8245c97edb429213c71f012"
+    },
+    {
+      "path": "supabase/migrations/20260602000000_patient_files_ai_summary.sql",
+      "sha256": "11d649562075d1d6c4ca0bdb4c84949f3fce7a54322c1feb8dfabbdbb1cf5d23"
+    },
+    {
+      "path": "supabase/migrations/20260603000000_prescriptions.sql",
+      "sha256": "532b8866e5d6f0fccdf52ad8783a86f05825c3315a336f935408aa6526421cca"
+    },
+    {
+      "path": "supabase/migrations/20260604000000_medication_catalog.sql",
+      "sha256": "98af048fc22e237801dee5b23b0fe1f5f7f52e2c72e793fe4341327fe0320ac7"
+    },
+    {
+      "path": "supabase/migrations/20260605000000_exam_requests.sql",
+      "sha256": "56f9286e333d9a8ce6ed9868d9bbb4729f4556ac91dba7063db7b60139b9c5c6"
+    },
+    {
+      "path": "supabase/migrations/20260606000000_document_templates.sql",
+      "sha256": "319eba36a98713e455f178d5f954c3e0fe2aa3410c6322f7b95e3341d81e86b7"
+    },
+    {
+      "path": "supabase/migrations/20260607000000_knowledge_base.sql",
+      "sha256": "3ac14dc6bcfa79d931b44775a4fe10817a76523bbd6f8c88a2bbf368cb8ea48f"
+    },
+    {
+      "path": "supabase/migrations/20261028000000_security_boundaries.sql",
+      "sha256": "c6c25ed710c8005f8f2a3c666878a603e78a89cbdb370c3cae35b7918905e5b4"
+    },
+    {
+      "path": "supabase/migrations/20261028000100_clinical_durability.sql",
+      "sha256": "1cd5766e3d16341389b7c506fe4ee30c7796813944db09de9c8fed4f5dc53db3"
+    },
+    {
+      "path": "supabase/migrations/20261028000200_atomic_quota.sql",
+      "sha256": "e1a14b31212b6d95fa20724fe45e27fb654ded1dba0d1e8e14d72327685493c5"
+    },
+    {
+      "path": "supabase/migrations/20261028000300_storage_deletion_guards.sql",
+      "sha256": "2b6ee3e3f0f725d488ed8026e694959c05a792380947c7696959f2212f741b17"
+    },
+    {
+      "path": "supabase/migrations/20261028000400_atomic_document_review.sql",
+      "sha256": "3c38e6ef541d55f693d65f506b02a8f1835c3f39e79a1c4c25c96c4c61d891b7"
+    },
+    {
+      "path": "supabase/migrations/20261028000500_verified_signature_metadata.sql",
+      "sha256": "9e1bf6294795077999c5da263640b92ec3620a93b1f6bc8ba6bc68898135bfb7"
+    },
+    {
+      "path": "supabase/migrations/20261028000600_legacy_deletion_preflight.sql",
+      "sha256": "e104ec34a34120414f126e893286d8ed0232b67e0e3aba435911188c497d613c"
+    },
+    {
+      "path": "supabase/migrations/20261028000700_live_storage_parents.sql",
+      "sha256": "b9c6930274d92bda6e9d7a38b3abac8c23709f5873d9bb9a327302aa5d7a50f9"
+    },
+    {
+      "path": "supabase/migrations/20261028000800_verified_issuance.sql",
+      "sha256": "7deb1151b8bb691a5ea36d17893b19e6ecac10ffdd6e44919327a43888cd4a21"
+    },
+    {
+      "path": "supabase/migrations/20261029000100_privacy_integrity.sql",
+      "sha256": "7c274094907dcd7e3a668d03e752e2774707e5b6b101fd9f681e879e2aed77e7"
+    },
+    {
+      "path": "supabase/migrations/20261029000200_clinical_integrity.sql",
+      "sha256": "b3c580bbda625bb805acca33aef744017db824e59c3cfbb076612c9b170d9bcf"
+    },
+    {
+      "path": "supabase/migrations/20261029000300_selective_sharing.sql",
+      "sha256": "0c3cc1bee8f09b6e00e84c5379bf8f876442c8f9c2c498bc07ba8508ea942d25"
+    },
+    {
+      "path": "supabase/migrations/20261029001000_clinical_workspace.sql",
+      "sha256": "16a8b2715d29dc5c87ee5b36dd87d1ce8777b41da0a84213f103144f9350425e"
+    },
+    {
+      "path": "supabase/migrations/20261029001100_proposal_acceptance.sql",
+      "sha256": "a756a61596d0bcb1b1ee56a57c316435cc873fa2b3e1e912e4319bbf4ac173e5"
+    },
+    {
+      "path": "supabase/migrations/20261029001200_reviewed_knowledge.sql",
+      "sha256": "43fe02b744f69239f8f8e34f0261cd2df2d98f43d210f343e9cf4465cacb6ca3"
+    },
+    {
+      "path": "supabase/migrations/20261029001300_operation_controls.sql",
+      "sha256": "d2df2a05f6499fb367df35252924a7299e3181a41c64c56e3b4533acb8388427"
+    },
+    {
+      "path": "supabase/migrations/20261029001400_session_assurance.sql",
+      "sha256": "cad8a8d048b830acc73e8f17309ca642f64440a6f61f178f81415868bb3e74b6"
+    },
+    {
+      "path": "supabase/migrations/20261029001500_clinic_specialties.sql",
+      "sha256": "1abb17da7ca2fbad9abfe79d2f2501fd7b4d833245c622457b12b99b2c42d5c1"
+    },
+    {
+      "path": "supabase/migrations/20261029001600_workspace_directory.sql",
+      "sha256": "5abae24c0ab83051d8500b30577627f818aa8e832ad1b595516b19ca7c8613be"
+    },
+    {
+      "path": "supabase/migrations/20261029001700_medication_reconciliation.sql",
+      "sha256": "e9a219eb85845461d7b6e04dfb893eda71307a1fbdeeabffe81f0c58056dd5b8"
+    },
+    {
+      "path": "supabase/migrations/20261029001800_encounter_completion.sql",
+      "sha256": "fab17d4a1c6dce54d9e60460417740febcce37ccdc023562c09382a45446e6b7"
+    },
+    {
+      "path": "supabase/migrations/20261029001900_shared_protocols.sql",
+      "sha256": "3e2d4ccdadbec61d559f78f9b9e7ba621a096ad0f0c91c42563b7b0ad84d1845"
+    },
+    {
+      "path": "supabase/migrations/20261101000000_review_hardening.sql",
+      "sha256": "7804279315a548be0cc8e5bd9f7cdacf245c2d806f0737218d955b2e836a4070"
+    },
+    {
+      "path": "supabase/migrations/20261103000100_patient_conversations.sql",
+      "sha256": "873d47a59a1f21e9f4ba3996fb776001e3733691f05da656697665a3ba58063f"
+    },
+    {
+      "path": "supabase/migrations/20261103000200_patient_registration.sql",
+      "sha256": "5a389294dd65bb5838f9a6bf42282b5bc43e04364d4909e1f82e1a1ef5e65343"
+    },
+    {
+      "path": "supabase/migrations/20261103001000_reception_access.sql",
+      "sha256": "14ee09dddcfc348c810d0a86963b32ffcb6caf9a839acc18c046d26c7c0eb4bc"
+    },
+    {
+      "path": "supabase/migrations/20261103002000_reception_workflow.sql",
+      "sha256": "3f6d293d1baabac268d3a8af411cd817aa88032c447517691b54a4f773d7dc95"
+    },
+    {
+      "path": "supabase/migrations/20261103003000_reception_calendar.sql",
+      "sha256": "9a79e09f1da876e9f7a8bef303f6b2bc7cd459b2e46ce8d9ff151bff4e20355f"
+    },
+    {
+      "path": "supabase/migrations/20261103003500_reception_contact_corrections.sql",
+      "sha256": "c34a294d234ad30a916371e36e4b9393c34e3bdc116b21bcdab43b43dde8cc6f"
+    },
+    {
+      "path": "supabase/migrations/20261103003600_reception_appointment_identity.sql",
+      "sha256": "788d2494d047494c93e8a807891add949dd98eac6c173427cb570910e28b70f5"
+    },
+    {
+      "path": "supabase/migrations/20261103003700_reception_link_confirmation.sql",
+      "sha256": "4df8213d28bd7898cdbd0ac09b112af197669c66e4e30b18768bc05fdc4304ff"
+    },
+    {
+      "path": "supabase/migrations/20261103003800_reception_link_corrections.sql",
+      "sha256": "14407df19a70005074c67063698760af8d38cfcc0223e1d7fe3be9c5556ebef0"
+    },
+    {
+      "path": "supabase/migrations/20261104001000_reception_deletion_custody.sql",
+      "sha256": "19035bdb0eb024600ccb5a651b0a6060fa1a184dcf988fc7f77b77caeeffdf34"
+    },
+    {
+      "path": "supabase/migrations/20261104002000_reception_deletion_barrier.sql",
+      "sha256": "db6a29e6f45d2b3540c77d7e197c8c4941554c6efb541625274c862710eb883d"
+    },
+    {
+      "path": "supabase/migrations/20261104003000_reception_admin_scopes.sql",
+      "sha256": "099b0c39d6cdb056228318e1159b810337346467cf2d23177168c8484f23d505"
+    },
+    {
+      "path": "supabase/migrations/20261104004000_reception_scope_lifecycle.sql",
+      "sha256": "e1cf3901c52122d9d801828cfaa215af7b3aab7ed5942b64381816e3f7da12f6"
+    },
+    {
+      "path": "supabase/migrations/20261104006000_reception_appointment_changes.sql",
+      "sha256": "eeddc762dc9da71eed1de70a7c8da72440785fb9622c4b883f845789b0ea2bbc"
+    },
+    {
+      "path": "supabase/migrations/20261104100000_prescriber_contact.sql",
+      "sha256": "f3e4644b3b5227ff5e77275e001e1919f107dee4d5bf2e18c92c2429a6ebd32a"
+    },
+    {
+      "path": "supabase/migrations/20261104110000_document_snippets.sql",
+      "sha256": "2769496ad56c547f6d9002cbe6790fda321c038d4ac071a0993c7f9435c9101b"
+    },
+    {
+      "path": "supabase/migrations/20261104120000_document_snippets_custody_epoch.sql",
+      "sha256": "c0c281bada94aa94161136c5432b092bfe9c67c56a86d9219f47ba5032f605e7"
+    },
+    {
+      "path": "supabase/migrations/20261104130000_controlled_prescription.sql",
+      "sha256": "222e67264641eb8e6359e58d2075bc149ff26ad67a00e6391d6a619f3352b0a3"
+    },
+    {
+      "path": "supabase/migrations/20261104200000_reception_scoped_custody.sql",
+      "sha256": "ee7e3cee0f253b9f74fcda856c9fc6dcb9a653e0ac79a35e79abfd6bc920fce0"
+    },
+    {
+      "path": "supabase/migrations/20261104210000_reception_clinic_calendar.sql",
+      "sha256": "80881045739469dd77c389f07e38ee23274568297fd0d66846f09f0565c609cc"
+    },
+    {
+      "path": "supabase/migrations/20261104220000_reception_staff_scope_lifecycle.sql",
+      "sha256": "cf271aba788bfd2151c8491aa6938a1b427946b2cf1d77bd2f6b2f3917d8265d"
+    },
+    {
+      "path": "supabase/migrations/20261104230000_reception_delegation_requests.sql",
+      "sha256": "07e6e82f695b40c122b0a897cd5c8561d6090d60337fc2ce07e294328ad6e261"
+    },
+    {
+      "path": "supabase/migrations/20261104240000_reception_delegation_decisions.sql",
+      "sha256": "a86da39d7c55d13b144135f3620e9e6af16b0c7faac52978cf414969f995670b"
+    },
+    {
+      "path": "supabase/migrations/20261104250000_reception_legacy_array_guard.sql",
+      "sha256": "489967eb36132c755e58fea54e0573fc9d73903dd6084d69946ae9c5e6f94aec"
+    },
+    {
+      "path": "supabase/migrations/20261105000000_reception_authenticated_scope_cut.sql",
+      "sha256": "fd90a6725a3d6a132e93938973d8a93d44d4867fa832b66f482275e38fe70481"
+    },
+    {
+      "path": "supabase/migrations/20261105010000_reception_legacy_scope_identity.sql",
+      "sha256": "6efdbdc752292c6445d1b3efb8709ecf1765bc8689081179ca52cd074ca4bc90"
+    },
+    {
+      "path": "supabase/migrations/20261105020000_reception_provisioning_requests.sql",
+      "sha256": "8a874a146eaaa5006d01f6ee2fa75047c951d2770010d89b9fa3feb208c85ba2"
+    },
+    {
+      "path": "supabase/migrations/20261105100000_digital_signature.sql",
+      "sha256": "27afd995be8fbc95aaadc9b60ba8b51c103bfb5db81d6cdccfa3c09849f6d2a9"
+    },
+    {
+      "path": "supabase/migrations/20261105110000_reference_catalogs.sql",
+      "sha256": "8ca9425aa725679b4201b14050aa340c9b48979867592011b68e8dace9cfbd8a"
+    },
+    {
+      "path": "supabase/migrations/20261105200000_reception_delegation_api.sql",
+      "sha256": "faccd21f59b43c66be60eab70cdb8a4a6e18dbdb6ce599c6a9218808966edf90"
+    },
+    {
+      "path": "supabase/migrations/20261105210000_reception_access_provenance.sql",
+      "sha256": "0979d60419d1dad5d4526e92d0d64f324058bcf8b08874da6d8f160306a7b8b9"
+    },
+    {
+      "path": "supabase/migrations/20261105220000_reception_card_withdrawal.sql",
+      "sha256": "ea4cd594e89d2081af3059c1dc030bf7a6c7f56a197e60ad229ee2a495f02eae"
+    },
+    {
+      "path": "supabase/migrations/20261105230000_reception_contact_links_page.sql",
+      "sha256": "c8eb0457956ca011e2547b8f90542bea58edff18a0371bfef3466ee2c2043a4d"
+    },
+    {
+      "path": "supabase/migrations/20261105240000_reception_link_state.sql",
+      "sha256": "34cbfc34984e084a0f6c594243ac325ef8354976e3523097d8480bf353e57385"
+    },
+    {
+      "path": "supabase/migrations/20261105250000_reception_legacy_cancellation.sql",
+      "sha256": "5503fc369f8025dcc541ea74cb2c59d7c20e647ba5ad392a14d82cbc01536ef6"
+    },
+    {
+      "path": "supabase/migrations/20261105260000_reception_calendar_window.sql",
+      "sha256": "8ba02a339f803625e120ff8f4897897f32b714d231a116c82727909163c0c163"
+    },
+    {
+      "path": "supabase/tests/bootstrap.sql",
+      "sha256": "5dde186f536df46c4a6e5045a0f62e81a21721e8299c322973143b99dd6db5b9"
+    },
+    {
+      "path": "supabase/tests/reception-calendar-window.test.sql",
+      "sha256": "d10f16b526e476cc233f88f09ff15e00ad2bae42ec2aa60f2a86139465e3f9c1"
+    },
+    {
+      "path": "scripts/test-reception-calendar-scope.mjs",
+      "sha256": "fd8f3d4370001e937c259fa22f21aa1036a65ed8aa8217d7db5db21cc5f1097b"
+    },
+    {
+      "path": "supabase/tests/reception-invalid-intervals.test.sql",
+      "sha256": "7fd8edb398c6bd8589230e15e8ea5db0f206323c5e9fb1f2cb24592748b75170"
+    },
+    {
+      "path": "supabase/tests/reception-calendar.test.sql",
+      "sha256": "26b01ef76f62d113319e214feca91c72cce37a03e3a4516040f59f780ad4889d"
+    },
+    {
+      "path": "supabase/tests/reception-appointment-changes.test.sql",
+      "sha256": "7c754520b93c9176563b4f35fbdc337b5c3e69c3379ac130899d19fe65863d0c"
+    },
+    {
+      "path": "supabase/tests/reception-clinic-boundary.test.sql",
+      "sha256": "d5000717b1cf04cd4b2e26b065c75dfdab32d4ef22c3c8cd13211fef24da734d"
+    },
+    {
+      "path": "supabase/tests/reception-appointment-identity.test.sql",
+      "sha256": "49638759b2feda26be6724b40e12a76fc2e2330c2e3fe2b53180ef31a5f0d37b"
+    },
+    {
+      "path": "supabase/tests/reception-link-state.test.sql",
+      "sha256": "16b367debcf5f4c79abe4dccb2b837383c2d9ad83b8e4e3de10d256bff8f6fd8"
+    },
+    {
+      "path": "supabase/tests/reception-link-state-permissions.test.sql",
+      "sha256": "632e0b29bbf8de180ba1f09e96083af12f03fd7e3235a7ec14a01e2a3931079b"
+    },
+    {
+      "path": "supabase/tests/reception-function-boundaries.test.sql",
+      "sha256": "75112b57e97c4326fc2e3c530c4648d3b23f9e0f34a857b44e2a067e12d01f47"
+    },
+    {
+      "path": "supabase/tests/reception-scope-lifecycle.test.sql",
+      "sha256": "d498eaa23dbaf98f5cfbcdce6919c65ac2486aa6756344d7fcea32f7e0649b0a"
+    }
+  ],
+  "cleanupVerified": true
+}
