@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCalendarWeekRange } from './calendarLabels';
+import { formatCalendarDay, formatCalendarWeekRange } from './calendarLabels';
 
 describe('Portuguese calendar week caption', () => {
   it.each([
@@ -17,5 +17,21 @@ describe('Portuguese calendar week caption', () => {
     const before = [start.getTime(), end.getTime()];
     expect(formatCalendarWeekRange({ start, end })).toBe('1–7 de novembro');
     expect([start.getTime(), end.getTime()]).toEqual(before);
+  });
+});
+
+describe('Portuguese calendar day caption', () => {
+  it.each([
+    [new Date(2026, 10, 5), 'quinta-feira, 5 de novembro'],
+    [new Date(2024, 1, 29), 'quinta-feira, 29 de fevereiro'],
+    [new Date(2027, 0, 1), 'sexta-feira, 1 de janeiro'],
+  ])('labels %s as %s', (date, expected) => {
+    expect(formatCalendarDay(date)).toBe(expected);
+  });
+
+  it('preserves the supplied date and time', () => {
+    const date = new Date(2026, 10, 5, 18, 42, 17, 321), before = date.getTime();
+    expect(formatCalendarDay(date)).toBe('quinta-feira, 5 de novembro');
+    expect(date.getTime()).toBe(before);
   });
 });

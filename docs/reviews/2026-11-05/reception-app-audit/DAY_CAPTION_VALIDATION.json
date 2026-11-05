@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "14292224132e382703a8bceb94061c246223aa61",
+  "browserStates": 18,
+  "widths": [
+    320,
+    375,
+    1280
+  ],
+  "unit": {
+    "files": 2,
+    "tests": 17,
+    "exitCode": 0
+  },
+  "checks": {
+    "appTypes": true,
+    "applicationLint": true,
+    "runnerLint": true,
+    "nodeSyntax": true,
+    "hashes": true,
+    "cleanup": true
+  },
+  "labels": {
+    "week-same-month": "1–7 de novembro",
+    "week-cross-month": "29 de nov. – 5 de dez.",
+    "week-cross-year": "27 de dez. de 2026 – 2 de jan. de 2027",
+    "day-localized": "quinta-feira, 5 de novembro",
+    "day-next": "sexta-feira, 6 de novembro",
+    "month-unchanged": "novembro 2026"
+  },
+  "overlays": [
+    {
+      "path": "src/pages/Calendar.tsx",
+      "sha256": "f24e2600245f3806493974345cce3d1e75bbaf1ff888c28699b794b8472e91d6"
+    },
+    {
+      "path": "src/lib/calendarLabels.ts",
+      "sha256": "fabce3df90f2324c62cc5d56b1dbf8e921d2cc5e50026ade2762f4ae910d4f33"
+    }
+  ]
+}

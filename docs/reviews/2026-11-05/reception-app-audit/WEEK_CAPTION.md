@@ -32,6 +32,8 @@ Não há submissões, alteração de paciente, conexão Google, novo teste SQL/A
 
 ## Reexecutar
 
+A legenda de Dia foi localizada depois em [T39/2e](DAY_CAPTION.md). O modo abaixo agora valida18estados, com a nova expectativa de Dia; os relatórios desta etapa continuam com os10estados e expectativas originais de T39/2c.
+
 Use nomes novos para cada diretório:
 
 ```powershell

@@ -205,11 +205,12 @@ try {
       assert.deepEqual(api.metrics, { briefings: 0, checklists: 0, chat: 0, newSources: 0, patientWrites: 0, appointmentWrites: 0 }, 'Welcome audit must not invoke AI or write data');
       navigationKeyboardVerified = true;
     } else {
-    for (const width of [375, 1280]) for (const scenario of [
+    for (const width of [320, 375, 1280]) for (const scenario of [
       { view: 'Semana', steps: 0, label: '1–7 de novembro', variant: 'week-same-month' },
       { view: 'Semana', steps: 4, label: '29 de nov. – 5 de dez.', variant: 'week-cross-month' },
       { view: 'Semana', steps: 8, label: '27 de dez. de 2026 – 2 de jan. de 2027', variant: 'week-cross-year' },
-      { view: 'Dia', steps: 0, label: 'quinta-feira nov 05', variant: 'day-unchanged' },
+      { view: 'Dia', steps: 0, label: 'quinta-feira, 5 de novembro', variant: 'day-localized' },
+      { view: 'Dia', steps: 1, label: 'sexta-feira, 6 de novembro', variant: 'day-next' },
       { view: 'Mês', steps: 0, label: 'novembro 2026', variant: 'month-unchanged' },
     ]) {
       await capture(doctor, app, 'clinical', '/agenda', width, async page => {

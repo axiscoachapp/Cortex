@@ -30,7 +30,7 @@ Código e classes permanecem congelados, e todas as chamadas ficam nas origens l
 
 ## Continuação
 
-A [mensagem Claude19:54](../../../../coordination/mensagens/2026-11-05-1954_claude-para-codex_agenda-legenda-dia.md) acrescenta a legenda da visão Dia. Esse complemento fica em T39/2e, separado desta fatia do Início. Os itens4–5, o reteste médico independente e os fluxos de T39/3 continuam pendentes.
+A [mensagem Claude19:54](../../../../coordination/mensagens/2026-11-05-1954_claude-para-codex_agenda-legenda-dia.md) acrescentou a legenda da visão Dia, posteriormente [entregue em T39/2e](DAY_CAPTION.md). Os itens4–5, o reteste médico independente e os fluxos de T39/3 continuam pendentes.
 
 ## Reexecutar
 
