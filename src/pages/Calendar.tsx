@@ -26,6 +26,7 @@ import { Appointment, Patient } from '@/types/patient';
 import { mapPatientRow } from '@/lib/patientMapper';
 import { AppointmentModal } from '@/components/AppointmentModal';
 import { CalendarWeekDetails, CompactWeekHeader } from '@/components/CalendarWeekDetails';
+import { formatCalendarWeekRange } from '@/lib/calendarLabels';
 import { useToast } from '@/hooks/use-toast';
 import { fetchAllRows } from '@/lib/pagination';
 import type { Tables } from '@/integrations/supabase/types';
@@ -440,6 +441,7 @@ export default function CalendarPage() {
             <BigCalendar
               scrollToTime={new Date(1970, 0, 1, 8, 0)}
               localizer={localizer}
+              formats={{ dayRangeHeaderFormat: formatCalendarWeekRange }}
               events={events}
               view={view}
               className={view === 'week' ? 'calendar-compact-week' : undefined}

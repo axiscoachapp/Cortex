@@ -1,0 +1,1046 @@
+{
+  "completed": true,
+  "timeOnly": false,
+  "weekOnly": true,
+  "fixedClock": "2026-11-05T15:00:00Z",
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "e6ddd086ce46c0ad8694e68448f988c8f38ef818",
+  "overlays": [
+    {
+      "path": "src/pages/Calendar.tsx",
+      "sha256": "66d08efb6dc5e5bbcc6f284e587864e04ee726394fec4ae54746be3f1356ab39"
+    },
+    {
+      "path": "src/lib/calendarLabels.ts",
+      "sha256": "9a93ac3f62091bfa343c4be8b56b194bb68f69385f239bb6ff8f31d3edfde2d2"
+    }
+  ],
+  "frozenTextSourceCount": 290,
+  "frozenTextSourceDigest": "c39e09fb438e63c94f9c8c7592e3870848ded4fc42f00e6f050a55288cb9c3be",
+  "tailwindRawContentCount": 288,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "9f6fcfdcc9536078a05b86598db4865f39bb6369c3ad1d7c11bde7e1dcf4417b"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "2c56404a59be9aa5e25813722848a1437de02f2cab8d877ef4b71916ada53c0e"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/AppointmentModal.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/CalendarWeekDetails.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/badge.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/calendar.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/popover.tsx",
+    "src/components/ui/select.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/hooks/use-mobile.tsx",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/calendarLabels.ts",
+    "src/lib/dates.ts",
+    "src/lib/interfaceScale.ts",
+    "src/lib/mfa.ts",
+    "src/lib/pagination.ts",
+    "src/lib/patientMapper.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/Calendar.tsx"
+  ],
+  "screens": [
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "week-same-month",
+      "actualPath": "/agenda",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "1–7 de novembro",
+      "calendarPeriodClipped": false,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Consultas da semana"
+      ],
+      "screenshot": "clinical--agenda-week-same-month-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "week-cross-month",
+      "actualPath": "/agenda",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "29 de nov. – 5 de dez.",
+      "calendarPeriodClipped": false,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Consultas da semana"
+      ],
+      "screenshot": "clinical--agenda-week-cross-month-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "week-cross-year",
+      "actualPath": "/agenda",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "27 de dez. de 2026 – 2 de jan. de 2027",
+      "calendarPeriodClipped": false,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Consultas da semana"
+      ],
+      "screenshot": "clinical--agenda-week-cross-year-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "day-unchanged",
+      "actualPath": "/agenda",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "quinta-feira nov 05",
+      "calendarPeriodClipped": false,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda"
+      ],
+      "screenshot": "clinical--agenda-day-unchanged-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "month-unchanged",
+      "actualPath": "/agenda",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "novembro 2026",
+      "calendarPeriodClipped": false,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda"
+      ],
+      "screenshot": "clinical--agenda-month-unchanged-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "week-same-month",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 111.9375,
+          "right": 148.375,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 352.15625,
+          "right": 418,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 613.359375,
+          "right": 666.625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 855.453125,
+          "right": 934.375,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1134.296875,
+          "right": 1165.375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "1–7 de novembro",
+      "calendarPeriodClipped": false,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda"
+      ],
+      "screenshot": "clinical--agenda-week-same-month-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "week-cross-month",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 111.9375,
+          "right": 148.375,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 352.15625,
+          "right": 418,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 613.359375,
+          "right": 666.625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 855.453125,
+          "right": 934.375,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1134.296875,
+          "right": 1165.375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "29 de nov. – 5 de dez.",
+      "calendarPeriodClipped": false,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda"
+      ],
+      "screenshot": "clinical--agenda-week-cross-month-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "week-cross-year",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 111.9375,
+          "right": 148.375,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 352.15625,
+          "right": 418,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 613.359375,
+          "right": 666.625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 855.453125,
+          "right": 934.375,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1134.296875,
+          "right": 1165.375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "27 de dez. de 2026 – 2 de jan. de 2027",
+      "calendarPeriodClipped": false,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda"
+      ],
+      "screenshot": "clinical--agenda-week-cross-year-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "day-unchanged",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 111.9375,
+          "right": 148.375,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 352.15625,
+          "right": 418,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 613.359375,
+          "right": 666.625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 855.453125,
+          "right": 934.375,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1134.296875,
+          "right": 1165.375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "quinta-feira nov 05",
+      "calendarPeriodClipped": false,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda"
+      ],
+      "screenshot": "clinical--agenda-day-unchanged-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/agenda",
+      "variant": "month-unchanged",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 111.9375,
+          "right": 148.375,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 352.15625,
+          "right": 418,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 613.359375,
+          "right": 666.625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 855.453125,
+          "right": 934.375,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1134.296875,
+          "right": 1165.375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "novembro 2026",
+      "calendarPeriodClipped": false,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda"
+      ],
+      "screenshot": "clinical--agenda-month-unchanged-1280.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "errorResponses": [],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

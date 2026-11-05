@@ -14,8 +14,11 @@ import { startClinicFixture } from './fixtures/clinic-review-api.mjs';
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|check-time-layout|check-mobile-navigation|check-calendar-header)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|check-time-layout|check-mobile-navigation|check-calendar-header)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
+const weekOnly = args.includes('--only=week-caption');
+assert.ok(args.filter(arg => arg.startsWith('--only=')).length <= 1, 'Only one focused audit mode is supported');
+assert.ok(!weekOnly || !args.some(arg => arg.startsWith('--check-')), 'Week caption mode runs its own checks');
 const checkMobileNavigation = args.includes('--check-mobile-navigation');
 assert.ok(!timeOnly || !checkMobileNavigation, 'Mobile navigation checks require the full route audit');
 const checkCalendarHeader = args.includes('--check-calendar-header');
@@ -23,7 +26,7 @@ assert.ok(!timeOnly || !checkCalendarHeader, 'Calendar header checks require the
 const git = options => { const result = spawnSync('git', options, { encoding: 'utf8', windowsHide: true, maxBuffer: 20 * 1024 * 1024 }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); };
 const baseline = args.find(arg => arg.startsWith('--baseline='))?.slice(11) || git(['rev-parse', 'HEAD']);
 const overlays = args.filter(arg => arg.startsWith('--overlay=')).map(arg => arg.slice(10));
-const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation)\.tsx)$/;
+const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation)\.tsx|src\/lib\/calendarLabels\.ts)$/;
 for (const path of overlays) assert.match(path, allowed, 'Overlay must be in the Codex audit scope');
 const run = args.find(arg => arg.startsWith('--run='))?.slice(6) || 'baseline';
 const folder = resolve('docs/reviews/2026-11-05/reception-app-audit', run);
@@ -39,7 +42,7 @@ for (const path of paths) {
   const size = Number(header.split(' ')[2]); offset = end + 1;
   sources.set(path, batch.stdout.subarray(offset, offset + size).toString('utf8')); offset += size + 1;
 }
-for (const path of overlays) { assert.ok(sources.has(path)); sources.set(path, await readFile(path, 'utf8')); }
+for (const path of overlays) { assert.ok(sources.has(path) || path === 'src/lib/calendarLabels.ts', 'New source is not allowlisted'); sources.set(path, await readFile(path, 'utf8')); }
 const overlayHashes = overlays.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') }));
 const frozen = new Map([...sources].map(([path, source]) => [resolve(path).toLowerCase(), { path, source }]));
 const frozenLoads = new Set();
@@ -114,8 +117,12 @@ async function capture(page, app, role, path, width, action, variant = '') {
       const rect = range.getBoundingClientRect(), target = element.getBoundingClientRect();
       return { label: text.textContent.trim(), left: rect.left, right: rect.right, targetLeft: target.left, targetRight: target.right, targetHeight: target.height };
     }).filter(Boolean);
+    const periodElement = document.querySelector('.rbc-toolbar-label'), periodBounds = periodElement?.getBoundingClientRect();
+    const periodRange = document.createRange();
+    if (periodElement) periodRange.selectNodeContents(periodElement);
+    const calendarPeriodClipped = periodElement ? [...periodRange.getClientRects()].some(rect => rect.left < periodBounds.left - 1 || rect.right > periodBounds.right + 1 || rect.top < periodBounds.top - 1 || rect.bottom > periodBounds.bottom + 1) : false;
     return { fontSize: getComputedStyle(document.documentElement).fontSize, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, dialogOutsideViewport, dialogHorizontalOverflow: dialogElement ? dialogElement.scrollWidth - dialogElement.clientWidth : 0,
-      missingButtons, missingLabels, navigationLabels, headerTitles, visibleAlerts: [...document.querySelectorAll('[role="alert"]')].filter(visible).map(element => element.textContent.trim()),
+      missingButtons, missingLabels, navigationLabels, headerTitles, calendarPeriod: periodElement?.textContent.trim(), calendarPeriodClipped, visibleAlerts: [...document.querySelectorAll('[role="alert"]')].filter(visible).map(element => element.textContent.trim()),
       timeControls: [...document.querySelectorAll('input[type="time"]')].filter(visible).map(element => { const rect = element.getBoundingClientRect(); return { id: element.id, value: element.value, width: rect.width, top: rect.top, bottom: rect.bottom }; }),
       brokenText: document.body.innerText.match(/\bundefined\b|\bNaN\b|\[object Object\]/g) ?? [], headings: [...document.querySelectorAll('h1,h2')].filter(visible).map(element => element.textContent.trim()) };
   });
@@ -163,6 +170,30 @@ try {
   temporaryCache = await mkdtemp(join(tmpdir(), 'cortex-reception-audit-'));
   await writeFile(join(temporaryCache, 'audit-owner'), cacheOwner);
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
+  if (weekOnly) {
+    const api = await startClinicFixture(); apis.push(api); const app = await appFor(api);
+    const doctor = await scene(app, 'review', '/agenda');
+    await doctor.clock.setFixedTime(new Date('2026-11-05T15:00:00Z'));
+    for (const width of [375, 1280]) for (const scenario of [
+      { view: 'Semana', steps: 0, label: '1–7 de novembro', variant: 'week-same-month' },
+      { view: 'Semana', steps: 4, label: '29 de nov. – 5 de dez.', variant: 'week-cross-month' },
+      { view: 'Semana', steps: 8, label: '27 de dez. de 2026 – 2 de jan. de 2027', variant: 'week-cross-year' },
+      { view: 'Dia', steps: 0, label: 'quinta-feira nov 05', variant: 'day-unchanged' },
+      { view: 'Mês', steps: 0, label: 'novembro 2026', variant: 'month-unchanged' },
+    ]) {
+      await capture(doctor, app, 'clinical', '/agenda', width, async page => {
+        await page.getByRole('group', { name: 'Visualização da agenda' }).getByRole('button', { name: scenario.view, exact: true }).click();
+        const period = page.locator('.rbc-toolbar-label');
+        for (let step = 0; step < scenario.steps; step++) {
+          const before = await period.textContent();
+          await page.locator('.rbc-toolbar').getByRole('button', { name: 'Próximo', exact: true }).click();
+          await expect(period).not.toHaveText(before);
+        }
+      }, scenario.variant);
+      assert.equal(screens.at(-1).calendarPeriod, scenario.label, 'Calendar period caption mismatch');
+      assert.equal(screens.at(-1).calendarPeriodClipped, false, 'Calendar period caption clipped');
+    }
+  } else {
   if (!timeOnly) {
   const doctorApi = await startClinicFixture(); apis.push(doctorApi); const doctorApp = await appFor(doctorApi);
   const anonymous = await scene(doctorApp);
@@ -225,8 +256,10 @@ try {
     await page.getByRole('button', { name: 'Bloquear horário', exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
   }, 'block-time-dialog');
+  }
   for (const source of [...ownHashes, ...overlayHashes]) assert.equal(createHash('sha256').update(await readFile(source.path)).digest('hex'), source.sha256, 'Audit source changed during run');
-  for (const path of ['src/App.tsx', 'src/pages/Auth.tsx', 'src/features/reception/ReceptionCalendar.tsx', ...overlays, ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
+  const requiredSources = weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
+  for (const path of ['src/App.tsx', 'src/pages/Auth.tsx', ...overlays, ...requiredSources]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
   if (checkMobileNavigation) assert.equal(navigationKeyboardVerified, true, 'Keyboard navigation did not complete');
 } catch (error) {
   failure = { name: error.name, message: error.message };
@@ -244,7 +277,7 @@ try {
   }
   cleanupVerified = true;
 }
-const report = { completed: !failure, failure, timeOnly, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
+const report = { completed: !failure, failure, timeOnly, weekOnly, fixedClock: weekOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
   frozenLoads: [...frozenLoads].sort(), screens, errors, consoleErrors, failedRequests, errorResponses, blockedExternalRequests: blocked, cleanupVerified };
 await writeFile(resolve(folder, 'AUDIT.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify({ baseline, screens: screens.length, errors: errors.length, consoleErrors: consoleErrors.length,
