@@ -24,6 +24,9 @@ describe('management directory separate from authorized agendas',()=>{
   mount();
   expect(await screen.findAllByText(b.name)).toHaveLength(2);
   expect(mocks.teamDoctors).toHaveBeenCalledWith(clinic);
+  const card=screen.getByRole('button',{name:'Salvar permissões'}).closest('article')!;
+  expect(within(card).getByRole('checkbox',{name:a.name})).toBeDisabled();
+  expect(within(card).getByRole('checkbox',{name:b.name})).toBeEnabled();
   fireEvent.click(screen.getByRole('button',{name:'Salvar permissões'}));
   await waitFor(()=>expect(mocks.updateStaff).toHaveBeenCalledWith(staff,[b.id],true));
  });
@@ -41,7 +44,7 @@ describe('management directory separate from authorized agendas',()=>{
   mount({cached:true,inactive:true});
   expect(await screen.findByRole('alert')).toHaveTextContent('Permissão revogada');
   expect(screen.queryByText(b.name)).not.toBeInTheDocument();
-  expect(screen.getByRole('button',{name:'Reativar com estas agendas'})).toBeDisabled();
+  expect(screen.getByRole('button',{name:'Reativar conta'})).toBeDisabled();
   expect(mocks.updateStaff).not.toHaveBeenCalled();
  });
  it('preserves entered data while retrying the directory',async()=>{
@@ -67,5 +70,35 @@ describe('management directory separate from authorized agendas',()=>{
   expect(within(form).getByRole('checkbox',{name:a.name})).toBeChecked();
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(mocks.invoke).toHaveBeenCalledTimes(1);
+ });
+ it('reactivates with an empty scope list even if the old card carried agendas',async()=>{
+  mount({inactive:true});
+  const button=await screen.findByRole('button',{name:'Reativar conta'});
+  await waitFor(()=>expect(button).toBeEnabled());
+  const card=button.closest('article')!;
+  expect(within(card).queryByRole('checkbox')).not.toBeInTheDocument();
+  expect(card).toHaveTextContent('As agendas anteriores não serão restauradas');
+  fireEvent.click(button);
+  await waitFor(()=>expect(mocks.updateStaff).toHaveBeenCalledWith(staff,[],true));
+  expect(await screen.findByRole('status')).toHaveTextContent('Conta reativada, sem agendas');
+  expect(screen.getByRole('link',{name:'Pedidos de acesso e aprovações médicas'})).toHaveAttribute('href',`/permissoes-recepcao?clinica=${clinic}`);
+ });
+ it('does not report reactivation success after a refused or unconfirmed update',async()=>{
+  mocks.updateStaff.mockResolvedValue(false);
+  mount({inactive:true});
+  const button=await screen.findByRole('button',{name:'Reativar conta'});
+  await waitFor(()=>expect(button).toBeEnabled());fireEvent.click(button);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível confirmar');
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+ });
+ it('preserves the reactivation path after a transport failure without restoring old scopes',async()=>{
+  mocks.updateStaff.mockRejectedValueOnce(new Error('Resposta não confirmada.')).mockResolvedValue(true);
+  mount({inactive:true});
+  const button=await screen.findByRole('button',{name:'Reativar conta'});
+  await waitFor(()=>expect(button).toBeEnabled());fireEvent.click(button);
+  await screen.findByText('Resposta não confirmada.');fireEvent.click(button);
+  await waitFor(()=>expect(mocks.updateStaff).toHaveBeenCalledTimes(2));
+  expect(mocks.updateStaff.mock.calls).toEqual([[staff,[],true],[staff,[],true]]);
+  expect(await screen.findByRole('status')).toHaveTextContent('Conta reativada, sem agendas');
  });
 });

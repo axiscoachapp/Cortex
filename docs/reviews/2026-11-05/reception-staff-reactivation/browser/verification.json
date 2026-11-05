@@ -1,0 +1,110 @@
+{
+  "syntheticOnly": true,
+  "realPagesAndApi": true,
+  "realSql": false,
+  "checks": [
+    "inactive card offers no agenda restoration",
+    "lost reply has no confirmed success",
+    "retry repeats empty scopes and activates only account",
+    "explicit fresh permission request remains pending",
+    "375px no overflow"
+  ],
+  "calls": [
+    {
+      "name": "clinic_access",
+      "body": {}
+    },
+    {
+      "name": "reception_team_doctors",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666"
+      }
+    },
+    {
+      "name": "update_reception_staff",
+      "body": {
+        "p_staff": "77777777-7777-4777-8777-777777777777",
+        "p_doctors": [],
+        "p_active": true
+      }
+    },
+    {
+      "name": "update_reception_staff",
+      "body": {
+        "p_staff": "77777777-7777-4777-8777-777777777777",
+        "p_doctors": [],
+        "p_active": true
+      }
+    },
+    {
+      "name": "clinic_access",
+      "body": {}
+    },
+    {
+      "name": "reception_team_doctors",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666"
+      }
+    },
+    {
+      "name": "reception_delegation_requests",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_after": null,
+        "p_after_id": null,
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "reception_team_doctors",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666"
+      }
+    },
+    {
+      "name": "reception_request_delegation",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_staff": "77777777-7777-4777-8777-777777777777",
+        "p_doctor": "88888888-8888-4888-8888-888888888888",
+        "p_operation": "3a64e800-7e9a-4011-8e03-0ae35b6f321d"
+      }
+    },
+    {
+      "name": "reception_delegation_requests",
+      "body": {
+        "p_clinic": "66666666-6666-4666-8666-666666666666",
+        "p_after": null,
+        "p_after_id": null,
+        "p_limit": 50
+      }
+    },
+    {
+      "name": "clinic_access",
+      "body": {}
+    }
+  ],
+  "pageErrors": [],
+  "sources": [
+    {
+      "path": "src/features/reception/TeamSettings.tsx",
+      "sha256": "a91d1940f67413418bced57ae1f143b163e88bad18e71dbbc1ca39cd382901bf"
+    },
+    {
+      "path": "src/features/reception/DelegationPermissions.tsx",
+      "sha256": "6c1b15caf59cb7c0207131662c60604f69b912ad4e0b256f741cea4733374323"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "dda848f7c3a6df45f1feb122c008a2542ac39cd17ef16e1ecb332b1664384736"
+    },
+    {
+      "path": "src/features/reception/delegationApi.ts",
+      "sha256": "142597d1b8a6e5a0cec87fab72842183e7eb5f16c8fc6ceac1b5596ee2cd8827"
+    },
+    {
+      "path": "scripts/fixtures/reception-reactivation-page.tsx",
+      "sha256": "894b69922a8471d383a6bfb316d74da64cf0724332d50443ec8d47cab39147f8"
+    }
+  ]
+}

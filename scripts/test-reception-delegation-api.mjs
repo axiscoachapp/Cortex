@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
-const red=process.argv.includes('--red'),types=process.argv.includes('--types');assert.ok(process.argv.slice(2).every(a=>['--red','--types'].includes(a))&&!(red&&types));
+const red=process.argv.includes('--red'),types=process.argv.includes('--types'),reactivation=process.argv.includes('--reactivation');assert.ok(process.argv.slice(2).every(a=>['--red','--types','--reactivation'].includes(a))&&!(red&&types)&&!(reactivation&&(red||types)));
 assert.ok(!process.env.DOCKER_HOST,'No Docker host override');
 const raw=(command,args,input)=>spawnSync(command,args,{input,encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:8*1024*1024});
 const ok=r=>{assert.equal(r.status,0,r.stderr||r.error?.message);return r.stdout;};
@@ -18,7 +18,8 @@ const sources=new Map(paths.map(p=>[p,git(['show',baseline+':'+p])]));
 sources.set('supabase/tests/bootstrap.sql',git(['show',baseline+':supabase/tests/bootstrap.sql']));
 sources.set(suite,readFileSync(suite,'utf8'));if(!red)sources.set(migration,readFileSync(migration,'utf8'));
 const extras=['reception-delegation-requests','reception-delegation-decisions','reception-provisioning-requests','reception-function-boundaries'];
-if(!red)for(const name of extras){const p='supabase/tests/'+name+'.test.sql';sources.set(p,name==='reception-function-boundaries'?readFileSync(p,'utf8'):git(['show',baseline+':'+p]));}
+if(reactivation)extras.push('reception-staff-reactivation','reception-staff-lifecycle','reception-scope-lifecycle');
+if(!red)for(const name of extras){const p='supabase/tests/'+name+'.test.sql';sources.set(p,['reception-function-boundaries','reception-staff-reactivation'].includes(name)?readFileSync(p,'utf8'):git(['show',baseline+':'+p]));}
 let started=false,network=false,report;
 try{
  ok(docker(['network','create','--internal','--label','cortex.test.run='+prefix,prefix]));network=true;
@@ -37,7 +38,7 @@ try{
   assert.ok(generated.includes('export type Database')&&generated.includes('reception_decide_delegation'));
   writeFileSync('src/integrations/supabase/types.ts',generated.trimEnd()+'\n');report.generatedTypes=true;
  }
- for(const path of [suite,...(red?[]:[migration,'supabase/tests/reception-function-boundaries.test.sql'])])assert.equal(readFileSync(path,'utf8'),sources.get(path),'Test source changed during execution: '+path);
+ for(const path of [suite,...(red?[]:[migration,'supabase/tests/reception-function-boundaries.test.sql']),...(reactivation?['supabase/tests/reception-staff-reactivation.test.sql']:[])])assert.equal(readFileSync(path,'utf8'),sources.get(path),'Test source changed during execution: '+path);
  report={...report,syntheticOnly:true,baseline,migrations:paths.length+(red?0:1),sources:[...sources].map(([path,source])=>({path,sha256:createHash('sha256').update(source).digest('hex')}))};
 }finally{
  const metaState=docker(['inspect','--format','{{index .Config.Labels "cortex.test.run"}}',meta]);
@@ -46,5 +47,5 @@ try{
  if(network){assert.equal(ok(docker(['network','inspect','--format','{{index .Labels "cortex.test.run"}}',prefix])).trim(),prefix);ok(docker(['network','rm',prefix]));assert.notEqual(docker(['network','inspect',prefix]).status,0);}
 }
 report.cleanupVerified=true;
-const folder='docs/reviews/2026-11-05/reception-delegation-api';mkdirSync(folder,{recursive:true});writeFileSync(folder+'/'+(red?'RED':'SQL')+'.json',JSON.stringify(report,null,2)+'\n');
+const folder='docs/reviews/2026-11-05/'+(reactivation?'reception-staff-reactivation':'reception-delegation-api');mkdirSync(folder,{recursive:true});writeFileSync(folder+'/'+(red?'RED':'SQL')+'.json',JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify({red,passed:report.passed,missingAuthenticatedApi:report.missingAuthenticatedApi,migrations:report.migrations,suites:report.suites,cleanupVerified:true},null,2));

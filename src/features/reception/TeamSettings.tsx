@@ -20,6 +20,7 @@ export default function TeamSettings() {
   const [doctors, setDoctors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [notice, setNotice] = useState('');
   const [credentials, setCredentials] = useState<{ email: string; temporaryPassword: string } | null>(null);
   const directory = useQuery({
     queryKey: ['reception', 'team-doctors', access?.clinic?.id, access?.actorId],
@@ -34,6 +35,7 @@ export default function TeamSettings() {
     if (busy || !directory.isSuccess || !doctors.length) return;
     setBusy(true);
     setError(null);
+    setNotice('');
     try {
       const { data, error } = await supabase.functions.invoke('create-clinic-receptionist', {
         body: { name, email, doctorIds: doctors },
@@ -61,8 +63,11 @@ export default function TeamSettings() {
     if (busy || (active && !directory.isSuccess)) return;
     setBusy(true);
     setError(null);
+    setNotice('');
     try {
-      await receptionApi.updateStaff(id, doctorIds, active);
+      const confirmed = await receptionApi.updateStaff(id, doctorIds, active);
+      if (confirmed !== true) throw new Error('Não foi possível confirmar a atualização da conta. Atualize a equipe antes de tentar novamente.');
+      if (active && doctorIds.length === 0) setNotice('Conta reativada, sem agendas. Envie um novo pedido de acesso para aprovação do médico.');
       await client.invalidateQueries({ queryKey: ['clinic-access'] });
       await client.invalidateQueries({ queryKey: ['reception'] });
     } catch (err) {
@@ -86,6 +91,7 @@ export default function TeamSettings() {
         )}
       </div>
       <ReceptionNotice error={error} />
+      {notice && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">{notice}</p>}
       <ReceptionNotice error={directory.error} loading={directory.isPending} onRetry={() => void directory.refetch()} />
       <section className="rounded-xl border bg-card p-4 space-y-4">
         <h2 className="font-semibold text-base">Criar conta de recepção</h2>
@@ -148,6 +154,7 @@ export default function TeamSettings() {
             scopesReady={directory.isSuccess}
             busy={busy}
             onSave={(ids) => void update(staff.id, ids, true)}
+            onReactivate={() => void update(staff.id, [], true)}
             onDeactivate={() => void update(staff.id, [], false)}
           />
         ))}
@@ -189,6 +196,7 @@ function StaffCard({
   busy,
   scopesReady,
   onSave,
+  onReactivate,
   onDeactivate,
 }: {
   staff: { id: string; name: string; active: boolean; doctorIds: string[] };
@@ -196,6 +204,7 @@ function StaffCard({
   busy: boolean;
   scopesReady: boolean;
   onSave: (ids: string[]) => void;
+  onReactivate: () => void;
   onDeactivate: () => void;
 }) {
   const [selected, setSelected] = useState(staff.doctorIds);
@@ -205,13 +214,14 @@ function StaffCard({
         <h3 className="font-medium">{staff.name}</h3>
         <span className="text-xs text-muted-foreground">{staff.active ? 'Ativa' : 'Desativada'}</span>
       </div>
-      <fieldset disabled={busy || !scopesReady} className="flex flex-wrap gap-3">
+      {staff.active ? <fieldset disabled={busy || !scopesReady} className="flex flex-wrap gap-3">
         <legend className="sr-only">Agendas de {staff.name}</legend>
         {doctors.map((d) => (
           <label key={d.id} className="flex gap-2 items-start text-xs">
             <input
               type="checkbox"
               className="mt-1 accent-primary"
+              disabled={!staff.doctorIds.includes(d.id)}
               checked={selected.includes(d.id)}
               onChange={(e) =>
                 setSelected((old) => (e.target.checked ? [...old, d.id] : old.filter((id) => id !== d.id)))
@@ -220,10 +230,11 @@ function StaffCard({
             {d.name}
           </label>
         ))}
-      </fieldset>
+      </fieldset> : <p className="text-sm text-muted-foreground">As agendas anteriores não serão restauradas. Reative a conta e envie um novo pedido para aprovação do médico.</p>}
+      {staff.active && !staff.doctorIds.length && <p className="text-sm text-muted-foreground">Conta ativa, sem agendas. Use Pedidos de acesso e aprovações médicas para solicitar permissão.</p>}
       <div className="flex flex-wrap gap-2">
-        <Button className="h-auto min-h-9 max-w-full whitespace-normal" size="sm" variant="outline" disabled={busy || !scopesReady || !selected.length} onClick={() => onSave(selected)}>
-          {staff.active ? 'Salvar permissões' : 'Reativar com estas agendas'}
+        <Button className="h-auto min-h-9 max-w-full whitespace-normal" size="sm" variant="outline" disabled={busy || !scopesReady || (staff.active && !selected.length)} onClick={() => staff.active ? onSave(selected) : onReactivate()}>
+          {staff.active ? 'Salvar permissões' : 'Reativar conta'}
         </Button>
         {staff.active && (
           <Button size="sm" variant="ghost" disabled={busy} onClick={onDeactivate}>
