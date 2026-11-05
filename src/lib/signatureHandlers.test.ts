@@ -214,6 +214,10 @@ describe('signature-session handler', () => {
       expect(response.status).toBe(403);
       expect(await response.json()).toMatchObject({ mfaRequired: true });
     }
+    // The state's refusal says whether signing is configured (Codex 10:25, 1).
+    expect(await (await signatureSessionHandler(req('state', 'GET'), low.deps)).json()).toMatchObject({ mfaRequired: true, configured: true });
+    const lowBare = makeDeps({ ctx: { aal: 'aal1' }, config: null });
+    expect(await (await signatureSessionHandler(req('state', 'GET'), lowBare.deps)).json()).toMatchObject({ mfaRequired: true, configured: false });
     expect(low.deps.rpc).not.toHaveBeenCalled();
     const { deps, calls } = makeDeps({ ctx: { exp: NOW / 1000 + 60 } });
     expect(await (await signatureSessionHandler(req('state', 'GET'), deps)).json()).toEqual({ active: true, configured: true });

@@ -6,6 +6,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Patient } from '@/types/patient';
+import { forgetOperation } from '@/lib/signatureClient';
 import { ChatPanel } from './ChatPanel';
 
 const RX = '55555555-5555-4555-8555-555555555555';
@@ -18,6 +19,9 @@ const mocks = vi.hoisted(() => ({
   generated: { prescriptionId: '', pdfSha256: '' },
   sign: [] as Array<{ data: unknown; error: unknown }>,
   state: { active: true, configured: true } as Record<string, unknown>,
+  /** Held answers: the test resolves them after changing the context. */
+  holdGenerate: null as null | Promise<unknown>,
+  holdSign: null as null | Promise<unknown>,
 }));
 
 vi.mock('@/components/ClinicalProposals', () => ({ ClinicalProposals: () => null }));
@@ -62,7 +66,9 @@ async function openComposer() {
 }
 
 beforeEach(() => {
+  vi.restoreAllMocks();
   vi.clearAllMocks();
+  forgetOperation('doctor', RX);
   localStorage.clear();
   HTMLElement.prototype.scrollIntoView = vi.fn();
   vi.spyOn(window, 'open').mockImplementation(mocks.open);
@@ -70,12 +76,18 @@ beforeEach(() => {
   mocks.generated = { prescriptionId: RX, pdfSha256: HASH };
   mocks.sign = [];
   mocks.state = { active: true, configured: true };
+  mocks.holdGenerate = null;
+  mocks.holdSign = null;
   mocks.invoke.mockImplementation(async (name: string) => {
     if (name === 'signature-session/state') return { data: mocks.state, error: null };
     if (name === 'generate-prescription') {
+      if (mocks.holdGenerate) await mocks.holdGenerate;
       return { data: { ...mocks.generated, accessCode: 'ABC123', previewUrl: 'https://storage.synthetic.invalid/unsigned.pdf', status: 'generated' }, error: null };
     }
-    if (name === 'sign-document') return mocks.sign.shift() ?? { data: { status: 'completed' }, error: null };
+    if (name === 'sign-document') {
+      if (mocks.holdSign) await mocks.holdSign;
+      return mocks.sign.shift() ?? { data: { status: 'completed' }, error: null };
+    }
     return { data: { questions: [] }, error: null };
   });
 });
@@ -123,6 +135,17 @@ describe('Gerar e assinar from the consultation', () => {
     expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Atestado gerado, sem assinatura digital' }));
   });
 
+  it('a browser that cannot keep the operation signs nothing; the document stays generated (Codex 10:25, 3)', async () => {
+    await openComposer();
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('full', 'QuotaExceededError'); });
+    await act(async () => { await mocks.composer.onGenerate!(sickNote(true)); });
+    expect(calls('generate-prescription')).toHaveLength(1);
+    expect(calls('sign-document')).toHaveLength(0);
+    expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Atestado gerado, sem assinatura digital', description: expect.stringContaining('não conseguiu guardar'),
+    }));
+  });
+
   it('a normal "Gerar documento" is unchanged: opens the preview and does not sign', async () => {
     await openComposer();
     await act(async () => { await mocks.composer.onGenerate!(sickNote(false)); });
@@ -140,4 +163,79 @@ describe('Gerar e assinar from the consultation', () => {
     await act(async () => {});
     expect(mocks.composer.signing).toBeNull();
   });
+});
+
+// Codex 05/11 11:38: an answer that arrives after the doctor, the patient or
+// the screen changed shows nothing of that document in the next context.
+describe('late answers after the context changed', () => {
+  const other: Patient = { ...patient, id: 'Q', name: 'Outra paciente sintética' };
+  const hold = () => { let release!: () => void; const promise = new Promise<void>((r) => { release = r; }); return { promise, release }; };
+  function mount() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = (userId: string, who: Patient) => (
+      <QueryClientProvider client={client}><ChatPanel messages={[]} onMessagesChange={vi.fn()} chiefComplaint="" preBriefing={null} briefingLoading={false} userId={userId} patient={who} /></QueryClientProvider>
+    );
+    const result = render(view('doctor', patient));
+    return { ...result, switchTo: (userId: string, who: Patient) => result.rerender(view(userId, who)) };
+  }
+  const opened = async () => {
+    fireEvent.click(screen.getByRole('button', { name: /Receita \/ atestado/ }));
+    await waitFor(() => expect(mocks.composer.signing).toEqual({ active: true }));
+  };
+  const nothingShown = () => {
+    expect(mocks.open).not.toHaveBeenCalled();
+    for (const [arg] of mocks.toast.mock.calls as Array<[{ title?: string; description?: string }]>) {
+      expect(`${arg.title} ${arg.description}`).not.toMatch(/ABC123|assinad|gerad/i);
+    }
+  };
+
+  for (const sign of [true, false]) {
+    it(`generation answered after the patient changed (${sign ? 'Gerar e assinar' : 'Gerar documento'}): no code, preview, notice or signature`, async () => {
+      const view = mount();
+      await act(async () => {});
+      await opened();
+      const gate = hold();
+      mocks.holdGenerate = gate.promise;
+      let pending!: Promise<void>;
+      act(() => { pending = mocks.composer.onGenerate!(sickNote(sign)); });
+      view.switchTo('doctor', other);
+      await act(async () => { gate.release(); await pending; });
+      expect(calls('generate-prescription')).toHaveLength(1);
+      expect(calls('sign-document')).toHaveLength(0);
+      nothingShown();
+    });
+  }
+
+  it('generation answered after the account changed: nothing signed nor shown', async () => {
+    const view = mount();
+    await act(async () => {});
+    await opened();
+    const gate = hold();
+    mocks.holdGenerate = gate.promise;
+    let pending!: Promise<void>;
+    act(() => { pending = mocks.composer.onGenerate!(sickNote(true)); });
+    view.switchTo('other-doctor', patient);
+    await act(async () => { gate.release(); await pending; });
+    expect(calls('sign-document')).toHaveLength(0);
+    nothingShown();
+  });
+
+  for (const change of ['patient', 'account', 'unmount'] as const) {
+    it(`signature answered after the ${change} changed: its result and code are not shown`, async () => {
+      const view = mount();
+      await act(async () => {});
+      await opened();
+      const gate = hold();
+      mocks.holdSign = gate.promise;
+      let pending!: Promise<void>;
+      act(() => { pending = mocks.composer.onGenerate!(sickNote(true)); });
+      await waitFor(() => expect(calls('sign-document')).toHaveLength(1));
+      if (change === 'patient') view.switchTo('doctor', other);
+      else if (change === 'account') view.switchTo('other-doctor', patient);
+      else view.unmount();
+      await act(async () => { gate.release(); await pending; });
+      nothingShown();
+      expect(localStorage.length).toBe(0); // the operation itself still ended normally
+    });
+  }
 });

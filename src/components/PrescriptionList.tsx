@@ -124,10 +124,10 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
           // Same rule as validate-prescription: only prescriptions have a
           // dispensing window; sick notes and exam requests stay valid.
           const expired = isExpired(rx);
-          const signHash = signing ? signableHash(rx, expired) : null;
+          const signHash = signing && !signing.mfaRequired ? signableHash(rx, expired) : null;
           return (
-            <div key={rx.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border/60 bg-card">
-              <div className="flex-1 min-w-0">
+            <div key={rx.id} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3 py-2 rounded-lg border border-border/60 bg-card">
+              <div className="flex-1 min-w-[10rem] break-words">
                 <p className="text-xs font-medium text-foreground">{TYPE_LABELS[rx.doc_type]}</p>
                 <p className="text-[0.625rem] text-muted-foreground">
                   {new Date(rx.created_at).toLocaleDateString('pt-BR')} · código {rx.secret_code}
@@ -138,7 +138,7 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
               <span className={cn('text-[0.5625rem] font-bold px-1.5 py-0.5 rounded shrink-0', meta.cls)}>
                 {trusted && expired && rx.status !== 'revoked' ? 'Expirada' : meta.label}
               </span>
-              <div className="flex items-center gap-0.5 shrink-0">
+              <div className="flex items-center gap-0.5 shrink-0 ml-auto">
                 {signHash && signing && (
                   <SignDocumentButton prescriptionId={rx.id} pdfSha256={signHash} sessionActive={signing.active} onSigned={refreshRows} />
                 )}

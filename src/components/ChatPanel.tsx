@@ -825,6 +825,10 @@ export function ChatPanel({
           : payload.docType === 'solicitacao_exames'
             ? 'Solicitação de exames gerada'
             : 'Receita gerada';
+      // Same doctor, same patient, still mounted: otherwise nothing of this
+      // document (code, preview, result) is shown in the context that
+      // followed; only its patient's list is refreshed (Codex 05/11 11:38).
+      const stillHere = () => isCurrentPatient(patient.id) && userIdRef.current === actor;
       if (payload.sign && SIGNABLE_TYPES.has(payload.docType)) {
         // "Gerar e assinar": sign the document this generation persisted (its
         // id and the hash of its PDF), only while the doctor and the patient
@@ -834,10 +838,7 @@ export function ChatPanel({
         const pdfSha256 = typeof data?.pdfSha256 === 'string' && /^[0-9a-f]{64}$/.test(data.pdfSha256) ? data.pdfSha256 : '';
         const unsigned = (reason: string) =>
           toast({ title: `${docLabel}, sem assinatura digital`, description: `${reason} Código de acesso do paciente: ${data?.accessCode}.` });
-        if (!isCurrentPatient(patient.id) || userIdRef.current !== actor) {
-          unsigned('O paciente ou a conta mudou antes de assinar; assine pela lista de documentos.');
-          return;
-        }
+        if (!stillHere()) return; // not signed; the document stays in its patient's list
         setComposerOpen(false);
         if (!prescriptionId || !pdfSha256) {
           unsigned('Assine pela lista de documentos.');
@@ -846,6 +847,7 @@ export function ChatPanel({
         const outcome = await signKeepingOperation(signatureInvoke, actor, { prescriptionId, pdfSha256 });
         queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patient.id] });
         if (outcome.kind === 'needs_session') queryClient.invalidateQueries({ queryKey: [SESSION_KEY] });
+        if (!stillHere()) return; // a late answer never reaches another context
         if (outcome.kind === 'completed') {
           toast({ title: `${docLabel} e assinado digitalmente`, description: `Já vale na validação pública. Código de acesso do paciente: ${data?.accessCode}.` });
         } else {
@@ -854,7 +856,7 @@ export function ChatPanel({
         }
         return;
       }
-      if (!isCurrentPatient(patient.id)) return;
+      if (!stillHere()) return;
       setComposerOpen(false);
       if (data?.previewUrl) window.open(data.previewUrl, '_blank');
       toast({

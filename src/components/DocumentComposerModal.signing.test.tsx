@@ -51,7 +51,7 @@ describe('Gerar e assinar', () => {
     const onGenerate = composer({ active: false });
     await pickType(/^Atestado médico/);
     expect(screen.getByRole('button', { name: 'Gerar e assinar' })).toBeDisabled();
-    expect(screen.getByText(/abra a sessão de assinatura na lista de documentos/)).toBeInTheDocument();
+    expect(screen.getByText(/abra a sessão de assinatura \(com o segundo fator ativo\) na lista de documentos/)).toBeInTheDocument();
     expect(onGenerate).not.toHaveBeenCalled();
   });
 

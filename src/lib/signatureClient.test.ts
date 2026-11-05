@@ -2,9 +2,9 @@
 // what the screen shows. supabase.functions.invoke is simulated with the
 // same shapes it returns (data, or a FunctionsHttpError whose context is the
 // Response). Synthetic ids only.
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  completeSession, forgetOperation, pendingOperation, rememberOperation, revokeSession, sessionState, signPrescription, startSession,
+  completeSession, forgetOperation, pendingOperation, rememberOperation, revokeSession, sessionState, signKeepingOperation, signPrescription, startSession,
   type Invoke,
 } from './signatureClient';
 
@@ -65,7 +65,10 @@ describe('signature session', () => {
       .toEqual({ available: true, configured: true, active: true, expiresAt: '2026-11-05T21:00:00Z' });
     expect(await sessionState(ok({ active: false, configured: false }))).toEqual({ available: true, configured: false, active: false, expiresAt: null });
     expect(await sessionState(http(404, { error: 'not found' }))).toEqual({ available: false });
-    expect(await sessionState(http(403, { mfaRequired: true }))).toEqual({ available: false });
+    // Without the second factor: shown with the way to enable it (Codex 10:25, 1).
+    expect(await sessionState(http(403, { error: 'Confirme o segundo fator para continuar.', mfaRequired: true, configured: true })))
+      .toEqual({ available: true, configured: true, active: false, expiresAt: null, mfaRequired: true });
+    expect(await sessionState(http(403, { mfaRequired: true }))).toMatchObject({ available: true, configured: false, mfaRequired: true });
     expect(await sessionState(offline)).toEqual({ available: false });
   });
 
@@ -96,7 +99,31 @@ describe('signature session', () => {
 });
 
 describe('operation kept per document', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => { forgetOperation('u', RX); localStorage.clear(); });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('never starts an operation this browser could not keep (Codex 10:25, 3)', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('full', 'QuotaExceededError'); });
+    const invoke = ok({ status: 'completed' });
+    const outcome = await signKeepingOperation(invoke, 'u', { prescriptionId: RX, pdfSha256: HASH });
+    expect(outcome).toMatchObject({ kind: 'refused', ended: false, message: expect.stringContaining('não conseguiu guardar') });
+    expect(invoke).not.toHaveBeenCalled();
+    expect(pendingOperation('u', RX)).toBeNull();
+  });
+
+  it('once started, a storage failure keeps the same id for the retries of this page', async () => {
+    const first = vi.fn(async () => ({ data: { status: 'in_progress' }, error: null }));
+    await signKeepingOperation(first, 'u', { prescriptionId: RX, pdfSha256: HASH }); // stored durably, then in progress
+    const started = (first.mock.calls[0] as unknown as [string, { body: { operationId: string } }])[1].body.operationId;
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('full', 'QuotaExceededError'); });
+    const again = vi.fn(async () => ({ data: { status: 'in_progress' }, error: null }));
+    await signKeepingOperation(again, 'u', { prescriptionId: RX, pdfSha256: HASH });
+    await signKeepingOperation(again, 'u', { prescriptionId: RX, pdfSha256: HASH }, { humanRetry: true });
+    const ids = again.mock.calls.map((call) => (call as unknown as [string, { body: { operationId: string; humanRetry?: boolean } }])[1].body);
+    expect(ids.map((b) => b.operationId)).toEqual([started, started]);
+    expect(ids[1].humanRetry).toBe(true);
+    expect(pendingOperation('u', RX)).toEqual({ operationId: started, awaiting: 'in_progress' });
+  });
 
   it('remembers, reads back and forgets; anything malformed reads as none', () => {
     expect(pendingOperation('u', RX)).toBeNull();

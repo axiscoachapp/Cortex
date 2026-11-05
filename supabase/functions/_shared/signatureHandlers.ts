@@ -240,14 +240,14 @@ function rpcFailure(json: ReturnType<typeof responder>, error: unknown): Respons
  * weaker path for state or revoke). Starting a signature step also needs
  * enough token left.
  */
-async function signer(req: Request, deps: HandlerDeps, json: ReturnType<typeof responder>, needsMargin = true): Promise<SignerContext | Response> {
+async function signer(req: Request, deps: HandlerDeps, json: ReturnType<typeof responder>, needsMargin = true, mfaDetail: Record<string, unknown> = {}): Promise<SignerContext | Response> {
   let ctx: SignerContext;
   try {
     ctx = await deps.authenticate(req);
   } catch (error) {
     return deps.authFailure(error) ?? json(401, { error: 'Não autorizado' });
   }
-  if (ctx.aal !== 'aal2') return json(403, { error: 'Confirme o segundo fator para continuar.', mfaRequired: true });
+  if (ctx.aal !== 'aal2') return json(403, { error: 'Confirme o segundo fator para continuar.', mfaRequired: true, ...mfaDetail });
   if (needsMargin && ctx.exp - (deps.now ?? Date.now)() / 1000 < MIN_TOKEN_SECONDS) return json(401, { error: 'Sua sessão vai expirar. Entre de novo antes de assinar.', code: 'renew_session' });
   return ctx;
 }
@@ -354,7 +354,10 @@ export async function signatureSessionHandler(req: Request, deps: HandlerDeps): 
   if (req.method !== allowed[route]) return json(405, { error: 'Método não permitido.' });
 
   // Every route needs AAL2; opening a session also needs enough token left.
-  const ctx = await signer(req, deps, json, route === 'start' || route === 'complete');
+  // The state's refusal still says whether signing is configured, so the
+  // screen can send a doctor without a second factor to enable it (Codex
+  // 05/11 10:25, 1).
+  const ctx = await signer(req, deps, json, route === 'start' || route === 'complete', route === 'state' ? { configured: deps.config !== null } : {});
   if (ctx instanceof Response) return ctx;
 
   try {

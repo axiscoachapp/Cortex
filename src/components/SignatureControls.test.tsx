@@ -2,14 +2,16 @@
 // with the functions simulated. Synthetic rows and ids only.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { forgetOperation } from '@/lib/signatureClient';
 import { PrescriptionList } from './PrescriptionList';
 
 const HASH = 'b'.repeat(64);
 const mocks = vi.hoisted(() => ({
   toast: vi.fn(),
   invoke: vi.fn(),
-  state: { data: { active: true, configured: true, expiresAt: '2026-11-05T21:00:00Z' } as unknown, error: null as unknown },
+  state: { data: { active: true, configured: true, expiresAt: '2026-11-05T21:00:00Z' } as unknown, error: null as unknown } as { data: unknown; error: unknown },
   signAnswers: [] as Array<{ data: unknown; error: unknown }>,
 }));
 
@@ -37,10 +39,15 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
-const renderList = () => render(<QueryClientProvider client={new QueryClient()}><PrescriptionList patientId="patient" /></QueryClientProvider>);
+const renderList = () => render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><PrescriptionList patientId="patient" /></QueryClientProvider></MemoryRouter>);
+const httpError = (status: number, body: unknown) => ({
+  data: null, error: Object.assign(new Error('non-2xx'), { context: new Response(JSON.stringify(body), { status }) }),
+});
 const signCalls = () => mocks.invoke.mock.calls.filter(([name]) => name === 'sign-document');
 
+afterEach(() => vi.restoreAllMocks());
 beforeEach(() => {
+  forgetOperation('owner', 'signable');
   localStorage.clear();
   sessionStorage.clear();
   mocks.toast.mockReset();
@@ -127,6 +134,51 @@ describe('signing from the documents list', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Assinar digitalmente' }));
     await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Abra a sessão de assinatura' })));
     expect(signCalls()).toHaveLength(0);
+  });
+
+  it('without the second factor it says how to enable it, and offers no signing (Codex 10:25, 1)', async () => {
+    mocks.state = httpError(403, { error: 'Confirme o segundo fator para continuar.', mfaRequired: true, configured: true });
+    renderList();
+    const link = await screen.findByRole('link', { name: 'Segurança' });
+    expect(link).toHaveAttribute('href', '/seguranca');
+    expect(screen.getByText(/ative o segundo fator/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Assinar digitalmente' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Abrir sessão de assinatura')).not.toBeInTheDocument();
+  });
+
+  it('an attempt left in progress can be asked about, or repeated once the doctor confirms (Codex 10:25, 2)', async () => {
+    mocks.signAnswers = [{ data: { status: 'in_progress' }, error: null }, { data: { status: 'in_progress' }, error: null }];
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderList();
+    fireEvent.click(await screen.findByRole('button', { name: 'Assinar digitalmente' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Verificar assinatura' }));
+    await waitFor(() => expect(signCalls()).toHaveLength(2));
+    expect(confirm).not.toHaveBeenCalled(); // asking never repeats
+    fireEvent.click(screen.getByRole('button', { name: 'Repetir assinatura' }));
+    await waitFor(() => expect(signCalls()).toHaveLength(3));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    const bodies = signCalls().map(([, options]) => (options as { body: Record<string, unknown> }).body);
+    expect(new Set(bodies.map((b) => b.operationId)).size).toBe(1);
+    expect(bodies.map((b) => b.humanRetry ?? false)).toEqual([false, false, true]);
+  });
+
+  it('a repeat the doctor does not confirm is not sent', async () => {
+    mocks.signAnswers = [{ data: { status: 'in_progress' }, error: null }];
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    renderList();
+    fireEvent.click(await screen.findByRole('button', { name: 'Assinar digitalmente' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Repetir assinatura' }));
+    await waitFor(() => expect(window.confirm).toHaveBeenCalled());
+    expect(signCalls()).toHaveLength(1);
+  });
+
+  it('a browser that cannot keep the operation starts none (Codex 10:25, 3)', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('full', 'QuotaExceededError'); });
+    renderList();
+    fireEvent.click(await screen.findByRole('button', { name: 'Assinar digitalmente' }));
+    await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ description: expect.stringContaining('não conseguiu guardar') })));
+    expect(signCalls()).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Assinar digitalmente' })).toBeInTheDocument();
   });
 
   it('opening a session keeps this page to come back to', async () => {

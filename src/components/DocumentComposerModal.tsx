@@ -839,7 +839,7 @@ export function DocumentComposerModal({
 
         {catalogError && <p role="alert" className="px-5 text-xs text-destructive">Não foi possível consultar o catálogo. Edite a busca para tentar novamente ou preencha o medicamento manualmente.</p>}
         {canSign && !signing?.active && (
-          <p className="px-5 text-[0.6875rem] text-muted-foreground">Para gerar e assinar, abra a sessão de assinatura na lista de documentos do paciente.</p>
+          <p className="px-5 text-[0.6875rem] text-muted-foreground">Para gerar e assinar, abra a sessão de assinatura (com o segundo fator ativo) na lista de documentos do paciente.</p>
         )}
         {/* Stacked on phones (primary action on top), side by side from sm up. */}
         <div className="px-5 py-3 border-t border-border/50 shrink-0 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

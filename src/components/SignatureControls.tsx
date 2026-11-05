@@ -3,8 +3,9 @@
 // The server decides every state; this only shows it and keeps the operation
 // id of a document until its operation ends (signatureClient).
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, PenLine, ShieldCheck } from 'lucide-react';
+import { Loader2, PenLine, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +23,13 @@ export function SignatureSessionBar({ state }: { state: SessionState }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   if (!state.available || !state.configured) return null;
+  if (state.mfaRequired) {
+    return (
+      <p className="text-[0.6875rem] text-muted-foreground">
+        Para assinar digitalmente, ative o segundo fator em <Link to="/seguranca" className="underline text-foreground">Segurança</Link>.
+      </p>
+    );
+  }
 
   const open = async () => {
     setBusy(true);
@@ -66,7 +74,12 @@ export function SignatureSessionBar({ state }: { state: SessionState }) {
   );
 }
 
-/** "Assinar digitalmente", "Tentar de novo" (no answer) or "Verificar assinatura" (in progress). */
+/**
+ * "Assinar digitalmente"; "Tentar de novo" after no answer; and for an
+ * attempt left in progress, "Verificar assinatura" (asks without repeating)
+ * plus "Repetir assinatura" (the doctor decides it was lost: confirmed, same
+ * operation, humanRetry; Codex 05/11 10:25, 2). Never a retry by itself.
+ */
 export function SignDocumentButton({ prescriptionId, pdfSha256, sessionActive, onSigned }: {
   prescriptionId: string;
   pdfSha256: string;
@@ -82,13 +95,15 @@ export function SignDocumentButton({ prescriptionId, pdfSha256, sessionActive, o
   const pending = pendingOperation(user.id, prescriptionId);
   const label = pending?.awaiting === 'ambiguous' ? 'Tentar de novo' : pending?.awaiting === 'in_progress' ? 'Verificar assinatura' : 'Assinar digitalmente';
 
-  const sign = async () => {
-    if (!sessionActive && pending?.awaiting !== 'in_progress') {
+  const sign = async (humanRetry: boolean) => {
+    // Only asking about an attempt in progress needs no session.
+    if (!sessionActive && (humanRetry || pending?.awaiting !== 'in_progress')) {
       toast({ title: 'Abra a sessão de assinatura', description: 'Use "Abrir sessão de assinatura" acima e assine de novo.' });
       return;
     }
-    const humanRetry = pending?.awaiting === 'ambiguous';
-    if (humanRetry && !window.confirm('O provedor não respondeu à última tentativa. Assinar de novo este mesmo documento?')) return;
+    if (humanRetry && !window.confirm(pending?.awaiting === 'in_progress'
+      ? 'A assinatura anterior não terminou. Repita só se ela não estiver mais em andamento em outra janela. Repetir no provedor este mesmo documento?'
+      : 'O provedor não respondeu à última tentativa. Assinar de novo este mesmo documento?')) return;
     setBusy(true);
     try {
       const outcome = await signKeepingOperation(signatureInvoke, user.id, { prescriptionId, pdfSha256 }, { humanRetry });
@@ -103,12 +118,23 @@ export function SignDocumentButton({ prescriptionId, pdfSha256, sessionActive, o
     }
   };
 
+  const icon = pending?.awaiting === 'in_progress' ? <RefreshCw className="w-3 h-3" /> : <PenLine className="w-3 h-3" />;
   return (
-    <Button
-      size="icon" variant="ghost" className="h-7 w-7 text-medical-blue"
-      title={label} aria-label={label} onClick={sign} disabled={busy}
-    >
-      {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <PenLine className="w-3 h-3" />}
-    </Button>
+    <>
+      <Button
+        size="icon" variant="ghost" className="h-7 w-7 text-medical-blue"
+        title={label} aria-label={label} onClick={() => sign(pending?.awaiting === 'ambiguous')} disabled={busy}
+      >
+        {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : icon}
+      </Button>
+      {pending?.awaiting === 'in_progress' && (
+        <Button
+          size="icon" variant="ghost" className="h-7 w-7 text-medical-blue"
+          title="Repetir assinatura" aria-label="Repetir assinatura" onClick={() => sign(true)} disabled={busy}
+        >
+          <RotateCcw className="w-3 h-3" />
+        </Button>
+      )}
+    </>
   );
 }

@@ -28,11 +28,17 @@ const OFFLINE = 'Sem conexão com o servidor. Verifique a internet e tente novam
 
 export type SessionState =
   | { available: false }
-  | { available: true; configured: boolean; active: boolean; expiresAt: string | null };
+  /** `mfaRequired`: the doctor must enable or confirm the second factor first. */
+  | { available: true; configured: boolean; active: boolean; expiresAt: string | null; mfaRequired?: boolean };
 
 /** Whether signing is available here and the doctor has an open session. */
 export async function sessionState(invoke: Invoke): Promise<SessionState> {
   const result = await answer(await invoke('signature-session/state', { method: 'GET' }));
+  // Without the second factor the server refuses, saying whether signing is
+  // configured: the screen sends the doctor to enable it (Codex 05/11 10:25, 1).
+  if (result?.status === 403 && result.body.mfaRequired === true) {
+    return { available: true, configured: result.body.configured === true, active: false, expiresAt: null, mfaRequired: true };
+  }
   if (!result || result.status !== 200) return { available: false };
   const { body } = result;
   return {
@@ -165,10 +171,16 @@ export async function signPrescription(invoke: Invoke, request: SignRequest): Pr
 export interface PendingOperation { operationId: string; awaiting: 'in_progress' | 'ambiguous' | null }
 const key = (userId: string, prescriptionId: string) => `cortex.signature.operation.${userId}.${prescriptionId}`;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// This page's copy (Codex 05/11 10:25, 3): when the browser storage fails
+// after an operation started, its retries in this page keep the same id.
+const kept = new Map<string, PendingOperation>();
 
 export function pendingOperation(userId: string, prescriptionId: string): PendingOperation | null {
+  const k = key(userId, prescriptionId);
+  const inPage = kept.get(k);
+  if (inPage) return inPage;
   try {
-    const value = JSON.parse(localStorage.getItem(key(userId, prescriptionId)) ?? 'null') as PendingOperation | null;
+    const value = JSON.parse(localStorage.getItem(k) ?? 'null') as PendingOperation | null;
     return value && typeof value.operationId === 'string' && UUID.test(value.operationId)
       && (value.awaiting === null || value.awaiting === 'in_progress' || value.awaiting === 'ambiguous') ? value : null;
   } catch {
@@ -176,12 +188,22 @@ export function pendingOperation(userId: string, prescriptionId: string): Pendin
   }
 }
 
-export function rememberOperation(userId: string, prescriptionId: string, value: PendingOperation): void {
-  try { localStorage.setItem(key(userId, prescriptionId), JSON.stringify(value)); } catch { /* private mode: the server still dedupes */ }
+/** Keeps the operation for this page and this browser; false when the browser could not store it. */
+export function rememberOperation(userId: string, prescriptionId: string, value: PendingOperation): boolean {
+  const k = key(userId, prescriptionId);
+  kept.set(k, value);
+  try {
+    localStorage.setItem(k, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function forgetOperation(userId: string, prescriptionId: string): void {
-  try { localStorage.removeItem(key(userId, prescriptionId)); } catch { /* nothing kept */ }
+  const k = key(userId, prescriptionId);
+  kept.delete(k);
+  try { localStorage.removeItem(k); } catch { /* nothing kept */ }
 }
 
 /**
@@ -198,7 +220,17 @@ export async function signKeepingOperation(
 ): Promise<SignOutcome> {
   const pending = pendingOperation(userId, document.prescriptionId);
   const operationId = pending?.operationId ?? crypto.randomUUID();
-  rememberOperation(userId, document.prescriptionId, { operationId, awaiting: pending?.awaiting ?? null });
+  const stored = rememberOperation(userId, document.prescriptionId, { operationId, awaiting: pending?.awaiting ?? null });
+  // A new operation starts only once it is kept in this browser: otherwise a
+  // closed tab would lose it and a retry would start another one, which the
+  // server refuses while the first is open (Codex 05/11 10:25, 3).
+  if (!pending && !stored) {
+    forgetOperation(userId, document.prescriptionId);
+    return {
+      kind: 'refused', ended: false,
+      message: 'Este navegador não conseguiu guardar a assinatura em andamento (armazenamento cheio ou bloqueado). Libere espaço ou saia da janela privada e assine de novo.',
+    };
+  }
   const outcome = await signPrescription(invoke, {
     prescriptionId: document.prescriptionId, operationId, shownPdfSha256: document.pdfSha256, humanRetry: options.humanRetry,
   });
