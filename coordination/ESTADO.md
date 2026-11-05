@@ -1,6 +1,8 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-05 08:44 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-05 09:00 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+
+**M2, contrato de custódia do provisionamento:** [matriz](../docs/product/clinic-crm/PROVISIONING_CUSTODY_CONTRACT.md) e [revisão](../docs/reviews/2026-11-05/provisioning-custody-contract/REVIEW.md). Inventário de ator/alvo/operação/sessão/fator/geração, preflight só de conta e alvo ainda ausente, sem escolher retenção nem alterar os três helpers com Claude. Revisão independente encontrou caso antes não separado: operação `auth_created` com intenção ainda `prepared`, alvo removido; check sem confirmação e replay podem devolver a intenção por leitura dos ramos atuais. Matriz agora distingue antes do nascimento, nascido pendente e confirmado; próximo incremento é RED/positivo/correção nas duas Auth, depois overlay T33. Não é reprodução Native nova nem correção runtime; só documentos, links/diff e revisão. Nenhuma migration/produção/purge; M2 aberta. Mensagens anteriores continuam atendidas, sem resposta duplicada.
 
 ## Áreas e responsáveis
 
