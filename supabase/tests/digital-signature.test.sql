@@ -135,6 +135,13 @@ do $$ declare op uuid:='d1740000-0000-4000-8000-000000000001';u uuid:='d1700000-
  assert public.signature_advance(u,op,'stored',jsonb_build_object('stagedPath',path,'signedSha256',repeat('f',64),'attempt',2))->>'state'='stored','Not stored';
  assert public.signature_complete(u,op,'00AB12','CN=AC Sintetica')->>'state'='completed','Not completed';
  assert public.signature_complete(u,op,'00AB12','CN=AC Sintetica')->>'state'='completed','Completion not idempotent';
+ -- Codex 04/11 23:29: the replay of a completed operation goes through the
+ -- reservation. It returns the history (owner and payload checked) although
+ -- the prescription is already signed, and must keep doing so under the
+ -- session fence; another payload is still refused.
+ assert public.signature_reserve(u,op,'d1720000-0000-4000-8000-000000000001',repeat('a',64))->>'state'='completed','Replay of a completed operation refused';
+ begin perform public.signature_reserve(u,op,'d1720000-0000-4000-8000-000000000001',repeat('b',64));
+  raise exception 'Replay with another payload accepted';exception when sqlstate '22023' then null;end;
  begin update public.prescriptions set status='signed',signature_verified_at=now() where id='d1720000-0000-4000-8000-000000000002';
   raise exception 'Generic writer marked a document signed';exception when insufficient_privilege then null;end;
  begin update public.prescriptions set signed_storage_path=null where id='d1720000-0000-4000-8000-000000000001';

@@ -95,7 +95,11 @@ Uma consulta HTTP ao Auth antes do RPC não fecha um logout que aconteça entre 
 - **Funções que movem uma operação existente** (`advance` produtivo e `complete`) **devolvem** a operação, sem lançar:
   - se o passo pedido **ainda é pertinente** àquela operação, ela vira `cancelled`, com o código `auth_session_ended` e a limpeza marcada pelo banco quando já houve chamada ao PSC. É pertinente quando:
     - `prepared` parte de `reserved`;
-    - `psc_requested` parte de `prepared` ou de `ambiguous`;
+    - `psc_requested` parte de `prepared` ou de `ambiguous` **e o pedido traz a tentativa observada** (`p_data.attempt`), igual a `psc_attempts` sob a trava. Vale também para o sucesso, não só para a sessão encerrada (Codex, 23:29). Vale nos dois casos:
+      - de `prepared`, a tentativa observada é 0;
+      - de `ambiguous`, é a tentativa que ficou sem resposta.
+
+      Uma tentativa diferente recebe P4094 sem mudar nada, inclusive quando o pedido vem com a sessão encerrada.
     - `stored` parte de `psc_requested`, com a tentativa igual a `psc_attempts`;
     - `complete` parte de `stored`;
   - se o passo **não é mais pertinente** (uma tentativa B mais nova avançou, ou a operação já terminou), nada muda. Para um passo de tentativa, a resposta é P4094, sem efeito; para os outros, a função devolve a operação como está;
@@ -108,6 +112,7 @@ Uma consulta HTTP ao Auth antes do RPC não fecha um logout que aconteça entre 
 - **Matriz:** A, com sessão encerrada, contra B atual com sessão válida (outro dispositivo do mesmo médico):
   - A em `stored` com a tentativa antiga recebe P4094 e não muda nada. B conclui;
   - A pedindo `psc_requested` quando B já está em `psc_requested` recebe P4093 e não muda nada;
+  - A lê `ambiguous`/1 e prepara uma repetição. Enquanto isso, B faz a tentativa 2 e volta a `ambiguous`/2. A chega depois, com a sessão encerrada ou não, pedindo `psc_requested` com a tentativa 1: recebe P4094, e B continua `ambiguous`/2 (Codex, 23:29);
   - A com o passo pertinente e a sessão encerrada cancela a própria tentativa. B, que ainda não tinha começado, encontra a operação terminal na retomada e começa uma nova operação.
 
 ### 3.4 Inventário: o que cada função trava e afirma
@@ -129,7 +134,9 @@ Sobre a ordem:
 | `consume_authorization` | **sim (novo no inventário)** | estado OAuth FOR UPDATE NOWAIT | o estado é do usuário e do PSC, não foi usado e `expires_at > clock_timestamp()`; sessão e fator. Só então marca `used_at` e libera o verificador | P4011 ou estado vencido, sem marcar `used_at` |
 | `activate_session` | sim | sessão de assinatura anterior (para substituir) | conta, sessão, fator, prazo | P4011, sem efeito |
 | `session_token` | sim | sessão de assinatura FOR UPDATE NOWAIT | sessão de assinatura ativa, mesma `generation` e prazo; sessão do Cortex e fator | P4011, sem efeito |
-| `reserve` (operação nova ou retorno da existente) | sim, nos dois ramos | sessão de assinatura, receita (share) | receita dona, `generated`, hash, tipo, sem caminho assinado; pacientes pelos epochs; ritmo | P4011, sem efeito |
+| `reserve`, operação nova | sim | sessão de assinatura, receita (share) | receita dona, `generated`, hash, tipo, sem caminho assinado; pacientes pelos epochs; ritmo | P4011, sem efeito |
+| `reserve`, retorno de operação existente **não terminal** | sim | sessão de assinatura, operação | dono e payload (`prescription_id`, `shown_pdf_sha256`) iguais | P4011, sem efeito |
+| `reserve`, retorno de operação existente **terminal** (`completed`, `failed`, `cancelled`, `cancelled_by_revocation`) | **não** | — | só dono e payload iguais. Não confere receita `generated` nem caminho assinado, que uma receita assinada já não cumpre. Devolve histórico: não autoriza assinatura nova nem gera URL (Codex, 23:29) | 22023 para dono ou payload diferente |
 | `advance` produtivo (`prepared`, `psc_requested`, `stored`) | sim | sessão de assinatura, operação, receita (share) | os da reserva, mais a tentativa (P4094) | §3.3: `cancelled` devolvido, ou P4094 |
 | `complete` | sim (retorno de `completed` já existente: sem cerca, porque não leva a nada novo) | sessão de assinatura, operação, receita (update), **`storage.objects` (share, novo)** | os anteriores, mais o objeto existente no caminho da operação | §3.3: `cancelled` devolvido; objeto ausente vira `cancelled` com `stored_object_missing` |
 | `close` (`ambiguous`, `failed`, `cancelled`) | **não** | operação | estado e tentativa (P4094) | — (só fecha) |
@@ -219,6 +226,8 @@ O Codex confere a nulabilidade nativa ao montar as duas tabelas. O adaptador do 
   - contenção: 40001 sem efeito;
 - `consume_authorization`: estado vencido pelo relógio lido depois das travas, sessão encerrada e `used_at` intacto em toda recusa;
 - reconciliação: cada CAS da §9 com o estado ou a tentativa mudados não faz nada; `stored_at` não muda numa repetição de `stored`; `stored_expired` só depois de 24 horas de `stored_at`;
+- `psc_requested` sem tentativa, com tentativa de outra rodada ou a partir de um `ambiguous` mais novo: P4094, e o estado e as tentativas ficam intactos. O fluxo passa a enviar a tentativa observada;
+- replay de uma operação concluída pela reserva, com a receita já assinada e **sem sessão do Cortex**: devolve `completed`. Este caso já passa hoje e fica fixado em `digital-signature.test.sql`; continua obrigatório depois da cerca;
 - logout entre a reserva e a conclusão leva a `cancelled` com `auth_session_ended` e limpeza;
 - objeto assinado ausente na conclusão.
 
