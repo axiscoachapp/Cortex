@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
@@ -9,6 +9,7 @@ import { receptionApi } from './api';
 import { NewCaseDialog, type ContactOption } from './NewCaseDialog';
 import { ReceptionNotice } from './ReceptionNotice';
 import { ContactCorrectionDialog } from './ContactCorrectionDialog';
+import { ContactLinksDialog } from './ContactLinksDialog';
 
 export default function ContactsPage() {
   const access = useClinicAccess();
@@ -17,6 +18,8 @@ export default function ContactsPage() {
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState<ContactOption>();
   const [editing, setEditing] = useState<string | null>(null);
+  const [viewingLinks, setViewingLinks] = useState<Pick<ContactOption, 'id' | 'name'> | null>(null);
+  useEffect(() => { setViewingLinks(null); }, [access?.actorId, access?.clinic?.id, access?.admin, access?.active, access?.kind]);
   const contacts = useInfiniteQuery({
     queryKey: ['reception', access?.actorId, 'contacts', access?.clinic?.id, search],
     initialPageParam: null as string | null,
@@ -77,6 +80,9 @@ export default function ContactsPage() {
                     Corrigir contato
                   </Button>
                 )}
+                {access?.admin && access.active && access.kind === 'clinical' && (
+                  <Button size="sm" variant="outline" className="h-auto min-h-10 max-w-full whitespace-normal" onClick={() => setViewingLinks(contact)}>Consultar vínculos</Button>
+                )}
               </div>
             </article>
           ))}
@@ -100,6 +106,7 @@ export default function ContactsPage() {
         />
       )}
       {editing && <ContactCorrectionDialog contactId={editing} onClose={() => setEditing(null)} />}
+      {viewingLinks && access?.admin && <ContactLinksDialog contactId={viewingLinks.id} contactName={viewingLinks.name} onClose={() => setViewingLinks(null)} />}
     </div>
   );
 }

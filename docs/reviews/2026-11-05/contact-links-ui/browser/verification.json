@@ -1,0 +1,160 @@
+{
+  "syntheticOnly": true,
+  "realPagesAndApi": true,
+  "realSql": false,
+  "checks": [
+    "lazy admin-only entrypoint",
+    "50 plus 1 rows through stable cursor",
+    "existing editor updates only the selected relationship",
+    "dirty Escape and return preserve list context",
+    "unavailable physician disables correction",
+    "permission refusal hides cached rows and actions",
+    "375px dialog title and footer reachable"
+  ],
+  "scenarios": [
+    {
+      "admin": true,
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_contacts",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_search": "",
+            "p_before": null
+          }
+        },
+        {
+          "name": "reception_contact_links",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-000000000001"
+          }
+        },
+        {
+          "name": "reception_update_link_relationship",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-000000000001",
+            "p_revision": 1,
+            "p_relationship": "family"
+          }
+        },
+        {
+          "name": "reception_contacts",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_search": "",
+            "p_before": null
+          }
+        },
+        {
+          "name": "reception_contact_links",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-000000000001"
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-000000000001"
+          }
+        },
+        {
+          "name": "reception_contact_links",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_after": "22222222-2222-4222-8222-000000000050",
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_contact_links",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        }
+      ]
+    },
+    {
+      "admin": false,
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_contacts",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_search": "",
+            "p_before": null
+          }
+        }
+      ]
+    }
+  ],
+  "pageErrors": [],
+  "sources": [
+    {
+      "path": "src/features/reception/ContactsPage.tsx",
+      "sha256": "9af3c75e2b37a3b0d729bd31842966851439f1cdf7222bfb379229b8d998f6fc"
+    },
+    {
+      "path": "src/features/reception/ContactLinksDialog.tsx",
+      "sha256": "11654410de21dd53a6b2e073b314300577d9dfa19c1888e6b9fd0295153a44e6"
+    },
+    {
+      "path": "src/features/reception/LinkRelationshipDialog.tsx",
+      "sha256": "a64a7ca74177f1ffe9ec2fe03fce944be6a0ad9f2fd7267d10f7f21506c91309"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "1613ab08621bb74ecba447683c6855ae882c2ed6f96394f276f98227485cbd5f"
+    },
+    {
+      "path": "src/features/reception/contracts.ts",
+      "sha256": "8c5f7f329416fd0e5b8dcdb155f99721015606699ce5fb5f9de07599640047a7"
+    },
+    {
+      "path": "src/features/reception/linkRelationships.ts",
+      "sha256": "f3308b7cd8ee89231d5bd5aaa1e0d51de16f58de7fde7cbbabc8a164c51d8636"
+    },
+    {
+      "path": "src/hooks/useUnsavedChanges.ts",
+      "sha256": "1a124ebb7fd75d09621ff4c85574257cb8436370960f47f0a0b32c8c7c9a6e23"
+    },
+    {
+      "path": "scripts/fixtures/contact-links-ui-page.tsx",
+      "sha256": "dfa627495964a40c07fdcf63d87873ab96a8429f6202ddb975dbb5aa5c7c4c07"
+    }
+  ],
+  "cleanupVerified": true
+}

@@ -12,3 +12,7 @@
 - Sem escrita de domínio ou auditoria de leitura contendo valores pessoais; escritores e DTOs existentes não mudam. Novo EXECUTE apenas para authenticated, com revogação explícita de todos os grants padrão; catálogo de funções atualizado na mesma entrega.
 
 Verificação: banco descartável sintético com permissões/assurance/inatividade/contato externo, cursor e limites, paginação estável, disponibilidade e projeção mínima; adaptador rejeita resposta extra/inválida. Tipos gerados do schema ensaiado. Sem carga/hosted/push. Migration reservada no ESTADO antes do arquivo.
+
+## Interface entregue em T05b/3d
+
+[Lista na página de contatos](../../reviews/2026-11-05/contact-links-ui/IMPLEMENTATION.md): entrada sob demanda para admin clínico ativo, cache por ator/clínica/contato e leitura fresca antes de revelar dados anteriores. Erros escondem linhas/ações, inclusive em outra página; indisponibilidade impede abrir correção. O editor existente recebe os IDs exatos em modal alternado e retorna à lista. Consulta abortada ao desmontar não é reaproveitada ao reabrir a mesma chave. A entrada visual está implementada; estados/escritores do vínculo continuam fora desta fatia.
