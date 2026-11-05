@@ -9,7 +9,7 @@ Pedido do usuário em 04/11/2026: seguir com a proposta de catálogos próprios,
 | Fórmulas manipuladas | Não há catálogo oficial de fórmulas: são os componentes, com os nomes da DCB, mais as fórmulas que cada médico salva | **Pronto**: servidor, tela e modelos (salvar e aplicar) |
 | Exames com código TUSS | ANS, Terminologia Unificada da Saúde Suplementar | **Pronto**: busca no pedido de exames, com o código impresso |
 | CID-10 | DATASUS | **Pronto**: sugestões no CID do atestado e da RCE |
-| Apresentações dos medicamentos | Lista CMED (Anvisa), sem os preços | Leitor pronto e conferido |
+| Apresentações dos medicamentos | Lista CMED (Anvisa), sem os preços | Pronto: escolha de concentração e forma no compositor |
 | Nome genérico oficial (DCB) | Anvisa | **Pronto** nos componentes das fórmulas manipuladas |
 | Favoritos de cada médico | Modelos do PersonalMed (743 receitas e 51 pedidos de exame) e os do próprio Cortex | Depois dos catálogos |
 
@@ -110,4 +110,24 @@ Na receita de controle especial, os componentes saem antes da linha "Quantidade"
 1. ~~Tela no compositor~~: pronta. O botão "Adicionar fórmula manipulada" abre linhas de componente (até 12), excipiente, forma (com sugestões) e quanto manipular. A validação é a mesma do servidor antes de adicionar, e o item aparece na lista com o selo MANIPULADO e o resumo dos componentes. Testes em `src/components/DocumentComposerModal.test.tsx`.
 2. ~~Modelos~~: prontos. A migration `20261105110000` aceita `formula` nos itens; "Salvar como modelo" guarda a fórmula, e aplicar um modelo a recoloca na receita, com os avisos de controlado e antimicrobiano. Uma fórmula guardada que não passa mais nas regras é descartada na leitura, nunca adivinhada.
 3. ~~Busca de nomes da DCB nos componentes~~: pronta (`DcbInput`). A partir de 3 letras, o nome do componente sugere as denominações oficiais; o texto livre continua valendo.
-4. Apresentações da CMED: escolher a apresentação depois de achar o produto. **A decidir:** o texto da CMED é abreviado ("50 MG COM CT BL AL PLAS TRANS X 30") e não serve para imprimir como está. Proposta: usar a apresentação só para preencher a concentração e sugerir a unidade, sem imprimi-la.
+4. ~~Apresentações da CMED~~: prontas. **Decisão do usuário (04/11/2026):** a apresentação só preenche a concentração e sugere a unidade; o texto abreviado da CMED ("50 MG COM CT BL AL PLAS TRANS X 30") nunca é impresso.
+   - **Como funciona:**
+     - ao escolher um produto da base Anvisa, o compositor busca as apresentações pelos 9 primeiros dígitos do registro (`registration9`);
+     - o item ganha um seletor opcional "Concentração e forma (lista CMED, opcional)", com uma opção por concentração e forma ("50 mg · comprimido revestido"), em ordem numérica;
+     - as apresentações de uso hospitalar e as que o leitor não entende com segurança ficam de fora.
+   - **Escolher uma opção:**
+     - acrescenta a concentração ao nome ("Losartana Potássica 50 mg"), a não ser que o nome já tenha uma;
+     - na receita de controle especial, preenche a concentração e a unidade ("comprimidos", "frascos", "ampolas"…), só se estiverem vazias ou se ainda tiverem o que a escolha anterior pôs. O que o médico digitou fica;
+     - a dose ganha a sugestão "ex.: 1 comprimido";
+     - a quantidade nunca é preenchida: é decisão do médico.
+   - **Trocar ou limpar a escolha** substitui ou desfaz só o que ela preencheu.
+   - **Sem apresentações** (produto sem registro, consulta falhou ou nada legível), o item funciona como antes.
+   - **Leitor (`src/lib/cmedPresentation.ts`):** lê concentração, forma e embalagem.
+     - A unidade vem da forma (sólidos) ou do primeiro recipiente citado (bisnaga, frasco, ampola, frasco-ampola, seringa, carpule, pote). Um diluente citado depois não conta.
+     - Kits com vários produtos e formas desconhecidas não geram opção, para não adivinhar.
+   - **Conferência no arquivo oficial de 04/11/2026** (fora do repo, só agregados):
+     - lê 21.961 de 26.638 apresentações (82,4%). Das que trazem concentração, são 96,8%; as 3.949 sem concentração ficam de fora de propósito;
+     - os 9.080 produtos distintos da CMED aparecem todos no arquivo de produtos da Anvisa (`NUMERO_REGISTRO_PRODUTO`, 9 dígitos);
+     - amostra aleatória de 40 leituras conferida à mão, sem erro de concentração.
+   - **Testes:** `src/lib/cmedPresentation.test.ts` (leitor, agrupamento, registro e aplicação ao item) e `src/components/DocumentComposerModal.presentation.test.tsx` (seletor, nome, dose e campos da RCE).
+   - **Limite conhecido:** `medication_catalog` guarda um registro por produto e princípio ativo. Se esse registro não tiver preço na CMED (por exemplo, inativo), o seletor não aparece, mas nada errado é preenchido.

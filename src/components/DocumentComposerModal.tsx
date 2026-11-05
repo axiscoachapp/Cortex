@@ -22,6 +22,7 @@ import {
 import { PrescriptionTemplatePicker, type ApplyMode } from '@/components/PrescriptionTemplatePicker';
 import { CidInput, DcbInput, ExamSearch, examLine } from '@/components/ReferenceSearch';
 import type { SnippetItem } from '@/lib/documentSnippets';
+import { applyPresentation, presentationOptions, registration9Of, type PresentationOption } from '@/lib/cmedPresentation';
 
 /** Sex values that satisfy RDC 471/2021; 'nao_informado' does not. */
 const PRINTABLE_SEX = new Set(['feminino', 'masculino', 'intersexo']);
@@ -44,6 +45,13 @@ interface ComposerMed extends Medication {
   concentration?: string;
   quantity?: string;
   unit?: string;
+  /** CMED presentations of the catalog product (strength and form only; the
+   *  abbreviated CMED text is never printed). */
+  registration9?: string | null;
+  presentations?: PresentationOption[];
+  baseName?: string;
+  presentationKey?: string;
+  doseUnit?: string;
 }
 
 /** What the RCE adds to each medication sent to generate-prescription. */
@@ -63,6 +71,7 @@ interface CatalogHit {
   active_ingredient: string | null;
   therapeutic_class: string | null;
   is_antimicrobial: boolean;
+  anvisa_registration?: string | null;
 }
 
 interface DocumentComposerModalProps {
@@ -193,7 +202,7 @@ export function DocumentComposerModal({
       const safe = q.replace(/["\\%_]/g, '');
       const { data, error } = await supabase
         .from('medication_catalog')
-        .select('id, product_name, active_ingredient, therapeutic_class, is_antimicrobial')
+        .select('id, product_name, active_ingredient, therapeutic_class, is_antimicrobial, anvisa_registration')
         .or(`product_name.ilike."%${safe}%",active_ingredient.ilike."%${safe}%"`)
         .limit(8);
       if (cancelled) return;
@@ -208,6 +217,7 @@ export function DocumentComposerModal({
     const name = hit.product_name
       .toLowerCase()
       .replace(/(^|\s|\+|\()([a-zà-ú])/g, (_, p, c) => p + c.toUpperCase());
+    const registration9 = registration9Of(hit.anvisa_registration);
     setMeds(prev => [...prev, {
       name,
       dosage: '',
@@ -216,8 +226,23 @@ export function DocumentComposerModal({
       fromCatalog: true,
       antimicrobial: hit.is_antimicrobial,
       ingredient: hit.active_ingredient,
+      registration9,
     }]);
     setQuery(''); setHits([]);
+    // Strengths and forms of this product (CMED). Optional: without them the
+    // item works as before.
+    if (registration9) {
+      void supabase
+        .from('medication_presentations')
+        .select('presentation, hospital_only')
+        .eq('registration9', registration9)
+        .limit(300)
+        .then(({ data, error }) => {
+          const options = error || !data ? [] : presentationOptions(data);
+          if (!options.length) return;
+          setMeds(prev => prev.map(m => (m.registration9 === registration9 && !m.presentations ? { ...m, presentations: options } : m)));
+        });
+    }
     // Suggest the right document type when an antimicrobial enters the list.
     if (hit.is_antimicrobial && docType === 'receita_simples') {
       setDocType('receita_antimicrobiano');
@@ -653,6 +678,22 @@ export function DocumentComposerModal({
                         </button>
                       )}
                     </div>
+                    {m.checked && !m.formula && m.presentations && m.presentations.length > 0 && (
+                      <div className="pl-5">
+                        <select
+                          aria-label={`Apresentação de ${m.baseName ?? m.name}`}
+                          className="h-7 w-full rounded-md border border-input bg-background px-2 text-xs"
+                          value={m.presentationKey ?? ''}
+                          onChange={e => {
+                            const option = m.presentations?.find(o => o.key === e.target.value) ?? null;
+                            setMeds(prev => prev.map((x, j) => (j === i ? applyPresentation(x, option) : x)));
+                          }}
+                        >
+                          <option value="">Concentração e forma (lista CMED, opcional)</option>
+                          {m.presentations.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                        </select>
+                      </div>
+                    )}
                     {m.formula && (
                       <p className="pl-5 text-[0.6875rem] text-muted-foreground break-words">
                         {m.formula.components.map(c => `${c.substance} ${c.amount}`).join(' + ')} · manipular {m.formula.quantity} ({m.formula.form})
@@ -665,7 +706,7 @@ export function DocumentComposerModal({
                           className="h-7 text-xs"
                           value={m.dosage ?? ''}
                           onChange={e => setMeds(prev => prev.map((x, j) => j === i ? { ...x, dosage: e.target.value } : x))}
-                          placeholder="Dose"
+                          placeholder={m.doseUnit ? `ex.: 1 ${m.doseUnit}` : 'Dose'}
                         />
                         <Input
                           aria-label={`Posologia e instruções de ${m.name}`}
