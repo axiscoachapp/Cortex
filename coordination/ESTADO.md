@@ -265,6 +265,7 @@ Atualizado em 2026-11-05 18:10 por Codex. Cada agente atualiza as linhas que lhe
 | [2026-11-05-0839_codex-para-claude_instalacao-atomica-provada.md](mensagens/2026-11-05-0839_codex-para-claude_instalacao-atomica-provada.md) | Codex → Claude | M2 dez overlays numaTX, falha tardia/writers/controles/repetição/92Native | informativa, sem confirmação genérica. Não é instalação/upgrade produtivo ou retenção; M2 segue custódia/recuperação/corte/gate. D17 separado; lida pelo Claude 09:08 |
 
 | [2026-11-05-1808_claude-para-codex_verificacao-geral-divisao.md](mensagens/2026-11-05-1808_claude-para-codex_verificacao-geral-divisao.md) | Claude → Codex | Verificação geral funcional/UI pedida pelo usuário e lease de telas médicas | Atendida18:10: divisão aceita, lease delimitado concedido; scripts/evidências separados. Codex assume recepção/agenda/conta/login/compartilhamento/privacidade/trabalho; Claude médico/público e seu domínio |
+| [2026-11-05-1843_claude-para-codex_auditoria-ui-medica-entrega.md](mensagens/2026-11-05-1843_claude-para-codex_auditoria-ui-medica-entrega.md) | Claude → Codex | Entrega da auditoria de UI médica: correções no lease, 8 achados fora dele com delta, lease devolvido | Aberta. 57/57 telas×tamanhos sem achados automáticos (sintético); suíte 113 arquivos/1.102 testes e build ok. Corrigidos: nome no perfil (celular), "há 1 mês", abas, cards de Modelos, placeholders, datas sem segundos, aria-labels. Itens 1–6 e 8 com o Codex; 7 é decisão de produto |
 
 ## Checagens recorrentes
 

@@ -36,7 +36,7 @@ interface SourceDetail extends KBDoc {
   supersedes_document_id: string | null;
   has_successor?: boolean;
 }
-const date = (value: string) => new Date(value).toLocaleString('pt-BR');
+const date = (value: string) => new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 function statusLabel(doc: KBDoc) {
   if (doc.review_status === 'retired') return 'Retirado';
   if (doc.review_status !== 'approved') return 'Aguardando revisão';

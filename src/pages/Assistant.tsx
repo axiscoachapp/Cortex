@@ -105,8 +105,8 @@ export default function AssistantPage() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') send(input); }}
-                placeholder="Escreva o que você precisa"
-                aria-label="Escreva o que você precisa"
+                placeholder="Escreva sua pergunta"
+                aria-label="Escreva sua pergunta"
                 className="w-full h-14 pl-5 pr-14 rounded-2xl border border-border bg-white shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30"
               />
               <Button
@@ -175,11 +175,11 @@ export default function AssistantPage() {
             <div className="border-t border-border/50 bg-background/95 backdrop-blur-sm">
               <div className="container mx-auto px-3 md:px-4 py-3 max-w-2xl flex items-center gap-2">
                 <input
-                  aria-label="Escreva o que você precisa"
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') send(input); }}
-                  placeholder="Escreva o que você precisa"
+                  placeholder="Escreva sua pergunta"
+                  aria-label="Escreva sua pergunta"
                   className="flex-1 h-11 px-4 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30"
                 />
                 <Button size="icon" aria-label="Enviar pergunta" className="rounded-xl h-11 w-11" onClick={() => send(input)} disabled={!input.trim() || loading}>

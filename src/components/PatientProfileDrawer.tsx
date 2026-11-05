@@ -87,8 +87,10 @@ function relativeDays(iso: string): string {
   if (d === 0) return 'hoje';
   if (d === 1) return 'ontem';
   if (d < 30) return `há ${d} dias`;
-  if (d < 365) return `há ${Math.floor(d / 30)} meses`;
-  return `há ${Math.floor(d / 365)} anos`;
+  const months = Math.floor(d / 30);
+  if (d < 365) return `há ${months} ${months === 1 ? 'mês' : 'meses'}`;
+  const years = Math.floor(d / 365);
+  return `há ${years} ${years === 1 ? 'ano' : 'anos'}`;
 }
 
 /* ──────────────────────────────────────────────────────────────────────── */
@@ -314,8 +316,10 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
           <SheetDescription className="sr-only">
             Dados clínicos, histórico de consultas e documentos deste paciente.
           </SheetDescription>
-          <div className="flex items-start justify-between gap-3">
-            <SheetTitle className="flex items-center gap-3 text-lg min-w-0">
+          {/* On a phone the name takes the whole width (clear of the close
+              button) and the actions go below it. */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+            <SheetTitle className="flex items-center gap-3 text-lg min-w-0 pr-8 sm:pr-0">
               <div className="w-10 h-10 rounded-full bg-medical-blue-light border-2 border-medical-blue/30 flex items-center justify-center shrink-0">
                 <span className="text-medical-blue font-bold text-sm">
                   {patient.name
@@ -326,8 +330,9 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                 </span>
               </div>
               <div className="min-w-0">
-                <span className="text-foreground truncate block max-w-[200px] md:max-w-[320px]">
-                  Dossiê: {patient.name}
+                <span className="text-foreground line-clamp-2 break-words">
+                  <span className="sr-only">Dossiê: </span>
+                  {patient.name}
                 </span>
                 <p className="text-sm font-normal text-muted-foreground">
                   {patient.age === null ? 'Idade não informada' : String(patient.age) + ' anos'}
@@ -335,7 +340,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                 </p>
               </div>
             </SheetTitle>
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex flex-wrap items-center gap-1 sm:shrink-0">
               {onAskAI && (
                 <Button
                   variant="outline"
@@ -347,7 +352,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                   title="Abrir o chat para perguntar à IA sobre este paciente"
                 >
                   <MessagesSquare className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Perguntar à IA</span>
+                  <span>Perguntar à IA</span>
                 </Button>
               )}
               <Button
@@ -359,7 +364,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                 title="Imprimir dossiê completo"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Dossiê</span>
+                <span>Dossiê</span>
               </Button>
             </div>
           </div>
@@ -459,14 +464,15 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
         )}
 
         <Tabs defaultValue="overview" className="mt-6">
-          <TabsList className="grid w-full grid-cols-3 mb-6 h-10">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm h-full">
+          {/* On a phone the three labels may need two lines each (135% scale). */}
+          <TabsList className="grid w-full grid-cols-3 mb-6 h-auto min-h-10">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm h-full whitespace-normal leading-tight px-1">
               Geral
             </TabsTrigger>
-            <TabsTrigger value="history" className="text-xs sm:text-sm h-full">
+            <TabsTrigger value="history" className="text-xs sm:text-sm h-full whitespace-normal leading-tight px-1">
               Histórico {consultations.length > 0 && `(${consultations.length})`}
             </TabsTrigger>
-            <TabsTrigger value="documents" className="text-xs sm:text-sm h-full">
+            <TabsTrigger value="documents" className="text-xs sm:text-sm h-full whitespace-normal leading-tight px-1">
               Documentos
             </TabsTrigger>
           </TabsList>
@@ -601,7 +607,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
               ) : (
                 <div className="pl-10 p-4 rounded-lg bg-secondary/50 border border-border">
                   <p className="text-sm text-muted-foreground">
-                    Nenhum insight gerado ainda. Cole notas longas em "Extrair com IA" no painel direito.
+                    Nenhum insight gerado ainda. Cole notas longas em "Extrair com IA", no painel Perfil.
                   </p>
                 </div>
               )}

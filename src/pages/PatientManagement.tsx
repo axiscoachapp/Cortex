@@ -271,7 +271,10 @@ const PatientManagement = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <Brain className="h-6 w-6 md:h-8 md:w-8 text-primary shrink-0" />
-            <h1 className="text-lg md:text-2xl font-semibold truncate">Gerenciar Pacientes</h1>
+            <h1 className="text-lg md:text-2xl font-semibold truncate">
+              <span className="sm:hidden">Pacientes</span>
+              <span className="hidden sm:inline">Gerenciar pacientes</span>
+            </h1>
           </div>
         </div>
       </header>
@@ -379,7 +382,7 @@ const PatientManagement = () => {
             <Input
               type="search"
               aria-label="Buscar pacientes"
-              placeholder="Buscar por nome ou profissão…"
+              placeholder="Nome ou profissão…"
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);

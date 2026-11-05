@@ -241,7 +241,10 @@ export default function TemplatesPage() {
             </Button>
             <FileStack className="h-5 w-5 text-medical-blue shrink-0" />
             <div className="min-w-0">
-              <h1 className="text-base md:text-lg font-semibold text-foreground leading-tight">Modelos de Documento</h1>
+              <h1 className="text-base md:text-lg font-semibold text-foreground leading-tight truncate">
+                <span className="sm:hidden">Modelos</span>
+                <span className="hidden sm:inline">Modelos de documento</span>
+              </h1>
               <p className="text-xs text-muted-foreground hidden sm:block">
                 Estruturas personalizadas para as evoluções geradas pela IA
               </p>
@@ -270,7 +273,7 @@ export default function TemplatesPage() {
             aria-label="Buscar modelos"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Pesquise pelo nome do modelo"
+            placeholder="Nome do modelo…"
             className="pl-9"
           />
         </div>
@@ -297,18 +300,20 @@ export default function TemplatesPage() {
               return (
                 <div
                   key={t.id}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border/60 bg-white shadow-[0_1px_4px_hsl(0_0%_0%/0.04)]"
+                  className="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 px-4 py-3 rounded-xl border border-border/60 bg-white shadow-[0_1px_4px_hsl(0_0%_0%/0.04)]"
                 >
                   <div className="w-9 h-9 rounded-lg bg-medical-blue-light flex items-center justify-center shrink-0">
                     <FileText className="w-4 h-4 text-medical-blue" />
                   </div>
-                  <button type="button" onClick={() => setPreview(t)} aria-label={`Pré-visualizar ${t.name}`} className="flex-1 min-w-0 text-left rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-                    <p className="text-sm font-semibold text-foreground truncate">{t.name}</p>
+                  {/* On a phone the name keeps the whole first line; the badge
+                      and actions move to a second line under it. */}
+                  <button type="button" onClick={() => setPreview(t)} aria-label={`Pré-visualizar ${t.name}`} className="flex-1 min-w-[calc(100%-3rem)] sm:min-w-0 text-left rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+                    <p className="text-sm font-semibold text-foreground line-clamp-2 break-words sm:truncate">{t.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{t.description ?? '—'}</p>
                   </button>
                   <span
                     className={cn(
-                      'text-[0.5625rem] font-bold px-1.5 py-0.5 rounded shrink-0',
+                      'text-[0.5625rem] font-bold px-1.5 py-0.5 rounded shrink-0 ml-12 sm:ml-0',
                       builtin ? 'bg-medical-blue-light text-medical-blue' : 'bg-green-100 text-green-700',
                     )}
                   >
@@ -321,6 +326,7 @@ export default function TemplatesPage() {
                         variant="ghost"
                         className="h-8 w-8"
                         title="Editar"
+                        aria-label={`Editar ${t.name}`}
                         onClick={() => openEdit(t)}
                       >
                         <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
@@ -331,6 +337,7 @@ export default function TemplatesPage() {
                       variant="ghost"
                       className="h-8 w-8"
                       title="Duplicar"
+                      aria-label={`Duplicar ${t.name}`}
                       disabled={busyId === t.id}
                       onClick={() => handleDuplicate(t)}
                     >
@@ -346,6 +353,7 @@ export default function TemplatesPage() {
                         variant="ghost"
                         className="h-8 w-8 hover:text-destructive"
                         title="Excluir"
+                        aria-label={`Excluir ${t.name}`}
                         disabled={busyId === t.id}
                         onClick={() => handleDelete(t)}
                       >
