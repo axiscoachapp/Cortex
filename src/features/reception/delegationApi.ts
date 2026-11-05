@@ -24,11 +24,13 @@ const permission = z.discriminatedUnion('source', [
 ]);
 const permissionsPage = z.object({ items: z.array(permission).max(100), nextCursor: uuid.nullable() }).strict();
 const permissionsInput = z.object({ clinicId: uuid, staffId: uuid, after: uuid.nullish(), limit: z.number().int().min(1).max(100).default(50) }).strict();
+const withdrawalReview = z.object({ id: uuid, clinicId: uuid, clinicName: z.string(), staffId: uuid, staffName: z.string(), doctorId: uuid, doctorName: z.string(), revision, state: z.literal('approved'), capabilityVersion: z.literal('clinic_reception_v1') }).strict();
+export type WithdrawalReview = z.infer<typeof withdrawalReview>;
 export type DelegationRequest = z.infer<typeof item>;
 export type DelegationCursor = z.infer<typeof cursor>;
 export type DelegationAction = z.infer<typeof changeInput>['action'];
 
-type RpcName = 'reception_delegation_requests' | 'reception_request_delegation' | 'reception_decide_delegation' | 'reception_cancel_delegation' | 'reception_revoke_delegation' | 'reception_staff_permissions';
+type RpcName = 'reception_delegation_requests' | 'reception_request_delegation' | 'reception_decide_delegation' | 'reception_cancel_delegation' | 'reception_revoke_delegation' | 'reception_staff_permissions' | 'reception_delegation_withdrawal';
 async function rpc<T>(name: RpcName, args: Record<string, unknown>, schema: z.ZodType<T>): Promise<T> {
   const { data, error } = await supabase.rpc(name as never, args as never).abortSignal(AbortSignal.timeout(20_000));
   if (error) throw new ReceptionError(
@@ -42,6 +44,9 @@ async function rpc<T>(name: RpcName, args: Record<string, unknown>, schema: z.Zo
   return parsed.data;
 }
 export const delegationApi = {
+  async withdrawal(requestId: string) {
+    return rpc('reception_delegation_withdrawal', { p_request: uuid.parse(requestId) }, withdrawalReview);
+  },
   async permissions(input: z.input<typeof permissionsInput>) {
     const value = permissionsInput.parse(input);
     return rpc('reception_staff_permissions', { p_clinic: value.clinicId, p_staff: value.staffId, p_after: value.after ?? null, p_limit: value.limit }, permissionsPage);

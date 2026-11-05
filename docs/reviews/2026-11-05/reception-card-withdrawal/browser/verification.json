@@ -1,0 +1,184 @@
+{
+  "syntheticOnly": true,
+  "realPagesAndApi": true,
+  "realSql": false,
+  "checks": [
+    "fresh named review",
+    "opening/cancel sends no write",
+    "lost reply retries same request/revision/operation",
+    "conflict refreshes without applying newer approval",
+    "unavailable review cannot confirm",
+    "375px dialog inside viewport"
+  ],
+  "scenarios": [
+    {
+      "mode": "lost",
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_team_doctors",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666"
+          }
+        },
+        {
+          "name": "reception_staff_permissions",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_staff": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_delegation_withdrawal",
+          "body": {
+            "p_request": "99999999-9999-4999-8999-999999999999"
+          }
+        },
+        {
+          "name": "reception_delegation_withdrawal",
+          "body": {
+            "p_request": "99999999-9999-4999-8999-999999999999"
+          }
+        },
+        {
+          "name": "reception_revoke_delegation",
+          "body": {
+            "p_request": "99999999-9999-4999-8999-999999999999",
+            "p_revision": 2,
+            "p_operation": "c9f5f719-758a-4ed0-acb7-098a6655b1bd"
+          }
+        },
+        {
+          "name": "reception_revoke_delegation",
+          "body": {
+            "p_request": "99999999-9999-4999-8999-999999999999",
+            "p_revision": 2,
+            "p_operation": "c9f5f719-758a-4ed0-acb7-098a6655b1bd"
+          }
+        },
+        {
+          "name": "reception_staff_permissions",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_staff": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "clinic_access",
+          "body": {}
+        }
+      ]
+    },
+    {
+      "mode": "conflict",
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_team_doctors",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666"
+          }
+        },
+        {
+          "name": "reception_staff_permissions",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_staff": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_delegation_withdrawal",
+          "body": {
+            "p_request": "99999999-9999-4999-8999-999999999999"
+          }
+        },
+        {
+          "name": "reception_revoke_delegation",
+          "body": {
+            "p_request": "99999999-9999-4999-8999-999999999999",
+            "p_revision": 2,
+            "p_operation": "7ba1f196-3cdb-4fe1-86a4-4158af7fa678"
+          }
+        },
+        {
+          "name": "reception_staff_permissions",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_staff": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "clinic_access",
+          "body": {}
+        }
+      ]
+    },
+    {
+      "mode": "unavailable",
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_team_doctors",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666"
+          }
+        },
+        {
+          "name": "reception_staff_permissions",
+          "body": {
+            "p_clinic": "66666666-6666-4666-8666-666666666666",
+            "p_staff": "77777777-7777-4777-8777-777777777777",
+            "p_after": null,
+            "p_limit": 50
+          }
+        },
+        {
+          "name": "reception_delegation_withdrawal",
+          "body": {
+            "p_request": "99999999-9999-4999-8999-999999999999"
+          }
+        }
+      ]
+    }
+  ],
+  "pageErrors": [],
+  "sources": [
+    {
+      "path": "src/features/reception/TeamSettings.tsx",
+      "sha256": "962d530404c83e29544cb2bf5457144ecbb66f8705c077a83a8986a5ad6f8098"
+    },
+    {
+      "path": "src/features/reception/StaffAccessProvenance.tsx",
+      "sha256": "be8fb60b8733bd76a19f5c4ab732c49ee05814524fbd30438d037a33e0feafa4"
+    },
+    {
+      "path": "src/features/reception/WithdrawDelegation.tsx",
+      "sha256": "13b87728cc5570b46d893119de827ad319cdb10a54f549ac12e604e634266c79"
+    },
+    {
+      "path": "src/features/reception/delegationApi.ts",
+      "sha256": "10d0781f52df063998563702defd6bcd845d4accc6403bf530ce35da1ea84a6d"
+    },
+    {
+      "path": "scripts/fixtures/reception-reactivation-page.tsx",
+      "sha256": "894b69922a8471d383a6bfb316d74da64cf0724332d50443ec8d47cab39147f8"
+    }
+  ]
+}

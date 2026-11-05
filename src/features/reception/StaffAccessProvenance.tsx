@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { delegationApi } from './delegationApi';
 import { ReceptionNotice } from './ReceptionNotice';
+import { WithdrawDelegation } from './WithdrawDelegation';
 
 type Props = { actorId: string; clinicId: string; staffId: string; staffName: string };
 export function StaffAccessProvenance(props: Props) {
@@ -16,6 +17,12 @@ export function StaffAccessProvenance(props: Props) {
   </div>;
 }
 function AccessDetails({ actorId, clinicId, staffId }: Props) {
+  const client = useQueryClient();
+  const refresh = () => Promise.all([
+    client.invalidateQueries({ queryKey: ['reception', 'staff-permission-origin', actorId, clinicId, staffId] }),
+    client.invalidateQueries({ queryKey: ['clinic-access', actorId] }),
+    client.invalidateQueries({ queryKey: ['reception-delegations', actorId] }),
+  ]);
   const page = useInfiniteQuery({
     queryKey: ['reception', 'staff-permission-origin', actorId, clinicId, staffId],
     queryFn: ({ pageParam }) => delegationApi.permissions({ clinicId, staffId, after: pageParam }),
@@ -34,6 +41,7 @@ function AccessDetails({ actorId, clinicId, staffId }: Props) {
         <p className="font-medium">{row.doctorName}</p>
         <p className={row.source === 'physician_approval' ? 'text-primary' : 'text-muted-foreground'}>{row.source === 'physician_approval' ? 'Aprovação médica vinculada' : row.source === 'legacy' ? 'Legado: anuência não comprovada' : 'Referência de aprovação não validada'}</p>
         <p className="text-xs text-muted-foreground">{row.effective ? 'Acesso ativo' : 'Sem acesso ativo'}</p>
+        {row.source === 'physician_approval' && <WithdrawDelegation key={row.requestId} actorId={actorId} clinicId={clinicId} staffId={staffId} doctorId={row.doctorId} requestId={row.requestId} doctorName={row.doctorName} disabled={page.isFetching} onRevoked={refresh} />}
       </li>)}</ul>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" className="h-auto min-h-10 whitespace-normal" disabled={page.isFetching} onClick={() => void page.refetch()}>Atualizar origem dos acessos</Button>

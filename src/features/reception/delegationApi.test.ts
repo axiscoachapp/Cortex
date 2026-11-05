@@ -57,4 +57,11 @@ describe('authenticated delegation API', () => {
     answer({items:[{doctorId:doctor,doctorName:'Médico sintético',source:'physician_approval',requestId:null,effective:true}],nextCursor:null});
     await expect(delegationApi.permissions({clinicId:clinic,staffId:staff})).rejects.toMatchObject({code:'INVALID_RESPONSE'});
   });
+  it('fetches the withdrawal review by request only and requires an approved exact DTO',async()=>{
+    answer({id:operation,clinicId:clinic,clinicName:'Clínica sintética',staffId:staff,staffName:'Recepção sintética',doctorId:doctor,doctorName:'Médico sintético',revision:2,state:'approved',capabilityVersion:'clinic_reception_v1'});
+    await delegationApi.withdrawal(operation);
+    expect(mocks.rpc).toHaveBeenCalledWith('reception_delegation_withdrawal',{p_request:operation});
+    answer({...snapshot,state:'revoked'});
+    await expect(delegationApi.withdrawal(operation)).rejects.toMatchObject({code:'INVALID_RESPONSE'});
+  });
 });

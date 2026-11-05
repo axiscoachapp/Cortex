@@ -2581,6 +2581,10 @@ export type Database = {
         }
         Returns: Json
       }
+      reception_delegation_withdrawal: {
+        Args: { p_request: string }
+        Returns: Json
+      }
       reception_link_edit: {
         Args: { p_contact: string; p_patient: string }
         Returns: Json
