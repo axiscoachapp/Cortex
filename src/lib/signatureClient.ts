@@ -184,5 +184,38 @@ export function forgetOperation(userId: string, prescriptionId: string): void {
   try { localStorage.removeItem(key(userId, prescriptionId)); } catch { /* nothing kept */ }
 }
 
+/**
+ * Signs one document with the operation kept on this device: resumes the
+ * pending one or starts a new one (kept before the request, so a closed tab
+ * resumes it), then keeps it while the PSC answer is pending and forgets it
+ * once the operation ended. The list and "Gerar e assinar" share this.
+ */
+export async function signKeepingOperation(
+  invoke: Invoke,
+  userId: string,
+  document: { prescriptionId: string; pdfSha256: string },
+  options: { humanRetry?: boolean } = {},
+): Promise<SignOutcome> {
+  const pending = pendingOperation(userId, document.prescriptionId);
+  const operationId = pending?.operationId ?? crypto.randomUUID();
+  rememberOperation(userId, document.prescriptionId, { operationId, awaiting: pending?.awaiting ?? null });
+  const outcome = await signPrescription(invoke, {
+    prescriptionId: document.prescriptionId, operationId, shownPdfSha256: document.pdfSha256, humanRetry: options.humanRetry,
+  });
+  if (outcome.kind === 'completed' || ('ended' in outcome && outcome.ended)) forgetOperation(userId, document.prescriptionId);
+  else if (outcome.kind === 'in_progress' || outcome.kind === 'ambiguous') rememberOperation(userId, document.prescriptionId, { operationId, awaiting: outcome.kind });
+  return outcome;
+}
+
+/** What to tell the doctor about an outcome (toast). */
+export function signatureNotice(outcome: SignOutcome): { title: string; description?: string; destructive?: boolean } {
+  switch (outcome.kind) {
+    case 'completed': return { title: 'Documento assinado digitalmente', description: 'A assinatura ICP-Brasil já vale na validação pública.' };
+    case 'in_progress': return { title: 'Assinatura em andamento', description: 'Use "Verificar assinatura" na lista de documentos em instantes.' };
+    case 'ambiguous': return { title: 'O provedor não respondeu', description: 'Nada foi publicado. Use "Tentar de novo" na lista de documentos quando quiser.' };
+    default: return { title: 'Documento não assinado', description: outcome.message, destructive: true };
+  }
+}
+
 /** Where to come back after the PSC authorization (same tab). */
 export const RETURN_KEY = 'cortex.signature.return';

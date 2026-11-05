@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { SESSION_KEY, signatureInvoke } from '@/hooks/useSignatureSession';
 import {
-  RETURN_KEY, forgetOperation, pendingOperation, rememberOperation, revokeSession, signPrescription, startSession,
+  RETURN_KEY, pendingOperation, revokeSession, signKeepingOperation, signatureNotice, startSession,
   type SessionState,
 } from '@/lib/signatureClient';
 
@@ -19,7 +19,6 @@ const timeOf = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('
 /** "Abrir sessão de assinatura" or "Assinatura digital ativa até HH:MM · Encerrar". */
 export function SignatureSessionBar({ state }: { state: SessionState }) {
   const { toast } = useToast();
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   if (!state.available || !state.configured) return null;
@@ -44,7 +43,7 @@ export function SignatureSessionBar({ state }: { state: SessionState }) {
       const result = await revokeSession(signatureInvoke);
       if (result.ok) toast({ title: 'Sessão de assinatura encerrada' });
       else toast({ title: 'Não foi possível encerrar', description: result.message, variant: 'destructive' });
-      await queryClient.invalidateQueries({ queryKey: [SESSION_KEY, user?.id] });
+      await queryClient.invalidateQueries({ queryKey: [SESSION_KEY] });
     } finally {
       setBusy(false);
     }
@@ -90,32 +89,14 @@ export function SignDocumentButton({ prescriptionId, pdfSha256, sessionActive, o
     }
     const humanRetry = pending?.awaiting === 'ambiguous';
     if (humanRetry && !window.confirm('O provedor não respondeu à última tentativa. Assinar de novo este mesmo documento?')) return;
-    const operationId = pending?.operationId ?? crypto.randomUUID();
-    // Kept before the request: a closed tab resumes the same operation.
-    rememberOperation(user.id, prescriptionId, { operationId, awaiting: pending?.awaiting ?? null });
     setBusy(true);
     try {
-      const outcome = await signPrescription(signatureInvoke, { prescriptionId, operationId, shownPdfSha256: pdfSha256, humanRetry });
-      switch (outcome.kind) {
-        case 'completed':
-          forgetOperation(user.id, prescriptionId);
-          toast({ title: 'Documento assinado digitalmente', description: 'A assinatura ICP-Brasil já vale na validação pública.' });
-          onSigned();
-          break;
-        case 'in_progress':
-          rememberOperation(user.id, prescriptionId, { operationId, awaiting: 'in_progress' });
-          toast({ title: 'Assinatura em andamento', description: 'Clique em "Verificar assinatura" em instantes.' });
-          break;
-        case 'ambiguous':
-          rememberOperation(user.id, prescriptionId, { operationId, awaiting: 'ambiguous' });
-          toast({ title: 'O provedor não respondeu', description: 'Nada foi publicado. Use "Tentar de novo" quando quiser.' });
-          break;
-        default:
-          if ('ended' in outcome && outcome.ended) forgetOperation(user.id, prescriptionId);
-          toast({ title: 'Documento não assinado', description: outcome.message, variant: 'destructive' });
-          if (outcome.kind === 'needs_session') await queryClient.invalidateQueries({ queryKey: [SESSION_KEY, user.id] });
-          if ('ended' in outcome && outcome.ended) onSigned(); // refresh the list: the state changed
-      }
+      const outcome = await signKeepingOperation(signatureInvoke, user.id, { prescriptionId, pdfSha256 }, { humanRetry });
+      const notice = signatureNotice(outcome);
+      toast({ title: notice.title, description: notice.description, ...(notice.destructive ? { variant: 'destructive' as const } : {}) });
+      if (outcome.kind === 'needs_session') await queryClient.invalidateQueries({ queryKey: [SESSION_KEY] });
+      // The state of the document changed: refresh the list.
+      if (outcome.kind === 'completed' || ('ended' in outcome && outcome.ended)) onSigned();
     } finally {
       setBusy(false);
       setVersion((v) => v + 1);

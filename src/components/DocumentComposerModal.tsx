@@ -1,7 +1,7 @@
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Pill, FileSignature, ClipboardPlus, Search, X, Loader2, AlertTriangle, FlaskConical, ShieldAlert,
+  Pill, FileSignature, ClipboardPlus, Search, X, Loader2, AlertTriangle, FlaskConical, ShieldAlert, PenLine,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -23,6 +23,7 @@ import { PrescriptionTemplatePicker, type ApplyMode } from '@/components/Prescri
 import { CidInput, DcbInput, ExamSearch, examLine } from '@/components/ReferenceSearch';
 import type { SnippetItem } from '@/lib/documentSnippets';
 import { applyPresentation, presentationOptions, registration9Of, type PresentationOption } from '@/lib/cmedPresentation';
+import { SIGNABLE_TYPES } from '@/lib/signatureClient';
 
 /** Sex values that satisfy RDC 471/2021; 'nao_informado' does not. */
 const PRINTABLE_SEX = new Set(['feminino', 'masculino', 'intersexo']);
@@ -82,8 +83,12 @@ interface DocumentComposerModalProps {
     docType: RxDocType;
     medications: ComposerMedication[];
     content?: { days?: number; cid?: string; note?: string; exams?: string[]; indication?: string } | ControlledContent;
+    /** "Gerar e assinar": sign the generated document right away (D17). */
+    sign?: boolean;
   }) => Promise<void>;
   isGenerating: boolean;
+  /** Digital signature available here (configured); null hides "Gerar e assinar". */
+  signing?: { active: boolean } | null;
 }
 
 // `shown` adds a soft hyphen where a long word may break on a phone; the
@@ -115,7 +120,7 @@ function catalogTerm(name: string): string {
 }
 
 export function DocumentComposerModal({
-  open, onOpenChange, patient, onGenerate, isGenerating,
+  open, onOpenChange, patient, onGenerate, isGenerating, signing = null,
 }: DocumentComposerModalProps) {
   const [docType, setDocType] = useState<RxDocType>('receita_simples');
   const [meds, setMeds] = useState<ComposerMed[]>([]);
@@ -368,9 +373,11 @@ export function DocumentComposerModal({
     ? selectedMeds.length > 0 && selectedMeds.length <= 3
     : selectedMeds.length > 0 && selectedMeds.length <= 15;
 
-  const handleGenerate = async () => {
-    if (!canGenerate || isGenerating) return;
+  const canSign = !!signing && SIGNABLE_TYPES.has(docType);
+  const handleGenerate = async (sign = false) => {
+    if (!canGenerate || isGenerating || (sign && !(canSign && signing?.active))) return;
     await onGenerate({
+      ...(sign ? { sign: true } : {}),
       docType,
       medications: isControlled
         ? controlledMedications()
@@ -831,12 +838,21 @@ export function DocumentComposerModal({
         </div>
 
         {catalogError && <p role="alert" className="px-5 text-xs text-destructive">Não foi possível consultar o catálogo. Edite a busca para tentar novamente ou preencha o medicamento manualmente.</p>}
+        {canSign && !signing?.active && (
+          <p className="px-5 text-[0.6875rem] text-muted-foreground">Para gerar e assinar, abra a sessão de assinatura na lista de documentos do paciente.</p>
+        )}
         {/* Stacked on phones (primary action on top), side by side from sm up. */}
         <div className="px-5 py-3 border-t border-border/50 shrink-0 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" size="sm" onClick={() => changeOpen(false)} disabled={isGenerating}>
             Cancelar
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={handleGenerate} disabled={!canGenerate || isGenerating}>
+          {canSign && (
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleGenerate(true)} disabled={!canGenerate || isGenerating || !signing?.active}>
+              {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PenLine className="w-3.5 h-3.5" />}
+              Gerar e assinar
+            </Button>
+          )}
+          <Button size="sm" className="gap-1.5" onClick={() => handleGenerate()} disabled={!canGenerate || isGenerating}>
             {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSignature className="w-3.5 h-3.5" />}
             Gerar documento
           </Button>

@@ -31,6 +31,8 @@ import { RecordingModeDialog } from '@/components/RecordingModeDialog';
 import { LiveCopilotCard, CopilotState } from '@/components/LiveCopilotCard';
 import { QuestionChecklistCard } from '@/components/QuestionChecklistCard';
 import { DocumentComposerModal, RxDocType } from '@/components/DocumentComposerModal';
+import { SESSION_KEY, signatureInvoke, useSignatureSession } from '@/hooks/useSignatureSession';
+import { SIGNABLE_TYPES, signKeepingOperation, signatureNotice } from '@/lib/signatureClient';
 import { Medication } from '@/types/patient';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { SoapNoteView } from '@/components/SoapNoteView';
@@ -191,6 +193,11 @@ export function ChatPanel({
   // Digital documents (receita/atestado — unsigned PDF with validation QR).
   const [generatingRx, setGeneratingRx] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
+  // "Gerar e assinar" (D17): the signature session while the composer is open,
+  // and the doctor of this render, checked again after each await.
+  const { data: signatureSession } = useSignatureSession(composerOpen);
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
   const composerConsultationIdRef = useRef<string | undefined>(undefined);
   const composerPatientIdRef = useRef<string | null>(null);
 
@@ -783,8 +790,10 @@ export function ChatPanel({
     docType: RxDocType;
     medications: Medication[];
     content?: { days: number; cid?: string; note?: string };
+    sign?: boolean;
   }) => {
     if (!patient || generatingRx || composerPatientIdRef.current !== patient.id) return;
+    const actor = userId;
     setGeneratingRx(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-prescription', {
@@ -810,15 +819,44 @@ export function ChatPanel({
         throw error;
       }
       queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patient.id] });
-      if (!isCurrentPatient(patient.id)) return;
-      setComposerOpen(false);
-      if (data?.previewUrl) window.open(data.previewUrl, '_blank');
       const docLabel =
         payload.docType === 'atestado'
           ? 'Atestado gerado'
           : payload.docType === 'solicitacao_exames'
             ? 'Solicitação de exames gerada'
             : 'Receita gerada';
+      if (payload.sign && SIGNABLE_TYPES.has(payload.docType)) {
+        // "Gerar e assinar": sign the document this generation persisted (its
+        // id and the hash of its PDF), only while the doctor and the patient
+        // are still the same. Signing never generates again nor removes the
+        // generated document; the unsigned preview is not opened as signed.
+        const prescriptionId = typeof data?.prescriptionId === 'string' ? data.prescriptionId : '';
+        const pdfSha256 = typeof data?.pdfSha256 === 'string' && /^[0-9a-f]{64}$/.test(data.pdfSha256) ? data.pdfSha256 : '';
+        const unsigned = (reason: string) =>
+          toast({ title: `${docLabel}, sem assinatura digital`, description: `${reason} Código de acesso do paciente: ${data?.accessCode}.` });
+        if (!isCurrentPatient(patient.id) || userIdRef.current !== actor) {
+          unsigned('O paciente ou a conta mudou antes de assinar; assine pela lista de documentos.');
+          return;
+        }
+        setComposerOpen(false);
+        if (!prescriptionId || !pdfSha256) {
+          unsigned('Assine pela lista de documentos.');
+          return;
+        }
+        const outcome = await signKeepingOperation(signatureInvoke, actor, { prescriptionId, pdfSha256 });
+        queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patient.id] });
+        if (outcome.kind === 'needs_session') queryClient.invalidateQueries({ queryKey: [SESSION_KEY] });
+        if (outcome.kind === 'completed') {
+          toast({ title: `${docLabel} e assinado digitalmente`, description: `Já vale na validação pública. Código de acesso do paciente: ${data?.accessCode}.` });
+        } else {
+          const notice = signatureNotice(outcome);
+          unsigned(`${notice.title}. ${notice.description ?? ''}`.trim());
+        }
+        return;
+      }
+      if (!isCurrentPatient(patient.id)) return;
+      setComposerOpen(false);
+      if (data?.previewUrl) window.open(data.previewUrl, '_blank');
       toast({
         title: docLabel,
         description: `Imprima, assine e carimbe (ainda sem assinatura digital ICP-Brasil). Código de acesso do paciente: ${data?.accessCode}.`,
@@ -2258,6 +2296,7 @@ export function ChatPanel({
           patient={patient}
           onGenerate={handleComposerGenerate}
           isGenerating={generatingRx}
+          signing={signatureSession?.available && signatureSession.configured ? { active: signatureSession.active } : null}
         />
       )}
 

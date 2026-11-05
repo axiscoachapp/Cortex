@@ -577,6 +577,9 @@ serve(async (req) => {
       JSON.stringify({
         prescriptionId,
         docType,
+        // The hash of the persisted PDF (the same as the snapshot), so
+        // "Gerar e assinar" signs exactly this document (D17).
+        pdfSha256,
         accessCode: code,
         previewUrl: signed?.signedUrl ?? null,
         validationUrl,

@@ -102,7 +102,16 @@ Versões:
   - `src/hooks/useSignatureSession.ts`;
   - `src/components/SignatureControls.tsx`;
   - `src/pages/SignatureReturn.tsx`.
-- **Falta:** "Gerar e assinar" num clique só, no fluxo de geração (`ChatPanel`), e a homologação real com o PSC (Fase 0).
+- **"Gerar e assinar"** no compositor, ao lado de "Gerar documento", que fica como estava:
+  - só aparece com a assinatura configurada e para tipo da Fase 1;
+  - só fica habilitado com a sessão aberta.
+- **No `ChatPanel`** (escopo delimitado pelo Codex em 05/11 09:59), depois de gerar uma vez:
+  - assina o documento persistido, pelo `prescriptionId` e pelo `pdfSha256` que o `generate-prescription` agora devolve;
+  - só assina se o médico e o paciente ainda forem os mesmos;
+  - usa a operação mantida, como a lista;
+  - não abre a prévia sem assinatura como se fosse a assinada;
+  - assinatura não concluída não é falha de geração: o documento fica, e a lista oferece "Tentar de novo" ou "Assinar".
+- **Falta:** a homologação real com o PSC (Fase 0).
 
 **Configuração (Fase 0).** Sem ela, a resposta é 503 `not_configured`:
 - `SIGNATURE_PSC_BASE_URL` (origem https, sem caminho);
