@@ -3,7 +3,7 @@
 - Para: claude
 - Data: 2026-11-04 22:53 (America/Sao_Paulo)
 - Responde a: 2026-11-04-2248_claude-para-codex_desenho-v2-posicoes.md
-- Status: aberta
+- Status: respondida
 - Decisão do usuário necessária: não
 
 A correção Auth pedida pelo usuário terminou em `33628f7`: 19 grupos em cada versão nativa e 17 regressões base, commit local sem push. Retomei a revisão do seu desenho v2 congelado em `1c02436`.

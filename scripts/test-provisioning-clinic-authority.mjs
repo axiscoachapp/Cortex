@@ -24,13 +24,14 @@ export function installClinicSchema({sql,inputs,red}){
  for(const {path,source} of inputs.migrations){try{sql(source);}catch(error){throw new Error('Application snapshot install failed at '+path,{cause:error});}}
  sql(inputs.identity);sql(inputs.intent);sql(inputs.membership);
  if(!red)sql(inputs.composed);
+ if(inputs.ledger)sql(inputs.ledger);
  assert.equal(columns(),beforeColumns,'Native Auth core columns/owners/table ACL changed');assert.equal(functions(),beforeFunctions,'Native identity helper definition or owner changed');
  assert.equal(sql("select bool_and(not has_table_privilege(r,t,'select')) from unnest(array['anon','authenticated','service_role']) r cross join unnest(array['auth.users','auth.sessions','auth.mfa_factors']) t"),'t');
  return {sourceBaseline:inputs.baseline,migrations:inputs.migrations.length,nativeCoreColumnsOwnersAndTableAclUnchanged:true,nativeIdentityHelpersUnchanged:true,
-  nativeTablesUnavailableToClientRoles:true,sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
+  nativeTablesUnavailableToClientRoles:true,ledgerBindingsInstalled:!!inputs.ledger,sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
 }
 
-export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,asyncHttp,pause,holderSession,restartAuth}){
+export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,asyncHttp,pause,holderSession,restartAuth}){
  const password=randomBytes(24).toString('hex');syntheticSecrets.push(password);
  const created=await call(auth,'/admin/users',adminJwt,{email:'clinic-authority@example.invalid',password,email_confirm:true});assert.equal(created.status,200);
  const login=await call(auth,'/token?grant_type=password',adminJwt,{email:'clinic-authority@example.invalid',password});assert.equal(login.status,200);
@@ -84,6 +85,37 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
  const positive=fixture(),initial=begin(positive,ctx);assert.equal(initial.membership_generation,generation());await birth(positive);
  assert.equal(JSON.parse(trusted(query(positive,ctx))).phase,'confirmed');assert.equal(begin(positive,ctx).expires_at,initial.expires_at);
  checks.push('Native birth receipt and original real membership generation confirm; exact replay keeps identity and deadline');
+ if(ledger){
+  const intentWhere=`operation_id='${positive.op}'`,opWhere=intentWhere;
+  const temporaryWriter="grant usage on schema provision_identity_lab,provision_intent_lab to service_role;grant select,insert,update,delete,truncate on provision_identity_lab.operations,provision_intent_lab.intents to service_role;set local role service_role;";
+  const expectWrite=(statement,code,service=false,replica=false)=>sql(`begin;${replica?"set local session_replication_role='replica';":''}${service?temporaryWriter:''}do $$ begin begin ${statement};raise exception 'Expected ledger refusal';exception when sqlstate '${code}' then null;end;end $$;rollback;`);
+  const intentChanges=['operation_id=gen_random_uuid()','planned_user_id=gen_random_uuid()','actor_id=gen_random_uuid()','clinic_id=gen_random_uuid()','session_id=gen_random_uuid()','factor_id=gen_random_uuid()',"expires_at=expires_at+interval '1 hour'",'membership_generation=gen_random_uuid()'];
+  for(const service of [false,true]){
+   for(const change of intentChanges)expectWrite(`update provision_intent_lab.intents set ${change} where ${intentWhere}`,'P4101',service);
+   for(const change of ['operation_id=gen_random_uuid()','planned_user_id=gen_random_uuid()','revision=revision+1','birth_transaction=null','birth_transaction=pg_current_xact_id()'])expectWrite(`update provision_identity_lab.operations set ${change} where ${opWhere}`,'P4101',service);
+   sql(`begin;${service?temporaryWriter:''}update provision_intent_lab.intents set phase=phase,expires_at=expires_at where ${intentWhere};update provision_identity_lab.operations set phase=phase,revision=revision where ${opWhere};rollback;`);
+  }
+  checks.push('Owner and temporarily granted service writers cannot replace any captured intent binding or identity/XID; no-op writes remain valid');
+  for(const service of [false,true]){
+   expectWrite(`insert into provision_identity_lab.operations(operation_id,planned_user_id,phase,birth_transaction) values(gen_random_uuid(),gen_random_uuid(),'auth_created',pg_current_xact_id())`,'P4103',service);
+   expectWrite(`insert into provision_intent_lab.intents select (jsonb_populate_record(null::provision_intent_lab.intents,to_jsonb(i)||jsonb_build_object('operation_id',gen_random_uuid(),'planned_user_id',gen_random_uuid(),'phase','confirmed'))).* from provision_intent_lab.intents i where ${intentWhere}`,'P4103',service);
+   const reservedOp=randomUUID(),reservedId=randomUUID(),wrongId=randomUUID();
+   expectWrite(`insert into provision_identity_lab.operations(operation_id,planned_user_id) values('${reservedOp}','${reservedId}');insert into provision_intent_lab.intents select (jsonb_populate_record(null::provision_intent_lab.intents,to_jsonb(i)||jsonb_build_object('operation_id','${reservedOp}','planned_user_id','${wrongId}','phase','prepared'))).* from provision_intent_lab.intents i where ${intentWhere}`,'P4104',service);
+  }
+  checks.push('Direct INSERT cannot start with a confirmed intent/birth receipt or attach an intent to a different reserved UUID');
+  for(const service of [false,true])for(const table of ['provision_intent_lab.intents','provision_identity_lab.operations']){
+   expectWrite(`delete from ${table} where ${intentWhere}`,'P4102',service);
+   expectWrite(`truncate ${table} cascade`,'P4102',service);
+  }
+  checks.push('Owner and temporarily granted service DELETE/TRUNCATE cannot erase either ledger for replacement');
+  expectWrite(`update provision_intent_lab.intents set expires_at=expires_at+interval '1 hour' where ${intentWhere}`,'P4101',false,true);
+  expectWrite(`delete from provision_identity_lab.operations where ${opWhere}`,'P4102',false,true);
+  sql(`begin;alter table provision_intent_lab.intents disable trigger intent_binding;do $$ declare original timestamptz;begin select expires_at into original from provision_intent_lab.intents where ${intentWhere};update provision_intent_lab.intents set expires_at=expires_at+interval '1 hour' where ${intentWhere};assert (select expires_at>original from provision_intent_lab.intents where ${intentWhere}),'Disabled trigger did not expose deadline replacement';end $$;rollback;`);
+  assert.equal(sql("select bool_and(tgenabled='A') from pg_trigger where not tgisinternal and tgname in ('operation_binding','operation_history','intent_binding','intent_history')"),'t');
+  expectWrite(`update provision_intent_lab.intents set expires_at=expires_at+interval '1 hour' where ${intentWhere}`,'P4101');
+  assert.equal(begin(positive,ctx).expires_at,initial.expires_at);
+  checks.push('ALWAYS guards reject replica DML; disabling only the lab guard exposes deadline replacement, rollback restores the original valid replay');
+ }
  const actorState=()=>sql(`select u.xmin::text||':'||s.xmin::text||':'||m.xmin::text||':'||e.revision::text from auth.users u join auth.sessions s on s.user_id=u.id join public.clinic_members m on m.user_id=u.id and m.clinic_id='${clinic}' join cortex_private.account_custody_epochs e on e.user_id=u.id where u.id='${ctx.sub}' and s.id='${ctx.session_id}'`);
  // Start with RR/deletion: this is the regression that the old receipt read missed.
  for(const [isolation,change] of [['repeatable read','delete'],['read committed','delete'],['repeatable read','metadata'],['read committed','metadata']]){
@@ -199,6 +231,6 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
  for(const table of ['clinic_members','clinic_staff_members','patients','consultations'])assert.equal(sql(`select count(*) from public.${table} where user_id in (select planned_user_id from provision_intent_lab.intents)`),'0');
  assert.equal(sql('select count(*) from public.staff_doctor_scopes'),'0');
  checks.push('Private composition stays absent from Data API and creates no target clinic/staff/chart memberships or scopes');
- assert.equal(checks.length,19);
- return {...report,checks,compositionProofPassed:true,notCovered:['all privileged ledger writers and UUID reservation races','production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
+ assert.equal(checks.length,19+(ledger?4:0));
+ return {...report,checks,compositionProofPassed:true,...(ledger?{ledgerBindingsProofPassed:true}:{}),notCovered:['authority of privileged INSERT/phase writers and UUID reservation races','production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
 }

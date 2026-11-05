@@ -41,3 +41,5 @@ Sintaxe/lint aprovados. Revisões locais de contrato e implementação encontrar
 É uma correção nos protótipos, sem mudar a autorização de produção. Permanecem: todos os escritores privilegiados do ledger e corridas de reserva de UUID; custódia/instalação/upgrade da intenção; histórico completo de credencial/eventos Auth e recuperação; integração da filiação/pedidos, corte do serviço legado, reconciliação e API/UI. M2/T31 não estão concluídas.
 
 O snapshot congelado antecede `908c38d`: esta prova não é reteste do delta D17 do Claude. Não altera os três helpers T33 dele, PersonalMed, campos legais ou SaaS. Credenciais sintéticas ficam em memória/stdin; rede Docker interna própria, sem portas publicadas, rota externa, dados reais, envio ou serviço pago.
+
+Prova posterior: [vínculos imutáveis do ledger](../provisioning-ledger-bindings/IMPLEMENTATION.md) preserva esses 19 grupos e acrescenta quatro em cada Auth, sobre snapshot `4a232f3` com o D17 já corrigido. Essa composição posterior também é laboratório, sem encerrar custódia, produtores de INSERT/phase, instalação ou corte do serviço.

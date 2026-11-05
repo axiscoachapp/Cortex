@@ -14,17 +14,19 @@ const setupMode = process.argv.includes('--setup-cas');
 const identityMode = process.argv.includes('--provision-identity');
 const intentMode = process.argv.includes('--provision-intent');
 const clinicMode = process.argv.includes('--provision-clinic'),clinicRed=process.argv.includes('--red');
+const ledgerMode=process.argv.includes('--ledger');
 const clinicSourceArg=process.argv.slice(2).find(arg=>arg.startsWith('--source='));
-assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding', '--link', '--setup-cas','--provision-identity','--provision-intent','--provision-clinic','--red'].includes(arg)||/^--source=[0-9a-f]{40}$/.test(arg)), 'Unknown lab option');
+assert.ok(process.argv.slice(2).every(arg => ['--all', '--check-cleanup', '--binding', '--link', '--setup-cas','--provision-identity','--provision-intent','--provision-clinic','--red','--ledger'].includes(arg)||/^--source=[0-9a-f]{40}$/.test(arg)), 'Unknown lab option');
 assert.ok([bindingMode, linkMode, setupMode,identityMode,intentMode,clinicMode].filter(Boolean).length <= 1, 'Choose one credential lab');
 assert.ok(!clinicRed||(clinicMode&&!process.argv.includes('--all')),'RED is a single clinic composition run');
+assert.ok(!ledgerMode||(clinicMode&&!clinicRed),'Ledger bindings extend only the composed clinic proof');
 assert.ok(!clinicSourceArg||clinicMode,'Source snapshot belongs to the clinic lab');
 assert.ok(process.argv.slice(2).filter(arg=>arg.startsWith('--source=')).length<=1,'Choose one source snapshot');
 assert.ok(!(cleanupCheck && (process.argv.includes('--all') || bindingMode || linkMode || setupMode || identityMode || intentMode || clinicMode)), 'Choose normal lab or cleanup diagnostic');
 const identityPaths = ['scripts/test-initial-password-auth.mjs','scripts/test-provisioning-auth-identity.mjs','supabase/tests/prototypes/provisioning-auth-identity.sql'];
 const identityHash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 const intentPaths = ['scripts/test-initial-password-auth.mjs','scripts/test-provisioning-human-intent.mjs','supabase/tests/prototypes/provisioning-human-intent.sql','supabase/tests/prototypes/provisioning-auth-identity.sql'];
-const clinicPaths=['scripts/test-initial-password-auth.mjs','scripts/test-provisioning-clinic-authority.mjs',...intentPaths.slice(2),'supabase/tests/prototypes/provisioning-membership-generation.sql',...(!clinicRed?['supabase/tests/prototypes/provisioning-clinic-intent.sql']:[])];
+const clinicPaths=['scripts/test-initial-password-auth.mjs','scripts/test-provisioning-clinic-authority.mjs',...intentPaths.slice(2),'supabase/tests/prototypes/provisioning-membership-generation.sql',...(!clinicRed?['supabase/tests/prototypes/provisioning-clinic-intent.sql']:[]),...(ledgerMode?['supabase/tests/prototypes/provisioning-ledger-bindings.sql']:[])];
 const identitySources = (identityMode ? identityPaths : intentMode ? intentPaths : clinicMode?clinicPaths:[]).map(path => ({path,sha256:identityHash(path)}));
 let clinicInputs,clinicModule;
 if(clinicMode){
@@ -33,7 +35,8 @@ if(clinicMode){
  const paths=git(['ls-tree','-r','--name-only',baseline,'--','supabase/migrations']).trim().split('\n').filter(p=>/^supabase\/migrations\/[^/]+\.sql$/.test(p)).sort();
  clinicInputs={baseline,bootstrap:git(['show',baseline+':supabase/tests/bootstrap.sql']),migrations:paths.map(path=>({path,source:git(['show',baseline+':'+path])})),
   identity:readFileSync('supabase/tests/prototypes/provisioning-auth-identity.sql','utf8'),intent:readFileSync('supabase/tests/prototypes/provisioning-human-intent.sql','utf8'),
-  membership:readFileSync('supabase/tests/prototypes/provisioning-membership-generation.sql','utf8'),composed:clinicRed?'':readFileSync('supabase/tests/prototypes/provisioning-clinic-intent.sql','utf8')};
+  membership:readFileSync('supabase/tests/prototypes/provisioning-membership-generation.sql','utf8'),composed:clinicRed?'':readFileSync('supabase/tests/prototypes/provisioning-clinic-intent.sql','utf8'),
+  ledger:ledgerMode?readFileSync('supabase/tests/prototypes/provisioning-ledger-bindings.sql','utf8'):null};
  clinicModule=await import('data:text/javascript;base64,'+Buffer.from(readFileSync('scripts/test-provisioning-clinic-authority.mjs','utf8')).toString('base64'));
 }
 const postgresImage = 'pgvector/pgvector:pg16';
@@ -200,7 +203,7 @@ for (const { version, fault } of runs) {
         : setupMode ? (await import('./test-initial-setup-cas.mjs')).exerciseInitialSetupCas
         : (await import('./test-single-use-setup.mjs')).exerciseSingleUseSetup;
       report = await exercise({ auth, rest, adminJwt, version, call, sql, asyncHttp, restartAuth: extra => restartAuth({ ...(bindingMode ? hookEnv : {}), ...extra }),
-        pause, syntheticSecrets,preparation:clinicPreparation,red:clinicRed,holderSession: () => {
+        pause, syntheticSecrets,preparation:clinicPreparation,red:clinicRed,ledger:ledgerMode,holderSession: () => {
           const child = spawn('docker', dockerArgs(['exec', '-i', names.db, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1']), { env: dockerEnvironment, windowsHide: true });
           observeChild(child); child.stderr.resume(); return child;
         } });
@@ -391,7 +394,7 @@ for (const { version, fault } of runs) {
   if (failure) {
     if(clinicMode&&failure.receiptEvidence){
       for(const source of identitySources)assert.equal(identityHash(source.path),source.sha256,'Receipt RED source changed');
-      const artifacts=resolve('docs/reviews/2026-11-04/provisioning-clinic-authority');mkdirSync(artifacts,{recursive:true});
+      const artifacts=resolve('docs/reviews/2026-11-04/'+(ledgerMode?'provisioning-ledger-bindings':'provisioning-clinic-authority'));mkdirSync(artifacts,{recursive:true});
       const evidence={...failure.receiptEvidence,sources:identitySources,cleanupVerified:ownedCleanupVerified};
       writeFileSync(resolve(artifacts,'RECEIPT_RED-'+version+'.json'),JSON.stringify(evidence,null,2)+'\n');process.stdout.write(JSON.stringify(evidence,null,2)+'\n');
     }
@@ -406,7 +409,7 @@ for (const { version, fault } of runs) {
   report.cleanupVerified = true;
   report.localDockerEndpoint = dockerEndpoint.startsWith('npipe:') ? 'verified local named pipe' : 'verified local Unix socket';
   report.network = 'owned internal network, no published ports or external route';
-  const artifacts = resolve('docs/reviews/2026-11-04/' + (clinicMode?'provisioning-clinic-authority':intentMode ? 'provisioning-human-intent' : identityMode ? 'provisioning-auth-identity' : setupMode ? 'initial-setup-cas' : linkMode ? 'single-use-setup' : bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
+  const artifacts = resolve('docs/reviews/2026-11-04/' + (ledgerMode?'provisioning-ledger-bindings':clinicMode?'provisioning-clinic-authority':intentMode ? 'provisioning-human-intent' : identityMode ? 'provisioning-auth-identity' : setupMode ? 'initial-setup-cas' : linkMode ? 'single-use-setup' : bindingMode ? 'credential-session-binding' : 'initial-password-auth'));
   mkdirSync(artifacts, { recursive: true });
   writeFileSync(resolve(artifacts, (clinicRed?'RED-':'')+version + '.json'), JSON.stringify(report, null, 2) + '\n');
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');

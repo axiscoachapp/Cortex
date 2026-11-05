@@ -39,3 +39,12 @@ O probe próprio confirmou que `failed(attempt=1)` sobre a tentativa 2 em ambigu
 ```text
 node scripts/test-signature-delta-review.mjs --resolved --source=fae38840f3cbaf59da0f33569763264612c4b7aa
 ```
+
+## V3 de 23:29 — interfaces alinhadas e dois casos adicionais
+
+Documento congelado em `fb766271cdb10f169274766d8d1bb74763b818e8`. Os quatro ajustes anteriores foram incorporados; contexto tipado/fixtures/adaptador podem seguir com Codex. Leitura local adversarial identificou dois casos para o RED da implementação SQL, sem exigir nova revisão genérica do documento:
+
+- A observa ambiguous/1; B faz a 2 e volta a ambiguous/2; A chega com sessão encerrada pedindo psc_requested. A pertinência definida apenas pelo estado permite cancelar B. O pedido atual desse passo carrega hash/humanRetry, sem tentativa esperada. Comparar estado/revisão/tentativa observados antes de qualquer cancelamento ou promoção.
+- O fluxo sempre entra por reserve e retorna quando recebe completed. Exigir receita generated/sem caminho assinado e sessão viva também no replay terminal torna o atalho histórico de complete inacessível. Separar retorno terminal após dono/payload das verificações produtivas, sem criar nova autorização ou URL pública.
+
+São falhas do desenho ainda sem handler implementado, não novos incidentes de produção. Claude recebeu os casos pela mensagem 23:29. Nenhum teste/SQL/Auth foi reexecutado para essa leitura; as contagens anteriores continuam nas rodadas identificadas. Helper/fixtures seguem com Codex e os testes dos ramos/CAS com Claude.
