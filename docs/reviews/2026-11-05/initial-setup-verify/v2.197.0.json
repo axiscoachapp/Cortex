@@ -1,0 +1,58 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.197.0",
+  "checks": [
+    "native recovery verification is observed waiting before its user-row update",
+    "native password commit revokes prior stored sessions and sequential link replay while verification remains in flight",
+    "owner-only completion fixture admits personal login but rejects the revoked unexpired initial JWT",
+    "late OTP session and native refresh pass the simple completed/live-session gate despite being issued from the pre-password recovery capability"
+  ],
+  "observed": {
+    "lateVerifyStatus": 200,
+    "lateAmrMethods": [
+      "otp"
+    ],
+    "lateSessionCreatedAfterPasswordCommit": true,
+    "lateReadRows": 1,
+    "lateRefreshStatus": 200,
+    "lateRefreshReadRows": 1,
+    "revokedInitialReadRows": 0,
+    "personalReadRows": 1
+  },
+  "candidateRejected": "private pending=false plus live session, even with session creation cutoff",
+  "prototypeIsProductionFix": false,
+  "completionProtocolImplemented": false,
+  "notCovered": [
+    "reserved password CAS composition",
+    "trusted session-purpose/generation completion fence",
+    "PKCE exchange in flight",
+    "MFA and recovery policy",
+    "existing accounts and app integration",
+    "hosted configuration"
+  ],
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "f57cd8872c688c470b76a29e31634d1c967aeba53474f3fffcdbbc5728769039"
+    },
+    {
+      "path": "scripts/test-initial-setup-verify.mjs",
+      "sha256": "ce10fda81a75ba271b5731a2d349740f8d2ddadaa7eb4ac5510b85627d09be99"
+    },
+    {
+      "path": "supabase/tests/prototypes/initial-password-auth.sql",
+      "sha256": "6e43c2859c484901b927a85421bfde7e61b97f896b294d4f4f76b5618548012f"
+    },
+    {
+      "path": "supabase/tests/prototypes/single-use-setup.sql",
+      "sha256": "50832fb2e503ced7408576357b6e3eff9d4f13af307d99d93b1e69909a7746b3"
+    }
+  ],
+  "postgresImage": "pgvector/pgvector:pg16",
+  "restImage": "public.ecr.aws/supabase/postgrest:v16.5",
+  "authImage": "public.ecr.aws/supabase/gotrue:v2.197.0",
+  "cleanupVerified": true,
+  "localDockerEndpoint": "verified local named pipe",
+  "network": "owned internal network, no published ports or external route"
+}

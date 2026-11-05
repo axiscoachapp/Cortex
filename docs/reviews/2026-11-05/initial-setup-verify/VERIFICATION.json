@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "checks": [
+    "v2.197.0: four native race groups, counterexample, sources and cleanup verified",
+    "v2.189.0: four native race groups, counterexample, sources and cleanup verified",
+    "CLI rejects setup-verify with --link before Docker",
+    "CLI rejects setup-verify with --setup-cas before Docker",
+    "CLI rejects setup-verify with --check-cleanup before Docker",
+    "Node syntax: scripts/test-initial-password-auth.mjs",
+    "Node syntax: scripts/test-initial-setup-verify.mjs",
+    "Historical evidence and SQL prototypes unchanged"
+  ]
+}
