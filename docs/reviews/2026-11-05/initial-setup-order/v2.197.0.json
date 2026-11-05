@@ -1,0 +1,50 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "authVersion": "v2.197.0",
+  "checks": [
+    "immediate-control-rejects-metadata-first",
+    "password-first-commits-once-with-auth-login-and-data-gate-closed",
+    "metadata-first-commits-once-with-auth-login-and-data-gate-closed",
+    "combined-update-commits-once-with-auth-login-and-data-gate-closed",
+    "metadata-only-rolls-back-at-commit",
+    "password-only-rolls-back-at-commit",
+    "wrong-operation-rolls-back-password-and-session-revocation",
+    "fault-after-both-writes-rolls-back-everything"
+  ],
+  "writer": "explicit SQL owner fixture on native Auth schema; not native Admin update order",
+  "prototypeIsProductionFix": false,
+  "dataAuthorizationImplemented": false,
+  "notCovered": [
+    "final session-generation authorization",
+    "in-flight verify/recovery/PKCE",
+    "MFA and recovery",
+    "crypto maintenance",
+    "existing accounts and reset policy",
+    "app integration and hosted configuration"
+  ],
+  "sources": [
+    {
+      "path": "scripts/test-initial-password-auth.mjs",
+      "sha256": "bd9a7963041ef7efd5b01864badac5c1e8255db4b91837b3e3a15fc3661b2752"
+    },
+    {
+      "path": "scripts/test-initial-setup-order.mjs",
+      "sha256": "915376f0fe4cf88b067a0cc2d6389c73f3729bd76a7e0b8560c770874383959a"
+    },
+    {
+      "path": "supabase/tests/prototypes/initial-password-auth.sql",
+      "sha256": "6e43c2859c484901b927a85421bfde7e61b97f896b294d4f4f76b5618548012f"
+    },
+    {
+      "path": "supabase/tests/prototypes/initial-setup-cas.sql",
+      "sha256": "8ac8010c28cef05279068269cb7fe58c7ceb03ec2ecbb159659d3ce2c021c36c"
+    }
+  ],
+  "postgresImage": "pgvector/pgvector:pg16",
+  "restImage": "public.ecr.aws/supabase/postgrest:v16.5",
+  "authImage": "public.ecr.aws/supabase/gotrue:v2.197.0",
+  "cleanupVerified": true,
+  "localDockerEndpoint": "verified local named pipe",
+  "network": "owned internal network, no published ports or external route"
+}
