@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,8 @@ import { useRequestId } from './useRequestId';
 import { ReceptionNotice } from './ReceptionNotice';
 import { BookingDialog } from './BookingDialog';
 import { DoctorSuggestion } from './DoctorSuggestion';
+import { LinkRelationshipDialog } from './LinkRelationshipDialog';
+import { relationshipLabels } from './linkRelationships';
 
 export function CaseWorkspace({ data }: { data: ReceptionCase }) {
   const access = useClinicAccess();
@@ -22,6 +24,9 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
   const [target, setTarget] = useState('');
   const [doctor, setDoctor] = useState('');
   const [booking, setBooking] = useState(false);
+  const [editingLink, setEditingLink] = useState<ReceptionCase['beneficiaries'][number] | null>(null);
+  const [linkNotice, setLinkNotice] = useState(false);
+  useEffect(() => { if (!access?.admin) { setEditingLink(null); setLinkNotice(false); } }, [access?.admin]);
   const [postError, setPostError] = useState<unknown>(null);
   const [posting, setPosting] = useState(false);
   const [older, setOlder] = useState<ReceptionCase['notes']>([]);
@@ -210,10 +215,12 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
           <h3 className="text-xs font-semibold">Vínculos administrativos confirmados</h3>
           {data.beneficiaries.length ? (
             data.beneficiaries.map((p) => (
-              <p key={p.id} className="text-xs break-words">
+              <div key={p.id} className="space-y-1"><p className="text-xs break-words">
                 {p.name} · {access?.doctors.find((d) => d.id === p.doctorId)?.name ?? 'Médico'}
                 {p.dateOfBirth ? ' · nascimento ' + p.dateOfBirth.split('-').reverse().join('/') : ''}
+                {' · ' + relationshipLabels[p.relationship]}
               </p>
+              {access?.admin && <Button size="sm" variant="outline" className="h-auto min-h-10 max-w-full whitespace-normal" onClick={() => { setLinkNotice(false); setEditingLink(p); }}>Corrigir relação de {p.name}</Button>}</div>
             ))
           ) : (
             <p className="text-xs text-muted-foreground">
@@ -222,6 +229,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
             </p>
           )}
         </section>
+        {linkNotice && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">Relação administrativa corrigida.</p>}
         <section className="space-y-3">
           <h3 className="text-sm font-semibold">Acompanhamento administrativo</h3>
           {notes.length < data.noteCount && (
@@ -292,6 +300,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
         </Link>
       </div>
       {booking && <BookingDialog receptionCase={data} onClose={() => setBooking(false)} />}
+      {editingLink && access?.admin && <LinkRelationshipDialog key={`${access.actorId}:${data.id}:${editingLink.id}`} contactId={data.contactId} patientId={editingLink.id} doctorId={editingLink.doctorId} contactName={data.contactName} onClose={() => setEditingLink(null)} onSaved={() => { setEditingLink(null); setLinkNotice(true); }} />}
     </article>
   );
 }

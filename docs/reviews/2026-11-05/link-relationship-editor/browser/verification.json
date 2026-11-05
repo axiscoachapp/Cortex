@@ -1,0 +1,132 @@
+{
+  "syntheticOnly": true,
+  "realPagesAndApi": true,
+  "realSql": false,
+  "checks": [
+    "admin-only case entrypoint",
+    "named review and explicit confirmation",
+    "stale revision preserves draft",
+    "explicit recovery resets baseline and confirmation",
+    "new revision saves relationship without identity fields",
+    "dirty Escape/close require discard consent",
+    "375px dialog inside viewport"
+  ],
+  "scenarios": [
+    {
+      "admin": true,
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_update_link_relationship",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_revision": 1,
+            "p_relationship": "family"
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_update_link_relationship",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222",
+            "p_revision": 2,
+            "p_relationship": "family"
+          }
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        },
+        {
+          "name": "reception_link_edit",
+          "body": {
+            "p_contact": "77777777-7777-4777-8777-777777777777",
+            "p_patient": "22222222-2222-4222-8222-222222222222"
+          }
+        }
+      ]
+    },
+    {
+      "admin": false,
+      "calls": [
+        {
+          "name": "clinic_access",
+          "body": {}
+        },
+        {
+          "name": "reception_case",
+          "body": {
+            "p_case": "99999999-9999-4999-8999-999999999999",
+            "p_before_note": null
+          }
+        }
+      ]
+    }
+  ],
+  "pageErrors": [],
+  "sources": [
+    {
+      "path": "src/features/reception/CaseWorkspace.tsx",
+      "sha256": "7cf2515133f3ca9777505e530da1b5a337c50207dad8704fcf364e80a98c3698"
+    },
+    {
+      "path": "src/features/reception/LinkRelationshipDialog.tsx",
+      "sha256": "a64a7ca74177f1ffe9ec2fe03fce944be6a0ad9f2fd7267d10f7f21506c91309"
+    },
+    {
+      "path": "src/features/reception/linkRelationships.ts",
+      "sha256": "f3308b7cd8ee89231d5bd5aaa1e0d51de16f58de7fde7cbbabc8a164c51d8636"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "dda848f7c3a6df45f1feb122c008a2542ac39cd17ef16e1ecb332b1664384736"
+    },
+    {
+      "path": "src/features/reception/contracts.ts",
+      "sha256": "36e8c7bd7c08875b79d551a3a047c907b808e0bdb73b191b4276f3a63ddb354d"
+    },
+    {
+      "path": "src/hooks/useUnsavedChanges.ts",
+      "sha256": "1a124ebb7fd75d09621ff4c85574257cb8436370960f47f0a0b32c8c7c9a6e23"
+    },
+    {
+      "path": "scripts/fixtures/link-relationship-editor-page.tsx",
+      "sha256": "55779f5504f4d1438c3311ae9c7ec6991fff76b191596053269d0589a087b59b"
+    }
+  ]
+}

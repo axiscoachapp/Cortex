@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
-const red=process.argv.includes('--red'),types=process.argv.includes('--types'),reactivation=process.argv.includes('--reactivation'),withdrawal=process.argv.includes('--withdrawal'),provenance=withdrawal||process.argv.includes('--provenance');assert.ok(process.argv.slice(2).every(a=>['--red','--types','--reactivation','--provenance','--withdrawal'].includes(a))&&!(red&&types)&&!(reactivation&&(red||types||provenance)));
+const red=process.argv.includes('--red'),types=process.argv.includes('--types'),reactivation=process.argv.includes('--reactivation'),linkEditor=process.argv.includes('--link-editor'),withdrawal=linkEditor||process.argv.includes('--withdrawal'),provenance=withdrawal||process.argv.includes('--provenance');assert.ok(process.argv.slice(2).every(a=>['--red','--types','--reactivation','--provenance','--withdrawal','--link-editor'].includes(a))&&!(red&&types)&&!(reactivation&&(red||types||provenance))&&!(linkEditor&&(red||types)));
 assert.ok(!process.env.DOCKER_HOST,'No Docker host override');
 const raw=(command,args,input)=>spawnSync(command,args,{input,encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:8*1024*1024});
 const ok=r=>{assert.equal(r.status,0,r.stderr||r.error?.message);return r.stdout;};
@@ -12,7 +12,7 @@ assert.match(endpoint,/^(npipe:\/{2,}\.\/pipe\/[^/]+|unix:\/\/\/.*)$/);
 const env={...process.env};for(const key of ['DOCKER_HOST','DOCKER_CONTEXT','DOCKER_TLS_VERIFY','DOCKER_CERT_PATH'])delete env[key];
 const docker=(args,input)=>spawnSync('docker',['--host',endpoint,...args],{input,env,encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:8*1024*1024});
 const prefix='cortex-delegation-api-'+randomUUID().slice(0,8),db=prefix+'-db',meta=prefix+'-meta';
-const migration='supabase/migrations/20261105200000_reception_delegation_api.sql',provenanceMigration='supabase/migrations/20261105210000_reception_access_provenance.sql',withdrawalMigration='supabase/migrations/20261105220000_reception_card_withdrawal.sql',suite='supabase/tests/'+(withdrawal?'reception-card-withdrawal':provenance?'reception-access-provenance':'reception-delegation-api')+'.test.sql';
+const migration='supabase/migrations/20261105200000_reception_delegation_api.sql',provenanceMigration='supabase/migrations/20261105210000_reception_access_provenance.sql',withdrawalMigration='supabase/migrations/20261105220000_reception_card_withdrawal.sql',suite='supabase/tests/'+(linkEditor?'reception-link-corrections':withdrawal?'reception-card-withdrawal':provenance?'reception-access-provenance':'reception-delegation-api')+'.test.sql';
 const paths=git(['ls-tree','-r','--name-only',baseline,'--','supabase/migrations']).trim().split('\n').filter(p=>p.endsWith('.sql')).sort();
 const sources=new Map(paths.map(p=>[p,git(['show',baseline+':'+p])]));
 sources.set('supabase/tests/bootstrap.sql',git(['show',baseline+':supabase/tests/bootstrap.sql']));
@@ -23,11 +23,12 @@ const extras=['reception-delegation-requests','reception-delegation-decisions','
 if(reactivation)extras.push('reception-staff-reactivation','reception-staff-lifecycle','reception-scope-lifecycle');
 if(provenance)extras.push('reception-delegation-api','reception-staff-reactivation','reception-staff-lifecycle','reception-scope-lifecycle');
 if(withdrawal)extras.push('reception-access-provenance');
+if(linkEditor)extras.push('reception-card-withdrawal');
 if(!red)for(const name of extras){
  const p='supabase/tests/'+name+'.test.sql';
  // Historical modes must use the catalog matching their installed API surface.
  if(name==='reception-function-boundaries'&&!withdrawal)sources.set(p,git(['show',(provenance?'0dbe1d8':'b3e9879')+':'+p]));
- else if(['reception-function-boundaries','reception-staff-reactivation','reception-delegation-api','reception-access-provenance'].includes(name))capture(p);
+ else if(['reception-function-boundaries','reception-staff-reactivation','reception-delegation-api','reception-access-provenance','reception-card-withdrawal'].includes(name))capture(p);
  else sources.set(p,git(['show',baseline+':'+p]));
 }
 let started=false,network=false,report;
@@ -59,5 +60,5 @@ try{
  if(network){assert.equal(ok(docker(['network','inspect','--format','{{index .Labels "cortex.test.run"}}',prefix])).trim(),prefix);ok(docker(['network','rm',prefix]));assert.notEqual(docker(['network','inspect',prefix]).status,0);}
 }
 report.cleanupVerified=true;
-const folder='docs/reviews/2026-11-05/'+(withdrawal?'reception-card-withdrawal':provenance?'reception-access-provenance':reactivation?'reception-staff-reactivation':'reception-delegation-api');mkdirSync(folder,{recursive:true});writeFileSync(folder+'/'+(red?'RED':'SQL')+'.json',JSON.stringify(report,null,2)+'\n');
+const folder='docs/reviews/2026-11-05/'+(linkEditor?'link-relationship-editor':withdrawal?'reception-card-withdrawal':provenance?'reception-access-provenance':reactivation?'reception-staff-reactivation':'reception-delegation-api');mkdirSync(folder,{recursive:true});writeFileSync(folder+'/'+(red?'RED':'SQL')+'.json',JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify({red,passed:report.passed,missingAuthenticatedApi:report.missingAuthenticatedApi,migrations:report.migrations,suites:report.suites,cleanupVerified:true},null,2));
