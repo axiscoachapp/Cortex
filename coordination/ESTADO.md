@@ -44,6 +44,7 @@ Atualizado em 2026-11-05 13:32 por Codex. Cada agente atualiza as linhas que lhe
 
 | Número | Assunto | Dono | Situação |
 |---|---|---|---|
+| `20261105230000` | T05b/3c: leitura administrativa paginada dos vínculos por contato | Codex | Reservada em 05/11 13:38 antes de criar o arquivo; somente nova leitura mínima, sem estados/escritores/importação ou domínioClaude |
 | `20261105220000` | T28/2b/3c: revisão atual para retirada explícita de aprovação no cartão | Codex | Reserva prévia05/11 12:26 preservada. Implementada/verificada:72migrations/dezSQL,40testes/5arquivos, seis verificações de navegador/tipos/build/lint/hash/cleanup; escritor/CAS/DTOs anteriores preservados, sem tocar domínioClaude |
 | `20261105210000` | T28/2b/3b: leitura administrativa da proveniência dos acessos atuais | Codex | Reserva prévia05/11 12:03 preservada. Implementada/verificada:71migrations/noveSQL,31testes/4arquivos, seis verificações de navegador, tipos/lint/build/hash/cleanup; sem alterar grants/consentimento/retirada ou domínioClaude |
 | `20261105200000` | T28/2b/3: RPCs autenticadas de pedidos/decisão para contas existentes | Codex | Reserva prévia05/11 11:00 preservada. Implementada/verificada localmente:70migrations/cincoSQL,22testes/3arquivos, seis verificações de navegador, tipos/lint/build sintético/cleanup; UI com confirmação própria, CAS/UUID/cache por ator. Sem novo provisionamento, reconciliação de grants ou publicação |
@@ -285,7 +286,9 @@ Decididas:
 
 Abertas ou em andamento:
 - **D2, adiada:** a migração fica pronta e roda sobre uma exportação atualizada. Os códigos foram identificados pelos nomes do sistema antigo (2 Sinaida Haddad, 3 Patricia Haddad, 4 Marcelo Chemim Nicola, 5 Marcia Regina Chemin Nicola, 9 Osny de Barros Junior, 11 "Gineco", que é um login compartilhado, e 13 Dr Daniel, sem prontuário). Faltam as contas Cortex e saber quem usava o "Gineco".
-- **D6 e D7:** análise entregue em 05/11 12:45 ([D6_D7_ANALISE.md](../docs/migration/personalmed/D6_D7_ANALISE.md), [mensagem](mensagens/2026-11-05-1245_claude-para-usuario_d6-d7-analise.md)). Recomendação: D6 A (cada trecho na consulta do seu dia, cerca de 9.800 consultas novas em vez de 13.010) e D7 A (alerta só do médico com ação sugerida; fila inicial de 2.868 alertas de pessoas vistas em 2025–2026). **Aguardando a escolha do usuário.**
+- **D6 e D7, decididas pelo usuário em 05/11: D6 A e D7 A.** Implementadas no staging `pm-v2` ([análise](../docs/migration/personalmed/D6_D7_ANALISE.md)):
+  - **D6:** QP/HDA pela data. 192.199 consultas, das quais 22.265 novas. A primeira análise estimou 9.800; o número foi corrigido pelo ensaio do extrator.
+  - **D7:** alertas com `suggestedAction` e `reviewQueue`. Na virada, 2.867 alertas; 2.410 ficam para quando a pessoa voltar.
 - **D10:** tarefa a fazer (pedir a pasta de imagens à clínica).
 - **D15:** teste com vídeos de consultas encenadas do YouTube. É preciso cuidar da licença dos vídeos e do gabarito (transcrição correta) de cada um.
 - **D16:** para depois, com os médicos.

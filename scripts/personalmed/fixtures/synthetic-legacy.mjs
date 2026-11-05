@@ -98,11 +98,20 @@ export const clinical = {
     firstVisit: '2015-03-02',
     lastVisit: '2026-07-10',
   },
-  '101|5': { encounters: [], historyText: 'Texto corrido sintético sem datas.', pages: [], pregnancies: [], firstVisit: '2021-08-16', lastVisit: '2026-05-04' },
+  // D6 A: an undated QP/HDA page joins the consultation of the first visit.
+  '101|5': {
+    encounters: [{ day: '2021-08-16', evolutions: [{ text: 'Primeira consulta sintética.' }], documents: [], cids: [], prenatal: [] }],
+    historyText: 'Texto corrido sintético sem datas.',
+    pages: [{ title: 'QP/HDA', kind: 'qp_hda', text: 'Queixa sintética de irregularidade menstrual.' }],
+    pregnancies: [],
+    firstVisit: '2021-08-16',
+    lastVisit: '2026-05-04',
+  },
   '102|3': {
     encounters: [{ day: '2026-06-01', evolutions: [], documents: [], cids: [{ code: 'Z34.0', description: 'Supervisão de primeira gravidez normal' }], prenatal: [{ ig: 20, weight: 64, pressure: '110/70', au: 20, bcf: '140', mf: 1, edema: 0 }] }],
     historyText: '',
-    pages: [],
+    // D6 A: a dated QP/HDA page is split; each entry joins the consultation of its day.
+    pages: [{ title: 'QP/HDA', kind: 'qp_hda', text: '01/06/2026 Queixa sintética de dor pélvica.\n15/07/2026 Retorno sintético sem queixas.' }],
     pregnancies: [
       { number: 2, dum: '2026-01-15', dpp: '2026-10-22', dppSource: 'DUM' },
       { number: 1, dum: '2019-01-01', dpp: '2019-10-08', dppSource: 'USG' },
@@ -110,6 +119,8 @@ export const clinical = {
     firstVisit: '2019-02-11',
     lastVisit: '2026-06-01',
   },
+  // D6 A: an undated QP/HDA page of a chart whose first visit is not a valid date.
+  '105|5': { encounters: [], historyText: '', pages: [{ title: 'QP/HDA', kind: 'qp_hda', text: 'Queixa sintética sem data.' }], pregnancies: [], firstVisit: '1899-12-30', lastVisit: '2024-09-09' },
 };
 
 const appt = (over) => ({ user: 3, date: EXPORT_DATE, startMinutes: 9 * 60, duration: 20, slotType: 'C', estado: '-', pcod: null, preCadastro: null, typeLabel: 'CONS', ...over });

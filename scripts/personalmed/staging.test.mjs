@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { syntheticBatch } from './make-synthetic-batch.mjs';
-import { buildLegacyAlert, writeBatch } from './staging.mjs';
+import { buildChartClinical, buildLegacyAlert, writeBatch } from './staging.mjs';
 import { wallClockToUtc } from './transforms.mjs';
 
 const { envelopes } = syntheticBatch();
@@ -103,7 +103,7 @@ describe('synthetic staging batch', () => {
 
   it('builds one consultation per day, merging structured data and the running history', () => {
     const ofChart = of('consultation').filter((c) => c.sourceRecordId.startsWith('pcod:101|user:3|'));
-    expect(ofChart.map((c) => c.sourceRecordId).sort()).toEqual(['pcod:101|user:3|day:2024-03-10', 'pcod:101|user:3|day:2025-05-15', 'pcod:101|user:3|day:2026-07-10', 'pcod:101|user:3|page:qp-hda']);
+    expect(ofChart.map((c) => c.sourceRecordId).sort()).toEqual(['pcod:101|user:3|day:2015-03-02', 'pcod:101|user:3|day:2024-03-10', 'pcod:101|user:3|day:2025-05-15', 'pcod:101|user:3|day:2026-07-10']);
     const mixed = find('consultation', 'pcod:101|user:3|day:2024-03-10').payload.soap_note;
     expect(mixed).toContain('### Evolução');
     expect(mixed).toContain('### Histórico corrido');
@@ -112,6 +112,50 @@ describe('synthetic staging batch', () => {
     const historyOnly = find('consultation', 'pcod:101|user:3|day:2025-05-15').payload;
     expect(historyOnly.chief_complaint).toBe('Anotação do histórico (PersonalMed)');
     expect(historyOnly.soap_note).toContain('Acrescentado no mesmo dia.');
+  });
+
+  // D6 A (user, 05/11/2026): QP/HDA by date, like the running history.
+  it('places an undated QP/HDA page at the first visit: a new consultation, or a section of the one that day', () => {
+    const own = find('consultation', 'pcod:101|user:3|day:2015-03-02').payload;
+    expect(own).toMatchObject({ chief_complaint: 'Primeira consulta: QP/HDA (PersonalMed)', created_at: '2015-03-02T15:00:00.000Z' });
+    expect(own.soap_note).toContain('### QP/HDA\n\nQueixa sintética de cólica.');
+    const joined = find('consultation', 'pcod:101|user:5|day:2021-08-16').payload;
+    expect(joined.chief_complaint).toBe('Consulta (PersonalMed)');
+    expect(joined.soap_note.indexOf('### QP/HDA')).toBeGreaterThan(0);
+    expect(joined.soap_note.indexOf('### QP/HDA')).toBeLessThan(joined.soap_note.indexOf('### Evolução'));
+    expect(joined.soap_note).toContain('Queixa sintética de irregularidade menstrual.');
+  });
+
+  it('splits a dated QP/HDA page by day: an entry joins its day, a new day becomes a consultation', () => {
+    const existing = find('consultation', 'pcod:102|user:3|day:2026-06-01').payload;
+    expect(existing.chief_complaint).toBe('Consulta (PersonalMed)');
+    expect(existing.soap_note).toContain('Queixa sintética de dor pélvica.');
+    expect(existing.soap_note).toContain('IG: 20 semanas');
+    const added = find('consultation', 'pcod:102|user:3|day:2026-07-15');
+    expect(added).toMatchObject({ mappingStatus: 'ready', issues: [] });
+    expect(added.payload.chief_complaint).toBe('Anotação QP/HDA (PersonalMed)');
+    expect(added.payload.soap_note).toContain('Retorno sintético sem queixas.');
+    expect(added.payload.soap_note).not.toContain('dor pélvica');
+  });
+
+  it('keeps an undated QP/HDA page without a valid first visit at the anchor, flagged', () => {
+    const e = find('consultation', 'pcod:105|user:5|page:qp-hda');
+    expect(e).toMatchObject({ mappingStatus: 'ready', issues: ['qp_hda_no_first_visit'] });
+    expect(e.payload).toMatchObject({ chief_complaint: 'Primeira consulta: QP/HDA (PersonalMed)', created_at: '2024-09-09T15:00:00.000Z' });
+    expect(e.payload.soap_note).toContain('### QP/HDA\n\nQueixa sintética sem data.');
+    // Only this case keeps the page key; every other QP/HDA goes to a day.
+    expect(of('consultation').filter((c) => c.sourceRecordId.endsWith('|page:qp-hda'))).toHaveLength(1);
+  });
+
+  it('sends a QP/HDA day typed out of order to review, like the running history', () => {
+    const ctx = { sourceInstance: 'pm-test', batchId: 'b', exportDate: '2026-08-24', importDate: '2026-11-05' };
+    const out = buildChartClinical(ctx, { pcod: 1, user: 3, patientTargetId: 't' }, {
+      encounters: new Map(), history: null, pregnancies: [], firstVisit: '2020-01-01', lastVisit: '2026-05-10',
+      pages: [{ title: 'QP/HDA', kind: 'qp_hda', text: '10/05/2026 Entrada sintética A.\n01/03/2026 Entrada sintética B.' }],
+    });
+    const day = (d) => out.find((e) => e.sourceRecordId === `pcod:1|user:3|day:${d}`);
+    expect(day('2026-05-10')).toMatchObject({ mappingStatus: 'ready', issues: [] });
+    expect(day('2026-03-01')).toMatchObject({ mappingStatus: 'requires_review', issues: ['qp_hda_date_out_of_order'] });
   });
 
   it('dates a consultation by its attended appointment and names that appointment only as a candidate', () => {
@@ -252,6 +296,24 @@ describe('synthetic "Atenção" alerts (S6)', () => {
     expect(alert(105)).toMatchObject({ mappingStatus: 'ready', issues: [] });
     expect(alert(103)).toBeUndefined();
     expect(of('legacy_alert')).toHaveLength(5);
+  });
+
+  // D7 A (user, 05/11/2026): suggested action and review queue.
+  it('suggests an action to the doctor and queues people seen since 2025 for the go-live review', () => {
+    expect(alert(102).payload).toMatchObject({ suggestedAction: 'doctor_review', reviewQueue: 'at_go_live' }); // clinical + administrative
+    expect(alert(101).payload).toMatchObject({ suggestedAction: 'clinical_note', reviewQueue: 'at_go_live' });
+    expect(alert(104).payload).toMatchObject({ suggestedAction: 'clinical_note', reviewQueue: 'on_return' }); // last visit 2018
+    expect(alert(105).payload).toMatchObject({ suggestedAction: 'doctor_review', reviewQueue: 'on_return' }); // no hint, last visit 2024
+    expect(alert(199).payload).toMatchObject({ reviewQueue: 'on_return' }); // no visit at all
+    const ctx = { sourceInstance: 'pm-test', batchId: 'b', exportDate: '2026-08-24' };
+    const one = [{ user: 3, patientTargetId: 't3' }];
+    expect(buildLegacyAlert(ctx, { pcod: 910, text: 'Deve a consulta de março, ligar.', lastVisit: '2025-01-01' }, one).payload)
+      .toMatchObject({ suggestedAction: 'administrative_note', reviewQueue: 'at_go_live' });
+    expect(buildLegacyAlert(ctx, { pcod: 911, text: 'Alergia a dipirona.', lastVisit: '2024-12-31' }, one).payload)
+      .toMatchObject({ suggestedAction: 'allergy_proposal', reviewQueue: 'on_return' });
+    // A sentinel or future date is not a visit.
+    expect(buildLegacyAlert(ctx, { pcod: 912, text: 'Alergia a dipirona.', lastVisit: '1899-12-30' }, one).payload.reviewQueue).toBe('on_return');
+    expect(buildLegacyAlert({ ...ctx, reviewFrom: '2026-01-01' }, { pcod: 913, text: 'Alergia a dipirona.', lastVisit: '2025-06-01' }, one).payload.reviewQueue).toBe('on_return');
   });
 
   it('flags an alert whose recipients include a shared login (D2)', () => {

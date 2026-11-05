@@ -13,7 +13,7 @@ import { basename, extname, join } from 'node:path';
 import { ParadoxTable, toCalendarDate } from './paradox-reader.mjs';
 import { Mdf } from './mssql2000-reader.mjs';
 import { rtfToText } from './rtf-to-text.mjs';
-import { alertCategories, splitHistory } from './transforms.mjs';
+import { alertCategories, alertSuggestedAction, splitHistory } from './transforms.mjs';
 
 const args = process.argv.slice(2);
 const dir = args[0];
@@ -89,18 +89,15 @@ const shingles = (text) => {
   for (let i = 0; i + SHINGLE <= words.length; i++) out.add(words.slice(i, i + SHINGLE).join(' '));
   return out;
 };
+// The exact number of consultations each rule creates comes from extract.mjs
+// (consultationKinds), which builds the real staging; an estimate here missed
+// sources and was withdrawn (05/11).
 const historyShingles = new Map();
-const historyDays = new Map(); // dated entries of the running history, which already become consultation days
 for (const r of rows(px('Co12_1'), ['PCod', 'UserNumber', 'Contents'], 'text')) {
   const t = plain(r.Contents);
   if (r.PCod == null || !t.trim()) continue;
-  const k = `${r.PCod}|${r.UserNumber}`;
-  historyShingles.set(k, shingles(t));
-  const dated = splitHistory(t, { exportDate: EXPORT }).entries.filter((e) => e.date);
-  if (dated.length >= 2) historyDays.set(k, new Set(dated.map((e) => e.date)));
+  historyShingles.set(`${r.PCod}|${r.UserNumber}`, shingles(t));
 }
-/** Days that already become consultations for a chart (approximation: visits, evolution rows, dated history). */
-const consultationDays = (k) => new Set([...(visitDays.get(k) ?? []), ...(recordDays.get(k) ?? []), ...(historyDays.get(k) ?? [])]);
 lap('history');
 
 // ---------------------------------------------------------------------------
@@ -114,10 +111,6 @@ const d6 = {
   overlapWithHistory: { noHistory: 0, none: 0, under20: 0, from20to80: 0, atLeast80: 0 },
   recency: {},
   labelled: { qpOrHda: 0 },
-  // Recommended rule: an undated page joins the consultation of the first
-  // visit when that day is one; a dated page is split like the history, each
-  // entry joining its day's consultation. Counts what would be new.
-  recommended: { undatedJoins: 0, undatedNew: 0, datedEntriesJoin: 0, datedNewDays: 0 },
 };
 const lengths = [];
 for (const r of rows(mdf.table('Me'), ['PCod', 'UserNumber', 'CompNumber', 'Contents1'], 'text')) {
@@ -142,16 +135,6 @@ for (const r of rows(mdf.table('Me'), ['PCod', 'UserNumber', 'CompNumber', 'Cont
   }
 
   const h = header.get(k);
-  const existing = consultationDays(k);
-  if (dated.length < 2) {
-    if (h?.first && existing.has(h.first)) d6.recommended.undatedJoins += 1;
-    else d6.recommended.undatedNew += 1;
-  } else {
-    for (const e of dated) {
-      if (existing.has(e.date)) d6.recommended.datedEntriesJoin += 1;
-      else { d6.recommended.datedNewDays += 1; existing.add(e.date); }
-    }
-  }
   if (!h?.first) d6.firstVisit.missing += 1;
   else {
     const visit = days.has(h.first);
@@ -206,13 +189,11 @@ for (const r of rows(mdf.table('Clini_01'), ['PCod', 'Attention'], 'text')) {
   if (!t || r.PCod == null) continue;
   d7.alerts += 1;
   alertLengths.push(t.length);
-  const { categories, clinical, administrative } = alertCategories(t);
+  const hints = alertCategories(t);
+  const { categories } = hints;
   for (const c of categories) inc(d7.base, c);
-  const route = clinical && administrative ? 'misto_revisao_medica'
-    : categories.includes('alergia') || categories.includes('medicamento_citado') ? 'proposta_alergia'
-    : clinical ? 'nota_clinica'
-    : administrative ? 'nota_administrativa'
-    : 'sem_categoria_revisao_medica';
+  const action = alertSuggestedAction(hints);
+  const route = action !== 'doctor_review' ? action : categories.length ? 'doctor_review_mixed' : 'doctor_review_uncategorized';
   inc(d7.routing, route);
   const bucket = yearBucket(personLast.get(r.PCod) ?? null);
   inc(d7.recency, `${route}.${bucket}`);

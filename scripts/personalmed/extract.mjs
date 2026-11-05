@@ -54,7 +54,7 @@ const lap = (label) => process.stderr.write(`${label}: ${((Date.now() - t0) / 10
 // Optional encrypted output (real patient data): only outside the repo, only with PM_STAGING_KEY.
 const writer = opt('--out') ? new SecureBatchWriter(opt('--out'), keyFromEnv()) : null;
 
-const agg = { entities: {}, issues: {}, sections: {}, chars: { historySource: 0, historyInConsultations: 0 } };
+const agg = { entities: {}, issues: {}, sections: {}, chiefComplaints: {}, chars: { historySource: 0, historyInConsultations: 0 } };
 function count(e) {
   writer?.add(e);
   const a = (agg.entities[e.sourceEntity] ??= { total: 0, byStatus: {}, byDoctor: {} });
@@ -63,6 +63,7 @@ function count(e) {
   if (e.sourceDoctorId) a.byDoctor[e.sourceDoctorId] = (a.byDoctor[e.sourceDoctorId] ?? 0) + 1;
   for (const i of e.issues) agg.issues[`${e.sourceEntity}.${i}`] = (agg.issues[`${e.sourceEntity}.${i}`] ?? 0) + 1;
   if (e.sourceEntity === 'consultation') {
+    agg.chiefComplaints[e.payload.chief_complaint] = (agg.chiefComplaints[e.payload.chief_complaint] ?? 0) + 1;
     for (const m of e.payload.soap_note.matchAll(/^### (.+)$/gm)) agg.sections[m[1]] = (agg.sections[m[1]] ?? 0) + 1;
     const h = e.payload.soap_note.split('### Histórico corrido\n\n')[1];
     if (h) agg.chars.historyInConsultations += h.length;
@@ -242,15 +243,17 @@ lap('health-plan cards');
 
 // "Atenção" alerts (S6): one per person with text, sent to the charts built
 // for that person. Counts only leave this script.
-const alertStats = { withText: 0, recipients: { none: 0, one: 0, several: 0 } };
+const alertStats = { withText: 0, recipients: { none: 0, one: 0, several: 0 }, reviewQueue: {}, suggestedAction: {} };
 for (const r of rows(mdf.table('Clini_01'), ['PCod', 'Attention'], 'text')) {
   const own = (chartHeaders.get(r.PCod) ?? [])
     .map((h) => ({ user: h.user, patientTargetId: chartIds.get(`${r.PCod}|${h.user}`) }))
     .filter((c) => c.patientTargetId);
-  const e = buildLegacyAlert(ctx, { pcod: r.PCod, text: plain(r.Attention) }, own);
+  const e = buildLegacyAlert(ctx, { pcod: r.PCod, text: plain(r.Attention), lastVisit: lastActivity.get(r.PCod) ?? null }, own);
   if (!e) continue;
   count(e);
   alertStats.withText += 1;
+  alertStats.reviewQueue[e.payload.reviewQueue] = (alertStats.reviewQueue[e.payload.reviewQueue] ?? 0) + 1;
+  alertStats.suggestedAction[e.payload.suggestedAction] = (alertStats.suggestedAction[e.payload.suggestedAction] ?? 0) + 1;
   alertStats.recipients[own.length === 0 ? 'none' : own.length === 1 ? 'one' : 'several'] += 1;
 }
 lap('alerts');
@@ -299,9 +302,10 @@ lap('templates');
 
 // ---------------------------------------------------------------------------
 
-const expected = { person: 32882, chart: 34796, contact_chart_link: 34796, consultation: 169934 + 13010, diagnosis_set: 2353, pregnancy_item: 97, template: 1123, legacy_alert: 5277, health_plan_card: 62204 - 32686 /* Clini_05 rows minus private pay */ };
+// Consultations: 169.934 + 22.265 of QP/HDA by date (D6 A: 4.188 first-visit notes and 18.077 diary days).
+const expected = { person: 32882, chart: 34796, contact_chart_link: 34796, consultation: 169934 + 22265, diagnosis_set: 2353, pregnancy_item: 97, template: 1123, legacy_alert: 5277, health_plan_card: 62204 - 32686 /* Clini_05 rows minus private pay */ };
 const reconciliation = Object.fromEntries(Object.entries(expected).map(([k, v]) => [k, { expected: v, staged: agg.entities[k]?.total ?? 0, diff: (agg.entities[k]?.total ?? 0) - v }]));
-const out = { exportDate: EXPORT, importDate: ctx.importDate, persons, chartsWithClinicalButNoHeader: chartsWithoutHeader, reconciliation, entities: agg.entities, issues: Object.fromEntries(Object.entries(agg.issues).sort()), consultationSections: agg.sections, historyChars: agg.chars, templates: templateStats, alerts: alertStats, healthPlans: planStats, seconds: Math.round((Date.now() - t0) / 1000) };
+const out = { exportDate: EXPORT, importDate: ctx.importDate, persons, chartsWithClinicalButNoHeader: chartsWithoutHeader, reconciliation, entities: agg.entities, issues: Object.fromEntries(Object.entries(agg.issues).sort()), consultationSections: agg.sections, consultationKinds: agg.chiefComplaints, historyChars: agg.chars, templates: templateStats, alerts: alertStats, healthPlans: planStats, seconds: Math.round((Date.now() - t0) / 1000) };
 if (writer) out.encryptedStaging = { dir: opt('--out'), manifest: 'manifest.json', files: Object.keys(writer.close({ sourceSystem: 'personalmed', sourceInstance: ctx.sourceInstance, batchId: ctx.batchId, exportDate: EXPORT, importDate: ctx.importDate }).files) };
 const json = JSON.stringify(out, null, 2);
 if (opt('--json')) writeFileSync(opt('--json'), json);

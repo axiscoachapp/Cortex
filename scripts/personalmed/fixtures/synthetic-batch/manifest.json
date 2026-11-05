@@ -4,58 +4,58 @@
   "batchId": "pm-synthetic-01",
   "exportDate": "2026-08-24",
   "synthetic": true,
-  "transformVersion": "pm-v1",
+  "transformVersion": "pm-v2",
   "files": {
     "appointment.ndjson": {
-      "sha256": "3c46e3cc2bc323e281be55778d22b9e2ad0d4398c430026884d58fdc0a0b933a",
+      "sha256": "09a2be0283d0cca98f1746702748a2d3a6c4137165925119c3dee5f924584832",
       "lines": 11
     },
     "chart.ndjson": {
-      "sha256": "367ab11a55643ecae79a838ef558383a0b2e218ad29898e5859cb7656f9d640c",
+      "sha256": "4c887db6ba1453ecbe0589d308e46a3d12e87bf9f4665bfc3820fe45d1a5036a",
       "lines": 6
     },
     "consultation.ndjson": {
-      "sha256": "c1ea409d7db2b18bd9a1f61c213e7bc727f1d2e78caccfa3fbe60fa4771fb275",
-      "lines": 6
+      "sha256": "aff46662fe894f4ad11f7f379919cfc56d7ec833da0e76046d3a91554b29eaf6",
+      "lines": 9
     },
     "contact.ndjson": {
-      "sha256": "c29982215445c8b26d2cb758c1d3af22758be61c8880773f175d536578d68061",
+      "sha256": "96153d70aac65a585170ecdf67f73084cb66f382ecf75bddbde273b52d4e3d71",
       "lines": 6
     },
     "contact_chart_link.ndjson": {
-      "sha256": "b35cb47eca49532007edd9a7054962a02bbfe6167ed2d9efa323be845e2a706d",
+      "sha256": "2e4646fe6654118de8ac59012c7aceb73a005aeaaa6f7d521f399a652578c922",
       "lines": 6
     },
     "diagnosis_set.ndjson": {
-      "sha256": "30670b131df968e8344cf442f57f5b974d8f7653e2ecba5c075e720a60482ee5",
+      "sha256": "13330c554d6ad9148f0a3a27f3299bf9db69155bd77fca01360c61eab5d661f5",
       "lines": 1
     },
     "health_plan_card.ndjson": {
-      "sha256": "f523a02b9e721ffca3ceba1c8e8f2cfdf0a7505e0831f45bf9a0d0e8fb37a64d",
+      "sha256": "31a2a05077db107d4cc6bff7e3427d87b8bc9a1a3fcf786428e13fe2284548ad",
       "lines": 4
     },
     "legacy_alert.ndjson": {
-      "sha256": "8cfc34b9c83cedb5188b34119581518a651bf7ff1affd1d0df13001903ce15b9",
+      "sha256": "f7ee1d350c0d5a2e2d1a12d2b7328356064f6165ff91995825c35e15304e3800",
       "lines": 5
     },
     "medical_history.ndjson": {
-      "sha256": "ba9716ff1c626894bffa295ab8864261b8eeff65c6e55faa977fc9a97e26198b",
+      "sha256": "9995d38b7b9b5799e9fe49f8454d71e350f1c89e107fb705cd97505bf4e16639",
       "lines": 1
     },
     "person.ndjson": {
-      "sha256": "fa50822b5a4e91c9dd9c9835cf161df77d07c9e53037f4cba319e9814d93fc59",
+      "sha256": "a2013b22c9a178b5efe179d2052fdfd096845bcee0fe53bf1f240564559a9608",
       "lines": 5
     },
     "pregnancy_item.ndjson": {
-      "sha256": "af907ab3ca5577a7be48390c8693d0a245333edcb9e22bf0614e2611a7ec35ec",
+      "sha256": "3abe8ec8c8d6d2feda4f62a248311cfff81fe67dcb142805bb77480009a0878d",
       "lines": 1
     },
     "schedule_block.ndjson": {
-      "sha256": "ada9f2c9f34c51451bd7093d8bd3d613e9dd44585b2216ef8e8eabb7d2c28169",
+      "sha256": "d3ce7f4a9f843cfdb2a8846f8827c4b2fcd84d3152900a22e8ee1f0a95110e89",
       "lines": 2
     },
     "template.ndjson": {
-      "sha256": "1dbefd651cb1db492a4d9efadb2b168c75180a7f8aa5c0870b8ce269e0afee1a",
+      "sha256": "52da9d19fda19978c6036dfae7eb34d2741252eb181e53468a99e8fa79882005",
       "lines": 9
     }
   },
@@ -85,13 +85,13 @@
       }
     },
     "consultation": {
-      "total": 6,
+      "total": 9,
       "byStatus": {
-        "ready": 6
+        "ready": 9
       },
       "byDoctor": {
-        "user:3": 5,
-        "user:5": 1
+        "user:3": 6,
+        "user:5": 3
       }
     },
     "contact": {
@@ -215,6 +215,7 @@
     "phone_ninth_digit_added": 2,
     "phone_no_ddd_outside_41": 2,
     "precadastro_unconfirmed": 1,
+    "qp_hda_no_first_visit": 1,
     "sex_missing": 1,
     "status_no_attendance_recorded": 1,
     "status_no_show_target_required": 2,

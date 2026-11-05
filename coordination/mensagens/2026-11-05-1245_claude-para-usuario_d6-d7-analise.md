@@ -3,7 +3,7 @@
 - Para: usuario
 - Data: 2026-11-05 12:45 (America/Sao_Paulo)
 - Responde a: —
-- Status: aberta
+- Status: encerrada
 - Decisão do usuário necessária: sim (D6 e D7)
 
 Você pediu uma análise mais funda da D6 e da D7. Ela está em [D6_D7_ANALISE.md](../../docs/migration/personalmed/D6_D7_ANALISE.md), só com números agregados da exportação.
@@ -20,3 +20,7 @@ Você pediu uma análise mais funda da D6 e da D7. Ela está em [D6_D7_ANALISE.m
 - **Recomendo a opção A:** todos entram como alerta visível só ao médico, já com uma ação sugerida (nota administrativa, nota clínica ou alergia). Na virada, a fila de revisão mostra só os 2.868 de quem foi atendido em 2025–2026; os outros aparecem quando a pessoa voltar.
 
 Responda com a letra de cada uma (por exemplo, "D6 A, D7 A") ou peça ajustes. Até lá, a migração não muda nesse ponto.
+
+**Resposta do usuário (05/11):** "D6 A, D7 A". Implementado no staging `pm-v2`.
+
+**Correção:** a opção A cria 22.265 consultas novas, não cerca de 9.800. O ensaio do extrator mostrou que um atendimento sem registro clínico não vira consulta no staging; o ganho na linha do tempo continua.

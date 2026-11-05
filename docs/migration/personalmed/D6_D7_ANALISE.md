@@ -1,5 +1,9 @@
 # D6 e D7: análise para a decisão
 
+**Decisão do usuário (05/11/2026): D6 A e D7 A.** Implementadas no staging `pm-v2`. Os números da opção A abaixo vêm do ensaio do extrator (`extract.mjs`) sobre a exportação, já com a regra aplicada.
+
+> **Correção (05/11):** a primeira versão desta análise estimou cerca de 9.800 consultas novas na opção A. A estimativa contava como consulta todo dia com atendimento na agenda. No staging, porém, um atendimento sem registro clínico não vira consulta, e por isso o número real é maior: 22.265. O ganho da opção A, cada trecho no dia certo, não muda.
+
 Análise mais funda pedida pelo usuário, feita em 05/11/2026 sobre a exportação de 24/08/2026. Script: `scripts/personalmed/d6-d7-analysis.mjs`. Só agregados: nenhum nome, identificador, data de pessoa ou texto de prontuário.
 
 ## D6: página "QP/HDA"
@@ -33,12 +37,19 @@ Análise mais funda pedida pelo usuário, feita em 05/11/2026 sobre a exportaç�
 
 ### Opções
 
-**A. Pela data, como o histórico corrido (recomendada)**
+**A. Pela data, como o histórico corrido (recomendada e escolhida)**
 
-- **Página sem datas:** vira a seção "QP/HDA" dentro da consulta da primeira visita. 7.311 entram em consultas que já existem, e 2.306 viram consultas novas nessa data.
-- **Página com datas:** é dividida por data, e cada trecho vai para a consulta daquele dia. 25.274 trechos entram em consultas que já existem, e 7.476 dias viram consultas novas.
+Números do ensaio do extrator:
 
-São cerca de 9.800 consultas novas, com cada trecho no dia certo da linha do tempo.
+- **Página sem datas** (9.617): vira a seção "QP/HDA" dentro da consulta da primeira visita.
+  - 5.429 entram em consultas que já existem;
+  - 4.188 viram a consulta "Primeira consulta: QP/HDA" nessa data. Entre elas, 26 de prontuários sem primeira consulta válida ficam na data da última visita, marcadas.
+- **Página com datas** (3.389): é dividida por data, e cada trecho vai para a consulta do seu dia.
+  - 14.545 dias entram em consultas que já existem;
+  - 18.077 dias viram a consulta "Anotação QP/HDA";
+  - 784 dias digitados fora de ordem vão para revisão.
+
+No total, 42.239 consultas recebem a seção QP/HDA, e 22.265 delas são novas (eram 169.934 consultas; passam a 192.199). Cada trecho fica no dia certo da linha do tempo.
 
 **B. Uma consulta por página (como está hoje no lote de ensaio)**
 
@@ -84,7 +95,13 @@ Nenhuma consulta nova. Mas a linha do tempo se perde, e os 32.750 trechos datado
 
 ### Opções
 
-**A. Alerta herdado com ação sugerida, revisado aos poucos (recomendada)**
+**A. Alerta herdado com ação sugerida, revisado aos poucos (recomendada e escolhida)**
+
+No ensaio do extrator, a fila da virada tem 2.867 alertas e 2.410 ficam para quando a pessoa voltar. As ações sugeridas são:
+- 3.920 para o médico decidir;
+- 1.015 notas administrativas;
+- 214 notas clínicas;
+- 128 propostas de alergia.
 
 Todos entram como alerta herdado visível só ao médico, como no desenho S6, já com a ação sugerida acima. O médico confirma em lote.
 

@@ -98,7 +98,7 @@ A clínica pode usar nuvem (decisão D11). Hoje o projeto Supabase de produção
 | Pré-natal | `Co49_2` | `PCod, UserNumber, NumberGestation, NumberConsultation` | 16.316 | Seção da consulta do dia |
 | Gestação | `Co49_1` | `Pcod, UserNumber, NumberGestation` | 4.502 | As 97 em curso viram `clinical_work_items` do tipo `pregnancy`; as demais vão como texto |
 | Histórico corrido | `Co12_1` | `PCod, UserNumber` | 26.864 | Dividido por data (§2.3) |
-| Páginas do prontuário | `Me` (SQL) | `PCod, UserNumber, CompNumber` | 17.581 | QP/HDA vira consulta da primeira visita; o resto vai para `medical_history` |
+| Páginas do prontuário | `Me` (SQL) | `PCod, UserNumber, CompNumber` | 17.581 | QP/HDA vai pela data, em seção da consulta do dia (D6 A); o resto vai para `medical_history` |
 | Alerta "Atenção" | `Clini_01.Attention` | `PCod` | 5.277 com texto | Alerta herdado para o médico revisar (§2.5) |
 | Carteira de convênio | `Clini_05` | `PCod, CarrierCod` | 62.204 | Convênio do contato (S2) |
 | Agendamento | `Age04` com `age03` | `UserNumber, Data, Inicio` | 273.794 | `appointments` (§2.6) |
@@ -158,7 +158,12 @@ Depois das correções automáticas da §4, 38% dos ativos ficam completos. Falt
 | Históricos sem datas | 16.578 |
 | **Total** | **169.934** |
 
-São mais 13.010 se a página QP/HDA virar consulta (decisão D6).
+**QP/HDA pela data (D6 A, decidida em 05/11).** Página sem datas vai para a consulta da primeira visita, e página com datas é dividida como o histórico corrido. Ensaio do extrator:
+- 42.239 consultas recebem a seção "QP/HDA", e 22.265 são novas: 4.188 "Primeira consulta: QP/HDA" e 18.077 "Anotação QP/HDA";
+- 784 dias fora de ordem vão para revisão (`qp_hda_date_out_of_order`);
+- 26 páginas sem primeira consulta válida ficam na data âncora (`qp_hda_no_first_visit`).
+
+Total de consultas: **192.199**. Detalhes em [D6_D7_ANALISE.md](D6_D7_ANALISE.md).
 
 ### 2.4 Outros dados clínicos
 
@@ -308,7 +313,7 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
   "sourceRecordId": "pcod:1234|user:3",
   "sourceDoctorId": "user:3",
   "batchId": "pm-2026-11-dryrun-01",
-  "transformVersion": "pm-v1",
+  "transformVersion": "pm-v2",
   "targetTable": "patients",
   "targetId": "<uuidv5 determinístico>",
   "payload": { "name": "Paciente Sintética", "date_of_birth": "1990-01-31" },
@@ -361,6 +366,8 @@ A frente de dados entrega arquivos de staging fora do repositório, cifrados no 
   - `text`;
   - `categories`: palavras-chave para quem revisa (alergia, medicamento citado, gestação, doença crônica, óbito, financeiro, comportamento, administrativo, convênio). Não são diagnóstico;
   - `clinical`, `administrative`;
+  - `suggestedAction` (D7 A, desde `pm-v2`): `administrative_note`, `clinical_note`, `allergy_proposal` ou `doctor_review` (`alertSuggestedAction` em `transforms.mjs`). É só sugestão: o médico confirma;
+  - `reviewQueue` (D7 A, desde `pm-v2`): `at_go_live` para pessoa vista desde 01/01/2025 (`ctx.reviewFrom`), senão `on_return`, que aparece quando a pessoa voltar;
   - `recipients`: `[{doctor, patientTargetId}]`, com os prontuários construídos para a pessoa;
   - `status: pending_review` e `visibility: doctor_only`.
 - **Situação:**
@@ -538,7 +545,8 @@ A ideia original era o cadastro legal ficar na pessoa, não em cada prontuário.
 ### S6. Dados clínicos importados
 
 - **Consultas:**
-  - mapeamento da ANALYSIS.md §4.3, mais a divisão do histórico (§2.3): `soap_note` em Markdown com as seções Evolução, Sinais vitais, Pré-natal, CID, Documentos emitidos e Histórico corrido;
+  - mapeamento da ANALYSIS.md §4.3, mais a divisão do histórico (§2.3): `soap_note` em Markdown com as seções QP/HDA, Evolução, Sinais vitais, Pré-natal, CID, Documentos emitidos e Histórico corrido;
+  - QP/HDA pela data (D6 A): `chief_complaint` "Primeira consulta: QP/HDA (PersonalMed)" ou "Anotação QP/HDA (PersonalMed)" quando o dia não tem outra consulta;
   - `chief_complaint` com o rótulo de importação;
   - o prefixo visível `[Importado do PersonalMed em AAAA-MM-DD]`.
 - **Diagnósticos:** só fora do capítulo Z, distintos por prontuário, em `{code, description}`.
@@ -546,6 +554,7 @@ A ideia original era o cadastro legal ficar na pessoa, não em cada prontuário.
 - **Histórico pessoal:** páginas `Me` que não são QP/HDA, mais contracepção e climatério, em seções com o título do médico.
 - **Alerta herdado:**
   - por prontuário, visível só ao médico, com status `pending_review`;
+  - com a ação sugerida (`suggestedAction`) e a fila (`reviewQueue`) da D7 A: na virada, só os de pessoas vistas desde 2025; os demais quando a pessoa voltar;
   - ações: virar proposta de alergia, virar nota clínica, virar nota administrativa (visível à recepção) ou descartar, sempre com auditoria.
 - **Arquivos:** só depois do paciente existir. BMP convertido para PNG, tag `importado-personalmed` e `ai_summary` nulo.
 - **Aceite:**
@@ -588,7 +597,7 @@ Os valores são da exportação de 24/08/2026 e devem ser recalculados na export
 | Contatos (pessoas) | 32.882 (ou o recorte escolhido em D1; ativos: 9.300) |
 | Prontuários | 34.796. Por médico: 2 → 6.406; 3 → 8.882; 4 → 10.170; 5 → 5.341; 9 → 3.266; 11 → 731 |
 | Vínculos `self` | 34.796 (1.666 pessoas com dois ou mais) |
-| Consultas | 169.934 (+13.010 se D6 = consulta) |
+| Consultas | 192.199: 169.934 mais 22.265 de QP/HDA pela data (D6 A). Ensaio de 05/11 sem diferença |
 | Diagnósticos fora do Z | 4.721 linhas em 2.353 prontuários |
 | Gestações em curso | 97 (recalcular) |
 | Itens de histórico pessoal | 4.571 páginas `Me` mais 668 de contracepção e climatério |
@@ -644,8 +653,8 @@ Navegador: 390, 768, 1280 e 1920 px na escala de 150%, como já está definido.
 | D3 | Agendamentos passados | **Decidida:** todos, inclusive os passados. |
 | D4 | DDD 41 automático para Curitiba e região | **Decidida:** sim, e o cadastro é revisado na primeira consulta no Cortex. |
 | D5 | Modelos: todos ou só os usados | **Decidida:** todos. |
-| D6 | QP/HDA como consulta ou como histórico | **Análise entregue em 05/11** ([D6_D7_ANALISE.md](D6_D7_ANALISE.md)); aguarda a escolha. Recomendada: cada trecho na consulta do seu dia. |
-| D7 | Alertas "Atenção" | **Análise entregue em 05/11** ([D6_D7_ANALISE.md](D6_D7_ANALISE.md)); aguarda a escolha. Recomendada: alerta só do médico com ação sugerida e fila inicial de pessoas vistas em 2025–2026. |
+| D6 | QP/HDA como consulta ou como histórico | **Decidida (05/11): A**, cada trecho na consulta do seu dia, como o histórico corrido ([D6_D7_ANALISE.md](D6_D7_ANALISE.md)). |
+| D7 | Alertas "Atenção" | **Decidida (05/11): A**, alerta só do médico com ação sugerida; fila da virada só com pessoas vistas desde 2025, os demais quando a pessoa voltar. |
 | D8 | Controlados no Cortex | **Decidida:** liberar. Vale para a Receita de Controle Especial (listas C1 e C5). As listas A e B continuam em notificação de receita de talão numerado, que o software não emite. |
 | D9 | Confirmar inferências | **Confirmada pelos dados em 04/11** (`scripts/personalmed/agenda-states.mjs` e `data-quality.mjs`): FAX = CPF (98% dos CPFs válidos estão no FAX); e-mail = acomodação (cerca de 7.650 cadastros); `T` = atendido (100% com chegada e início do atendimento); `C` = cancelado e `F` = falta (0% de chegada); `A` = chegou, atendimento não marcado (100% de chegada, 0,1% de início); `E` = em atendimento, não finalizado (100% e 100%); `-` = agendado no futuro e sem registro de comparecimento no passado (0% de chegada, como `F`); horário `P` = bloqueio curto (nunca recebe agendamento; 15 min, às 7–8 h e 17 h). |
 | D10 | Pasta externa de imagens (172) | **Tarefa a fazer:** pedir à clínica. |

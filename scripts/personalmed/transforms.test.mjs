@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   alertCategories,
+  alertSuggestedAction,
   cleanName,
   cpfValid,
   dateInWords,
@@ -331,5 +332,19 @@ describe('"Atenção" alert categories', () => {
     });
     expect(alertCategories('Faleceu em 2019')).toMatchObject({ categories: ['obito'], clinical: true, administrative: false });
     expect(alertCategories('Prefere a tarde')).toEqual({ categories: [], clinical: false, administrative: false });
+  });
+});
+
+describe('alertSuggestedAction (D7 A)', () => {
+  it('suggests only; mixed or unhinted alerts go to the doctor', () => {
+    const of = (t) => alertSuggestedAction(alertCategories(t));
+    expect(of('Deve duas consultas.')).toBe('administrative_note');
+    expect(of('Convênio vencido, ligar para a paciente.')).toBe('administrative_note');
+    expect(of('Alergia a penicilina.')).toBe('allergy_proposal');
+    expect(of('Usa dipirona sem problemas.')).toBe('allergy_proposal');
+    expect(of('Hipertensa, em uso de medicação.')).toBe('clinical_note');
+    expect(of('Gestante.')).toBe('clinical_note');
+    expect(of('Alérgica a dipirona. Ligar antes.')).toBe('doctor_review');
+    expect(of('Prefere atendimento à tarde.')).toBe('doctor_review');
   });
 });

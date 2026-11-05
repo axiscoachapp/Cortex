@@ -31,7 +31,8 @@ export function syntheticBatch() {
   envelopes.push(...buildAgenda(ctx, agenda, chartIds));
   for (const a of alerts) {
     const own = charts.filter((c) => c.pcod === a.pcod).map((c) => ({ user: c.user, patientTargetId: chartIds.get(`${c.pcod}|${c.user}`) }));
-    const e = buildLegacyAlert(ctx, a, own);
+    const lastVisit = charts.filter((c) => c.pcod === a.pcod).map((c) => c.lastVisit).sort().at(-1) ?? null;
+    const e = buildLegacyAlert(ctx, { ...a, lastVisit }, own);
     if (e) envelopes.push(e);
   }
   const usage = templateUsage(

@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import {
   TRANSFORM_VERSION,
   alertCategories,
+  alertSuggestedAction,
   cleanName,
   fold,
   envelope,
@@ -29,6 +30,7 @@ import {
   parseTemplateItems,
   registrationPhones,
   SHARED_LOGINS,
+  splitHistory,
   templateKind,
   wallClockToUtc,
 } from './transforms.mjs';
@@ -313,10 +315,30 @@ export function buildChartClinical(ctx, chart, input) {
       dated.set(e.date, { text: prev ? `${prev.text}\n\n${e.text}` : e.text, outOfOrder: Boolean(prev?.outOfOrder || e.outOfOrder) });
     }
   }
-  const days = [...new Set([...(input.encounters?.keys() ?? []), ...dated.keys()])].sort();
+  // D6 A (user, 05/11/2026): the QP/HDA page goes by date, like the running
+  // history. A page with two or more dated entries is split and each entry
+  // joins the consultation of its day; an undated page is the first-visit
+  // note and joins the consultation of the first visit (a new one when that
+  // day has none). Text before the first date stays in the first entry.
+  const firstDay = legacyDate(input.firstVisit, { max: ctx.exportDate }).date;
+  const qp = new Map(); // day -> { text, outOfOrder, firstVisitNote }
+  let qpNoDay = null;
+  const addQp = (day, body, flags = {}) => {
+    const prev = qp.get(day);
+    qp.set(day, { text: prev ? `${prev.text}\n\n${body}` : body, outOfOrder: Boolean(prev?.outOfOrder || flags.outOfOrder), firstVisitNote: Boolean(prev?.firstVisitNote || flags.firstVisitNote) });
+  };
+  for (const page of input.pages ?? []) {
+    if (page.kind !== 'qp_hda' || !text(page.text)) continue;
+    const entries = splitHistory(text(page.text), { exportDate: ctx.exportDate }).entries.filter((e) => e.date);
+    if (entries.length >= 2) for (const e of entries) addQp(e.date, e.text, { outOfOrder: e.outOfOrder });
+    else if (firstDay) addQp(firstDay, text(page.text), { firstVisitNote: true });
+    else qpNoDay = qpNoDay ? `${qpNoDay}\n\n${text(page.text)}` : text(page.text);
+  }
+  const days = [...new Set([...(input.encounters?.keys() ?? []), ...dated.keys(), ...qp.keys()])].sort();
   for (const day of days) {
     const enc = input.encounters?.get(day);
     const sections = [
+      SECTION('QP/HDA', qp.get(day)?.text),
       SECTION('Evolução', (enc?.evolutions ?? []).map((v) => v.text).filter(Boolean).join('\n\n')),
       SECTION('Sinais vitais', (enc?.evolutions ?? []).map(vitalsText).filter(Boolean).join('\n')),
       SECTION('Pré-natal', (enc?.prenatal ?? []).map(prenatalText).filter(Boolean).join('\n')),
@@ -324,7 +346,10 @@ export function buildChartClinical(ctx, chart, input) {
       SECTION('Documentos emitidos', (enc?.documents ?? []).map((d) => `**${DOC_TYPE[d.type] ?? 'Documento'}**\n\n${d.text}`).join('\n\n---\n\n')),
       SECTION('Histórico corrido', dated.get(day)?.text),
     ].filter(Boolean);
-    const onlyHistory = !enc;
+    const chiefComplaint = enc ? 'Consulta (PersonalMed)'
+      : dated.has(day) ? 'Anotação do histórico (PersonalMed)'
+      : qp.get(day)?.firstVisitNote ? 'Primeira consulta: QP/HDA (PersonalMed)'
+      : 'Anotação QP/HDA (PersonalMed)';
     out.push(
       envelope({
         ...base,
@@ -336,7 +361,7 @@ export function buildChartClinical(ctx, chart, input) {
           patientTargetId,
           ownerLegacyDoctor: user,
           created_at: enc?.appointmentStart ?? wallClockToUtc(day, 12 * 60),
-          chief_complaint: onlyHistory ? 'Anotação do histórico (PersonalMed)' : 'Consulta (PersonalMed)',
+          chief_complaint: chiefComplaint,
           soap_note: [stamp, ...sections].join('\n\n'),
           // Same doctor, patient and day is a CANDIDATE, not proof of which
           // appointment produced this consultation (no relational key in the
@@ -348,7 +373,7 @@ export function buildChartClinical(ctx, chart, input) {
             : null,
         },
         // Only the day whose typed date broke the chronological order needs review.
-        issues: dated.get(day)?.outOfOrder ? ['history_date_out_of_order'] : [],
+        issues: [...(dated.get(day)?.outOfOrder ? ['history_date_out_of_order'] : []), ...(qp.get(day)?.outOfOrder ? ['qp_hda_date_out_of_order'] : [])],
       }),
     );
   }
@@ -366,9 +391,8 @@ export function buildChartClinical(ctx, chart, input) {
       }),
     );
   }
-  for (const page of input.pages ?? []) {
-    if (page.kind !== 'qp_hda' || !text(page.text)) continue;
-    const first = legacyDate(input.firstVisit, { max: ctx.exportDate }).date ?? anchor;
+  // An undated QP/HDA page of a chart without a valid first visit: kept at the anchor.
+  if (qpNoDay) {
     out.push(
       envelope({
         ...base,
@@ -376,7 +400,8 @@ export function buildChartClinical(ctx, chart, input) {
         key: { pcod, user, page: 'qp-hda' },
         doctor: user,
         targetTable: 'consultations',
-        payload: { patientTargetId, ownerLegacyDoctor: user, created_at: wallClockToUtc(first, 12 * 60), chief_complaint: 'Primeira consulta: QP/HDA (PersonalMed)', soap_note: `${stamp}\n\n${text(page.text)}`, appointmentSourceRecordId: null },
+        payload: { patientTargetId, ownerLegacyDoctor: user, created_at: wallClockToUtc(anchor, 12 * 60), chief_complaint: 'Primeira consulta: QP/HDA (PersonalMed)', soap_note: `${stamp}\n\n### QP/HDA\n\n${qpNoDay}`, appointmentSourceRecordId: null },
+        issues: ['qp_hda_no_first_visit'],
       }),
     );
   }
@@ -468,13 +493,16 @@ export function buildHealthPlanCards(ctx, pcod, cards) {
 
 /**
  * One "Atenção" text (Clini_01.Attention, one per person) -> `legacy_alert`
- * (S6): delivered to the chart of the doctor who treats the person, visible
- * only to that doctor, status pending_review. Nothing goes to the chart or to
- * the reception directly (D7). In PersonalMed every doctor saw the field; in
- * Cortex charts are private, so a person with several doctors waits for D20.
+ * (S6): visible only to the doctors who treat the person, status
+ * pending_review. Nothing goes to the chart or to the reception directly.
  *
- * @param ctx    { sourceInstance, batchId }
- * @param alert  { pcod, text } with plain text (RTF already converted)
+ * D7 A (user, 05/11/2026): every alert carries the action suggested to the
+ * doctor (alertSuggestedAction), confirmed by the doctor, and a review queue:
+ * `at_go_live` for a person seen since ctx.reviewFrom (2025-01-01), otherwise
+ * `on_return` (shown when the person comes back).
+ *
+ * @param ctx    { sourceInstance, batchId, reviewFrom? }
+ * @param alert  { pcod, text, lastVisit? } with plain text (RTF already converted)
  * @param charts [{ user, patientTargetId }] charts built for this person
  */
 export function buildLegacyAlert(ctx, alert, charts) {
@@ -490,6 +518,8 @@ export function buildLegacyAlert(ctx, alert, charts) {
   // A recipient that is a shared login (D2) has no known owner yet.
   if (charts.some((c) => SHARED_LOGINS.has(Number(c.user)))) issues.push('owner_shared_login');
   const status = charts.length === 1 ? 'ready' : 'requires_review';
+  const lastVisit = legacyDate(alert.lastVisit ?? null, { max: ctx.exportDate }).date;
+  const reviewQueue = lastVisit && lastVisit >= (ctx.reviewFrom ?? '2025-01-01') ? 'at_go_live' : 'on_return';
   return envelope({
     sourceInstance: ctx.sourceInstance,
     batchId: ctx.batchId,
@@ -502,6 +532,8 @@ export function buildLegacyAlert(ctx, alert, charts) {
       categories,
       clinical,
       administrative,
+      suggestedAction: alertSuggestedAction({ categories, clinical, administrative }),
+      reviewQueue,
       recipients: charts.map((c) => ({ doctor: `user:${c.user}`, patientTargetId: c.patientTargetId })),
       status: 'pending_review',
       visibility: 'doctor_only',

@@ -7,7 +7,8 @@
 
 import { createHash } from 'node:crypto';
 
-export const TRANSFORM_VERSION = 'pm-v1';
+// pm-v2 (05/11/2026): D6 A (QP/HDA by date) and D7 A (alert suggested action and review queue).
+export const TRANSFORM_VERSION = 'pm-v2';
 /** Fixed namespace for deterministic target ids (UUIDv5). Never change it. */
 export const MIGRATION_NAMESPACE = '8f1d2c3b-4a5e-5f60-8172-93a4b5c6d7e8';
 
@@ -69,7 +70,7 @@ export function envelope({ sourceInstance, sourceEntity, key, doctor = null, bat
 
 /** Issues that send a record to human review instead of automatic load. */
 // appointment_chart_missing: the doctor has no chart for that patient (D14, clinic decision pending).
-export const REVIEW_ISSUES = new Set(['history_date_out_of_order', 'name_invalid', 'appointment_overlap', 'appointment_chart_missing', 'owner_shared_login']);
+export const REVIEW_ISSUES = new Set(['history_date_out_of_order', 'qp_hda_date_out_of_order', 'name_invalid', 'appointment_overlap', 'appointment_chart_missing', 'owner_shared_login']);
 
 // ---------------------------------------------------------------------------
 // Shared reference data
@@ -439,6 +440,22 @@ export function alertCategories(alertText) {
     clinical: categories.some((c) => CLINICAL_ALERT.includes(c)),
     administrative: categories.some((c) => ADMIN_ALERT.includes(c)),
   };
+}
+
+/**
+ * The action suggested to the doctor for an "Atenção" alert (D7 A, user
+ * 05/11/2026). Only a suggestion: the doctor confirms every alert.
+ * - administrative_note: only administrative hints (finance, plan, errands, behaviour);
+ * - allergy_proposal: allergy or a medicine named, without administrative content;
+ * - clinical_note: other clinical hints (chronic disease, pregnancy, death);
+ * - doctor_review: clinical and administrative together, or no hint at all.
+ */
+export function alertSuggestedAction({ categories, clinical, administrative }) {
+  if (clinical && administrative) return 'doctor_review';
+  if (categories.includes('alergia') || categories.includes('medicamento_citado')) return 'allergy_proposal';
+  if (clinical) return 'clinical_note';
+  if (administrative) return 'administrative_note';
+  return 'doctor_review';
 }
 
 /** Template kind by PersonalMed ModelType: 1 prescription, 3 exam request, others text. */
