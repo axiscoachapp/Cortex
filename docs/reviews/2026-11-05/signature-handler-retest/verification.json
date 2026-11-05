@@ -1,0 +1,50 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "13a39adc59b423cb3207d45f24d6358a66a60f7b",
+  "reviewResolved": false,
+  "remainingFindings": [
+    "R2 malformed outer X.509 structures accepted and activated",
+    "R4 actual storage-js download absence is StorageUnknownError(Response), adapter throws"
+  ],
+  "contractR3Accepted": "AAL2 on every route, 120 second margin only for productive steps, global Auth helper unchanged",
+  "unitTests": {
+    "files": 6,
+    "passed": 129,
+    "skipped": 1,
+    "exitCode": 0
+  },
+  "deno": {
+    "version": "2.9.6",
+    "entrypoints": 2,
+    "offline": true,
+    "cachedOnly": true,
+    "exitCode": 0
+  },
+  "migrations": 69,
+  "sqlSuitesRun": 1,
+  "signatureConcurrencyPassed": true,
+  "sqlResumeCases": 4,
+  "closeNoopNegativeControlCaught": true,
+  "sourceHashesVerified": true,
+  "sdkStorage": {
+    "version": "2.86.0",
+    "realSdk": true,
+    "fetchInMemory": true
+  },
+  "cleanupVerified": true,
+  "syntaxAndLintExitCode": 0,
+  "review": {
+    "implementationReview": "two concrete residual findings independently reproduced by root",
+    "qaCycles": 2,
+    "qaFindingFixed": "close could be masked by later reserve; assert immediate state/cleanup/hashes and NULL-safe controls",
+    "finalConcreteQaFindings": 0,
+    "externalReview": "dispensed by user"
+  },
+  "historicalEvidencePreserved": true,
+  "rootSqlMatrix48Repeated": false,
+  "fullAppSuiteRepeated": false,
+  "buildOrBrowserRepeated": false,
+  "nativeAuthHttp": false,
+  "externalServicesUsed": false,
+  "implementationFilesOfClaudeChanged": false
+}

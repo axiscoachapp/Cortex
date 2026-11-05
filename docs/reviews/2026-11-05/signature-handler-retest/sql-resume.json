@@ -1,0 +1,64 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "13a39adc59b423cb3207d45f24d6358a66a60f7b",
+  "migrations": 69,
+  "sqlSuitesRun": 1,
+  "signatureSqlSuitePassed": true,
+  "signatureConcurrencyPassed": true,
+  "closeNoopNegativeControlCaught": true,
+  "helperSha256": "de0c8be20ad47c3f3711cff5a18a896d480767655e50437c4bef63d831a97b8f",
+  "sqlSourceDigest": "171d0b10548c3810aac8c021a4a1d832d00398670834eae7a7f7ceec1597c1bc",
+  "ownSources": [
+    {
+      "path": "scripts/test-signature-handler-sql.mjs",
+      "sha256": "272cb7e2ce189646637674e1f35f29e5f84bcd37534a09cae1a8e4f1e769c8ed"
+    },
+    {
+      "path": "supabase/tests/prototypes/signature-handler-resume-fixed.sql",
+      "sha256": "cb1a748087de1b55be2db129750c07e95b6226858357828fc7bda7e8ba90c653"
+    }
+  ],
+  "rows": [
+    {
+      "method": "close",
+      "observed": "ambiguous",
+      "state_after": "cancelled_by_revocation",
+      "token_refusal": "P4031",
+      "cleanup_pending": true,
+      "prepared_preserved": true,
+      "new_reservation_state": "reserved"
+    },
+    {
+      "method": "close",
+      "observed": "prepared",
+      "state_after": "cancelled_by_revocation",
+      "token_refusal": "P4031",
+      "cleanup_pending": false,
+      "prepared_preserved": true,
+      "new_reservation_state": "reserved"
+    },
+    {
+      "method": "new_reserve",
+      "observed": "ambiguous",
+      "state_after": "cancelled_by_revocation",
+      "token_refusal": "P4031",
+      "cleanup_pending": true,
+      "prepared_preserved": true,
+      "new_reservation_state": "reserved"
+    },
+    {
+      "method": "new_reserve",
+      "observed": "prepared",
+      "state_after": "cancelled_by_revocation",
+      "token_refusal": "P4031",
+      "cleanup_pending": false,
+      "prepared_preserved": true,
+      "new_reservation_state": "reserved"
+    }
+  ],
+  "cleanupVerified": true,
+  "ownedInternalNetwork": true,
+  "publishedPorts": false,
+  "nativeAuthHttp": false,
+  "realProvider": false
+}

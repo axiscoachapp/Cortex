@@ -1,0 +1,97 @@
+{
+  "syntheticOnly": true,
+  "sourceBaseline": "13a39adc59b423cb3207d45f24d6358a66a60f7b",
+  "unitTests": {
+    "files": 6,
+    "passed": 129,
+    "skipped": 1,
+    "exitCode": 0
+  },
+  "deno": {
+    "version": "2.9.6",
+    "entrypoints": 2,
+    "offline": true,
+    "cachedOnly": true,
+    "exitCode": 0
+  },
+  "sourceWorktreeMatchesFrozenIgnoringCrLf": true,
+  "sources": [
+    {
+      "path": "src/lib/signatureFlow.test.ts",
+      "worktreeSha256": "9d1d053e27294b1ede7c213218f05e2b69f8be0554eae2244ad556106b24f5f0",
+      "frozenSha256": "2c96d2f713038c766b8ffa8af7083d8eafb40a8bf5819940ce8afd65c81ff2a1"
+    },
+    {
+      "path": "src/lib/signatureHandlers.test.ts",
+      "worktreeSha256": "19df6c42ae85e4b15664c1ebbe1c9c2e41e94d21a903fa9b6777c75a2de46116",
+      "frozenSha256": "19b5b1d8d89ba2745d3eb7ed6038e3c21e25dfdde4e8e8da79e342f55c54fc7f"
+    },
+    {
+      "path": "src/lib/signerCertificate.test.ts",
+      "worktreeSha256": "bc75238a4f37bdd5ef4702172441385f1c4b20dd1a2e60b85c1f546fcb6590c6",
+      "frozenSha256": "bc75238a4f37bdd5ef4702172441385f1c4b20dd1a2e60b85c1f546fcb6590c6"
+    },
+    {
+      "path": "src/lib/pades.test.ts",
+      "worktreeSha256": "5d3f124b1387e9addb3afa3275828f0ed1faa21db65f821006ba69dbd1141127",
+      "frozenSha256": "5d3f124b1387e9addb3afa3275828f0ed1faa21db65f821006ba69dbd1141127"
+    },
+    {
+      "path": "src/lib/psc.test.ts",
+      "worktreeSha256": "439a2756ccf8d470e3e6e1f3ccc78c4d4ec62616b1382279625e3f0e7d220a36",
+      "frozenSha256": "439a2756ccf8d470e3e6e1f3ccc78c4d4ec62616b1382279625e3f0e7d220a36"
+    },
+    {
+      "path": "src/lib/authAssurance.test.ts",
+      "worktreeSha256": "fc732b021f8742cab5785457120c39659fcdd8b1d1fe1d36dd4f7574424e0978",
+      "frozenSha256": "305216ce739e84d722d8a4f0aaa6dea4df95824b003a2023f19d7054685b28dd"
+    },
+    {
+      "path": "src/test/syntheticPki.ts",
+      "worktreeSha256": "17279d2e00d44ec5a8ac1f64a970e83c5f9e0df6b259e6917ed1f0e4972f5ff7",
+      "frozenSha256": "17279d2e00d44ec5a8ac1f64a970e83c5f9e0df6b259e6917ed1f0e4972f5ff7"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureDeps.ts",
+      "worktreeSha256": "3df303691ce66f5a4cefbf4607e8770348d2ab639e89c2d80981c2a3b994640f",
+      "frozenSha256": "de1c74b1f0b2618e6e9f2400127915969aa3221d4a62acb4397e4af4a1e1164b"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureHandlers.ts",
+      "worktreeSha256": "1ba97caa88c7a397234424805594a4739d54145a82b78ad7f04e54f02b3b3872",
+      "frozenSha256": "24bebe89e90694481b16f827874586d8e980dc8d009c3469b68ebdb26b8b60fa"
+    },
+    {
+      "path": "supabase/functions/_shared/auth.ts",
+      "worktreeSha256": "7ad19b9c7173ea41a516a0d4018a3ad772b5a047fc9b47c6bfa6c4e10e09eeeb",
+      "frozenSha256": "4d9e2ca5b79c7ceb836ee298e9c661795e1dd86874ca35c13c5ff0761d1a5f56"
+    },
+    {
+      "path": "supabase/functions/_shared/pades.ts",
+      "worktreeSha256": "e10493ec4d0a60f4b3d2d9add2f1189429155ad4e15bbddd28948a01c380a4bc",
+      "frozenSha256": "ed9400bbc898ef2a0a1c22f6ede71906f79277b90de0d60e49999048faaa4505"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "worktreeSha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71",
+      "frozenSha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71"
+    },
+    {
+      "path": "supabase/functions/_shared/signatureFlow.ts",
+      "worktreeSha256": "f3c76666e0544c8c80e9b89f25552d617f4963be854505231f6f9e7c03fb59cc",
+      "frozenSha256": "162c63d03997f956b3f598848e5b90858457270d40b2c417a114b59de70316be"
+    },
+    {
+      "path": "supabase/functions/signature-session/index.ts",
+      "worktreeSha256": "5be3e98c2de14a18f5000ac6b21aebe2f8f337a036a3c71615cde12f25b881b3",
+      "frozenSha256": "5be3e98c2de14a18f5000ac6b21aebe2f8f337a036a3c71615cde12f25b881b3"
+    },
+    {
+      "path": "supabase/functions/sign-document/index.ts",
+      "worktreeSha256": "b9647bdb0bf4db18d8a17316e1b7aea5e5c130225de13f94fa31b62ce9ce972d",
+      "frozenSha256": "b9647bdb0bf4db18d8a17316e1b7aea5e5c130225de13f94fa31b62ce9ce972d"
+    }
+  ],
+  "fullAppSuiteRepeated": false,
+  "frontendBuildRepeated": false
+}
