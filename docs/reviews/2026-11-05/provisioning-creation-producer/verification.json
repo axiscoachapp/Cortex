@@ -1,0 +1,52 @@
+{
+  "syntheticOnly": true,
+  "labOnly": true,
+  "sourceBaseline": "07508fa4fc72b6b2e17564f3b0d2e44fd9dad479",
+  "versions": [
+    {
+      "authVersion": "v2.197.0",
+      "migrations": 69,
+      "compositionAndBirthGroups": 27,
+      "reservationGroups": 5,
+      "confirmationGroups": 3,
+      "creationGroups": 3,
+      "cleanupVerified": true
+    },
+    {
+      "authVersion": "v2.189.0",
+      "migrations": 69,
+      "compositionAndBirthGroups": 27,
+      "reservationGroups": 5,
+      "confirmationGroups": 3,
+      "creationGroups": 3,
+      "cleanupVerified": true
+    }
+  ],
+  "totalGroups": 76,
+  "red": {
+    "authVersion": "v2.197.0",
+    "directPreparedRowsWithInvalidSessionAccepted": true,
+    "authorizedProducerRejectedInvalidSession": true,
+    "cleanupVerified": true
+  },
+  "sameSourceManifestsAcrossVersions": true,
+  "finalSourceHashesVerified": true,
+  "beginBodyOnlyBooleanReaderSubstitution": true,
+  "creationGuardRemovalControlsPerVersion": 2,
+  "aclNegativeControlsPerVersion": 2,
+  "installerFixtureImpersonationExplicit": true,
+  "syntaxAndLintExitCode": 0,
+  "review": {
+    "cycles": 2,
+    "actionableFindingsFixed": [
+      "older corruption fixture masked by new INSERT guard",
+      "wrong-parent fixture and disabled-key wait controls must preserve causal scope"
+    ],
+    "finalConcreteFindings": 0,
+    "selfReview": "guard removal proves exact row presence before rollback and absence after rollback",
+    "externalReview": "dispensed by user"
+  },
+  "rootSqlSuitesOrAppTestsRepeated": false,
+  "productionAuthorizationImplemented": false,
+  "externalCalls": false
+}

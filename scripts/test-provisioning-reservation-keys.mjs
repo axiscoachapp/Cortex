@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {createHmac,randomBytes} from 'node:crypto';
 
 // Called only by the owned Native Auth laboratory. Never accepts a DB URL.
-export async function exerciseReservationKeys({auth,rest,adminJwt,call,sql,syntheticSecrets,holderSession,pause,ctx,clinic,fixture,args,red}){
+export async function exerciseReservationKeys({auth,rest,adminJwt,call,sql,syntheticSecrets,holderSession,pause,ctx,clinic,fixture,args,red,creatorFixturePrefix=''}){
  const password=randomBytes(24).toString('hex');syntheticSecrets.push(password);
  const created=await call(auth,'/admin/users',adminJwt,{email:'reservation-second@example.invalid',password,email_confirm:true});assert.equal(created.status,200);
  const login=await call(auth,'/token?grant_type=password',adminJwt,{email:'reservation-second@example.invalid',password});assert.equal(login.status,200);
@@ -114,7 +114,9 @@ export async function exerciseReservationKeys({auth,rest,adminJwt,call,sql,synth
  }
  checks.push('Temporarily granted service INSERTs into both ledgers refuse40001, including an invisible parent and replica; no Auth SELECT grant is needed');
 
- const updated=fixture();trusted(rawOperation(updated));
+ // Only installer fixture/control INSERTs impersonate the creator. Actual
+ // service contention probes above retain their real service_role identity.
+ const updated=fixture();trusted(creatorFixturePrefix+rawOperation(updated));
  await collide(`update provision_identity_lab.operations set phase=phase where operation_id='${updated.op}'`,rawOperation({...fixture(),id:updated.id}));
  const updatedIntent=fixture();trusted(begin(updatedIntent));
  await collide(`update provision_intent_lab.intents set phase=phase where operation_id='${updatedIntent.op}'`,rawIntent(updatedIntent),{prefix:grants});
@@ -125,7 +127,7 @@ export async function exerciseReservationKeys({auth,rest,adminJwt,call,sql,synth
   ['provision_intent_lab.intents',`update provision_intent_lab.intents set phase=phase where operation_id='${updatedIntent.op}'`,rawIntent(updatedIntent)],
  ]){
   sql(`alter table ${table} disable trigger aa_reservation_keys`);
-  try{await collide(holding,contending,{wait:true,refusal:'23505'});}
+  try{await collide(holding,contending,{wait:true,refusal:'23505',prefix:creatorFixturePrefix});}
   finally{sql(`alter table ${table} enable always trigger aa_reservation_keys`);}
  }
  assert.equal(sql("select count(*) from pg_trigger where tgname='aa_reservation_keys' and tgenabled='A' and tgrelid in ('provision_identity_lab.operations'::regclass,'provision_intent_lab.intents'::regclass)"),'2');

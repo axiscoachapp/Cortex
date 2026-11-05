@@ -59,6 +59,11 @@ export function installClinicSchema({sql,inputs,red}){
   const definition="select pg_get_functiondef('provision_intent_lab.check_intent(uuid,uuid,uuid,uuid,text,bigint,boolean)'::regprocedure)";
   const before=sql(definition);sql(inputs.confirmationProducer);assert.equal(sql(definition),before,'Confirmation producer changed the authorizing body');
  }
+ if(inputs.creationProducer){
+  const body="select prosrc from pg_proc where oid='provision_intent_lab.begin_intent(uuid,uuid,uuid,uuid,uuid,text,bigint)'::regprocedure";
+  const before=sql(body),site='exists(select 1 from auth.users where id=p_planned)';assert.equal(before.split(site).length,2);
+  sql(inputs.creationProducer);assert.equal(sql(body),before.replace(site,'provision_identity_lab.target_exists(p_planned)'),'Creation changed authorization beyond the minimal reader');
+ }
  assert.equal(columns(),beforeColumns,'Native Auth core columns/owners/table or column ACL/RLS flags changed');assert.equal(functions(),beforeFunctions,'Native identity helper definition or owner changed');
  assert.equal(enums(),beforeEnums,'Native Auth enum definition/owner/ACL changed');
  assert.equal(sql(clientReadsQuery),'t','Native Auth table or column became readable by a client role');
@@ -77,10 +82,10 @@ export function installClinicSchema({sql,inputs,red}){
  return {sourceBaseline:inputs.baseline,migrations:inputs.migrations.length,nativeCoreColumnsOwnersAndTableAclUnchanged:true,nativeIdentityHelpersUnchanged:true,
   nativeTablesUnavailableToClientRoles:true,nativeColumnAclUnchanged:true,nativeColumnAclControlPassed:true,nativeEnumsOwnersAndAclUnchanged:true,nativeTableRlsFlagsUnchanged:true,ledgerBindingsInstalled:!!inputs.ledger,birthProducerInstalled:!!inputs.birthProducer,
   ...(inputs.sessionFixture?{fixtureProjectionVerified:true,fixtureProjection:projection,bootstrapOverlaySha256:createHash('sha256').update(inputs.bootstrap).digest('hex')}:{}),
-  confirmationProducerInstalled:!!inputs.confirmationProducer,...(inputs.confirmationProducer?{confirmationAuthorizingBodyUnchanged:true}:{}),reservationKeysInstalled:!!inputs.reservationKeys,sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
+  creationProducerInstalled:!!inputs.creationProducer,confirmationProducerInstalled:!!inputs.confirmationProducer,...(inputs.confirmationProducer?{confirmationAuthorizingBodyUnchanged:true}:{}),reservationKeysInstalled:!!inputs.reservationKeys,sqlSourceDigest:createHash('sha256').update([bootstrap,...inputs.migrations.map(m=>m.source)].join('\n')).digest('hex')};
 }
 
-export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,birthProducer,birthProducerRed,reservationCheck,reservationRed,confirmationCheck,confirmationRed,asyncHttp,pause,holderSession,restartAuth}){
+export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,version,call,sql,syntheticSecrets,preparation,red,ledger,birthProducer,birthProducerRed,reservationCheck,reservationRed,confirmationCheck,confirmationRed,creationCheck,creationRed,creationInstalled,asyncHttp,pause,holderSession,restartAuth}){
  const password=randomBytes(24).toString('hex');syntheticSecrets.push(password);
  const created=await call(auth,'/admin/users',adminJwt,{email:'clinic-authority@example.invalid',password,email_confirm:true});assert.equal(created.status,200);
  const login=await call(auth,'/token?grant_type=password',adminJwt,{email:'clinic-authority@example.invalid',password});assert.equal(login.status,200);
@@ -138,7 +143,8 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
   // An existing Native identity was not born in the later reservation's XID.
   const preexisting=fixture();
   assert.equal((await call(auth,'/admin/users',adminJwt,{id:preexisting.id,email:preexisting.email,email_confirm:true,app_metadata:{account_type:'reception'}})).status,200);
-  sql(`insert into provision_identity_lab.operations(operation_id,planned_user_id) values('${preexisting.op}','${preexisting.id}');`);
+  // Installer-only corruption fixture; the actual service cannot SET ROLE.
+  sql(`${creationInstalled?'begin;set local role provision_create_writer_lab;':''}insert into provision_identity_lab.operations(operation_id,planned_user_id) values('${preexisting.op}','${preexisting.id}');${creationInstalled?'commit;':''}`);
   assert.equal((await call(auth,'/admin/users/'+preexisting.id,adminJwt,{app_metadata:{cortex_provision_operation:preexisting.op,cortex_provision_revision:1}},'PUT')).status,200);
   assert.equal(sql(`select provision_identity_lab.has_birth_receipt('${preexisting.op}')`),'f');
   const forge=`update provision_identity_lab.operations set phase='inserting',birth_transaction=pg_current_xact_id() where operation_id='${preexisting.op}';update provision_identity_lab.operations set phase='auth_created' where operation_id='${preexisting.op}';`;
@@ -200,7 +206,9 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
    expectWrite(`insert into provision_identity_lab.operations(operation_id,planned_user_id,phase,birth_transaction) values(gen_random_uuid(),gen_random_uuid(),'auth_created',pg_current_xact_id())`,'P4103',service);
    expectWrite(`insert into provision_intent_lab.intents select (jsonb_populate_record(null::provision_intent_lab.intents,to_jsonb(i)||jsonb_build_object('operation_id',gen_random_uuid(),'planned_user_id',gen_random_uuid(),'phase','confirmed'))).* from provision_intent_lab.intents i where ${intentWhere}`,'P4103',service);
    const reservedOp=randomUUID(),reservedId=randomUUID(),wrongId=randomUUID();
-   expectWrite(`insert into provision_identity_lab.operations(operation_id,planned_user_id) values('${reservedOp}','${reservedId}');insert into provision_intent_lab.intents select (jsonb_populate_record(null::provision_intent_lab.intents,to_jsonb(i)||jsonb_build_object('operation_id','${reservedOp}','planned_user_id','${wrongId}','phase','prepared'))).* from provision_intent_lab.intents i where ${intentWhere}`,'P4104',service);
+   const reserve=`insert into provision_identity_lab.operations(operation_id,planned_user_id) values('${reservedOp}','${reservedId}');`;
+   const fixtureParent=creationInstalled?`set local role provision_create_writer_lab;${reserve}set local role ${service?'service_role':'postgres'};`:reserve;
+   expectWrite(`${fixtureParent}insert into provision_intent_lab.intents select (jsonb_populate_record(null::provision_intent_lab.intents,to_jsonb(i)||jsonb_build_object('operation_id','${reservedOp}','planned_user_id','${wrongId}','phase','prepared'))).* from provision_intent_lab.intents i where ${intentWhere}`,'P4104',service);
   }
   checks.push('Direct INSERT cannot start with a confirmed intent/birth receipt or attach an intent to a different reserved UUID');
   for(const service of [false,true])for(const table of ['provision_intent_lab.intents','provision_identity_lab.operations']){
@@ -216,13 +224,17 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
   assert.equal(begin(positive,ctx).expires_at,initial.expires_at);
   checks.push('ALWAYS guards reject replica DML; disabling only the lab guard exposes deadline replacement, rollback restores the original valid replay');
  }
- let reservation,confirmation;
+ let reservation,confirmation,creation;
+ if(creationCheck){
+  creation=await creationCheck({sql,fixture,begin,birth,query,ctx,clinic,red:creationRed});
+  if(creationRed)return {...report,checks,...creation,compositionProofPassed:false};
+ }
  if(confirmationCheck){
   confirmation=await confirmationCheck({sql,fixture,begin,birth,query,ctx,red:confirmationRed});
   if(confirmationRed)return {...report,checks,...confirmation,compositionProofPassed:false};
  }
  if(reservationCheck){
-  reservation=await reservationCheck({auth,rest,adminJwt,call,sql,syntheticSecrets,holderSession,pause,ctx,clinic,fixture,args,red:reservationRed});
+  reservation=await reservationCheck({auth,rest,adminJwt,call,sql,syntheticSecrets,holderSession,pause,ctx,clinic,fixture,args,red:reservationRed,creatorFixturePrefix:creationInstalled?'set local role provision_create_writer_lab;':''});
   if(reservationRed)return {...report,checks,...reservation,compositionProofPassed:false};
  }
  const actorState=()=>sql(`select u.xmin::text||':'||s.xmin::text||':'||m.xmin::text||':'||e.revision::text from auth.users u join auth.sessions s on s.user_id=u.id join public.clinic_members m on m.user_id=u.id and m.clinic_id='${clinic}' join cortex_private.account_custody_epochs e on e.user_id=u.id where u.id='${ctx.sub}' and s.id='${ctx.session_id}'`);
@@ -341,5 +353,5 @@ export async function exerciseProvisioningClinicAuthority({auth,rest,adminJwt,ve
  assert.equal(sql('select count(*) from public.staff_doctor_scopes'),'0');
  checks.push('Private composition stays absent from Data API and creates no target clinic/staff/chart memberships or scopes');
  assert.equal(checks.length,19+(ledger?4:0)+(birthProducer?4:0));
- return {...report,checks,compositionProofPassed:true,...reservation,...confirmation,...(ledger?{ledgerBindingsProofPassed:true}:{}),...(birthProducer?{birthProducerProofPassed:true}:{}),notCovered:['authority of reservation/intent INSERT'+(confirmationCheck?'; production confirmation API':' and human confirmation writers')+(reservationCheck?'':'; UUID reservation races'),'production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
+ return {...report,checks,compositionProofPassed:true,...reservation,...confirmation,...creation,...(ledger?{ledgerBindingsProofPassed:true}:{}),...(birthProducer?{birthProducerProofPassed:true}:{}),notCovered:[(creationCheck?'production creation API':'authority of reservation/intent INSERT')+(confirmationCheck?'; production confirmation API':' and human confirmation writers')+(reservationCheck?'':'; UUID reservation races'),'production intent custody/install/upgrade','credential or historical Auth event generation and recovery','team membership, consent requests, legacy service cutover and app APIs/UI']};
 }
