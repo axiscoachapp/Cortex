@@ -281,7 +281,7 @@ Decididas:
 
 Abertas ou em andamento:
 - **D2, adiada:** a migração fica pronta e roda sobre uma exportação atualizada. Os códigos foram identificados pelos nomes do sistema antigo (2 Sinaida Haddad, 3 Patricia Haddad, 4 Marcelo Chemim Nicola, 5 Marcia Regina Chemin Nicola, 9 Osny de Barros Junior, 11 "Gineco", que é um login compartilhado, e 13 Dr Daniel, sem prontuário). Faltam as contas Cortex e saber quem usava o "Gineco".
-- **D6 e D7:** o usuário pediu uma análise mais funda. Claude prepara.
+- **D6 e D7:** análise entregue em 05/11 12:45 ([D6_D7_ANALISE.md](../docs/migration/personalmed/D6_D7_ANALISE.md), [mensagem](mensagens/2026-11-05-1245_claude-para-usuario_d6-d7-analise.md)). Recomendação: D6 A (cada trecho na consulta do seu dia, cerca de 9.800 consultas novas em vez de 13.010) e D7 A (alerta só do médico com ação sugerida; fila inicial de 2.868 alertas de pessoas vistas em 2025–2026). **Aguardando a escolha do usuário.**
 - **D10:** tarefa a fazer (pedir a pasta de imagens à clínica).
 - **D15:** teste com vídeos de consultas encenadas do YouTube. É preciso cuidar da licença dos vídeos e do gabarito (transcrição correta) de cada um.
 - **D16:** para depois, com os médicos.

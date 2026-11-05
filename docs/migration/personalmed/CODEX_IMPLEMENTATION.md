@@ -644,8 +644,8 @@ Navegador: 390, 768, 1280 e 1920 px na escala de 150%, como já está definido.
 | D3 | Agendamentos passados | **Decidida:** todos, inclusive os passados. |
 | D4 | DDD 41 automático para Curitiba e região | **Decidida:** sim, e o cadastro é revisado na primeira consulta no Cortex. |
 | D5 | Modelos: todos ou só os usados | **Decidida:** todos. |
-| D6 | QP/HDA como consulta ou como histórico | **Em avaliação:** o usuário pediu uma análise mais funda. |
-| D7 | Alertas "Atenção" | **Em avaliação:** o usuário pediu uma revisão. |
+| D6 | QP/HDA como consulta ou como histórico | **Análise entregue em 05/11** ([D6_D7_ANALISE.md](D6_D7_ANALISE.md)); aguarda a escolha. Recomendada: cada trecho na consulta do seu dia. |
+| D7 | Alertas "Atenção" | **Análise entregue em 05/11** ([D6_D7_ANALISE.md](D6_D7_ANALISE.md)); aguarda a escolha. Recomendada: alerta só do médico com ação sugerida e fila inicial de pessoas vistas em 2025–2026. |
 | D8 | Controlados no Cortex | **Decidida:** liberar. Vale para a Receita de Controle Especial (listas C1 e C5). As listas A e B continuam em notificação de receita de talão numerado, que o software não emite. |
 | D9 | Confirmar inferências | **Confirmada pelos dados em 04/11** (`scripts/personalmed/agenda-states.mjs` e `data-quality.mjs`): FAX = CPF (98% dos CPFs válidos estão no FAX); e-mail = acomodação (cerca de 7.650 cadastros); `T` = atendido (100% com chegada e início do atendimento); `C` = cancelado e `F` = falta (0% de chegada); `A` = chegou, atendimento não marcado (100% de chegada, 0,1% de início); `E` = em atendimento, não finalizado (100% e 100%); `-` = agendado no futuro e sem registro de comparecimento no passado (0% de chegada, como `F`); horário `P` = bloqueio curto (nunca recebe agendamento; 15 min, às 7–8 h e 17 h). |
 | D10 | Pasta externa de imagens (172) | **Tarefa a fazer:** pedir à clínica. |
