@@ -16,3 +16,13 @@ verify_jwt = true
 # code inside the function.
 [functions.validate-prescription]
 verify_jwt = false
+
+# Public by design: Meta calls the WhatsApp webhook without a JWT. Every delivery is
+# authenticated by its X-Hub-Signature-256 HMAC (WHATSAPP_APP_SECRET) inside the function.
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+# Public by design: pg_cron calls the WhatsApp automations runner with the x-cortex-cron
+# shared secret (WHATSAPP_CRON_SECRET), checked inside the function.
+[functions.whatsapp-automations]
+verify_jwt = false

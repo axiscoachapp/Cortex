@@ -1,0 +1,608 @@
+// Edge handlers of the WhatsApp channel (C4): the public webhook and the authenticated API used by
+// Settings (connection) and by the reception inbox. Dependencies are injected so the Vitest suite can
+// run them with fakes. Contract: docs/product/whatsapp/CONTRATO.md.
+//
+// The caller's clinic and role come only from the injected authorize() (JWT + session assurance +
+// clinic_access()), never from the body. Logs carry ids and codes only.
+
+import { openSecret, sealSecret } from './psc.ts';
+import { GraphError, parseWebhook, sha256Hex, validSignature, windowOpenUntil, type GraphClient } from './whatsapp.ts';
+
+type KeyList = { current: string; keys: Record<string, Uint8Array> };
+type Sealed = { v: 1; keyId: string; nonce: string; ciphertext: string };
+
+export interface Caller { userId: string; clinicId: string; admin: boolean; reception: boolean }
+
+export interface ChannelRow {
+  id: string; clinic_id: string; phone_number_id: string; waba_id: string; display_phone: string; verified_name: string;
+  quality_rating: string | null; status: 'connected' | 'disconnected' | 'error'; token_sealed: Sealed | null;
+  last_error: string | null; connected_at: string;
+}
+export interface ConversationRow {
+  id: string; clinic_id: string; wa_id: string | null; user_id: string | null; profile_name: string; contact_id: string | null; case_id: string | null;
+  queue: string; status: 'open' | 'closed'; assigned_to: string | null; assigned_at: string | null; opened_at: string;
+  first_response_at: string | null; closed_at: string | null; last_inbound_at: string | null; last_message_at: string;
+  last_message_preview: string; unread_count: number; opted_out_at: string | null; revision: number;
+}
+export interface MessageRow {
+  id: string; clinic_id: string; conversation_id: string; direction: 'in' | 'out'; wamid: string | null; kind: string; body: string;
+  media: { id: string; mime: string; filename?: string; voice?: boolean } | null; template: { name: string; language: string } | null;
+  status: string; error: string | null; sent_by: string | null; provider_at: string | null; created_at: string;
+}
+export interface TemplateRow { name: string; language: string; category: string; status: string; body: string; param_count: number }
+export type InboxFilter = 'unassigned' | 'mine' | 'open' | 'closed';
+export type ParamSource = 'paciente_primeiro_nome' | 'data' | 'hora' | 'dia_semana' | 'medico' | 'clinica' | 'link' | 'texto';
+export interface AutomationRow {
+  id: string; clinic_id: string; name: string; enabled: boolean; trigger: 'before_start' | 'after_end'; offset_minutes: number;
+  template_name: string; template_language: string; params: Array<{ source: ParamSource; text?: string }>; link_url: string | null;
+  doctor_ids: string[] | null; appointment_types: string[] | null; revision: number; updated_at: string;
+}
+export interface AutomationRunRow {
+  id: string; automation_id: string; appointment_id: string; appointment_start: string; status: string; reason: string | null;
+  reply: string | null; replied_at: string | null; created_at: string;
+}
+export interface Candidate {
+  automation_id: string; clinic_id: string; appointment_id: string; appointment_start: string; appointment_end: string;
+  doctor_id: string; patient_name: string; phone: string | null; doctor_name: string; clinic_name: string; opted_out: boolean;
+}
+
+export interface WhatsAppStore {
+  channelForClinic(clinicId: string): Promise<ChannelRow | null>;
+  channelByPhoneNumberId(phoneNumberId: string): Promise<ChannelRow | null>;
+  saveChannel(row: Omit<ChannelRow, 'connected_at'> & { connected_by: string }): Promise<void>;
+  disconnect(clinicId: string): Promise<void>;
+  replaceTemplates(channelId: string, rows: TemplateRow[]): Promise<void>;
+  templates(channelId: string): Promise<TemplateRow[]>;
+  conversations(q: { clinicId: string; filter: InboxFilter; actor: string; search: string; before: string | null; limit: number }): Promise<ConversationRow[]>;
+  conversation(clinicId: string, id: string): Promise<ConversationRow | null>;
+  messages(q: { clinicId: string; conversationId: string; before: string | null; limit: number }): Promise<MessageRow[]>;
+  message(clinicId: string, id: string): Promise<MessageRow | null>;
+  lastInboundWamid(clinicId: string, conversationId: string): Promise<string | null>;
+  automations(clinicId: string): Promise<AutomationRow[]>;
+  automationsByIds(ids: string[]): Promise<AutomationRow[]>;
+  deleteAutomation(clinicId: string, id: string): Promise<boolean>;
+  automationRuns(clinicId: string, limit: number): Promise<AutomationRunRow[]>;
+}
+
+export interface WhatsAppConfig {
+  appSecret: string;
+  verifyToken: string;
+  keys: KeyList | null;
+  webhookUrl: string;
+  /** Shared secret of the scheduler that calls whatsapp-automations (WHATSAPP_CRON_SECRET). */
+  cronSecret?: string;
+}
+
+export interface WhatsAppDeps {
+  corsHeaders: Record<string, string>;
+  config: WhatsAppConfig;
+  authorize(req: Request): Promise<Caller>;
+  authFailure(error: unknown): Response | null;
+  /** Service-role RPC; throws an object with the SQLSTATE in `code`. */
+  rpc(name: string, args: Record<string, unknown>): Promise<unknown>;
+  store: WhatsAppStore;
+  graph: GraphClient;
+  newId?: () => string;
+  now?: () => Date;
+  log?: (event: string, detail: Record<string, unknown>) => void;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DIGITS = /^[0-9]{5,30}$/;
+const MAX_WEBHOOK_BYTES = 2 * 1024 * 1024;
+
+export const tokenBinding = (channelId: string, clinicId: string) => `cortex/whatsapp-token/v1|${channelId.toLowerCase()}|${clinicId.toLowerCase()}`;
+
+class HttpError extends Error {
+  constructor(readonly status: number, message: string, readonly code?: string) { super(message); }
+}
+
+const json = (deps: WhatsAppDeps, status: number, body: unknown) =>
+  new Response(JSON.stringify(body), { status, headers: { ...deps.corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+
+function rpcError(e: unknown): HttpError {
+  const code = (e as { code?: string })?.code;
+  const message = (e as { message?: string })?.message ?? '';
+  switch (code) {
+    case 'P0W01': return new HttpError(409, 'Passaram mais de 24 horas desde a última mensagem do paciente. Use um modelo aprovado.', 'window_closed');
+    case 'P0W02': return new HttpError(409, 'Este contato pediu para não receber mensagens.', 'opted_out');
+    case '40001': return new HttpError(409, 'A conversa mudou. Atualize e tente de novo.', 'stale');
+    case '42501': return new HttpError(403, 'Sem permissão para esta conversa.', 'forbidden');
+    case '22023': return new HttpError(400, message.slice(0, 200) || 'Pedido inválido.', 'invalid');
+    default: return new HttpError(500, 'Não foi possível concluir. Tente de novo.', 'server');
+  }
+}
+
+// ---------------------------------------------------------------- webhook
+
+export async function webhookHandler(req: Request, deps: WhatsAppDeps): Promise<Response> {
+  const text = (status: number, body = '') => new Response(body, { status, headers: { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' } });
+  const { appSecret, verifyToken } = deps.config;
+  if (!appSecret || !verifyToken) return text(503);
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const challenge = url.searchParams.get('hub.challenge') ?? '';
+    if (url.searchParams.get('hub.mode') === 'subscribe' && url.searchParams.get('hub.verify_token') === verifyToken && /^[0-9A-Za-z_-]{1,200}$/.test(challenge))
+      return text(200, challenge);
+    return text(403);
+  }
+  if (req.method !== 'POST') return text(405);
+  const length = Number(req.headers.get('content-length') ?? '0');
+  if (length > MAX_WEBHOOK_BYTES) return text(413);
+  const raw = new Uint8Array(await req.arrayBuffer());
+  if (raw.length > MAX_WEBHOOK_BYTES) return text(413);
+  if (!(await validSignature(appSecret, raw, req.headers.get('x-hub-signature-256')))) return text(401);
+  let payload: unknown;
+  try { payload = JSON.parse(new TextDecoder().decode(raw)); } catch { return text(400); }
+  const sha = await sha256Hex(raw);
+  let state: { new: boolean; processed: boolean };
+  try { state = (await deps.rpc('whatsapp_record_event', { p_sha: sha, p_payload: payload })) as typeof state; }
+  catch { return text(500); }
+  if (state.processed) return text(200);
+  const { messages, statuses, identityChanges } = parseWebhook(payload);
+  let failure: string | null = null;
+  for (const m of messages) {
+    try {
+      await deps.rpc('whatsapp_ingest_inbound', {
+        p_phone_number_id: m.phoneNumberId, p_wa_id: m.waId, p_user_id: m.userId, p_profile_name: m.profileName, p_wamid: m.wamid,
+        p_kind: m.kind, p_body: m.body, p_media: m.media, p_context_wamid: m.contextWamid, p_provider_at: m.providerAt,
+      });
+    } catch (e) { failure = `ingest ${(e as { code?: string })?.code ?? 'error'}`; }
+  }
+  for (const c of identityChanges) {
+    try {
+      await deps.rpc('whatsapp_identity_change', {
+        p_phone_number_id: c.phoneNumberId, p_wamid: c.wamid, p_previous_user_id: c.previousUserId, p_user_id: c.userId,
+        p_wa_id: c.waId, p_kind: c.kind, p_provider_at: c.at,
+      });
+    } catch (e) { failure = `identity ${(e as { code?: string })?.code ?? 'error'}`; }
+  }
+  for (const s of statuses) {
+    try {
+      await deps.rpc('whatsapp_apply_status', { p_phone_number_id: s.phoneNumberId, p_wamid: s.wamid, p_status: s.status, p_at: s.at, p_error: s.error });
+    } catch (e) { failure = `status ${(e as { code?: string })?.code ?? 'error'}`; }
+  }
+  try { await deps.rpc('whatsapp_finish_event', { p_sha: sha, p_error: failure }); } catch { return text(500); }
+  deps.log?.('whatsapp_webhook', { messages: messages.length, statuses: statuses.length, failed: !!failure });
+  // A failure asks Meta to deliver again; processing is idempotent per wamid.
+  return text(failure ? 500 : 200);
+}
+
+// ---------------------------------------------------------------- API
+
+const conversationDto = (c: ConversationRow) => ({
+  id: c.id, waId: c.wa_id, profileName: c.profile_name, contactId: c.contact_id, caseId: c.case_id, queue: c.queue,
+  status: c.status, assignedTo: c.assigned_to, assignedAt: c.assigned_at, openedAt: c.opened_at, firstResponseAt: c.first_response_at,
+  closedAt: c.closed_at, lastInboundAt: c.last_inbound_at, windowOpenUntil: windowOpenUntil(c.last_inbound_at),
+  lastMessageAt: c.last_message_at, lastMessagePreview: c.last_message_preview, unreadCount: c.unread_count,
+  optedOut: c.opted_out_at !== null, revision: c.revision,
+});
+const messageDto = (m: MessageRow) => ({
+  id: m.id, direction: m.direction, kind: m.kind, body: m.body,
+  media: m.media ? { mime: m.media.mime, filename: m.media.filename ?? null, voice: !!m.media.voice } : null,
+  template: m.template ? { name: m.template.name, language: m.template.language } : null,
+  status: m.status, error: m.error, sentBy: m.sent_by, at: m.provider_at ?? m.created_at,
+});
+
+async function channelToken(deps: WhatsAppDeps, ch: ChannelRow): Promise<string> {
+  if (ch.status !== 'connected' || !ch.token_sealed) throw new HttpError(409, 'O WhatsApp da clínica não está conectado.', 'not_connected');
+  if (!deps.config.keys) throw new HttpError(503, 'O servidor ainda não está configurado para o WhatsApp.', 'server_not_ready');
+  try { return await openSecret(deps.config.keys, ch.token_sealed, tokenBinding(ch.id, ch.clinic_id)); }
+  catch { throw new HttpError(503, 'Não foi possível abrir a credencial do WhatsApp. Reconecte o número.', 'token_unreadable'); }
+}
+
+function graphFailure(e: unknown): HttpError {
+  if (e instanceof GraphError) return new HttpError(e.status === 413 ? 413 : 502, e.message, `graph_${e.code ?? e.status}`);
+  return new HttpError(502, 'O WhatsApp não respondeu. Tente de novo.', 'graph');
+}
+
+const requireAdmin = (c: Caller) => { if (!c.admin) throw new HttpError(403, 'Somente o administrador da clínica pode alterar a conexão.', 'forbidden'); };
+const requireInbox = (c: Caller) => { if (!c.admin && !c.reception) throw new HttpError(403, 'A caixa de conversas é da recepção.', 'forbidden'); };
+const uuid = (v: unknown, what: string) => { if (typeof v !== 'string' || !UUID.test(v)) throw new HttpError(400, `${what} inválido.`, 'invalid'); return v.toLowerCase(); };
+
+export async function apiHandler(req: Request, deps: WhatsAppDeps): Promise<Response> {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: deps.corsHeaders });
+  if (req.method !== 'POST') return json(deps, 405, { error: 'Método não permitido.' });
+  try {
+    const caller = await deps.authorize(req);
+    let body: Record<string, unknown>;
+    try {
+      const raw = await req.text();
+      if (raw.length > 64 * 1024) throw new Error();
+      body = JSON.parse(raw);
+      if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error();
+    } catch { throw new HttpError(400, 'Pedido inválido.', 'invalid'); }
+    switch (body.action) {
+      case 'state': return json(deps, 200, await state(deps, caller));
+      case 'connect': return json(deps, 200, await connect(deps, caller, body));
+      case 'disconnect': requireAdmin(caller); await deps.store.disconnect(caller.clinicId); deps.log?.('whatsapp_disconnected', { clinic: caller.clinicId }); return json(deps, 200, { connected: false });
+      case 'syncTemplates': return json(deps, 200, await syncTemplates(deps, caller));
+      case 'templates': {
+        requireInbox(caller);
+        const ch = await deps.store.channelForClinic(caller.clinicId);
+        const rows = ch ? await deps.store.templates(ch.id) : [];
+        return json(deps, 200, { templates: rows.map((t) => ({ name: t.name, language: t.language, category: t.category, status: t.status, body: t.body, paramCount: t.param_count })) });
+      }
+      case 'conversations': return json(deps, 200, await conversations(deps, caller, body));
+      case 'messages': return json(deps, 200, await messages(deps, caller, body));
+      case 'send': return json(deps, 200, await send(deps, caller, body));
+      case 'act': return json(deps, 200, await act(deps, caller, body));
+      case 'media': return await media(deps, caller, body);
+      case 'automations': return json(deps, 200, await listAutomations(deps, caller));
+      case 'saveAutomation': return json(deps, 200, await saveAutomation(deps, caller, body));
+      case 'deleteAutomation': {
+        requireAdmin(caller);
+        const ok = await deps.store.deleteAutomation(caller.clinicId, uuid(body.id, 'Regra'));
+        if (!ok) throw new HttpError(404, 'Regra não encontrada.', 'not_found');
+        return json(deps, 200, { deleted: true });
+      }
+      default: throw new HttpError(400, 'Ação desconhecida.', 'invalid');
+    }
+  } catch (e) {
+    const auth = deps.authFailure(e);
+    if (auth) return auth;
+    if (e instanceof HttpError) return json(deps, e.status, { error: e.message, code: e.code ?? null });
+    deps.log?.('whatsapp_api_error', { kind: (e as Error)?.name ?? 'unknown' });
+    return json(deps, 500, { error: 'Não foi possível concluir. Tente de novo.', code: 'server' });
+  }
+}
+
+async function state(deps: WhatsAppDeps, caller: Caller) {
+  const ch = await deps.store.channelForClinic(caller.clinicId);
+  const serverReady = !!(deps.config.appSecret && deps.config.verifyToken && deps.config.keys);
+  const base = {
+    serverReady, connected: ch?.status === 'connected', status: ch?.status ?? 'none',
+    displayPhone: ch?.display_phone ?? null, verifiedName: ch?.verified_name ?? null, quality: ch?.quality_rating ?? null,
+    connectedAt: ch?.connected_at ?? null, canManage: caller.admin, canUseInbox: caller.admin || caller.reception,
+  };
+  return caller.admin ? { ...base, lastError: ch?.last_error ?? null, webhookUrl: deps.config.webhookUrl, phoneNumberId: ch?.phone_number_id ?? null, wabaId: ch?.waba_id ?? null } : base;
+}
+
+async function connect(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireAdmin(caller);
+  if (!deps.config.keys || !deps.config.appSecret || !deps.config.verifyToken)
+    throw new HttpError(503, 'O servidor ainda não tem os segredos do WhatsApp (WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN, WHATSAPP_TOKEN_KEYS).', 'server_not_ready');
+  const phoneNumberId = typeof body.phoneNumberId === 'string' ? body.phoneNumberId.trim() : '';
+  const wabaId = typeof body.wabaId === 'string' ? body.wabaId.trim() : '';
+  const token = typeof body.accessToken === 'string' ? body.accessToken.trim() : '';
+  const pin = typeof body.pin === 'string' ? body.pin.trim() : '';
+  if (!DIGITS.test(phoneNumberId) || !DIGITS.test(wabaId)) throw new HttpError(400, 'Informe o ID do número e o ID da conta do WhatsApp Business (só números).', 'invalid');
+  if (token.length < 20 || token.length > 1024 || /\s/.test(token)) throw new HttpError(400, 'Informe o token de acesso completo.', 'invalid');
+  if (pin && !/^[0-9]{6}$/.test(pin)) throw new HttpError(400, 'O PIN de confirmação em duas etapas tem 6 dígitos.', 'invalid');
+  const other = await deps.store.channelByPhoneNumberId(phoneNumberId);
+  if (other && other.clinic_id !== caller.clinicId) throw new HttpError(409, 'Este número já está conectado a outra clínica.', 'in_use');
+  let info: Awaited<ReturnType<GraphClient['phoneNumber']>>;
+  try {
+    info = await deps.graph.phoneNumber(phoneNumberId, token);
+    const numbers = await deps.graph.wabaPhoneNumbers(wabaId, token);
+    if (!numbers.includes(phoneNumberId)) throw new HttpError(400, 'O número não pertence a esta conta do WhatsApp Business.', 'mismatch');
+    if (pin) await deps.graph.register(phoneNumberId, token, pin);
+    await deps.graph.subscribeApp(wabaId, token);
+  } catch (e) { throw e instanceof HttpError ? e : graphFailure(e); }
+  const existing = await deps.store.channelForClinic(caller.clinicId);
+  const id = existing?.id ?? (deps.newId ?? (() => crypto.randomUUID()))();
+  const sealed = (await sealSecret(deps.config.keys, token, tokenBinding(id, caller.clinicId))) as Sealed;
+  await deps.store.saveChannel({
+    id, clinic_id: caller.clinicId, phone_number_id: phoneNumberId, waba_id: wabaId, display_phone: info.displayPhone,
+    verified_name: info.verifiedName, quality_rating: info.quality, status: 'connected', token_sealed: sealed, last_error: null,
+    connected_by: caller.userId,
+  });
+  deps.log?.('whatsapp_connected', { clinic: caller.clinicId, channel: id });
+  let templates = 0;
+  try { templates = (await syncTemplates(deps, caller)).templates; } catch { /* the connection stands; templates can be synced later */ }
+  return { connected: true, displayPhone: info.displayPhone, verifiedName: info.verifiedName, quality: info.quality, templates };
+}
+
+async function syncTemplates(deps: WhatsAppDeps, caller: Caller) {
+  requireAdmin(caller);
+  const ch = await deps.store.channelForClinic(caller.clinicId);
+  if (!ch) throw new HttpError(409, 'O WhatsApp da clínica não está conectado.', 'not_connected');
+  const token = await channelToken(deps, ch);
+  let list: Awaited<ReturnType<GraphClient['templates']>>;
+  try { list = await deps.graph.templates(ch.waba_id, token); } catch (e) { throw graphFailure(e); }
+  await deps.store.replaceTemplates(ch.id, list.map((t) => ({ name: t.name, language: t.language, category: t.category, status: t.status, body: t.body, param_count: t.paramCount })));
+  return { templates: list.length };
+}
+
+async function conversations(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireInbox(caller);
+  const filter = (['unassigned', 'mine', 'open', 'closed'] as const).find((f) => f === body.filter) ?? 'open';
+  const search = typeof body.search === 'string' ? body.search.trim().slice(0, 80) : '';
+  const before = typeof body.before === 'string' && !Number.isNaN(Date.parse(body.before)) ? new Date(body.before).toISOString() : null;
+  const limit = typeof body.limit === 'number' && body.limit >= 1 && body.limit <= 100 ? Math.floor(body.limit) : 50;
+  const rows = await deps.store.conversations({ clinicId: caller.clinicId, filter, actor: caller.userId, search, before, limit });
+  return { conversations: rows.map(conversationDto), nextBefore: rows.length === limit ? rows[rows.length - 1].last_message_at : null };
+}
+
+async function messages(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireInbox(caller);
+  const conversationId = uuid(body.conversationId, 'Conversa');
+  const conv = await deps.store.conversation(caller.clinicId, conversationId);
+  if (!conv) throw new HttpError(404, 'Conversa não encontrada.', 'not_found');
+  const before = typeof body.before === 'string' && !Number.isNaN(Date.parse(body.before)) ? new Date(body.before).toISOString() : null;
+  const rows = await deps.store.messages({ clinicId: caller.clinicId, conversationId, before, limit: 50 });
+  return { conversation: conversationDto(conv), messages: rows.map(messageDto), nextBefore: rows.length === 50 ? rows[rows.length - 1].created_at : null };
+}
+
+async function send(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireInbox(caller);
+  const conversationId = uuid(body.conversationId, 'Conversa');
+  const requestId = uuid(body.requestId, 'Pedido');
+  const text = typeof body.text === 'string' ? body.text.trim() : '';
+  const tpl = body.template as { name?: unknown; language?: unknown; params?: unknown } | undefined;
+  let kind: 'text' | 'template';
+  let message: Record<string, unknown> = {};
+  let template: { name: string; language: string; params: string[] } | null = null;
+  if (text && !tpl) {
+    if (text.length > 4096) throw new HttpError(400, 'A mensagem passa de 4.096 caracteres.', 'invalid');
+    kind = 'text';
+    message = { type: 'text', text: { preview_url: false, body: text } };
+  } else if (tpl && !text && typeof tpl.name === 'string' && typeof tpl.language === 'string') {
+    const params = Array.isArray(tpl.params) ? tpl.params : [];
+    if (params.length > 20 || params.some((p) => typeof p !== 'string' || !p.trim() || p.length > 1024 || /[\n\t]| {5,}/.test(p)))
+      throw new HttpError(400, 'Preencha os campos do modelo (sem quebras de linha).', 'invalid');
+    kind = 'template';
+    template = { name: tpl.name, language: tpl.language, params: params as string[] };
+  } else throw new HttpError(400, 'Escreva a mensagem ou escolha um modelo.', 'invalid');
+
+  const conv = await deps.store.conversation(caller.clinicId, conversationId);
+  if (!conv) throw new HttpError(404, 'Conversa não encontrada.', 'not_found');
+  const ch = await deps.store.channelForClinic(caller.clinicId);
+  if (!ch) throw new HttpError(409, 'O WhatsApp da clínica não está conectado.', 'not_connected');
+  if (template) {
+    const known = (await deps.store.templates(ch.id)).find((t) => t.name === template!.name && t.language === template!.language);
+    if (!known || known.status !== 'APPROVED') throw new HttpError(400, 'Modelo não aprovado. Sincronize os modelos em Configurações.', 'template');
+    if (known.param_count !== template.params.length) throw new HttpError(400, `Este modelo pede ${known.param_count} campo(s).`, 'template');
+    message = {
+      type: 'template',
+      template: {
+        name: template.name, language: { code: template.language },
+        ...(template.params.length ? { components: [{ type: 'body', parameters: template.params.map((p) => ({ type: 'text', text: p.trim() })) }] } : {}),
+      },
+    };
+  }
+  const token = await channelToken(deps, ch);
+  const reserve = () => deps.rpc('whatsapp_begin_outbound', {
+    p_clinic: caller.clinicId, p_conversation: conversationId, p_actor: caller.userId, p_request: requestId,
+    p_kind: kind, p_body: kind === 'text' ? text : '', p_template: template,
+  }) as Promise<{ messageId: string; state: 'new' | 'existing'; status: string; wamid: string | null }>;
+  let reserved: Awaited<ReturnType<typeof reserve>>;
+  try { reserved = await reserve(); }
+  catch (e) {
+    if ((e as { code?: string })?.code === '23505') { try { reserved = await reserve(); } catch (again) { throw rpcError(again); } }
+    else throw rpcError(e);
+  }
+  if (reserved.state === 'existing') return { messageId: reserved.messageId, status: reserved.status, duplicate: true };
+  let wamid: string | null = null;
+  let failure: string | null = null;
+  // Meta may know the person only by the business-scoped id (WhatsApp usernames).
+  const recipient = conv.wa_id ? { to: conv.wa_id } : { recipient: conv.user_id };
+  try { wamid = await deps.graph.send(ch.phone_number_id, token, { ...recipient, ...message }); }
+  catch (e) { failure = e instanceof GraphError ? e.message : 'O WhatsApp não respondeu.'; }
+  try { await deps.rpc('whatsapp_finish_outbound', { p_message: reserved.messageId, p_wamid: wamid, p_error: failure }); }
+  catch (e) { deps.log?.('whatsapp_finish_outbound_failed', { message: reserved.messageId, code: (e as { code?: string })?.code ?? null }); }
+  if (failure) throw new HttpError(502, failure, 'send_failed');
+  return { messageId: reserved.messageId, status: 'sent', duplicate: false };
+}
+
+async function act(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireInbox(caller);
+  const conversationId = uuid(body.conversationId, 'Conversa');
+  const action = typeof body.operation === 'string' ? body.operation : '';
+  const allowed = ['assign', 'unassign', 'close', 'reopen', 'mark_read', 'link_contact', 'link_case', 'set_queue'];
+  if (!allowed.includes(action)) throw new HttpError(400, 'Ação desconhecida.', 'invalid');
+  const revision = typeof body.revision === 'number' && Number.isInteger(body.revision) ? body.revision : null;
+  if (action !== 'mark_read' && revision === null) throw new HttpError(400, 'Revisão da conversa ausente.', 'invalid');
+  let target: string | null = null;
+  if (action === 'assign') target = body.targetUserId === undefined ? caller.userId : uuid(body.targetUserId, 'Pessoa');
+  if (action === 'link_contact' || action === 'link_case') target = body.targetId === null ? null : uuid(body.targetId, 'Vínculo');
+  let result: unknown;
+  try {
+    result = await deps.rpc('whatsapp_conversation_action', {
+      p_clinic: caller.clinicId, p_conversation: conversationId, p_actor: caller.userId, p_revision: revision,
+      p_action: action, p_target: target, p_queue: typeof body.queue === 'string' ? body.queue : null,
+    });
+  } catch (e) { throw rpcError(e); }
+  if (action === 'mark_read') {
+    // Best effort read receipt to the patient's phone; the inbox state is already saved.
+    try {
+      const ch = await deps.store.channelForClinic(caller.clinicId);
+      const wamid = ch ? await deps.store.lastInboundWamid(caller.clinicId, conversationId) : null;
+      if (ch && wamid) await deps.graph.markRead(ch.phone_number_id, await channelToken(deps, ch), wamid);
+    } catch { /* ignored */ }
+  }
+  return result;
+}
+
+async function media(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>): Promise<Response> {
+  requireInbox(caller);
+  const messageId = uuid(body.messageId, 'Mensagem');
+  const m = await deps.store.message(caller.clinicId, messageId);
+  if (!m?.media?.id) throw new HttpError(404, 'Mídia não encontrada.', 'not_found');
+  const ch = await deps.store.channelForClinic(caller.clinicId);
+  if (!ch) throw new HttpError(409, 'O WhatsApp da clínica não está conectado.', 'not_connected');
+  let file: { bytes: Uint8Array; mime: string };
+  try { file = await deps.graph.media(m.media.id, await channelToken(deps, ch)); } catch (e) { throw e instanceof HttpError ? e : graphFailure(e); }
+  const safeMime = /^[a-z]+\/[a-z0-9.+-]+$/i.test(file.mime) ? file.mime : 'application/octet-stream';
+  return new Response(file.bytes as BodyInit, {
+    status: 200,
+    headers: { ...deps.corsHeaders, 'Content-Type': safeMime, 'Cache-Control': 'no-store', 'Content-Disposition': 'attachment', 'X-Content-Type-Options': 'nosniff' },
+  });
+}
+
+// ---------------------------------------------------------------- agenda automations
+
+export const PARAM_SOURCES: Record<ParamSource, string> = {
+  paciente_primeiro_nome: 'Primeiro nome do paciente',
+  data: 'Data da consulta (dd/mm)',
+  hora: 'Horário da consulta',
+  dia_semana: 'Dia da semana',
+  medico: 'Nome do médico',
+  clinica: 'Nome da clínica',
+  link: 'Link da regra',
+  texto: 'Texto fixo',
+};
+const TZ = 'America/Sao_Paulo';
+/** Automated messages leave only between 08:00 and 20:00 in São Paulo. */
+export const QUIET_HOURS = { start: 8, end: 20 };
+
+const automationDto = (a: AutomationRow) => ({
+  id: a.id, name: a.name, enabled: a.enabled, trigger: a.trigger, offsetMinutes: a.offset_minutes, templateName: a.template_name,
+  templateLanguage: a.template_language, params: a.params, linkUrl: a.link_url, doctorIds: a.doctor_ids, appointmentTypes: a.appointment_types,
+  revision: a.revision, updatedAt: a.updated_at,
+});
+
+async function listAutomations(deps: WhatsAppDeps, caller: Caller) {
+  requireAdmin(caller);
+  const [rules, runs] = await Promise.all([deps.store.automations(caller.clinicId), deps.store.automationRuns(caller.clinicId, 100)]);
+  return {
+    automations: rules.map(automationDto),
+    runs: runs.map((r) => ({
+      id: r.id, automationId: r.automation_id, appointmentId: r.appointment_id, appointmentStart: r.appointment_start, status: r.status,
+      reason: r.reason, reply: r.reply, repliedAt: r.replied_at, at: r.created_at,
+    })),
+    sources: PARAM_SOURCES,
+    quietHours: QUIET_HOURS,
+  };
+}
+
+async function saveAutomation(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireAdmin(caller);
+  const rule = body.rule as Record<string, unknown> | undefined;
+  if (!rule || typeof rule !== 'object') throw new HttpError(400, 'Regra inválida.', 'invalid');
+  const id = body.id === undefined || body.id === null ? null : uuid(body.id, 'Regra');
+  const revision = id ? (typeof body.revision === 'number' && Number.isInteger(body.revision) ? body.revision : -1) : null;
+  const name = typeof rule.name === 'string' ? rule.name.trim() : '';
+  const trigger = rule.trigger === 'before_start' || rule.trigger === 'after_end' ? rule.trigger : null;
+  const offset = typeof rule.offsetMinutes === 'number' && Number.isInteger(rule.offsetMinutes) ? rule.offsetMinutes : -1;
+  const linkUrl = typeof rule.linkUrl === 'string' && rule.linkUrl.trim() ? rule.linkUrl.trim() : null;
+  if (name.length < 2 || name.length > 80) throw new HttpError(400, 'Dê um nome à regra (2 a 80 caracteres).', 'invalid');
+  if (!trigger || offset < 0 || offset > 20160) throw new HttpError(400, 'Escolha quando enviar (até 14 dias antes ou depois).', 'invalid');
+  if (linkUrl && (!/^https:\/\/[^\s]+$/.test(linkUrl) || linkUrl.length > 500)) throw new HttpError(400, 'O link precisa começar com https://.', 'invalid');
+  const ch = await deps.store.channelForClinic(caller.clinicId);
+  if (!ch) throw new HttpError(409, 'Conecte o WhatsApp antes de criar automações.', 'not_connected');
+  const template = (await deps.store.templates(ch.id)).find((t) => t.name === rule.templateName && t.language === rule.templateLanguage);
+  if (!template) throw new HttpError(400, 'Escolha um modelo sincronizado do WhatsApp.', 'template');
+  if (rule.enabled === true && template.status !== 'APPROVED') throw new HttpError(400, 'O modelo ainda não foi aprovado pela Meta.', 'template');
+  const params = Array.isArray(rule.params) ? rule.params : [];
+  if (params.length !== template.param_count) throw new HttpError(400, `Este modelo tem ${template.param_count} campo(s); preencha todos.`, 'template');
+  const clean: Array<{ source: ParamSource; text?: string }> = [];
+  for (const p of params as Array<Record<string, unknown>>) {
+    const source = p?.source as ParamSource;
+    if (typeof source !== 'string' || !Object.prototype.hasOwnProperty.call(PARAM_SOURCES, source)) throw new HttpError(400, 'Campo do modelo com origem desconhecida.', 'invalid');
+    if (source === 'texto') {
+      const text = typeof p.text === 'string' ? p.text.trim() : '';
+      if (!text || text.length > 200 || /[\n\t]| {5,}/.test(text)) throw new HttpError(400, 'Texto fixo de até 200 caracteres, sem quebra de linha.', 'invalid');
+      clean.push({ source, text });
+    } else clean.push({ source });
+    if (source === 'link' && !linkUrl) throw new HttpError(400, 'Informe o link usado no modelo.', 'invalid');
+  }
+  const doctorIds = Array.isArray(rule.doctorIds) && rule.doctorIds.length ? (rule.doctorIds as unknown[]).map((d) => uuid(d, 'Médico')) : null;
+  const types = Array.isArray(rule.appointmentTypes) && rule.appointmentTypes.length
+    ? (rule.appointmentTypes as unknown[]).filter((t): t is string => typeof t === 'string' && /^[a-z_]{2,30}$/.test(t)) : null;
+  try {
+    return await deps.rpc('whatsapp_automation_save', {
+      p_clinic: caller.clinicId, p_actor: caller.userId, p_id: id, p_revision: revision,
+      p_rule: {
+        name, enabled: rule.enabled === true, trigger, offsetMinutes: offset, templateName: template.name, templateLanguage: template.language,
+        params: clean, linkUrl, doctorIds, appointmentTypes: types?.length ? types : null,
+      },
+    });
+  } catch (e) { throw rpcError(e); }
+}
+
+const firstName = (name: string) => {
+  const first = name.trim().split(/\s+/)[0] ?? '';
+  return first ? first.charAt(0).toLocaleUpperCase('pt-BR') + first.slice(1).toLocaleLowerCase('pt-BR') : '';
+};
+const local = (iso: string, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, ...opts }).format(new Date(iso));
+
+/** The template fields for one appointment; never empty (Meta refuses empty parameters). */
+export function renderParams(rule: Pick<AutomationRow, 'params' | 'link_url'>, c: Candidate): string[] {
+  return rule.params.map((p) => {
+    switch (p.source) {
+      case 'paciente_primeiro_nome': return firstName(c.patient_name) || 'paciente';
+      case 'data': return local(c.appointment_start, { day: '2-digit', month: '2-digit' });
+      case 'hora': return local(c.appointment_start, { hour: '2-digit', minute: '2-digit' });
+      case 'dia_semana': return local(c.appointment_start, { weekday: 'long' });
+      case 'medico': return c.doctor_name.trim() || 'nossa equipe';
+      case 'clinica': return c.clinic_name.trim() || 'a clínica';
+      case 'link': return rule.link_url ?? '';
+      case 'texto': return p.text ?? '';
+      default: return '';
+    }
+  });
+}
+
+export const renderBody = (body: string, params: string[]) => body.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, n) => params[Number(n) - 1] ?? '');
+
+export function inQuietHours(now: Date): boolean {
+  const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(now));
+  return hour < QUIET_HOURS.start || hour >= QUIET_HOURS.end;
+}
+
+/** Scheduler entry point (pg_cron every few minutes). Sends what is due, at most once per rule and appointment start. */
+export async function automationsHandler(req: Request, deps: WhatsAppDeps): Promise<Response> {
+  const secret = deps.config.cronSecret ?? '';
+  const given = req.headers.get('x-cortex-cron') ?? '';
+  let diff = secret.length === given.length && secret.length >= 32 ? 0 : 1;
+  for (let i = 0; i < Math.min(secret.length, given.length); i++) diff |= secret.charCodeAt(i) ^ given.charCodeAt(i);
+  if (req.method !== 'POST' || diff !== 0) return json(deps, 401, { error: 'Não autorizado.' });
+  const now = (deps.now ?? (() => new Date()))();
+  if (inQuietHours(now)) return json(deps, 200, { quiet: true, candidates: 0, sent: 0, skipped: 0, failed: 0 });
+  const candidates = (await deps.rpc('whatsapp_automation_candidates', { p_now: now.toISOString(), p_limit: 100 })) as Candidate[] | null;
+  const list = candidates ?? [];
+  const rules = new Map((await deps.store.automationsByIds([...new Set(list.map((c) => c.automation_id))])).map((r) => [r.id, r]));
+  const channels = new Map<string, ChannelRow | null>();
+  const tokens = new Map<string, string | null>();
+  const templateCache = new Map<string, TemplateRow[]>();
+  const tally = { sent: 0, skipped: 0, failed: 0 };
+  const fail = (rule: AutomationRow, c: Candidate, reason: string) =>
+    deps.rpc('whatsapp_automation_fail', { p_automation: rule.id, p_appointment: c.appointment_id, p_start: c.appointment_start, p_reason: reason }).catch(() => null);
+  for (const c of list) {
+    const rule = rules.get(c.automation_id);
+    if (!rule) continue;
+    if (!channels.has(c.clinic_id)) channels.set(c.clinic_id, await deps.store.channelForClinic(c.clinic_id));
+    const ch = channels.get(c.clinic_id);
+    if (!ch) continue;
+    if (!tokens.has(ch.id)) { try { tokens.set(ch.id, await channelToken(deps, ch)); } catch { tokens.set(ch.id, null); } }
+    const token = tokens.get(ch.id);
+    if (!token) continue; // channel unusable: retried on the next run, nothing is claimed
+    if (!templateCache.has(ch.id)) templateCache.set(ch.id, await deps.store.templates(ch.id));
+    const template = templateCache.get(ch.id)!.find((t) => t.name === rule.template_name && t.language === rule.template_language);
+    const skip = c.opted_out ? 'O contato pediu para não receber mensagens.'
+      : !c.phone || !/^[0-9]{10,15}$/.test(c.phone) ? 'Sem telefone válido no cadastro.'
+      : !template || template.status !== 'APPROVED' ? 'Modelo não aprovado.'
+      : template.param_count !== rule.params.length ? 'Campos do modelo mudaram; revise a regra.' : null;
+    const params = skip ? [] : renderParams(rule, c);
+    if (!skip && params.some((p) => !p.trim())) { await fail(rule, c, 'Campo do modelo vazio.'); tally.failed++; continue; }
+    let begun: { runId: string; messageId?: string; to?: string; skipped: boolean } | null;
+    try {
+      begun = (await deps.rpc('whatsapp_automation_begin', {
+        p_automation: rule.id, p_appointment: c.appointment_id, p_start: c.appointment_start, p_wa_id: skip ? null : c.phone, p_skip_reason: skip,
+        p_body: skip ? '' : renderBody(template!.body, params), p_template: skip ? null : { name: rule.template_name, language: rule.template_language, params },
+      })) as typeof begun;
+    } catch (e) {
+      await fail(rule, c, `Preparação: ${(e as { code?: string })?.code ?? 'erro'}`);
+      tally.failed++;
+      continue;
+    }
+    if (!begun) continue; // another run claimed it
+    if (begun.skipped) { tally.skipped++; continue; }
+    let wamid: string | null = null;
+    let failure: string | null = null;
+    try {
+      wamid = await deps.graph.send(ch.phone_number_id, token, {
+        to: begun.to, type: 'template',
+        template: {
+          name: rule.template_name, language: { code: rule.template_language },
+          ...(params.length ? { components: [{ type: 'body', parameters: params.map((text) => ({ type: 'text', text })) }] } : {}),
+        },
+      });
+    } catch (e) { failure = e instanceof GraphError ? e.message : 'O WhatsApp não respondeu.'; }
+    await deps.rpc('whatsapp_finish_outbound', { p_message: begun.messageId, p_wamid: wamid, p_error: failure }).catch(() => null);
+    if (failure) tally.failed++; else tally.sent++;
+  }
+  deps.log?.('whatsapp_automations', { candidates: list.length, ...tally });
+  return json(deps, 200, { quiet: false, candidates: list.length, ...tally });
+}
