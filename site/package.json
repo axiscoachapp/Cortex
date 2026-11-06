@@ -1,0 +1,34 @@
+{
+  "name": "cortex-site",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Site público de marketing do Cortex (HTML estático pré-renderizado).",
+  "scripts": {
+    "sync-brand": "node scripts/sync-brand.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build:client": "vite build",
+    "build:ssr": "vite build --ssr src/entry-server.tsx --outDir dist-ssr",
+    "prerender": "node scripts/prerender.mjs",
+    "build": "npm run sync-brand && npm run typecheck && npm run build:client && npm run build:ssr && npm run prerender",
+    "dev": "npm run sync-brand && node scripts/dev.mjs",
+    "preview": "node scripts/serve.mjs",
+    "og": "node scripts/og-image.mjs",
+    "screenshots": "node scripts/screenshots.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@fontsource-variable/manrope": "5.3.0",
+    "@types/node": "22.16.5",
+    "@types/react": "18.3.23",
+    "@types/react-dom": "18.3.7",
+    "autoprefixer": "10.4.21",
+    "lucide-react": "0.462.0",
+    "postcss": "8.5.32",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.8.3",
+    "vite": "8.3.5"
+  }
+}

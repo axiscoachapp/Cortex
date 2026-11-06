@@ -1,0 +1,199 @@
+@import '@fontsource-variable/manrope/wght.css';
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-padding-top: 5.5rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    @apply bg-bg font-sans text-base text-ink antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-extrabold text-ink;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  a {
+    @apply text-teal-700 underline decoration-teal-700/30 underline-offset-[3px] transition-colors hover:decoration-teal-700;
+  }
+
+  :focus-visible {
+    @apply rounded-sm outline outline-2 outline-offset-2 outline-teal-700;
+  }
+
+  .on-ink :focus-visible {
+    @apply outline-teal-300;
+  }
+
+  ::selection {
+    @apply bg-teal-100 text-ink;
+  }
+
+  summary {
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@layer components {
+  .container-site {
+    @apply mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8;
+  }
+
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 py-2.5 text-base font-bold no-underline transition-[background-color,border-color,color,box-shadow,transform] duration-200 motion-safe:active:translate-y-px;
+  }
+
+  .btn-primary {
+    @apply btn bg-teal-700 text-white shadow-[0_1px_2px_rgb(14_42_51/0.12)] hover:bg-teal-800 hover:text-white;
+  }
+
+  .btn-signal {
+    @apply btn bg-signal text-ink hover:bg-[#f5c25f] hover:text-ink;
+  }
+
+  .btn-secondary {
+    @apply btn border border-line bg-surface text-ink hover:border-teal-700/40 hover:bg-teal-50 hover:text-ink;
+  }
+
+  .btn-ghost-ink {
+    @apply btn border border-white/25 text-white hover:border-white/60 hover:bg-white/5 hover:text-white;
+  }
+
+  .btn[aria-disabled='true'],
+  .btn:disabled {
+    @apply cursor-not-allowed bg-line text-muted shadow-none hover:bg-line hover:text-muted motion-safe:active:translate-y-0;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.08em] text-teal-700;
+  }
+
+  .eyebrow::before {
+    content: '';
+    @apply h-1.5 w-1.5 rounded-full bg-signal;
+  }
+
+  .on-ink .eyebrow {
+    @apply text-teal-300;
+  }
+
+  .link-arrow {
+    @apply inline-flex items-center gap-1.5 font-bold text-teal-700 no-underline hover:text-teal-800;
+  }
+
+  .link-arrow svg {
+    @apply transition-transform duration-200;
+  }
+
+  .link-arrow:hover svg {
+    @apply motion-safe:translate-x-0.5;
+  }
+
+  .card {
+    @apply rounded-card border border-line bg-surface;
+  }
+
+  .prose-legal h2 {
+    @apply mt-10 text-2xl font-extrabold;
+  }
+
+  .prose-legal h3 {
+    @apply mt-6 text-lg font-bold;
+  }
+
+  .prose-legal p,
+  .prose-legal ul {
+    @apply mt-4 text-base leading-7 text-ink/90;
+  }
+
+  .prose-legal ul {
+    @apply list-disc space-y-2 pl-6 marker:text-teal-700;
+  }
+
+  .field-label {
+    @apply block text-sm font-bold text-ink;
+  }
+
+  .field-input {
+    @apply mt-1.5 block min-h-[44px] w-full rounded-[10px] border border-line bg-surface px-3.5 py-2.5 text-base text-ink placeholder:text-muted/80 transition-colors hover:border-[#c3d0cd] focus-visible:border-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-teal-700/30;
+  }
+
+  .field-input[aria-invalid='true'] {
+    @apply border-danger;
+  }
+
+  .field-error {
+    @apply mt-1.5 flex items-start gap-1.5 text-sm font-semibold text-danger;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .wave-bar {
+    transform-origin: bottom;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .wave-bar {
+      animation: wave 1.4s ease-in-out infinite;
+    }
+
+    .rec-dot {
+      animation: rec 1.6s ease-in-out infinite;
+    }
+  }
+
+  @keyframes wave {
+    0%,
+    100% {
+      transform: scaleY(0.45);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes rec {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgb(180 35 24 / 0.35);
+    }
+    50% {
+      box-shadow: 0 0 0 6px rgb(180 35 24 / 0);
+    }
+  }
+}
