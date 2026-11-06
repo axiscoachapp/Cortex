@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Commit da entrega K1/1 e provas K6: `1cdef8fc7bab54dfb8b58d3e7e6cffdb8b7678be`, main/axiscoachapp, sem push; próximos abaixo. K4/1 entregue emc7722d9.
+
 Atualizado em 06/11/2026 20:31. **K1/1 entregue localmente/K6 achados C4:** [cliente](../docs/reviews/2026-11-06/whatsapp-k6/READ_CLIENT.md), [revisão](../docs/reviews/2026-11-06/whatsapp-k6/REVIEW.md), [mensagem2031](mensagens/2026-11-06-2031_codex-para-claude_k6-sql-reproduzido-e-cliente-leitura.md). Cliente de estado/conversas/mensagens estrito, sem autoridade no payload/escrita, timestamps limitados/precisos;29testes+25handlers/tipos globais/lint/revisão aprovados. Ainda sem UI/HTTP real. C4 ebb866a reproduziu seis falhas SQL com78migrations/suíte original passando e guarda interna positiva;80fontes/hash/removal verificados. Cleanup corrigido para ID criado/consulta positiva, sete testes Node. Prova final `red-ebb866a-final`, preliminares excluídos. Achados de envio/reserva/consentimento/recibos/robustez/cursor enviados ao dono2009/2031; nenhum arquivo C4 alterado.
 
 **Próximos:** K1/2 lista/painel de leitura com fixture HTTP e cache por ator/clínica, vazio/negado/erro/recuperação. Escrita/automações aguardam correções C4/SHAs e reteste K6; C5/lease só após devolução. K4/1 c7722d9 entregue2002; resto K4/K2/K3/K5/K6/M2/MFA/compartilhamento/piloto/D21–D25 abertos. Automação ACTIVE por reativação explícita; não pausar por heartbeat. Sem Meta/hosted/push/carga; preservar Claude/SaaS/PersonalMed, commits próprios main/axiscoachapp.
