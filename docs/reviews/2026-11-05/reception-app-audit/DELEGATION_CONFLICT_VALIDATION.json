@@ -1,0 +1,236 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "8fab6335f6004ebf86e72908927c3a81bc3b0a10",
+  "scope": "T39/3b/2a integrated revision-conflict recovery; in-memory transport only",
+  "browser": {
+    "states": 12,
+    "widths": [
+      375,
+      1280,
+      1920
+    ],
+    "rejections409": 3,
+    "successfulWrites": 3,
+    "uniqueOperations": 6,
+    "sameMountedPageBetweenOldAndNewConfirmation": true,
+    "identityAndSiblingRowsPreserved": true
+  },
+  "runs": [
+    {
+      "run": "delegation-conflict-verified",
+      "states": 12,
+      "passed": true
+    },
+    {
+      "run": "delegation-conflict-positive-regression",
+      "states": 12,
+      "passed": true
+    },
+    {
+      "run": "delegation-conflict-read-regression",
+      "states": 15,
+      "passed": true
+    }
+  ],
+  "checks": [
+    {
+      "width": 375,
+      "revisionChange": {
+        "requestId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "beforeRevision": 1,
+        "afterRevision": 2
+      },
+      "rejected": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 1,
+          "p_operation": "a0eeedf9-0f25-4f37-90af-a76e59c5ae30",
+          "p_decision": "approve"
+        },
+        "currentRevision": 2,
+        "status": 409
+      },
+      "approved": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 2,
+          "p_operation": "2e2a3991-58b6-4a76-a634-1e03b78a1eea",
+          "p_decision": "approve"
+        },
+        "currentRevision": 2,
+        "status": 200
+      },
+      "successfulWrites": 1
+    },
+    {
+      "width": 1280,
+      "revisionChange": {
+        "requestId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "beforeRevision": 1,
+        "afterRevision": 2
+      },
+      "rejected": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 1,
+          "p_operation": "2ebdd22f-a777-4aa8-84f7-3b9f1e1507e7",
+          "p_decision": "approve"
+        },
+        "currentRevision": 2,
+        "status": 409
+      },
+      "approved": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 2,
+          "p_operation": "8cc3a097-ca1f-4fc0-9cef-d42966078e2c",
+          "p_decision": "approve"
+        },
+        "currentRevision": 2,
+        "status": 200
+      },
+      "successfulWrites": 1
+    },
+    {
+      "width": 1920,
+      "revisionChange": {
+        "requestId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "beforeRevision": 1,
+        "afterRevision": 2
+      },
+      "rejected": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 1,
+          "p_operation": "91e2d8ad-00ec-49a6-8cfe-a45b9cd7e308",
+          "p_decision": "approve"
+        },
+        "currentRevision": 2,
+        "status": 409
+      },
+      "approved": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 2,
+          "p_operation": "83cb3dc3-6795-4278-8fe9-84b8165c7b7d",
+          "p_decision": "approve"
+        },
+        "currentRevision": 2,
+        "status": 200
+      },
+      "successfulWrites": 1
+    }
+  ],
+  "tests": {
+    "existingAppTests": 20,
+    "existingAppFiles": 2,
+    "fixtureTests": 2,
+    "fixtureRedExit": 1,
+    "fixtureRedReason": "advanceDelegationRevision absent before implementation",
+    "fixtureGreenExit": 0,
+    "fixtureTestSource": {
+      "path": "scripts/fixtures/clinic-review-api.test.mjs",
+      "sha256": "5ff678fa3406d914b86e95c0eadcdefe35f9655ef4b760dfc6aa6383c22ba2d9"
+    }
+  },
+  "verification": {
+    "syntaxFiles": 3,
+    "lintFiles": 3,
+    "invalidFlagCombinationsRefused": 3,
+    "sourceHashes": true,
+    "frozenSourceDigest": "0569bac55aefb810d91eb4ac457ff326e0fd4f2632c816667894c57cc8ecd5ba",
+    "cleanup": true
+  },
+  "review": {
+    "actionable": "capture reloaded the page and could hide missing conflict invalidation",
+    "fixed": "captures2–4 preserve the mounted page and conflict alert; final12states rerun",
+    "final": "No remaining actionable issues",
+    "external": "Not invoked; user previously declined and this is a non-interactive heartbeat"
+  },
+  "expectedHttpErrors": [
+    {
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "status": 409
+    },
+    {
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "status": 409
+    },
+    {
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "status": 409
+    }
+  ],
+  "expectedConsoleErrors": [
+    {
+      "path": "/permissoes-recepcao",
+      "message": "Failed to load resource: the server responded with a status of 409 (Conflict)",
+      "resource": "/rest/v1/rpc/reception_decide_delegation"
+    },
+    {
+      "path": "/permissoes-recepcao",
+      "message": "Failed to load resource: the server responded with a status of 409 (Conflict)",
+      "resource": "/rest/v1/rpc/reception_decide_delegation"
+    },
+    {
+      "path": "/permissoes-recepcao",
+      "message": "Failed to load resource: the server responded with a status of 409 (Conflict)",
+      "resource": "/rest/v1/rpc/reception_decide_delegation"
+    }
+  ],
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "feb0c009fd1f7740363302aab86af68c3ce91e08a7a27e20e9ecbd1c7904b5c5"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "1cbbfb09078ea228ea9090991e25d45b16ad466d037279ba2bfa85a712b39435"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "limits": [
+    "No real grant/RLS/persistence proof",
+    "No concurrent SQL transaction proof",
+    "Mock does not implement idempotent replay",
+    "Lost-reply/retry and read-denial UI coverage remain pending"
+  ]
+}

@@ -14,14 +14,14 @@ import { startClinicFixture, patientId, uid } from './fixtures/clinic-review-api
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
 const timestampOnly = args.includes('--only=short-timestamps');
 const medicalOnly = args.includes('--only=medical-delivery');
 const delegationOnly = args.includes('--only=delegation-read');
-const delegationDecisionOnly = args.includes('--only=delegation-decision'), delegationMode = delegationOnly || delegationDecisionOnly;
+const delegationDecisionOnly = args.includes('--only=delegation-decision'), delegationConflictOnly = args.includes('--only=delegation-conflict'), delegationMode = delegationOnly || delegationDecisionOnly || delegationConflictOnly;
 const medicalHistoryOnly = args.includes('--medical-history-only');
 assert.ok(!medicalHistoryOnly || medicalOnly, 'Medical history focus requires medical delivery mode');
 const checkWorkspaceLayout = args.includes('--check-workspace-layout');
@@ -35,6 +35,7 @@ assert.ok(!timestampOnly || !args.some(arg => arg.startsWith('--check-') && arg 
 assert.ok(!medicalOnly || !args.some(arg => arg.startsWith('--check-')), 'Medical delivery mode runs its own checks');
 assert.ok(!delegationOnly || !args.some(arg => arg.startsWith('--check-')), 'Delegation read mode runs its own checks');
 assert.ok(!delegationDecisionOnly || !args.some(arg => arg.startsWith('--check-')), 'Delegation decision mode runs its own checks');
+assert.ok(!delegationConflictOnly || !args.some(arg => arg.startsWith('--check-')), 'Delegation conflict mode runs its own checks');
 const checkMobileNavigation = args.includes('--check-mobile-navigation');
 assert.ok(!timeOnly || !checkMobileNavigation, 'Mobile navigation checks require the full route audit');
 const checkCalendarHeader = args.includes('--check-calendar-header');
@@ -79,7 +80,7 @@ const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/c
 const ownHashes = await Promise.all(ownPaths.map(async path => ({ path, sha256: createHash('sha256').update(await readFile(path)).digest('hex') })));
 const apps = [], apis = [], contexts = [], errors = [], blocked = [], consoleErrors = [], screens = [], failedRequests = [], errorResponses = [];
 const medicalCaseFailures = []; let medicalCasesAttempted = 0;
-const delegationDecisionChecks = [];
+const delegationDecisionChecks = [], delegationConflictChecks = [];
 const cacheOwner = randomUUID();
 let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false, draftPreserved = false, timestampDataPreserved = false, medicalDataPreserved = false, delegationDataPreserved = false;
 async function appFor(api) {
@@ -100,7 +101,7 @@ async function scene(app, email, next) {
   });
   const page = await context.newPage();
   page.on('pageerror', error => errors.push({ path: new URL(page.url()).pathname, message: error.message }));
-  page.on('console', message => { if (message.type() === 'error') consoleErrors.push({ path: new URL(page.url()).pathname, message: message.text() }); });
+  page.on('console', message => { if (message.type() === 'error') consoleErrors.push({ path: new URL(page.url()).pathname, message: message.text(), ...(delegationConflictOnly ? { resource: message.location().url ? new URL(message.location().url).pathname : null } : {}) }); });
   const responseStatuses = new WeakMap();
   page.on('requestfailed', request => failedRequests.push({ method: request.method(), path: new URL(request.url()).pathname, status: responseStatuses.get(request) ?? null, reason: request.failure()?.errorText }));
   page.on('response', response => { responseStatuses.set(response.request(), response.status()); if (response.status() >= 400) errorResponses.push({ path: new URL(response.url()).pathname, status: response.status() }); });
@@ -113,9 +114,10 @@ async function scene(app, email, next) {
   }
   return page;
 }
-async function capture(page, app, role, path, width, action, variant = '') {
+async function capture(page, app, role, path, width, action, variant = '', { navigate = true } = {}) {
   await page.setViewportSize({ width, height: 1000 });
-  await page.goto(app.origin + path); await page.waitForLoadState('networkidle');
+  if (navigate) await page.goto(app.origin + path);
+  await page.waitForLoadState('networkidle');
   if (action) { await action(page); await page.waitForLoadState('networkidle'); }
   const file = `${role}-${path.replace(/[^a-z0-9]/gi, '-')}${variant ? '-' + variant : ''}-${width}.png`;
   await page.screenshot({ path: resolve(folder, file), fullPage: true, animations: 'disabled' });
@@ -248,12 +250,68 @@ try {
   await writeFile(join(temporaryCache, 'audit-owner'), cacheOwner);
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
   if (focusedOnly) {
-    const api = await startClinicFixture(welcomeOnly ? { lastVisit: '2026-10-01' } : timestampOnly ? { workspaceDates: true } : medicalOnly ? { medicalUI: true } : delegationMode ? { delegationPermissions: true, delegationDecisions: delegationDecisionOnly } : {}); apis.push(api); const app = await appFor(api);
+    const api = await startClinicFixture(welcomeOnly ? { lastVisit: '2026-10-01' } : timestampOnly ? { workspaceDates: true } : medicalOnly ? { medicalUI: true } : delegationMode ? { delegationPermissions: true, delegationDecisions: delegationDecisionOnly || delegationConflictOnly } : {}); apis.push(api); const app = await appFor(api);
     const chatPath = '/?patient=' + patientId;
     const doctor = await scene(app, 'review', delegationMode ? '/permissoes-recepcao' : timestampOnly ? '/trabalho' : chatOnly || medicalOnly ? chatPath : welcomeOnly ? '/' : '/agenda');
     await doctor.waitForLoadState('networkidle');
     await doctor.clock.setFixedTime(new Date('2026-11-05T15:00:00Z'));
-    if (delegationDecisionOnly) {
+    if (delegationConflictOnly) {
+      const originalRows = structuredClone(api.delegationRows), targetId = originalRows[0].id;
+      const target = page => page.locator('article').filter({ has: page.getByRole('heading', { name: originalRows[0].staffName, exact: true }) });
+      const approvePath = '/rest/v1/rpc/reception_decide_delegation';
+      const openConfirmation = async page => {
+        await target(page).getByRole('button', { name: 'Aprovar acesso', exact: true }).click();
+        const dialog = page.getByRole('dialog');
+        for (const label of [originalRows[0].staffName, originalRows[0].clinicName, originalRows[0].doctorName, 'prontuários']) await expect(dialog).toContainText(label);
+        await expect(dialog.getByRole('button', { name: 'Confirmar aprovação', exact: true })).toBeEnabled();
+      };
+      for (const width of [375, 1280, 1920]) {
+        api.resetDelegationDecisions(); const writesBefore = api.metrics.delegationWrites.length, attemptsBefore = api.metrics.delegationAttempts.length;
+        await capture(doctor, app, 'permissions', '/permissoes-recepcao', width, async page => {
+          await expect(target(page).getByText('Aguardando médico', { exact: true })).toBeVisible(); await openConfirmation(page);
+          assert.equal(api.metrics.delegationAttempts.length, attemptsBefore);
+        }, 'conflict-old-confirmation');
+        const revisionChange = api.advanceDelegationRevision(targetId);
+        await doctor.getByRole('dialog').getByRole('button', { name: 'Confirmar aprovação', exact: true }).click();
+        await expect(doctor.getByRole('dialog')).toHaveCount(0);
+        await expect(doctor.getByRole('alert')).toHaveText('O pedido mudou. Atualize a lista e revise a ação antes de tentar novamente.');
+        await expect(target(doctor).getByRole('button', { name: 'Aprovar acesso', exact: true })).toBeEnabled(); await doctor.waitForLoadState('networkidle');
+        await capture(doctor, app, 'permissions', '/permissoes-recepcao', width, async page => {
+          await expect(target(page).getByText('Aguardando médico', { exact: true })).toBeVisible(); await expect(target(page).getByText('Sem acesso ativo', { exact: true })).toBeVisible();
+          await expect(page.getByRole('alert')).toHaveText('O pedido mudou. Atualize a lista e revise a ação antes de tentar novamente.');
+          await expect(page.getByRole('dialog')).toHaveCount(0); await target(page).scrollIntoViewIfNeeded();
+          assert.equal(api.metrics.delegationWrites.length, writesBefore); assert.equal(api.metrics.delegationAttempts.length, attemptsBefore + 1);
+          assert.deepEqual(api.delegationRows, [{ ...originalRows[0], revision: 2 }, ...originalRows.slice(1)]);
+        }, 'conflict-refreshed', { navigate: false });
+        await capture(doctor, app, 'permissions', '/permissoes-recepcao', width, async page => {
+          await openConfirmation(page); assert.equal(api.metrics.delegationAttempts.length, attemptsBefore + 1); assert.equal(api.metrics.delegationWrites.length, writesBefore);
+        }, 'conflict-new-confirmation', { navigate: false });
+        await doctor.getByRole('dialog').getByRole('button', { name: 'Confirmar aprovação', exact: true }).click();
+        await expect(target(doctor).getByText('Aprovado', { exact: true })).toBeVisible(); await doctor.waitForLoadState('networkidle');
+        await capture(doctor, app, 'permissions', '/permissoes-recepcao', width, async page => {
+          await expect(target(page).getByText('Acesso ativo', { exact: true })).toBeVisible(); await expect(page.getByRole('alert')).toHaveCount(0); await target(page).scrollIntoViewIfNeeded();
+        }, 'conflict-approved', { navigate: false });
+        const [rejected, approved] = api.metrics.delegationAttempts.slice(attemptsBefore);
+        assert.equal(api.metrics.delegationAttempts.length, attemptsBefore + 2); assert.equal(api.metrics.delegationWrites.length, writesBefore + 1);
+        for (const attempt of [rejected, approved]) { assert.equal(attempt.path, approvePath); assert.equal(attempt.args.p_request, targetId); assert.equal(attempt.args.p_decision, 'approve'); assert.equal(attempt.currentRevision, 2); }
+        assert.equal(rejected.status, 409); assert.equal(rejected.args.p_revision, 1); assert.equal(approved.status, 200); assert.equal(approved.args.p_revision, 2); assert.notEqual(rejected.args.p_operation, approved.args.p_operation);
+        assert.deepEqual(api.delegationRows, [{ ...originalRows[0], state: 'approved', revision: 3, effective: true, canDecide: false, canRevoke: true }, ...originalRows.slice(1)]);
+        delegationConflictChecks.push({ width, revisionChange, rejected, approved, successfulWrites: 1 });
+      }
+      const allowed = new Set(['POST /auth/v1/token', 'GET /auth/v1/user', 'POST /rest/v1/rpc/clinic_access', 'POST /rest/v1/rpc/reception_delegation_requests', 'POST ' + approvePath]);
+      assert.ok(api.metrics.delegationRequests.every(call => allowed.has(call.method + ' ' + call.path))); assert.deepEqual(api.metrics.delegationUnexpected, []);
+      assert.equal(api.metrics.delegationRequests.filter(call => call.path === approvePath).length, 6); assert.equal(api.metrics.delegationWrites.length, 3);
+      assert.equal(new Set(api.metrics.delegationAttempts.map(attempt => attempt.args.p_operation)).size, 6);
+      assert.deepEqual(errorResponses, Array.from({ length: 3 }, () => ({ path: approvePath, status: 409 })));
+      assert.deepEqual(consoleErrors, Array.from({ length: 3 }, () => ({ path: '/permissoes-recepcao', resource: approvePath, message: 'Failed to load resource: the server responded with a status of 409 (Conflict)' })));
+      assert.equal(screens.length, 12);
+      for (const measured of screens) {
+        assert.ok(measured.overflow <= 1 && measured.dialogHorizontalOverflow <= 1 && !measured.dialogOutsideViewport && measured.dialogActionReachable !== false, 'Delegation conflict layout or dialog action is clipped');
+        assert.equal(measured.recoveryScreen, false); assert.deepEqual(measured.missingButtons, []); assert.deepEqual(measured.missingLabels, []); assert.deepEqual(measured.brokenText, []);
+      }
+      for (const key of ['briefings', 'checklists', 'chat', 'newSources', 'patientWrites', 'appointmentWrites']) assert.equal(api.metrics[key], 0);
+      for (const observations of [errors, failedRequests, blocked]) assert.deepEqual(observations, []);
+    } else if (delegationDecisionOnly) {
       const originalRows = structuredClone(api.delegationRows), targetId = originalRows[0].id;
       const target = page => page.locator('article').filter({ has: page.getByRole('heading', { name: originalRows[0].staffName, exact: true }) });
       for (const width of [375, 1280, 1920]) {
@@ -557,7 +615,7 @@ try {
   cleanupVerified = true;
 }
 const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, chatOnly, timestampOnly, checkWorkspaceLayout, timestampDataPreserved, timestampMetrics: timestampOnly ? { ...apis[0]?.metrics } : null, draftPreserved, welcomeMetrics: welcomeOnly || chatOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
-  delegationOnly, delegationDecisionOnly, delegationDecisionChecks, delegationDataPreserved, delegationMetrics: delegationMode ? { ...apis[0]?.metrics } : null,
+  delegationOnly, delegationDecisionOnly, delegationConflictOnly, delegationDecisionChecks, delegationConflictChecks, delegationDataPreserved, delegationMetrics: delegationMode ? { ...apis[0]?.metrics } : null,
   medicalOnly, medicalHistoryOnly, medicalDelivery, medicalBaseSources, medicalCasesAttempted, medicalCaseFailures, medicalDataPreserved, medicalMetrics: medicalOnly ? { ...apis[0]?.metrics } : null,
   medicalSources: medicalOnly ? medicalPaths.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') })) : [],
   frozenLoads: [...frozenLoads].sort(), screens, errors, consoleErrors, failedRequests, errorResponses, blockedExternalRequests: blocked, cleanupVerified };

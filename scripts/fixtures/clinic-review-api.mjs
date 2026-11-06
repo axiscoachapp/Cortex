@@ -23,7 +23,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     visits.push({...visits[0],id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',created_at:'2025-10-01T12:00:00Z',chief_complaint:'Consulta anterior sintética'});
   }
   const turns=[];const knowledge=medicalUI?[{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',user_id:uid,title:'Fonte sintética revisada',source_text:'Texto original sintético para revisão visual.',source_reference:'Referência sintética',source_version:'2026',char_count:44,source_type:'text',status:'ready',review_status:'approved',created_at:'2026-11-04T18:20:31Z',reviewed_at:'2026-11-04T19:21:45Z',reviewer_name:'Profissional de Demonstração',indexed_at:'2026-11-04T19:22:48Z',supersedes_document_id:null}]:[];
-  const metrics={briefings:0,checklists:0,chat:0,newSources:0,patientWrites:0,appointmentWrites:0,...(workspaceDates?{workspaceWrites:0}:{}),...(medicalUI?{medicalWrites:0}:{}),...(delegationPermissions?{delegationCalls:[],delegationRequests:[],delegationUnexpected:[]}:{}) ,...(delegationDecisions?{delegationWrites:[]}:{})};
+  const metrics={briefings:0,checklists:0,chat:0,newSources:0,patientWrites:0,appointmentWrites:0,...(workspaceDates?{workspaceWrites:0}:{}),...(medicalUI?{medicalWrites:0}:{}),...(delegationPermissions?{delegationCalls:[],delegationRequests:[],delegationUnexpected:[]}:{}) ,...(delegationDecisions?{delegationWrites:[],delegationAttempts:[]}:{})};
   const medicalData={patients,templates,visits,knowledge,settings};
   let delegationReadMode='valid';
   const delegationAllowed=new Set(['POST /auth/v1/token','GET /auth/v1/user','POST /rest/v1/rpc/clinic_access','POST /rest/v1/rpc/reception_delegation_requests']);
@@ -55,7 +55,9 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
       if(!parsed.success)return send({code:'22023',message:'Invalid synthetic decision input'},400);
       const row=delegationRows.find(row=>row.id===input.p_request&&row.doctorId===uid);
       if(!row)return send({code:'42501',message:'Synthetic physician scope denied'},403);
-      if(row.revision!==input.p_revision||row.state!==(approve?'pending':'approved'))return send({code:'40001',message:'Synthetic revision conflict'},409);
+      const conflict=row.revision!==input.p_revision||row.state!==(approve?'pending':'approved');
+      metrics.delegationAttempts.push({path:url.pathname,args:input,currentRevision:row.revision,status:conflict?409:200});
+      if(conflict)return send({code:'40001',message:'Synthetic revision conflict'},409);
       const beforeRevision=row.revision,snapshot={id:row.id,state:approve?'approved':'revoked',revision:row.revision+1,capabilityVersion:row.capabilityVersion};
       Object.assign(row,snapshot,{effective:approve,canDecide:false,canRevoke:approve});
       metrics.delegationWrites.push({path:url.pathname,args:input,beforeRevision,snapshot:{...snapshot}});return send(snapshot);
@@ -98,5 +100,12 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   return {origin:`http://127.0.0.1:${server.address().port}`,metrics,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,delegationRows,
     setDelegationReadMode(mode){if(!delegationPermissions||!['valid','invalid'].includes(mode))throw new Error('Unsupported delegation fixture mode');delegationReadMode=mode;},
     resetDelegationDecisions(){if(!delegationDecisions)throw new Error('Delegation decision fixture is not enabled');delegationRows.splice(0,delegationRows.length,...structuredClone(initialDelegations));},
+    // Test-only control: emulate a pending request changed after the browser read it.
+    advanceDelegationRevision(requestId){
+      if(!delegationDecisions)throw new Error('Delegation decision fixture is not enabled');
+      z.string().uuid().parse(requestId);const row=delegationRows.find(row=>row.id===requestId&&row.state==='pending');
+      if(!row)throw new Error('Expected an existing pending request');
+      const beforeRevision=row.revision;row.revision++;return {requestId,beforeRevision,afterRevision:row.revision};
+    },
     close:()=>new Promise(resolve=>server.close(resolve))};
 }
