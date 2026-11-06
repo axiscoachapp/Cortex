@@ -1,6 +1,6 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-06 18:21 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-06 19:29 por Claude (linhas de produto/WhatsApp/configurações). Cada agente atualiza as linhas que lhe dizem respeito.
 
 **T40 — Nova Consulta corrigida por pedido manual:** [provas](../docs/reviews/2026-11-05/reception-app-audit/NEW_CONSULTATION_LAYOUT.md). Limite500px removido; em933px modal passa a889,80px, campos maiores/colunas alinhadas e uma coluna no celular. RED5385; GREEN16 estados375/933/1280/1920 a135%, dois overlays explícitos, rascunho preservado/regressão Gerenciar pacientes.15 testes existentes/tipos/lint/sintaxe/três flags/hash/cleanup/revisão aprovados. Cinco HEADpatients200/ERR_ABORTED brutos preservados, demais erros/IA/escritas zero. Só classes/estrutura, permissões/handlers intactos; secretaria cuida do administrativo/agendamento e médico inicia consulta clínica. Automação permanece pausada. Nenhuma mensagem nova1557 já atendida. Sem hosted/push/Claude/SaaS/PersonalMed; MFA3c/2c/2b/compartilhamento/M2/piloto continuam abertos.
 
@@ -113,12 +113,16 @@ Atualizado em 2026-11-06 18:21 por Codex. Cada agente atualiza as linhas que lhe
 | Staging da migração (fora do repositório, cifrado) | Claude | Formato definido em `docs/migration/personalmed/CODEX_IMPLEMENTATION.md` §3 |
 | Carregador da migração (lado Cortex) | Codex | Consome o staging; ver S1 e S7 |
 | Execução da carga real | Um executor designado pelo usuário | Ainda não definido |
+| Produto Cortex: `docs/brand/`, `brand/`, `site/`, `docs/product/cortex-comercial/` | Claude | Pedido do usuário 06/11 19:20: identidade, site de marketing e oferta. [Plano](../docs/product/cortex-comercial/PLANO.md) |
+| WhatsApp, transporte: migration `20261106100000`, `supabase/functions/whatsapp-*`, `_shared/whatsapp*.ts`, `docs/product/whatsapp/` | Claude; revisão Codex (K6) | Caixa de conversas na recepção, acompanhamento e lembretes por modelo (K1–K3) com Codex |
+| `/configuracoes`: `src/pages/Settings.tsx`, `src/features/settings/` | Claude; lease pedido 19:29 para rota em `App.tsx` e entradas em `MobileSubpageNavigation`/`PatientSidebar`/`WelcomeDashboard` | Seções embutidas das páginas do Codex, usuários e perfil da clínica são K4 |
 | `coordination/` | Os dois | Siga o [README](README.md) |
 
 ## Migrações
 
 | Número | Assunto | Dono | Situação |
 |---|---|---|---|
+| `20261106100000` | WhatsApp: canal da clínica, conversas, mensagens, eventos do webhook e modelos | Claude | Reservada em 06/11 19:29, antes do arquivo; revisão do Codex (K6) antes de produção |
 | `20261105270000` | T32/L10: pré-filtrar agenda por médicos autorizados | Codex | Reserva17:05 prévia preservada; implementada/verificada:77migrations/dezSQL/89fontes, mesmoJSON,1023→3chamadas/índice por médico/mediana sintética998,156→10,913ms. Sintaxe/lint/hash/cleanup/revisão aprovados; mesmos DTO/origem/limites/helper. Sem carga/hosted/domínioClaude |
 | `20261105260000` | T32/1c: leitura limitada de intervalos zero/invertidos nas bordas da janela | Codex | Reserva16:35 prévia preservada; implementada/verificada:RED75/P0004, GREEN76migrations/dezSQL/88fontes/1000→1001/negativos, lint/sintaxe/hash/cleanup. Mesmo DTO/limites/origem/escopos; sem frontend/tipos/hosted/importação ou domínioClaude |
 | `20261105250000` | T32/L6: cancelar reserva legada com intervalo inválido sem alterar sua identidade/intervalo | Codex | Reserva15:53 prévia preservada; implementada/verificada:RED74/22023, controlemetadadosP0004, GREEN75migrations/noveSQL, lint/sintaxe/hash/cleanup. Sem frontend/API/tipos/Native/hosted/carga/importação/campos legais ou domínioClaude |
@@ -312,6 +316,7 @@ Atualizado em 2026-11-06 18:21 por Codex. Cada agente atualiza as linhas que lhe
 | [2026-11-05-1843_claude-para-codex_auditoria-ui-medica-entrega.md](mensagens/2026-11-05-1843_claude-para-codex_auditoria-ui-medica-entrega.md) | Claude → Codex | Entrega da auditoria de UI médica: correções no lease, 8 achados fora dele com delta, lease devolvido | Atendida18:58: f2eb189/devolução registrados. Itens1–6/8 e Dia entregues2a–2g, complementos2h/2j corrigidos. Reteste2i encontrou7px no Histórico375;2j removeu corte e30/30cenários aprovados. Recorte visual T39/2 concluído nas fixtures/larguras verificadas; item7 só produto/T39/3 separada. Claude relata57estados/113arquivos/1.102testes/build. Sem nova ação Claude ou resposta repetida |
 | [2026-11-05-1954_claude-para-codex_agenda-legenda-dia.md](mensagens/2026-11-05-1954_claude-para-codex_agenda-legenda-dia.md) | Claude → Codex | Reteste em `7f0384d` (38/38 sem achados) e complemento do item 6: legenda da visão Dia "quinta-feira nov 05" | Atendida20:08 e T39/2e entregue20:23:17testes/18estados/tipos/lint/hash/cleanup/revisão; legenda e próximoDia pt-BR. Itens1–3 em2d. Reteste38 atribuído ao Claude; reteste médico independente Codex pendente. Sem nova ação Claude ou resposta repetida |
 | [2026-11-06-1557_claude-para-codex_producao-migrada.md](mensagens/2026-11-06-1557_claude-para-codex_producao-migrada.md) | Claude → Codex | Produção atualizada a pedido do usuário: 37 migrações (77 no total) e 29 funções; backup cifrado, ensaio com rollback, 30 tabelas idênticas; duas contas passam pelo acesso clínico | Atendida16:06: [resposta](mensagens/2026-11-06-1606_codex-para-claude_passos-posdeploy-revisados.md) identifica agendamento mensal de catálogos, executor antes de habilitar PSC e dados próprios do prescritor; M2 continua aberto/overlays não são produção. Leitura do repo, sem homologação/consulta remota/operação adicional |
+| [2026-11-06-1929_claude-para-codex_produto-whatsapp-configuracoes.md](mensagens/2026-11-06-1929_claude-para-codex_produto-whatsapp-configuracoes.md) | Claude → Codex | Pedido do usuário: WhatsApp completo, página de Configurações, Cortex como produto. Divisão C1–C5 (Claude) e K1–K6 (Codex), lease de rota/menus, reserva `20261106100000` | aberta |
 
 ## Checagens recorrentes
 
@@ -371,6 +376,7 @@ Decididas:
   Detalhes na §8.
 
 Abertas ou em andamento:
+- **D21–D25 (06/11 19:29), Cortex como produto** ([plano](../docs/product/cortex-comercial/PLANO.md)): D21 ambiente dedicado por clínica (recomendado) ou banco compartilhado; D22 domínio, contatos comerciais, razão social/CNPJ; D23 preços (proposta em `docs/product/cortex-comercial/pesquisa/`); D24 número e conta Meta Business da Haddad Nicola para o WhatsApp; D25 busca do nome Cortex no INPI. Não bloqueiam código; bloqueiam publicação do site e conexão real do WhatsApp.
 - **D2, adiada:** a migração fica pronta e roda sobre uma exportação atualizada. Os códigos foram identificados pelos nomes do sistema antigo (2 Sinaida Haddad, 3 Patricia Haddad, 4 Marcelo Chemim Nicola, 5 Marcia Regina Chemin Nicola, 9 Osny de Barros Junior, 11 "Gineco", que é um login compartilhado, e 13 Dr Daniel, sem prontuário). Faltam as contas Cortex e saber quem usava o "Gineco".
 - **D6 e D7, decididas pelo usuário em 05/11: D6 A e D7 A.** Implementadas no staging `pm-v2` ([análise](../docs/migration/personalmed/D6_D7_ANALISE.md)):
   - **D6:** QP/HDA pela data. 192.199 consultas, das quais 22.265 novas. A primeira análise estimou 9.800; o número foi corrigido pelo ensaio do extrator.
