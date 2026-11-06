@@ -1,0 +1,141 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "415dea40c9bf48fba2d164fcb6492130e4929fb9",
+  "scope": "T39/3c/2c/1 successful synthetic stale cleanup/enrollment, metadata refresh and square QR",
+  "red": {
+    "run": "mfa-enrollment-red",
+    "completed": false,
+    "qr": {
+      "width": 254.21875,
+      "height": 280.796875,
+      "contentWidth": 254.17923387096775
+    },
+    "componentFailure": "Removed pending factor remained cached after enrollment"
+  },
+  "green": {
+    "run": "mfa-enrollment-final",
+    "states": 12,
+    "qr": [
+      {
+        "width": 254.21875,
+        "height": 254.21875,
+        "left": 60.390625,
+        "right": 314.609375,
+        "contentLeft": 60.410383064516125,
+        "contentRight": 314.5896169354839,
+        "contentWidth": 254.17923387096778
+      },
+      {
+        "width": 280.796875,
+        "height": 280.796875,
+        "left": 246.796875,
+        "right": 527.59375,
+        "contentLeft": 246.81038450118766,
+        "contentRight": 1033.1896154988124,
+        "contentWidth": 786.3792309976247
+      },
+      {
+        "width": 280.796875,
+        "height": 280.796875,
+        "left": 566.796875,
+        "right": 847.59375,
+        "contentLeft": 566.8103845011876,
+        "contentRight": 1353.1896154988124,
+        "contentWidth": 786.3792309976247
+      }
+    ],
+    "mutations": 6,
+    "newFactorVerified": false,
+    "placeholderOnly": true,
+    "cancellationDismissed": true
+  },
+  "regression": {
+    "run": "mfa-enrollment-final-focus",
+    "states": 12,
+    "passed": true
+  },
+  "tests": {
+    "nodeTests": 10,
+    "newNodeRedFailures": 2,
+    "vitestTests": 14,
+    "files": 2,
+    "newComponentRedFailures": 1,
+    "greenExit": 0,
+    "rerun": "First threads run timed out in helper/worker start; single fork/no-isolate/testTimeout30000 rerun passed unchanged assertions"
+  },
+  "checks": {
+    "types": true,
+    "uiLintFiles": 2,
+    "scriptLintSyntaxFiles": 3,
+    "invalidFlagCombinations": 3,
+    "hashes": true,
+    "cleanup": true
+  },
+  "review": {
+    "actionable": "QR containment needed actual left/right content edges",
+    "fixed": "Record and assert both content edges within2px; final browser matrices rerun",
+    "external": "Not invoked for non-interactive heartbeat"
+  },
+  "sources": [
+    {
+      "path": "src/pages/AccountSecurity.tsx",
+      "sha256": "b4df9df4b80eacfccb4f04cc892171b9d3c8efaaab222af20b91c5e975d33fef"
+    },
+    {
+      "path": "src/pages/AccountSecurity.test.tsx",
+      "sha256": "c819f4a53944305630fae560c21c9aee86961debd2ab16bd183ca90ce42ee833"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.node-test.mjs",
+      "sha256": "50f8044cac4b8d527f2fd75c397f354b86e77ea4f350d3c528a65d625e01faf8"
+    }
+  ],
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "4f4ccfa8b2f5aa6bd60db65aa07d86451ef2c9be79c6314fb331c1a5cf1d7ae1"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "2677a79838c9db50120bd21473141c57a2a809589801ffc51e98823121b6113f"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "limits": [
+    "No real Auth/TOTP/AAL2/persistence/authority proof",
+    "SVG and key are explicitly fake and unusable",
+    "New-factor deletion and challenge/verification remain forbidden; native cancellation is dismissed only"
+  ]
+}

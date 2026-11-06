@@ -3,14 +3,16 @@ import http from 'node:http';
 import { z } from 'zod';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false } = {}) {
   if(delegationDecisions&&!delegationPermissions)throw new Error('Delegation decisions require the permissions fixture');
   if(delegationReplay&&(!delegationPermissions||!delegationDecisions))throw new Error('Delegation replay requires the permissions and decision fixtures');
   if(mfaReview&&(workspaceDates||medicalUI||delegationPermissions||delegationDecisions||delegationReplay))throw new Error('MFA review is an isolated fixture');
   if(mfaCleanupReview&&!mfaReview)throw new Error('MFA cleanup review requires its MFA read fixture');
+  if(mfaEnrollmentReview&&(!mfaReview||mfaCleanupReview))throw new Error('MFA enrollment requires isolated MFA reads without cleanup-denial mode');
   const now=new Date().toISOString();
   const user={id:uid,email:'review@example.invalid',aud:'authenticated',role:'authenticated',created_at:now,email_confirmed_at:now,app_metadata:{provider:'email'},user_metadata:{},factors:[]};
   if(mfaReview)user.factors=['verified','verified','unverified'].map((status,index)=>({id:['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','cccccccc-cccc-4ccc-8ccc-cccccccccccc'][index],friendly_name:'Autenticador sintético '+['A','B','pendente'][index],factor_type:'totp',status,created_at:'2026-11-05T12:00:00Z',updated_at:'2026-11-05T12:00:00Z'}));
+  const initialMfaFactors=structuredClone(user.factors),newMfaFactorId='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
   const token=[{alg:'HS256',typ:'JWT'},{sub:uid,role:'authenticated',aud:'authenticated',aal:'aal1',exp:Math.floor(Date.now()/1000)+86400,iat:Math.floor(Date.now()/1000)}].map(value=>Buffer.from(JSON.stringify(value)).toString('base64url')).join('.')+'.synthetic-signature';
   const patients=[{id:patientId,user_id:uid,name:'Paciente Exemplo A',age:0,date_of_birth:null,revision:0,profession:'',last_visit:lastVisit,status:'retorno',diagnoses:[],medications:[],allergies:[],clinical_notes:'',medical_history:'',social_anamnesis:'',phone:null,email:null,cpf:null,sex:null,health_insurance:null,archived_at:null}];
   const templates=[{id:'44444444-4444-4444-8444-444444444444',user_id:null,name:'Modelo sintético SOAP',description:'Estrutura para revisão visual',content:'**S (Subjetivo):** relato\n\n**O (Objetivo):** achados\n\n**A:** avaliação\n\n**P:** plano',created_at:now}];
@@ -33,6 +35,8 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   const mfaAllowed=new Set(['POST /auth/v1/token','GET /auth/v1/user']);
   const mfaPendingPath=mfaReview?'/auth/v1/factors/'+user.factors[2].id:null;
   if(mfaCleanupReview){metrics.mfaCleanupCalls=[];mfaAllowed.add('DELETE '+mfaPendingPath);}
+  if(mfaEnrollmentReview){metrics.mfaEnrollmentCalls=[];mfaAllowed.add('DELETE '+mfaPendingPath);mfaAllowed.add('POST /auth/v1/factors');}
+  const mfaEnrollmentInput=z.object({friendly_name:z.string().trim().min(1).max(200),factor_type:z.literal('totp'),issuer:z.literal('Haddad Nicola')}).strict();
   let delegationReadMode='valid';
   const delegationAllowed=new Set(['POST /auth/v1/token','GET /auth/v1/user','POST /rest/v1/rpc/clinic_access','POST /rest/v1/rpc/reception_delegation_requests']);
   if(delegationDecisions)for(const name of ['reception_decide_delegation','reception_revoke_delegation'])delegationAllowed.add('POST /rest/v1/rpc/'+name);
@@ -48,13 +52,25 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,'http://127.0.0.1');let raw='';for await(const chunk of req)raw+=chunk;
     const input=raw?JSON.parse(raw):{};
-    const headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':mfaCleanupReview?'GET,POST,DELETE,OPTIONS':'GET,POST,PATCH,HEAD,OPTIONS','Content-Type':'application/json','Access-Control-Expose-Headers':'content-range'};
+    const headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':mfaCleanupReview||mfaEnrollmentReview?'GET,POST,DELETE,OPTIONS':'GET,POST,PATCH,HEAD,OPTIONS','Content-Type':'application/json','Access-Control-Expose-Headers':'content-range'};
     const send=(data,status=200)=>{res.writeHead(status,headers);res.end(JSON.stringify(data));};
     if(req.method==='OPTIONS')return send({});
     if(mfaReview){
       const call={method:req.method,path:url.pathname};metrics.mfaRequests.push(call);
       if(!mfaAllowed.has(call.method+' '+call.path)){metrics.mfaUnexpected.push(call);return send({code:'TEST_UNEXPECTED_RESOURCE',message:'Unexpected MFA test resource'},403);}
       if(mfaCleanupReview&&call.method==='DELETE'&&call.path===mfaPendingPath){metrics.mfaCleanupCalls.push({factorId:user.factors[2].id,status:403});return send({code:'insufficient_aal',message:'Synthetic pending factor cleanup denied'},403);}
+      if(mfaEnrollmentReview&&call.method==='DELETE'&&call.path===mfaPendingPath){
+        const index=user.factors.findIndex(factor=>factor.id===initialMfaFactors[2].id&&factor.status==='unverified');
+        if(index<0)return send({code:'TEST_MFA_ORDER',message:'Synthetic pending setup already removed'},409);
+        const [removed]=user.factors.splice(index,1);metrics.mfaEnrollmentCalls.push({kind:'remove',factorId:removed.id});return send({id:removed.id});
+      }
+      if(mfaEnrollmentReview&&call.method==='POST'&&call.path==='/auth/v1/factors'){
+        const parsed=mfaEnrollmentInput.safeParse(input);if(!parsed.success)return send({code:'TEST_INVALID_INPUT',message:'Invalid synthetic enrollment'},400);
+        if(user.factors.some(factor=>factor.status==='unverified'))return send({code:'TEST_MFA_ORDER',message:'Synthetic flow requires cleanup before enrollment'},409);
+        const factor={...initialMfaFactors[2],id:newMfaFactorId,friendly_name:parsed.data.friendly_name};user.factors.push(factor);
+        metrics.mfaEnrollmentCalls.push({kind:'enroll',factorId:factor.id,args:parsed.data});
+        return send({id:factor.id,type:'totp',friendly_name:factor.friendly_name,totp:{qr_code:'<svg xmlns="http://www.w3.org/2000/svg" width="208" height="208" viewBox="0 0 208 208"><rect width="208" height="208" fill="white"/><text x="20" y="104" fill="black">SYNTHETIC ONLY</text></svg>',secret:'SYNTHETIC-NOT-A-REAL-SECRET'}});
+      }
     }
     if(delegationPermissions){
       const call={method:req.method,path:url.pathname};metrics.delegationRequests.push(call);
@@ -129,6 +145,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   return {origin:`http://127.0.0.1:${server.address().port}`,metrics,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,mfaFactors:mfaReview?user.factors:null,delegationRows,
+    resetMfaEnrollment(){if(!mfaEnrollmentReview)throw new Error('MFA enrollment fixture is not enabled');user.factors.splice(0,user.factors.length,...structuredClone(initialMfaFactors));},
     setDelegationReadMode(mode){if(!delegationPermissions||!['valid','invalid','denied'].includes(mode))throw new Error('Unsupported delegation fixture mode');delegationReadMode=mode;},
     resetDelegationDecisions(){if(!delegationDecisions)throw new Error('Delegation decision fixture is not enabled');delegationRows.splice(0,delegationRows.length,...structuredClone(initialDelegations));delegationReceipts.clear();lostDelegationReplies.clear();},
     armDelegationLostReply(requestId){

@@ -64,4 +64,16 @@ describe('TOTP metadata including abandoned setups', () => {
     expect(screen.getByRole('alert')).toHaveFocus(); expect(input).toHaveValue('12345'); expect(selector).toHaveValue(active.id);
     expect(mocks.unenroll).toHaveBeenCalledTimes(2); expect(mocks.enroll).not.toHaveBeenCalled();
   });
+  it('refreshes factor metadata after enrollment instead of keeping the removed pending setup', async () => {
+    const fresh = { ...pending, id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', friendly_name: 'Nova configuração sintética' };
+    mocks.listFactors.mockResolvedValueOnce({ data: { all: [active, pending, phone], totp: [active] }, error: null })
+      .mockResolvedValue({ data: { all: [active, fresh, phone], totp: [active] }, error: null });
+    mount(); await screen.findByText('Pendente sintético · Configuração pendente');
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar autenticador' }));
+    await screen.findByRole('heading', { name: 'Configurar aplicativo' });
+    await screen.findByText('Nova configuração sintética · Configuração pendente');
+    expect(screen.queryByText('Pendente sintético · Configuração pendente')).not.toBeInTheDocument();
+    expect(screen.getByText('Ativo sintético · Ativo')).toBeVisible();
+    expect(mocks.listFactors).toHaveBeenCalledTimes(2);
+  });
 });

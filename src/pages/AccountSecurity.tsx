@@ -54,6 +54,7 @@ export default function AccountSecurity() {
       if (error) throw error;
       setSetup({ id: data.id, qr: data.totp.qr_code, secret: data.totp.secret });
       setFactor(data.id);
+      void client.invalidateQueries({ queryKey: ['mfa-factors', user?.id] });
     });
   const verify = () =>
     run(async () => {
@@ -143,7 +144,7 @@ export default function AccountSecurity() {
                 : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(setup.qr)
             }
             alt="QR code para configurar seu autenticador"
-            className="w-52 h-52"
+            className="w-52 max-w-full h-auto"
           />
           <details>
             <summary className="cursor-pointer text-sm">Inserir chave manualmente</summary>

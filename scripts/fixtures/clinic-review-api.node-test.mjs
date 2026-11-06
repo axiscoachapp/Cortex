@@ -4,6 +4,34 @@ import { startClinicFixture } from './clinic-review-api.mjs';
 
 // Run explicitly with node --test; keep this outside Vitest's .test discovery.
 
+test('MFA enrollment requires isolated reads and excludes cleanup-denial mode', async () => {
+  for (const options of [{ mfaEnrollmentReview: true }, { mfaReview: true, mfaCleanupReview: true, mfaEnrollmentReview: true }]) {
+    let api;
+    try { await assert.rejects(async () => { api = await startClinicFixture(options); }, /enrollment/); }
+    finally { if (api) await api.close(); }
+  }
+});
+
+test('synthetic enrollment validates input, cleans the stale setup, protects active factors and resets', async () => {
+  const api = await startClinicFixture({ mfaReview: true, mfaEnrollmentReview: true });
+  try {
+    const before = structuredClone(api.mfaFactors), pending = before[2];
+    const input = { friendly_name: 'Autenticador sintético novo', factor_type: 'totp', issuer: 'Haddad Nicola' };
+    const enroll = body => fetch(api.origin + '/auth/v1/factors', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const bad = await enroll({ ...input, actorId: before[0].id }); assert.equal(bad.status, 400);
+    const early = await enroll(input); assert.equal(early.status, 409); assert.deepEqual(api.mfaFactors, before);
+    const removed = await fetch(api.origin + '/auth/v1/factors/' + pending.id, { method: 'DELETE' }); assert.equal(removed.status, 200);
+    const created = await enroll(input); assert.equal(created.status, 200); const dto = await created.json();
+    assert.equal(dto.type, 'totp'); assert.match(dto.totp.qr_code, /svg/); assert.equal(dto.totp.secret, 'SYNTHETIC-NOT-A-REAL-SECRET');
+    assert.deepEqual(api.mfaFactors.slice(0, 2), before.slice(0, 2)); assert.equal(api.mfaFactors[2].id, dto.id); assert.equal(api.mfaFactors[2].status, 'unverified');
+    assert.deepEqual(api.metrics.mfaEnrollmentCalls.map(call => call.kind), ['remove', 'enroll']);
+    for (const [method, path] of [['DELETE', '/auth/v1/factors/' + before[0].id], ['DELETE', '/auth/v1/factors/' + dto.id], ['POST', '/auth/v1/factors/' + dto.id + '/challenge']]) {
+      const denied = await fetch(api.origin + path, { method }); assert.equal(denied.status, 403);
+    }
+    api.resetMfaEnrollment(); assert.deepEqual(api.mfaFactors, before);
+  } finally { await api.close(); }
+});
+
 test('MFA cleanup denial requires its read fixture, denies only the pending DELETE and never enrolls', async () => {
   let invalid;
   try { await assert.rejects(async () => { invalid = await startClinicFixture({ mfaCleanupReview: true }); }, /requires/); }
