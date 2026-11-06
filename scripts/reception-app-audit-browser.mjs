@@ -14,18 +14,19 @@ import { startClinicFixture, patientId, uid } from './fixtures/clinic-review-api
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
 const timestampOnly = args.includes('--only=short-timestamps');
 const medicalOnly = args.includes('--only=medical-delivery');
 const delegationOnly = args.includes('--only=delegation-read');
+const delegationDecisionOnly = args.includes('--only=delegation-decision'), delegationMode = delegationOnly || delegationDecisionOnly;
 const medicalHistoryOnly = args.includes('--medical-history-only');
 assert.ok(!medicalHistoryOnly || medicalOnly, 'Medical history focus requires medical delivery mode');
 const checkWorkspaceLayout = args.includes('--check-workspace-layout');
 assert.ok(!checkWorkspaceLayout || timestampOnly, 'Workspace layout checks require the populated timestamp audit');
-const welcomeOnly = args.includes('--only=welcome-dashboard'), focusedOnly = weekOnly || welcomeOnly || chatOnly || timestampOnly || medicalOnly || delegationOnly;
+const welcomeOnly = args.includes('--only=welcome-dashboard'), focusedOnly = weekOnly || welcomeOnly || chatOnly || timestampOnly || medicalOnly || delegationMode;
 assert.ok(args.filter(arg => arg.startsWith('--only=')).length <= 1, 'Only one focused audit mode is supported');
 assert.ok(!weekOnly || !args.some(arg => arg.startsWith('--check-')), 'Week caption mode runs its own checks');
 assert.ok(!welcomeOnly || !args.some(arg => arg.startsWith('--check-')), 'Welcome mode runs its own checks');
@@ -33,6 +34,7 @@ assert.ok(!chatOnly || !args.some(arg => arg.startsWith('--check-')), 'Chat prom
 assert.ok(!timestampOnly || !args.some(arg => arg.startsWith('--check-') && arg !== '--check-workspace-layout'), 'Timestamp mode only supports workspace layout checks');
 assert.ok(!medicalOnly || !args.some(arg => arg.startsWith('--check-')), 'Medical delivery mode runs its own checks');
 assert.ok(!delegationOnly || !args.some(arg => arg.startsWith('--check-')), 'Delegation read mode runs its own checks');
+assert.ok(!delegationDecisionOnly || !args.some(arg => arg.startsWith('--check-')), 'Delegation decision mode runs its own checks');
 const checkMobileNavigation = args.includes('--check-mobile-navigation');
 assert.ok(!timeOnly || !checkMobileNavigation, 'Mobile navigation checks require the full route audit');
 const checkCalendarHeader = args.includes('--check-calendar-header');
@@ -46,7 +48,7 @@ const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivac
 for (const path of overlays) assert.match(path, allowed, 'Overlay must be in the Codex audit scope');
 assert.ok(!overlays.includes('src/components/PatientProfileDrawer.tsx') || medicalOnly, 'Profile overlay requires medical delivery mode');
 assert.ok(!medicalOnly || overlays.length <= 1 && overlays.every(path => path === 'src/components/PatientProfileDrawer.tsx'), 'Medical delivery only permits the explicit profile overlay');
-assert.ok(!delegationOnly || overlays.length === 0, 'Delegation read mode uses only the committed snapshot');
+assert.ok(!delegationMode || overlays.length === 0, 'Delegation modes use only the committed snapshot');
 const run = args.find(arg => arg.startsWith('--run='))?.slice(6) || 'baseline';
 const folder = resolve('docs/reviews/2026-11-05/reception-app-audit', run);
 await mkdir(dirname(folder), { recursive: true });
@@ -77,6 +79,7 @@ const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/c
 const ownHashes = await Promise.all(ownPaths.map(async path => ({ path, sha256: createHash('sha256').update(await readFile(path)).digest('hex') })));
 const apps = [], apis = [], contexts = [], errors = [], blocked = [], consoleErrors = [], screens = [], failedRequests = [], errorResponses = [];
 const medicalCaseFailures = []; let medicalCasesAttempted = 0;
+const delegationDecisionChecks = [];
 const cacheOwner = randomUUID();
 let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false, draftPreserved = false, timestampDataPreserved = false, medicalDataPreserved = false, delegationDataPreserved = false;
 async function appFor(api) {
@@ -245,12 +248,58 @@ try {
   await writeFile(join(temporaryCache, 'audit-owner'), cacheOwner);
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
   if (focusedOnly) {
-    const api = await startClinicFixture(welcomeOnly ? { lastVisit: '2026-10-01' } : timestampOnly ? { workspaceDates: true } : medicalOnly ? { medicalUI: true } : delegationOnly ? { delegationPermissions: true } : {}); apis.push(api); const app = await appFor(api);
+    const api = await startClinicFixture(welcomeOnly ? { lastVisit: '2026-10-01' } : timestampOnly ? { workspaceDates: true } : medicalOnly ? { medicalUI: true } : delegationMode ? { delegationPermissions: true, delegationDecisions: delegationDecisionOnly } : {}); apis.push(api); const app = await appFor(api);
     const chatPath = '/?patient=' + patientId;
-    const doctor = await scene(app, 'review', delegationOnly ? '/permissoes-recepcao' : timestampOnly ? '/trabalho' : chatOnly || medicalOnly ? chatPath : welcomeOnly ? '/' : '/agenda');
+    const doctor = await scene(app, 'review', delegationMode ? '/permissoes-recepcao' : timestampOnly ? '/trabalho' : chatOnly || medicalOnly ? chatPath : welcomeOnly ? '/' : '/agenda');
     await doctor.waitForLoadState('networkidle');
     await doctor.clock.setFixedTime(new Date('2026-11-05T15:00:00Z'));
-    if (delegationOnly) {
+    if (delegationDecisionOnly) {
+      const originalRows = structuredClone(api.delegationRows), targetId = originalRows[0].id;
+      const target = page => page.locator('article').filter({ has: page.getByRole('heading', { name: originalRows[0].staffName, exact: true }) });
+      for (const width of [375, 1280, 1920]) {
+        api.resetDelegationDecisions(); const before = api.metrics.delegationWrites.length;
+        await capture(doctor, app, 'permissions', '/permissoes-recepcao', width, async page => {
+          await expect(target(page).getByText('Aguardando médico', { exact: true })).toBeVisible();
+          await target(page).getByRole('button', { name: 'Aprovar acesso', exact: true }).click();
+          const dialog = page.getByRole('dialog'); for (const label of [originalRows[0].staffName, originalRows[0].clinicName, originalRows[0].doctorName, 'prontuários']) await expect(dialog).toContainText(label);
+          await expect(dialog.getByRole('button', { name: 'Confirmar aprovação', exact: true })).toBeEnabled(); assert.equal(api.metrics.delegationWrites.length, before);
+        }, 'decision-approval-confirmation');
+        await doctor.getByRole('dialog').getByRole('button', { name: 'Confirmar aprovação', exact: true }).click();
+        await expect(target(doctor).getByText('Aprovado', { exact: true })).toBeVisible(); await doctor.waitForLoadState('networkidle');
+        assert.equal(api.metrics.delegationWrites.length, before + 1);
+        await capture(doctor, app, 'permissions', '/permissoes-recepcao', width, async page => {
+          await expect(target(page).getByText('Acesso ativo', { exact: true })).toBeVisible(); await expect(target(page).getByRole('button', { name: 'Aprovar acesso', exact: true })).toHaveCount(0); await target(page).scrollIntoViewIfNeeded();
+        }, 'decision-approved');
+        await capture(doctor, app, 'permissions', '/permissoes-recepcao', width, async page => {
+          await target(page).getByRole('button', { name: 'Revogar acesso', exact: true }).click(); const dialog = page.getByRole('dialog'); for (const label of [originalRows[0].staffName, originalRows[0].clinicName, originalRows[0].doctorName, 'O histórico será preservado']) await expect(dialog).toContainText(label);
+          await expect(dialog.getByRole('button', { name: 'Confirmar revogação', exact: true })).toBeEnabled(); assert.equal(api.metrics.delegationWrites.length, before + 1);
+        }, 'decision-revocation-confirmation');
+        await doctor.getByRole('dialog').getByRole('button', { name: 'Confirmar revogação', exact: true }).click();
+        await expect(target(doctor).getByText('Revogado', { exact: true })).toBeVisible(); await doctor.waitForLoadState('networkidle');
+        assert.equal(api.metrics.delegationWrites.length, before + 2);
+        await capture(doctor, app, 'permissions', '/permissoes-recepcao', width, async page => {
+          await expect(target(page).getByText('Revogado', { exact: true })).toBeVisible(); await expect(target(page).getByText('Sem acesso ativo', { exact: true })).toBeVisible(); await expect(target(page).getByRole('button', { name: 'Revogar acesso', exact: true })).toHaveCount(0); await target(page).scrollIntoViewIfNeeded();
+        }, 'decision-revoked');
+        const [approval, revocation] = api.metrics.delegationWrites.slice(before);
+        assert.equal(approval.args.p_request, targetId); assert.equal(revocation.args.p_request, targetId); assert.equal(approval.args.p_revision, 1); assert.equal(revocation.args.p_revision, 2); assert.notEqual(approval.args.p_operation, revocation.args.p_operation);
+        assert.deepEqual(api.delegationRows.slice(1), originalRows.slice(1));
+        assert.deepEqual(api.delegationRows[0], { ...originalRows[0], state: 'revoked', revision: 3, effective: false, canDecide: false, canRevoke: false });
+        delegationDecisionChecks.push({ width, targetId, approvalOperation: approval.args.p_operation, revocationOperation: revocation.args.p_operation, successfulWrites: 2 });
+      }
+      assert.equal(api.metrics.delegationWrites.length, 6);
+      const allowed = new Set(['POST /auth/v1/token', 'GET /auth/v1/user', 'POST /rest/v1/rpc/clinic_access', 'POST /rest/v1/rpc/reception_delegation_requests', 'POST /rest/v1/rpc/reception_decide_delegation', 'POST /rest/v1/rpc/reception_revoke_delegation']);
+      assert.ok(api.metrics.delegationRequests.every(call => allowed.has(call.method + ' ' + call.path))); assert.deepEqual(api.metrics.delegationUnexpected, []);
+      assert.equal(api.metrics.delegationRequests.filter(call => /reception_(decide|revoke)_delegation$/.test(call.path)).length, 6);
+      assert.equal(new Set(api.metrics.delegationWrites.map(write => write.args.p_operation)).size, 6);
+      assert.equal(screens.length, 12, 'Expected four decision states at three widths');
+      for (const measured of screens) {
+        assert.ok(measured.overflow <= 1 && measured.dialogHorizontalOverflow <= 1 && !measured.dialogOutsideViewport && measured.dialogActionReachable !== false, 'Delegation decision layout or dialog action is clipped');
+        assert.equal(measured.recoveryScreen, false);
+        assert.deepEqual(measured.missingButtons, []); assert.deepEqual(measured.missingLabels, []); assert.deepEqual(measured.brokenText, []);
+      }
+      for (const key of ['briefings', 'checklists', 'chat', 'newSources', 'patientWrites', 'appointmentWrites']) assert.equal(api.metrics[key], 0);
+      for (const observations of [errors, consoleErrors, failedRequests, errorResponses, blocked]) assert.deepEqual(observations, []);
+    } else if (delegationOnly) {
       const originalData = JSON.stringify(api.delegationRows);
       const ready = async page => {
         await expect(page.getByRole('heading', { name: 'Permissões da recepção', exact: true })).toBeVisible();
@@ -487,7 +536,7 @@ try {
   }, 'block-time-dialog');
   }
   for (const source of [...ownHashes, ...overlayHashes]) assert.equal(createHash('sha256').update(await readFile(source.path)).digest('hex'), source.sha256, 'Audit source changed during run');
-  const requiredSources = delegationOnly ? ['src/features/reception/DelegationPermissions.tsx', 'src/features/reception/delegationApi.ts'] : medicalOnly ? medicalHistoryOnly ? ['src/components/PatientProfileDrawer.tsx'] : medicalPaths : timestampOnly ? ['src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/lib/recordingRescue.ts'] : chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
+  const requiredSources = delegationMode ? ['src/features/reception/DelegationPermissions.tsx', 'src/features/reception/delegationApi.ts'] : medicalOnly ? medicalHistoryOnly ? ['src/components/PatientProfileDrawer.tsx'] : medicalPaths : timestampOnly ? ['src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/lib/recordingRescue.ts'] : chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
   for (const path of ['src/App.tsx', 'src/pages/Auth.tsx', ...overlays, ...requiredSources]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
   if (medicalOnly) assert.deepEqual(medicalCaseFailures, [], 'Medical delivery has unresolved case failures');
   if (checkMobileNavigation || welcomeOnly) assert.equal(navigationKeyboardVerified, true, 'Keyboard navigation did not complete');
@@ -508,7 +557,7 @@ try {
   cleanupVerified = true;
 }
 const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, chatOnly, timestampOnly, checkWorkspaceLayout, timestampDataPreserved, timestampMetrics: timestampOnly ? { ...apis[0]?.metrics } : null, draftPreserved, welcomeMetrics: welcomeOnly || chatOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
-  delegationOnly, delegationDataPreserved, delegationMetrics: delegationOnly ? { ...apis[0]?.metrics } : null,
+  delegationOnly, delegationDecisionOnly, delegationDecisionChecks, delegationDataPreserved, delegationMetrics: delegationMode ? { ...apis[0]?.metrics } : null,
   medicalOnly, medicalHistoryOnly, medicalDelivery, medicalBaseSources, medicalCasesAttempted, medicalCaseFailures, medicalDataPreserved, medicalMetrics: medicalOnly ? { ...apis[0]?.metrics } : null,
   medicalSources: medicalOnly ? medicalPaths.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') })) : [],
   frozenLoads: [...frozenLoads].sort(), screens, errors, consoleErrors, failedRequests, errorResponses, blockedExternalRequests: blocked, cleanupVerified };

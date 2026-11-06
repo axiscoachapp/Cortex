@@ -1,0 +1,46 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "invalidOptionRejected": true,
+  "probes": [
+    {
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "status": 403,
+      "code": "TEST_UNEXPECTED_RESOURCE"
+    },
+    {
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "status": 400,
+      "code": "22023"
+    },
+    {
+      "path": "/rest/v1/rpc/reception_revoke_delegation",
+      "status": 409,
+      "code": "40001"
+    },
+    {
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "status": 200,
+      "code": null
+    },
+    {
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "status": 409,
+      "code": "40001"
+    },
+    {
+      "path": "/rest/v1/rpc/reception_revoke_delegation",
+      "status": 200,
+      "code": null
+    }
+  ],
+  "readOnlyModeUnchanged": true,
+  "invalidInputAndStaleStatePreserved": true,
+  "unrelatedRowsPreserved": true,
+  "closed": true,
+  "source": {
+    "path": "scripts/fixtures/clinic-review-api.mjs",
+    "sha256": "11c5a21c946d116cec650df660d2e1e3857546c9ed91e73368b3c95d28fcdb17"
+  },
+  "scope": "Fixture protocol checks only; not database authorization, server idempotency or UI conflict recovery"
+}

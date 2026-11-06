@@ -1,0 +1,155 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "e891c678ccea88e4016e42219a3538d70313a51d",
+  "scope": "Positive approval/revocation confirmation in integrated client; in-memory transport only",
+  "browser": {
+    "states": 12,
+    "widths": [
+      375,
+      1280,
+      1920
+    ],
+    "explicitApprovals": 3,
+    "explicitRevocations": 3,
+    "successfulWrites": 6,
+    "uniqueOperations": 6,
+    "identityAndSiblingRowsPreserved": true,
+    "resetsPerWidth": true
+  },
+  "writes": [
+    {
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "args": {
+        "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "p_revision": 1,
+        "p_operation": "64a0df49-8d42-4ef2-9c6d-efe8c530a9e9",
+        "p_decision": "approve"
+      },
+      "beforeRevision": 1,
+      "snapshot": {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "state": "approved",
+        "revision": 2,
+        "capabilityVersion": "clinic_reception_v1"
+      }
+    },
+    {
+      "path": "/rest/v1/rpc/reception_revoke_delegation",
+      "args": {
+        "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "p_revision": 2,
+        "p_operation": "3ed03746-5e66-47a6-9376-8e5955d175c2"
+      },
+      "beforeRevision": 2,
+      "snapshot": {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "state": "revoked",
+        "revision": 3,
+        "capabilityVersion": "clinic_reception_v1"
+      }
+    },
+    {
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "args": {
+        "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "p_revision": 1,
+        "p_operation": "35ad9d5f-a137-4bf4-bee8-b9f43e9bd84f",
+        "p_decision": "approve"
+      },
+      "beforeRevision": 1,
+      "snapshot": {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "state": "approved",
+        "revision": 2,
+        "capabilityVersion": "clinic_reception_v1"
+      }
+    },
+    {
+      "path": "/rest/v1/rpc/reception_revoke_delegation",
+      "args": {
+        "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "p_revision": 2,
+        "p_operation": "c43dcec0-c24e-46ac-8360-df9c693afc57"
+      },
+      "beforeRevision": 2,
+      "snapshot": {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "state": "revoked",
+        "revision": 3,
+        "capabilityVersion": "clinic_reception_v1"
+      }
+    },
+    {
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "args": {
+        "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "p_revision": 1,
+        "p_operation": "cf4de081-9322-453c-bf92-da6b49d545d5",
+        "p_decision": "approve"
+      },
+      "beforeRevision": 1,
+      "snapshot": {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "state": "approved",
+        "revision": 2,
+        "capabilityVersion": "clinic_reception_v1"
+      }
+    },
+    {
+      "path": "/rest/v1/rpc/reception_revoke_delegation",
+      "args": {
+        "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "p_revision": 2,
+        "p_operation": "abe4ec4c-59f2-4c56-8b11-95c9c025b016"
+      },
+      "beforeRevision": 2,
+      "snapshot": {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "state": "revoked",
+        "revision": 3,
+        "capabilityVersion": "clinic_reception_v1"
+      }
+    }
+  ],
+  "unit": {
+    "files": 2,
+    "tests": 20,
+    "exitCode": 0
+  },
+  "regression": {
+    "mode": "delegation-read",
+    "states": 15,
+    "passed": true,
+    "mutationsStillDenied": true
+  },
+  "guardProbes": {
+    "file": "DELEGATION_DECISION_GUARDS.json",
+    "count": 6,
+    "passed": true
+  },
+  "checks": {
+    "runnerAndFixtureLint": true,
+    "nodeSyntax": true,
+    "invalidFlagCombinationsRefused": 3,
+    "hashes": true,
+    "cleanup": true
+  },
+  "review": {
+    "actionable": "Decision captures did not initially assert recorded UI defects",
+    "fixed": "All12 decision states now assert layout, dialog reachability, labels and runtime recovery",
+    "final": "No additional actionable defect",
+    "external": "Declined by user"
+  },
+  "network": {
+    "unexpectedResources": 0,
+    "errors": 0,
+    "clinicalReads": 0,
+    "otherAiOrWrites": 0
+  },
+  "limits": [
+    "No server idempotency/replay implementation in mock",
+    "UI CAS/lost-reply/retry/read-denial coverage pending",
+    "No real grant/RLS/persistence proof or app-source edits"
+  ]
+}
