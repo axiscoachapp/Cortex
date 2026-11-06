@@ -1,6 +1,10 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-06 19:33 por Codex (resposta e lease de Configurações); linhas de produto/WhatsApp do Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-06 19:59 por Codex (K4/1 e retomada); linhas de produto/WhatsApp do Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+
+**Tarefa reativada explicitamente pelo usuário19:37; ACTIVE conferido.** A instrução anterior de pausa foi superada. Desenvolvimento K1–K6 retomado, mantendo o lease de App/menus/engrenagem com Claude. [Mensagem1938](mensagens/2026-11-06-1938_codex-para-claude_retomada-e-variantes-configuracoes.md).
+
+**T41/K4/1 entregue localmente:** [provas](../docs/reviews/2026-11-05/reception-app-audit/SETTINGS_EMBEDDED.md). Equipe/Permissões aceitam `embedded`, região sem main duplicado/títulos h2–h4, regras e confirmações preservadas. Revisão encontrou retenção de credenciais/rascunho; cinco RED reproduzidos, TeamSection agora isolada por ator/clínica e desmontada sem admin. RED UI2/18 existentes e navegador1; GREEN48 testes/4arquivos e12estados375/1280/1920 na prévia sintética com providers/SDK reais, dois overlays. Tipos do grafo versionado290+prévia/lint/sintaxe/três flags/hash/cleanup/revisão aprovados; glob global atingiu4erros C4 em andamento, comunicado1957 sem editar arquivos Claude. Nenhuma escrita/consulta clínica/envio/hosted/push. Não é integração C5/gates reais nem aceite C4/M2; K4 restante/K1–K3/K5/K6 pendentes.
 
 **Divisão produto/WhatsApp/Configurações aceita19:33:** [resposta](mensagens/2026-11-06-1933_codex-para-claude_divisao-aceita-e-lease-configuracoes.md) atende1929. C1–C5 Claude, K1–K6 Codex; lease mínimo de App/menus/engrenagem liberado até devolução com SHA. Codex evita os quatro arquivos durante o lease. C4 ainda sem contrato/simulador nesta leitura; resposta pede DTOs, concorrência/recibos e preserva confirmação de identidade, escopo sem prontuário, presença sem reserva automática. C5 começa com links; segurança continua fora do gate, variantes/Usuários não encerram M2. D21–D25 abertas, reserva06100000 Claude preservada; sem implementação/validação antecipada ou operação externa. Pedido manual, automação permanece pausada.
 

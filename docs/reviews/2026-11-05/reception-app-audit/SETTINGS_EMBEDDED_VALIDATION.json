@@ -1,0 +1,124 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "2d9a9925183125c5433a7e313b71b1a1d8299ef1",
+  "scope": "T41/K4/1 embedded permissions and team sections, actor/clinic state isolation",
+  "red": {
+    "run": "settings-embedded-red-verified",
+    "states": 1,
+    "h1s": 2,
+    "newUiFailures": 2,
+    "contextFailures": 5
+  },
+  "green": {
+    "run": "settings-embedded-final",
+    "states": 12,
+    "widths": [
+      375,
+      1280,
+      1920
+    ],
+    "sectionChecks": 9,
+    "confirmationViews": 3,
+    "readOnlyRequests": 23,
+    "writes": 0,
+    "source": "Real K4 components/providers/SDK in test-only preview; not production C5 route"
+  },
+  "tests": {
+    "passed": 48,
+    "files": 4,
+    "exit": 0,
+    "isolation": "single fork worker with per-file isolation; no-isolate trial rejected because API mocks leaked across files"
+  },
+  "checks": {
+    "types": "Tracked app roots and preview; untracked C4 work excluded",
+    "uiTestPreviewLint": 5,
+    "auditLintSyntax": true,
+    "invalidFlags": 3,
+    "hashes": true,
+    "cleanup": true,
+    "screenshot375Inspected": true
+  },
+  "review": {
+    "fixed": [
+      "Actor/clinic keyed TeamSection plus non-admin unmount; five failing tests reproduced stale draft/credentials",
+      "Fixed-clock report matches installed scene clock",
+      "Unreachable helper return removed"
+    ],
+    "final": "No remaining actionable findings",
+    "external": "Prior user preference to skip external CLI"
+  },
+  "sources": [
+    {
+      "path": "src/features/reception/DelegationPermissions.tsx",
+      "sha256": "288e281b9e0d4338b4302667dfe2cdd1e977c3a828c52ba46ecdb529fa26a094"
+    },
+    {
+      "path": "src/features/reception/TeamSettings.tsx",
+      "sha256": "330cc2168c1fae1238fe023250a71f8019c74d5a3c6143e7c80647c8f5bc1e0f"
+    },
+    {
+      "path": "src/features/reception/DelegationPermissions.test.tsx",
+      "sha256": "40669d76b84fc620242fbaf3c7310f2d55d75b2f2f1d99f30a8971aa700053a6"
+    },
+    {
+      "path": "src/features/reception/TeamSettings.test.tsx",
+      "sha256": "db0d0a2f04b246d19b8f2e71732a13e42da0b0ba364e22b91b509b3cb64bc3a3"
+    }
+  ],
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "7b508636fd236eb3598c9f78c62b66374036d671de93e289296850a9e914db29"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "4dd734d772088faa3f5b5a5bbed384ff37ee0fdb88ea60843d9e6c422d119895"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "scripts/fixtures/settings-embedded-preview.tsx",
+      "sha256": "c67e4b23cfca2dd0708676c6530c4f4dd2f557f0086027216755cec5cc457688"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "sourceDigest": "5a59cd428060f00dfba265a56f1d31861b40d2ed7d99bb15c496160afa0ab2c6",
+  "fixedClock": "2026-11-05T15:00:00Z",
+  "limits": [
+    "Does not exercise production C5 navigation or SessionAssurance/ClinicAccessGate",
+    "No real Auth/MFA, SQL grants/RLS or remote transport guarantee",
+    "Context replacement demonstrated in component tests; browser checks presentation/read-only behavior",
+    "Global typecheck reached incomplete untracked Claude C4 draft; recorded separately in coordination message1957",
+    "App/navigation lease preserved; no migration/hosted/send/paid call/push"
+  ]
+}

@@ -11,13 +11,29 @@ vi.mock('./api', () => ({ receptionApi: { teamDoctors: mocks.teamDoctors } }));
 const clinic = '11111111-1111-4111-8111-111111111111', staff = '22222222-2222-4222-8222-222222222222';
 const doctor = '33333333-3333-4333-8333-333333333333', request = '44444444-4444-4444-8444-444444444444';
 const row = { id: request, clinicId: clinic, clinicName: 'Clínica sintética', staffId: staff, staffName: 'Recepção sintética', doctorId: doctor, doctorName: 'Médico sintético', createdAt: '2026-11-05T12:00:00.123456+00:00', state: 'pending', revision: 1, capabilityVersion: 'clinic_reception_v1', effective: false, canDecide: true, canCancel: false, canRevoke: false };
-function mount(admin = false) {
+function mount(admin = false, embedded = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const view = (id = mocks.actor) => <QueryClientProvider client={client}><MemoryRouter initialEntries={[admin ? `/permissoes-recepcao?clinica=${clinic}` : '/permissoes-recepcao']}><ClinicAccessContext.Provider value={{ actorId: id, kind: 'clinical', active: true, admin, clinic: { id: clinic, name: 'Clínica sintética' }, doctors: [], staff: [{ id: staff, name: 'Recepção sintética', active: true, doctorIds: [] }] }}><DelegationPermissions /></ClinicAccessContext.Provider></MemoryRouter></QueryClientProvider>;
+  const view = (id = mocks.actor) => <QueryClientProvider client={client}><MemoryRouter initialEntries={[admin ? `/permissoes-recepcao?clinica=${clinic}` : '/permissoes-recepcao']}><ClinicAccessContext.Provider value={{ actorId: id, kind: 'clinical', active: true, admin, clinic: { id: clinic, name: 'Clínica sintética' }, doctors: [], staff: [{ id: staff, name: 'Recepção sintética', active: true, doctorIds: [] }] }}>{embedded ? <main><h1>Configurações</h1><DelegationPermissions embedded /></main> : <DelegationPermissions />}</ClinicAccessContext.Provider></MemoryRouter></QueryClientProvider>;
   return { ...render(view()), client, view };
 }
 describe('physician reception permissions', () => {
   beforeEach(() => { vi.resetAllMocks(); mocks.actor = doctor; mocks.list.mockResolvedValue({ canManage: false, items: [row], nextCursor: null }); mocks.change.mockResolvedValue({}); mocks.request.mockResolvedValue({}); mocks.teamDoctors.mockResolvedValue([{ id: doctor, name: 'Médico sintético', specialty: null }]); });
+  it('embeds one named region without nested main or back navigation and still requires confirmation', async () => {
+    mount(false, true);
+    const approve = await screen.findByRole('button', { name: 'Aprovar acesso' });
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+    expect(screen.getByRole('region', { name: 'Permissões da recepção' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Permissões da recepção', level: 2 })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Meus pedidos e aprovações', level: 3 })).toBeVisible();
+    expect(screen.getByRole('heading', { name: row.staffName, level: 4 })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Voltar ao início' })).not.toBeInTheDocument();
+    fireEvent.click(approve);
+    expect(mocks.change).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar aprovação' }));
+    await waitFor(() => expect(mocks.change).toHaveBeenCalledTimes(1));
+    expect(mocks.change.mock.calls[0][0]).toEqual(expect.objectContaining({ requestId: request, revision: 1, action: 'approve' }));
+    expect(mocks.teamDoctors).not.toHaveBeenCalled();
+  });
   it('requires an explicit confirmation of the displayed staff, clinic and administrative scope', async () => {
     mount(); fireEvent.click(await screen.findByRole('button', { name: 'Aprovar acesso' }));
     expect(mocks.change).not.toHaveBeenCalled();

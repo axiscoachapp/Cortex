@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -14,16 +14,18 @@ import { ReceptionNotice } from './ReceptionNotice';
 import { useRequestId } from './useRequestId';
 
 const labels: Record<DelegationRequest['state'], string> = { pending: 'Aguardando médico', approved: 'Aprovado', denied: 'Recusado', cancelled: 'Cancelado', revoked: 'Revogado' };
-export default function DelegationPermissions() {
+export default function DelegationPermissions({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const [params] = useSearchParams();
   const clinicId = params.get('clinica');
   if (clinicId !== null && !z.string().uuid().safeParse(clinicId).success) return <p role="alert" className="p-6">Clínica inválida. Confira o endereço da página.</p>;
   if (!user) return null;
-  return <Permissions key={`${user.id}:${clinicId ?? 'mine'}`} actorId={user.id} clinicId={clinicId} />;
+  return <Permissions key={`${user.id}:${clinicId ?? 'mine'}`} actorId={user.id} clinicId={clinicId} embedded={embedded} />;
 }
 
-function Permissions({ actorId, clinicId }: { actorId: string; clinicId: string | null }) {
+function Permissions({ actorId, clinicId, embedded }: { actorId: string; clinicId: string | null; embedded: boolean }) {
+  const titleId = useId();
+  const Container = embedded ? 'section' : 'main', Heading = embedded ? 'h2' : 'h1', SectionHeading = embedded ? 'h3' : 'h2', RowHeading = embedded ? 'h4' : 'h3';
   const access = useClinicAccess();
   const client = useQueryClient();
   const operation = useRequestId();
@@ -85,10 +87,10 @@ function Permissions({ actorId, clinicId }: { actorId: string; clinicId: string 
     }
   }
 
-  return <main className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6">
-    <Link to={clinicId ? '/recepcao/equipe' : '/'} className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />{clinicId ? 'Voltar à equipe' : 'Voltar ao início'}</Link>
+  return <Container aria-labelledby={embedded ? titleId : undefined} className={embedded ? 'space-y-6' : 'mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6'}>
+    {!embedded && <Link to={clinicId ? '/recepcao/equipe' : '/'} className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />{clinicId ? 'Voltar à equipe' : 'Voltar ao início'}</Link>}
     <header className="space-y-3">
-      <div className="flex items-start gap-3"><ShieldCheck className="mt-1 h-6 w-6 shrink-0 text-primary" /><div><h1 className="text-2xl font-semibold tracking-tight">Permissões da recepção</h1><p className="mt-1 text-sm text-muted-foreground">{clinicId ? 'Pedidos da clínica para contas já cadastradas.' : 'Você decide quem pode operar sua agenda na clínica.'}</p></div></div>
+      <div className="flex items-start gap-3"><ShieldCheck className="mt-1 h-6 w-6 shrink-0 text-primary" /><div><Heading id={titleId} className="text-2xl font-semibold tracking-tight">Permissões da recepção</Heading><p className="mt-1 text-sm text-muted-foreground">{clinicId ? 'Pedidos da clínica para contas já cadastradas.' : 'Você decide quem pode operar sua agenda na clínica.'}</p></div></div>
       <p className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed">A aprovação permite atender contatos, operar a fila e gerenciar agendamentos da clínica. Os prontuários, evoluções e documentos clínicos continuam privados. Você pode revogar o acesso a qualquer momento.</p>
       <Button variant="outline" disabled={busy || requests.isFetching} onClick={() => void requests.refetch()}>Atualizar lista</Button>
     </header>
@@ -96,7 +98,7 @@ function Permissions({ actorId, clinicId }: { actorId: string; clinicId: string 
     <ReceptionNotice error={error} />
     {notice && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">{notice}</p>}
     {canManage && <section className="space-y-4 rounded-xl border bg-card p-4 sm:p-5" aria-labelledby="request-title">
-      <h2 id="request-title" className="font-semibold">Solicitar acesso para uma conta existente</h2>
+      <SectionHeading id="request-title" className="font-semibold">Solicitar acesso para uma conta existente</SectionHeading>
       {!currentClinic ? <p role="alert" className="text-sm">Abra este fluxo pela equipe da clínica selecionada para escolher as contas corretas.</p> : <>
         <ReceptionNotice loading={directory.isPending} error={directory.error} onRetry={() => void directory.refetch()} />
         <form className="space-y-4" onSubmit={event => { event.preventDefault(); if (formReady && staff.some(s => s.id === staffId) && directory.data?.some(d => d.id === doctorId)) void mutate({ kind: 'request', staffId, doctorId }); }}>
@@ -109,11 +111,11 @@ function Permissions({ actorId, clinicId }: { actorId: string; clinicId: string 
       </>}
     </section>}
     {verified && <section className="space-y-3" aria-labelledby="requests-title">
-      <h2 id="requests-title" className="text-lg font-semibold">{clinicId ? 'Pedidos e aprovações da clínica' : 'Meus pedidos e aprovações'}</h2>
+      <SectionHeading id="requests-title" className="text-lg font-semibold">{clinicId ? 'Pedidos e aprovações da clínica' : 'Meus pedidos e aprovações'}</SectionHeading>
       <p className="text-sm text-muted-foreground">Esta lista acompanha os pedidos feitos por este fluxo. A gestão dos acessos anteriores continua na página da equipe.</p>
       {!rows.length && <p className="rounded-xl border p-5 text-sm text-muted-foreground">Nenhum pedido encontrado.</p>}
       {rows.map(row => <article key={row.id} className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0 break-words"><h3 className="font-semibold">{row.staffName}</h3><p className="mt-1 text-sm text-muted-foreground">{row.clinicName} · {row.doctorName}</p></div><span className="w-fit shrink-0 rounded-full bg-muted px-3 py-1 text-xs font-medium">{labels[row.state]}</span></div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0 break-words"><RowHeading className="font-semibold">{row.staffName}</RowHeading><p className="mt-1 text-sm text-muted-foreground">{row.clinicName} · {row.doctorName}</p></div><span className="w-fit shrink-0 rounded-full bg-muted px-3 py-1 text-xs font-medium">{labels[row.state]}</span></div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground"><span>{new Date(row.createdAt).toLocaleString('pt-BR')}</span><span>{row.effective ? 'Acesso ativo' : 'Sem acesso ativo'}</span></div>
         <div className="flex flex-wrap gap-2">
           {row.canDecide && <><Button disabled={!ready} onClick={() => setConfirmation({ row, action: 'approve' })}>Aprovar acesso</Button><Button variant="outline" disabled={!ready} onClick={() => void mutate({ kind: 'change', row, action: 'deny' })}>Recusar pedido</Button></>}
@@ -131,5 +133,5 @@ function Permissions({ actorId, clinicId }: { actorId: string; clinicId: string 
         <DialogFooter><Button variant="outline" disabled={busy} onClick={() => setConfirmation(null)}>Voltar</Button><Button disabled={!ready || !confirmCurrent} onClick={() => { if (confirmation && confirmCurrent) void mutate({ kind: 'change', ...confirmation }); }}>{confirmation?.action === 'approve' ? 'Confirmar aprovação' : 'Confirmar revogação'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
-  </main>;
+  </Container>;
 }

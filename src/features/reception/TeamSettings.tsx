@@ -1,20 +1,28 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { functionErrorMessage } from '@/lib/functionErrors';
 import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
 import { ReceptionNotice } from './ReceptionNotice';
 import { StaffAccessProvenance } from './StaffAccessProvenance';
+import type { ClinicAccess } from './contracts';
 
-export default function TeamSettings() {
+export default function TeamSettings({ embedded = false }: { embedded?: boolean }) {
   const access = useClinicAccess();
+  if (!access?.admin) return <p role="alert">Somente o administrador pode gerenciar a equipe.</p>;
+  return <TeamSection key={`${access.actorId}:${access.clinic?.id ?? 'none'}`} access={access} embedded={embedded} />;
+}
+
+function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boolean }) {
+  const titleId = useId();
+  const Container = embedded ? 'section' : 'div', Heading = embedded ? 'h2' : 'h1', SectionHeading = embedded ? 'h3' : 'h2';
   const client = useQueryClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -25,12 +33,11 @@ export default function TeamSettings() {
   const [credentials, setCredentials] = useState<{ email: string; temporaryPassword: string } | null>(null);
   const directory = useQuery({
     queryKey: ['reception', 'team-doctors', access?.clinic?.id, access?.actorId],
-    queryFn: () => receptionApi.teamDoctors(access!.clinic!.id),
-    enabled: !!access?.admin && !!access.clinic,
+    queryFn: () => receptionApi.teamDoctors(access.clinic!.id),
+    enabled: !!access.clinic,
     staleTime: 30_000,
   });
   const teamDoctors = directory.isSuccess ? directory.data : [];
-  if (!access?.admin) return <p role="alert">Somente o administrador pode gerenciar a equipe.</p>;
   async function create(event: React.FormEvent) {
     event.preventDefault();
     if (busy || !directory.isSuccess || !doctors.length) return;
@@ -78,9 +85,9 @@ export default function TeamSettings() {
     }
   }
   return (
-    <div className="space-y-6 max-w-4xl">
+    <Container aria-labelledby={embedded ? titleId : undefined} className={embedded ? 'space-y-6' : 'space-y-6 max-w-4xl'}>
       <div>
-        <h1 className="text-xl font-semibold">Equipe e permissões</h1>
+        <Heading id={titleId} className="text-xl font-semibold">Equipe e permissões</Heading>
         <p className="mt-2 text-sm text-muted-foreground">
           Configure as agendas das secretárias. Seu acesso às agendas e aos prontuários é independente da gestão da equipe.
         </p>
@@ -95,7 +102,7 @@ export default function TeamSettings() {
       {notice && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">{notice}</p>}
       <ReceptionNotice error={directory.error} loading={directory.isPending} onRetry={() => void directory.refetch()} />
       <section className="rounded-xl border bg-card p-4 space-y-4">
-        <h2 className="font-semibold text-base">Criar conta de recepção</h2>
+        <SectionHeading className="font-semibold text-base">Criar conta de recepção</SectionHeading>
         <form onSubmit={create} className="space-y-4">
           <fieldset disabled={busy} className="grid md:grid-cols-2 gap-4">
             <div>
@@ -145,12 +152,13 @@ export default function TeamSettings() {
         </form>
       </section>
       <section className="space-y-3">
-        <h2 className="font-semibold text-base">Contas cadastradas</h2>
+        <SectionHeading className="font-semibold text-base">Contas cadastradas</SectionHeading>
         {!access.staff.length && <p className="text-sm text-muted-foreground">Nenhuma conta de recepção cadastrada.</p>}
         {access.staff.map((staff) => (
           <StaffCard
             key={staff.id + JSON.stringify(staff.doctorIds) + staff.active}
             staff={staff}
+            embedded={embedded}
             provenance={access.clinic ? <StaffAccessProvenance actorId={access.actorId} clinicId={access.clinic.id} staffId={staff.id} staffName={staff.name} /> : null}
             doctors={teamDoctors}
             scopesReady={directory.isSuccess}
@@ -171,10 +179,10 @@ export default function TeamSettings() {
           <DialogHeader>
             <DialogTitle>Credenciais temporárias</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <DialogDescription>
             Entregue estas credenciais à pessoa responsável por um canal seguro. Ela deverá trocar a senha no primeiro
             acesso.
-          </p>
+          </DialogDescription>
           <dl className="text-sm space-y-3">
             <div>
               <dt>E-mail</dt>
@@ -188,12 +196,13 @@ export default function TeamSettings() {
           <Button onClick={() => setCredentials(null)}>Concluir</Button>
         </DialogContent>
       </Dialog>
-    </div>
+    </Container>
   );
 }
 
 function StaffCard({
   staff,
+  embedded,
   provenance,
   doctors,
   busy,
@@ -203,6 +212,7 @@ function StaffCard({
   onDeactivate,
 }: {
   staff: { id: string; name: string; active: boolean; doctorIds: string[] };
+  embedded: boolean;
   provenance: React.ReactNode;
   doctors: { id: string; name: string }[];
   busy: boolean;
@@ -211,11 +221,12 @@ function StaffCard({
   onReactivate: () => void;
   onDeactivate: () => void;
 }) {
+  const Heading = embedded ? 'h4' : 'h3';
   const [selected, setSelected] = useState(staff.doctorIds);
   return (
     <article className="rounded-xl border bg-card p-4 space-y-3">
       <div className="flex flex-wrap gap-2 justify-between">
-        <h3 className="font-medium">{staff.name}</h3>
+        <Heading className="font-medium">{staff.name}</Heading>
         <span className="text-xs text-muted-foreground">{staff.active ? 'Ativa' : 'Desativada'}</span>
       </div>
       {staff.active ? <fieldset disabled={busy || !scopesReady} className="flex flex-wrap gap-3">

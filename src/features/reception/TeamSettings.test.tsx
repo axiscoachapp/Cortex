@@ -12,15 +12,62 @@ vi.mock('@/integrations/supabase/client',()=>({supabase:{functions:{invoke:mocks
 const a={id:'11111111-1111-4111-8111-111111111111',name:'Doutor A sintético',specialty:null};
 const b={id:'22222222-2222-4222-8222-222222222222',name:'Doutor B sintético',specialty:null};
 const clinic='33333333-3333-4333-8333-333333333333',staff='44444444-4444-4444-8444-444444444444';
-function mount({cached=false,inactive=false}={}) {
+function mount({cached=false,inactive=false,embedded=false,admin=true}={}) {
  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
  if(cached)client.setQueryData(['reception','team-doctors',clinic,a.id],[a,b],{updatedAt:1});
- const access:ClinicAccess={kind:'clinical',active:true,admin:true,actorId:a.id,clinic:{id:clinic,name:'Clínica sintética'},doctors:[a],staff:[{id:staff,name:'Secretária sintética',active:!inactive,doctorIds:[b.id]}]};
- render(<QueryClientProvider client={client}><MemoryRouter><ClinicAccessContext.Provider value={access}><TeamSettings/></ClinicAccessContext.Provider></MemoryRouter></QueryClientProvider>);
- return client;
+ const access:ClinicAccess={kind:'clinical',active:true,admin,actorId:a.id,clinic:{id:clinic,name:'Clínica sintética'},doctors:[a],staff:[{id:staff,name:'Secretária sintética',active:!inactive,doctorIds:[b.id]}]};
+ const view=(value:ClinicAccess)=><QueryClientProvider client={client}><MemoryRouter><ClinicAccessContext.Provider value={value}>{embedded?<main><h1>Configurações</h1><TeamSettings embedded/></main>:<TeamSettings/>}</ClinicAccessContext.Provider></MemoryRouter></QueryClientProvider>;
+ const result=render(view(access));
+ return {...result,access,changeContext:(value:ClinicAccess)=>result.rerender(view(value))};
 }
 describe('management directory separate from authorized agendas',()=>{
  beforeEach(()=>{vi.resetAllMocks();mocks.teamDoctors.mockResolvedValue([a,b]);mocks.updateStaff.mockResolvedValue(true);});
+ it('embeds an administrator section with nested headings while preserving scope updates',async()=>{
+  mount({embedded:true});await screen.findAllByText(b.name);
+  expect(screen.getAllByRole('main')).toHaveLength(1);
+  expect(screen.getByRole('region',{name:'Equipe e permissões'})).toBeVisible();
+  expect(screen.getByRole('heading',{name:'Equipe e permissões',level:2})).toBeVisible();
+  expect(screen.getByRole('heading',{name:'Criar conta de recepção',level:3})).toBeVisible();
+  expect(screen.getByRole('heading',{name:'Contas cadastradas',level:3})).toBeVisible();
+  expect(mocks.updateStaff).not.toHaveBeenCalled();expect(mocks.invoke).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button',{name:'Salvar permissões'}));
+  await waitFor(()=>expect(mocks.updateStaff).toHaveBeenCalledWith(staff,[b.id],true));
+ });
+ it('does not expose or query the administrative directory to an embedded non-admin',()=>{
+  mount({embedded:true,admin:false});
+  expect(screen.getByRole('alert')).toHaveTextContent('Somente o administrador');
+  expect(screen.queryByLabelText('Nome da secretária')).not.toBeInTheDocument();
+  expect(screen.queryByText('Secretária sintética')).not.toBeInTheDocument();
+  expect(mocks.teamDoctors).not.toHaveBeenCalled();expect(mocks.updateStaff).not.toHaveBeenCalled();expect(mocks.invoke).not.toHaveBeenCalled();
+ });
+ it.each(['actor','clinic'])('clears temporary credentials when embedded %s changes',async change=>{
+  mocks.invoke.mockResolvedValue({data:{success:true,email:'staff@example.invalid',temporaryPassword:'synthetic-temporary-password-only'},error:null});
+  const result=mount({embedded:true});await screen.findAllByText(a.name);
+  fireEvent.change(screen.getByLabelText('Nome da secretária'),{target:{value:'Conta sintética'}});
+  fireEvent.change(screen.getByLabelText('E-mail exclusivo da conta'),{target:{value:'staff@example.invalid'}});
+  const form=screen.getByRole('button',{name:'Criar conta com acesso restrito'}).closest('form')!;
+  fireEvent.click(within(form).getByRole('checkbox',{name:a.name}));
+  fireEvent.click(screen.getByRole('button',{name:'Criar conta com acesso restrito'}));
+  await screen.findByRole('dialog');
+  result.changeContext({...result.access,...(change==='actor'?{actorId:b.id}:{clinic:{id:'55555555-5555-4555-8555-555555555555',name:'Outra clínica sintética'}})});
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(mocks.invoke).toHaveBeenCalledTimes(1);
+ });
+ it.each(['actor','clinic','admin'])('clears the embedded creation draft on %s context replacement',async change=>{
+  const result=mount({embedded:true});await screen.findAllByText(a.name);
+  fireEvent.change(screen.getByLabelText('Nome da secretária'),{target:{value:'Conta sintética'}});
+  fireEvent.change(screen.getByLabelText('E-mail exclusivo da conta'),{target:{value:'staff@example.invalid'}});
+  const form=screen.getByRole('button',{name:'Criar conta com acesso restrito'}).closest('form')!;
+  fireEvent.click(within(form).getByRole('checkbox',{name:a.name}));
+  result.changeContext({...result.access,...(change==='actor'?{actorId:b.id}:change==='clinic'?{clinic:{id:'55555555-5555-4555-8555-555555555555',name:'Outra clínica sintética'}}:{admin:false})});
+  if(change==='admin'){expect(screen.getByRole('alert')).toHaveTextContent('Somente o administrador');result.changeContext(result.access);}
+  await screen.findAllByText(a.name);
+  expect(screen.getByLabelText('Nome da secretária')).toHaveValue('');
+  expect(screen.getByLabelText('E-mail exclusivo da conta')).toHaveValue('');
+  const nextForm=screen.getByRole('button',{name:'Criar conta com acesso restrito'}).closest('form')!;
+  expect(within(nextForm).getByRole('checkbox',{name:a.name})).not.toBeChecked();
+  expect(mocks.invoke).not.toHaveBeenCalled();expect(mocks.updateStaff).not.toHaveBeenCalled();
+ });
  it('can manage doctor B without exposing B in the operational agenda list',async()=>{
   mount();
   expect(await screen.findAllByText(b.name)).toHaveLength(2);
