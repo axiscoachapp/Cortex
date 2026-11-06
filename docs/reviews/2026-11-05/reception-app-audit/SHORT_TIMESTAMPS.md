@@ -1,5 +1,7 @@
 # T39/2g — datas e horários sem segundos
 
+Atualização posterior: o corte de layout observado neste ensaio foi corrigido em [T39/2h](WORKSPACE_LAYOUT.md). Os relatórios e a descrição abaixo preservam as observações da época.
+
 Item 4 da entrega médica de 18:43, recebido pela resposta de 18:58. Cinco chamadas a `toLocaleString` passam a usar `{ dateStyle: 'short', timeStyle: 'short' }`, mantendo `pt-BR` e o fuso do navegador:
 
 - Em Trabalho: consulta recuperável, atualização do registro, versões do registro e versões da consulta.

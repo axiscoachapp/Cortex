@@ -346,6 +346,7 @@ export default function ClinicalWorkspacePage() {
                 <Button
                   variant={tab === 'work' ? 'default' : 'outline'}
                   aria-pressed={tab === 'work'}
+                  className="max-w-full h-auto min-h-10 whitespace-normal"
                   onClick={() => setTab('work')}
                 >
                   Registros e acompanhamento
@@ -528,7 +529,7 @@ export default function ClinicalWorkspacePage() {
             ) : history.data?.length ? (
               history.data.map((c) => (
                 <article className="rounded-xl border bg-card p-5" key={c.id}>
-                  <div className="flex justify-between gap-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <h2 className="font-semibold">
                       {new Date(c.created_at).toLocaleDateString('pt-BR')} · {c.chief_complaint || 'Consulta'}
                     </h2>

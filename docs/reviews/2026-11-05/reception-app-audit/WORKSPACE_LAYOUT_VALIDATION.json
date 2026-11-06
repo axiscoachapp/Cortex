@@ -1,0 +1,81 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "a94c67426f31744f36d38e8c75f2d212eb20a9b5",
+  "browser": {
+    "states": 15,
+    "workspaceStates": 12,
+    "widths": [
+      320,
+      375,
+      1280
+    ],
+    "fontSize": "21.6px",
+    "originalTimeline320": {
+      "left": 0,
+      "right": 320,
+      "clientWidth": 320,
+      "scrollWidth": 391,
+      "scrollLeft": 50
+    },
+    "fixedTimeline320": {
+      "left": 0,
+      "right": 320,
+      "clientWidth": 320,
+      "scrollWidth": 320,
+      "scrollLeft": 0
+    },
+    "internalOverflow": 0,
+    "clippedControls": 0
+  },
+  "dataPreserved": true,
+  "rescuedRecordingRetained": true,
+  "metrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "workspaceWrites": 0
+  },
+  "checks": {
+    "appTypes": true,
+    "applicationLint": true,
+    "runnerLint": true,
+    "nodeSyntax": true,
+    "invalidFlagCombinationsRefused": 3,
+    "hashes": true,
+    "cleanup": true
+  },
+  "review": {
+    "local": "No actionable issue found",
+    "external": "Declined by user"
+  },
+  "network": {
+    "acceptedOnly": {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    "counts": {
+      "red": 3,
+      "green": 3
+    },
+    "causeInferred": false,
+    "otherFailures": 0
+  },
+  "overlays": [
+    {
+      "path": "src/pages/ClinicalWorkspace.tsx",
+      "sha256": "aeb784fe291dde2f9f5628d68a91c82c43c016acea5e8228d7bb6b38f73e4951"
+    }
+  ],
+  "scope": "Two layout class changes; no state/data/query/action changes",
+  "limits": [
+    "Only synthetic fixture and specified widths",
+    "No new unit tests for class literals or global build",
+    "No full application/backend/pilot approval"
+  ]
+}

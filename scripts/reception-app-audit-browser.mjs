@@ -14,17 +14,19 @@ import { startClinicFixture, patientId, uid } from './fixtures/clinic-review-api
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|check-time-layout|check-mobile-navigation|check-calendar-header)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
 const timestampOnly = args.includes('--only=short-timestamps');
+const checkWorkspaceLayout = args.includes('--check-workspace-layout');
+assert.ok(!checkWorkspaceLayout || timestampOnly, 'Workspace layout checks require the populated timestamp audit');
 const welcomeOnly = args.includes('--only=welcome-dashboard'), focusedOnly = weekOnly || welcomeOnly || chatOnly || timestampOnly;
 assert.ok(args.filter(arg => arg.startsWith('--only=')).length <= 1, 'Only one focused audit mode is supported');
 assert.ok(!weekOnly || !args.some(arg => arg.startsWith('--check-')), 'Week caption mode runs its own checks');
 assert.ok(!welcomeOnly || !args.some(arg => arg.startsWith('--check-')), 'Welcome mode runs its own checks');
 assert.ok(!chatOnly || !args.some(arg => arg.startsWith('--check-')), 'Chat prompt mode runs its own checks');
-assert.ok(!timestampOnly || !args.some(arg => arg.startsWith('--check-')), 'Timestamp mode runs its own checks');
+assert.ok(!timestampOnly || !args.some(arg => arg.startsWith('--check-') && arg !== '--check-workspace-layout'), 'Timestamp mode only supports workspace layout checks');
 const checkMobileNavigation = args.includes('--check-mobile-navigation');
 assert.ok(!timeOnly || !checkMobileNavigation, 'Mobile navigation checks require the full route audit');
 const checkCalendarHeader = args.includes('--check-calendar-header');
@@ -145,8 +147,17 @@ async function capture(page, app, role, path, width, action, variant = '') {
         textWidth: context.measureText(clinicalInput.placeholder).width + spacing * Math.max(0, clinicalInput.placeholder.length - 1),
         availableWidth: clinicalInput.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight), empty: clinicalInput.value === '' };
     }
+    const workspaceMain = location.pathname === '/trabalho' ? document.querySelector('main') : null;
+    let workspaceGeometry = null;
+    if (workspaceMain) {
+      const shell = document.querySelector('[data-clinic-page-shell]');
+      const bounds = element => { const rect = element.getBoundingClientRect(); return { left: rect.left, right: rect.right, clientWidth: element.clientWidth, scrollWidth: element.scrollWidth, scrollLeft: element.scrollLeft }; };
+      workspaceGeometry = { shell: bounds(shell), main: bounds(workspaceMain),
+        overflowingContainers: [...workspaceMain.querySelectorAll('section,article,div')].filter(visible).filter(element => element.scrollWidth > element.clientWidth + 1).map(element => ({ tag: element.tagName, className: element.className, ...bounds(element) })),
+        clippedControls: [...workspaceMain.querySelectorAll('button,a,summary')].filter(visible).filter(element => { const rect = element.getBoundingClientRect(); return rect.left < -1 || rect.right > innerWidth + 1 || element.scrollWidth > element.clientWidth + 1; }).map(element => ({ label: name(element) || element.textContent.trim(), ...bounds(element) })) };
+    }
     return { fontSize: getComputedStyle(document.documentElement).fontSize, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, dialogOutsideViewport, dialogHorizontalOverflow: dialogElement ? dialogElement.scrollWidth - dialogElement.clientWidth : 0,
-      missingButtons, missingLabels, navigationLabels, headerTitles, calendarPeriod: periodElement?.textContent.trim(), calendarPeriodClipped, shortcuts, clinicalPrompt,
+      missingButtons, missingLabels, navigationLabels, headerTitles, calendarPeriod: periodElement?.textContent.trim(), calendarPeriodClipped, shortcuts, clinicalPrompt, workspaceGeometry,
       timestampLabels: [...document.querySelectorAll('a,p,summary')].filter(element => visible(element) && /\b05\/11\/2026/.test(element.textContent)).map(element => element.textContent.trim()),
       welcomeDate: dateLine ? { text: dateLine.textContent.trim(), transform: getComputedStyle(dateLine).textTransform } : null,
       visibleAlerts: [...document.querySelectorAll('[role="alert"]')].filter(visible).map(element => element.textContent.trim()),
@@ -230,6 +241,12 @@ try {
       assert.deepEqual(rescuedDates, [{ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', createdAt: '2026-11-05T20:06:59Z' }], 'Display must retain the rescued recording and its original timestamp');
       assert.ok(Object.values(api.metrics).every(value => value === 0), 'Display must not invoke AI or write data');
       timestampDataPreserved = true;
+      if (checkWorkspaceLayout) {
+        const workspaceScreens = screens.filter(screen => screen.workspaceGeometry);
+        assert.equal(workspaceScreens.length, 12, 'Expected four workspace states at three widths');
+        const clipped = workspaceScreens.filter(({ workspaceGeometry: geometry }) => geometry.shell.scrollWidth > geometry.shell.clientWidth + 1 || Math.abs(geometry.shell.scrollLeft) > 1 || geometry.main.scrollWidth > geometry.main.clientWidth + 1 || geometry.overflowingContainers.length || geometry.clippedControls.length);
+        assert.deepEqual(clipped.map(screen => ({ variant: screen.variant, width: screen.width })), [], 'Workspace content is clipped inside its scroll container');
+      }
     } else if (chatOnly) {
       for (const width of [320, 375, 1280]) for (const mode of ['question', 'comment']) {
         const label = mode === 'question' ? 'Pergunta ao assistente clínico' : 'Comentário clínico para este paciente';
@@ -378,7 +395,7 @@ try {
   }
   cleanupVerified = true;
 }
-const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, chatOnly, timestampOnly, timestampDataPreserved, timestampMetrics: timestampOnly ? { ...apis[0]?.metrics } : null, draftPreserved, welcomeMetrics: welcomeOnly || chatOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
+const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, chatOnly, timestampOnly, checkWorkspaceLayout, timestampDataPreserved, timestampMetrics: timestampOnly ? { ...apis[0]?.metrics } : null, draftPreserved, welcomeMetrics: welcomeOnly || chatOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
   frozenLoads: [...frozenLoads].sort(), screens, errors, consoleErrors, failedRequests, errorResponses, blockedExternalRequests: blocked, cleanupVerified };
 await writeFile(resolve(folder, 'AUDIT.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify({ baseline, screens: screens.length, errors: errors.length, consoleErrors: consoleErrors.length,
