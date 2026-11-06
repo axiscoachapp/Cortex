@@ -110,6 +110,7 @@ async function supabase(route) {
   if (path.startsWith('/auth/v1/factors')) return respond(route, { all: [], totp: [], phone: [] });
   // A clinic without a signing provider yet: the documents tab asks for this.
   if (path === '/functions/v1/signature-session/state') return respond(route, { configured: false, active: false, expiresAt: null });
+  if (path === '/functions/v1/whatsapp-api') return respond(route, whatsappAnswer(request.postDataJSON?.() ?? {}));
   if (path.startsWith('/functions/')) return respond(route, { error: 'Operação externa bloqueada no ensaio' }, 503);
   if (path.startsWith('/storage/')) return respond(route, []);
   const single = (request.headers()['accept'] ?? '').includes('vnd.pgrst.object');
@@ -124,7 +125,11 @@ async function supabase(route) {
   if (table === 'user_settings') return rows([state.settings]);
   if (table in state) return rows(state[table]);
   if (table === 'rpc/update_user_settings') return respond(route, null);
-  if (table === 'rpc/clinic_access') return respond(route, { kind: 'clinical', active: true, admin: false, actorId: doctorId, clinic: null, doctors: [], staff: [] });
+  if (table === 'rpc/clinic_access')
+    return respond(route, CLINIC_ADMIN
+      ? { kind: 'clinical', active: true, admin: true, actorId: doctorId, clinic: { id: 'd5120000-0000-4000-8000-000000000001', name: 'Clínica Sintética' },
+          doctors: [{ id: doctorId, name: 'Dra. Ana Exemplo', specialty: 'ginecologia' }], staff: [] }
+      : { kind: 'clinical', active: true, admin: false, actorId: doctorId, clinic: null, doctors: [], staff: [] });
   if (table === 'rpc/workspace_directory') return respond(route, { patients: state.patients, counts: { total: state.patients.length, new: 1, returns: 2 } });
   if (table === 'rpc/list_patient_chat_turns') return respond(route, []);
   // Empty but valid answers for overviews the screens read (no grants in the synthetic world).
@@ -132,6 +137,26 @@ async function supabase(route) {
   if (table === 'rpc/get_integration_status') return respond(route, { google: { connected: false } });
   unknown.set(`${request.method()} ${table}`, (unknown.get(`${request.method()} ${table}`) ?? 0) + 1);
   return single ? respond(route, null) : rows([]);
+}
+
+// Settings audit (AUDIT_CLINIC_ADMIN=1): the doctor administers a synthetic clinic with a connected WhatsApp number.
+const CLINIC_ADMIN = process.env.AUDIT_CLINIC_ADMIN === '1';
+function whatsappAnswer(body) {
+  const template = { name: 'lembrete_consulta', language: 'pt_BR', category: 'UTILITY', status: 'APPROVED', body: 'Olá {{1}}, sua consulta é {{2}} às {{3}}. Responda Confirmar ou Remarcar.', paramCount: 3 };
+  switch (body.action) {
+    case 'state': return { serverReady: true, connected: true, status: 'connected', displayPhone: '+55 41 3000-0000', verifiedName: 'Clínica Sintética', quality: 'GREEN',
+      connectedAt: day(-3), canManage: true, canUseInbox: true, lastError: null, webhookUrl: `${SUPABASE}/functions/v1/whatsapp-webhook`, phoneNumberId: '200000000001', wabaId: '1000000001' };
+    case 'templates': return { templates: [template, { ...template, name: 'pre_consulta_link', status: 'PENDING', body: 'Olá {{1}}, antes da consulta acesse {{2}}.', paramCount: 2 }] };
+    case 'automations': return {
+      automations: [{ id: 'd5130000-0000-4000-8000-000000000001', name: 'Lembrete 48 h antes', enabled: true, trigger: 'before_start', offsetMinutes: 2880, templateName: 'lembrete_consulta',
+        templateLanguage: 'pt_BR', params: [{ source: 'paciente_primeiro_nome' }, { source: 'data' }, { source: 'hora' }], linkUrl: null, doctorIds: null, appointmentTypes: null, revision: 1, updatedAt: day(-1) }],
+      runs: [{ id: 'd5140000-0000-4000-8000-000000000001', automationId: 'd5130000-0000-4000-8000-000000000001', appointmentId: 'd5150000-0000-4000-8000-000000000001',
+        appointmentStart: day(2), status: 'sent', reason: null, reply: 'Confirmar', repliedAt: day(0), at: day(0) },
+        { id: 'd5140000-0000-4000-8000-000000000002', automationId: 'd5130000-0000-4000-8000-000000000001', appointmentId: 'd5150000-0000-4000-8000-000000000002',
+        appointmentStart: day(2), status: 'skipped', reason: 'Sem telefone válido no cadastro.', reply: null, repliedAt: null, at: day(0) }],
+      sources: {}, quietHours: { start: 8, end: 20 } };
+    default: return { error: 'Operação externa bloqueada no ensaio', code: 'server' };
+  }
 }
 
 /** Automatic findings on the current page. */
@@ -192,6 +217,12 @@ const ROUTES = [
   ['sobre', '/sobre'],
   ['aviso', '/aviso-de-privacidade'],
   ['inexistente', '/rota-inexistente'],
+  ['configuracoes', '/configuracoes'],
+  ['config-whatsapp', '/configuracoes?secao=whatsapp'],
+  ['config-conexoes', '/configuracoes?secao=conexoes'],
+  ['config-permissoes', '/configuracoes?secao=permissoes'],
+  ['config-equipe', '/configuracoes?secao=equipe'],
+  ['config-seguranca', '/configuracoes?secao=seguranca'],
 ];
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null;
 
@@ -247,6 +278,8 @@ try {
     for (const [name, path] of ROUTES) {
       if (only && !only.includes(path)) continue;
       await page.goto(origin + path);
+      // A cold dev server compiles lazy routes on first visit; wait for the loading screen to go.
+      await page.getByText('Carregando...', { exact: true }).waitFor({ state: 'detached', timeout: 20000 }).catch(() => {});
       await page.waitForTimeout(1500);
       await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: true });
       report.routes[`${label} ${path}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };

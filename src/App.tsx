@@ -30,6 +30,7 @@ const AssistantPage = lazy(() => import("./pages/Assistant"));
 const SharingPage = lazy(() => import('./pages/Sharing'));
 const ClinicalWorkspacePage = lazy(() => import('./pages/ClinicalWorkspace'));
 const AccountSecurityPage = lazy(() => import('./pages/AccountSecurity'));
+const SettingsPage = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ReceptionLayout = lazy(() => import('./features/reception/ReceptionLayout'));
 const ReceptionQueue = lazy(() => import('./features/reception/ReceptionQueue'));
@@ -108,6 +109,7 @@ const router = createBrowserRouter([
     { path: '/permissoes-recepcao', element: <DelegationPermissions /> },
     { path: '/trabalho', element: <ClinicalWorkspacePage /> },
     { path: '/seguranca', element: <AccountSecurityPage /> },
+    { path: '/configuracoes', element: <SettingsPage /> },
   ] },
   { path: '*', element: <NotFound /> },
   ] },

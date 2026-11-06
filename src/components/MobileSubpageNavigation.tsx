@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Users, CalendarDays, ClipboardList, Menu, Sparkles, FileStack, BookOpen, Share2, Shield } from 'lucide-react';
+import { Home, Users, CalendarDays, ClipboardList, Menu, Sparkles, FileStack, BookOpen, Settings2, Shield } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { useAuth } from '@/contexts/AuthContext';
 
 const main=[{to:'/',label:'Início',icon:Home},{to:'/gerenciar-pacientes',label:'Pacientes',icon:Users},{to:'/agenda',label:'Agenda',icon:CalendarDays},{to:'/trabalho',label:'Pendências',icon:ClipboardList}];
-const more=[{to:'/assistente',label:'Assistente',icon:Sparkles},{to:'/modelos',label:'Modelos',icon:FileStack},{to:'/conhecimento',label:'Conhecimento',icon:BookOpen},{to:'/compartilhamento',label:'Compartilhamento',icon:Share2},{to:'/permissoes-recepcao',label:'Permissões da recepção',icon:Users},{to:'/seguranca',label:'Segurança da conta',icon:Shield},{to:'/privacidade',label:'Privacidade e dados',icon:Shield}];
+const more=[{to:'/assistente',label:'Assistente',icon:Sparkles},{to:'/modelos',label:'Modelos',icon:FileStack},{to:'/conhecimento',label:'Conhecimento',icon:BookOpen},{to:'/configuracoes',label:'Configurações',icon:Settings2}];
 export function MobileSubpageNavigation() {
   const {pathname}=useLocation();
   const access=useClinicAccess();const {user}=useAuth();

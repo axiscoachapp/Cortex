@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Plus, CalendarDays, Sparkles, FileStack, BookOpen, Users, ChevronRight, CalendarX, ClipboardList, Share2,
+  Plus, CalendarDays, Sparkles, FileStack, BookOpen, Users, ChevronRight, CalendarX, ClipboardList, Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Patient } from '@/types/patient';
@@ -46,14 +46,12 @@ function formatTime(iso: string): string {
 
 const NAV_ITEMS = [
   { to: '/trabalho', icon: ClipboardList, label: 'Trabalho pendente' },
-  { to: '/compartilhamento', icon: Share2, label: 'Compartilhamento' },
-  { to: '/permissoes-recepcao', icon: Users, label: 'Permissões da recepção' },
-  { to: '/seguranca', icon: Users, label: 'Segurança da conta' },
   { to: '/assistente',           icon: Sparkles,    label: 'Assistente' },
   { to: '/modelos',              icon: FileStack,   label: 'Modelos' },
   { to: '/conhecimento',         icon: BookOpen,    label: 'Conhecimento' },
   { to: '/gerenciar-pacientes',  icon: Users,       label: 'Pacientes' },
   { to: '/agenda',               icon: CalendarDays,label: 'Agenda' },
+  { to: '/configuracoes',        icon: Settings2,   label: 'Configurações' },
 ];
 
 export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId, onHome, onNavigate }: PatientSidebarProps) {
