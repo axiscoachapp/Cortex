@@ -21,7 +21,8 @@ export default function AccountSecurity() {
     queryFn: async () => {
       const { data, error } = await supabase.auth.mfa.listFactors();
       if (error) throw error;
-      return data.totp;
+      // The SDK's totp list excludes pending setups, which still need cleanup.
+      return data.all.filter((factor) => factor.factor_type === 'totp');
     },
   });
   const run = async (action: () => Promise<void>) => {

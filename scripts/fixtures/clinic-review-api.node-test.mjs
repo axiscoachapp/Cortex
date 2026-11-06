@@ -4,6 +4,29 @@ import { startClinicFixture } from './clinic-review-api.mjs';
 
 // Run explicitly with node --test; keep this outside Vitest's .test discovery.
 
+test('MFA review is isolated from other fixtures and leaves the default user unchanged', async () => {
+  let mixed;
+  try { await assert.rejects(async () => { mixed = await startClinicFixture({ mfaReview: true, delegationPermissions: true }); }, /isolated/); }
+  finally { if (mixed) await mixed.close(); }
+  const normal = await startClinicFixture();
+  try { assert.deepEqual((await (await fetch(normal.origin + '/auth/v1/user')).json()).factors, []); }
+  finally { await normal.close(); }
+});
+
+test('MFA review exposes only synthetic factor reads and refuses enrollment, challenge and removal', async () => {
+  const api = await startClinicFixture({ mfaReview: true });
+  try {
+    assert.equal(api.mfaFactors.length, 3); const before = structuredClone(api.mfaFactors);
+    const response = await fetch(api.origin + '/auth/v1/user'); assert.equal(response.status, 200); assert.deepEqual((await response.json()).factors, before);
+    assert.deepEqual(before.map(factor => factor.status), ['verified', 'verified', 'unverified']);
+    for (const [method, path] of [['POST', '/auth/v1/factors'], ['POST', '/auth/v1/factors/' + before[0].id + '/challenge'], ['DELETE', '/auth/v1/factors/' + before[0].id]]) {
+      const denied = await fetch(api.origin + path, { method }); assert.equal(denied.status, 403); assert.equal((await denied.json()).code, 'TEST_UNEXPECTED_RESOURCE');
+    }
+    assert.equal(api.metrics.mfaUnexpected.length, 3); assert.deepEqual(api.mfaFactors, before);
+    assert.equal('delegationWrites' in api.metrics, false);
+  } finally { await api.close(); }
+});
+
 test('reply replay requires explicit decision and permissions options; arming validates the pending UUID', async () => {
   for (const options of [{ delegationReplay: true }, { delegationPermissions: true, delegationReplay: true }]) {
     let api;

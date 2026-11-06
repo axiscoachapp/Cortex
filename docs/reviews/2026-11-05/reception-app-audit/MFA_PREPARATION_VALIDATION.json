@@ -1,0 +1,145 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "3ef508a5c83086fd7841066f9d8c54f465aeef51",
+  "scope": "T39/3c/1 pending TOTP metadata fix and integrated MFA preparation; no verification/enrollment HTTP",
+  "red": {
+    "run": "mfa-preparation-verified",
+    "completed": false,
+    "rowsExpected": 3,
+    "rowsObserved": 2,
+    "reason": "SDK totp contains verified factors only; pending setups absent"
+  },
+  "green": {
+    "run": "mfa-preparation-green",
+    "states": 12,
+    "widths": [
+      375,
+      1280,
+      1920
+    ],
+    "factorsDisplayed": 3,
+    "pendingExcludedFromSelector": true,
+    "sameDocument": true,
+    "codePreparationOnly": true,
+    "overlay": {
+      "path": "src/pages/AccountSecurity.tsx",
+      "sha256": "b3933aeed8fc381986700988e2345755954a630527e8584308e9c8d56a76e096"
+    }
+  },
+  "regression": {
+    "run": "mfa-preparation-final-regression",
+    "states": 15,
+    "passed": true
+  },
+  "tests": {
+    "nodeTests": 7,
+    "nodeNewRedFailures": 2,
+    "vitestTests": 11,
+    "vitestFiles": 2,
+    "newComponentRedFailures": 2,
+    "greenExit": 0
+  },
+  "checks": {
+    "applicationTypes": true,
+    "uiLintFiles": 2,
+    "scriptLintSyntaxFiles": 3,
+    "invalidFlagCombinationsRefused": 3,
+    "hashes": true,
+    "cleanup": true
+  },
+  "review": {
+    "actionable": "AccountSecurity consumed verified-only SDK totp data, hiding pending setups and skipping cleanup",
+    "fix": "Consume all factors filtered to TOTP; verified selector stays filtered",
+    "final": "No additional concrete defects in bounded delta",
+    "external": "Not invoked for non-interactive heartbeat"
+  },
+  "sdk": {
+    "version": "2.86.0",
+    "source": "node_modules/@supabase/auth-js/src/GoTrueClient.ts",
+    "sha256": "17196f3d95cf7d32762db046befbce7e69135edbbee345479b8c8dad9f1a0b75"
+  },
+  "sources": [
+    {
+      "path": "src/pages/AccountSecurity.tsx",
+      "sha256": "b3933aeed8fc381986700988e2345755954a630527e8584308e9c8d56a76e096"
+    },
+    {
+      "path": "src/pages/AccountSecurity.test.tsx",
+      "sha256": "7fc82dcacbfd889b7b8b5809d5f6c00d6009a8e438e64887419deff49c62b212"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.node-test.mjs",
+      "sha256": "c46e3ca8a13514801d04d9f81093f1ee9081fce6a48a910ed7a86b869e19dcc3"
+    }
+  ],
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "521a8159103fc92e220ee39741a0722d9c13443afec05607c67feddaefbb5d8d"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "66590334b55d7b5db974c45e2bbbe041645dcbe5c06ddb9b89db34fdf03ca447"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "mfaRequests": [
+    {
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/v1/user"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/v1/user"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/v1/user"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/v1/user"
+    }
+  ],
+  "limits": [
+    "Browser performs reads and input preparation only; no real or synthetic MFA challenge/verification/enrollment/removal HTTP",
+    "Cleanup ordering is proven by component mocks, not Auth server",
+    "No NativeAuth/AAL2/TOTP cryptography/recovery proof; broader MFA/shared access remain pending"
+  ]
+}
