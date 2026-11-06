@@ -1,0 +1,163 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "5385b7155388894b5fb6d93f0cf6d805d588456d",
+  "scope": "T40 new consultation modal layout, unchanged clinical/admin boundaries",
+  "red": {
+    "run": "consultation-layout-red-verified",
+    "states": 2,
+    "dialogWidth": 500,
+    "ageWidth": 205.8125,
+    "phoneEmailTopDifference": 32.390625
+  },
+  "green": {
+    "run": "consultation-layout-final",
+    "states": 16,
+    "widths": [
+      933,
+      375,
+      1280,
+      1920
+    ],
+    "checks": 12,
+    "dialogWidths": [
+      {
+        "viewport": 933,
+        "dialog": 889.796875,
+        "ageWidth": 400.703125,
+        "controlHeight": 59.390625
+      },
+      {
+        "viewport": 375,
+        "dialog": 331.796875,
+        "ageWidth": 265.015625,
+        "controlHeight": 59.390625
+      },
+      {
+        "viewport": 1280,
+        "dialog": 1209.59375,
+        "ageWidth": 560.609375,
+        "controlHeight": 59.390625
+      },
+      {
+        "viewport": 1920,
+        "dialog": 1209.59375,
+        "ageWidth": 560.609375,
+        "controlHeight": 59.390625
+      }
+    ],
+    "draftPreserved": true,
+    "sharedFieldsRegression": true,
+    "submissions": 0
+  },
+  "tests": {
+    "vitest": 15,
+    "files": 2,
+    "exit": 0
+  },
+  "checks": {
+    "types": true,
+    "uiLint": 2,
+    "scriptLintSyntax": true,
+    "invalidFlagCombinations": 3,
+    "sourceHashes": true,
+    "cleanup": true,
+    "desktopAndMobileScreenshotsInspected": true
+  },
+  "review": {
+    "finalRead": "No actionable findings",
+    "external": "Skipped; existing user preference"
+  },
+  "failedRequests": [
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    }
+  ],
+  "requestLimits": "Only GET/HEAD and three named read/auth POST paths observed; raw HEAD/patients200/ERR_ABORTED retained without attributing cause",
+  "sources": [
+    {
+      "path": "src/components/NewConsultationModal.tsx",
+      "sha256": "620c20e3dbb8e73009d51c763f860637e31f7af5f89ec773275e866f3151aedf"
+    },
+    {
+      "path": "src/components/PatientAdministrativeFields.tsx",
+      "sha256": "66b358cec9dcfb02cd2e010376447a9d6b3d256719f8ce6c8363837002745a20"
+    }
+  ],
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "d681978b4a514a18bd97d6b2e3620023e9af21231825b6c8b3c3defed5584bd1"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "4dd734d772088faa3f5b5a5bbed384ff37ee0fdb88ea60843d9e6c422d119895"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "sourceDigest": "df74fc278e9a29f697571a9faf022ecf25dd65c108c85ef0f2afecb5a34f45b8",
+  "limits": [
+    "CSS/markup only; no permissions, data contracts, validation or submit handler change",
+    "Synthetic fixture and isolated browser; no real patient data or hosted operations",
+    "Clinical start/complaint remains doctor workflow; reception handles authorized administrative registration/contact/scheduling",
+    "Scheduled coordination task remains paused; MFA recovery/sharing and M2/pilot remain pending"
+  ]
+}

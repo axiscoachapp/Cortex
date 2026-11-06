@@ -1,0 +1,2724 @@
+{
+  "completed": true,
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": "2026-11-05T15:00:00Z",
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "5385b7155388894b5fb6d93f0cf6d805d588456d",
+  "overlays": [
+    {
+      "path": "src/components/NewConsultationModal.tsx",
+      "sha256": "620c20e3dbb8e73009d51c763f860637e31f7af5f89ec773275e866f3151aedf"
+    },
+    {
+      "path": "src/components/PatientAdministrativeFields.tsx",
+      "sha256": "66b358cec9dcfb02cd2e010376447a9d6b3d256719f8ce6c8363837002745a20"
+    }
+  ],
+  "frozenTextSourceCount": 292,
+  "frozenTextSourceDigest": "df74fc278e9a29f697571a9faf022ecf25dd65c108c85ef0f2afecb5a34f45b8",
+  "tailwindRawContentCount": 290,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "d681978b4a514a18bd97d6b2e3620023e9af21231825b6c8b3c3defed5584bd1"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "4dd734d772088faa3f5b5a5bbed384ff37ee0fdb88ea60843d9e6c422d119895"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": true,
+  "consultationChecks": [
+    {
+      "width": 933,
+      "variant": "empty",
+      "dialogWidth": 889.796875,
+      "left": 21.6015625,
+      "right": 911.3984375,
+      "scrollWidth": 888,
+      "clientWidth": 888,
+      "fields": {
+        "new-patient-name": {
+          "left": 54.9921875,
+          "right": 455.6953125,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 400.703125,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-birth-date": {
+          "left": 477.2890625,
+          "right": 878.0078125,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 400.71875,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-age": {
+          "left": 54.9921875,
+          "right": 455.6953125,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 400.703125,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-profession": {
+          "left": 477.2890625,
+          "right": 878.0078125,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 400.71875,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-phone": {
+          "left": 54.9921875,
+          "right": 455.6953125,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 400.703125,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-email": {
+          "left": 477.2890625,
+          "right": 878.0078125,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 400.71875,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-cpf": {
+          "left": 54.9921875,
+          "right": 455.6953125,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 400.703125,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-healthInsurance": {
+          "left": 477.2890625,
+          "right": 878.0078125,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 400.71875,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-sex": {
+          "left": 54.9921875,
+          "right": 455.6953125,
+          "top": 601.3125,
+          "bottom": 660.703125,
+          "width": 400.703125,
+          "height": 59.390625,
+          "value": ""
+        },
+        "chief-complaint": {
+          "left": 54.9921875,
+          "right": 878.0078125,
+          "top": 724.484375,
+          "bottom": 824.484375,
+          "width": 823.015625,
+          "height": 100,
+          "value": ""
+        }
+      },
+      "prefix": "new-patient"
+    },
+    {
+      "width": 933,
+      "variant": "filled",
+      "dialogWidth": 889.796875,
+      "left": 21.6015625,
+      "right": 911.3984375,
+      "scrollWidth": 888,
+      "clientWidth": 888,
+      "fields": {
+        "new-patient-name": {
+          "left": 54.9921875,
+          "right": 455.6953125,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 400.703125,
+          "height": 59.390625,
+          "value": "Pessoa sintética de revisão"
+        },
+        "new-patient-birth-date": {
+          "left": 477.2890625,
+          "right": 878.0078125,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 400.71875,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-age": {
+          "left": 54.9921875,
+          "right": 455.6953125,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 400.703125,
+          "height": 59.390625,
+          "value": "35"
+        },
+        "new-patient-profession": {
+          "left": 477.2890625,
+          "right": 878.0078125,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 400.71875,
+          "height": 59.390625,
+          "value": "Profissão sintética"
+        },
+        "new-patient-phone": {
+          "left": 54.9921875,
+          "right": 455.6953125,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 400.703125,
+          "height": 59.390625,
+          "value": "+5511000000000"
+        },
+        "new-patient-email": {
+          "left": 477.2890625,
+          "right": 878.0078125,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 400.71875,
+          "height": 59.390625,
+          "value": "review@example.invalid"
+        },
+        "new-patient-cpf": {
+          "left": 54.9921875,
+          "right": 455.6953125,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 400.703125,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-healthInsurance": {
+          "left": 477.2890625,
+          "right": 878.0078125,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 400.71875,
+          "height": 59.390625,
+          "value": "Plano sintético"
+        },
+        "new-patient-sex": {
+          "left": 54.9921875,
+          "right": 455.6953125,
+          "top": 601.3125,
+          "bottom": 660.703125,
+          "width": 400.703125,
+          "height": 59.390625,
+          "value": ""
+        },
+        "chief-complaint": {
+          "left": 54.9921875,
+          "right": 878.0078125,
+          "top": 724.484375,
+          "bottom": 824.484375,
+          "width": 823.015625,
+          "height": 100,
+          "value": "Queixa sintética para revisão visual."
+        }
+      },
+      "prefix": "new-patient"
+    },
+    {
+      "width": 933,
+      "variant": "administrative-regression",
+      "dialogWidth": 691.1875,
+      "left": 120.90625,
+      "right": 812.09375,
+      "scrollWidth": 689,
+      "clientWidth": 689,
+      "fields": {
+        "name": {
+          "left": 154.296875,
+          "right": 778.703125,
+          "top": -87.328125,
+          "bottom": -33.328125,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "age": {
+          "left": 154.296875,
+          "right": 778.703125,
+          "top": 20.65625,
+          "bottom": 74.65625,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "date_of_birth": {
+          "left": 154.296875,
+          "right": 778.703125,
+          "top": 128.640625,
+          "bottom": 182.640625,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "profession": {
+          "left": 154.296875,
+          "right": 778.703125,
+          "top": 236.625,
+          "bottom": 290.625,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-phone": {
+          "left": 154.296875,
+          "right": 455.703125,
+          "top": 355.40625,
+          "bottom": 409.40625,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-email": {
+          "left": 477.296875,
+          "right": 778.703125,
+          "top": 355.40625,
+          "bottom": 409.40625,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-cpf": {
+          "left": 154.296875,
+          "right": 455.703125,
+          "top": 474.1875,
+          "bottom": 528.1875,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-healthInsurance": {
+          "left": 477.296875,
+          "right": 778.703125,
+          "top": 474.1875,
+          "bottom": 528.1875,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-sex": {
+          "left": 154.296875,
+          "right": 455.703125,
+          "top": 592.96875,
+          "bottom": 646.96875,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "last_visit": {
+          "left": 154.296875,
+          "right": 778.703125,
+          "top": 679.359375,
+          "bottom": 733.359375,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "": {
+          "left": 153.296875,
+          "right": 154.296875,
+          "top": 840.34375,
+          "bottom": 841.34375,
+          "width": 1,
+          "height": 1,
+          "value": "novo"
+        }
+      },
+      "prefix": "patient"
+    },
+    {
+      "width": 375,
+      "variant": "empty",
+      "dialogWidth": 331.796875,
+      "left": 21.6015625,
+      "right": 353.3984375,
+      "scrollWidth": 330,
+      "clientWidth": 330,
+      "fields": {
+        "new-patient-name": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": -462.546875,
+          "bottom": -403.15625,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-birth-date": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": -318.796875,
+          "bottom": -259.40625,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-age": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": -201.03125,
+          "bottom": -141.640625,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-profession": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": -83.265625,
+          "bottom": -23.875,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-phone": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 60.484375,
+          "bottom": 119.875,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-email": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 178.25,
+          "bottom": 237.640625,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-cpf": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 296.015625,
+          "bottom": 355.40625,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-healthInsurance": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 413.78125,
+          "bottom": 473.171875,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-sex": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 531.546875,
+          "bottom": 590.9375,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "chief-complaint": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 654.71875,
+          "bottom": 754.71875,
+          "width": 265.015625,
+          "height": 100,
+          "value": ""
+        }
+      },
+      "prefix": "new-patient"
+    },
+    {
+      "width": 375,
+      "variant": "filled",
+      "dialogWidth": 331.796875,
+      "left": 21.6015625,
+      "right": 353.3984375,
+      "scrollWidth": 330,
+      "clientWidth": 330,
+      "fields": {
+        "new-patient-name": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": -462.546875,
+          "bottom": -403.15625,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": "Pessoa sintética de revisão"
+        },
+        "new-patient-birth-date": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": -318.796875,
+          "bottom": -259.40625,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-age": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": -201.03125,
+          "bottom": -141.640625,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": "35"
+        },
+        "new-patient-profession": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": -83.265625,
+          "bottom": -23.875,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": "Profissão sintética"
+        },
+        "new-patient-phone": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 60.484375,
+          "bottom": 119.875,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": "+5511000000000"
+        },
+        "new-patient-email": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 178.25,
+          "bottom": 237.640625,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": "review@example.invalid"
+        },
+        "new-patient-cpf": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 296.015625,
+          "bottom": 355.40625,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-healthInsurance": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 413.78125,
+          "bottom": 473.171875,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": "Plano sintético"
+        },
+        "new-patient-sex": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 531.546875,
+          "bottom": 590.9375,
+          "width": 265.015625,
+          "height": 59.390625,
+          "value": ""
+        },
+        "chief-complaint": {
+          "left": 54.9921875,
+          "right": 320.0078125,
+          "top": 654.71875,
+          "bottom": 754.71875,
+          "width": 265.015625,
+          "height": 100,
+          "value": "Queixa sintética para revisão visual."
+        }
+      },
+      "prefix": "new-patient"
+    },
+    {
+      "width": 375,
+      "variant": "administrative-regression",
+      "dialogWidth": 359,
+      "left": 8,
+      "right": 367,
+      "scrollWidth": 357,
+      "clientWidth": 357,
+      "fields": {
+        "name": {
+          "left": 41.390625,
+          "right": 333.609375,
+          "top": -422.328125,
+          "bottom": -368.328125,
+          "width": 292.21875,
+          "height": 54,
+          "value": ""
+        },
+        "age": {
+          "left": 41.390625,
+          "right": 333.609375,
+          "top": -314.34375,
+          "bottom": -260.34375,
+          "width": 292.21875,
+          "height": 54,
+          "value": ""
+        },
+        "date_of_birth": {
+          "left": 41.390625,
+          "right": 333.609375,
+          "top": -173.96875,
+          "bottom": -119.96875,
+          "width": 292.21875,
+          "height": 54,
+          "value": ""
+        },
+        "profession": {
+          "left": 41.390625,
+          "right": 333.609375,
+          "top": -65.984375,
+          "bottom": -11.984375,
+          "width": 292.21875,
+          "height": 54,
+          "value": ""
+        },
+        "patient-phone": {
+          "left": 41.390625,
+          "right": 333.609375,
+          "top": 85.1875,
+          "bottom": 139.1875,
+          "width": 292.21875,
+          "height": 54,
+          "value": ""
+        },
+        "patient-email": {
+          "left": 41.390625,
+          "right": 333.609375,
+          "top": 203.96875,
+          "bottom": 257.96875,
+          "width": 292.21875,
+          "height": 54,
+          "value": ""
+        },
+        "patient-cpf": {
+          "left": 41.390625,
+          "right": 333.609375,
+          "top": 322.75,
+          "bottom": 376.75,
+          "width": 292.21875,
+          "height": 54,
+          "value": ""
+        },
+        "patient-healthInsurance": {
+          "left": 41.390625,
+          "right": 333.609375,
+          "top": 441.53125,
+          "bottom": 495.53125,
+          "width": 292.21875,
+          "height": 54,
+          "value": ""
+        },
+        "patient-sex": {
+          "left": 41.390625,
+          "right": 333.609375,
+          "top": 560.3125,
+          "bottom": 614.3125,
+          "width": 292.21875,
+          "height": 54,
+          "value": ""
+        },
+        "last_visit": {
+          "left": 41.390625,
+          "right": 333.609375,
+          "top": 679.09375,
+          "bottom": 733.09375,
+          "width": 292.21875,
+          "height": 54,
+          "value": ""
+        },
+        "": {
+          "left": 40.390625,
+          "right": 41.390625,
+          "top": 840.078125,
+          "bottom": 841.078125,
+          "width": 1,
+          "height": 1,
+          "value": "novo"
+        }
+      },
+      "prefix": "patient"
+    },
+    {
+      "width": 1280,
+      "variant": "empty",
+      "dialogWidth": 1209.59375,
+      "left": 35.203125,
+      "right": 1244.796875,
+      "scrollWidth": 1208,
+      "clientWidth": 1208,
+      "fields": {
+        "new-patient-name": {
+          "left": 68.59375,
+          "right": 629.203125,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-birth-date": {
+          "left": 650.796875,
+          "right": 1211.40625,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-age": {
+          "left": 68.59375,
+          "right": 629.203125,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-profession": {
+          "left": 650.796875,
+          "right": 1211.40625,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-phone": {
+          "left": 68.59375,
+          "right": 629.203125,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-email": {
+          "left": 650.796875,
+          "right": 1211.40625,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-cpf": {
+          "left": 68.59375,
+          "right": 629.203125,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-healthInsurance": {
+          "left": 650.796875,
+          "right": 1211.40625,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-sex": {
+          "left": 68.59375,
+          "right": 629.203125,
+          "top": 601.3125,
+          "bottom": 660.703125,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "chief-complaint": {
+          "left": 68.59375,
+          "right": 1211.40625,
+          "top": 724.484375,
+          "bottom": 824.484375,
+          "width": 1142.8125,
+          "height": 100,
+          "value": ""
+        }
+      },
+      "prefix": "new-patient"
+    },
+    {
+      "width": 1280,
+      "variant": "filled",
+      "dialogWidth": 1209.59375,
+      "left": 35.203125,
+      "right": 1244.796875,
+      "scrollWidth": 1208,
+      "clientWidth": 1208,
+      "fields": {
+        "new-patient-name": {
+          "left": 68.59375,
+          "right": 629.203125,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "Pessoa sintética de revisão"
+        },
+        "new-patient-birth-date": {
+          "left": 650.796875,
+          "right": 1211.40625,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-age": {
+          "left": 68.59375,
+          "right": 629.203125,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "35"
+        },
+        "new-patient-profession": {
+          "left": 650.796875,
+          "right": 1211.40625,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "Profissão sintética"
+        },
+        "new-patient-phone": {
+          "left": 68.59375,
+          "right": 629.203125,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "+5511000000000"
+        },
+        "new-patient-email": {
+          "left": 650.796875,
+          "right": 1211.40625,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "review@example.invalid"
+        },
+        "new-patient-cpf": {
+          "left": 68.59375,
+          "right": 629.203125,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-healthInsurance": {
+          "left": 650.796875,
+          "right": 1211.40625,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "Plano sintético"
+        },
+        "new-patient-sex": {
+          "left": 68.59375,
+          "right": 629.203125,
+          "top": 601.3125,
+          "bottom": 660.703125,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "chief-complaint": {
+          "left": 68.59375,
+          "right": 1211.40625,
+          "top": 724.484375,
+          "bottom": 824.484375,
+          "width": 1142.8125,
+          "height": 100,
+          "value": "Queixa sintética para revisão visual."
+        }
+      },
+      "prefix": "new-patient"
+    },
+    {
+      "width": 1280,
+      "variant": "administrative-regression",
+      "dialogWidth": 691.1875,
+      "left": 294.40625,
+      "right": 985.59375,
+      "scrollWidth": 689,
+      "clientWidth": 689,
+      "fields": {
+        "name": {
+          "left": 327.796875,
+          "right": 952.203125,
+          "top": -87.328125,
+          "bottom": -33.328125,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "age": {
+          "left": 327.796875,
+          "right": 952.203125,
+          "top": 20.65625,
+          "bottom": 74.65625,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "date_of_birth": {
+          "left": 327.796875,
+          "right": 952.203125,
+          "top": 128.640625,
+          "bottom": 182.640625,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "profession": {
+          "left": 327.796875,
+          "right": 952.203125,
+          "top": 236.625,
+          "bottom": 290.625,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-phone": {
+          "left": 327.796875,
+          "right": 629.203125,
+          "top": 355.40625,
+          "bottom": 409.40625,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-email": {
+          "left": 650.796875,
+          "right": 952.203125,
+          "top": 355.40625,
+          "bottom": 409.40625,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-cpf": {
+          "left": 327.796875,
+          "right": 629.203125,
+          "top": 474.1875,
+          "bottom": 528.1875,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-healthInsurance": {
+          "left": 650.796875,
+          "right": 952.203125,
+          "top": 474.1875,
+          "bottom": 528.1875,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-sex": {
+          "left": 327.796875,
+          "right": 629.203125,
+          "top": 592.96875,
+          "bottom": 646.96875,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "last_visit": {
+          "left": 327.796875,
+          "right": 952.203125,
+          "top": 679.359375,
+          "bottom": 733.359375,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "": {
+          "left": 326.796875,
+          "right": 327.796875,
+          "top": 840.34375,
+          "bottom": 841.34375,
+          "width": 1,
+          "height": 1,
+          "value": "novo"
+        }
+      },
+      "prefix": "patient"
+    },
+    {
+      "width": 1920,
+      "variant": "empty",
+      "dialogWidth": 1209.59375,
+      "left": 355.203125,
+      "right": 1564.796875,
+      "scrollWidth": 1208,
+      "clientWidth": 1208,
+      "fields": {
+        "new-patient-name": {
+          "left": 388.59375,
+          "right": 949.203125,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-birth-date": {
+          "left": 970.796875,
+          "right": 1531.40625,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-age": {
+          "left": 388.59375,
+          "right": 949.203125,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-profession": {
+          "left": 970.796875,
+          "right": 1531.40625,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-phone": {
+          "left": 388.59375,
+          "right": 949.203125,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-email": {
+          "left": 970.796875,
+          "right": 1531.40625,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-cpf": {
+          "left": 388.59375,
+          "right": 949.203125,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-healthInsurance": {
+          "left": 970.796875,
+          "right": 1531.40625,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-sex": {
+          "left": 388.59375,
+          "right": 949.203125,
+          "top": 601.3125,
+          "bottom": 660.703125,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "chief-complaint": {
+          "left": 388.59375,
+          "right": 1531.40625,
+          "top": 724.484375,
+          "bottom": 824.484375,
+          "width": 1142.8125,
+          "height": 100,
+          "value": ""
+        }
+      },
+      "prefix": "new-patient"
+    },
+    {
+      "width": 1920,
+      "variant": "filled",
+      "dialogWidth": 1209.59375,
+      "left": 355.203125,
+      "right": 1564.796875,
+      "scrollWidth": 1208,
+      "clientWidth": 1208,
+      "fields": {
+        "new-patient-name": {
+          "left": 388.59375,
+          "right": 949.203125,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "Pessoa sintética de revisão"
+        },
+        "new-patient-birth-date": {
+          "left": 970.796875,
+          "right": 1531.40625,
+          "top": 130.25,
+          "bottom": 189.640625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-age": {
+          "left": 388.59375,
+          "right": 949.203125,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "35"
+        },
+        "new-patient-profession": {
+          "left": 970.796875,
+          "right": 1531.40625,
+          "top": 248.015625,
+          "bottom": 307.40625,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "Profissão sintética"
+        },
+        "new-patient-phone": {
+          "left": 388.59375,
+          "right": 949.203125,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "+5511000000000"
+        },
+        "new-patient-email": {
+          "left": 970.796875,
+          "right": 1531.40625,
+          "top": 365.78125,
+          "bottom": 425.171875,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "review@example.invalid"
+        },
+        "new-patient-cpf": {
+          "left": 388.59375,
+          "right": 949.203125,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "new-patient-healthInsurance": {
+          "left": 970.796875,
+          "right": 1531.40625,
+          "top": 483.546875,
+          "bottom": 542.9375,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": "Plano sintético"
+        },
+        "new-patient-sex": {
+          "left": 388.59375,
+          "right": 949.203125,
+          "top": 601.3125,
+          "bottom": 660.703125,
+          "width": 560.609375,
+          "height": 59.390625,
+          "value": ""
+        },
+        "chief-complaint": {
+          "left": 388.59375,
+          "right": 1531.40625,
+          "top": 724.484375,
+          "bottom": 824.484375,
+          "width": 1142.8125,
+          "height": 100,
+          "value": "Queixa sintética para revisão visual."
+        }
+      },
+      "prefix": "new-patient"
+    },
+    {
+      "width": 1920,
+      "variant": "administrative-regression",
+      "dialogWidth": 691.1875,
+      "left": 614.40625,
+      "right": 1305.59375,
+      "scrollWidth": 689,
+      "clientWidth": 689,
+      "fields": {
+        "name": {
+          "left": 647.796875,
+          "right": 1272.203125,
+          "top": -87.328125,
+          "bottom": -33.328125,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "age": {
+          "left": 647.796875,
+          "right": 1272.203125,
+          "top": 20.65625,
+          "bottom": 74.65625,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "date_of_birth": {
+          "left": 647.796875,
+          "right": 1272.203125,
+          "top": 128.640625,
+          "bottom": 182.640625,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "profession": {
+          "left": 647.796875,
+          "right": 1272.203125,
+          "top": 236.625,
+          "bottom": 290.625,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-phone": {
+          "left": 647.796875,
+          "right": 949.203125,
+          "top": 355.40625,
+          "bottom": 409.40625,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-email": {
+          "left": 970.796875,
+          "right": 1272.203125,
+          "top": 355.40625,
+          "bottom": 409.40625,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-cpf": {
+          "left": 647.796875,
+          "right": 949.203125,
+          "top": 474.1875,
+          "bottom": 528.1875,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-healthInsurance": {
+          "left": 970.796875,
+          "right": 1272.203125,
+          "top": 474.1875,
+          "bottom": 528.1875,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "patient-sex": {
+          "left": 647.796875,
+          "right": 949.203125,
+          "top": 592.96875,
+          "bottom": 646.96875,
+          "width": 301.40625,
+          "height": 54,
+          "value": ""
+        },
+        "last_visit": {
+          "left": 647.796875,
+          "right": 1272.203125,
+          "top": 679.359375,
+          "bottom": 733.359375,
+          "width": 624.40625,
+          "height": 54,
+          "value": ""
+        },
+        "": {
+          "left": 646.796875,
+          "right": 647.796875,
+          "top": 840.34375,
+          "bottom": 841.34375,
+          "width": 1,
+          "height": 1,
+          "value": "novo"
+        }
+      },
+      "prefix": "patient"
+    }
+  ],
+  "consultationRequests": [
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_templates"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_templates"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_templates"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_templates"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_templates"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_templates"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_templates"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_templates"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    }
+  ],
+  "consultationMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "medicalWrites": 0
+  },
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": null,
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/ChatPanel.tsx",
+    "src/components/ClinicalAnswer.tsx",
+    "src/components/ClinicalMarkdown.tsx",
+    "src/components/ClinicalProposals.tsx",
+    "src/components/CommentProposalCard.tsx",
+    "src/components/ConsultationReviewModal.tsx",
+    "src/components/DocumentComposerModal.tsx",
+    "src/components/DocumentPreviewModal.tsx",
+    "src/components/ImportPatientsModal.tsx",
+    "src/components/LiveCopilotCard.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/NewConsultationModal.tsx",
+    "src/components/OnboardingCard.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/PatientAdministrativeFields.tsx",
+    "src/components/PatientFiles.tsx",
+    "src/components/PatientProfileDrawer.tsx",
+    "src/components/PatientSidebar.tsx",
+    "src/components/PatientSnapshot.tsx",
+    "src/components/PrescriptionList.tsx",
+    "src/components/PrescriptionTemplatePicker.tsx",
+    "src/components/ProfileUpdateCard.tsx",
+    "src/components/QuestionChecklistCard.tsx",
+    "src/components/RecordingModeDialog.tsx",
+    "src/components/ReferenceSearch.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/SignatureControls.tsx",
+    "src/components/SoapNoteView.tsx",
+    "src/components/SpecialtySettingsSheet.tsx",
+    "src/components/UsageMeter.tsx",
+    "src/components/WelcomeDashboard.tsx",
+    "src/components/ui/alert-dialog.tsx",
+    "src/components/ui/badge.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/card.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/select.tsx",
+    "src/components/ui/sheet.tsx",
+    "src/components/ui/switch.tsx",
+    "src/components/ui/table.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/data/seedData.ts",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useDocumentSnippets.ts",
+    "src/hooks/useRecording.ts",
+    "src/hooks/useSeedPatients.ts",
+    "src/hooks/useSignatureSession.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/hooks/useUsage.ts",
+    "src/hooks/useUserSettings.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/cmedPresentation.ts",
+    "src/lib/consultationDrafts.ts",
+    "src/lib/dates.ts",
+    "src/lib/documentSnippets.ts",
+    "src/lib/functionErrors.ts",
+    "src/lib/interfaceScale.ts",
+    "src/lib/medicationMerge.ts",
+    "src/lib/mfa.ts",
+    "src/lib/pagination.ts",
+    "src/lib/patientConversation.ts",
+    "src/lib/patientImport.ts",
+    "src/lib/patientMapper.ts",
+    "src/lib/patientRegistration.ts",
+    "src/lib/prescriberContact.ts",
+    "src/lib/printDoc.ts",
+    "src/lib/recordingRescue.ts",
+    "src/lib/sharing.ts",
+    "src/lib/signatureClient.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/Index.tsx",
+    "src/pages/PatientManagement.tsx"
+  ],
+  "screens": [
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-existing",
+      "actualPath": "/",
+      "width": 933,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Paciente Exemplo A · 0 anos",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-existing-933.png",
+      "actionScreenshot": "clinical---consultation-existing-933-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-new-empty",
+      "actualPath": "/",
+      "width": 933,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-new-empty-933.png",
+      "actionScreenshot": "clinical---consultation-new-empty-933-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-new-filled",
+      "actualPath": "/",
+      "width": 933,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-new-filled-933.png",
+      "actionScreenshot": "clinical---consultation-new-filled-933-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/gerenciar-pacientes",
+      "variant": "administrative-fields-regression",
+      "actualPath": "/gerenciar-pacientes",
+      "width": 933,
+      "dialogActions": [
+        {
+          "name": "Novo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo Paciente"
+      ],
+      "screenshot": "clinical--gerenciar-pacientes-administrative-fields-regression-933.png",
+      "actionScreenshot": "clinical--gerenciar-pacientes-administrative-fields-regression-933-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-existing",
+      "actualPath": "/",
+      "width": 375,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Paciente Exemplo A · 0 anos",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-existing-375.png",
+      "actionScreenshot": "clinical---consultation-existing-375-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-new-empty",
+      "actualPath": "/",
+      "width": 375,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-new-empty-375.png",
+      "actionScreenshot": "clinical---consultation-new-empty-375-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-new-filled",
+      "actualPath": "/",
+      "width": 375,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-new-filled-375.png",
+      "actionScreenshot": "clinical---consultation-new-filled-375-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/gerenciar-pacientes",
+      "variant": "administrative-fields-regression",
+      "actualPath": "/gerenciar-pacientes",
+      "width": 375,
+      "dialogActions": [
+        {
+          "name": "Novo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo Paciente"
+      ],
+      "screenshot": "clinical--gerenciar-pacientes-administrative-fields-regression-375.png",
+      "actionScreenshot": "clinical--gerenciar-pacientes-administrative-fields-regression-375-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-existing",
+      "actualPath": "/",
+      "width": 1280,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Paciente Exemplo A · 0 anos",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-existing-1280.png",
+      "actionScreenshot": "clinical---consultation-existing-1280-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-new-empty",
+      "actualPath": "/",
+      "width": 1280,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-new-empty-1280.png",
+      "actionScreenshot": "clinical---consultation-new-empty-1280-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-new-filled",
+      "actualPath": "/",
+      "width": 1280,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-new-filled-1280.png",
+      "actionScreenshot": "clinical---consultation-new-filled-1280-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/gerenciar-pacientes",
+      "variant": "administrative-fields-regression",
+      "actualPath": "/gerenciar-pacientes",
+      "width": 1280,
+      "dialogActions": [
+        {
+          "name": "Novo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo Paciente"
+      ],
+      "screenshot": "clinical--gerenciar-pacientes-administrative-fields-regression-1280.png",
+      "actionScreenshot": "clinical--gerenciar-pacientes-administrative-fields-regression-1280-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-existing",
+      "actualPath": "/",
+      "width": 1920,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Paciente Exemplo A · 0 anos",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-existing-1920.png",
+      "actionScreenshot": "clinical---consultation-existing-1920-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-new-empty",
+      "actualPath": "/",
+      "width": 1920,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-new-empty-1920.png",
+      "actionScreenshot": "clinical---consultation-new-empty-1920-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-new-filled",
+      "actualPath": "/",
+      "width": 1920,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-new-filled-1920.png",
+      "actionScreenshot": "clinical---consultation-new-filled-1920-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/gerenciar-pacientes",
+      "variant": "administrative-fields-regression",
+      "actualPath": "/gerenciar-pacientes",
+      "width": 1920,
+      "dialogActions": [
+        {
+          "name": "Novo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo Paciente"
+      ],
+      "screenshot": "clinical--gerenciar-pacientes-administrative-fields-regression-1920.png",
+      "actionScreenshot": "clinical--gerenciar-pacientes-administrative-fields-regression-1920-actions.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "failedRequests": [
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    }
+  ],
+  "errorResponses": [],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

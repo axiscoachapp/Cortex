@@ -6,7 +6,7 @@ export function PatientAdministrativeFields({value,onChange,prefix='patient'}: {
   onChange:(patch:Partial<ReturnType<typeof administrativeValues>>)=>void;
   prefix?:string;
 }) {
-  return <div className="grid gap-3 sm:grid-cols-2">
+  return <div className="grid items-end gap-4 sm:grid-cols-2">
     {([{key:'phone',label:'Telefone / WhatsApp (opcional)',type:'tel',max:25},{key:'email',label:'E-mail (opcional)',type:'email',max:254},{key:'cpf',label:'CPF (opcional)',type:'text',max:14},{key:'healthInsurance',label:'Convênio (opcional)',type:'text',max:120}] as const).map(field=><div key={field.key} className="space-y-2">
       <Label htmlFor={prefix+'-'+field.key}>{field.label}</Label><Input id={prefix+'-'+field.key} type={field.type} maxLength={field.max} value={value[field.key]} onChange={event=>onChange({[field.key]:event.target.value})} />
     </div>)}

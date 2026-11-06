@@ -1,0 +1,503 @@
+{
+  "completed": false,
+  "failure": {
+    "name": "AssertionError",
+    "message": "Paired fields are misaligned: name/birth-date"
+  },
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": "2026-11-05T15:00:00Z",
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "5385b7155388894b5fb6d93f0cf6d805d588456d",
+  "overlays": [],
+  "frozenTextSourceCount": 292,
+  "frozenTextSourceDigest": "901bf69521b0499d5d418222dd2791c124045f198c88346aa1ee9f8337002e99",
+  "tailwindRawContentCount": 290,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "d206c457d59e61b6ff91783f85a953d344e3cc41a52babec5ff7386e10dd3620"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "4dd734d772088faa3f5b5a5bbed384ff37ee0fdb88ea60843d9e6c422d119895"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": true,
+  "consultationChecks": [
+    {
+      "width": 933,
+      "variant": "empty",
+      "dialogWidth": 500,
+      "left": 216.5,
+      "right": 716.5,
+      "scrollWidth": 498,
+      "clientWidth": 498,
+      "fields": {
+        "new-patient-name": {
+          "left": 249.890625,
+          "right": 683.109375,
+          "top": -15.140625,
+          "bottom": 38.859375,
+          "width": 433.21875,
+          "height": 54,
+          "value": ""
+        },
+        "new-patient-birth-date": {
+          "left": 249.890625,
+          "right": 683.109375,
+          "top": 103.640625,
+          "bottom": 157.640625,
+          "width": 433.21875,
+          "height": 54,
+          "value": ""
+        },
+        "new-patient-age": {
+          "left": 249.890625,
+          "right": 455.703125,
+          "top": 222.421875,
+          "bottom": 276.421875,
+          "width": 205.8125,
+          "height": 54,
+          "value": ""
+        },
+        "new-patient-profession": {
+          "left": 477.296875,
+          "right": 683.109375,
+          "top": 222.421875,
+          "bottom": 276.421875,
+          "width": 205.8125,
+          "height": 54,
+          "value": ""
+        },
+        "new-patient-phone": {
+          "left": 249.890625,
+          "right": 458.40625,
+          "top": 373.59375,
+          "bottom": 427.59375,
+          "width": 208.515625,
+          "height": 54,
+          "value": ""
+        },
+        "new-patient-email": {
+          "left": 474.59375,
+          "right": 683.109375,
+          "top": 341.203125,
+          "bottom": 395.203125,
+          "width": 208.515625,
+          "height": 54,
+          "value": ""
+        },
+        "new-patient-cpf": {
+          "left": 249.890625,
+          "right": 458.40625,
+          "top": 486.96875,
+          "bottom": 540.96875,
+          "width": 208.515625,
+          "height": 54,
+          "value": ""
+        },
+        "new-patient-healthInsurance": {
+          "left": 474.59375,
+          "right": 683.109375,
+          "top": 486.96875,
+          "bottom": 540.96875,
+          "width": 208.515625,
+          "height": 54,
+          "value": ""
+        },
+        "new-patient-sex": {
+          "left": 249.890625,
+          "right": 458.40625,
+          "top": 600.34375,
+          "bottom": 654.34375,
+          "width": 208.515625,
+          "height": 54,
+          "value": ""
+        },
+        "chief-complaint": {
+          "left": 249.890625,
+          "right": 683.109375,
+          "top": 724.53125,
+          "bottom": 824.53125,
+          "width": 433.21875,
+          "height": 100,
+          "value": ""
+        }
+      },
+      "prefix": "new-patient"
+    }
+  ],
+  "consultationRequests": [
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_templates"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_templates"
+    }
+  ],
+  "consultationMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "medicalWrites": 0
+  },
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": null,
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/ChatPanel.tsx",
+    "src/components/ClinicalAnswer.tsx",
+    "src/components/ClinicalMarkdown.tsx",
+    "src/components/ClinicalProposals.tsx",
+    "src/components/CommentProposalCard.tsx",
+    "src/components/ConsultationReviewModal.tsx",
+    "src/components/DocumentComposerModal.tsx",
+    "src/components/DocumentPreviewModal.tsx",
+    "src/components/LiveCopilotCard.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/NewConsultationModal.tsx",
+    "src/components/OnboardingCard.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/PatientAdministrativeFields.tsx",
+    "src/components/PatientFiles.tsx",
+    "src/components/PatientProfileDrawer.tsx",
+    "src/components/PatientSidebar.tsx",
+    "src/components/PatientSnapshot.tsx",
+    "src/components/PrescriptionList.tsx",
+    "src/components/PrescriptionTemplatePicker.tsx",
+    "src/components/ProfileUpdateCard.tsx",
+    "src/components/QuestionChecklistCard.tsx",
+    "src/components/RecordingModeDialog.tsx",
+    "src/components/ReferenceSearch.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/SignatureControls.tsx",
+    "src/components/SoapNoteView.tsx",
+    "src/components/SpecialtySettingsSheet.tsx",
+    "src/components/UsageMeter.tsx",
+    "src/components/WelcomeDashboard.tsx",
+    "src/components/ui/badge.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/select.tsx",
+    "src/components/ui/sheet.tsx",
+    "src/components/ui/switch.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/data/seedData.ts",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useDocumentSnippets.ts",
+    "src/hooks/useRecording.ts",
+    "src/hooks/useSeedPatients.ts",
+    "src/hooks/useSignatureSession.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/hooks/useUsage.ts",
+    "src/hooks/useUserSettings.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/cmedPresentation.ts",
+    "src/lib/consultationDrafts.ts",
+    "src/lib/dates.ts",
+    "src/lib/documentSnippets.ts",
+    "src/lib/functionErrors.ts",
+    "src/lib/interfaceScale.ts",
+    "src/lib/medicationMerge.ts",
+    "src/lib/mfa.ts",
+    "src/lib/pagination.ts",
+    "src/lib/patientConversation.ts",
+    "src/lib/patientImport.ts",
+    "src/lib/patientMapper.ts",
+    "src/lib/patientRegistration.ts",
+    "src/lib/prescriberContact.ts",
+    "src/lib/printDoc.ts",
+    "src/lib/recordingRescue.ts",
+    "src/lib/sharing.ts",
+    "src/lib/signatureClient.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/Index.tsx"
+  ],
+  "screens": [
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-existing",
+      "actualPath": "/",
+      "width": 933,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Paciente Exemplo A · 0 anos",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-existing-933.png",
+      "actionScreenshot": "clinical---consultation-existing-933-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/",
+      "variant": "consultation-new-empty",
+      "actualPath": "/",
+      "width": 933,
+      "dialogActions": [
+        {
+          "name": "Paciente Existente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Novo Paciente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Iniciar Consulta",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": {
+        "text": "Quinta-feira, 5 de novembro",
+        "transform": "none"
+      },
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova Consulta"
+      ],
+      "screenshot": "clinical---consultation-new-empty-933.png",
+      "actionScreenshot": "clinical---consultation-new-empty-933-actions.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "failedRequests": [
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    }
+  ],
+  "errorResponses": [],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

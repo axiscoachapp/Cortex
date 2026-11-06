@@ -1,6 +1,8 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-06 16:24 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-06 18:21 por Codex. Cada agente atualiza as linhas que lhe dizem respeito.
+
+**T40 — Nova Consulta corrigida por pedido manual:** [provas](../docs/reviews/2026-11-05/reception-app-audit/NEW_CONSULTATION_LAYOUT.md). Limite500px removido; em933px modal passa a889,80px, campos maiores/colunas alinhadas e uma coluna no celular. RED5385; GREEN16 estados375/933/1280/1920 a135%, dois overlays explícitos, rascunho preservado/regressão Gerenciar pacientes.15 testes existentes/tipos/lint/sintaxe/três flags/hash/cleanup/revisão aprovados. Cinco HEADpatients200/ERR_ABORTED brutos preservados, demais erros/IA/escritas zero. Só classes/estrutura, permissões/handlers intactos; secretaria cuida do administrativo/agendamento e médico inicia consulta clínica. Automação permanece pausada. Nenhuma mensagem nova1557 já atendida. Sem hosted/push/Claude/SaaS/PersonalMed; MFA3c/2c/2b/compartilhamento/M2/piloto continuam abertos.
 
 **T39/3c/2c/2a corrigido/concluído localmente:** [provas](../docs/reviews/2026-11-05/reception-app-audit/MFA_CANCELLATION.md). Remoção confirmada limpa setup/seleção/código; consulta do ator cancelada e ID retirado do cache antes da atualização impedem fallback para fator removido. RED f401 no navegador/três testes UI e teste adicional de refetch pendente; GREEN18 estados375/1280/1920+overlay único,12 regressões de erro/foco,12Node+22Vitest/tipos/lint/sintaxe/quatro flags/hash/cleanup/revisão aprovados. Ativos intactos, confirmação dispensada/recusa preservam dados; testes cobrem último fator com falha e leitura antiga em voo. Nove mutações no mock, nenhum challenge/verify no navegador. Próximo3c/2c/2b: desafio/verificação/erros/recovery; depois compartilhamento. Nenhuma mensagem nova,1557 atendida1606. Sem Auth/TOTP/AAL2/SQL/NativeAuth/hosted/push/Claude/SaaS/PersonalMed; T39/M2/piloto abertos.
 

@@ -108,13 +108,13 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-[500px] max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-foreground">Nova Consulta</DialogTitle>
           <DialogDescription className="sr-only">Selecione ou cadastre um paciente e informe a queixa principal para iniciar.</DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-5 mt-2" aria-busy={saving}>
+        <form onSubmit={handleSubmit} className="space-y-5 mt-2 [&_input]:h-11 [&_input]:min-w-0 [&_select]:h-11 [&_label]:block [&_label]:leading-snug" aria-busy={saving}>
           {submitError && <p role="alert" className="text-sm text-destructive">{submitError}</p>}
           <fieldset disabled={saving} className="space-y-5">
           {/* Patient Selection Toggle */}
@@ -124,7 +124,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
               variant={!isNewPatient ? 'default' : 'outline'}
               size="sm"
               onClick={() => setIsNewPatient(false)}
-              className="flex-1"
+              className="min-w-0 flex-1 h-auto min-h-11 whitespace-normal py-2"
             >
               Paciente Existente
             </Button>
@@ -133,7 +133,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
               variant={isNewPatient ? 'default' : 'outline'}
               size="sm"
               onClick={() => setIsNewPatient(true)}
-              className="flex-1"
+              className="min-w-0 flex-1 h-auto min-h-11 whitespace-normal py-2"
             >
               Novo Paciente
             </Button>
@@ -191,35 +191,35 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="new-patient-name">Nome do Paciente *</Label>
-                <Input
-                  id="new-patient-name"
-                  value={newPatientName}
-                  onChange={(e) => setNewPatientName(e.target.value)}
-                  placeholder="Nome completo"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-patient-birth-date">Data de nascimento (opcional)</Label>
-                <Input id="new-patient-birth-date" type="date" max={clinicDate()} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
+                <div className="min-w-0 space-y-2">
+                  <Label htmlFor="new-patient-name">Nome do Paciente *</Label>
+                  <Input
+                    id="new-patient-name"
+                    value={newPatientName}
+                    onChange={(e) => setNewPatientName(e.target.value)}
+                    placeholder="Nome completo"
+                  />
+                </div>
+                <div className="min-w-0 space-y-2">
+                  <Label htmlFor="new-patient-birth-date">Data de nascimento (opcional)</Label>
+                  <Input id="new-patient-birth-date" type="date" max={clinicDate()} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+                </div>
+                <div className="min-w-0 space-y-2">
                   <Label htmlFor="new-patient-age">Idade</Label>
                   <Input
                     id="new-patient-age"
                     type="number"
-                      min={0}
-                      max={130}
-                      step={1}
+                    min={0}
+                    max={130}
+                    step={1}
                     disabled={!!dateOfBirth}
                     value={newPatientAge}
                     onChange={(e) => setNewPatientAge(e.target.value)}
                     placeholder="Ex: 35"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="min-w-0 space-y-2">
                   <Label htmlFor="new-patient-profession">Profissão</Label>
                   <Input
                     id="new-patient-profession"
@@ -245,11 +245,11 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => close(false)} className="flex-1">
+          <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => close(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit" variant="medical" disabled={!isValid || saving} className="flex-1">
+            <Button type="submit" variant="medical" disabled={!isValid || saving} className="w-full sm:w-auto">
               {saving ? 'Iniciando…' : 'Iniciar Consulta'}
             </Button>
           </div>
