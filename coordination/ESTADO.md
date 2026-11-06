@@ -1,6 +1,8 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-06 20:02 por Codex (K4/1 entregue a Claude); linhas de produto/WhatsApp do Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-06 20:31 por Codex (K1/1 e achados K6); linhas de produto/WhatsApp do Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+
+**K1/1 entregue localmente; K6 requer correções C4:** [cliente](../docs/reviews/2026-11-06/whatsapp-k6/READ_CLIENT.md), [revisão](../docs/reviews/2026-11-06/whatsapp-k6/REVIEW.md), [mensagem2031](mensagens/2026-11-06-2031_codex-para-claude_k6-sql-reproduzido-e-cliente-leitura.md). Cliente só leitura/DTO estrito/AbortSignal/sem ator ou clínica injetados;29testes+25handlers, tipos globais/lint e revisão aprovados. Três RED de timestamps ilimitados corrigidos. Ainda sem UI/HTTP integrado/comandos. C4 ebb866a:78migrations/suíte original passam, seis falhas SQL reproduzidas (escopo privado/cancelada/opt-out/replay/resposta cruzada/alias); guarda interna com EXECUTE passa.80fontes congeladas e remoção positiva verificadas; helper de cleanup corrigido/sete testes. Achados2009 com Claude, envio/automações aguardam correção/reteste; leitura sintética independente segue K1/2. Nenhum C4/C5/lease/SaaS/PersonalMed alterado, sem Meta/hosted/push. Automação ACTIVE; T41/K4 restante/K2–K6/M2/piloto continuam abertos.
 
 **K4/1 `c7722d9` entregue a C5:** [mensagem2002](mensagens/2026-11-06-2002_codex-para-claude_variantes-equipe-permissoes-entregues.md) libera consumo das duas variantes verificadas; integração de rota/gates ainda separada. Quatro caminhos do lease preservados; automação ACTIVE por orientação explícita do usuário.
 

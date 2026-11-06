@@ -1,0 +1,68 @@
+{
+  "date": "2026-11-06",
+  "c4Baseline": "ebb866af7bff1e2685150d315f0564da20f352fc",
+  "workingTreeBytes": true,
+  "sources": [
+    {
+      "path": "src/features/reception/whatsappApi.ts",
+      "sha256": "455a295d03294cc9e0454262da0b516ad3815611f95c422b0341f24649c1d2e2"
+    },
+    {
+      "path": "src/features/reception/whatsappApi.test.ts",
+      "sha256": "c14dc4cb9b44b6ab8724a6e058858d000a372727b1cb176d13fc816fa54b4e26"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-k6-sql.mjs",
+      "sha256": "cefb5a701905d4b65e9df3ccf2d3748cde60a267094671e990a2e7d5a83852f3"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-k6-cleanup.mjs",
+      "sha256": "fe63397ac1257a2155ba8eb4390d9d1d0b3c3accdcf32c2cef078a657f641917"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-k6-cleanup.node-test.mjs",
+      "sha256": "c1761ea4d178a7bc25dacdf180c3e28931e2d9b81050d1050768ed02bbe102a1"
+    }
+  ],
+  "checks": {
+    "vitest": {
+      "client": 29,
+      "producer": 25,
+      "total": 54,
+      "exitCode": 0,
+      "fileIsolation": true
+    },
+    "cleanupNodeTests": {
+      "passed": 7,
+      "exitCode": 0
+    },
+    "appTypecheck": {
+      "command": "tsc --noEmit --incremental false -p tsconfig.app.json",
+      "exitCode": 0
+    },
+    "eslintClientAndTests": {
+      "exitCode": 0,
+      "warnings": 0
+    },
+    "eslintNodeRecommended": {
+      "exitCode": 0,
+      "warnings": 0
+    },
+    "runnerSyntax": {
+      "exitCode": 0
+    },
+    "frozenSourceHashes": 80,
+    "sqlCompleted": true,
+    "sqlAccepted": false,
+    "sqlContractFailures": 6,
+    "sqlFixtureFailures": 0,
+    "cleanupVerified": true
+  },
+  "review": "Fresh-context read-only final delta review: no actionable findings remaining in the client/helper",
+  "limits": [
+    "invoke mocked; no browser or real HTTP integration",
+    "local bootstrap PostgreSQL, no Native Auth or hosted database",
+    "C4 outbound and automations await owner corrections and K6 retest",
+    "no Meta, real messages, booking, deployment or push"
+  ]
+}
