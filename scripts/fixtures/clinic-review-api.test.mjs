@@ -2,6 +2,28 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { startClinicFixture } from './clinic-review-api.mjs';
 
+test('a denied read hides the DTO and can recover without mutating requests or allowing decisions', async () => {
+  const api = await startClinicFixture({ delegationPermissions: true });
+  try {
+    const before = structuredClone(api.delegationRows);
+    const args = { p_clinic: null, p_after: null, p_after_id: null, p_limit: 50 };
+    const list = () => fetch(api.origin + '/rest/v1/rpc/reception_delegation_requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(args) });
+    api.setDelegationReadMode('denied');
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await list(); assert.equal(response.status, 403);
+      assert.deepEqual(await response.json(), { code: '42501', message: 'Synthetic delegation read denied' });
+      assert.deepEqual(api.delegationRows, before);
+    }
+    api.setDelegationReadMode('valid'); const recovered = await list(); assert.equal(recovered.status, 200);
+    assert.deepEqual(await recovered.json(), { canManage: false, items: before, nextCursor: null });
+    assert.deepEqual(api.metrics.delegationCalls.map(call => call.mode), ['denied', 'denied', 'valid']);
+    for (const call of api.metrics.delegationCalls) assert.deepEqual(call.args, args);
+    const decision = await fetch(api.origin + '/rest/v1/rpc/reception_decide_delegation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ p_request: before[0].id, p_revision: 1, p_operation: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', p_decision: 'approve' }) });
+    assert.equal(decision.status, 403); assert.equal((await decision.json()).code, 'TEST_UNEXPECTED_RESOURCE');
+    assert.equal('delegationWrites' in api.metrics, false); assert.deepEqual(api.delegationRows, before);
+  } finally { await api.close(); }
+});
+
 test('revision control requires the decision fixture and an existing pending UUID', async () => {
   const read = await startClinicFixture({ delegationPermissions: true });
   const decisions = await startClinicFixture({ delegationPermissions: true, delegationDecisions: true });

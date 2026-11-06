@@ -48,6 +48,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     }
     if(delegationPermissions && url.pathname==='/rest/v1/rpc/reception_delegation_requests'){
       metrics.delegationCalls.push({args:input,mode:delegationReadMode});
+      if(delegationReadMode==='denied')return send({code:'42501',message:'Synthetic delegation read denied'},403);
       return send(delegationReadMode==='invalid'?[]:{canManage:false,items:delegationRows,nextCursor:null});
     }
     if(delegationDecisions && ['/rest/v1/rpc/reception_decide_delegation','/rest/v1/rpc/reception_revoke_delegation'].includes(url.pathname)){
@@ -98,7 +99,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   return {origin:`http://127.0.0.1:${server.address().port}`,metrics,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,delegationRows,
-    setDelegationReadMode(mode){if(!delegationPermissions||!['valid','invalid'].includes(mode))throw new Error('Unsupported delegation fixture mode');delegationReadMode=mode;},
+    setDelegationReadMode(mode){if(!delegationPermissions||!['valid','invalid','denied'].includes(mode))throw new Error('Unsupported delegation fixture mode');delegationReadMode=mode;},
     resetDelegationDecisions(){if(!delegationDecisions)throw new Error('Delegation decision fixture is not enabled');delegationRows.splice(0,delegationRows.length,...structuredClone(initialDelegations));},
     // Test-only control: emulate a pending request changed after the browser read it.
     advanceDelegationRevision(requestId){
