@@ -14,25 +14,29 @@ import { startClinicFixture, patientId, uid } from './fixtures/clinic-review-api
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
 const timestampOnly = args.includes('--only=short-timestamps');
+const medicalOnly = args.includes('--only=medical-delivery');
 const checkWorkspaceLayout = args.includes('--check-workspace-layout');
 assert.ok(!checkWorkspaceLayout || timestampOnly, 'Workspace layout checks require the populated timestamp audit');
-const welcomeOnly = args.includes('--only=welcome-dashboard'), focusedOnly = weekOnly || welcomeOnly || chatOnly || timestampOnly;
+const welcomeOnly = args.includes('--only=welcome-dashboard'), focusedOnly = weekOnly || welcomeOnly || chatOnly || timestampOnly || medicalOnly;
 assert.ok(args.filter(arg => arg.startsWith('--only=')).length <= 1, 'Only one focused audit mode is supported');
 assert.ok(!weekOnly || !args.some(arg => arg.startsWith('--check-')), 'Week caption mode runs its own checks');
 assert.ok(!welcomeOnly || !args.some(arg => arg.startsWith('--check-')), 'Welcome mode runs its own checks');
 assert.ok(!chatOnly || !args.some(arg => arg.startsWith('--check-')), 'Chat prompt mode runs its own checks');
 assert.ok(!timestampOnly || !args.some(arg => arg.startsWith('--check-') && arg !== '--check-workspace-layout'), 'Timestamp mode only supports workspace layout checks');
+assert.ok(!medicalOnly || !args.some(arg => arg.startsWith('--check-')), 'Medical delivery mode runs its own checks');
 const checkMobileNavigation = args.includes('--check-mobile-navigation');
 assert.ok(!timeOnly || !checkMobileNavigation, 'Mobile navigation checks require the full route audit');
 const checkCalendarHeader = args.includes('--check-calendar-header');
 assert.ok(!timeOnly || !checkCalendarHeader, 'Calendar header checks require the full route audit');
 const git = options => { const result = spawnSync('git', options, { encoding: 'utf8', windowsHide: true, maxBuffer: 20 * 1024 * 1024 }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); };
 const baseline = args.find(arg => arg.startsWith('--baseline='))?.slice(11) || git(['rev-parse', 'HEAD']);
+const medicalPaths = ['src/components/PatientProfileDrawer.tsx', 'src/pages/PatientManagement.tsx', 'src/pages/KnowledgeBase.tsx', 'src/pages/Templates.tsx', 'src/pages/Assistant.tsx'];
+const medicalDelivery = medicalOnly ? git(['rev-parse', 'f2eb189']) : null;
 const overlays = args.filter(arg => arg.startsWith('--overlay=')).map(arg => arg.slice(10));
 const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation|WelcomeDashboard|ChatPanel)\.tsx|src\/lib\/calendarLabels\.ts)$/;
 for (const path of overlays) assert.match(path, allowed, 'Overlay must be in the Codex audit scope');
@@ -51,6 +55,7 @@ for (const path of paths) {
   sources.set(path, batch.stdout.subarray(offset, offset + size).toString('utf8')); offset += size + 1;
 }
 for (const path of overlays) { assert.ok(sources.has(path) || path === 'src/lib/calendarLabels.ts', 'New source is not allowlisted'); sources.set(path, await readFile(path, 'utf8')); }
+if (medicalOnly) for (const path of medicalPaths) assert.equal(sources.get(path).replaceAll('\r\n', '\n').trim(), git(['show', medicalDelivery + ':' + path]), 'Medical delivery source differs: ' + path);
 const overlayHashes = overlays.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') }));
 const frozen = new Map([...sources].map(([path, source]) => [resolve(path).toLowerCase(), { path, source }]));
 const frozenLoads = new Set();
@@ -63,8 +68,9 @@ const tailwindContent = [...sources].filter(([path]) => /\.(tsx?|jsx?)$/.test(pa
 const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/clinic-review-api.mjs', 'scripts/fixtures/reception-api.mjs', ...configurationPaths];
 const ownHashes = await Promise.all(ownPaths.map(async path => ({ path, sha256: createHash('sha256').update(await readFile(path)).digest('hex') })));
 const apps = [], apis = [], contexts = [], errors = [], blocked = [], consoleErrors = [], screens = [], failedRequests = [], errorResponses = [];
+const medicalCaseFailures = []; let medicalCasesAttempted = 0;
 const cacheOwner = randomUUID();
-let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false, draftPreserved = false, timestampDataPreserved = false;
+let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false, draftPreserved = false, timestampDataPreserved = false, medicalDataPreserved = false;
 async function appFor(api) {
   process.env.VITE_SUPABASE_URL = api.origin; process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'synthetic-public-key';
   process.env.VITE_BYPASS_EMAIL = ''; process.env.VITE_BYPASS_PASSWORD = '';
@@ -147,6 +153,28 @@ async function capture(page, app, role, path, width, action, variant = '') {
         textWidth: context.measureText(clinicalInput.placeholder).width + spacing * Math.max(0, clinicalInput.placeholder.length - 1),
         availableWidth: clinicalInput.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight), empty: clinicalInput.value === '' };
     }
+    const medicalTextFit = [...document.querySelectorAll('header h1, [role="dialog"] h2 span.line-clamp-2, [role="tab"], main button[aria-label^="Pré-visualizar"] p:first-child')].filter(visible).map(element => {
+      const box = element.getBoundingClientRect(), walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT); let node, clipped = false, left = 0, right = innerWidth;
+      for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
+        if (!['hidden', 'clip', 'auto', 'scroll'].includes(getComputedStyle(ancestor).overflowX)) continue;
+        const bounds = ancestor.getBoundingClientRect(); left = Math.max(left, bounds.left + ancestor.clientLeft); right = Math.min(right, bounds.left + ancestor.clientLeft + ancestor.clientWidth);
+      }
+      const lineClamped = parseInt(getComputedStyle(element).webkitLineClamp) > 0, textRects = [];
+      while ((node = walker.nextNode())) {
+        if (!node.textContent.trim() || node.parentElement.closest('.sr-only,[aria-hidden="true"]') || !visible(node.parentElement)) continue;
+        const range = document.createRange(); range.selectNodeContents(node);
+        for (const rect of range.getClientRects()) if (rect.width > 0) {
+          textRects.push({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
+          if (rect.left < left - 1 || rect.right > right + 1 || (lineClamped && (rect.top < box.top - 1 || rect.bottom > box.bottom + 1))) clipped = true;
+        }
+      }
+      return { text: element.textContent.trim(), tab: element.getAttribute('role') === 'tab', clipped, textRects };
+    });
+    const overlappingMedicalTabs = medicalTextFit.flatMap((item, index) => !item.tab ? [] : medicalTextFit.slice(index + 1).filter(other => other.tab && item.textRects.some(a => other.textRects.some(b => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1))).map(other => [item.text, other.text]));
+    const medicalPlaceholders = [...document.querySelectorAll('input')].filter(element => visible(element) && ['Buscar pacientes', 'Buscar modelos', 'Escreva sua pergunta'].includes(element.getAttribute('aria-label'))).map(element => {
+      const style = getComputedStyle(element), context = document.createElement('canvas').getContext('2d'); context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      return { label: element.getAttribute('aria-label'), placeholder: element.placeholder, textWidth: context.measureText(element.placeholder).width + (parseFloat(style.letterSpacing) || 0) * Math.max(0, element.placeholder.length - 1), availableWidth: element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) };
+    });
     const workspaceMain = location.pathname === '/trabalho' ? document.querySelector('main') : null;
     let workspaceGeometry = null;
     if (workspaceMain) {
@@ -157,7 +185,7 @@ async function capture(page, app, role, path, width, action, variant = '') {
         clippedControls: [...workspaceMain.querySelectorAll('button,a,summary')].filter(visible).filter(element => { const rect = element.getBoundingClientRect(); return rect.left < -1 || rect.right > innerWidth + 1 || element.scrollWidth > element.clientWidth + 1; }).map(element => ({ label: name(element) || element.textContent.trim(), ...bounds(element) })) };
     }
     return { fontSize: getComputedStyle(document.documentElement).fontSize, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, dialogOutsideViewport, dialogHorizontalOverflow: dialogElement ? dialogElement.scrollWidth - dialogElement.clientWidth : 0,
-      missingButtons, missingLabels, navigationLabels, headerTitles, calendarPeriod: periodElement?.textContent.trim(), calendarPeriodClipped, shortcuts, clinicalPrompt, workspaceGeometry,
+      missingButtons, missingLabels, navigationLabels, headerTitles, calendarPeriod: periodElement?.textContent.trim(), calendarPeriodClipped, shortcuts, clinicalPrompt, workspaceGeometry, medicalTextFit, overlappingMedicalTabs, medicalPlaceholders,
       timestampLabels: [...document.querySelectorAll('a,p,summary')].filter(element => visible(element) && /\b05\/11\/2026/.test(element.textContent)).map(element => element.textContent.trim()),
       welcomeDate: dateLine ? { text: dateLine.textContent.trim(), transform: getComputedStyle(dateLine).textTransform } : null,
       visibleAlerts: [...document.querySelectorAll('[role="alert"]')].filter(visible).map(element => element.textContent.trim()),
@@ -209,12 +237,48 @@ try {
   await writeFile(join(temporaryCache, 'audit-owner'), cacheOwner);
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
   if (focusedOnly) {
-    const api = await startClinicFixture(welcomeOnly ? { lastVisit: '2026-10-01' } : timestampOnly ? { workspaceDates: true } : {}); apis.push(api); const app = await appFor(api);
+    const api = await startClinicFixture(welcomeOnly ? { lastVisit: '2026-10-01' } : timestampOnly ? { workspaceDates: true } : medicalOnly ? { medicalUI: true } : {}); apis.push(api); const app = await appFor(api);
     const chatPath = '/?patient=' + patientId;
-    const doctor = await scene(app, 'review', timestampOnly ? '/trabalho' : chatOnly ? chatPath : welcomeOnly ? '/' : '/agenda');
+    const doctor = await scene(app, 'review', timestampOnly ? '/trabalho' : chatOnly || medicalOnly ? chatPath : welcomeOnly ? '/' : '/agenda');
     await doctor.waitForLoadState('networkidle');
     await doctor.clock.setFixedTime(new Date('2026-11-05T15:00:00Z'));
-    if (timestampOnly) {
+    if (medicalOnly) {
+      const originalData = JSON.stringify(api.medicalData);
+      const openProfile = async (page, width) => {
+        await expect(page.getByRole('heading', { name: 'Paciente Exemplo A', exact: true }).first()).toBeVisible();
+        await page.getByRole('button', { name: width < 1728 ? 'Perfil' : 'Perfil Completo & Arquivos', exact: true }).click();
+        const dialog = page.getByRole('dialog'); await expect(dialog).toBeVisible(); return dialog;
+      };
+      const cases = [
+        { variant: 'profile-overview', path: chatPath, ready: async (page, width) => { const dialog = await openProfile(page, width); await expect(dialog.getByText(/no painel Perfil/)).toBeVisible(); await expect(dialog.getByRole('button', { name: 'Perguntar à IA', exact: true })).toBeVisible(); await expect(dialog.getByRole('button', { name: 'Dossiê', exact: true })).toBeVisible(); await dialog.getByRole('tab', { name: 'Geral', exact: true }).scrollIntoViewIfNeeded(); } },
+        { variant: 'profile-history', path: chatPath, ready: async (page, width) => { const dialog = await openProfile(page, width); const tab = dialog.getByRole('tab', { name: /^Histórico/ }); await tab.click(); await expect(tab).toHaveAttribute('aria-selected', 'true'); const panel = dialog.getByRole('tabpanel'); await expect(panel.getByText('há 1 mês', { exact: true })).toBeVisible(); await expect(panel.getByText('há 1 ano', { exact: true })).toBeVisible(); } },
+        { variant: 'profile-documents', path: chatPath, ready: async (page, width) => { const dialog = await openProfile(page, width); const tab = dialog.getByRole('tab', { name: 'Documentos', exact: true }); await tab.click(); await expect(tab).toHaveAttribute('aria-selected', 'true'); await expect(dialog.getByRole('heading', { name: 'Arquivos anexados', exact: true })).toBeVisible(); } },
+        { variant: 'patients', path: '/gerenciar-pacientes', ready: async (page, width) => { await expect(page.getByRole('heading', { name: width < 864 ? 'Pacientes' : 'Gerenciar pacientes', exact: true, level: 1 })).toBeVisible(); await expect(page.getByRole('searchbox', { name: 'Buscar pacientes', exact: true })).toHaveAttribute('placeholder', 'Nome ou profissão…'); await expect(page.getByRole('link', { name: 'Abrir prontuário de Paciente Exemplo A', exact: true })).toBeVisible(); } },
+        { variant: 'templates', path: '/modelos', ready: async (page, width) => { await expect(page.getByRole('heading', { name: width < 864 ? 'Modelos' : 'Modelos de documento', exact: true, level: 1 })).toBeVisible(); await expect(page.getByRole('textbox', { name: 'Buscar modelos', exact: true })).toHaveAttribute('placeholder', 'Nome do modelo…'); for (const action of ['Editar', 'Duplicar', 'Excluir']) await expect(page.getByRole('button', { name: action + ' Modelo de revisão sintético', exact: true })).toBeVisible(); } },
+        { variant: 'template-preview', path: '/modelos', ready: async page => { await page.getByRole('button', { name: 'Pré-visualizar Modelo de revisão sintético', exact: true }).click(); await expect(page.getByRole('dialog').getByText('Texto sintético do modelo.', { exact: true })).toBeVisible(); } },
+        { variant: 'knowledge', path: '/conhecimento', ready: async page => { await expect(page.getByRole('heading', { name: 'Fonte sintética revisada', exact: true })).toBeVisible(); await expect(page.getByText('Revisão: 04/11/2026, 16:21 · Profissional de Demonstração', { exact: false })).toBeVisible(); } },
+        { variant: 'knowledge-source', path: '/conhecimento', ready: async page => { await page.getByRole('button', { name: 'Ver fonte', exact: true }).click(); await expect(page.getByRole('dialog').getByText('Texto original sintético para revisão visual.', { exact: true })).toBeVisible(); await expect(page.getByRole('dialog').getByText('Profissional de Demonstração · 04/11/2026, 16:21', { exact: true })).toBeVisible(); } },
+        { variant: 'assistant-initial', path: '/assistente', ready: async page => { await expect(page.getByRole('textbox', { name: 'Escreva sua pergunta', exact: true })).toHaveAttribute('placeholder', 'Escreva sua pergunta'); } },
+        { variant: 'assistant-conversation', path: '/assistente', ready: async page => { await page.getByRole('textbox', { name: 'Escreva sua pergunta', exact: true }).fill('Pergunta sintética sem dados pessoais'); await page.getByRole('button', { name: 'Enviar pergunta', exact: true }).click(); await expect(page.getByRole('log', { name: 'Conversa com o assistente', exact: true })).toContainText('Verificação farmacológica necessária'); await expect(page.getByRole('textbox', { name: 'Escreva sua pergunta', exact: true })).toBeEmpty(); } },
+      ];
+      for (const width of [375, 1280, 1920]) for (const entry of cases) {
+        medicalCasesAttempted++;
+        try {
+          await capture(doctor, app, 'medical', entry.path, width, page => entry.ready(page, width), entry.variant);
+          const measured = screens.at(-1);
+          assert.ok(measured.medicalTextFit.every(item => !item.clipped), 'Medical delivery text is clipped: ' + entry.variant);
+          assert.deepEqual(measured.overlappingMedicalTabs, [], 'Medical profile tab labels overlap');
+          assert.ok(measured.medicalPlaceholders.every(item => item.textWidth <= item.availableWidth + 1), 'Medical delivery placeholder is clipped: ' + entry.variant);
+          assert.ok(measured.dialogHorizontalOverflow <= 1 && !measured.dialogOutsideViewport && measured.overflow <= 1, 'Medical delivery container overflows: ' + entry.variant);
+        } catch (error) {
+          medicalCaseFailures.push({ width, variant: entry.variant, name: error.name, message: error.message });
+        }
+      }
+      assert.equal(JSON.stringify(api.medicalData), originalData, 'Medical review changed stored data');
+      assert.equal(api.metrics.chat, 3, 'Only the three explicit synthetic assistant submissions are allowed');
+      assert.ok(Object.entries(api.metrics).every(([key, value]) => key === 'chat' || value === 0), 'Medical review must not write data or invoke another AI operation');
+      medicalDataPreserved = true;
+    } else if (timestampOnly) {
       const originalData = JSON.stringify(api.displayData);
       await doctor.evaluate(async ({ uid, patientId }) => {
         const { saveRescuedRecording } = await import('/src/lib/recordingRescue.ts');
@@ -376,8 +440,9 @@ try {
   }, 'block-time-dialog');
   }
   for (const source of [...ownHashes, ...overlayHashes]) assert.equal(createHash('sha256').update(await readFile(source.path)).digest('hex'), source.sha256, 'Audit source changed during run');
-  const requiredSources = timestampOnly ? ['src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/lib/recordingRescue.ts'] : chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
+  const requiredSources = medicalOnly ? medicalPaths : timestampOnly ? ['src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/lib/recordingRescue.ts'] : chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
   for (const path of ['src/App.tsx', 'src/pages/Auth.tsx', ...overlays, ...requiredSources]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
+  if (medicalOnly) assert.deepEqual(medicalCaseFailures, [], 'Medical delivery has unresolved case failures');
   if (checkMobileNavigation || welcomeOnly) assert.equal(navigationKeyboardVerified, true, 'Keyboard navigation did not complete');
 } catch (error) {
   failure = { name: error.name, message: error.message };
@@ -396,6 +461,8 @@ try {
   cleanupVerified = true;
 }
 const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, chatOnly, timestampOnly, checkWorkspaceLayout, timestampDataPreserved, timestampMetrics: timestampOnly ? { ...apis[0]?.metrics } : null, draftPreserved, welcomeMetrics: welcomeOnly || chatOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
+  medicalOnly, medicalDelivery, medicalCasesAttempted, medicalCaseFailures, medicalDataPreserved, medicalMetrics: medicalOnly ? { ...apis[0]?.metrics } : null,
+  medicalSources: medicalOnly ? medicalPaths.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') })) : [],
   frozenLoads: [...frozenLoads].sort(), screens, errors, consoleErrors, failedRequests, errorResponses, blockedExternalRequests: blocked, cleanupVerified };
 await writeFile(resolve(folder, 'AUDIT.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify({ baseline, screens: screens.length, errors: errors.length, consoleErrors: consoleErrors.length,

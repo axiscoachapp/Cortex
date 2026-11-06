@@ -2,7 +2,7 @@
 import http from 'node:http';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false } = {}) {
   const now=new Date().toISOString();
   const user={id:uid,email:'review@example.invalid',aud:'authenticated',role:'authenticated',created_at:now,email_confirmed_at:now,app_metadata:{provider:'email'},user_metadata:{},factors:[]};
   const token=[{alg:'HS256',typ:'JWT'},{sub:uid,role:'authenticated',aud:'authenticated',aal:'aal1',exp:Math.floor(Date.now()/1000)+86400,iat:Math.floor(Date.now()/1000)}].map(value=>Buffer.from(JSON.stringify(value)).toString('base64url')).join('.')+'.synthetic-signature';
@@ -15,7 +15,14 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   const recordRevisions=workspaceDates?[{id:'88888888-8888-4888-8888-888888888888',patient_id:patientId,record_id:visits[0].id,revision:1,snapshot:{soap_note:'Versão sintética da consulta.'},created_at:'2026-11-05T19:05:51Z'}]:[];
   const drafts=workspaceDates?[{id:'99999999-9999-4999-8999-999999999999',user_id:uid,patient_id:patientId,status:'error',chief_complaint:'Consulta sintética recuperável',audio_storage_path:null,content:{audioMimeType:'audio/webm'},updated_at:'2026-11-05T17:03:27Z'}]:[];
   const displayData={workItems,workRevisions,recordRevisions,drafts};
-  const turns=[];const knowledge=[];const metrics={briefings:0,checklists:0,chat:0,newSources:0,patientWrites:0,appointmentWrites:0,...(workspaceDates?{workspaceWrites:0}:{})};
+  if(medicalUI){
+    templates.push({id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',user_id:uid,name:'Modelo de revisão sintético',description:'Estrutura sintética particular',content:'Texto sintético do modelo.',created_at:'2026-11-04T12:00:00Z'});
+    visits[0].created_at='2026-10-01T12:00:00Z';
+    visits.push({...visits[0],id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',created_at:'2025-10-01T12:00:00Z',chief_complaint:'Consulta anterior sintética'});
+  }
+  const turns=[];const knowledge=medicalUI?[{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',user_id:uid,title:'Fonte sintética revisada',source_text:'Texto original sintético para revisão visual.',source_reference:'Referência sintética',source_version:'2026',char_count:44,source_type:'text',status:'ready',review_status:'approved',created_at:'2026-11-04T18:20:31Z',reviewed_at:'2026-11-04T19:21:45Z',reviewer_name:'Profissional de Demonstração',indexed_at:'2026-11-04T19:22:48Z',supersedes_document_id:null}]:[];
+  const metrics={briefings:0,checklists:0,chat:0,newSources:0,patientWrites:0,appointmentWrites:0,...(workspaceDates?{workspaceWrites:0}:{}),...(medicalUI?{medicalWrites:0}:{})};
+  const medicalData={patients,templates,visits,knowledge,settings};
   const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,'http://127.0.0.1');let raw='';for await(const chunk of req)raw+=chunk;
     const input=raw?JSON.parse(raw):{};
@@ -42,12 +49,14 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
       if(input.patientId===patientId && input.conversationId && !turns.some(turn=>turn.id===input.conversationId))turns.unshift({id:input.conversationId,question:input.userMessage,response,status:'complete',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
       return send(response);
     }
+    if(medicalUI && url.pathname==='/functions/v1/signature-session/state' && req.method==='GET')return send({configured:false,active:false,expiresAt:null});
     if(url.pathname.startsWith('/functions/'))return send({error:'Integração externa desativada no teste.'},503);
+    if(medicalUI && url.pathname.startsWith('/rest/') && !['GET','HEAD'].includes(req.method)){metrics.medicalWrites++;return send({error:'Read-only medical UI fixture'},405);}
     const table=url.pathname.split('/').pop();
     const workspaceRows={clinical_work_items:workItems,clinical_work_revisions:workRevisions,clinical_record_revisions:recordRevisions,consultation_drafts:drafts};
     if(workspaceDates && Object.hasOwn(workspaceRows,table) && !['GET','HEAD'].includes(req.method)){metrics.workspaceWrites++;return send({error:'Read-only display fixture'},405);}
     let rows=workspaceRows[table]??(table==='patients'?patients:table==='appointments'?appointments:table==='consultations'?visits:table==='user_settings'?[settings]:table==='document_templates'?templates:table==='knowledge_documents'?knowledge:table==='usage_daily'?[{credits_used:0,calls:0}]:[]);
-    for(const field of ['id','patient_id','revision','item_id','record_id']){const filter=url.searchParams.get(field);if(filter?.startsWith('eq.'))rows=rows.filter(row=>String(row[field])===filter.slice(3));}
+    for(const field of ['id','patient_id','revision','item_id','record_id','supersedes_document_id']){const filter=url.searchParams.get(field);if(filter?.startsWith('eq.'))rows=rows.filter(row=>String(row[field])===filter.slice(3));}
     if(table==='patients' && req.method==='PATCH'){metrics.patientWrites++;rows.forEach(row=>Object.assign(row,input,{revision:row.revision+1}));}
     if(table==='appointments' && req.method==='PATCH'){metrics.appointmentWrites++;rows.forEach(row=>Object.assign(row,input,{revision:row.revision+1}));}
     const offset=Number(url.searchParams.get('offset')??'0');const total=rows.length;rows=rows.slice(offset,offset+Number(url.searchParams.get('limit')??500));headers['content-range']=`0-${Math.max(0,rows.length-1)}/${total}`;
@@ -55,5 +64,5 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     return send(req.headers.accept?.includes('application/vnd.pgrst.object+json')?(rows[0]??null):rows);
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  return {origin:`http://127.0.0.1:${server.address().port}`,metrics,displayData:workspaceDates?displayData:null,close:()=>new Promise(resolve=>server.close(resolve))};
+  return {origin:`http://127.0.0.1:${server.address().port}`,metrics,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,close:()=>new Promise(resolve=>server.close(resolve))};
 }

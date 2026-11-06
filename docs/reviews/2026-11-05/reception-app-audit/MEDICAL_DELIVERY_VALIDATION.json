@@ -1,0 +1,110 @@
+{
+  "evidenceVerified": true,
+  "deliveryAccepted": false,
+  "syntheticOnly": true,
+  "baseline": "f1ca046a825cc2e74bda66297f5e4f58393836dc",
+  "medicalDelivery": "f2eb1894f416a99d9e0394f86f6e22636b9f70bd",
+  "sourceFiles": [
+    {
+      "path": "src/components/PatientProfileDrawer.tsx",
+      "sha256": "d80e52df5b4c3448033cc8d61a3f6bbceddfefd97d09cb46531a96cc02be6fee"
+    },
+    {
+      "path": "src/pages/PatientManagement.tsx",
+      "sha256": "9586504144b2134cd1f2d5be56981f5aebb9a9b21445d1266f7b44fd3b1a5ada"
+    },
+    {
+      "path": "src/pages/KnowledgeBase.tsx",
+      "sha256": "e3de0e457c5a1699c78e1c4f41656e88af1bf1d941dd3b07fc9d7bbe4f1ad869"
+    },
+    {
+      "path": "src/pages/Templates.tsx",
+      "sha256": "d6a4a6631a5aa1aa36455f0a867af89809171c2ee7ef70d3a68c509c7fa694be"
+    },
+    {
+      "path": "src/pages/Assistant.tsx",
+      "sha256": "0d61e21e47e3bad2644b7bfc1dc171b097e6e25ba0d228688221f760c8fac525"
+    }
+  ],
+  "sourceFilesUnchangedAndServed": true,
+  "caseResults": {
+    "attempted": 30,
+    "captured": 30,
+    "passed": 29,
+    "failed": 1,
+    "widths": [
+      375,
+      1280,
+      1920
+    ],
+    "failures": [
+      {
+        "width": 375,
+        "variant": "profile-history",
+        "name": "AssertionError",
+        "message": "Medical delivery container overflows: profile-history"
+      }
+    ]
+  },
+  "finding": {
+    "task": "T39/2j",
+    "variant": "profile-history",
+    "width": 375,
+    "overflowPx": 7,
+    "description": "Latest-visit badge extends beyond the profile history card and sheet",
+    "fixed": false
+  },
+  "dataPreserved": true,
+  "metrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 3,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "medicalWrites": 0
+  },
+  "regression": {
+    "mode": "welcome-dashboard",
+    "states": 9,
+    "passed": true,
+    "defaultSixMetricsPreserved": true,
+    "keyboard": true
+  },
+  "unit": {
+    "files": 3,
+    "tests": 8,
+    "exitCode": 0
+  },
+  "checks": {
+    "appTypes": true,
+    "applicationLint": true,
+    "runnerAndFixtureLint": true,
+    "nodeSyntax": true,
+    "invalidFlagCombinationsRefused": 3,
+    "hashes": true,
+    "cleanup": true
+  },
+  "review": {
+    "local": "No actionable script finding; selector/panel fixes checked",
+    "external": "Declined by user"
+  },
+  "network": {
+    "observedMethod": "HEAD",
+    "observedStatus": 200,
+    "observedReason": "net::ERR_ABORTED",
+    "countsByPath": {
+      "/rest/v1/patients": 10,
+      "/rest/v1/knowledge_documents": 3
+    },
+    "newObservationPath": "/rest/v1/knowledge_documents",
+    "causeInferred": false,
+    "transportApproved": false,
+    "otherFailures": 0
+  },
+  "limits": [
+    "Audit process returns failure for unresolved UI case",
+    "Three assistant calls are synthetic local submissions only",
+    "No app source edits, real signing/paid calls or backend/pilot approval"
+  ]
+}
