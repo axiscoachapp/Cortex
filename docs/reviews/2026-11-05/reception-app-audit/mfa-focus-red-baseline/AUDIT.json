@@ -1,0 +1,257 @@
+{
+  "completed": false,
+  "failure": {
+    "name": "Error",
+    "message": "expect(locator).toBeFocused() failed\n\nLocator:  getByRole('alert')\nExpected: focused\nReceived: inactive\nTimeout:  5000ms\n\nCall log:\n  - Expect \"toBeFocused\" getByRole('alert') with timeout 5000ms\n  - waiting for getByRole('alert')\n    14 × locator resolved to <p role=\"alert\" class=\"text-destructive text-sm\">Não foi possível concluir. Confira o código e a c…</p>\n       - unexpected value \"inactive\"\n"
+  },
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": "2026-11-05T15:00:00Z",
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "6405563dc0b927a3ec0d012ae3bbc78daa4ab878",
+  "overlays": [],
+  "frozenTextSourceCount": 292,
+  "frozenTextSourceDigest": "da263e1e8ad87dcc0c652f0819e8870511a9b5706d908aa2d69b877df56aad69",
+  "tailwindRawContentCount": 290,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "a6d36537f425b80d285f36a69ecd41cdf189cebcdd01a2687e87015fb9ffaa5c"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "c18f7db01cdc89defe0fecfd6f58338835eea155b86a2a2d057a06d6a380622d"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "mfaOnly": false,
+  "mfaCleanupOnly": true,
+  "checkMfaErrorFocus": true,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "mfaRequests": [
+      {
+        "method": "POST",
+        "path": "/auth/v1/token"
+      },
+      {
+        "method": "GET",
+        "path": "/auth/v1/user"
+      },
+      {
+        "method": "GET",
+        "path": "/auth/v1/user"
+      },
+      {
+        "method": "DELETE",
+        "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+      }
+    ],
+    "mfaUnexpected": [],
+    "mfaCleanupCalls": [
+      {
+        "factorId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "status": 403
+      }
+    ]
+  },
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/mfa.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/AccountSecurity.tsx",
+    "src/pages/Auth.tsx"
+  ],
+  "screens": [
+    {
+      "role": "security",
+      "path": "/seguranca",
+      "variant": "cleanup-initial",
+      "actualPath": "/seguranca",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 20.125,
+          "right": 56.5625,
+          "targetLeft": 5.390625,
+          "targetRight": 71.3125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 76.75,
+          "right": 142.59375,
+          "targetLeft": 76.703125,
+          "targetRight": 142.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 154.359375,
+          "right": 207.625,
+          "targetLeft": 148.03125,
+          "targetRight": 213.96875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pendências",
+          "left": 219.359375,
+          "right": 298.28125,
+          "targetLeft": 219.359375,
+          "targetRight": 298.28125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 321.09375,
+          "right": 352.171875,
+          "targetLeft": 303.671875,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Segurança da conta"
+      ],
+      "screenshot": "security--seguranca-cleanup-initial-375.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    }
+  ],
+  "failedRequests": [],
+  "errorResponses": [
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    }
+  ],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

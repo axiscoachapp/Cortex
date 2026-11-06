@@ -1,0 +1,227 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "6405563dc0b927a3ec0d012ae3bbc78daa4ab878",
+  "scope": "T39/3c/2b focus and expose mutation failure without manual harness scroll",
+  "red": {
+    "run": "mfa-focus-red-baseline",
+    "completed": false,
+    "reason": "Alert not focused after failure"
+  },
+  "green": {
+    "run": "mfa-focus-green",
+    "states": 12,
+    "widths": [
+      375,
+      1280,
+      1920
+    ],
+    "focusObservations": [
+      {
+        "width": 375,
+        "phase": "first",
+        "codeLength": 4,
+        "top": 149.78125,
+        "bottom": 230.78125,
+        "focused": true,
+        "fits": true,
+        "exposed": true
+      },
+      {
+        "width": 375,
+        "phase": "repeat",
+        "codeLength": 5,
+        "top": 35.78125,
+        "bottom": 116.78125,
+        "focused": true,
+        "fits": true,
+        "exposed": true
+      },
+      {
+        "width": 1280,
+        "phase": "first",
+        "codeLength": 4,
+        "top": 301.75,
+        "bottom": 328.75,
+        "focused": true,
+        "fits": true,
+        "exposed": true
+      },
+      {
+        "width": 1280,
+        "phase": "repeat",
+        "codeLength": 5,
+        "top": 242.75,
+        "bottom": 269.75,
+        "focused": true,
+        "fits": true,
+        "exposed": true
+      },
+      {
+        "width": 1920,
+        "phase": "first",
+        "codeLength": 4,
+        "top": 411.75,
+        "bottom": 438.75,
+        "focused": true,
+        "fits": true,
+        "exposed": true
+      },
+      {
+        "width": 1920,
+        "phase": "repeat",
+        "codeLength": 5,
+        "top": 328.75,
+        "bottom": 355.75,
+        "focused": true,
+        "fits": true,
+        "exposed": true
+      }
+    ],
+    "manualScroll": false,
+    "factorAndCodePreserved": true,
+    "typingDoesNotStealFocus": true,
+    "overlay": {
+      "path": "src/pages/AccountSecurity.tsx",
+      "sha256": "3e800e1e3099a7fb7fdb08ab02eedd3b10a8d0e9a0b647139fb15b8500c7ee7d"
+    }
+  },
+  "regression": {
+    "run": "mfa-focus-preparation-regression",
+    "states": 12,
+    "passed": true
+  },
+  "tests": {
+    "vitestTests": 13,
+    "files": 2,
+    "newOrExtendedRedFailures": 2,
+    "greenExit": 0
+  },
+  "checks": {
+    "applicationTypes": true,
+    "uiLintFiles": 2,
+    "runnerSyntaxLint": true,
+    "invalidFlagCombinationsRefused": 4,
+    "hashes": true,
+    "cleanup": true
+  },
+  "review": {
+    "final": "No concrete defects or contract-level blind spots",
+    "external": "Not invoked for non-interactive heartbeat"
+  },
+  "sources": [
+    {
+      "path": "src/pages/AccountSecurity.tsx",
+      "sha256": "3e800e1e3099a7fb7fdb08ab02eedd3b10a8d0e9a0b647139fb15b8500c7ee7d"
+    },
+    {
+      "path": "src/pages/AccountSecurity.test.tsx",
+      "sha256": "f6f92307607e210501ebac2755305df8b1dc1c7966ca7a9e4d180df6bc243a8b"
+    }
+  ],
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "a6d36537f425b80d285f36a69ecd41cdf189cebcdd01a2687e87015fb9ffaa5c"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "c18f7db01cdc89defe0fecfd6f58338835eea155b86a2a2d057a06d6a380622d"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "expectedHttpErrors": [
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    },
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    },
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    },
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    },
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    },
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    }
+  ],
+  "expectedConsoleErrors": [
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    },
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    },
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    },
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    },
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    },
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    }
+  ],
+  "limits": [
+    "Only mutation failures use this focus target; factor-list load errors are separate",
+    "No real device virtual keyboard or assistive-technology session",
+    "No Auth/TOTP/AAL2/enrollment/removal/verification authority proof"
+  ]
+}

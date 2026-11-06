@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -44,10 +44,24 @@ describe('TOTP metadata including abandoned setups', () => {
     mocks.unenroll.mockResolvedValue({ error: Object.assign(new Error('Synthetic cleanup denied'), { code: 'insufficient_aal' }) });
     mount(); await screen.findByRole('option', { name: active.friendly_name });
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar autenticador' }));
-    await screen.findByRole('alert');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveFocus();
     expect(mocks.unenroll).toHaveBeenCalledExactlyOnceWith({ factorId: pending.id });
     expect(mocks.enroll).not.toHaveBeenCalled();
     expect(screen.queryByRole('heading', { name: 'Configurar aplicativo' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Adicionar autenticador' })).toBeEnabled();
+  });
+  it('refocuses an identical later failure while preserving edits and allowing code entry', async () => {
+    mocks.unenroll.mockResolvedValue({ error: Object.assign(new Error('Synthetic cleanup denied'), { code: 'insufficient_aal' }) });
+    mount(); await screen.findByRole('option', { name: active.friendly_name });
+    const input = screen.getByLabelText('Código do aplicativo'), selector = screen.getByRole('combobox', { name: 'Autenticador' });
+    fireEvent.change(selector, { target: { value: active.id } }); fireEvent.change(input, { target: { value: '1234' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Adicionar autenticador' })); });
+    expect(screen.getByRole('alert')).toHaveFocus(); expect(input).toHaveValue('1234'); expect(selector).toHaveValue(active.id);
+    input.focus(); fireEvent.change(input, { target: { value: '12345' } });
+    expect(input).toHaveFocus(); expect(input).toHaveValue('12345');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Adicionar autenticador' })); });
+    expect(screen.getByRole('alert')).toHaveFocus(); expect(input).toHaveValue('12345'); expect(selector).toHaveValue(active.id);
+    expect(mocks.unenroll).toHaveBeenCalledTimes(2); expect(mocks.enroll).not.toHaveBeenCalled();
   });
 });

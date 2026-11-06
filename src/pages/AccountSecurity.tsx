@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +13,9 @@ export default function AccountSecurity() {
   const [setup, setSetup] = useState<{ id: string; qr: string; secret: string } | null>(null);
   const [code, setCode] = useState('');
   const [factor, setFactor] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<{ message: string } | null>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => { errorRef.current?.focus(); }, [error]);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const factors = useQuery({
@@ -27,12 +29,12 @@ export default function AccountSecurity() {
   });
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
-    setError('');
+    setError(null);
     setNotice('');
     try {
       await action();
     } catch (err) {
-      setError(mfaErrorMessage(err));
+      setError({ message: mfaErrorMessage(err) });
     } finally {
       setBusy(false);
     }
@@ -90,8 +92,8 @@ export default function AccountSecurity() {
         própria conta.
       </p>
       {error && (
-        <p role="alert" className="text-destructive text-sm">
-          {error}
+        <p ref={errorRef} tabIndex={-1} role="alert" className="text-destructive text-sm">
+          {error.message}
         </p>
       )}
       {notice && (
