@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "loopbackOnly": true,
+  "probes": [
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultation_drafts",
+      "status": 403,
+      "code": "TEST_UNEXPECTED_RESOURCE"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/update_user_settings",
+      "status": 403,
+      "code": "TEST_UNEXPECTED_RESOURCE"
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/synthetic-other-ai",
+      "status": 403,
+      "code": "TEST_UNEXPECTED_RESOURCE"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "status": 403,
+      "code": "TEST_UNEXPECTED_RESOURCE"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients",
+      "status": 403,
+      "code": "TEST_UNEXPECTED_RESOURCE"
+    }
+  ],
+  "dataPreserved": true,
+  "closed": true,
+  "source": {
+    "path": "scripts/fixtures/clinic-review-api.mjs",
+    "sha256": "613c275461536a90fcfb0fedcd91d04acf4104abf6e47a19ce06e7e3e687cdd8"
+  }
+}

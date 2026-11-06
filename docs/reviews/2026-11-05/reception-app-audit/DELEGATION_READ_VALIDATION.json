@@ -1,0 +1,74 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "d6ff63ed537db8bde71557d1d2ea73cfd29a9fcf",
+  "scope": "Physician read, confirmation presentation, invalid DTO hiding and recovery only",
+  "browserStates": 15,
+  "widths": [
+    375,
+    1280,
+    1920
+  ],
+  "dataPreserved": true,
+  "requestAllowlist": [
+    "POST /auth/v1/token",
+    "GET /auth/v1/user",
+    "POST /rest/v1/rpc/clinic_access",
+    "POST /rest/v1/rpc/reception_delegation_requests"
+  ],
+  "requestCounts": {
+    "POST /auth/v1/token": 1,
+    "POST /rest/v1/rpc/clinic_access": 16,
+    "POST /rest/v1/rpc/reception_delegation_requests": 24
+  },
+  "unexpectedRequests": 0,
+  "clinicalReads": 0,
+  "decisionSubmissions": 0,
+  "coreMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0
+  },
+  "fixtureGuardProbes": {
+    "file": "DELEGATION_FIXTURE_GUARDS.json",
+    "passed": 5
+  },
+  "unit": {
+    "files": 2,
+    "tests": 20,
+    "exitCode": 0
+  },
+  "regression": {
+    "mode": "welcome-dashboard",
+    "states": 9,
+    "passed": true,
+    "defaultSixMetricsPreserved": true
+  },
+  "checks": {
+    "runnerAndFixtureLint": true,
+    "nodeSyntax": true,
+    "invalidFlagCombinationsRefused": 3,
+    "hashes": true,
+    "cleanup": true
+  },
+  "review": {
+    "actionable": "Partial counters missed other endpoints",
+    "fixed": "Complete non-OPTIONS method/path ledger plus allowlist and error assertions",
+    "final": "No remaining actionable script defect",
+    "external": "Declined by user"
+  },
+  "network": {
+    "delegationFailures": 0,
+    "defaultHeadPatientObservations": 9,
+    "causeInferred": false,
+    "productionTransportApproved": false
+  },
+  "limits": [
+    "Mocked DTO flags do not prove RLS or real authority",
+    "No decision persistence/CAS/retry mutation test",
+    "No new app source or global TypeScript/build run"
+  ]
+}

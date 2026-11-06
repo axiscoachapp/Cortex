@@ -2,7 +2,7 @@
 import http from 'node:http';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false, delegationPermissions = false } = {}) {
   const now=new Date().toISOString();
   const user={id:uid,email:'review@example.invalid',aud:'authenticated',role:'authenticated',created_at:now,email_confirmed_at:now,app_metadata:{provider:'email'},user_metadata:{},factors:[]};
   const token=[{alg:'HS256',typ:'JWT'},{sub:uid,role:'authenticated',aud:'authenticated',aal:'aal1',exp:Math.floor(Date.now()/1000)+86400,iat:Math.floor(Date.now()/1000)}].map(value=>Buffer.from(JSON.stringify(value)).toString('base64url')).join('.')+'.synthetic-signature';
@@ -21,14 +21,29 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     visits.push({...visits[0],id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',created_at:'2025-10-01T12:00:00Z',chief_complaint:'Consulta anterior sintética'});
   }
   const turns=[];const knowledge=medicalUI?[{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',user_id:uid,title:'Fonte sintética revisada',source_text:'Texto original sintético para revisão visual.',source_reference:'Referência sintética',source_version:'2026',char_count:44,source_type:'text',status:'ready',review_status:'approved',created_at:'2026-11-04T18:20:31Z',reviewed_at:'2026-11-04T19:21:45Z',reviewer_name:'Profissional de Demonstração',indexed_at:'2026-11-04T19:22:48Z',supersedes_document_id:null}]:[];
-  const metrics={briefings:0,checklists:0,chat:0,newSources:0,patientWrites:0,appointmentWrites:0,...(workspaceDates?{workspaceWrites:0}:{}),...(medicalUI?{medicalWrites:0}:{})};
+  const metrics={briefings:0,checklists:0,chat:0,newSources:0,patientWrites:0,appointmentWrites:0,...(workspaceDates?{workspaceWrites:0}:{}),...(medicalUI?{medicalWrites:0}:{}),...(delegationPermissions?{delegationCalls:[],delegationRequests:[],delegationUnexpected:[]}:{})};
   const medicalData={patients,templates,visits,knowledge,settings};
+  let delegationReadMode='valid';
+  const delegationAllowed=new Set(['POST /auth/v1/token','GET /auth/v1/user','POST /rest/v1/rpc/clinic_access','POST /rest/v1/rpc/reception_delegation_requests']);
+  const delegationRows=delegationPermissions?[
+    {id:'dddddddd-dddd-4ddd-8ddd-dddddddddddd',staffId:'77777777-7777-4777-8777-777777777777',staffName:'Recepção pendente',state:'pending',revision:1,effective:false,canDecide:true,canRevoke:false},
+    {id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',staffId:'88888888-8888-4888-8888-888888888888',staffName:'Recepção aprovada',state:'approved',revision:2,effective:true,canDecide:false,canRevoke:true},
+    {id:'ffffffff-ffff-4fff-8fff-ffffffffffff',staffId:'99999999-9999-4999-8999-999999999999',staffName:'Recepção sem acesso',state:'approved',revision:2,effective:false,canDecide:false,canRevoke:true},
+  ].map(row=>({...row,clinicId:'66666666-6666-4666-8666-666666666666',clinicName:'Clínica sintética',doctorId:uid,doctorName:'Profissional de Demonstração',createdAt:'2026-11-05T14:00:00Z',capabilityVersion:'clinic_reception_v1',canCancel:false})):[];
   const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,'http://127.0.0.1');let raw='';for await(const chunk of req)raw+=chunk;
     const input=raw?JSON.parse(raw):{};
     const headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'GET,POST,PATCH,HEAD,OPTIONS','Content-Type':'application/json','Access-Control-Expose-Headers':'content-range'};
     const send=(data,status=200)=>{res.writeHead(status,headers);res.end(JSON.stringify(data));};
     if(req.method==='OPTIONS')return send({});
+    if(delegationPermissions){
+      const call={method:req.method,path:url.pathname};metrics.delegationRequests.push(call);
+      if(!delegationAllowed.has(call.method+' '+call.path)){metrics.delegationUnexpected.push(call);return send({code:'TEST_UNEXPECTED_RESOURCE',message:'Unexpected delegation test resource'},403);}
+    }
+    if(delegationPermissions && url.pathname==='/rest/v1/rpc/reception_delegation_requests'){
+      metrics.delegationCalls.push({args:input,mode:delegationReadMode});
+      return send(delegationReadMode==='invalid'?[]:{canManage:false,items:delegationRows,nextCursor:null});
+    }
     if(url.pathname==='/__fixture/metrics')return send(metrics);
     if(url.pathname==='/auth/v1/token')return send({access_token:token,refresh_token:'synthetic-refresh',expires_in:86400,expires_at:Math.floor(Date.now()/1000)+86400,token_type:'bearer',user});
     if(url.pathname==='/auth/v1/user')return send(user);
@@ -64,5 +79,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     return send(req.headers.accept?.includes('application/vnd.pgrst.object+json')?(rows[0]??null):rows);
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  return {origin:`http://127.0.0.1:${server.address().port}`,metrics,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,close:()=>new Promise(resolve=>server.close(resolve))};
+  return {origin:`http://127.0.0.1:${server.address().port}`,metrics,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,delegationRows,
+    setDelegationReadMode(mode){if(!delegationPermissions||!['valid','invalid'].includes(mode))throw new Error('Unsupported delegation fixture mode');delegationReadMode=mode;},
+    close:()=>new Promise(resolve=>server.close(resolve))};
 }
