@@ -23,6 +23,8 @@ export interface ConversationRow {
   queue: string; status: 'open' | 'closed'; assigned_to: string | null; assigned_at: string | null; opened_at: string;
   first_response_at: string | null; closed_at: string | null; last_inbound_at: string | null; last_message_at: string;
   last_message_preview: string; unread_count: number; opted_out_at: string | null; revision: number;
+  /** Current WhatsApp opt-in for this phone (filled by the store). */
+  consented?: boolean;
 }
 export interface MessageRow {
   id: string; clinic_id: string; conversation_id: string; direction: 'in' | 'out'; wamid: string | null; kind: string; body: string;
@@ -31,6 +33,15 @@ export interface MessageRow {
 }
 export interface TemplateRow { name: string; language: string; category: string; status: string; body: string; param_count: number }
 export type InboxFilter = 'unassigned' | 'mine' | 'open' | 'closed';
+/** Keyset cursor: timestamp plus id, so rows sharing a timestamp are never skipped. */
+export interface Cursor { at: string; id: string }
+const encodeCursor = (at: string, id: string) => `${at}|${id}`;
+function decodeCursor(v: unknown): Cursor | null {
+  if (typeof v !== 'string') return null;
+  const [at, id] = v.split('|');
+  if (!at || !id || Number.isNaN(Date.parse(at)) || !UUID.test(id)) return null;
+  return { at: new Date(at).toISOString(), id: id.toLowerCase() };
+}
 export type ParamSource = 'paciente_primeiro_nome' | 'data' | 'hora' | 'dia_semana' | 'medico' | 'clinica' | 'link' | 'texto';
 export interface AutomationRow {
   id: string; clinic_id: string; name: string; enabled: boolean; trigger: 'before_start' | 'after_end'; offset_minutes: number;
@@ -44,6 +55,7 @@ export interface AutomationRunRow {
 export interface Candidate {
   automation_id: string; clinic_id: string; appointment_id: string; appointment_start: string; appointment_end: string;
   doctor_id: string; patient_name: string; phone: string | null; doctor_name: string; clinic_name: string; opted_out: boolean;
+  consented: boolean;
 }
 
 export interface WhatsAppStore {
@@ -53,9 +65,9 @@ export interface WhatsAppStore {
   disconnect(clinicId: string): Promise<void>;
   replaceTemplates(channelId: string, rows: TemplateRow[]): Promise<void>;
   templates(channelId: string): Promise<TemplateRow[]>;
-  conversations(q: { clinicId: string; filter: InboxFilter; actor: string; search: string; before: string | null; limit: number }): Promise<ConversationRow[]>;
+  conversations(q: { clinicId: string; filter: InboxFilter; actor: string; search: string; before: Cursor | null; limit: number }): Promise<ConversationRow[]>;
   conversation(clinicId: string, id: string): Promise<ConversationRow | null>;
-  messages(q: { clinicId: string; conversationId: string; before: string | null; limit: number }): Promise<MessageRow[]>;
+  messages(q: { clinicId: string; conversationId: string; before: Cursor | null; limit: number }): Promise<MessageRow[]>;
   message(clinicId: string, id: string): Promise<MessageRow | null>;
   lastInboundWamid(clinicId: string, conversationId: string): Promise<string | null>;
   automations(clinicId: string): Promise<AutomationRow[]>;
@@ -93,6 +105,28 @@ const MAX_WEBHOOK_BYTES = 2 * 1024 * 1024;
 
 export const tokenBinding = (channelId: string, clinicId: string) => `cortex/whatsapp-token/v1|${channelId.toLowerCase()}|${clinicId.toLowerCase()}`;
 
+/** Reads at most `max` bytes of the body, cancelling the stream beyond that (null = too large). */
+async function readLimited(req: Request, max: number): Promise<Uint8Array | null> {
+  if (!req.body) return new Uint8Array();
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(size);
+  let offset = 0;
+  for (const c of chunks) { out.set(c, offset); offset += c.byteLength; }
+  return out;
+}
+
 class HttpError extends Error {
   constructor(readonly status: number, message: string, readonly code?: string) { super(message); }
 }
@@ -129,8 +163,8 @@ export async function webhookHandler(req: Request, deps: WhatsAppDeps): Promise<
   if (req.method !== 'POST') return text(405);
   const length = Number(req.headers.get('content-length') ?? '0');
   if (length > MAX_WEBHOOK_BYTES) return text(413);
-  const raw = new Uint8Array(await req.arrayBuffer());
-  if (raw.length > MAX_WEBHOOK_BYTES) return text(413);
+  const raw = await readLimited(req, MAX_WEBHOOK_BYTES);
+  if (!raw) return text(413);
   if (!(await validSignature(appSecret, raw, req.headers.get('x-hub-signature-256')))) return text(401);
   let payload: unknown;
   try { payload = JSON.parse(new TextDecoder().decode(raw)); } catch { return text(400); }
@@ -139,7 +173,13 @@ export async function webhookHandler(req: Request, deps: WhatsAppDeps): Promise<
   try { state = (await deps.rpc('whatsapp_record_event', { p_sha: sha, p_payload: payload })) as typeof state; }
   catch { return text(500); }
   if (state.processed) return text(200);
-  const { messages, statuses, identityChanges } = parseWebhook(payload);
+  let parsed: ReturnType<typeof parseWebhook>;
+  try { parsed = parseWebhook(payload); }
+  catch {
+    await deps.rpc('whatsapp_finish_event', { p_sha: sha, p_error: 'parse' }).catch(() => null);
+    return text(200); // the payload cannot be read; a retry would not change that
+  }
+  const { messages, statuses, identityChanges } = parsed;
   let failure: string | null = null;
   for (const m of messages) {
     try {
@@ -175,7 +215,7 @@ const conversationDto = (c: ConversationRow) => ({
   status: c.status, assignedTo: c.assigned_to, assignedAt: c.assigned_at, openedAt: c.opened_at, firstResponseAt: c.first_response_at,
   closedAt: c.closed_at, lastInboundAt: c.last_inbound_at, windowOpenUntil: windowOpenUntil(c.last_inbound_at),
   lastMessageAt: c.last_message_at, lastMessagePreview: c.last_message_preview, unreadCount: c.unread_count,
-  optedOut: c.opted_out_at !== null, revision: c.revision,
+  optedOut: c.opted_out_at !== null, consented: c.consented ?? false, revision: c.revision,
 });
 const messageDto = (m: MessageRow) => ({
   id: m.id, direction: m.direction, kind: m.kind, body: m.body,
@@ -194,6 +234,36 @@ async function channelToken(deps: WhatsAppDeps, ch: ChannelRow): Promise<string>
 function graphFailure(e: unknown): HttpError {
   if (e instanceof GraphError) return new HttpError(e.status === 413 ? 413 : 502, e.message, `graph_${e.code ?? e.status}`);
   return new HttpError(502, 'O WhatsApp não respondeu. Tente de novo.', 'graph');
+}
+
+/** Marks a value so apiHandler answers 202 (accepted, outcome not confirmed). */
+const ACCEPTED = Symbol('accepted');
+const json202 = <T extends object>(body: T) => Object.assign(body, { [ACCEPTED]: true });
+
+/**
+ * Sends one reserved message and records the outcome. A refusal from Meta (4xx) is a failure; no
+ * answer or a 5xx is "unknown" and is never retried automatically. If Meta accepted but recording
+ * fails, recording is retried; when it still fails the id is logged for reconciliation.
+ */
+async function deliver(deps: WhatsAppDeps, ch: ChannelRow, token: string, messageId: string, message: Record<string, unknown>):
+  Promise<{ status: 'sent'; recorded: boolean } | { status: 'failed' | 'unknown'; error: string }> {
+  let wamid: string;
+  try { wamid = await deps.graph.send(ch.phone_number_id, token, message); }
+  catch (e) {
+    const definite = e instanceof GraphError && e.definite;
+    const error = e instanceof GraphError ? e.message : 'O WhatsApp não respondeu.';
+    await deps.rpc('whatsapp_finish_outbound', { p_message: messageId, p_wamid: null, p_error: error, p_unknown: !definite })
+      .catch(() => deps.log?.('whatsapp_finish_outbound_failed', { message: messageId, outcome: definite ? 'failed' : 'unknown' }));
+    return { status: definite ? 'failed' : 'unknown', error };
+  }
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await deps.rpc('whatsapp_finish_outbound', { p_message: messageId, p_wamid: wamid, p_error: null, p_unknown: false });
+      return { status: 'sent', recorded: true };
+    } catch { /* retried below */ }
+  }
+  deps.log?.('whatsapp_sent_unrecorded', { message: messageId, wamid });
+  return { status: 'sent', recorded: false };
 }
 
 const requireAdmin = (c: Caller) => { if (!c.admin) throw new HttpError(403, 'Somente o administrador da clínica pode alterar a conexão.', 'forbidden'); };
@@ -225,7 +295,10 @@ export async function apiHandler(req: Request, deps: WhatsAppDeps): Promise<Resp
       }
       case 'conversations': return json(deps, 200, await conversations(deps, caller, body));
       case 'messages': return json(deps, 200, await messages(deps, caller, body));
-      case 'send': return json(deps, 200, await send(deps, caller, body));
+      case 'send': {
+        const result = await send(deps, caller, body);
+        return json(deps, (result as Record<symbol, unknown>)[ACCEPTED] ? 202 : 200, result);
+      }
       case 'act': return json(deps, 200, await act(deps, caller, body));
       case 'media': return await media(deps, caller, body);
       case 'automations': return json(deps, 200, await listAutomations(deps, caller));
@@ -308,10 +381,11 @@ async function conversations(deps: WhatsAppDeps, caller: Caller, body: Record<st
   requireInbox(caller);
   const filter = (['unassigned', 'mine', 'open', 'closed'] as const).find((f) => f === body.filter) ?? 'open';
   const search = typeof body.search === 'string' ? body.search.trim().slice(0, 80) : '';
-  const before = typeof body.before === 'string' && !Number.isNaN(Date.parse(body.before)) ? new Date(body.before).toISOString() : null;
+  const before = decodeCursor(body.before);
   const limit = typeof body.limit === 'number' && body.limit >= 1 && body.limit <= 100 ? Math.floor(body.limit) : 50;
   const rows = await deps.store.conversations({ clinicId: caller.clinicId, filter, actor: caller.userId, search, before, limit });
-  return { conversations: rows.map(conversationDto), nextBefore: rows.length === limit ? rows[rows.length - 1].last_message_at : null };
+  const last = rows[rows.length - 1];
+  return { conversations: rows.map(conversationDto), nextBefore: rows.length === limit && last ? encodeCursor(last.last_message_at, last.id) : null };
 }
 
 async function messages(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
@@ -319,9 +393,10 @@ async function messages(deps: WhatsAppDeps, caller: Caller, body: Record<string,
   const conversationId = uuid(body.conversationId, 'Conversa');
   const conv = await deps.store.conversation(caller.clinicId, conversationId);
   if (!conv) throw new HttpError(404, 'Conversa não encontrada.', 'not_found');
-  const before = typeof body.before === 'string' && !Number.isNaN(Date.parse(body.before)) ? new Date(body.before).toISOString() : null;
+  const before = decodeCursor(body.before);
   const rows = await deps.store.messages({ clinicId: caller.clinicId, conversationId, before, limit: 50 });
-  return { conversation: conversationDto(conv), messages: rows.map(messageDto), nextBefore: rows.length === 50 ? rows[rows.length - 1].created_at : null };
+  const last = rows[rows.length - 1];
+  return { conversation: conversationDto(conv), messages: rows.map(messageDto), nextBefore: rows.length === 50 && last ? encodeCursor(last.created_at, last.id) : null };
 }
 
 async function send(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
@@ -362,34 +437,34 @@ async function send(deps: WhatsAppDeps, caller: Caller, body: Record<string, unk
     };
   }
   const token = await channelToken(deps, ch);
+  type Reserved = { messageId: string; state: 'new' | 'existing'; status: string; wamid: string | null; to?: string | null; recipient?: string | null };
   const reserve = () => deps.rpc('whatsapp_begin_outbound', {
     p_clinic: caller.clinicId, p_conversation: conversationId, p_actor: caller.userId, p_request: requestId,
     p_kind: kind, p_body: kind === 'text' ? text : '', p_template: template,
-  }) as Promise<{ messageId: string; state: 'new' | 'existing'; status: string; wamid: string | null }>;
-  let reserved: Awaited<ReturnType<typeof reserve>>;
+  }) as Promise<Reserved>;
+  let reserved: Reserved;
   try { reserved = await reserve(); }
   catch (e) {
     if ((e as { code?: string })?.code === '23505') { try { reserved = await reserve(); } catch (again) { throw rpcError(again); } }
     else throw rpcError(e);
   }
   if (reserved.state === 'existing') return { messageId: reserved.messageId, status: reserved.status, duplicate: true };
-  let wamid: string | null = null;
-  let failure: string | null = null;
-  // Meta may know the person only by the business-scoped id (WhatsApp usernames).
-  const recipient = conv.wa_id ? { to: conv.wa_id } : { recipient: conv.user_id };
-  try { wamid = await deps.graph.send(ch.phone_number_id, token, { ...recipient, ...message }); }
-  catch (e) { failure = e instanceof GraphError ? e.message : 'O WhatsApp não respondeu.'; }
-  try { await deps.rpc('whatsapp_finish_outbound', { p_message: reserved.messageId, p_wamid: wamid, p_error: failure }); }
-  catch (e) { deps.log?.('whatsapp_finish_outbound_failed', { message: reserved.messageId, code: (e as { code?: string })?.code ?? null }); }
-  if (failure) throw new HttpError(502, failure, 'send_failed');
-  return { messageId: reserved.messageId, status: 'sent', duplicate: false };
+  // Send to the address fixed at reservation (Meta may know the person only by the business-scoped id).
+  const address = reserved.to ? { to: reserved.to } : reserved.recipient ? { recipient: reserved.recipient } : null;
+  if (!address) throw new HttpError(409, 'A conversa não tem destinatário válido.', 'invalid');
+  const outcome = await deliver(deps, ch, token, reserved.messageId, { ...address, ...message });
+  if (outcome.status === 'failed') throw new HttpError(502, outcome.error, 'send_failed');
+  if (outcome.status === 'unknown')
+    return json202({ messageId: reserved.messageId, status: 'unknown', duplicate: false,
+      warning: 'O WhatsApp não confirmou o envio. Confira com o paciente antes de mandar de novo.' });
+  return { messageId: reserved.messageId, status: 'recorded' in outcome && !outcome.recorded ? 'unrecorded' : 'sent', duplicate: false };
 }
 
 async function act(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
   requireInbox(caller);
   const conversationId = uuid(body.conversationId, 'Conversa');
   const action = typeof body.operation === 'string' ? body.operation : '';
-  const allowed = ['assign', 'unassign', 'close', 'reopen', 'mark_read', 'link_contact', 'link_case', 'set_queue'];
+  const allowed = ['assign', 'unassign', 'close', 'reopen', 'mark_read', 'link_contact', 'link_case', 'set_queue', 'record_opt_in', 'revoke_opt_in'];
   if (!allowed.includes(action)) throw new HttpError(400, 'Ação desconhecida.', 'invalid');
   const revision = typeof body.revision === 'number' && Number.isInteger(body.revision) ? body.revision : null;
   if (action !== 'mark_read' && revision === null) throw new HttpError(400, 'Revisão da conversa ausente.', 'invalid');
@@ -497,15 +572,20 @@ async function saveAutomation(deps: WhatsAppDeps, caller: Caller, body: Record<s
     } else clean.push({ source });
     if (source === 'link' && !linkUrl) throw new HttpError(400, 'Informe o link usado no modelo.', 'invalid');
   }
-  const doctorIds = Array.isArray(rule.doctorIds) && rule.doctorIds.length ? (rule.doctorIds as unknown[]).map((d) => uuid(d, 'Médico')) : null;
-  const types = Array.isArray(rule.appointmentTypes) && rule.appointmentTypes.length
-    ? (rule.appointmentTypes as unknown[]).filter((t): t is string => typeof t === 'string' && /^[a-z_]{2,30}$/.test(t)) : null;
+  // null = all; an empty or invalid list is refused instead of silently widening the audience.
+  if (rule.doctorIds !== undefined && rule.doctorIds !== null && (!Array.isArray(rule.doctorIds) || !rule.doctorIds.length))
+    throw new HttpError(400, 'Escolha pelo menos um médico ou deixe "todos".', 'invalid');
+  if (rule.appointmentTypes !== undefined && rule.appointmentTypes !== null && (!Array.isArray(rule.appointmentTypes) || !rule.appointmentTypes.length
+    || rule.appointmentTypes.some((t) => typeof t !== 'string' || !/^[a-z_]{2,30}$/.test(t))))
+    throw new HttpError(400, 'Tipo de consulta inválido.', 'invalid');
+  const doctorIds = Array.isArray(rule.doctorIds) ? [...new Set((rule.doctorIds as unknown[]).map((d) => uuid(d, 'Médico')))] : null;
+  const types = Array.isArray(rule.appointmentTypes) ? [...new Set(rule.appointmentTypes as string[])] : null;
   try {
     return await deps.rpc('whatsapp_automation_save', {
       p_clinic: caller.clinicId, p_actor: caller.userId, p_id: id, p_revision: revision,
       p_rule: {
         name, enabled: rule.enabled === true, trigger, offsetMinutes: offset, templateName: template.name, templateLanguage: template.language,
-        params: clean, linkUrl, doctorIds, appointmentTypes: types?.length ? types : null,
+        params: clean, linkUrl, doctorIds, appointmentTypes: types,
       },
     });
   } catch (e) { throw rpcError(e); }
@@ -549,14 +629,14 @@ export async function automationsHandler(req: Request, deps: WhatsAppDeps): Prom
   for (let i = 0; i < Math.min(secret.length, given.length); i++) diff |= secret.charCodeAt(i) ^ given.charCodeAt(i);
   if (req.method !== 'POST' || diff !== 0) return json(deps, 401, { error: 'Não autorizado.' });
   const now = (deps.now ?? (() => new Date()))();
-  if (inQuietHours(now)) return json(deps, 200, { quiet: true, candidates: 0, sent: 0, skipped: 0, failed: 0 });
+  if (inQuietHours(now)) return json(deps, 200, { quiet: true, candidates: 0, sent: 0, skipped: 0, failed: 0, unknown: 0 });
   const candidates = (await deps.rpc('whatsapp_automation_candidates', { p_now: now.toISOString(), p_limit: 100 })) as Candidate[] | null;
   const list = candidates ?? [];
   const rules = new Map((await deps.store.automationsByIds([...new Set(list.map((c) => c.automation_id))])).map((r) => [r.id, r]));
   const channels = new Map<string, ChannelRow | null>();
   const tokens = new Map<string, string | null>();
   const templateCache = new Map<string, TemplateRow[]>();
-  const tally = { sent: 0, skipped: 0, failed: 0 };
+  const tally = { sent: 0, skipped: 0, failed: 0, unknown: 0 };
   const fail = (rule: AutomationRow, c: Candidate, reason: string) =>
     deps.rpc('whatsapp_automation_fail', { p_automation: rule.id, p_appointment: c.appointment_id, p_start: c.appointment_start, p_reason: reason }).catch(() => null);
   for (const c of list) {
@@ -571,6 +651,7 @@ export async function automationsHandler(req: Request, deps: WhatsAppDeps): Prom
     if (!templateCache.has(ch.id)) templateCache.set(ch.id, await deps.store.templates(ch.id));
     const template = templateCache.get(ch.id)!.find((t) => t.name === rule.template_name && t.language === rule.template_language);
     const skip = c.opted_out ? 'O contato pediu para não receber mensagens.'
+      : !c.consented ? 'Sem consentimento registrado para mensagens pelo WhatsApp.'
       : !c.phone || !/^[0-9]{10,15}$/.test(c.phone) ? 'Sem telefone válido no cadastro.'
       : !template || template.status !== 'APPROVED' ? 'Modelo não aprovado.'
       : template.param_count !== rule.params.length ? 'Campos do modelo mudaram; revise a regra.' : null;
@@ -589,19 +670,14 @@ export async function automationsHandler(req: Request, deps: WhatsAppDeps): Prom
     }
     if (!begun) continue; // another run claimed it
     if (begun.skipped) { tally.skipped++; continue; }
-    let wamid: string | null = null;
-    let failure: string | null = null;
-    try {
-      wamid = await deps.graph.send(ch.phone_number_id, token, {
-        to: begun.to, type: 'template',
-        template: {
-          name: rule.template_name, language: { code: rule.template_language },
-          ...(params.length ? { components: [{ type: 'body', parameters: params.map((text) => ({ type: 'text', text })) }] } : {}),
-        },
-      });
-    } catch (e) { failure = e instanceof GraphError ? e.message : 'O WhatsApp não respondeu.'; }
-    await deps.rpc('whatsapp_finish_outbound', { p_message: begun.messageId, p_wamid: wamid, p_error: failure }).catch(() => null);
-    if (failure) tally.failed++; else tally.sent++;
+    const outcome = await deliver(deps, ch, token, begun.messageId!, {
+      to: begun.to, type: 'template',
+      template: {
+        name: rule.template_name, language: { code: rule.template_language },
+        ...(params.length ? { components: [{ type: 'body', parameters: params.map((text) => ({ type: 'text', text })) }] } : {}),
+      },
+    });
+    if (outcome.status === 'sent') tally.sent++; else if (outcome.status === 'unknown') tally.unknown++; else tally.failed++;
   }
   deps.log?.('whatsapp_automations', { candidates: list.length, ...tally });
   return json(deps, 200, { quiet: false, candidates: list.length, ...tally });

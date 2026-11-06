@@ -61,7 +61,7 @@ create table public.whatsapp_conversations (
   check (status <> 'closed' or closed_at is not null),
   check ((assigned_to is null) = (assigned_at is null))
 );
-create index whatsapp_conversations_inbox on public.whatsapp_conversations (clinic_id, status, last_message_at desc);
+create index whatsapp_conversations_inbox on public.whatsapp_conversations (clinic_id, status, last_message_at desc, id desc);
 create index whatsapp_conversations_assignee on public.whatsapp_conversations (clinic_id, assigned_to, status);
 
 create table public.whatsapp_messages (
@@ -76,8 +76,10 @@ create table public.whatsapp_messages (
   context_wamid text check (context_wamid is null or length(context_wamid) between 8 and 256),
   media jsonb check (media is null or jsonb_typeof(media) = 'object'),
   template jsonb check (template is null or jsonb_typeof(template) = 'object'),
-  status text not null check (status in ('received', 'pending', 'sent', 'delivered', 'read', 'failed')),
+  status text not null check (status in ('received', 'pending', 'sent', 'delivered', 'read', 'failed', 'unknown')),
   error text check (error is null or length(error) <= 500),
+  -- Phone or business-scoped id the outbound message was addressed to (fixed at reservation).
+  recipient text check (recipient is null or length(recipient) <= 180),
   sent_by uuid references auth.users(id) on delete set null,
   request_id uuid,
   provider_at timestamptz,
@@ -87,7 +89,7 @@ create table public.whatsapp_messages (
   check ((direction = 'in') = (status = 'received')),
   check (direction = 'in' or request_id is not null)
 );
-create index whatsapp_messages_conversation on public.whatsapp_messages (conversation_id, created_at desc);
+create index whatsapp_messages_conversation on public.whatsapp_messages (conversation_id, created_at desc, id desc);
 
 -- Raw webhook deliveries. Persisted before the 200 so a crash never loses an event; the payload is
 -- erased once processed (only the hash stays for de-duplication).
@@ -113,15 +115,29 @@ create table public.whatsapp_templates (
   primary key (channel_id, name, language)
 );
 
+-- Permission to start conversations with a person (WhatsApp Business Messaging Policy). Automatic
+-- messages go only to people with a current record here. "SAIR" revokes it; "VOLTAR" renews it.
+create table public.whatsapp_opt_ins (
+  clinic_id uuid not null references public.clinics(id) on delete restrict,
+  wa_id text not null check (wa_id ~ '^[0-9]{8,15}$'),
+  source text not null check (source in ('recepcao', 'paciente', 'cadastro')),
+  text_version text not null default 'v1' check (length(text_version) between 1 and 40),
+  recorded_by uuid references auth.users(id) on delete set null,
+  recorded_at timestamptz not null default now(),
+  revoked_at timestamptz,
+  primary key (clinic_id, wa_id)
+);
+
+alter table public.whatsapp_opt_ins enable row level security;
 alter table public.whatsapp_channels enable row level security;
 alter table public.whatsapp_conversations enable row level security;
 alter table public.whatsapp_messages enable row level security;
 alter table public.whatsapp_webhook_events enable row level security;
 alter table public.whatsapp_templates enable row level security;
 revoke all on public.whatsapp_channels, public.whatsapp_conversations, public.whatsapp_messages,
-  public.whatsapp_webhook_events, public.whatsapp_templates from public, anon, authenticated;
+  public.whatsapp_webhook_events, public.whatsapp_templates, public.whatsapp_opt_ins from public, anon, authenticated;
 grant select, insert, update, delete on public.whatsapp_channels, public.whatsapp_conversations, public.whatsapp_messages,
-  public.whatsapp_webhook_events, public.whatsapp_templates to service_role;
+  public.whatsapp_webhook_events, public.whatsapp_templates, public.whatsapp_opt_ins to service_role;
 grant usage on sequence public.whatsapp_webhook_events_id_seq to service_role;
 
 -- Brazilian mobile numbers may arrive with or without the ninth digit; both forms identify one person.
@@ -190,7 +206,8 @@ begin
   elsif p_kind in ('text', 'button', 'interactive') and keyword in ('VOLTAR', 'RECEBER LEMBRETES') then opt := 'in'; end if;
   if p_context_wamid is not null and p_kind in ('button', 'interactive') then
     update public.whatsapp_automation_runs r set reply = left(coalesce(p_body, ''), 200), replied_at = now(), updated_at = now()
-    from public.whatsapp_messages m where m.wamid = p_context_wamid and m.clinic_id = conv.clinic_id and r.message_id = m.id;
+    from public.whatsapp_messages m where m.wamid = p_context_wamid and m.clinic_id = conv.clinic_id and m.conversation_id = conv.id
+      and r.message_id = m.id;
   end if;
 
   if conv.contact_id is null and coalesce(p_wa_id, conv.wa_id) is not null then
@@ -200,8 +217,12 @@ begin
   end if;
   preview := left(case when coalesce(p_body, '') <> '' then p_body else '[' || p_kind || ']' end, 160);
   update public.whatsapp_conversations set
-    wa_id = coalesce(wa_id, p_wa_id),
-    user_id = coalesce(user_id, p_user_id),
+    -- Copy a missing key only when no other conversation of the channel already holds it: two
+    -- conversations of one person are left for review instead of a silent merge or a 23505 loop.
+    wa_id = case when wa_id is null and p_wa_id is not null and not exists (select 1 from public.whatsapp_conversations o
+      where o.channel_id = conv.channel_id and o.wa_id = p_wa_id and o.id <> conv.id) then p_wa_id else wa_id end,
+    user_id = case when user_id is null and p_user_id is not null and not exists (select 1 from public.whatsapp_conversations o
+      where o.channel_id = conv.channel_id and o.user_id = p_user_id and o.id <> conv.id) then p_user_id else user_id end,
     profile_name = case when coalesce(p_profile_name, '') <> '' then left(p_profile_name, 200) else profile_name end,
     contact_id = coalesce(contact_id, matched),
     last_inbound_at = greatest(coalesce(last_inbound_at, '-infinity'), coalesce(p_provider_at, now())),
@@ -216,6 +237,13 @@ begin
     opted_out_at = case when opt = 'out' then now() when opt = 'in' then null else opted_out_at end,
     revision = revision + 1
   where id = conv.id;
+  if opt = 'out' then
+    update public.whatsapp_opt_ins set revoked_at = now() where clinic_id = conv.clinic_id and revoked_at is null
+      and wa_id = any (public.whatsapp_phone_variants(coalesce(p_wa_id, conv.wa_id, '')));
+  elsif opt = 'in' and coalesce(p_wa_id, conv.wa_id) is not null then
+    insert into public.whatsapp_opt_ins (clinic_id, wa_id, source) values (conv.clinic_id, coalesce(p_wa_id, conv.wa_id), 'paciente')
+    on conflict (clinic_id, wa_id) do update set revoked_at = null, source = 'paciente', recorded_at = now(), recorded_by = null;
+  end if;
   return jsonb_build_object('conversationId', conv.id, 'duplicate', false, 'optOut', opt);
 end $$;
 
@@ -271,11 +299,12 @@ begin
 end $$;
 
 -- Outbound, step 1: reserve the message under the caller's request id. Free text only inside the
--- 24-hour customer service window; templates only for people who did not opt out.
+-- 24-hour customer service window; templates only for people who did not opt out. The recipient is
+-- read here, under the conversation lock, and returned: the caller sends to exactly this address.
 create function public.whatsapp_begin_outbound(p_clinic uuid, p_conversation uuid, p_actor uuid, p_request uuid,
   p_kind text, p_body text, p_template jsonb) returns jsonb
 language plpgsql security definer set search_path = '' as $$
-declare conv public.whatsapp_conversations; existing public.whatsapp_messages; m public.whatsapp_messages;
+declare conv public.whatsapp_conversations; existing public.whatsapp_messages; m public.whatsapp_messages; recipient text;
 begin
   if auth.role() is distinct from 'service_role' then raise exception 'Not authorized' using errcode = '42501'; end if;
   if p_kind not in ('text', 'template') or p_request is null or p_actor is null then
@@ -283,7 +312,11 @@ begin
   end if;
   select * into existing from public.whatsapp_messages where clinic_id = p_clinic and sent_by = p_actor and request_id = p_request;
   if found then
-    if existing.conversation_id <> p_conversation then raise exception 'Pedido já usado' using errcode = '22023'; end if;
+    -- A replay must be the same message; another content under the same request id is refused.
+    if existing.conversation_id <> p_conversation or existing.kind <> p_kind or existing.body <> left(coalesce(p_body, ''), 4096)
+       or existing.template is distinct from p_template then
+      raise exception 'Este pedido já foi usado para outra mensagem' using errcode = '22023';
+    end if;
     return jsonb_build_object('messageId', existing.id, 'state', 'existing', 'status', existing.status, 'wamid', existing.wamid);
   end if;
   select * into conv from public.whatsapp_conversations where id = p_conversation and clinic_id = p_clinic for update;
@@ -294,14 +327,18 @@ begin
   if p_kind = 'template' and conv.opted_out_at is not null then
     raise exception 'Contato pediu para não receber mensagens' using errcode = 'P0W02';
   end if;
-  insert into public.whatsapp_messages (clinic_id, conversation_id, direction, kind, body, template, status, sent_by, request_id)
-  values (p_clinic, p_conversation, 'out', p_kind, left(coalesce(p_body, ''), 4096), p_template, 'pending', p_actor, p_request)
+  recipient := coalesce(conv.wa_id, conv.user_id);
+  insert into public.whatsapp_messages (clinic_id, conversation_id, direction, kind, body, template, status, sent_by, request_id, recipient)
+  values (p_clinic, p_conversation, 'out', p_kind, left(coalesce(p_body, ''), 4096), p_template, 'pending', p_actor, p_request, recipient)
   returning * into m;
-  return jsonb_build_object('messageId', m.id, 'state', 'new', 'status', m.status, 'wamid', null);
+  return jsonb_build_object('messageId', m.id, 'state', 'new', 'status', m.status, 'wamid', null,
+    'to', conv.wa_id, 'recipient', case when conv.wa_id is null then conv.user_id end);
 end $$;
 
--- Outbound, step 2: record what the Cloud API answered.
-create function public.whatsapp_finish_outbound(p_message uuid, p_wamid text, p_error text) returns void
+-- Outbound, step 2: record what the Cloud API answered. p_unknown: the request may have reached Meta
+-- but no answer came back (network failure, 5xx). The message stays "unknown" for a person to check;
+-- it is never retried automatically, because a retry could duplicate the message.
+create function public.whatsapp_finish_outbound(p_message uuid, p_wamid text, p_error text, p_unknown boolean default false) returns void
 language plpgsql security definer set search_path = '' as $$
 declare m public.whatsapp_messages;
 begin
@@ -319,6 +356,10 @@ begin
       revision = revision + 1
     where id = m.conversation_id;
     update public.whatsapp_automation_runs set status = 'sent', updated_at = now() where message_id = m.id and status = 'pending';
+  elsif coalesce(p_unknown, false) then
+    update public.whatsapp_messages set status = 'unknown', error = left(coalesce(p_error, 'Envio não confirmado pelo WhatsApp'), 500) where id = m.id;
+    update public.whatsapp_automation_runs set status = 'unknown', reason = left(coalesce(p_error, 'Envio não confirmado pelo WhatsApp'), 300),
+      updated_at = now() where message_id = m.id and status = 'pending';
   else
     update public.whatsapp_messages set status = 'failed', error = left(coalesce(p_error, 'Falha no envio'), 500) where id = m.id;
     update public.whatsapp_automation_runs set status = 'failed', reason = left(coalesce(p_error, 'Falha no envio'), 300), updated_at = now()
@@ -365,6 +406,15 @@ begin
       raise exception 'Atendimento indisponível' using errcode = '22023';
     end if;
     update public.whatsapp_conversations set case_id = p_target, revision = revision + 1 where id = conv.id;
+  elsif p_action = 'record_opt_in' then
+    if conv.wa_id is null then raise exception 'Sem telefone para registrar o consentimento' using errcode = '22023'; end if;
+    insert into public.whatsapp_opt_ins (clinic_id, wa_id, source, recorded_by) values (p_clinic, conv.wa_id, 'recepcao', p_actor)
+    on conflict (clinic_id, wa_id) do update set revoked_at = null, source = 'recepcao', recorded_by = p_actor, recorded_at = now();
+    update public.whatsapp_conversations set opted_out_at = null, revision = revision + 1 where id = conv.id;
+  elsif p_action = 'revoke_opt_in' then
+    update public.whatsapp_opt_ins set revoked_at = now() where clinic_id = p_clinic and revoked_at is null
+      and wa_id = any (public.whatsapp_phone_variants(coalesce(conv.wa_id, '')));
+    update public.whatsapp_conversations set opted_out_at = coalesce(opted_out_at, now()), revision = revision + 1 where id = conv.id;
   elsif p_action = 'set_queue' then
     if p_queue is null or p_queue !~ '^[a-z0-9][a-z0-9_-]{0,39}$' then raise exception 'Fila inválida' using errcode = '22023'; end if;
     update public.whatsapp_conversations set queue = p_queue, revision = revision + 1 where id = conv.id;
@@ -382,7 +432,7 @@ revoke all on function public.whatsapp_ingest_inbound(text, text, text, text, te
 revoke all on function public.whatsapp_identity_change(text, text, text, text, text, text, timestamptz) from public, anon, authenticated;
 revoke all on function public.whatsapp_apply_status(text, text, text, timestamptz, text) from public, anon, authenticated;
 revoke all on function public.whatsapp_begin_outbound(uuid, uuid, uuid, uuid, text, text, jsonb) from public, anon, authenticated;
-revoke all on function public.whatsapp_finish_outbound(uuid, text, text) from public, anon, authenticated;
+revoke all on function public.whatsapp_finish_outbound(uuid, text, text, boolean) from public, anon, authenticated;
 revoke all on function public.whatsapp_conversation_action(uuid, uuid, uuid, integer, text, uuid, text) from public, anon, authenticated;
 grant execute on function public.whatsapp_phone_variants(text) to service_role;
 grant execute on function public.whatsapp_record_event(text, jsonb) to service_role;
@@ -391,7 +441,7 @@ grant execute on function public.whatsapp_ingest_inbound(text, text, text, text,
 grant execute on function public.whatsapp_identity_change(text, text, text, text, text, text, timestamptz) to service_role;
 grant execute on function public.whatsapp_apply_status(text, text, text, timestamptz, text) to service_role;
 grant execute on function public.whatsapp_begin_outbound(uuid, uuid, uuid, uuid, text, text, jsonb) to service_role;
-grant execute on function public.whatsapp_finish_outbound(uuid, text, text) to service_role;
+grant execute on function public.whatsapp_finish_outbound(uuid, text, text, boolean) to service_role;
 grant execute on function public.whatsapp_conversation_action(uuid, uuid, uuid, integer, text, uuid, text) to service_role;
 
 -- ---------------------------------------------------------------- agenda automations
@@ -429,7 +479,7 @@ create table public.whatsapp_automation_runs (
   automation_id uuid not null references public.whatsapp_automations(id) on delete cascade,
   appointment_id uuid not null references public.appointments(id) on delete cascade,
   appointment_start timestamptz not null,
-  status text not null check (status in ('pending', 'sent', 'failed', 'skipped')),
+  status text not null check (status in ('pending', 'sent', 'failed', 'skipped', 'unknown')),
   reason text check (reason is null or length(reason) <= 300),
   message_id uuid references public.whatsapp_messages(id) on delete set null,
   reply text check (reply is null or length(reply) <= 200),
@@ -456,26 +506,28 @@ language sql immutable set search_path = '' as $$
   from (select nullif(regexp_replace(coalesce(p_raw, ''), '[^0-9]', '', 'g'), '') as d) x
 $$;
 
--- Appointments whose automation time has come (within the last 14 hours, so quiet hours delay
--- rather than drop a message), with only what the template may use.
+-- Appointments of the clinic agenda whose automation time has come (within the last 14 hours, so
+-- quiet hours delay rather than drop a message). Only appointments that belong to the clinic
+-- (appointments.clinic_id), never a doctor's private agenda, and only the reception contact's phone:
+-- the private patient record is not read. `consented`: the person has a recorded opt-in.
 create function public.whatsapp_automation_candidates(p_now timestamptz, p_limit integer) returns table (
   automation_id uuid, clinic_id uuid, appointment_id uuid, appointment_start timestamptz, appointment_end timestamptz,
-  doctor_id uuid, patient_name text, phone text, doctor_name text, clinic_name text, opted_out boolean)
+  doctor_id uuid, patient_name text, phone text, doctor_name text, clinic_name text, opted_out boolean, consented boolean)
 language sql stable security definer set search_path = '' as $$
   select a.id, a.clinic_id, ap.id, ap.start_time, ap.end_time, ap.user_id,
-    coalesce(nullif(trim(ct.name), ''), nullif(trim(p.name), ''), '') as patient_name,
-    coalesce(ct.phone_normalized, public.whatsapp_safe_phone(p.phone)) as phone,
+    coalesce(nullif(trim(ct.name), ''), '') as patient_name,
+    ct.phone_normalized as phone,
     coalesce(nullif(trim(us.doctor_name), ''), '') as doctor_name,
     cl.name,
     exists (select 1 from public.whatsapp_conversations c where c.channel_id = ch.id and c.opted_out_at is not null
-      and c.wa_id = any (public.whatsapp_phone_variants(coalesce(ct.phone_normalized, public.whatsapp_safe_phone(p.phone), '')))) as opted_out
+      and c.wa_id = any (public.whatsapp_phone_variants(coalesce(ct.phone_normalized, '')))) as opted_out,
+    exists (select 1 from public.whatsapp_opt_ins o where o.clinic_id = a.clinic_id and o.revoked_at is null
+      and o.wa_id = any (public.whatsapp_phone_variants(coalesce(ct.phone_normalized, '')))) as consented
   from public.whatsapp_automations a
   join public.whatsapp_channels ch on ch.clinic_id = a.clinic_id and ch.status = 'connected'
   join public.clinics cl on cl.id = a.clinic_id
-  join public.clinic_members m on m.clinic_id = a.clinic_id and m.status = 'active'
-  join public.appointments ap on ap.user_id = m.user_id and (ap.clinic_id is null or ap.clinic_id = a.clinic_id)
-  left join public.clinic_contacts ct on ct.clinic_id = a.clinic_id and ct.id = ap.contact_id
-  left join public.patients p on p.id = ap.patient_id and p.user_id = ap.user_id
+  join public.appointments ap on ap.clinic_id = a.clinic_id
+  left join public.clinic_contacts ct on ct.clinic_id = ap.clinic_id and ct.id = ap.contact_id
   left join public.user_settings us on us.user_id = ap.user_id
   where a.enabled
     and (a.doctor_ids is null or ap.user_id = any (a.doctor_ids))
@@ -491,35 +543,56 @@ language sql stable security definer set search_path = '' as $$
   limit greatest(1, least(p_limit, 500))
 $$;
 
--- Claims one run. Returns null when another worker already did. For a sendable run it also prepares
--- the conversation (created closed, so it only enters the reception queue when the person replies)
--- and the pending outbound message.
+-- Claims one run. Returns null when another worker already did. Everything the candidate list said
+-- is checked again here, under locks: the appointment still belongs to the clinic, is still due and
+-- not cancelled, the phone is still the contact's, the person consented and did not opt out. When
+-- something changed the run is recorded as skipped with the reason. For a sendable run it also
+-- prepares the conversation (created closed, so it only enters the reception queue when the person
+-- replies) and the pending outbound message.
 create function public.whatsapp_automation_begin(p_automation uuid, p_appointment uuid, p_start timestamptz, p_wa_id text,
   p_skip_reason text, p_body text, p_template jsonb) returns jsonb
 language plpgsql security definer set search_path = '' as $$
-declare a public.whatsapp_automations; ch public.whatsapp_channels; conv public.whatsapp_conversations; run_id uuid; msg_id uuid;
+declare a public.whatsapp_automations; ch public.whatsapp_channels; conv public.whatsapp_conversations; ap public.appointments;
+  phone text; reason text := p_skip_reason; run_id uuid; msg_id uuid;
 begin
   if auth.role() is distinct from 'service_role' then raise exception 'Not authorized' using errcode = '42501'; end if;
-  select * into a from public.whatsapp_automations where id = p_automation and enabled;
+  select * into a from public.whatsapp_automations where id = p_automation and enabled for share;
   if not found then return null; end if;
-  insert into public.whatsapp_automation_runs (clinic_id, automation_id, appointment_id, appointment_start, status, reason)
-  values (a.clinic_id, a.id, p_appointment, p_start, case when p_skip_reason is null then 'pending' else 'skipped' end, left(p_skip_reason, 300))
-  on conflict (automation_id, appointment_id, appointment_start) do nothing returning id into run_id;
-  if run_id is null or p_skip_reason is not null then
-    return case when run_id is null then null else jsonb_build_object('runId', run_id, 'skipped', true) end;
+  if reason is null then
+    select * into ap from public.appointments where id = p_appointment for share;
+    if not found or ap.clinic_id is distinct from a.clinic_id then reason := 'A consulta não está mais na agenda da clínica.';
+    elsif ap.start_time <> p_start then reason := 'A consulta mudou de horário.';
+    elsif a.trigger = 'before_start' and ap.status not in ('agendado', 'confirmado') then reason := 'A consulta não está mais agendada.';
+    elsif a.trigger = 'after_end' and ap.status <> 'realizado' then reason := 'A consulta não foi marcada como realizada.';
+    else
+      select c.phone_normalized into phone from public.clinic_contacts c where c.clinic_id = a.clinic_id and c.id = ap.contact_id;
+      if phone is null or p_wa_id is null or not (p_wa_id = any (public.whatsapp_phone_variants(phone))) then
+        reason := 'O telefone do contato mudou ou não é válido.';
+      elsif not exists (select 1 from public.whatsapp_opt_ins o where o.clinic_id = a.clinic_id and o.revoked_at is null
+          and o.wa_id = any (public.whatsapp_phone_variants(p_wa_id))) then
+        reason := 'Sem consentimento registrado para mensagens pelo WhatsApp.';
+      end if;
+    end if;
   end if;
-  if p_wa_id is null or p_wa_id !~ '^[0-9]{8,15}$' then raise exception 'Telefone inválido' using errcode = '22023'; end if;
   select * into ch from public.whatsapp_channels where clinic_id = a.clinic_id and status = 'connected';
-  if not found then raise exception 'Canal desconectado' using errcode = '22023'; end if;
-  perform pg_advisory_xact_lock(hashtextextended('whatsapp:' || ch.id::text || ':' || p_wa_id, 0));
-  select * into conv from public.whatsapp_conversations where channel_id = ch.id and wa_id = any (public.whatsapp_phone_variants(p_wa_id))
-  order by (wa_id = p_wa_id) desc limit 1 for update;
-  if not found then
+  if reason is null and not found then reason := 'O WhatsApp da clínica está desconectado.'; end if;
+  if reason is null then
+    perform pg_advisory_xact_lock(hashtextextended('whatsapp:' || ch.id::text || ':' || p_wa_id, 0));
+    select * into conv from public.whatsapp_conversations where channel_id = ch.id and wa_id = any (public.whatsapp_phone_variants(p_wa_id))
+    order by (wa_id = p_wa_id) desc limit 1 for update;
+    if found and conv.opted_out_at is not null then reason := 'O contato pediu para não receber mensagens.'; end if;
+  end if;
+  insert into public.whatsapp_automation_runs (clinic_id, automation_id, appointment_id, appointment_start, status, reason)
+  values (a.clinic_id, a.id, p_appointment, p_start, case when reason is null then 'pending' else 'skipped' end, left(reason, 300))
+  on conflict (automation_id, appointment_id, appointment_start) do nothing returning id into run_id;
+  if run_id is null then return null; end if;
+  if reason is not null then return jsonb_build_object('runId', run_id, 'skipped', true, 'reason', reason); end if;
+  if conv.id is null then
     insert into public.whatsapp_conversations (clinic_id, channel_id, wa_id, status, closed_at)
     values (a.clinic_id, ch.id, p_wa_id, 'closed', now()) returning * into conv;
   end if;
-  insert into public.whatsapp_messages (clinic_id, conversation_id, direction, kind, body, template, status, request_id)
-  values (a.clinic_id, conv.id, 'out', 'template', left(coalesce(p_body, ''), 4096), p_template, 'pending', run_id)
+  insert into public.whatsapp_messages (clinic_id, conversation_id, direction, kind, body, template, status, request_id, recipient)
+  values (a.clinic_id, conv.id, 'out', 'template', left(coalesce(p_body, ''), 4096), p_template, 'pending', run_id, conv.wa_id)
   returning id into msg_id;
   update public.whatsapp_automation_runs set message_id = msg_id, updated_at = now() where id = run_id;
   return jsonb_build_object('runId', run_id, 'messageId', msg_id, 'conversationId', conv.id, 'to', conv.wa_id, 'skipped', false);

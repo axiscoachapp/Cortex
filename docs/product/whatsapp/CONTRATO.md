@@ -1,6 +1,6 @@
 # WhatsApp da recepção: contrato
 
-Versão 1, 06/11/2026. A camada de transporte é do Claude (C4). A caixa de conversas, o acompanhamento e a confirmação na agenda são do Codex (K1–K3), e a revisão de RLS e autorização também (K6). O plano está em [PLANO.md](../cortex-comercial/PLANO.md), e a pesquisa de caminhos e custos em [WHATSAPP_OPCOES.md](../cortex-comercial/pesquisa/WHATSAPP_OPCOES.md).
+Versão 1.1, 06/11/2026 (correções da revisão K6 do Codex, mensagens 20:09 e 20:31). A camada de transporte é do Claude (C4). A caixa de conversas, o acompanhamento e a confirmação na agenda são do Codex (K1–K3), e a revisão de RLS e autorização também (K6). O plano está em [PLANO.md](../cortex-comercial/PLANO.md), e a pesquisa de caminhos e custos em [WHATSAPP_OPCOES.md](../cortex-comercial/pesquisa/WHATSAPP_OPCOES.md).
 
 ## O que existe
 
@@ -94,16 +94,16 @@ Sempre `POST`, com JSON `{ "action": ..., ... }`. Os erros vêm como `{ error, c
 | `disconnect` | Admin | — | `{ connected: false }`; o token é apagado |
 | `syncTemplates` | Admin | — | `{ templates: n }` |
 | `templates` | Recepção e admin | — | `{ templates: [{ name, language, category, status, body, paramCount }] }` |
-| `conversations` | Recepção e admin | `filter: 'unassigned' \| 'mine' \| 'open' \| 'closed'`, `search?` (nome, ou 4+ dígitos do telefone), `before?`, `limit?` (até 100) | `{ conversations: [Conversa], nextBefore }` |
+| `conversations` | Recepção e admin | `filter: 'unassigned' \| 'mine' \| 'open' \| 'closed'`, `search?` (nome, ou 4+ dígitos do telefone), `before?` (cursor opaco `data\|id` vindo de `nextBefore`), `limit?` (até 100) | `{ conversations: [Conversa], nextBefore }` |
 | `messages` | Recepção e admin | `conversationId`, `before?` | `{ conversation, messages: [Mensagem] (mais recentes primeiro), nextBefore }` |
-| `send` | Recepção e admin | `conversationId`, `requestId` (UUID do cliente), e `text` **ou** `template: { name, language, params: string[] }` | `{ messageId, status, duplicate }` |
+| `send` | Recepção e admin | `conversationId`, `requestId` (UUID do cliente), e `text` **ou** `template: { name, language, params: string[] }` | `{ messageId, status, duplicate }`. `status` é `sent`, ou `unrecorded` (a Meta aceitou, mas o registro falhou e o ID foi para o log). Com **202**, `status: 'unknown'` e `warning`: a Meta não respondeu e não há reenvio automático. |
 | `act` | Recepção e admin | `conversationId`, `operation`, `revision` (dispensável em `mark_read`), `targetUserId?` (padrão: quem chama), `targetId?`, `queue?` | `{ revision, status, assignedTo }` |
 | `media` | Recepção e admin | `messageId` | O arquivo, com `Content-Disposition: attachment` |
 | `automations` | Admin | — | `{ automations, runs (últimas 100), sources, quietHours }` |
 | `saveAutomation` | Admin | `id?`, `revision?`, `rule: { name, enabled, trigger, offsetMinutes, templateName, templateLanguage, params, linkUrl?, doctorIds?, appointmentTypes? }` | `{ id, revision }` |
 | `deleteAutomation` | Admin | `id` | `{ deleted: true }` |
 
-**Operações de `act`:** `assign`, `unassign`, `close`, `reopen`, `mark_read`, `link_contact`, `link_case` e `set_queue`.
+**Operações de `act`:** `assign`, `unassign`, `close`, `reopen`, `mark_read`, `link_contact`, `link_case`, `set_queue`, `record_opt_in` (a recepção registra que a pessoa autorizou mensagens pelo WhatsApp) e `revoke_opt_in`.
 - `assign` aceita recepção ativa ou administrador da clínica.
 - `mark_read` também manda o recibo de leitura ao celular do paciente, em melhor esforço.
 
@@ -111,26 +111,29 @@ Sempre `POST`, com JSON `{ "action": ..., ... }`. Os erros vêm como `{ error, c
 - Identificação: `id`, `waId` (pode ser `null`: a Meta às vezes só informa o ID por usuário, o BSUID), `profileName`, `contactId`, `caseId`.
 - Fila e responsável: `queue`, `status` (`open` ou `closed`), `assignedTo`, `assignedAt`.
 - Tempos: `openedAt`, `firstResponseAt`, `closedAt`, `lastInboundAt`, `windowOpenUntil`, `lastMessageAt`.
-- Outros: `lastMessagePreview`, `unreadCount`, `optedOut`, `revision`.
+- Outros: `lastMessagePreview`, `unreadCount`, `optedOut`, `consented` (há consentimento vigente para o telefone), `revision`.
 
 **Mensagem:**
 - Campos: `id`, `direction` (`in` ou `out`), `kind`, `body`, `media` (`{ mime, filename, voice }` ou `null`), `template`, `status`, `error`, `sentBy`, `at`.
-- `status` vai de `received` (entrada) e `pending` → `sent` → `delivered` → `read`, ou termina em `failed`.
+- `status` vai de `received` (entrada) e `pending` → `sent` → `delivered` → `read`, ou termina em `failed` (a Meta recusou) ou `unknown` (sem resposta; conferir antes de reenviar).
 
 ## Regras de negócio
 
 - **Janela de 24 h:** texto livre só até 24 h depois da última mensagem do paciente (`windowOpenUntil`). Fora dela, só modelo aprovado. A conferência é atômica no banco (`P0W01`).
 - **Sair:** "SAIR", "PARAR", "STOP", "CANCELAR LEMBRETES" ou "NÃO QUERO RECEBER" (texto ou botão) marca `opted_out_at`, e nenhum modelo sai depois disso (`P0W02`). "VOLTAR" ou "RECEBER LEMBRETES" desfaz. Uma resposta humana dentro da janela continua permitida, porque foi a pessoa que escreveu.
+- **Consentimento:** automações só saem para quem tem consentimento vigente em `whatsapp_opt_ins`. Ele é registrado pela recepção (`record_opt_in`) ou pela própria pessoa ("VOLTAR"). "SAIR" revoga. O cadastro pode registrar com origem `cadastro` quando a S2 tiver o campo.
+- **Destinatário:** é lido e fixado na reserva, sob lock, e devolvido ao handler, que envia exatamente para ele (`to` ou `recipient`) e o grava em `whatsapp_messages.recipient`.
+- **Resultado:** recusa da Meta (4xx) vira `failed`; sem resposta ou 5xx vira `unknown`, e nada é reenviado sozinho. Uma aceitação cujo registro falha é tentada três vezes e depois vai para o log com o `wamid`.
 - **Idempotência:**
   - entrada pelo `wamid`;
-  - envio por `(clínica, autor, requestId)`; repetir o mesmo `requestId` devolve `duplicate: true` e não envia de novo;
+  - envio por `(clínica, autor, requestId)`; repetir o mesmo `requestId` com o mesmo conteúdo devolve `duplicate: true` e não envia de novo, e com outro conteúdo é recusado;
   - eventos pelo SHA-256 do corpo, que é apagado depois de processado;
   - uma falha no processamento responde 500, e a Meta reenvia.
 - **Fila:**
   - Mensagem nova numa conversa fechada reabre a conversa, mantém o responsável e zera `firstResponseAt`.
   - A primeira resposta humana grava `firstResponseAt`.
   - A automação não conta como resposta e não limpa o contador de não lidas.
-- **BSUID:** a conversa é encontrada pelo BSUID ou pelo telefone. O envio usa `to` quando há telefone e `recipient` (BSUID) quando não há. Uma troca de número ou de BSUID (`system`) move a conversa, solta o contato vinculado e registra uma nota sem o número.
+- **BSUID:** a conversa é encontrada pelo BSUID ou pelo telefone. Se já existirem uma conversa só com telefone e outra só com BSUID, a entrega com os dois fica na encontrada, sem copiar a chave que pertence à outra: nada é fundido em silêncio e o webhook não entra em laço de erro. O envio usa `to` quando há telefone e `recipient` (BSUID) quando não há. Uma troca de número ou de BSUID (`system`) move a conversa, solta o contato vinculado e registra uma nota sem o número.
 - **Política do WhatsApp (23/09/2026):** a política proíbe enviar ou pedir informação de saúde e pedir documentos pelo canal. Os modelos devem ser neutros ("sua consulta é dia {{2}}"); o conteúdo clínico fica em link para página própria.
 
 ## Automações da agenda
@@ -143,9 +146,10 @@ O administrador cria regras em Configurações. Cada regra combina:
 
 **Funcionamento:**
 - O pg_cron chama a função a cada 10 minutos. Fora das 08:00–20:00 (São Paulo) nada sai, e a mensagem espera o horário. Lembretes atrasados mais de 14 h são descartados.
-- **Consultas elegíveis:** antes do início, só `agendado` ou `confirmado`, com início a mais de 1 h; depois do fim, só `realizado`.
+- **Consultas elegíveis:** só as da agenda da clínica (`appointments.clinic_id`), nunca a agenda particular do médico. Antes do início, só `agendado` ou `confirmado`, com início a mais de 1 h; depois do fim, só `realizado`.
 - **Uma vez por regra, consulta e horário de início:** remarcar gera um lembrete novo.
-- **Telefone:** o do contato da recepção ou, se não houver, o do cadastro do paciente.
+- **Telefone:** só o do contato da recepção ligado à consulta. O prontuário do paciente não é lido.
+- **Reconferência na reserva:** sob lock, a reserva confere de novo clínica, horário, situação, telefone, consentimento e "SAIR". Se algo mudou, a execução fica `skipped` com o motivo.
 - **Pulos e falhas ficam registrados** com o motivo em `runs`: quem saiu, quem não tem telefone, modelo não aprovado, campos alterados, falha da Meta.
 - **Conversa criada:** a automação cria a conversa **fechada**. Ela só entra na fila quando o paciente responde.
 - **Botões do modelo:** a resposta por botão ("Confirmar", "Remarcar") fica gravada na execução (`reply`, `replied_at`), ligada pela mensagem respondida.
@@ -154,7 +158,7 @@ O administrador cria regras em Configurações. Cada regra combina:
 
 ## Limites da v1 e pendências
 
-- **Opt-in:** a política exige consentimento antes de iniciar contato. O cadastro ainda não guarda esse consentimento (data, canal, versão do texto), e a clínica precisa colhê-lo. Proposta: campo no cadastro (S2, Codex).
+- **Opt-in pelo cadastro:** a tabela e as ações existem; falta o campo no cadastro e no agendamento (S2/K3, Codex), para a recepção registrar o consentimento ao marcar a consulta.
 - **Mídia:** é baixada sob demanda, mas a Meta guarda por no máximo 30 dias. Para arquivar no Storage privado falta decidir a retenção.
 - **Recepção:** a caixa consulta a API a cada poucos segundos. RLS com Realtime fica para a revisão K6.
 - **Modelos:** a sincronização é manual (`syncTemplates`). Ouvir `message_template_status_update` fica para depois.

@@ -33,6 +33,18 @@ export function whatsappDeps(): WhatsAppDeps {
   const service = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { global: { fetch: fetchWithDeadline } });
   const fail = (what: string) => { throw new Error(`Banco indisponível (${what})`); };
 
+  // Current opt-in of each listed phone (both forms of the Brazilian ninth digit).
+  const variants = (wa: string) => /^55[1-9][0-9][6-9][0-9]{7}$/.test(wa) ? [wa, `${wa.slice(0, 4)}9${wa.slice(4)}`]
+    : /^55[1-9][0-9]9[6-9][0-9]{7}$/.test(wa) ? [wa, `${wa.slice(0, 4)}${wa.slice(5)}`] : [wa];
+  async function withConsent(clinicId: string, rows: ConversationRow[]): Promise<ConversationRow[]> {
+    const phones = [...new Set(rows.flatMap((r) => (r.wa_id ? variants(r.wa_id) : [])))];
+    if (!phones.length) return rows.map((r) => ({ ...r, consented: false }));
+    const { data, error } = await service.from('whatsapp_opt_ins').select('wa_id').eq('clinic_id', clinicId).is('revoked_at', null).in('wa_id', phones);
+    if (error) fail('consentimentos');
+    const ok = new Set((data ?? []).map((d) => d.wa_id as string));
+    return rows.map((r) => ({ ...r, consented: !!r.wa_id && variants(r.wa_id).some((v) => ok.has(v)) }));
+  }
+
   const store: WhatsAppStore = {
     async channelForClinic(clinicId) {
       const { data, error } = await service.from('whatsapp_channels').select(CHANNEL_COLUMNS).eq('clinic_id', clinicId).maybeSingle();
@@ -78,20 +90,20 @@ export function whatsappDeps(): WhatsAppDeps {
         const safe = search.replace(/[%_,()\\]/g, ' ').trim();
         q = digits.length >= 4 ? q.like('wa_id', `%${digits}%`) : safe ? q.ilike('profile_name', `%${safe}%`) : q;
       }
-      if (before) q = q.lt('last_message_at', before);
-      const { data, error } = await q.order('last_message_at', { ascending: false }).limit(limit);
+      if (before) q = q.or(`last_message_at.lt."${before.at}",and(last_message_at.eq."${before.at}",id.lt.${before.id})`);
+      const { data, error } = await q.order('last_message_at', { ascending: false }).order('id', { ascending: false }).limit(limit);
       if (error) fail('conversas');
-      return (data ?? []) as ConversationRow[];
+      return withConsent(clinicId, (data ?? []) as ConversationRow[]);
     },
     async conversation(clinicId, id) {
       const { data, error } = await service.from('whatsapp_conversations').select(CONVERSATION_COLUMNS).eq('clinic_id', clinicId).eq('id', id).maybeSingle();
       if (error) fail('conversa');
-      return (data as ConversationRow | null) ?? null;
+      return data ? (await withConsent(clinicId, [data as ConversationRow]))[0] : null;
     },
     async messages({ clinicId, conversationId, before, limit }) {
       let q = service.from('whatsapp_messages').select(MESSAGE_COLUMNS).eq('clinic_id', clinicId).eq('conversation_id', conversationId);
-      if (before) q = q.lt('created_at', before);
-      const { data, error } = await q.order('created_at', { ascending: false }).limit(limit);
+      if (before) q = q.or(`created_at.lt."${before.at}",and(created_at.eq."${before.at}",id.lt.${before.id})`);
+      const { data, error } = await q.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit);
       if (error) fail('mensagens');
       return (data ?? []) as MessageRow[];
     },

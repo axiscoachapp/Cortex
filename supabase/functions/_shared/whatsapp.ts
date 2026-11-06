@@ -74,7 +74,8 @@ const phoneOrNull = (v: unknown) => (WA_ID.test(str(v, 20)) ? str(v, 20) : null)
 const bsuidOrNull = (v: unknown) => (BSUID.test(str(v, 170)) ? str(v, 170) : null);
 const isoFromUnix = (v: unknown): string | null => {
   const n = typeof v === 'string' ? Number(v) : typeof v === 'number' ? v : NaN;
-  return Number.isFinite(n) && n > 0 ? new Date(n * 1000).toISOString() : null;
+  // Seconds since 1970 up to the year 2286; anything else is ignored instead of throwing RangeError.
+  return Number.isFinite(n) && n > 0 && n < 1e10 ? new Date(n * 1000).toISOString() : null;
 };
 
 function mediaOf(value: unknown): InboundMessage['media'] {
@@ -188,6 +189,10 @@ export class GraphError extends Error {
   constructor(message: string, readonly status: number, readonly code: number | null) {
     super(message);
   }
+  /** Meta answered with a refusal (4xx): the message was certainly not sent. Otherwise the outcome is unknown. */
+  get definite(): boolean {
+    return this.status >= 400 && this.status < 500;
+  }
 }
 
 export interface GraphClient {
@@ -206,10 +211,16 @@ export const MAX_MEDIA_BYTES = 20 * 1024 * 1024;
 export function graphClient(fetchImpl: typeof fetch, version = DEFAULT_GRAPH_VERSION): GraphClient {
   if (!/^v[0-9]{2}\.0$/.test(version)) throw new Error('Versão da Graph API inválida.');
   const call = async (path: string, token: string, init: RequestInit = {}) => {
-    const res = await fetchImpl(`${GRAPH}/${version}/${path}`, {
-      ...init,
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
-    });
+    let res: Response;
+    try {
+      res = await fetchImpl(`${GRAPH}/${version}/${path}`, {
+        ...init,
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+      });
+    } catch {
+      // No answer: the request may or may not have reached Meta (status 0 = unknown outcome).
+      throw new GraphError('O WhatsApp não respondeu.', 0, null);
+    }
     const text = await res.text();
     let parsed: unknown = null;
     try { parsed = text ? JSON.parse(text) : null; } catch { parsed = null; }

@@ -272,12 +272,12 @@ describe('api handler: inbox', () => {
   it('sends free text inside the window under the request id', async () => {
     const h = await connectedHarness();
     h.deps.authorize = async () => ({ userId: RECEPTION, clinicId: CLINIC, admin: false, reception: true });
-    h.rpcResults.whatsapp_begin_outbound = { messageId: MSG, state: 'new', status: 'pending', wamid: null };
+    h.rpcResults.whatsapp_begin_outbound = { messageId: MSG, state: 'new', status: 'pending', wamid: null, to: '5541999990000' };
     const res = await h.api({ action: 'send', conversationId: CONV, requestId: REQ, text: 'Podemos às 15h?' });
     expect(res.status).toBe(200);
     expect(h.calls.find(([n]) => n === 'whatsapp_begin_outbound')?.[1]).toMatchObject({ p_actor: RECEPTION, p_request: REQ, p_kind: 'text' });
     expect(h.graph.send).toHaveBeenCalledWith('200000000001', 'EAASYNTHETICTOKEN000000000000', expect.objectContaining({ to: '5541999990000', type: 'text' }));
-    expect(h.calls.at(-1)).toEqual(['whatsapp_finish_outbound', { p_message: MSG, p_wamid: 'wamid.OUT2', p_error: null }]);
+    expect(h.calls.at(-1)).toEqual(['whatsapp_finish_outbound', { p_message: MSG, p_wamid: 'wamid.OUT2', p_error: null, p_unknown: false }]);
   });
 
   it('does not call Meta when the window is closed or the request was already sent', async () => {
@@ -294,16 +294,16 @@ describe('api handler: inbox', () => {
 
   it('records a failed send and reports it', async () => {
     const h = await connectedHarness();
-    h.rpcResults.whatsapp_begin_outbound = { messageId: MSG, state: 'new', status: 'pending', wamid: null };
+    h.rpcResults.whatsapp_begin_outbound = { messageId: MSG, state: 'new', status: 'pending', wamid: null, to: '5541999990000' };
     vi.mocked(h.graph.send).mockRejectedValueOnce(new GraphError('O número não pode receber mensagens pelo WhatsApp.', 400, 131026));
     const res = await h.api({ action: 'send', conversationId: CONV, requestId: REQ, text: 'Oi' });
     expect(res.status).toBe(502);
-    expect(h.calls.at(-1)).toEqual(['whatsapp_finish_outbound', { p_message: MSG, p_wamid: null, p_error: 'O número não pode receber mensagens pelo WhatsApp.' }]);
+    expect(h.calls.at(-1)).toEqual(['whatsapp_finish_outbound', { p_message: MSG, p_wamid: null, p_error: 'O número não pode receber mensagens pelo WhatsApp.', p_unknown: false }]);
   });
 
   it('sends only approved templates with the right number of fields', async () => {
     const h = await connectedHarness();
-    h.rpcResults.whatsapp_begin_outbound = { messageId: MSG, state: 'new', status: 'pending', wamid: null };
+    h.rpcResults.whatsapp_begin_outbound = { messageId: MSG, state: 'new', status: 'pending', wamid: null, to: '5541999990000' };
     const wrong = await h.api({ action: 'send', conversationId: CONV, requestId: REQ, template: { name: 'lembrete_consulta', language: 'pt_BR', params: ['Paciente'] } });
     expect(wrong.status).toBe(400);
     const unknown = await h.api({ action: 'send', conversationId: CONV, requestId: REQ, template: { name: 'promocao', language: 'pt_BR', params: [] } });
@@ -342,7 +342,7 @@ describe('api handler: inbox', () => {
 describe('api handler: BSUID recipients', () => {
   it('sends to the business-scoped id when Meta did not share the phone', async () => {
     const h = await connectedHarness({ conv: { wa_id: null, user_id: 'BR.13491208655302741918' } });
-    h.rpcResults.whatsapp_begin_outbound = { messageId: MSG, state: 'new', status: 'pending', wamid: null };
+    h.rpcResults.whatsapp_begin_outbound = { messageId: MSG, state: 'new', status: 'pending', wamid: null, to: null, recipient: 'BR.13491208655302741918' };
     expect((await h.api({ action: 'send', conversationId: CONV, requestId: REQ, text: 'Oi' })).status).toBe(200);
     const sent = vi.mocked(h.graph.send).mock.calls[0][2];
     expect(sent).toMatchObject({ recipient: 'BR.13491208655302741918', type: 'text' });
@@ -353,7 +353,7 @@ describe('api handler: BSUID recipients', () => {
 describe('agenda automations', () => {
   const candidate: Candidate = {
     automation_id: RULE, clinic_id: CLINIC, appointment_id: APPT, appointment_start: '2026-12-10T18:00:00Z', appointment_end: '2026-12-10T18:30:00Z',
-    doctor_id: ADMIN, patient_name: 'MARIA exemplo da silva', phone: '5541999990000', doctor_name: 'Dra. Ana Exemplo', clinic_name: 'Clínica Exemplo', opted_out: false,
+    doctor_id: ADMIN, patient_name: 'MARIA exemplo da silva', phone: '5541999990000', doctor_name: 'Dra. Ana Exemplo', clinic_name: 'Clínica Exemplo', opted_out: false, consented: true,
   };
   const cron = (h: ReturnType<typeof harness>, secret = CRON) =>
     automationsHandler(new Request('https://x/functions/v1/whatsapp-automations', { method: 'POST', headers: { 'x-cortex-cron': secret } }), h.deps);
@@ -398,7 +398,7 @@ describe('agenda automations', () => {
     expect(h.calls.find(([n, a]) => n === 'whatsapp_automation_begin' && a.p_skip_reason)![1]).toMatchObject({ p_wa_id: null, p_skip_reason: expect.stringContaining('não receber') });
     expect(h.graph.send).toHaveBeenCalledTimes(1);
     expect(vi.mocked(h.graph.send).mock.calls[0][2]).toMatchObject({ to: '5541999990000', type: 'template', template: { components: [{ parameters: [{ text: 'Maria' }, { text: '10/12' }] }] } });
-    expect(h.calls).toContainEqual(['whatsapp_finish_outbound', { p_message: MSG, p_wamid: 'wamid.OUT2', p_error: null }]);
+    expect(h.calls).toContainEqual(['whatsapp_finish_outbound', { p_message: MSG, p_wamid: 'wamid.OUT2', p_error: null, p_unknown: false }]);
     expect(begins).toBe(1);
   });
 
@@ -427,5 +427,84 @@ describe('agenda automations', () => {
     h.deps.authorize = async () => ({ userId: RECEPTION, clinicId: CLINIC, admin: false, reception: true });
     expect((await h.api({ action: 'saveAutomation', rule: base })).status).toBe(403);
     expect((await h.api({ action: 'automations' })).status).toBe(403);
+  });
+});
+
+describe('K6 corrections', () => {
+  it('sends to the address fixed by the reservation, not the one read before it', async () => {
+    const h = await connectedHarness();
+    h.rpcResults.whatsapp_begin_outbound = { messageId: MSG, state: 'new', status: 'pending', wamid: null, to: '5541988887777' };
+    await h.api({ action: 'send', conversationId: CONV, requestId: REQ, text: 'Oi' });
+    expect(vi.mocked(h.graph.send).mock.calls[0][2]).toMatchObject({ to: '5541988887777' });
+  });
+
+  it('keeps a send without answer as unknown (202) and never as failed', async () => {
+    const h = await connectedHarness();
+    h.rpcResults.whatsapp_begin_outbound = { messageId: MSG, state: 'new', status: 'pending', wamid: null, to: '5541999990000' };
+    vi.mocked(h.graph.send).mockRejectedValueOnce(new GraphError('O WhatsApp não respondeu.', 0, null));
+    const res = await h.api({ action: 'send', conversationId: CONV, requestId: REQ, text: 'Oi' });
+    expect(res.status).toBe(202);
+    expect(await res.json()).toMatchObject({ status: 'unknown' });
+    expect(h.calls).toContainEqual(['whatsapp_finish_outbound', { p_message: MSG, p_wamid: null, p_error: 'O WhatsApp não respondeu.', p_unknown: true }]);
+    vi.mocked(h.graph.send).mockRejectedValueOnce(new GraphError('O WhatsApp está indisponível no momento. Tente de novo.', 503, null));
+    expect((await h.api({ action: 'send', conversationId: CONV, requestId: REQ, text: 'Oi' })).status).toBe(202);
+  });
+
+  it('retries recording an accepted message and reports it when recording still fails', async () => {
+    const h = await connectedHarness();
+    let finishes = 0;
+    vi.mocked(h.deps.rpc).mockImplementation(async (name: string, args: Record<string, unknown>) => {
+      h.calls.push([name, args]);
+      if (name === 'whatsapp_begin_outbound') return { messageId: MSG, state: 'new', status: 'pending', wamid: null, to: '5541999990000' };
+      if (name === 'whatsapp_finish_outbound') { finishes++; throw Object.assign(new Error('db'), { code: '08006' }); }
+      return null;
+    });
+    const res = await h.api({ action: 'send', conversationId: CONV, requestId: REQ, text: 'Oi' });
+    expect(await res.json()).toMatchObject({ status: 'unrecorded' });
+    expect(finishes).toBe(3);
+  });
+
+  it('refuses empty or invalid audience filters instead of widening them', async () => {
+    const h = await connectedHarness();
+    const base = { name: 'Lembrete', enabled: true, trigger: 'before_start', offsetMinutes: 2880, templateName: 'lembrete_consulta', templateLanguage: 'pt_BR',
+      params: [{ source: 'paciente_primeiro_nome' }, { source: 'data' }] };
+    expect((await h.api({ action: 'saveAutomation', rule: { ...base, doctorIds: [] } })).status).toBe(400);
+    expect((await h.api({ action: 'saveAutomation', rule: { ...base, appointmentTypes: ['retorno', 'X;drop'] } })).status).toBe(400);
+    expect((await h.api({ action: 'saveAutomation', rule: { ...base, appointmentTypes: [] } })).status).toBe(400);
+  });
+
+  it('skips people without recorded consent', async () => {
+    const h = await connectedHarness();
+    h.deps.now = () => new Date('2026-12-08T15:00:00Z');
+    h.rpcResults.whatsapp_automation_candidates = [{
+      automation_id: RULE, clinic_id: CLINIC, appointment_id: APPT, appointment_start: '2026-12-10T18:00:00Z', appointment_end: '2026-12-10T18:30:00Z',
+      doctor_id: ADMIN, patient_name: 'Maria', phone: '5541999990000', doctor_name: '', clinic_name: '', opted_out: false, consented: false,
+    }];
+    h.rpcResults.whatsapp_automation_begin = { runId: 'r', skipped: true };
+    const res = await automationsHandler(new Request('https://x', { method: 'POST', headers: { 'x-cortex-cron': CRON } }), h.deps);
+    expect(await res.json()).toMatchObject({ skipped: 1, sent: 0 });
+    expect(h.calls.find(([n]) => n === 'whatsapp_automation_begin')?.[1]).toMatchObject({ p_wa_id: null, p_skip_reason: expect.stringContaining('consentimento') });
+    expect(h.graph.send).not.toHaveBeenCalled();
+  });
+
+  it('caps the webhook body while reading and survives out-of-range timestamps', async () => {
+    const h = harness();
+    const big = new ReadableStream<Uint8Array>({
+      pull(controller) { controller.enqueue(new Uint8Array(512 * 1024)); },
+    });
+    const res = await webhookHandler(new Request('https://x/w', { method: 'POST', body: big, duplex: 'half' } as RequestInit), h.deps);
+    expect(res.status).toBe(413);
+    const odd = structuredClone(textDelivery);
+    (odd.entry[0].changes[0].value.messages[0] as Record<string, unknown>).timestamp = '1e30';
+    expect(parseWebhook(odd).messages[0].providerAt).toBeNull();
+  });
+
+  it('pages with a timestamp and id cursor', async () => {
+    const h = harness();
+    const seen: unknown[] = [];
+    h.deps.store.conversations = async (q) => { seen.push(q.before); return []; };
+    await h.api({ action: 'conversations', before: '2026-11-06T12:00:00.000Z|55555555-5555-4555-8555-555555555555' });
+    await h.api({ action: 'conversations', before: 'not-a-cursor' });
+    expect(seen).toEqual([{ at: '2026-11-06T12:00:00.000Z', id: '55555555-5555-4555-8555-555555555555' }, null]);
   });
 });
