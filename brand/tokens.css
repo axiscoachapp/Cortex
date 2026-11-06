@@ -1,0 +1,35 @@
+/* Cortex brand tokens. Source of truth: docs/brand/IDENTIDADE.md.
+   Contrast ratios measured against WCAG 2.2 and recorded in the brand guide. */
+:root {
+  /* Core */
+  --cx-ink: #0e2a33;          /* text, dark surfaces (15.0:1 on white) */
+  --cx-teal-800: #0b5650;     /* pressed, text on teal-100 (7.2:1) */
+  --cx-teal-700: #0f6b63;     /* primary: buttons, links (6.4:1 on white) */
+  --cx-teal-600: #13847a;     /* hover on dark, large text only (4.6:1) */
+  --cx-teal-300: #9de0d3;     /* accents on ink (10.0:1) */
+  --cx-teal-100: #d9f0ec;     /* tinted surfaces */
+  --cx-teal-50: #eef8f6;
+  --cx-signal: #f2b23e;       /* the "signal" dot: fills and highlights, never body text on light */
+  --cx-signal-700: #8a5300;   /* text on signal-50 (5.8:1) */
+  --cx-signal-50: #fff4dc;
+
+  /* Neutrals */
+  --cx-bg: #f6f8f7;
+  --cx-surface: #ffffff;
+  --cx-border: #dde5e3;
+  --cx-muted: #56676c;        /* secondary text (5.9:1 on white) */
+  --cx-muted-on-ink: #b9c7ca; /* secondary text on ink (8.7:1) */
+
+  /* Semantic */
+  --cx-success: #1e7f4f;
+  --cx-warning: #b26b00;
+  --cx-danger: #b42318;
+  --cx-info: #1d5fa8;
+
+  /* Type */
+  --cx-font: 'Manrope Variable', 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --cx-radius-sm: 8px;
+  --cx-radius: 12px;
+  --cx-radius-lg: 20px;
+  --cx-shadow: 0 1px 2px rgb(14 42 51 / 0.06), 0 8px 24px rgb(14 42 51 / 0.08);
+}
