@@ -43,8 +43,19 @@ Anonymous probes now return 401/42501 for `clinic_access` and the new tables, in
 
 ## Not changed / known limits
 - **Secrets.** No secrets were added or changed. `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (Google Calendar) and `RESEND_API_KEY` (appointment reminder e-mail) remain unset, as before.
-- **Reference catalogs.** `exam_catalog`, `cid10_catalog`, `medication_presentations` and `dcb_catalog` are empty. They are filled by `refresh-reference-catalogs` (service role, public ANS/DATASUS/Anvisa files), which was not run. Exam and CID search return nothing until it is.
 - **Signature.** Digital signing reports "não configurada", because no PSC and no signing secrets are configured.
 - **AI.** Settings were not touched.
 - **No data operations.** No patient rows were inserted, edited or deleted, and no PersonalMed data was loaded.
 - **Token.** The token was pasted in chat, so it should be revoked after this operation.
+
+## Reference catalogs (same day, at the user's request)
+`refresh-reference-catalogs` was invoked once per source. In the Edge runtime, `SUPABASE_SERVICE_ROLE_KEY` is the new-format secret key, not the legacy JWT. Rows loaded:
+
+| Source | Table | Rows |
+| --- | --- | --- |
+| CID-10 (DATASUS) | `cid10_catalog` | 14,496 |
+| TUSS (ANS) | `exam_catalog` | 5,966 |
+| DCB (Anvisa, Oct 2026 list) | `dcb_catalog` | 12,760 |
+| CMED (Anvisa) | `medication_presentations` | 26,635 |
+
+The app's own queries were run inside a rolled-back transaction as the clinic doctor (`aal1`). Searches for hemograma, gonadotrofina, transvaginal, code prefix 4030, `N95`, climatério and estradiol all returned results.
