@@ -23,5 +23,5 @@ Use um nome de execução novo:
 
 ```powershell
 node scripts/reception-app-audit-browser.mjs --baseline=81abbff454899814957daed87a77be9b34a3a413 --run=denied-recheck --only=delegation-denied
-node --test scripts/fixtures/clinic-review-api.test.mjs
+node --test scripts/fixtures/clinic-review-api.node-test.mjs
 ```

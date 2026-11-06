@@ -1,0 +1,253 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "8522092f5bda462ffab5b3589e4cee10e38eed83",
+  "scope": "T39/3b/2b/2 integrated retry after truncated HTTP200 body; opt-in in-memory receipts only",
+  "browser": {
+    "states": 12,
+    "widths": [
+      375,
+      1280,
+      1920
+    ],
+    "failedBodyReads": 3,
+    "successfulWrites": 3,
+    "attempts": 6,
+    "uniqueOperations": 3,
+    "sameDocument": true,
+    "renderedIdentitiesMetadataSiblingStatesAndActionsVerified": true
+  },
+  "runs": [
+    {
+      "run": "delegation-retry-verified",
+      "states": 12,
+      "passed": true
+    },
+    {
+      "run": "delegation-retry-positive-regression",
+      "states": 12,
+      "passed": true
+    },
+    {
+      "run": "delegation-retry-denied-regression",
+      "states": 12,
+      "passed": true
+    }
+  ],
+  "checks": [
+    {
+      "width": 375,
+      "sameDocument": true,
+      "first": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 1,
+          "p_operation": "67b0f7d3-909d-49a5-b846-ec4db783d9ae",
+          "p_decision": "approve"
+        },
+        "currentRevision": 1,
+        "status": 200
+      },
+      "replay": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 1,
+          "p_operation": "67b0f7d3-909d-49a5-b846-ec4db783d9ae",
+          "p_decision": "approve"
+        },
+        "currentRevision": 2,
+        "status": 200,
+        "replay": true
+      },
+      "snapshot": {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "state": "approved",
+        "revision": 2,
+        "capabilityVersion": "clinic_reception_v1"
+      },
+      "successfulWrites": 1
+    },
+    {
+      "width": 1280,
+      "sameDocument": true,
+      "first": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 1,
+          "p_operation": "a803e9b6-14ca-4667-b65a-63917ae08038",
+          "p_decision": "approve"
+        },
+        "currentRevision": 1,
+        "status": 200
+      },
+      "replay": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 1,
+          "p_operation": "a803e9b6-14ca-4667-b65a-63917ae08038",
+          "p_decision": "approve"
+        },
+        "currentRevision": 2,
+        "status": 200,
+        "replay": true
+      },
+      "snapshot": {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "state": "approved",
+        "revision": 2,
+        "capabilityVersion": "clinic_reception_v1"
+      },
+      "successfulWrites": 1
+    },
+    {
+      "width": 1920,
+      "sameDocument": true,
+      "first": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 1,
+          "p_operation": "781a0c7d-96e1-493b-9dbc-5a8430399b76",
+          "p_decision": "approve"
+        },
+        "currentRevision": 1,
+        "status": 200
+      },
+      "replay": {
+        "path": "/rest/v1/rpc/reception_decide_delegation",
+        "args": {
+          "p_request": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "p_revision": 1,
+          "p_operation": "781a0c7d-96e1-493b-9dbc-5a8430399b76",
+          "p_decision": "approve"
+        },
+        "currentRevision": 2,
+        "status": 200,
+        "replay": true
+      },
+      "snapshot": {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "state": "approved",
+        "revision": 2,
+        "capabilityVersion": "clinic_reception_v1"
+      },
+      "successfulWrites": 1
+    }
+  ],
+  "tests": {
+    "appTests": 20,
+    "appFiles": 2,
+    "nodeFixtureTests": 5,
+    "newNodeTestsRedFailures": 2,
+    "greenExit": 0,
+    "nodeTestSource": {
+      "path": "scripts/fixtures/clinic-review-api.node-test.mjs",
+      "sha256": "3e36cc473dec1cc5a9b0caa0996454dc2c3e1e4817fbb568525bd08be18f66a9"
+    }
+  },
+  "verification": {
+    "syntaxFiles": 3,
+    "lintFiles": 3,
+    "invalidFlagCombinationsRefused": 3,
+    "hashes": true,
+    "cleanup": true,
+    "vitestDiscovery": {
+      "oldNodeTestWasDiscovered": true,
+      "renamedNodeTestExcluded": true
+    }
+  },
+  "review": {
+    "actionable": "Rendered sibling identity/metadata/state/action checks were missing",
+    "fixed": "verifyRows before initial/reopened confirmation and after acknowledgement; final rerun passed",
+    "final": "No remaining actionable findings",
+    "external": "Not invoked for non-interactive heartbeat"
+  },
+  "expectedFailedRequests": [
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "status": 200,
+      "reason": "net::ERR_CONTENT_LENGTH_MISMATCH"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "status": 200,
+      "reason": "net::ERR_CONTENT_LENGTH_MISMATCH"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_decide_delegation",
+      "status": 200,
+      "reason": "net::ERR_CONTENT_LENGTH_MISMATCH"
+    }
+  ],
+  "expectedConsoleErrors": [
+    {
+      "path": "/permissoes-recepcao",
+      "message": "Failed to load resource: net::ERR_CONTENT_LENGTH_MISMATCH",
+      "resource": "/rest/v1/rpc/reception_decide_delegation"
+    },
+    {
+      "path": "/permissoes-recepcao",
+      "message": "Failed to load resource: net::ERR_CONTENT_LENGTH_MISMATCH",
+      "resource": "/rest/v1/rpc/reception_decide_delegation"
+    },
+    {
+      "path": "/permissoes-recepcao",
+      "message": "Failed to load resource: net::ERR_CONTENT_LENGTH_MISMATCH",
+      "resource": "/rest/v1/rpc/reception_decide_delegation"
+    }
+  ],
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "bb618e4592f5f6c326d9732d0f8f01a1d20d33028e2131f678281a943a0e11d2"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "f9eac41328818eedad4f622cf676b6d51109c47614ad4be7b9f040b44871d11d"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "limits": [
+    "No real SQL/RLS/permission/persistence/server-idempotency proof",
+    "Receipts and response truncation exist only in opt-in loopback fixture",
+    "Only the verified same-mounted-page retry window is covered; reload/poll reconciliation/native Auth remain separate"
+  ]
+}

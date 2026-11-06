@@ -30,5 +30,5 @@ Use um nome de execução novo:
 
 ```powershell
 node scripts/reception-app-audit-browser.mjs --baseline=8fab6335f6004ebf86e72908927c3a81bc3b0a10 --run=conflict-recheck --only=delegation-conflict
-node --test scripts/fixtures/clinic-review-api.test.mjs
+node --test scripts/fixtures/clinic-review-api.node-test.mjs
 ```

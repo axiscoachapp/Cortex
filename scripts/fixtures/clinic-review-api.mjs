@@ -3,8 +3,9 @@ import http from 'node:http';
 import { z } from 'zod';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false } = {}) {
   if(delegationDecisions&&!delegationPermissions)throw new Error('Delegation decisions require the permissions fixture');
+  if(delegationReplay&&(!delegationPermissions||!delegationDecisions))throw new Error('Delegation replay requires the permissions and decision fixtures');
   const now=new Date().toISOString();
   const user={id:uid,email:'review@example.invalid',aud:'authenticated',role:'authenticated',created_at:now,email_confirmed_at:now,app_metadata:{provider:'email'},user_metadata:{},factors:[]};
   const token=[{alg:'HS256',typ:'JWT'},{sub:uid,role:'authenticated',aud:'authenticated',aal:'aal1',exp:Math.floor(Date.now()/1000)+86400,iat:Math.floor(Date.now()/1000)}].map(value=>Buffer.from(JSON.stringify(value)).toString('base64url')).join('.')+'.synthetic-signature';
@@ -23,7 +24,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     visits.push({...visits[0],id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',created_at:'2025-10-01T12:00:00Z',chief_complaint:'Consulta anterior sintética'});
   }
   const turns=[];const knowledge=medicalUI?[{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',user_id:uid,title:'Fonte sintética revisada',source_text:'Texto original sintético para revisão visual.',source_reference:'Referência sintética',source_version:'2026',char_count:44,source_type:'text',status:'ready',review_status:'approved',created_at:'2026-11-04T18:20:31Z',reviewed_at:'2026-11-04T19:21:45Z',reviewer_name:'Profissional de Demonstração',indexed_at:'2026-11-04T19:22:48Z',supersedes_document_id:null}]:[];
-  const metrics={briefings:0,checklists:0,chat:0,newSources:0,patientWrites:0,appointmentWrites:0,...(workspaceDates?{workspaceWrites:0}:{}),...(medicalUI?{medicalWrites:0}:{}),...(delegationPermissions?{delegationCalls:[],delegationRequests:[],delegationUnexpected:[]}:{}) ,...(delegationDecisions?{delegationWrites:[],delegationAttempts:[]}:{})};
+  const metrics={briefings:0,checklists:0,chat:0,newSources:0,patientWrites:0,appointmentWrites:0,...(workspaceDates?{workspaceWrites:0}:{}),...(medicalUI?{medicalWrites:0}:{}),...(delegationPermissions?{delegationCalls:[],delegationRequests:[],delegationUnexpected:[]}:{}) ,...(delegationDecisions?{delegationWrites:[],delegationAttempts:[]}:{}) ,...(delegationReplay?{delegationReplies:[]}:{})};
   const medicalData={patients,templates,visits,knowledge,settings};
   let delegationReadMode='valid';
   const delegationAllowed=new Set(['POST /auth/v1/token','GET /auth/v1/user','POST /rest/v1/rpc/clinic_access','POST /rest/v1/rpc/reception_delegation_requests']);
@@ -34,6 +35,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     {id:'ffffffff-ffff-4fff-8fff-ffffffffffff',staffId:'99999999-9999-4999-8999-999999999999',staffName:'Recepção sem acesso',state:'approved',revision:2,effective:false,canDecide:false,canRevoke:true},
   ].map(row=>({...row,clinicId:'66666666-6666-4666-8666-666666666666',clinicName:'Clínica sintética',doctorId:uid,doctorName:'Profissional de Demonstração',createdAt:'2026-11-05T14:00:00Z',capabilityVersion:'clinic_reception_v1',canCancel:false})):[];
   const initialDelegations=structuredClone(delegationRows);
+  const delegationReceipts=new Map(),lostDelegationReplies=new Set();
   const changeFields={p_request:z.string().uuid(),p_revision:z.number().int().positive(),p_operation:z.string().uuid()};
   const approveInput=z.object({...changeFields,p_decision:z.literal('approve')}).strict(),revokeInput=z.object(changeFields).strict();
   const server=http.createServer(async(req,res)=>{
@@ -56,12 +58,28 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
       if(!parsed.success)return send({code:'22023',message:'Invalid synthetic decision input'},400);
       const row=delegationRows.find(row=>row.id===input.p_request&&row.doctorId===uid);
       if(!row)return send({code:'42501',message:'Synthetic physician scope denied'},403);
+      const binding=JSON.stringify([url.pathname,input.p_request,input.p_revision,input.p_decision??null]),receipt=delegationReplay?delegationReceipts.get(input.p_operation):null;
+      if(receipt){
+        const matches=receipt.binding===binding;
+        metrics.delegationAttempts.push({path:url.pathname,args:input,currentRevision:row.revision,status:matches?200:409,replay:matches});
+        if(!matches)return send({code:'40001',message:'Synthetic operation binding conflict'},409);
+        metrics.delegationReplies.push({kind:'replay',path:url.pathname,args:input,snapshot:{...receipt.snapshot}});return send(receipt.snapshot);
+      }
       const conflict=row.revision!==input.p_revision||row.state!==(approve?'pending':'approved');
       metrics.delegationAttempts.push({path:url.pathname,args:input,currentRevision:row.revision,status:conflict?409:200});
       if(conflict)return send({code:'40001',message:'Synthetic revision conflict'},409);
       const beforeRevision=row.revision,snapshot={id:row.id,state:approve?'approved':'revoked',revision:row.revision+1,capabilityVersion:row.capabilityVersion};
       Object.assign(row,snapshot,{effective:approve,canDecide:false,canRevoke:approve});
-      metrics.delegationWrites.push({path:url.pathname,args:input,beforeRevision,snapshot:{...snapshot}});return send(snapshot);
+      metrics.delegationWrites.push({path:url.pathname,args:input,beforeRevision,snapshot:{...snapshot}});
+      if(delegationReplay){
+        delegationReceipts.set(input.p_operation,{binding,snapshot:{...snapshot}});
+        if(lostDelegationReplies.delete(row.id)){
+          metrics.delegationReplies.push({kind:'truncated',path:url.pathname,args:input,snapshot:{...snapshot}});
+          // Deliberately close an incomplete HTTP200 body after the synthetic write.
+          res.writeHead(200,{...headers,'Content-Length':64,Connection:'close'});return res.end('{"id":');
+        }
+      }
+      return send(snapshot);
     }
     if(url.pathname==='/__fixture/metrics')return send(metrics);
     if(url.pathname==='/auth/v1/token')return send({access_token:token,refresh_token:'synthetic-refresh',expires_in:86400,expires_at:Math.floor(Date.now()/1000)+86400,token_type:'bearer',user});
@@ -100,7 +118,12 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   return {origin:`http://127.0.0.1:${server.address().port}`,metrics,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,delegationRows,
     setDelegationReadMode(mode){if(!delegationPermissions||!['valid','invalid','denied'].includes(mode))throw new Error('Unsupported delegation fixture mode');delegationReadMode=mode;},
-    resetDelegationDecisions(){if(!delegationDecisions)throw new Error('Delegation decision fixture is not enabled');delegationRows.splice(0,delegationRows.length,...structuredClone(initialDelegations));},
+    resetDelegationDecisions(){if(!delegationDecisions)throw new Error('Delegation decision fixture is not enabled');delegationRows.splice(0,delegationRows.length,...structuredClone(initialDelegations));delegationReceipts.clear();lostDelegationReplies.clear();},
+    armDelegationLostReply(requestId){
+      if(!delegationReplay)throw new Error('Delegation replay fixture is not enabled');
+      z.string().uuid().parse(requestId);if(!delegationRows.some(row=>row.id===requestId&&row.state==='pending'))throw new Error('Expected an existing pending request');
+      lostDelegationReplies.add(requestId);
+    },
     // Test-only control: emulate a pending request changed after the browser read it.
     advanceDelegationRevision(requestId){
       if(!delegationDecisions)throw new Error('Delegation decision fixture is not enabled');

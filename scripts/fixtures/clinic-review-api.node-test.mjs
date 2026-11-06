@@ -2,6 +2,49 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { startClinicFixture } from './clinic-review-api.mjs';
 
+// Run explicitly with node --test; keep this outside Vitest's .test discovery.
+
+test('reply replay requires explicit decision and permissions options; arming validates the pending UUID', async () => {
+  for (const options of [{ delegationReplay: true }, { delegationPermissions: true, delegationReplay: true }]) {
+    let api;
+    try { await assert.rejects(async () => { api = await startClinicFixture(options); }, /decision/); }
+    finally { if (api) await api.close(); }
+  }
+  const normal = await startClinicFixture({ delegationPermissions: true, delegationDecisions: true });
+  const replay = await startClinicFixture({ delegationPermissions: true, delegationDecisions: true, delegationReplay: true });
+  try {
+    assert.throws(() => normal.armDelegationLostReply(normal.delegationRows[0].id), /not enabled/);
+    const before = structuredClone(replay.delegationRows);
+    assert.throws(() => replay.armDelegationLostReply('invalid'));
+    assert.throws(() => replay.armDelegationLostReply('00000000-0000-4000-8000-000000000000'), /pending/);
+    assert.throws(() => replay.armDelegationLostReply(before[1].id), /pending/);
+    assert.deepEqual(replay.delegationRows, before);
+  } finally { await normal.close(); await replay.close(); }
+});
+
+test('a truncated reply follows one write; an identical retry replays while changed bindings conflict', async () => {
+  const api = await startClinicFixture({ delegationPermissions: true, delegationDecisions: true, delegationReplay: true });
+  try {
+    const before = structuredClone(api.delegationRows), id = before[0].id;
+    const path = '/rest/v1/rpc/reception_decide_delegation';
+    const args = { p_request: id, p_revision: 1, p_operation: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', p_decision: 'approve' };
+    const send = (body = args, endpoint = path) => fetch(api.origin + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    api.armDelegationLostReply(id);
+    const broken = await send(); assert.equal(broken.status, 200); await assert.rejects(() => broken.json());
+    const expected = { id, state: 'approved', revision: 2, capabilityVersion: 'clinic_reception_v1' };
+    assert.equal(api.metrics.delegationWrites.length, 1); assert.deepEqual(api.metrics.delegationWrites[0].snapshot, expected);
+    assert.deepEqual(api.delegationRows, [{ ...before[0], ...expected, effective: true, canDecide: false, canRevoke: true }, ...before.slice(1)]);
+    const retry = await send(); assert.equal(retry.status, 200); assert.deepEqual(await retry.json(), expected);
+    assert.equal(api.metrics.delegationWrites.length, 1); assert.deepEqual(api.metrics.delegationReplies.map(reply => reply.kind), ['truncated', 'replay']);
+    for (const changed of [{ ...args, p_revision: 2 }, { ...args, p_request: before[1].id }, { ...args, p_operation: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' }]) {
+      const response = await send(changed); assert.equal(response.status, 409); assert.equal((await response.json()).code, '40001');
+    }
+    const crossEndpoint = await send({ p_request: id, p_revision: 2, p_operation: args.p_operation }, '/rest/v1/rpc/reception_revoke_delegation');
+    assert.equal(crossEndpoint.status, 409); assert.equal((await crossEndpoint.json()).code, '40001');
+    assert.equal(api.metrics.delegationWrites.length, 1); assert.deepEqual(api.delegationRows.slice(1), before.slice(1));
+  } finally { await api.close(); }
+});
+
 test('a denied read hides the DTO and can recover without mutating requests or allowing decisions', async () => {
   const api = await startClinicFixture({ delegationPermissions: true });
   try {
