@@ -1,0 +1,123 @@
+{
+  "passed": true,
+  "visualScopeAccepted": true,
+  "syntheticOnly": true,
+  "baseline": "ff755fc3a9e2948658d2c4c986a1f54123073ad6",
+  "medicalDelivery": "f2eb1894f416a99d9e0394f86f6e22636b9f70bd",
+  "browser": {
+    "redStates": 3,
+    "greenStates": 30,
+    "widths": [
+      375,
+      1280,
+      1920
+    ],
+    "redHistory375Overflow": 7,
+    "greenHistory375Overflow": 0
+  },
+  "unit": {
+    "files": 1,
+    "tests": 1,
+    "exitCode": 0
+  },
+  "checks": {
+    "appTypes": true,
+    "applicationLint": true,
+    "runnerLint": true,
+    "nodeSyntax": true,
+    "invalidOverlayOrFocusCombinationsRefused": 4,
+    "hashes": true,
+    "cleanup": true
+  },
+  "sourceProof": {
+    "originalFive": [
+      {
+        "path": "src/components/PatientProfileDrawer.tsx",
+        "sha256": "d80e52df5b4c3448033cc8d61a3f6bbceddfefd97d09cb46531a96cc02be6fee"
+      },
+      {
+        "path": "src/pages/PatientManagement.tsx",
+        "sha256": "9586504144b2134cd1f2d5be56981f5aebb9a9b21445d1266f7b44fd3b1a5ada"
+      },
+      {
+        "path": "src/pages/KnowledgeBase.tsx",
+        "sha256": "e3de0e457c5a1699c78e1c4f41656e88af1bf1d941dd3b07fc9d7bbe4f1ad869"
+      },
+      {
+        "path": "src/pages/Templates.tsx",
+        "sha256": "d6a4a6631a5aa1aa36455f0a867af89809171c2ee7ef70d3a68c509c7fa694be"
+      },
+      {
+        "path": "src/pages/Assistant.tsx",
+        "sha256": "0d61e21e47e3bad2644b7bfc1dc171b097e6e25ba0d228688221f760c8fac525"
+      }
+    ],
+    "activeFive": [
+      {
+        "path": "src/components/PatientProfileDrawer.tsx",
+        "sha256": "4ae615ee2dfaaafbc875050d4f1c19ffea27a9501072e90e94285c4c78e1ae54"
+      },
+      {
+        "path": "src/pages/PatientManagement.tsx",
+        "sha256": "9586504144b2134cd1f2d5be56981f5aebb9a9b21445d1266f7b44fd3b1a5ada"
+      },
+      {
+        "path": "src/pages/KnowledgeBase.tsx",
+        "sha256": "e3de0e457c5a1699c78e1c4f41656e88af1bf1d941dd3b07fc9d7bbe4f1ad869"
+      },
+      {
+        "path": "src/pages/Templates.tsx",
+        "sha256": "d6a4a6631a5aa1aa36455f0a867af89809171c2ee7ef70d3a68c509c7fa694be"
+      },
+      {
+        "path": "src/pages/Assistant.tsx",
+        "sha256": "0d61e21e47e3bad2644b7bfc1dc171b097e6e25ba0d228688221f760c8fac525"
+      }
+    ],
+    "unchangedSiblings": 4,
+    "changedOnlyProfile": true,
+    "allFiveServed": true,
+    "overlays": [
+      {
+        "path": "src/components/PatientProfileDrawer.tsx",
+        "sha256": "4ae615ee2dfaaafbc875050d4f1c19ffea27a9501072e90e94285c4c78e1ae54"
+      }
+    ]
+  },
+  "dataPreserved": true,
+  "metrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 3,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "medicalWrites": 0
+  },
+  "review": {
+    "local": "No actionable issue found",
+    "external": "Declined by user"
+  },
+  "network": {
+    "observationMethod": "HEAD",
+    "observationStatus": 200,
+    "observationReason": "net::ERR_ABORTED",
+    "counts": {
+      "red": {
+        "/rest/v1/patients": 4
+      },
+      "green": {
+        "/rest/v1/patients": 10,
+        "/rest/v1/knowledge_documents": 3
+      }
+    },
+    "causeInferred": false,
+    "transportApproved": false,
+    "otherFailures": 0
+  },
+  "scope": "One flex-wrap class in profile history; T39/2 visual subset only",
+  "limits": [
+    "No global app/backend/pilot approval",
+    "Historical medical-delivery failure reports unchanged"
+  ]
+}

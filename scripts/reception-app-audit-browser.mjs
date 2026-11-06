@@ -14,12 +14,14 @@ import { startClinicFixture, patientId, uid } from './fixtures/clinic-review-api
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
 const timestampOnly = args.includes('--only=short-timestamps');
 const medicalOnly = args.includes('--only=medical-delivery');
+const medicalHistoryOnly = args.includes('--medical-history-only');
+assert.ok(!medicalHistoryOnly || medicalOnly, 'Medical history focus requires medical delivery mode');
 const checkWorkspaceLayout = args.includes('--check-workspace-layout');
 assert.ok(!checkWorkspaceLayout || timestampOnly, 'Workspace layout checks require the populated timestamp audit');
 const welcomeOnly = args.includes('--only=welcome-dashboard'), focusedOnly = weekOnly || welcomeOnly || chatOnly || timestampOnly || medicalOnly;
@@ -38,8 +40,10 @@ const baseline = args.find(arg => arg.startsWith('--baseline='))?.slice(11) || g
 const medicalPaths = ['src/components/PatientProfileDrawer.tsx', 'src/pages/PatientManagement.tsx', 'src/pages/KnowledgeBase.tsx', 'src/pages/Templates.tsx', 'src/pages/Assistant.tsx'];
 const medicalDelivery = medicalOnly ? git(['rev-parse', 'f2eb189']) : null;
 const overlays = args.filter(arg => arg.startsWith('--overlay=')).map(arg => arg.slice(10));
-const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation|WelcomeDashboard|ChatPanel)\.tsx|src\/lib\/calendarLabels\.ts)$/;
+const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation|WelcomeDashboard|ChatPanel|PatientProfileDrawer)\.tsx|src\/lib\/calendarLabels\.ts)$/;
 for (const path of overlays) assert.match(path, allowed, 'Overlay must be in the Codex audit scope');
+assert.ok(!overlays.includes('src/components/PatientProfileDrawer.tsx') || medicalOnly, 'Profile overlay requires medical delivery mode');
+assert.ok(!medicalOnly || overlays.length <= 1 && overlays.every(path => path === 'src/components/PatientProfileDrawer.tsx'), 'Medical delivery only permits the explicit profile overlay');
 const run = args.find(arg => arg.startsWith('--run='))?.slice(6) || 'baseline';
 const folder = resolve('docs/reviews/2026-11-05/reception-app-audit', run);
 await mkdir(dirname(folder), { recursive: true });
@@ -54,8 +58,9 @@ for (const path of paths) {
   const size = Number(header.split(' ')[2]); offset = end + 1;
   sources.set(path, batch.stdout.subarray(offset, offset + size).toString('utf8')); offset += size + 1;
 }
-for (const path of overlays) { assert.ok(sources.has(path) || path === 'src/lib/calendarLabels.ts', 'New source is not allowlisted'); sources.set(path, await readFile(path, 'utf8')); }
 if (medicalOnly) for (const path of medicalPaths) assert.equal(sources.get(path).replaceAll('\r\n', '\n').trim(), git(['show', medicalDelivery + ':' + path]), 'Medical delivery source differs: ' + path);
+const medicalBaseSources = medicalOnly ? medicalPaths.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') })) : [];
+for (const path of overlays) { assert.ok(sources.has(path) || path === 'src/lib/calendarLabels.ts', 'New source is not allowlisted'); sources.set(path, await readFile(path, 'utf8')); }
 const overlayHashes = overlays.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') }));
 const frozen = new Map([...sources].map(([path, source]) => [resolve(path).toLowerCase(), { path, source }]));
 const frozenLoads = new Set();
@@ -153,7 +158,7 @@ async function capture(page, app, role, path, width, action, variant = '') {
         textWidth: context.measureText(clinicalInput.placeholder).width + spacing * Math.max(0, clinicalInput.placeholder.length - 1),
         availableWidth: clinicalInput.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight), empty: clinicalInput.value === '' };
     }
-    const medicalTextFit = [...document.querySelectorAll('header h1, [role="dialog"] h2 span.line-clamp-2, [role="tab"], main button[aria-label^="Pré-visualizar"] p:first-child')].filter(visible).map(element => {
+    const medicalTextFit = [...document.querySelectorAll('header h1, [role="dialog"] h2 span.line-clamp-2, [role="tab"], [role="tabpanel"] .bg-medical-blue, main button[aria-label^="Pré-visualizar"] p:first-child')].filter(visible).map(element => {
       const box = element.getBoundingClientRect(), walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT); let node, clipped = false, left = 0, right = innerWidth;
       for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
         if (!['hidden', 'clip', 'auto', 'scroll'].includes(getComputedStyle(ancestor).overflowX)) continue;
@@ -251,7 +256,7 @@ try {
       };
       const cases = [
         { variant: 'profile-overview', path: chatPath, ready: async (page, width) => { const dialog = await openProfile(page, width); await expect(dialog.getByText(/no painel Perfil/)).toBeVisible(); await expect(dialog.getByRole('button', { name: 'Perguntar à IA', exact: true })).toBeVisible(); await expect(dialog.getByRole('button', { name: 'Dossiê', exact: true })).toBeVisible(); await dialog.getByRole('tab', { name: 'Geral', exact: true }).scrollIntoViewIfNeeded(); } },
-        { variant: 'profile-history', path: chatPath, ready: async (page, width) => { const dialog = await openProfile(page, width); const tab = dialog.getByRole('tab', { name: /^Histórico/ }); await tab.click(); await expect(tab).toHaveAttribute('aria-selected', 'true'); const panel = dialog.getByRole('tabpanel'); await expect(panel.getByText('há 1 mês', { exact: true })).toBeVisible(); await expect(panel.getByText('há 1 ano', { exact: true })).toBeVisible(); } },
+        { variant: 'profile-history', path: chatPath, ready: async (page, width) => { const dialog = await openProfile(page, width); const tab = dialog.getByRole('tab', { name: /^Histórico/ }); await tab.click(); await expect(tab).toHaveAttribute('aria-selected', 'true'); const panel = dialog.getByRole('tabpanel'); await expect(panel.getByText('há 1 mês', { exact: true })).toBeVisible(); await expect(panel.getByText('há 1 ano', { exact: true })).toBeVisible(); await expect(panel.getByText('Última', { exact: true })).toBeVisible(); } },
         { variant: 'profile-documents', path: chatPath, ready: async (page, width) => { const dialog = await openProfile(page, width); const tab = dialog.getByRole('tab', { name: 'Documentos', exact: true }); await tab.click(); await expect(tab).toHaveAttribute('aria-selected', 'true'); await expect(dialog.getByRole('heading', { name: 'Arquivos anexados', exact: true })).toBeVisible(); } },
         { variant: 'patients', path: '/gerenciar-pacientes', ready: async (page, width) => { await expect(page.getByRole('heading', { name: width < 864 ? 'Pacientes' : 'Gerenciar pacientes', exact: true, level: 1 })).toBeVisible(); await expect(page.getByRole('searchbox', { name: 'Buscar pacientes', exact: true })).toHaveAttribute('placeholder', 'Nome ou profissão…'); await expect(page.getByRole('link', { name: 'Abrir prontuário de Paciente Exemplo A', exact: true })).toBeVisible(); } },
         { variant: 'templates', path: '/modelos', ready: async (page, width) => { await expect(page.getByRole('heading', { name: width < 864 ? 'Modelos' : 'Modelos de documento', exact: true, level: 1 })).toBeVisible(); await expect(page.getByRole('textbox', { name: 'Buscar modelos', exact: true })).toHaveAttribute('placeholder', 'Nome do modelo…'); for (const action of ['Editar', 'Duplicar', 'Excluir']) await expect(page.getByRole('button', { name: action + ' Modelo de revisão sintético', exact: true })).toBeVisible(); } },
@@ -261,7 +266,7 @@ try {
         { variant: 'assistant-initial', path: '/assistente', ready: async page => { await expect(page.getByRole('textbox', { name: 'Escreva sua pergunta', exact: true })).toHaveAttribute('placeholder', 'Escreva sua pergunta'); } },
         { variant: 'assistant-conversation', path: '/assistente', ready: async page => { await page.getByRole('textbox', { name: 'Escreva sua pergunta', exact: true }).fill('Pergunta sintética sem dados pessoais'); await page.getByRole('button', { name: 'Enviar pergunta', exact: true }).click(); await expect(page.getByRole('log', { name: 'Conversa com o assistente', exact: true })).toContainText('Verificação farmacológica necessária'); await expect(page.getByRole('textbox', { name: 'Escreva sua pergunta', exact: true })).toBeEmpty(); } },
       ];
-      for (const width of [375, 1280, 1920]) for (const entry of cases) {
+      for (const width of [375, 1280, 1920]) for (const entry of medicalHistoryOnly ? cases.filter(entry => entry.variant === 'profile-history') : cases) {
         medicalCasesAttempted++;
         try {
           await capture(doctor, app, 'medical', entry.path, width, page => entry.ready(page, width), entry.variant);
@@ -275,7 +280,7 @@ try {
         }
       }
       assert.equal(JSON.stringify(api.medicalData), originalData, 'Medical review changed stored data');
-      assert.equal(api.metrics.chat, 3, 'Only the three explicit synthetic assistant submissions are allowed');
+      assert.equal(api.metrics.chat, medicalHistoryOnly ? 0 : 3, 'Only the explicitly selected synthetic assistant submissions are allowed');
       assert.ok(Object.entries(api.metrics).every(([key, value]) => key === 'chat' || value === 0), 'Medical review must not write data or invoke another AI operation');
       medicalDataPreserved = true;
     } else if (timestampOnly) {
@@ -440,7 +445,7 @@ try {
   }, 'block-time-dialog');
   }
   for (const source of [...ownHashes, ...overlayHashes]) assert.equal(createHash('sha256').update(await readFile(source.path)).digest('hex'), source.sha256, 'Audit source changed during run');
-  const requiredSources = medicalOnly ? medicalPaths : timestampOnly ? ['src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/lib/recordingRescue.ts'] : chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
+  const requiredSources = medicalOnly ? medicalHistoryOnly ? ['src/components/PatientProfileDrawer.tsx'] : medicalPaths : timestampOnly ? ['src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/lib/recordingRescue.ts'] : chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
   for (const path of ['src/App.tsx', 'src/pages/Auth.tsx', ...overlays, ...requiredSources]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
   if (medicalOnly) assert.deepEqual(medicalCaseFailures, [], 'Medical delivery has unresolved case failures');
   if (checkMobileNavigation || welcomeOnly) assert.equal(navigationKeyboardVerified, true, 'Keyboard navigation did not complete');
@@ -461,7 +466,7 @@ try {
   cleanupVerified = true;
 }
 const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, chatOnly, timestampOnly, checkWorkspaceLayout, timestampDataPreserved, timestampMetrics: timestampOnly ? { ...apis[0]?.metrics } : null, draftPreserved, welcomeMetrics: welcomeOnly || chatOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
-  medicalOnly, medicalDelivery, medicalCasesAttempted, medicalCaseFailures, medicalDataPreserved, medicalMetrics: medicalOnly ? { ...apis[0]?.metrics } : null,
+  medicalOnly, medicalHistoryOnly, medicalDelivery, medicalBaseSources, medicalCasesAttempted, medicalCaseFailures, medicalDataPreserved, medicalMetrics: medicalOnly ? { ...apis[0]?.metrics } : null,
   medicalSources: medicalOnly ? medicalPaths.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') })) : [],
   frozenLoads: [...frozenLoads].sort(), screens, errors, consoleErrors, failedRequests, errorResponses, blockedExternalRequests: blocked, cleanupVerified };
 await writeFile(resolve(folder, 'AUDIT.json'), JSON.stringify(report, null, 2) + '\n');

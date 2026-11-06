@@ -653,7 +653,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                           )}
                         >
                           <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 min-w-0">
                               <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
                               <span className="text-sm font-medium text-foreground">{formatDate(c.created_at)}</span>
                               <span className="text-xs text-muted-foreground">{relativeDays(c.created_at)}</span>

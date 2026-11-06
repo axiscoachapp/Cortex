@@ -1,5 +1,7 @@
 # T39/2i — reteste independente da entrega médica
 
+Atualização posterior: o corte do Histórico em 375 px foi corrigido em [T39/2j](PROFILE_HISTORY_LAYOUT.md), com 30 cenários aprovados. O relatório e a validação originais abaixo preservam a falha encontrada na entrega anterior ao ajuste.
+
 Reteste da entrega `f2eb1894f416a99d9e0394f86f6e22636b9f70bd`, recebida pela resposta de 18:58. Os cinco arquivos médicos continuam idênticos à entrega; o navegador usa o snapshot atual `f1ca046a825cc2e74bda66297f5e4f58393836dc`, sem overlays. O runner compara as fontes com a entrega e exige que os cinco módulos tenham sido servidos.
 
 O resultado mantém a aceitação visual pendente: o Histórico do perfil apresenta overflow horizontal de 7 px em 375 px, com o selo Última cortado. O [relatório completo](medical-delivery-final/AUDIT.json) registra 30 capturas, 29 casos aprovados e essa falha. O processo termina com código 1 após conferir dados, hashes e módulos servidos. Os demais cenários foram executados mesmo após esse achado.
