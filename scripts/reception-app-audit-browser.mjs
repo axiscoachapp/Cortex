@@ -14,7 +14,7 @@ import { startClinicFixture, patientId, uid } from './fixtures/clinic-review-api
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus|check-mfa-cancellation)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
@@ -24,6 +24,8 @@ const mfaOnly = args.includes('--only=mfa-preparation');
 const mfaCleanupOnly = args.includes('--only=mfa-cleanup'), mfaEnrollmentOnly = args.includes('--only=mfa-enrollment'), mfaMode = mfaOnly || mfaCleanupOnly || mfaEnrollmentOnly;
 const checkMfaErrorFocus = args.includes('--check-mfa-error-focus');
 assert.ok(!checkMfaErrorFocus || mfaCleanupOnly, 'MFA error focus requires MFA cleanup mode');
+const checkMfaCancellation = args.includes('--check-mfa-cancellation');
+assert.ok(!checkMfaCancellation || mfaEnrollmentOnly, 'MFA cancellation requires enrollment mode');
 const delegationOnly = args.includes('--only=delegation-read');
 const delegationDecisionOnly = args.includes('--only=delegation-decision'), delegationConflictOnly = args.includes('--only=delegation-conflict'), delegationDeniedOnly = args.includes('--only=delegation-denied'), delegationRetryOnly = args.includes('--only=delegation-retry'), delegationMode = delegationOnly || delegationDecisionOnly || delegationConflictOnly || delegationDeniedOnly || delegationRetryOnly;
 const medicalHistoryOnly = args.includes('--medical-history-only');
@@ -44,7 +46,7 @@ assert.ok(!delegationDeniedOnly || !args.some(arg => arg.startsWith('--check-'))
 assert.ok(!delegationRetryOnly || !args.some(arg => arg.startsWith('--check-')), 'Delegation retry mode runs its own checks');
 assert.ok(!mfaOnly || !args.some(arg => arg.startsWith('--check-')), 'MFA preparation mode runs its own checks');
 assert.ok(!mfaCleanupOnly || !args.some(arg => arg.startsWith('--check-') && arg !== '--check-mfa-error-focus'), 'MFA cleanup only supports error focus checks');
-assert.ok(!mfaEnrollmentOnly || !args.some(arg => arg.startsWith('--check-')), 'MFA enrollment runs its own checks');
+assert.ok(!mfaEnrollmentOnly || !args.some(arg => arg.startsWith('--check-') && arg !== '--check-mfa-cancellation'), 'MFA enrollment only supports cancellation checks');
 const checkMobileNavigation = args.includes('--check-mobile-navigation');
 assert.ok(!timeOnly || !checkMobileNavigation, 'Mobile navigation checks require the full route audit');
 const checkCalendarHeader = args.includes('--check-calendar-header');
@@ -97,6 +99,7 @@ const mfaPreparationChecks = [];
 const mfaCleanupChecks = [];
 const mfaErrorFocusChecks = [];
 const mfaEnrollmentChecks = [], mfaEnrollmentQrChecks = [];
+const mfaCancellationChecks = [];
 const cacheOwner = randomUUID();
 let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false, draftPreserved = false, timestampDataPreserved = false, medicalDataPreserved = false, delegationDataPreserved = false;
 async function appFor(api) {
@@ -266,7 +269,7 @@ try {
   await writeFile(join(temporaryCache, 'audit-owner'), cacheOwner);
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
   if (focusedOnly) {
-    const api = await startClinicFixture(welcomeOnly ? { lastVisit: '2026-10-01' } : timestampOnly ? { workspaceDates: true } : medicalOnly ? { medicalUI: true } : mfaMode ? { mfaReview: true, mfaCleanupReview: mfaCleanupOnly, mfaEnrollmentReview: mfaEnrollmentOnly } : delegationMode ? { delegationPermissions: true, delegationDecisions: delegationDecisionOnly || delegationConflictOnly || delegationRetryOnly, delegationReplay: delegationRetryOnly } : {}); apis.push(api); const app = await appFor(api);
+    const api = await startClinicFixture(welcomeOnly ? { lastVisit: '2026-10-01' } : timestampOnly ? { workspaceDates: true } : medicalOnly ? { medicalUI: true } : mfaMode ? { mfaReview: true, mfaCleanupReview: mfaCleanupOnly, mfaEnrollmentReview: mfaEnrollmentOnly, mfaCancellationReview: checkMfaCancellation } : delegationMode ? { delegationPermissions: true, delegationDecisions: delegationDecisionOnly || delegationConflictOnly || delegationRetryOnly, delegationReplay: delegationRetryOnly } : {}); apis.push(api); const app = await appFor(api);
     const chatPath = '/?patient=' + patientId;
     const doctor = await scene(app, 'review', mfaMode ? '/seguranca' : delegationMode ? '/permissoes-recepcao' : timestampOnly ? '/trabalho' : chatOnly || medicalOnly ? chatPath : welcomeOnly ? '/' : '/agenda');
     await doctor.waitForLoadState('networkidle');
@@ -296,8 +299,22 @@ try {
         await capture(doctor, app, 'security', '/seguranca', width, async page => { await sameDocument(page); await rows(page, expected); await expect(qr(page)).toBeVisible(); await expect(page.getByLabel('Código do aplicativo', { exact: true })).toHaveValue('1234'); await expect(page.getByRole('alert')).toHaveCount(0); assert.equal(api.metrics.mfaEnrollmentCalls.length, before + 2); }, 'enrollment-cancellation-dismissed', { navigate: false });
         const [removed, enrolled] = api.metrics.mfaEnrollmentCalls.slice(before); assert.deepEqual(removed, { kind: 'remove', factorId: original[2].id }); assert.equal(enrolled.kind, 'enroll'); assert.equal(enrolled.factorId, newId); assert.equal(enrolled.args.factor_type, 'totp'); assert.equal(enrolled.args.issuer, 'Haddad Nicola'); assert.equal(enrolled.args.friendly_name, expected[2].friendly_name); assert.deepEqual(api.mfaFactors, expected);
         mfaEnrollmentChecks.push({ width, sameDocument: true, removedId: removed.factorId, enrolledId: newId, verifiedFactorsUnchanged: true, newFactorVerified: false, cancellationDismissed: true, calls: 2 });
+        if (checkMfaCancellation) {
+          await doctor.getByLabel('Código do aplicativo', { exact: true }).fill('123456');
+          const confirmation = doctor.waitForEvent('dialog'), cancelClick = doctor.getByRole('button', { name: 'Cancelar configuração', exact: true }).click(); const cancelDialog = await confirmation;
+          assert.equal(cancelDialog.type(), 'confirm'); assert.equal(cancelDialog.message(), 'Remover este autenticador da sua conta?'); await cancelDialog.accept(); await cancelClick;
+          await expect(doctor.getByText('Autenticador removido.', { exact: true })).toBeVisible();
+          await capture(doctor, app, 'security', '/seguranca', width, async page => { await sameDocument(page); await rows(page, original.slice(0, 2)); await expect(qr(page)).toHaveCount(0); await expect(page.getByRole('heading', { name: 'Configurar aplicativo', exact: true })).toHaveCount(0); }, 'cancellation-confirmed', { navigate: false });
+          const input = doctor.getByLabel('Código do aplicativo', { exact: true }), selector = doctor.getByRole('combobox', { name: 'Autenticador', exact: true });
+          const observation = { width, code: await input.inputValue(), selectedId: await selector.inputValue(), optionIds: await selector.locator('option').evaluateAll(options => options.map(option => option.value)), calls: api.metrics.mfaEnrollmentCalls.length - before, sameDocument: true };
+          mfaCancellationChecks.push(observation);
+          assert.equal(observation.code, '', 'Code from the removed setup was retained'); assert.equal(observation.selectedId, original[0].id, 'Removed setup selection was retained'); assert.deepEqual(observation.optionIds, ['', ...original.slice(0, 2).map(factor => factor.id)]);
+          await expect(doctor.getByRole('button', { name: 'Verificar código', exact: true })).toBeDisabled();
+          await capture(doctor, app, 'security', '/seguranca', width, async page => { await sameDocument(page); await input.fill('654321'); await expect(selector).toHaveValue(original[0].id); await expect(page.getByRole('button', { name: 'Verificar código', exact: true })).toBeEnabled(); assert.equal(await input.evaluate(element => element.form.checkValidity()), true); await rows(page, original.slice(0, 2)); await expect(page.getByRole('button', { name: 'Adicionar autenticador', exact: true })).toBeEnabled(); }, 'cancellation-fresh-code', { navigate: false });
+          assert.deepEqual(api.mfaFactors, original.slice(0, 2)); assert.deepEqual(api.metrics.mfaEnrollmentCalls.slice(before + 2), [{ kind: 'remove', factorId: newId }]); assert.equal(observation.calls, 3);
+        }
       }
-      const allowed = new Set(['POST /auth/v1/token', 'GET /auth/v1/user', 'DELETE /auth/v1/factors/' + original[2].id, 'POST /auth/v1/factors']); assert.ok(api.metrics.mfaRequests.every(call => allowed.has(call.method + ' ' + call.path))); assert.deepEqual(api.metrics.mfaUnexpected, []); assert.equal(api.metrics.mfaEnrollmentCalls.length, 6); assert.equal(screens.length, 12);
+      const allowed = new Set(['POST /auth/v1/token', 'GET /auth/v1/user', 'DELETE /auth/v1/factors/' + original[2].id, 'POST /auth/v1/factors', ...(checkMfaCancellation ? ['DELETE /auth/v1/factors/' + newId] : [])]); assert.ok(api.metrics.mfaRequests.every(call => allowed.has(call.method + ' ' + call.path))); assert.deepEqual(api.metrics.mfaUnexpected, []); assert.equal(api.metrics.mfaEnrollmentCalls.length, checkMfaCancellation ? 9 : 6); assert.equal(screens.length, checkMfaCancellation ? 18 : 12);
       for (const measured of screens) { assert.ok(measured.overflow <= 1 && measured.dialogHorizontalOverflow <= 1 && !measured.dialogOutsideViewport && measured.dialogActionReachable !== false, 'MFA enrollment layout is clipped'); assert.equal(measured.recoveryScreen, false); assert.deepEqual(measured.missingButtons, []); assert.deepEqual(measured.missingLabels, []); assert.deepEqual(measured.brokenText, []); }
       for (const key of ['briefings', 'checklists', 'chat', 'newSources', 'patientWrites', 'appointmentWrites']) assert.equal(api.metrics[key], 0); for (const observations of [errors, consoleErrors, errorResponses, failedRequests, blocked]) assert.deepEqual(observations, []);
     } else if (mfaCleanupOnly) {
@@ -833,7 +850,7 @@ try {
   cleanupVerified = true;
 }
 const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, chatOnly, timestampOnly, checkWorkspaceLayout, timestampDataPreserved, timestampMetrics: timestampOnly ? { ...apis[0]?.metrics } : null, draftPreserved, welcomeMetrics: welcomeOnly || chatOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
-  mfaOnly, mfaCleanupOnly, mfaEnrollmentOnly, checkMfaErrorFocus, mfaPreparationChecks, mfaCleanupChecks, mfaErrorFocusChecks, mfaEnrollmentChecks, mfaEnrollmentQrChecks, mfaMetrics: mfaMode ? { ...apis[0]?.metrics } : null,
+  mfaOnly, mfaCleanupOnly, mfaEnrollmentOnly, checkMfaErrorFocus, checkMfaCancellation, mfaPreparationChecks, mfaCleanupChecks, mfaErrorFocusChecks, mfaEnrollmentChecks, mfaEnrollmentQrChecks, mfaCancellationChecks, mfaMetrics: mfaMode ? { ...apis[0]?.metrics } : null,
   delegationOnly, delegationDecisionOnly, delegationConflictOnly, delegationDeniedOnly, delegationRetryOnly, delegationDecisionChecks, delegationConflictChecks, delegationDeniedChecks, delegationRetryChecks, delegationDataPreserved, delegationMetrics: delegationMode ? { ...apis[0]?.metrics } : null,
   medicalOnly, medicalHistoryOnly, medicalDelivery, medicalBaseSources, medicalCasesAttempted, medicalCaseFailures, medicalDataPreserved, medicalMetrics: medicalOnly ? { ...apis[0]?.metrics } : null,
   medicalSources: medicalOnly ? medicalPaths.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') })) : [],

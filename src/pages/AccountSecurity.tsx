@@ -77,8 +77,13 @@ export default function AccountSecurity() {
       if (!window.confirm('Remover este autenticador da sua conta?')) return;
       const { error } = await supabase.auth.mfa.unenroll({ factorId: id });
       if (error) throw error;
+      const queryKey = ['mfa-factors', user?.id];
+      await client.cancelQueries({ queryKey });
+      client.setQueryData<typeof factors.data>(queryKey, current => current?.filter(f => f.id !== id));
       setSetup(null);
-      void client.invalidateQueries({ queryKey: ['mfa-factors'] });
+      setFactor('');
+      setCode('');
+      void client.invalidateQueries({ queryKey });
       setNotice('Autenticador removido.');
     });
   return (

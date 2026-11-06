@@ -3,12 +3,13 @@ import http from 'node:http';
 import { z } from 'zod';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false, mfaCancellationReview = false } = {}) {
   if(delegationDecisions&&!delegationPermissions)throw new Error('Delegation decisions require the permissions fixture');
   if(delegationReplay&&(!delegationPermissions||!delegationDecisions))throw new Error('Delegation replay requires the permissions and decision fixtures');
   if(mfaReview&&(workspaceDates||medicalUI||delegationPermissions||delegationDecisions||delegationReplay))throw new Error('MFA review is an isolated fixture');
   if(mfaCleanupReview&&!mfaReview)throw new Error('MFA cleanup review requires its MFA read fixture');
   if(mfaEnrollmentReview&&(!mfaReview||mfaCleanupReview))throw new Error('MFA enrollment requires isolated MFA reads without cleanup-denial mode');
+  if(mfaCancellationReview&&!mfaEnrollmentReview)throw new Error('MFA cancellation requires the isolated enrollment fixture');
   const now=new Date().toISOString();
   const user={id:uid,email:'review@example.invalid',aud:'authenticated',role:'authenticated',created_at:now,email_confirmed_at:now,app_metadata:{provider:'email'},user_metadata:{},factors:[]};
   if(mfaReview)user.factors=['verified','verified','unverified'].map((status,index)=>({id:['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','cccccccc-cccc-4ccc-8ccc-cccccccccccc'][index],friendly_name:'Autenticador sintético '+['A','B','pendente'][index],factor_type:'totp',status,created_at:'2026-11-05T12:00:00Z',updated_at:'2026-11-05T12:00:00Z'}));
@@ -36,6 +37,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   const mfaPendingPath=mfaReview?'/auth/v1/factors/'+user.factors[2].id:null;
   if(mfaCleanupReview){metrics.mfaCleanupCalls=[];mfaAllowed.add('DELETE '+mfaPendingPath);}
   if(mfaEnrollmentReview){metrics.mfaEnrollmentCalls=[];mfaAllowed.add('DELETE '+mfaPendingPath);mfaAllowed.add('POST /auth/v1/factors');}
+  if(mfaCancellationReview)mfaAllowed.add('DELETE /auth/v1/factors/'+newMfaFactorId);
   const mfaEnrollmentInput=z.object({friendly_name:z.string().trim().min(1).max(200),factor_type:z.literal('totp'),issuer:z.literal('Haddad Nicola')}).strict();
   let delegationReadMode='valid';
   const delegationAllowed=new Set(['POST /auth/v1/token','GET /auth/v1/user','POST /rest/v1/rpc/clinic_access','POST /rest/v1/rpc/reception_delegation_requests']);
@@ -59,8 +61,8 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
       const call={method:req.method,path:url.pathname};metrics.mfaRequests.push(call);
       if(!mfaAllowed.has(call.method+' '+call.path)){metrics.mfaUnexpected.push(call);return send({code:'TEST_UNEXPECTED_RESOURCE',message:'Unexpected MFA test resource'},403);}
       if(mfaCleanupReview&&call.method==='DELETE'&&call.path===mfaPendingPath){metrics.mfaCleanupCalls.push({factorId:user.factors[2].id,status:403});return send({code:'insufficient_aal',message:'Synthetic pending factor cleanup denied'},403);}
-      if(mfaEnrollmentReview&&call.method==='DELETE'&&call.path===mfaPendingPath){
-        const index=user.factors.findIndex(factor=>factor.id===initialMfaFactors[2].id&&factor.status==='unverified');
+      if(mfaEnrollmentReview&&call.method==='DELETE'&&(call.path===mfaPendingPath||mfaCancellationReview&&call.path==='/auth/v1/factors/'+newMfaFactorId)){
+        const index=user.factors.findIndex(factor=>call.path==='/auth/v1/factors/'+factor.id&&factor.status==='unverified');
         if(index<0)return send({code:'TEST_MFA_ORDER',message:'Synthetic pending setup already removed'},409);
         const [removed]=user.factors.splice(index,1);metrics.mfaEnrollmentCalls.push({kind:'remove',factorId:removed.id});return send({id:removed.id});
       }

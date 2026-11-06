@@ -4,6 +4,33 @@ import { startClinicFixture } from './clinic-review-api.mjs';
 
 // Run explicitly with node --test; keep this outside Vitest's .test discovery.
 
+test('MFA cancellation requires the isolated enrollment fixture', async () => {
+  for (const options of [{ mfaCancellationReview: true }, { mfaReview: true, mfaCancellationReview: true }]) {
+    let api;
+    try { await assert.rejects(async () => { api = await startClinicFixture(options); }, /cancellation/); }
+    finally { if (api) await api.close(); }
+  }
+});
+
+test('synthetic cancellation removes only the newly enrolled pending setup and protects verification', async () => {
+  const api = await startClinicFixture({ mfaReview: true, mfaEnrollmentReview: true, mfaCancellationReview: true });
+  try {
+    const original = structuredClone(api.mfaFactors);
+    const remove = id => fetch(api.origin + '/auth/v1/factors/' + id, { method: 'DELETE' });
+    assert.equal((await remove(original[2].id)).status, 200);
+    const created = await fetch(api.origin + '/auth/v1/factors', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ friendly_name: 'Setup sintético cancelável', factor_type: 'totp', issuer: 'Haddad Nicola' }) });
+    const dto = await created.json(); assert.equal(created.status, 200);
+    assert.equal((await remove(dto.id)).status, 200);
+    assert.deepEqual(api.mfaFactors, original.slice(0, 2));
+    assert.deepEqual(api.metrics.mfaEnrollmentCalls.map(call => [call.kind, call.factorId]), [['remove', original[2].id], ['enroll', dto.id], ['remove', dto.id]]);
+    assert.equal((await remove(dto.id)).status, 409);
+    assert.equal((await remove(original[0].id)).status, 403);
+    assert.equal((await fetch(api.origin + '/auth/v1/factors/' + dto.id + '/challenge', { method: 'POST' })).status, 403);
+    assert.deepEqual(api.mfaFactors, original.slice(0, 2));
+    api.resetMfaEnrollment(); assert.deepEqual(api.mfaFactors, original);
+  } finally { await api.close(); }
+});
+
 test('MFA enrollment requires isolated reads and excludes cleanup-denial mode', async () => {
   for (const options of [{ mfaEnrollmentReview: true }, { mfaReview: true, mfaCleanupReview: true, mfaEnrollmentReview: true }]) {
     let api;
