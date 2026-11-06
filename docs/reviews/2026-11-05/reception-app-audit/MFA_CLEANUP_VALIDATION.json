@@ -1,0 +1,174 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "baseline": "c5e7e4450c8acbbf9408e0c636684860ef1de8b4",
+  "scope": "T39/3c/2a stop enrollment when pending-factor cleanup resolves with an SDK error",
+  "red": {
+    "run": "mfa-cleanup-red",
+    "completed": false,
+    "unexpectedPost": "/auth/v1/factors"
+  },
+  "green": {
+    "run": "mfa-cleanup-final",
+    "states": 12,
+    "widths": [
+      375,
+      1280,
+      1920
+    ],
+    "failedDeletes": 6,
+    "enrollmentRequests": 0,
+    "nativeRemovalCancellations": 3,
+    "sameDocument": true,
+    "metadataUnchanged": true,
+    "overlay": {
+      "path": "src/pages/AccountSecurity.tsx",
+      "sha256": "60a91ab1c57e35286aebe6d81a6d7633e0042f5614e2813eff9408096c7bd8ab"
+    }
+  },
+  "regression": {
+    "run": "mfa-cleanup-final-preparation",
+    "states": 12,
+    "passed": true
+  },
+  "tests": {
+    "nodeTests": 8,
+    "nodeNewRedFailures": 1,
+    "vitestTests": 12,
+    "vitestFiles": 2,
+    "newComponentRedFailures": 1,
+    "greenExit": 0
+  },
+  "checks": {
+    "applicationTypes": true,
+    "uiLintFiles": 2,
+    "scriptSyntaxLintFiles": 3,
+    "invalidFlagCombinationsRefused": 3,
+    "hashes": true,
+    "cleanup": true
+  },
+  "review": {
+    "final": "No actionable defects or contract-relevant blind spots",
+    "external": "Not invoked for non-interactive heartbeat"
+  },
+  "visualFollowUp": "Failure alert is above the button on mobile; captures manually scroll to it. App automatic focus/scroll remains a later UI increment.",
+  "sources": [
+    {
+      "path": "src/pages/AccountSecurity.tsx",
+      "sha256": "60a91ab1c57e35286aebe6d81a6d7633e0042f5614e2813eff9408096c7bd8ab"
+    },
+    {
+      "path": "src/pages/AccountSecurity.test.tsx",
+      "sha256": "9ca9223a465603af6e5abf080ffbed30e07d5004caa0674237ff237a19e319f9"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.node-test.mjs",
+      "sha256": "1ef0793b38b0d4f25ae948395a04a6ae8e6b3833f0df545c77b375e8233d14f7"
+    }
+  ],
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "cd8f1514165e1945ae6a7cf6418013fc3144f241cc07d46052653be9bdf16c5b"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "c18f7db01cdc89defe0fecfd6f58338835eea155b86a2a2d057a06d6a380622d"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "05e3c64098502bc99fe2bbfe26d11c991adbb173903f6a0c27ca1344e08d3968"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "expectedHttpErrors": [
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    },
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    },
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    },
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    },
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    },
+    {
+      "path": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "status": 403
+    }
+  ],
+  "expectedConsoleErrors": [
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    },
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    },
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    },
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    },
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    },
+    {
+      "path": "/seguranca",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "resource": "/auth/v1/factors/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    }
+  ],
+  "limits": [
+    "Denied DELETE and unchanged factor state are synthetic; no real Auth/permission/persistence proof",
+    "No successful enrollment/challenge/verification/recovery or AAL2/TOTP cryptographic proof",
+    "Native confirmation cancellation only; no real factor removal"
+  ]
+}

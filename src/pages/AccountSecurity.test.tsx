@@ -40,4 +40,14 @@ describe('TOTP metadata including abandoned setups', () => {
     expect(mocks.unenroll.mock.invocationCallOrder[0]).toBeLessThan(mocks.enroll.mock.invocationCallOrder[0]);
     expect(mocks.enroll).toHaveBeenCalledWith(expect.objectContaining({ factorType: 'totp' }));
   });
+  it('stops enrollment when the SDK returns a pending-factor cleanup error', async () => {
+    mocks.unenroll.mockResolvedValue({ error: Object.assign(new Error('Synthetic cleanup denied'), { code: 'insufficient_aal' }) });
+    mount(); await screen.findByRole('option', { name: active.friendly_name });
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar autenticador' }));
+    await screen.findByRole('alert');
+    expect(mocks.unenroll).toHaveBeenCalledExactlyOnceWith({ factorId: pending.id });
+    expect(mocks.enroll).not.toHaveBeenCalled();
+    expect(screen.queryByRole('heading', { name: 'Configurar aplicativo' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Adicionar autenticador' })).toBeEnabled();
+  });
 });

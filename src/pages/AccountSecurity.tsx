@@ -40,8 +40,10 @@ export default function AccountSecurity() {
   const enroll = () =>
     run(async () => {
       // Abandoned, never-verified setups count toward the factor limit: clear them first.
-      for (const stale of factors.data?.filter((f) => f.status !== 'verified') ?? [])
-        await supabase.auth.mfa.unenroll({ factorId: stale.id });
+      for (const stale of factors.data?.filter((f) => f.status !== 'verified') ?? []) {
+        const { error: cleanupError } = await supabase.auth.mfa.unenroll({ factorId: stale.id });
+        if (cleanupError) throw cleanupError;
+      }
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
         friendlyName: newFactorName(factors.data?.filter((f) => f.status === 'verified').length ?? 0),

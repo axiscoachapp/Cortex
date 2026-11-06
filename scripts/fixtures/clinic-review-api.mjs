@@ -3,10 +3,11 @@ import http from 'node:http';
 import { z } from 'zod';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false } = {}) {
   if(delegationDecisions&&!delegationPermissions)throw new Error('Delegation decisions require the permissions fixture');
   if(delegationReplay&&(!delegationPermissions||!delegationDecisions))throw new Error('Delegation replay requires the permissions and decision fixtures');
   if(mfaReview&&(workspaceDates||medicalUI||delegationPermissions||delegationDecisions||delegationReplay))throw new Error('MFA review is an isolated fixture');
+  if(mfaCleanupReview&&!mfaReview)throw new Error('MFA cleanup review requires its MFA read fixture');
   const now=new Date().toISOString();
   const user={id:uid,email:'review@example.invalid',aud:'authenticated',role:'authenticated',created_at:now,email_confirmed_at:now,app_metadata:{provider:'email'},user_metadata:{},factors:[]};
   if(mfaReview)user.factors=['verified','verified','unverified'].map((status,index)=>({id:['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','cccccccc-cccc-4ccc-8ccc-cccccccccccc'][index],friendly_name:'Autenticador sintético '+['A','B','pendente'][index],factor_type:'totp',status,created_at:'2026-11-05T12:00:00Z',updated_at:'2026-11-05T12:00:00Z'}));
@@ -30,6 +31,8 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   const medicalData={patients,templates,visits,knowledge,settings};
   if(mfaReview)Object.assign(metrics,{mfaRequests:[],mfaUnexpected:[]});
   const mfaAllowed=new Set(['POST /auth/v1/token','GET /auth/v1/user']);
+  const mfaPendingPath=mfaReview?'/auth/v1/factors/'+user.factors[2].id:null;
+  if(mfaCleanupReview){metrics.mfaCleanupCalls=[];mfaAllowed.add('DELETE '+mfaPendingPath);}
   let delegationReadMode='valid';
   const delegationAllowed=new Set(['POST /auth/v1/token','GET /auth/v1/user','POST /rest/v1/rpc/clinic_access','POST /rest/v1/rpc/reception_delegation_requests']);
   if(delegationDecisions)for(const name of ['reception_decide_delegation','reception_revoke_delegation'])delegationAllowed.add('POST /rest/v1/rpc/'+name);
@@ -45,12 +48,13 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,'http://127.0.0.1');let raw='';for await(const chunk of req)raw+=chunk;
     const input=raw?JSON.parse(raw):{};
-    const headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'GET,POST,PATCH,HEAD,OPTIONS','Content-Type':'application/json','Access-Control-Expose-Headers':'content-range'};
+    const headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':mfaCleanupReview?'GET,POST,DELETE,OPTIONS':'GET,POST,PATCH,HEAD,OPTIONS','Content-Type':'application/json','Access-Control-Expose-Headers':'content-range'};
     const send=(data,status=200)=>{res.writeHead(status,headers);res.end(JSON.stringify(data));};
     if(req.method==='OPTIONS')return send({});
     if(mfaReview){
       const call={method:req.method,path:url.pathname};metrics.mfaRequests.push(call);
       if(!mfaAllowed.has(call.method+' '+call.path)){metrics.mfaUnexpected.push(call);return send({code:'TEST_UNEXPECTED_RESOURCE',message:'Unexpected MFA test resource'},403);}
+      if(mfaCleanupReview&&call.method==='DELETE'&&call.path===mfaPendingPath){metrics.mfaCleanupCalls.push({factorId:user.factors[2].id,status:403});return send({code:'insufficient_aal',message:'Synthetic pending factor cleanup denied'},403);}
     }
     if(delegationPermissions){
       const call={method:req.method,path:url.pathname};metrics.delegationRequests.push(call);

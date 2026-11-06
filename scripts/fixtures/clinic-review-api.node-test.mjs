@@ -4,6 +4,24 @@ import { startClinicFixture } from './clinic-review-api.mjs';
 
 // Run explicitly with node --test; keep this outside Vitest's .test discovery.
 
+test('MFA cleanup denial requires its read fixture, denies only the pending DELETE and never enrolls', async () => {
+  let invalid;
+  try { await assert.rejects(async () => { invalid = await startClinicFixture({ mfaCleanupReview: true }); }, /requires/); }
+  finally { if (invalid) await invalid.close(); }
+  const api = await startClinicFixture({ mfaReview: true, mfaCleanupReview: true });
+  try {
+    const before = structuredClone(api.mfaFactors), pending = before.find(factor => factor.status === 'unverified');
+    const response = await fetch(api.origin + '/auth/v1/factors/' + pending.id, { method: 'DELETE' });
+    assert.equal(response.status, 403); assert.equal((await response.json()).code, 'insufficient_aal');
+    assert.deepEqual(api.metrics.mfaCleanupCalls, [{ factorId: pending.id, status: 403 }]);
+    assert.deepEqual(api.metrics.mfaUnexpected, []);
+    for (const [method, path] of [['POST', '/auth/v1/factors'], ['DELETE', '/auth/v1/factors/' + before[0].id]]) {
+      const denied = await fetch(api.origin + path, { method }); assert.equal(denied.status, 403); assert.equal((await denied.json()).code, 'TEST_UNEXPECTED_RESOURCE');
+    }
+    assert.deepEqual(api.mfaFactors, before); assert.equal(api.metrics.mfaUnexpected.length, 2);
+  } finally { await api.close(); }
+});
+
 test('MFA review is isolated from other fixtures and leaves the default user unchanged', async () => {
   let mixed;
   try { await assert.rejects(async () => { mixed = await startClinicFixture({ mfaReview: true, delegationPermissions: true }); }, /isolated/); }
