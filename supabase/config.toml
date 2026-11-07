@@ -26,3 +26,6 @@ verify_jwt = false
 # shared secret (WHATSAPP_CRON_SECRET), checked inside the function.
 [functions.whatsapp-automations]
 verify_jwt = false
+
+[functions.signature-maintenance]
+verify_jwt = false

@@ -841,4 +841,35 @@ do $$ begin
  assert not exists(select 1 from cortex_private.signature_sessions where user_id='d1700000-0000-4000-8000-000000000003'),'Session survived the account';
  assert exists(select 1 from cortex_private.signature_sessions where user_id='d1700000-0000-4000-8000-000000000001'),'Session lost with a patient';
 end $$;
+-- P4 (20261107100000): what the executor discovers. Rows are written directly (triggers and FKs
+-- off, inside a block that is rolled back) to set states and ages the writers never produce.
+do $$ declare w jsonb; u uuid:='d1700000-0000-4000-8000-000000000001';
+ ins text:='insert into cortex_private.signature_operations(operation_id,user_id,prescription_id,session_id,session_generation,shown_pdf_sha256,cert_sha256,
+  signing_time,state,prepared_pdf_sha256,to_be_signed_sha256,policy_oid,psc_attempts,staged_path,signed_pdf_sha256,stored_at,cleanup_pending,updated_at) values ';
+begin
+ perform set_config('session_replication_role','replica',true);
+ execute ins||format($v$
+  ('e1740000-0000-4000-8000-000000000001',%1$L,'e1720000-0000-4000-8000-000000000001','d1730000-0000-4000-8000-000000000003',1,repeat('a',64),repeat('c',64),now(),
+   'stored',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',1,'rx/'||%1$L||'/e1720000-0000-4000-8000-000000000001/signed-e1740000-0000-4000-8000-000000000001.pdf',repeat('f',64),now()-interval '1 hour',true,now()-interval '1 hour'),
+  ('e1740000-0000-4000-8000-000000000002',%1$L,'e1720000-0000-4000-8000-000000000002','d1730000-0000-4000-8000-000000000003',1,repeat('a',64),repeat('c',64),now(),
+   'stored',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',2,'rx/'||%1$L||'/e1720000-0000-4000-8000-000000000002/signed-e1740000-0000-4000-8000-000000000002.pdf',repeat('f',64),now()-interval '25 hours',true,now()-interval '25 hours'),
+  ('e1740000-0000-4000-8000-000000000003',%1$L,'e1720000-0000-4000-8000-000000000003','d1730000-0000-4000-8000-000000000003',1,repeat('a',64),repeat('c',64),now(),
+   'completed',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',1,'rx/'||%1$L||'/e1720000-0000-4000-8000-000000000003/signed-e1740000-0000-4000-8000-000000000003.pdf',repeat('f',64),now()-interval '2 days',true,now()-interval '2 days'),
+  ('e1740000-0000-4000-8000-000000000004',%1$L,'e1720000-0000-4000-8000-000000000004','d1730000-0000-4000-8000-000000000003',1,repeat('a',64),repeat('c',64),now(),
+   'ambiguous',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',3,null,null,null,true,now()-interval '2 days'),
+  ('e1740000-0000-4000-8000-000000000005',%1$L,'e1720000-0000-4000-8000-000000000005','d1730000-0000-4000-8000-000000000003',1,repeat('a',64),repeat('c',64),now(),
+   'psc_requested',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',4,null,null,null,true,now()-interval '20 minutes')
+ $v$, u);
+ w:=public.signature_pending_work(500);
+ assert not exists(select 1 from jsonb_array_elements(w) e where e->>'operationId'='e1740000-0000-4000-8000-000000000001'),'Stored candidate waiting for the doctor listed';
+ assert exists(select 1 from jsonb_array_elements(w) e where e->>'operationId'='e1740000-0000-4000-8000-000000000002' and e->>'kind'='stuck' and (e->>'attempt')::int=2),
+  'Stored for 24 h not listed as stuck with its attempt';
+ assert not exists(select 1 from jsonb_array_elements(w) e where e->>'operationId' in ('e1740000-0000-4000-8000-000000000003','e1740000-0000-4000-8000-000000000004')),
+  'Completed or ambiguous operation listed';
+ assert exists(select 1 from jsonb_array_elements(w) e where e->>'operationId'='e1740000-0000-4000-8000-000000000005' and e->>'kind'='stuck' and (e->>'attempt')::int=4),
+  'PSC request untouched for 15 min not listed with its attempt';
+ assert not exists(select 1 from jsonb_array_elements(w) e where not (e ? 'attempt')),'Item without attempt';
+ raise exception using errcode='P0099', message='p4_rollback';
+exception when sqlstate 'P0099' then null;
+end $$;
 rollback;
