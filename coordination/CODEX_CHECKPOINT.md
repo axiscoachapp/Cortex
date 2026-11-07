@@ -1,6 +1,6 @@
 # Checkpoint do Codex
 
-Atualizado em 2026-11-07 11:33 (America/Sao_Paulo). K2/1 consumidor local concluído; commit será conferido abaixo. main/axiscoachapp, somente manifesto próprio, sem push; Claude/SaaS e índice compartilhado preservados.
+Atualizado em 2026-11-07 11:33 (America/Sao_Paulo). K2/1 consumidor local entregue em 7708420fd6a9956403443091fe705caf3f5a3e76:91caminhos do manifesto conferidos, autor/committer axiscoachapp, índice livre após commit --only. main/axiscoachapp, somente manifesto próprio, sem push; Claude/SaaS e índice compartilhado preservados.
 
 /recepcao/painel + nav Painel, leitor estrito/período São Paulo em quatro campos legíveis,10responsáveis/página e snapshot inteiro/contexto fresco. Sem inferir abandono/faltas/confirmações/autoria por owner. [Provas](../docs/reviews/2026-11-07/whatsapp-dashboard/REVIEW.md):98+15RED nos stubs→352Vitest/seis arquivos; SDK23grupos/19POST/dois hashes; SQL b7f424d83migrations/duas suítes/14casos/86fontes verdes/cleanup;59capturas Edge320–1920/135%,419fontes/41runtime/cinco overlays, zero escrita/externo, tipos/lint/sintaxe/quatro revisões.
 
