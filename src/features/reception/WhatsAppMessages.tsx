@@ -4,17 +4,21 @@ import { Button } from '@/components/ui/button';
 import { whatsappApi, type WhatsAppConversation } from './whatsappApi';
 import { clinicDateLabel, clinicTime } from './dates';
 import { WhatsAppBotSession } from './WhatsAppBotSession';
+import {WhatsAppCloseAction} from './WhatsAppCloseAction';
 
 const kindLabels: Record<string, string> = { image: 'Imagem', audio: 'Áudio', video: 'Vídeo', document: 'Documento', sticker: 'Figurinha', location: 'Localização', unsupported: 'Mensagem não disponível' };
 
-export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,onRelease,commandBusy=false,commandBlocked=false,onNavigate,generation=0 }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void;onClaim?:(conversation:WhatsAppConversation)=>void;onRelease?:(conversation:WhatsAppConversation)=>void;commandBusy?:boolean;commandBlocked?:boolean;onNavigate?:()=>void;generation?:number }) {
+export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,onRelease,onCloseConversation,commandKind,commandBusy=false,commandBlocked=false,onNavigate,generation=0 }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void;onClaim?:(conversation:WhatsAppConversation)=>void;onRelease?:(conversation:WhatsAppConversation)=>void;onCloseConversation?:(conversation:WhatsAppConversation)=>void;commandKind?:'assign'|'unassign'|'close';commandBusy?:boolean;commandBlocked?:boolean;onNavigate?:()=>void;generation?:number }) {
   const region = useRef<HTMLElement>(null);
   const pageHeading=useRef<HTMLHeadingElement>(null);
   const [before,setBefore]=useState<string|null>(null);
   const [botReadGeneration,setBotReadGeneration]=useState(0);
+  const readVersion=useRef(0);
   const messages = useQuery({
     queryKey: ['reception', actor, clinic, 'whatsapp', 'messages', conversation.id,before,generation],
-    queryFn: ({ signal }) => whatsappApi.messages({ conversationId: conversation.id,...(before?{before}:{}) }, signal),
+    // Each successful read carries a local identity, even when identical data
+    // and fetching/success notifications coalesce. It never goes on the wire.
+    queryFn: async ({ signal }) => ({...await whatsappApi.messages({ conversationId: conversation.id,...(before?{before}:{}) }, signal),readVersion:++readVersion.current}),
     retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
   const fresh = messages.isSuccess && messages.isFetchedAfterMount && !messages.isFetching;
@@ -48,9 +52,11 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
     <Button variant="outline" disabled={messages.isFetching||commandBusy} onClick={refresh}>Atualizar mensagens</Button>
     {fresh && <>
       <p className="text-sm [overflow-wrap:anywhere]">Fila atual: <strong>{messages.data.conversation.queue}</strong></p>
+      <p className="text-sm">Situação atual: <strong>{messages.data.conversation.status==='closed'?'Encerrada':'Em aberto'}</strong></p>
       <p className="text-sm">Responsável atual: <strong>{messages.data.conversation.assignedTo===null?'Sem responsável':messages.data.conversation.assignedTo===actor?'Você':'Outra pessoa'}</strong></p>
-      {onClaim&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===null&&messages.data.conversation.revision<2147483647&&<Button className="h-auto min-h-11 max-w-full whitespace-normal" disabled={commandBlocked} onClick={()=>onClaim(messages.data.conversation)}>{commandBusy?'Assumindo…':'Assumir conversa'}</Button>}
-      {onRelease&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.revision<2147483647&&<Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" disabled={commandBlocked} onClick={()=>onRelease(messages.data.conversation)}>{commandBusy?'Devolvendo…':'Devolver à fila'}</Button>}
+      {onClaim&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===null&&messages.data.conversation.revision<2147483647&&<Button className="h-auto min-h-11 max-w-full whitespace-normal" disabled={commandBlocked} onClick={()=>onClaim(messages.data.conversation)}>{commandBusy&&commandKind==='assign'?'Assumindo…':'Assumir conversa'}</Button>}
+      {onRelease&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.revision<2147483647&&<Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" disabled={commandBlocked} onClick={()=>onRelease(messages.data.conversation)}>{commandBusy&&commandKind==='unassign'?'Devolvendo…':'Devolver à fila'}</Button>}
+      {onCloseConversation&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.revision<2147483647&&<WhatsAppCloseAction key={messages.data.conversation.id+':'+messages.data.conversation.revision+':'+messages.data.readVersion} conversation={messages.data.conversation} disabled={commandBlocked} busy={commandBusy&&commandKind==='close'} onConfirm={onCloseConversation}/>}
       <WhatsAppBotSession key={botReadGeneration} generation={botReadGeneration} actor={actor} clinic={clinic} conversationId={messages.data.conversation.id} />
       {messages.data.conversation.optedOut && <p className="rounded-md bg-muted p-3 text-sm">Este contato pediu para não receber lembretes.</p>}
     </>}

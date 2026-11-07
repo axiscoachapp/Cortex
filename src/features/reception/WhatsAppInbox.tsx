@@ -9,6 +9,7 @@ import { useClinicAccess } from './accessContext';
 import { whatsappApi, type WhatsAppInboxFilter,type WhatsAppConversation } from './whatsappApi';
 import {claimWhatsAppConversation,WhatsAppClaimError} from './whatsappClaim';
 import {releaseWhatsAppConversation} from './whatsappRelease';
+import {closeWhatsAppConversation} from './whatsappClose';
 import { WhatsAppMessages } from './WhatsAppMessages';
 import { clinicDateLabel, clinicTime } from './dates';
 
@@ -58,7 +59,7 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
   const [detailGeneration,setDetailGeneration]=useState(0);
   const heading = useRef<HTMLHeadingElement>(null);
   const feedbackRef=useRef<HTMLDivElement>(null);
-  type Operation={id:string;controller:AbortController;checking:boolean};
+  type Operation={id:string;kind:'assign'|'unassign'|'close';controller:AbortController;checking:boolean};
   const operation=useRef<Operation|null>(null);
   const [feedback,setFeedback]=useState<{phase:'sending'|'checking'|'unresolved'|'done';message:string;error:boolean}|null>(null);
   useEffect(()=>()=>{operation.current?.controller.abort();operation.current=null;},[]);
@@ -79,25 +80,26 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
   const isCurrent=(entry:Operation)=>operation.current===entry&&!entry.controller.signal.aborted;
   const reconcile=async(entry:Operation)=>{
     if(!isCurrent(entry)||entry.checking)return;
-    entry.checking=true;setFeedback({phase:'checking',message:'Conferindo o responsável e atualizando a lista…',error:false});
+    entry.checking=true;setFeedback({phase:'checking',message:entry.kind==='close'?'Conferindo a conversa e atualizando a lista…':'Conferindo o responsável e atualizando a lista…',error:false});
     const [detail,result]=await Promise.allSettled([whatsappApi.messages({conversationId:entry.id},entry.controller.signal),list.refetch()]);
     if(!isCurrent(entry))return;
     entry.checking=false;
     if(detail.status!=='fulfilled'||result.status!=='fulfilled'||!result.value.isSuccess){
-      setFeedback({phase:'unresolved',message:'Não foi possível conferir o responsável. Confira os dados antes de outra tentativa.',error:true});return;
+      setFeedback({phase:'unresolved',message:entry.kind==='close'?'Não foi possível conferir a conversa. Confira os dados antes de outra tentativa.':'Não foi possível conferir o responsável. Confira os dados antes de outra tentativa.',error:true});return;
     }
     operation.current=null;
     // A fast list refresh may coalesce fetching/success without unmounting the
     // detail. A new generation always fetches the authoritative visible state.
     setDetailGeneration(generation=>generation+1);
-    setFeedback({phase:'done',message:'Dados atualizados. Confira o responsável atual na conversa.',error:false});
+    setFeedback({phase:'done',message:entry.kind==='close'?'Dados atualizados. Confira a situação atual na conversa.':'Dados atualizados. Confira o responsável atual na conversa.',error:false});
   };
-  const changeOwner=async(detail:WhatsAppConversation,kind:'assign'|'unassign')=>{
+  const runCommand=async(detail:WhatsAppConversation,kind:Operation['kind'])=>{
     if(operation.current||!fresh||!current||selected!==detail.id||current.id!==detail.id||detail.status!=='open'||(kind==='assign'?detail.assignedTo!==null:detail.assignedTo!==actor)||detail.revision>=2147483647)return;
-    const entry:Operation={id:detail.id,controller:new AbortController(),checking:false};operation.current=entry;
-    setFeedback({phase:'sending',message:kind==='assign'?'Assumindo conversa…':'Devolvendo conversa à fila…',error:false});
+    const entry:Operation={id:detail.id,kind,controller:new AbortController(),checking:false};operation.current=entry;
+    setFeedback({phase:'sending',message:kind==='assign'?'Assumindo conversa…':kind==='close'?'Encerrando conversa…':'Devolvendo conversa à fila…',error:false});
     try{
       if(kind==='assign')await claimWhatsAppConversation({conversationId:detail.id,revision:detail.revision},actor,entry.controller.signal);
+      else if(kind==='close')await closeWhatsAppConversation({conversationId:detail.id,revision:detail.revision,status:detail.status,assignedTo:actor},actor,entry.controller.signal);
       else await releaseWhatsAppConversation({conversationId:detail.id,revision:detail.revision,assignedTo:actor},actor,entry.controller.signal);
     }
     catch(error){
@@ -109,7 +111,7 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
   return <div className="space-y-4">
     {feedback&&<div ref={feedbackRef} tabIndex={-1} role={feedback.error?'alert':'status'} className="rounded-lg border bg-muted/30 p-4 space-y-3 text-sm outline-none">
       <p>{feedback.message}</p>
-      {feedback.phase==='unresolved'&&<Button variant="outline" className="h-auto min-h-11 whitespace-normal" onClick={()=>{if(operation.current)void reconcile(operation.current);}}>Conferir responsável</Button>}
+      {feedback.phase==='unresolved'&&<Button variant="outline" className="h-auto min-h-11 whitespace-normal" onClick={()=>{if(operation.current)void reconcile(operation.current);}}>{operation.current?.kind==='close'?'Conferir conversa':'Conferir responsável'}</Button>}
     </div>}
     <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_auto]">
       <div className="space-y-2 min-w-0">
@@ -145,8 +147,8 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
           </li>)}</ul>
         </>}
       </section>
-      {current&&feedback?.phase!=='checking'&&feedback?.phase!=='unresolved' ? <WhatsAppMessages key={current.id+':'+detailGeneration} generation={detailGeneration} actor={actor} clinic={clinic} conversation={current} commandBusy={commandBusy} commandBlocked={commandBlocked} onClaim={detail=>void changeOwner(detail,'assign')} onRelease={detail=>void changeOwner(detail,'unassign')} onNavigate={resetOperation} onClose={() => {resetOperation(); setSelected(null); heading.current?.focus(); }} />
-        : selected&&(feedback?.phase==='checking'||feedback?.phase==='unresolved')?<div className="rounded-lg border bg-card p-6 space-y-3 text-sm"><p>O detalhe será exibido após a conferência do responsável.</p><Button variant="outline" onClick={()=>{resetOperation();setSelected(null);heading.current?.focus();}}>Voltar à lista</Button></div>
+      {current&&feedback?.phase!=='checking'&&feedback?.phase!=='unresolved' ? <WhatsAppMessages key={current.id+':'+detailGeneration} generation={detailGeneration} actor={actor} clinic={clinic} conversation={current} commandBusy={commandBusy} commandBlocked={commandBlocked} onClaim={detail=>void runCommand(detail,'assign')} onRelease={detail=>void runCommand(detail,'unassign')} onCloseConversation={detail=>void runCommand(detail,'close')} commandKind={operation.current?.kind} onNavigate={resetOperation} onClose={() => {resetOperation(); setSelected(null); heading.current?.focus(); }} />
+        : selected&&(feedback?.phase==='checking'||feedback?.phase==='unresolved')?<div className="rounded-lg border bg-card p-6 space-y-3 text-sm"><p>{operation.current?.kind==='close'?'O detalhe será exibido após a conferência da conversa.':'O detalhe será exibido após a conferência do responsável.'}</p><Button variant="outline" onClick={()=>{resetOperation();setSelected(null);heading.current?.focus();}}>Voltar à lista</Button></div>
         : <p className="rounded-lg border border-dashed bg-card p-6 text-sm text-muted-foreground">Selecione uma conversa para ler as mensagens.</p>}
     </div>
   </div>;

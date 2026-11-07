@@ -1,0 +1,62 @@
+{
+  "baseline": "4be996d8bd03158427fae1b18245c2d6080b9278",
+  "scope": "K1/4f human close confirmation UI",
+  "unit": {
+    "passed": 270,
+    "failed": 0,
+    "files": 7,
+    "newUI": 22,
+    "initialRed": {
+      "total": 21,
+      "failed": 17,
+      "passed": 4
+    },
+    "immediateRefetchRed": 1
+  },
+  "fixture": {
+    "passed": 16,
+    "failed": 0,
+    "files": 4,
+    "syntheticOnly": true
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 9,
+    "status": "passed"
+  },
+  "syntax": {
+    "scripts": 5,
+    "status": "passed"
+  },
+  "invalidCliCombinations": 6,
+  "review": "Three read-only adversarial cycles: immediate refetch invalidation and scoped overlay preflight corrected; final read found no remaining material issue",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "browser": {
+    "report": "../../2026-11-05/reception-app-audit/whatsapp-close-ui-confirmation-final/AUDIT.json",
+    "states": 44,
+    "pngs": 48,
+    "widths": [
+      320,
+      375,
+      1280,
+      1920
+    ],
+    "scalePercent": 135,
+    "frozenSources": 329,
+    "runtimeHashes": 29,
+    "overlays": 3,
+    "cleanupVerified": true,
+    "requests": 160,
+    "fixtureCalls": 124,
+    "commands": 12,
+    "applied": 8,
+    "conflicts": 4,
+    "expectedHttpErrors": 8,
+    "expectedConsoleErrors": 8,
+    "jsErrors": 0,
+    "failedRequests": 0,
+    "externalRequests": 0,
+    "sourceHashesStable": true
+  },
+  "limits": "Synthetic local UI/App/SDK proof only; no actual Meta/hosted DB/SQL CAS/RLS/server authorization/concurrency proof. Local eligibility does not restrict broad close policy of the producer."
+}

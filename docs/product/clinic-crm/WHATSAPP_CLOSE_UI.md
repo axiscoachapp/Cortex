@@ -1,0 +1,11 @@
+# K1/4f — encerramento humano da conversa
+
+Oferecer Encerrar conversa só no detalhe fresco aberto/próprio e com revisão incrementável, sob as guardas atuais de acesso/conexão/lista/ator/clínica. Abrir uma confirmação acessível com nome fresco da conversa e consequências: sai de Em aberto, zera contador de não lidas, mantém responsável e vínculos. Cancelar/fechar antes da confirmação não envia comando, e o foco volta ao botão. Só Confirmar encerramento chama o adaptador K1/4e uma vez.
+
+A confirmação pertence ao detalhe fresco, à sua revisão e à identidade local única de cada leitura bem-sucedida (inclusive releitura imediata com DTO idêntico e notificações agrupadas), sendo desmontada se houver refetch/troca de revisão/proprietário/estado/contexto ou perda de acesso. Não reaparecer confirmada após refresh; abrir novamente exige leitura nova e novo clique. Não enviar tuple anterior sob um diálogo atualizado. Após confirmar, exclusão mútua compartilhada com assumir/devolver bloqueia outros comandos e refreshes; rótulos pendentes identificam a operação correta.
+
+Reutilizar conferência/gerações: sucesso ou resultado inconclusivo iniciado relê detalhe/lista, sem retry de escrita/estado otimista/declaração antecipada de encerramento. Falha de leitura oculta detalhe e oferece só conferência por leitura/volta. Após leitura fresca, se a conversa sair do filtro atual, ocultar detalhe e manter feedback com foco; filtro Encerradas permite nova leitura do estado. Responsável preservado; situação do detalhe vem somente da resposta fresca. Troca de contexto cancela observação e ignora resposta tardia, sem rollback prometido.
+
+A UI mais restrita não prova nem altera política ampla de close do produtor. Encerrar conversa não escreve caso/clínico/agenda/identidade/vínculos/consentimento, não chama mark_read/send/unassign/reopen e não faz envio externo. Não inferir CAS/RLS/concorrência/autorização real da fixture.
+
+Provar cancelamento/foco, confirmação exata, detalhe/revisão frescos, refetch com diálogo aberto, perda/troca de escopo, duplo clique, erro iniciado/releitura recusada e retry só leitura. App/providers/SDK reais sobre API sintética opt-in isolada de claim/release/leitura; navegador/perfil isolado,320–1920/135%, confirmação com nome longo e ações alcançáveis. Sem banco/Meta/hosted/dado real.
