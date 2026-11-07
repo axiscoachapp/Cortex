@@ -1,0 +1,130 @@
+{
+  "baseline": "be5b794dcdf6aea51cde7cc896c5a44204e6cfee",
+  "directoryGuard": false,
+  "syntheticOnly": true,
+  "networkCalls": 0,
+  "accepted": false,
+  "checks": [
+    {
+      "case": "two_explicit_pages",
+      "passed": true
+    },
+    {
+      "case": "case_and_space_collision_control",
+      "passed": true
+    },
+    {
+      "case": "invalid_limits_and_cursor",
+      "passed": true
+    },
+    {
+      "case": "ordinary_clinical_caller_denied_before_store",
+      "passed": true
+    },
+    {
+      "case": "collision_after_global_scan_500",
+      "passed": false,
+      "eligibleRows": 501,
+      "displayNamesEqual": true,
+      "flags": [
+        false,
+        false
+      ]
+    },
+    {
+      "case": "collision_after_display_truncation",
+      "passed": false,
+      "inputNameLengths": [
+        257,
+        257
+      ],
+      "displayNameLength": 256,
+      "displayNamesEqual": true,
+      "flags": [
+        false,
+        false
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "after": null,
+      "limit": 2
+    },
+    {
+      "after": null,
+      "limit": 500
+    },
+    {
+      "after": "00000000-0000-4000-8000-000000000001",
+      "limit": 2
+    },
+    {
+      "after": null,
+      "limit": 500
+    },
+    {
+      "after": null,
+      "limit": 51
+    },
+    {
+      "after": null,
+      "limit": 500
+    },
+    {
+      "after": null,
+      "limit": 2
+    },
+    {
+      "after": null,
+      "limit": 500
+    },
+    {
+      "after": "00000000-0000-4000-8000-000000000500",
+      "limit": 2
+    },
+    {
+      "after": null,
+      "limit": 500
+    },
+    {
+      "after": null,
+      "limit": 51
+    },
+    {
+      "after": null,
+      "limit": 500
+    }
+  ],
+  "sources": [
+    {
+      "path": "supabase/functions/_shared/whatsappHandlers.ts",
+      "sha256": "9ec486d0872dce208c40421578a4180727f252324463ae8bf289510f65f5aed5"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "sha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71"
+    },
+    {
+      "path": "supabase/functions/_shared/whatsapp.ts",
+      "sha256": "8e62962e04e51dd9d4e8448bd78c01d7a52b09076bb81861e5aa6167df0a8320"
+    },
+    {
+      "path": "supabase/functions/_shared/whatsappFlow.ts",
+      "sha256": "f160540c5dd983fa20de02efa5767f432181926282a095d9bfd56cb870f3b599"
+    },
+    {
+      "path": "supabase/functions/_shared/whatsappDeps.ts",
+      "sha256": "56bc65fee7152dbf8e070bb5f3361ea3ac6a6cafbd319e9f55c806937adde44d"
+    },
+    {
+      "path": "supabase/migrations/20261104130000_controlled_prescription.sql",
+      "sha256": "e1fd575feb2f6ccdfab3be83066c604f4c992af35b1b3c59e148bce4f21da3e7"
+    },
+    {
+      "path": "docs/product/whatsapp/CONTRATO.md",
+      "sha256": "fa73c7b68b6356c5958e17fa6bfde1e63f7c1e175735a0ea2799b7c20ae7ddbc"
+    }
+  ],
+  "limits": "Frozen production apiHandler with fake authorization/store. Store models the documented eligible sorted rows and requested limit; no real Auth/SQL/PostgREST eligibility or UI proof."
+}

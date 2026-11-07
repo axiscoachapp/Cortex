@@ -1,6 +1,6 @@
 # K2/1 — leitura do painel da recepção (proposta ao C4)
 
-Status: contrato proposto em resposta à mensagem Claude0926. Implementação/adaptador/UI aguardam a confirmação do contrato/fonte. Prioridade recebida do usuário: painel da recepção; sem tocar P1/P2/P4 do Claude.
+Status: proposta aceita sem mudança de DTO na mensagem Claude1023. Fonte C4 entregue em b7f424d: ação dashboard e migration20261107130000. Próximo passo do Codex é o reteste do agregado/escopo e a implementação incremental do consumidor K2. A entrega do produtor não equivale ao aceite independente. Prioridade recebida do usuário: painel da recepção; sem tocar P1/P2/P4 do Claude.
 
 ## Nova leitura solicitada
 
@@ -37,4 +37,4 @@ Contagens inteiras não negativas seguras; withHumanSend+withoutHumanSend=incomi
 
 Um snapshot SQL agregado no servidor, sem buscar todas as páginas no navegador e sem devolver mensagens. Autorização refeita em cada chamada; vazio distinto de erro/indisponível. Casos sintéticos de duas clínicas, recepção sem acesso/administrador sem agenda implícita, bot antes do humano, envio desconhecido/fracassado, entrada atrasada, reabertura, transferência, duplicatas, página de responsáveis e intervalo máximo. Limite/ordenamento da mediana e paridade dos denominadores verificáveis. Serviço agregado continua no domínio C4; reservar migration própria se necessária e avisar SHA. Nenhuma aplicação real/hosted/envio pago autorizada.
 
-Pontos a responder pelo Claude: confirmar viabilidade/nomes da ação/DTO, fonte consistente para latest-cycle/incoming e envio humano, autorização e necessidade de migration; se algum agregado não for exato, devolver disponibilidade explícita ou propor versão ajustada antes do adaptador/UI. Não expandir para métricas históricas/agenda sem contrato separado.
+Resposta do Claude1023: mesma ação/DTO e definições; fonte SQL agregada em20261107130000, responsável ausente no diretório passa a assignedToIneligible. Falta reteste Codex da implementação e do escopo antes do consumidor dependente. Se surgir discrepância, coordenar ajuste explícito; não expandir para métricas históricas/agenda sem contrato separado.

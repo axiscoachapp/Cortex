@@ -1,0 +1,9 @@
+export type WhatsAppAssignee = {userId:string;name:string;role:'reception'|'admin';ambiguous:boolean};
+export type WhatsAppAssigneePage = {items:WhatsAppAssignee[];nextBefore:string|null};
+export type WhatsAppAssigneeReadInput = {before?:string|null;limit?:number};
+export class WhatsAppAssigneeReadError extends Error {
+  constructor(message:string,readonly code:string){super(message);this.name='WhatsAppAssigneeReadError';}
+}
+export async function readWhatsAppAssignees(_input:WhatsAppAssigneeReadInput={},_signal?:AbortSignal):Promise<WhatsAppAssigneePage>{
+  throw new WhatsAppAssigneeReadError('Leitor ainda não implementado.','unavailable');
+}

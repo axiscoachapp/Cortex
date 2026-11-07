@@ -1,0 +1,199 @@
+{
+  "time": "2026-11-07 10:35:55",
+  "syntheticOnly": true,
+  "sourceHashes": [
+    {
+      "path": "src/features/reception/whatsappAssignees.ts",
+      "sha256": "45658c0a3269ad4e2ec0b0826efbf7faaf9cfd8b172e81219fe0d4cd48296509"
+    },
+    {
+      "path": "src/features/reception/whatsappAssignees.test.ts",
+      "sha256": "fc1e6116493a9a6d4b7576a563d54652370df647df9edf137e1a7c237fabd4ad"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-assignees-producer.mjs",
+      "sha256": "f3f969adbdcd4664b0fdc5ddddbedfa2b800f147a23ca8f8f38b5c2a7c245a9d"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-assignees-sdk.mjs",
+      "sha256": "d538e9a9391ef9a71bdd4797de435919077955d5b35f83d0bb871ba1ed22b590"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-assignees-sdk-control.mjs",
+      "sha256": "d89a2fe5b21a10272a2e2f4eb137449cad1a16cb9ae8adcfa9e7460b8bc3da02"
+    }
+  ],
+  "red": {
+    "report": "UNIT_RED.json",
+    "failed": 73,
+    "passed": 0,
+    "initialImplementation": "INITIAL_READER.ts.txt",
+    "sha256": "abd956455eafb466d3bcd40b810c30fc653d1dee00d2ce21e04b814788a75e07",
+    "limits": "New reader stub deliberately throws; no prior implemented method replaced"
+  },
+  "green": {
+    "report": "UNIT_GREEN.json",
+    "passed": 239,
+    "failed": 0,
+    "files": 4,
+    "newCases": 74,
+    "addedAfterRed": "directory_unavailable mapping from newly delivered v1.4"
+  },
+  "types": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json --pretty false",
+    "exitCode": 0,
+    "worktreeWithParallelChanges": true
+  },
+  "lint": {
+    "files": [
+      "src/features/reception/whatsappAssignees.ts",
+      "src/features/reception/whatsappAssignees.test.ts",
+      "scripts/reviews/whatsapp-assignees-producer.mjs",
+      "scripts/reviews/whatsapp-assignees-sdk.mjs",
+      "scripts/reviews/whatsapp-assignees-sdk-control.mjs"
+    ],
+    "exitCode": 0
+  },
+  "syntax": {
+    "files": [
+      "scripts/reviews/whatsapp-assignees-producer.mjs",
+      "scripts/reviews/whatsapp-assignees-sdk.mjs",
+      "scripts/reviews/whatsapp-assignees-sdk-control.mjs"
+    ],
+    "exitCode": 0
+  },
+  "sdk": {
+    "report": "SDK.json",
+    "version": "2.86.0",
+    "groups": 16,
+    "postCalls": 14,
+    "hashes": 2,
+    "sourceHashesStillCurrent": true,
+    "nativeNetworkCalls": 0,
+    "limits": "Installed FunctionsClient with memory fetch only. No UI, global roster completeness, real Auth/SQL/eligibility, transfer or Meta."
+  },
+  "sdkControl": {
+    "report": "SDK_CONTROL.json",
+    "sourceCurrent": true,
+    "negativeCases": 2,
+    "reproducedFalseAcceptanceWhenRecordingRemoved": true,
+    "noSDKReportWritten": true
+  },
+  "producer": {
+    "redReport": "PRODUCER.json",
+    "redBaseline": "be5b794dcdf6aea51cde7cc896c5a44204e6cfee",
+    "redContractFailures": 2,
+    "redControls": 4,
+    "greenReport": "PRODUCER_B7F424D.json",
+    "greenBaseline": "b7f424d2191013693fd64118020f9f100bee0bc1",
+    "greenChecks": 8,
+    "greenAccepted": true,
+    "frozenSourcesPerReport": 7,
+    "frozenHashesVerified": true,
+    "limits": "Frozen production apiHandler with fake authorization/store. Store models the documented eligible sorted rows and requested limit; no real Auth/SQL/PostgREST eligibility or UI proof.",
+    "findingsClosedWithinScope": true,
+    "issue": "coordination/mensagens/2026-11-07-1011_codex-para-claude_assignees-ambiguidade.md",
+    "response": "coordination/mensagens/2026-11-07-1032_codex-para-claude_catalogo-retestado-k2-e-encaixes.md"
+  },
+  "reviews": [
+    {
+      "cycle": 1,
+      "actionable": [],
+      "producerFindingsConfirmed": true
+    },
+    {
+      "cycle": 2,
+      "classification": "valid + actionable",
+      "issue": "FunctionsClient swallowed fetch assertions as unavailable",
+      "fix": "Record request-contract failures outside SDK; explicit two-mode injection control"
+    },
+    {
+      "cycle": 3,
+      "actionable": []
+    }
+  ],
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "browser": {
+    "run": false,
+    "reason": "Read adapter only, no mounted UI; SDK/units do not prove browser/Auth/SQL/eligibility"
+  },
+  "incoming": {
+    "count": 71,
+    "digest": "c96e7af6821439f9f4ef2aab9fb6cba68f6b8543915ebac1fe7213371c5a8f07",
+    "previous69Unchanged": true,
+    "latest": "2026-11-07-1040_claude-para-codex_financeiro-concluido.md",
+    "newResponse": "coordination/mensagens/2026-11-07-1032_codex-para-claude_catalogo-retestado-k2-e-encaixes.md",
+    "previous70Unchanged": true,
+    "additionalDelivery": "1040 P2 finance UI +0a0270e, review remains queued; no empty confirmation sent"
+  },
+  "coordination": {
+    "k2": "Contract accepted and source b7f424d received1023; aggregate retest and consumer are next priority",
+    "intakeBillingSignature": "P1/P2/P4 pending independent review; no premature approval",
+    "menuAndIntake": "Planned after scoped reviews; contact editor only name/phone, no inferred legal-field writes; arrival is not proof of service conclusion"
+  },
+  "boundaries": [
+    "No UI,transfer,mutation,cache,auto-paging or new transport deadline",
+    "Visible collision rejection is not global roster certification",
+    "No SQL/schema/Claude/PersonalMed/SaaS/Meta/hosted/load/paid/deploy/push operation"
+  ],
+  "foreignPreserved": [
+    {
+      "path": "tasks/plan.md",
+      "sha256": "d4091e88d0f622bf15e9ad80f79957ffd801edaea968870274a5b8b8370023b6"
+    },
+    {
+      "path": "tasks/todo.md",
+      "sha256": "a60d951ead6051eae4411e87b5a7c22e94b57bf07fb46b2b143bde2c27762e49"
+    }
+  ],
+  "gitManifest": {
+    "expectedPaths": [
+      "coordination/CODEX_CHECKPOINT.md",
+      "coordination/ESTADO.md",
+      "coordination/mensagens/2026-11-07-0940_codex-para-claude_k2-painel-contrato-e-controles-c5.md",
+      "coordination/mensagens/2026-11-07-1011_codex-para-claude_assignees-ambiguidade.md",
+      "coordination/mensagens/2026-11-07-1032_codex-para-claude_catalogo-retestado-k2-e-encaixes.md",
+      "docs/product/clinic-crm/RECEPTION_DASHBOARD_READ.md",
+      "docs/product/clinic-crm/WHATSAPP_ASSIGNEES_PROPOSAL.md",
+      "docs/product/clinic-crm/WHATSAPP_ASSIGNEES_READ.md",
+      "docs/reviews/2026-11-07/whatsapp-assignees/INITIAL_READER.ts.txt",
+      "docs/reviews/2026-11-07/whatsapp-assignees/PRODUCER.json",
+      "docs/reviews/2026-11-07/whatsapp-assignees/PRODUCER_B7F424D.json",
+      "docs/reviews/2026-11-07/whatsapp-assignees/REVIEW.md",
+      "docs/reviews/2026-11-07/whatsapp-assignees/SDK.json",
+      "docs/reviews/2026-11-07/whatsapp-assignees/SDK_CONTROL.json",
+      "docs/reviews/2026-11-07/whatsapp-assignees/UNIT_GREEN.json",
+      "docs/reviews/2026-11-07/whatsapp-assignees/UNIT_RED.json",
+      "docs/reviews/2026-11-07/whatsapp-assignees/VALIDATION.json",
+      "scripts/reviews/whatsapp-assignees-producer.mjs",
+      "scripts/reviews/whatsapp-assignees-sdk-control.mjs",
+      "scripts/reviews/whatsapp-assignees-sdk.mjs",
+      "src/features/reception/whatsappAssignees.test.ts",
+      "src/features/reception/whatsappAssignees.ts",
+      "tasks/clinic-crm/todo.md"
+    ],
+    "branch": "main",
+    "identity": "axiscoachapp",
+    "onlyCommit": true,
+    "baseHead": "0a0270e4e4ee419c74de5cf237c13f0e525cf05e",
+    "foreignIndexBefore": [],
+    "parallelDirtyExcluded": [
+      "scripts/app-audit-browser.mjs",
+      "src/features/billing/BillingPage.test.tsx",
+      "src/features/billing/ChargesTabs.tsx",
+      "src/features/billing/billingApi.ts",
+      "src/lib/billingHandlers.test.ts",
+      "supabase/functions/_shared/billingHandlers.ts",
+      "tasks/plan.md",
+      "tasks/todo.md"
+    ],
+    "parallelCommitsPreserved": [
+      "70ef155",
+      "b6b8394",
+      "b7f424d",
+      "e7eebaf",
+      "17664fc",
+      "0a0270e"
+    ]
+  }
+}

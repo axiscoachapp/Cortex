@@ -1,6 +1,8 @@
 # Proposta K1/4j — catálogo de destinatários da conversa
 
-Proposta para o domínio C4 do Claude, ainda sem endpoint/cliente implementados. act/assign já aceita targetUserId explícito e valida recepção ativa/admin ativo da clínica. A secretária precisa selecionar um nome real da equipe autorizada, sem UUID digitado nem inferência de doctors. clinic_access.staff só existe para admin e não enumera admins; não serve como catálogo geral do WhatsApp.
+Atualização 07/11: Claude entregou o transporte em be5b794, incluindo role e ambiguous; o [leitor K1/4j1](WHATSAPP_ASSIGNEES_READ.md) está implementado. Os [achados1011](../../../coordination/mensagens/2026-11-07-1011_codex-para-claude_assignees-ambiguidade.md) foram corrigidos em b7f424d e passaram no reteste dirigido de oito controles. O seletor permanece em recorte separado. O contrato atual do leitor prevalece sobre a forma simplificada da proposta abaixo; não pedir novamente o catálogo0506 como se não tivesse sido entregue.
+
+Proposta original para o domínio C4 do Claude. act/assign já aceita targetUserId explícito e valida recepção ativa/admin ativo da clínica. A secretária precisa selecionar um nome real da equipe autorizada, sem UUID digitado nem inferência de doctors. clinic_access.staff só existe para admin e não enumera admins; não serve como catálogo geral do WhatsApp.
 
 Sugestão: ação assignees do whatsapp-api, sob requireInbox/contexto autenticado e mesma clínica derivada no servidor; entrada sem ator/clínica, apenas limit<=50 e before opaco opcional. Resposta estrita {items:[{userId:uuid,name:string}],nextBefore:string|null}. Ordenação estável por userId, max50 por página, sem duplicatas, cursor completo emitido pelo produtor. Nomes limitados (<=256), sem e-mail/telefone/dados clínicos/escopos médicos/funções legais. Identificador é user_id do alvo, nunca id da linha de vínculo.
 

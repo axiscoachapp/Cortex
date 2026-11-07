@@ -1,0 +1,24 @@
+{
+  "syntheticOnly": true,
+  "nativeNetworkCalls": 0,
+  "source": {
+    "path": "scripts/reviews/whatsapp-assignees-sdk.mjs",
+    "sha256": "d538e9a9391ef9a71bdd4797de435919077955d5b35f83d0bb871ba1ed22b590"
+  },
+  "checks": [
+    {
+      "case": "injected_contract_failures_are_rejected",
+      "passed": true,
+      "detected": 2
+    },
+    {
+      "case": "removing_recording_reproduces_false_acceptance",
+      "passed": true,
+      "masked": 2,
+      "apparentChecks": 16,
+      "apparentCalls": 14
+    }
+  ],
+  "sourceUnchanged": true,
+  "sdkReportNotWrittenByControl": true
+}

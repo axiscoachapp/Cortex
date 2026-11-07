@@ -1,0 +1,228 @@
+{
+  "syntheticOnly": true,
+  "nativeNetworkCalls": 0,
+  "sdkVersion": "2.86.0",
+  "checks": [
+    {
+      "case": "success",
+      "calls": 1,
+      "outcome": "page"
+    },
+    {
+      "case": "next",
+      "calls": 1,
+      "outcome": "page"
+    },
+    {
+      "case": "empty",
+      "calls": 1,
+      "outcome": "page"
+    },
+    {
+      "case": "ambiguous",
+      "calls": 1,
+      "outcome": "page"
+    },
+    {
+      "case": "collision",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "extra",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "reversed",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "wrong-cursor",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "overflow",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "forbidden",
+      "calls": 1,
+      "outcome": "forbidden"
+    },
+    {
+      "case": "lost",
+      "calls": 1,
+      "outcome": "unavailable"
+    },
+    {
+      "case": "truncated",
+      "calls": 1,
+      "outcome": "unavailable"
+    },
+    {
+      "case": "authority-input",
+      "calls": 0,
+      "outcome": "invalid"
+    },
+    {
+      "case": "pre-aborted",
+      "calls": 0,
+      "outcome": "cancelled"
+    },
+    {
+      "case": "late",
+      "calls": 1,
+      "outcome": "cancelled"
+    },
+    {
+      "case": "in-flight",
+      "calls": 1,
+      "outcome": "cancelled"
+    }
+  ],
+  "calls": [
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": "a1.00000000-0000-4000-8000-000000000002",
+        "limit": 1
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "assignees",
+        "before": null,
+        "limit": 50
+      }
+    }
+  ],
+  "sources": [
+    {
+      "path": "src/lib/functionErrors.ts",
+      "sha256": "36c8cb268acf947fbe799e9b8080db16dd1f049e7b1f8997c97f300b01c6fd4f"
+    },
+    {
+      "path": "src/features/reception/whatsappAssignees.ts",
+      "sha256": "45658c0a3269ad4e2ec0b0826efbf7faaf9cfd8b172e81219fe0d4cd48296509"
+    }
+  ],
+  "sourceHashesStable": true,
+  "unexpected": [],
+  "limits": "Installed FunctionsClient with memory fetch only. No UI, global roster completeness, real Auth/SQL/eligibility, transfer or Meta."
+}
