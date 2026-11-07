@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSessionHidden } from '@/contexts/SessionVisibility';
 import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
 import type { ContactEdit } from './contracts';
@@ -13,19 +15,73 @@ import { ReceptionNotice } from './ReceptionNotice';
 
 export function ContactCorrectionDialog({ contactId, onClose }: { contactId: string; onClose: () => void }) {
   const access = useClinicAccess();
+  const { user } = useAuth();
+  const hidden = useSessionHidden();
   const client = useQueryClient();
+  const { toast } = useToast();
+  const scope = user && access?.clinic && user.id === access.actorId
+    ? [user.id, access.clinic.id, access.admin, access.kind].join(':') : null;
+  const origin = useRef({ scope, actor: access?.actorId, clinic: access?.clinic?.id, contactId });
+  const mounted = useRef(false), current = useRef(false), invalidated = useRef(false), started = useRef(false);
+  const operation = useRef<'save' | 'recover' | null>(null);
+  const validContext = !!scope && scope === origin.current.scope && contactId === origin.current.contactId && !!access?.active && access.admin && !hidden;
+  const blocked = invalidated.current || !validContext;
+  useLayoutEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useLayoutEffect(() => {
+    if (!validContext) invalidated.current = true;
+    current.current = !blocked;
+  }, [validContext, blocked]);
+  const mayContinue = () => mounted.current && current.current && !invalidated.current;
   const canClose = useRef(() => true);
   const [reloadCount, setReloadCount] = useState(0);
   const [recovering, setRecovering] = useState(false);
+  const [reloadError, setReloadError] = useState<unknown>(null);
   const snapshot = useQuery({
-    queryKey: ['reception', access?.actorId, 'contact-edit', contactId],
-    queryFn: () => receptionApi.contactEdit(contactId),
+    queryKey: ['reception', origin.current.actor, 'contact-edit', origin.current.clinic, origin.current.contactId],
+    queryFn: async () => {
+      const contact = await receptionApi.contactEdit(origin.current.contactId);
+      if (contact.id !== origin.current.contactId) throw new Error('Não foi possível conferir o contato solicitado. Tente novamente.');
+      return contact;
+    },
+    enabled: !blocked,
     retry: false,
     refetchOnWindowFocus: false,
   });
+  const invalidateRelated = async () => {
+    if (!mayContinue()) return;
+    await client.invalidateQueries({
+      queryKey: ['reception', origin.current.actor],
+      predicate: query => typeof query.queryKey[2] === 'string' && ['contacts', 'contact-picker', 'queue', 'calendar', 'contact-links'].includes(query.queryKey[2])
+        && query.queryKey[3] === origin.current.clinic,
+    });
+  };
+  const recover = async () => {
+    if (operation.current || !mayContinue()) return;
+    operation.current = 'recover';
+    setRecovering(true); setReloadError(null);
+    try {
+      const result = await snapshot.refetch();
+      if (!mayContinue() || result.error) return;
+      await invalidateRelated();
+      if (mayContinue()) setReloadCount(value => value + 1);
+    } catch {
+      if (mayContinue()) setReloadError(new Error('Não foi possível recuperar o cadastro. Tente novamente.'));
+    } finally {
+      operation.current = null;
+      if (mayContinue()) setRecovering(false);
+    }
+  };
+  if (blocked) return <Dialog open={!hidden} onOpenChange={open => { if (!open) onClose(); }}>
+    <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
+      <DialogHeader><DialogTitle>Corrigir contato</DialogTitle><DialogDescription>Fechar esta janela descarta o preenchimento.</DialogDescription></DialogHeader>
+      <p role="alert" className="text-sm">Esta correção foi interrompida. Feche a janela e confira o cadastro antes de abrir outra correção.</p>
+      {started.current && <p className="text-sm">Uma solicitação enviada antes da mudança pode ter sido concluída.</p>}
+      <Button type="button" variant="outline" className="h-auto min-h-11 whitespace-normal" onClick={onClose}>Fechar correção</Button>
+    </DialogContent>
+  </Dialog>;
   return (
     <Dialog
-      open
+      open={!hidden}
       onOpenChange={(open) => {
         if (!open && canClose.current()) onClose();
       }}
@@ -38,30 +94,30 @@ export function ContactCorrectionDialog({ contactId, onClose }: { contactId: str
             família.
           </DialogDescription>
         </DialogHeader>
-        <ReceptionNotice loading={snapshot.isPending} error={snapshot.error} onRetry={() => void snapshot.refetch()} />
-        {snapshot.data && (
+        <ReceptionNotice loading={snapshot.isPending} error={reloadError || snapshot.error} onRetry={() => {
+          if (mayContinue()) { setReloadError(null); void snapshot.refetch(); }
+        }} />
+        {snapshot.data?.id === origin.current.contactId && (
           <div hidden={snapshot.isError}>
             <CorrectionForm
               key={reloadCount}
               initial={snapshot.data}
               onClose={onClose}
-              onReload={() => {
-                if (recovering) return;
-                setRecovering(true);
-                void snapshot
-                  .refetch()
-                  .then((result) => {
-                    if (!result.error) {
-                      setReloadCount((value) => value + 1);
-                      void client.invalidateQueries({
-                        predicate: (query) =>
-                          query.queryKey[0] === 'reception' &&
-                          query.queryKey[1] === access?.actorId &&
-                          query.queryKey[2] !== 'contact-edit',
-                      });
-                    }
-                  })
-                  .finally(() => setRecovering(false));
+              onReload={() => void recover()}
+              mayContinue={mayContinue}
+              beginSave={() => {
+                if (operation.current || !mayContinue()) return false;
+                operation.current = 'save';
+                return true;
+              }}
+              endSave={() => { if (operation.current === 'save') operation.current = null; }}
+              onStart={() => { started.current = true; }}
+              onSaved={async () => {
+                if (!mayContinue()) return;
+                await invalidateRelated();
+                if (!mayContinue()) return;
+                toast({ title: 'Contato corrigido' });
+                onClose();
               }}
               recovering={recovering}
               closeCheck={canClose}
@@ -79,28 +135,37 @@ function CorrectionForm({
   onReload,
   closeCheck,
   recovering,
+  mayContinue,
+  beginSave,
+  endSave,
+  onStart,
+  onSaved,
 }: {
   initial: ContactEdit;
   onClose: () => void;
   onReload: () => void;
   closeCheck: React.MutableRefObject<() => boolean>;
   recovering: boolean;
+  mayContinue: () => boolean;
+  beginSave: () => boolean;
+  endSave: () => void;
+  onStart: () => void;
+  onSaved: () => Promise<void>;
 }) {
   const [initial] = useState(loaded);
   const field = useId();
-  const client = useQueryClient();
-  const { toast } = useToast();
   const [name, setName] = useState(initial.name);
   const [phone, setPhone] = useState(initial.phone);
   const [confirmed, setConfirmed] = useState(false);
   const dirty = name !== initial.name || phone !== initial.phone;
   const save = useMutation({
-    mutationFn: () => receptionApi.updateContact(initial.id, initial.revision, name.trim(), phone),
-    onSuccess: async () => {
-      toast({ title: 'Contato corrigido' });
-      onClose();
-      await client.invalidateQueries({ queryKey: ['reception'] });
+    mutationFn: (payload: { name: string; phone: string }) => {
+      if (!mayContinue()) throw new Error('Correção interrompida. Confira o cadastro antes de continuar.');
+      onStart();
+      return receptionApi.updateContact(initial.id, initial.revision, payload.name, payload.phone);
     },
+    onSuccess: onSaved,
+    onSettled: endSave,
   });
   const busy = save.isPending || recovering;
   const guard = useUnsavedChanges(
@@ -125,7 +190,9 @@ function CorrectionForm({
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
-        if (confirmed && dirty && !busy) save.mutate();
+        if (confirmed && dirty && !busy && mayContinue() && beginSave()) {
+          save.mutate({ name: name.trim(), phone });
+        }
       }}
     >
       <ReceptionNotice error={save.error} />

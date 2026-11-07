@@ -1,0 +1,25 @@
+{
+  "baseline": "569ab7a079a2b4dd382c0e0a7de9dd5c8dccc08d",
+  "originalGitBlobSha256": "f53e13396d99c664ba32b33b250fbc8e222c9dff343c840c1c28eaf1bcd5d479",
+  "oldFixtures": "Only active synthetic admin/Auth context added to existing tests; all7 controls passed against original product before edits.",
+  "initial": {
+    "total": 30,
+    "failed": 25,
+    "controls": 5,
+    "testedBeforeProductEdits": true
+  },
+  "mutex": {
+    "total": 32,
+    "failed": 2,
+    "selected": "Interleaved save/recover in one act batch in both orders",
+    "fix": "One synchronous parent operation lock shared by save and recovery"
+  },
+  "identity": {
+    "total": 34,
+    "failed": 1,
+    "controls": 1,
+    "fix": "Reject DTO id mismatch; queued mutation guard already passed"
+  },
+  "noGenericTimeouts": true,
+  "noSourceSwap": true
+}

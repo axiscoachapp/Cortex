@@ -1,0 +1,9 @@
+# T46 — contexto da correção de contato
+
+A correção pertence ao ator autenticado, clínica, papel administrativo e contato da abertura. Exige acesso ativo de administração. Perda/troca desses valores ou sessão oculta invalida a janela até fechar e abrir outra; dados antigos saem do DOM e voltar ao contexto original não reativa a edição. Fechar a janela invalidada descarta o preenchimento.
+
+O id do cadastro recebido deve coincidir com o contato aberto pela pessoa antes de montar o formulário. Envio captura nome/telefone com id/revisão do baseline congelado e confirmação humana já existente. Uma trava síncrona comum a salvar/recuperar impede dois envios ou operações cruzadas antes de busy renderizar. Antes de escrever e após cada await, conferir instância montada e contexto válido. Respostas tardias de gravação/recuperação/invalidação não mostram sucesso, fecham a janela, substituem campos ou disparam outra invalidação. Pedido já enviado pode ter sido concluído; não há promessa de aborto/rollback ou repetição automática.
+
+Recuperação do servidor continua explícita e confirma descarte quando há edição. Mantém bloqueio durante a consulta e releitura dos dados relacionados; somente resposta atual pode reiniciar o formulário. Invalidação de dados relacionados fica nas famílias com clínica explícita (contatos, busca, fila, calendário e vínculos), no ator/clínica de origem. Nenhuma invalidação por texto de busca ou de outro ator/clínica.
+
+Este recorte trata contexto/efeitos assíncronos e envio. Mantém a política anterior de baseline congelado e preservação do rascunho através de erro/retry de leitura no mesmo contexto. Não redesenha a conferência de frescor desse leitor nem o ciclo dos vínculos. API/RPC/SQL/revisão e dados legais/legado preservados; nenhum merge de identidade ou acesso clínico novo. Ensaios sintéticos/isolados; sem carga, hospedado, Meta ou push. Guardas de interface não provam autorização ou transação do servidor.

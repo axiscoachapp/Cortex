@@ -1,0 +1,198 @@
+{
+  "time": "2026-11-07 08:50:44",
+  "baseline": "569ab7a079a2b4dd382c0e0a7de9dd5c8dccc08d",
+  "syntheticOnly": true,
+  "sourceHashes": [
+    {
+      "path": "src/features/reception/ContactCorrectionDialog.tsx",
+      "sha256": "aec09009b9ff5f110bbd1d80b5b7530ec8d9954f67fd45ae7fc613dc731cf126"
+    },
+    {
+      "path": "src/features/reception/ContactCorrectionDialog.test.tsx",
+      "sha256": "5ce26c791aa63844600e37fc85eb7c0756b9d884be893c30e5a4412dca3b9cde"
+    },
+    {
+      "path": "src/features/reception/ContactCorrectionContext.test.tsx",
+      "sha256": "f9cc30303fdd52656bbd225376b25c682c0bbc0252b3d063ddbc588566920054"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "2d0860a0f5530ff85816fbf5dc02b3e2b78e32957bd5b6dd951859e326b31083"
+    },
+    {
+      "path": "scripts/fixtures/contact-correction-context-browser.mjs",
+      "sha256": "191a04a939b43a3c4f0c72ea243043c06674738db7d45817e4901d9a65a13f4b"
+    }
+  ],
+  "red": {
+    "originalControls": 7,
+    "initialFailed": 25,
+    "initialPassed": 5,
+    "mutexFailed": 2,
+    "identityFailed": 1,
+    "queuedMutationControl": 1,
+    "noGenericTimeouts": true
+  },
+  "green": {
+    "passed": 125,
+    "failed": 0,
+    "files": 7,
+    "newCases": 34,
+    "existingCorrectionControls": 7
+  },
+  "types": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json --pretty false",
+    "exitCode": 0
+  },
+  "lint": {
+    "files": [
+      "src/features/reception/ContactCorrectionDialog.tsx",
+      "src/features/reception/ContactCorrectionDialog.test.tsx",
+      "src/features/reception/ContactCorrectionContext.test.tsx",
+      "scripts/reception-app-audit-browser.mjs",
+      "scripts/fixtures/contact-correction-context-browser.mjs"
+    ],
+    "exitCode": 0
+  },
+  "syntax": {
+    "files": [
+      "scripts/reception-app-audit-browser.mjs",
+      "scripts/fixtures/contact-correction-context-browser.mjs"
+    ],
+    "exitCode": 0
+  },
+  "cli": {
+    "validRejections": 6,
+    "allMatched": true
+  },
+  "browser": {
+    "report": "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/AUDIT.json",
+    "states": 20,
+    "pngs": 36,
+    "artifacts": 37,
+    "sourceCount": 354,
+    "runtimeHashes": 38,
+    "overlays": [
+      {
+        "path": "src/features/reception/ContactCorrectionDialog.tsx",
+        "sha256": "aec09009b9ff5f110bbd1d80b5b7530ec8d9954f67fd45ae7fc613dc731cf126"
+      }
+    ],
+    "requests": 34,
+    "expected503": 4,
+    "expectedConsole503": 4,
+    "pageErrors": 0,
+    "failedRequests": 0,
+    "external": 0,
+    "fontSizes": [
+      "21.6px"
+    ],
+    "metrics": {
+      "clinicalReads": [],
+      "externalCalls": [],
+      "unknown": [],
+      "bookings": 0,
+      "contacts": 0,
+      "caseWrites": 0
+    },
+    "cleanupVerified": true,
+    "manualInspection": [
+      "recovered-invalid-320",
+      "fresh-window-1920"
+    ],
+    "limits": "Admin only; actual access503/SessionVisibility latch/close-reopen, no submissions. Does not prove fresh server re-read on reopen. All write/recovery/context/identity/mutex/cache boundaries unit-only."
+  },
+  "review": {
+    "cycles": 1,
+    "actionable": [],
+    "independentTests": 41,
+    "readerPolicy": "Existing same-context freshness/error/draft preservation explicitly outside scope"
+  },
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "foreignPreserved": [
+    {
+      "path": "tasks/plan.md",
+      "sha256": "d4091e88d0f622bf15e9ad80f79957ffd801edaea968870274a5b8b8370023b6"
+    },
+    {
+      "path": "tasks/todo.md",
+      "sha256": "a60d951ead6051eae4411e87b5a7c22e94b57bf07fb46b2b143bde2c27762e49"
+    }
+  ],
+  "incoming": {
+    "count": 68,
+    "latest": "2026-11-06-2152_claude-para-codex_robo-de-fluxo-entregue.md",
+    "digest": "cd4ae7f0d05082496f3d8ff38fc7bbea94ad4e1dc28a2c81fefb5cfb35634c61",
+    "digestAlgorithm": "SHA256(JSON.stringify(sorted files mapped to {name,sha256(raw bytes)}))",
+    "unchanged": true
+  },
+  "boundaries": [
+    "No API/RPC/SQL/schema changes",
+    "Existing same-context reader freshness policy retained",
+    "No server rollback/cancellation/Auth/SQL proof",
+    "No Claude/PersonalMed/SaaS/Meta/hosted/load/paid/deploy/push operation"
+  ],
+  "gitManifest": {
+    "expectedPaths": [
+      "coordination/CODEX_CHECKPOINT.md",
+      "coordination/ESTADO.md",
+      "docs/product/clinic-crm/CONTACT_CORRECTION_CONTEXT.md",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/AUDIT.json",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-access-blocked-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-access-blocked-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-access-blocked-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-access-blocked-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-access-blocked-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-access-blocked-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-access-blocked-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-access-blocked-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-closed-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-closed-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-closed-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-closed-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-draft-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-draft-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-draft-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-draft-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-draft-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-draft-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-draft-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-draft-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-fresh-window-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-fresh-window-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-fresh-window-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-fresh-window-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-fresh-window-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-fresh-window-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-fresh-window-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-fresh-window-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-recovered-invalid-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-recovered-invalid-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-recovered-invalid-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-recovered-invalid-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-recovered-invalid-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-recovered-invalid-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-recovered-invalid-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-context-final/admin--recepcao-contatos-contact-correction-context-recovered-invalid-375.png",
+      "docs/reviews/2026-11-07/contact-correction-context/BASELINE_CONTROLS.json",
+      "docs/reviews/2026-11-07/contact-correction-context/CLI.json",
+      "docs/reviews/2026-11-07/contact-correction-context/IDENTITY_RED.json",
+      "docs/reviews/2026-11-07/contact-correction-context/IMPLEMENTATION.md",
+      "docs/reviews/2026-11-07/contact-correction-context/MUTEX_RED.json",
+      "docs/reviews/2026-11-07/contact-correction-context/RED_CONTROL.json",
+      "docs/reviews/2026-11-07/contact-correction-context/UNIT_GREEN.json",
+      "docs/reviews/2026-11-07/contact-correction-context/UNIT_RED.json",
+      "docs/reviews/2026-11-07/contact-correction-context/VALIDATION.json",
+      "scripts/fixtures/contact-correction-context-browser.mjs",
+      "scripts/reception-app-audit-browser.mjs",
+      "src/features/reception/ContactCorrectionContext.test.tsx",
+      "src/features/reception/ContactCorrectionDialog.test.tsx",
+      "src/features/reception/ContactCorrectionDialog.tsx",
+      "tasks/clinic-crm/todo.md"
+    ],
+    "branch": "main",
+    "identity": "axiscoachapp",
+    "foreignIndexBefore": [],
+    "onlyCommit": true
+  }
+}

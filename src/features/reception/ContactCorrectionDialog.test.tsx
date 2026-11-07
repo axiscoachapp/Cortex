@@ -3,10 +3,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ContactCorrectionDialog } from './ContactCorrectionDialog';
 import { confirmSessionExit } from '@/hooks/useUnsavedChanges';
+import { ClinicAccessContext } from './accessContext';
 
 const mocks = vi.hoisted(() => ({ snapshot: vi.fn(), update: vi.fn(), toast: vi.fn(), close: vi.fn() }));
 vi.mock('./api', () => ({ receptionApi: { contactEdit: mocks.snapshot, updateContact: mocks.update } }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
+const actor = '22222222-2222-4222-8222-222222222222';
+vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: '22222222-2222-4222-8222-222222222222' } }) }));
 const original = {
   id: '11111111-1111-4111-8111-111111111111',
   name: 'Contato Exemplo',
@@ -17,7 +20,9 @@ function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const result = render(
     <QueryClientProvider client={client}>
-      <ContactCorrectionDialog contactId={original.id} onClose={mocks.close} />
+      <ClinicAccessContext.Provider value={{ actorId: actor, active: true, admin: true, kind: 'clinical', clinic: { id: '33333333-3333-4333-8333-333333333333', name: 'Clínica sintética' }, doctors: [], staff: [] }}>
+        <ContactCorrectionDialog contactId={original.id} onClose={mocks.close} />
+      </ClinicAccessContext.Provider>
     </QueryClientProvider>,
   );
   return { ...result, client };
