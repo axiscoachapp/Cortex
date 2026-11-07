@@ -21,10 +21,12 @@
 
 - O token é `HMAC-SHA256(INTAKE_LINK_SECRET, "cortex/intake/v1|<id>|<nonce>")` em base64url, com 43 caracteres.
 - O banco guarda só o SHA-256 do token e o nonce. Sem o segredo, o banco sozinho não reconstrói o link.
+  - **Exceção conhecida:** a mensagem que a automação envia pelo WhatsApp fica guardada em `whatsapp_messages` com o link no texto, como qualquer mensagem enviada. Quem lê a conversa vê o link. Com ele, dá para reenviar respostas até a recepção conferir, mas não para ler as já enviadas.
 - A automação e a recepção recebem o mesmo link enquanto ele não for trocado.
 - "Trocar o link" grava um nonce novo, e o anterior para de funcionar na hora. As respostas já enviadas continuam guardadas.
-- **Validade:** até 2 horas depois do fim da consulta. Depois disso, e também com a consulta cancelada, marcada como falta ou realizada, o formulário aparece como encerrado.
-- **Remarcação:** a consulta remarcada mantém o link e ganha o prazo novo.
+- **Validade:** até 2 horas depois do fim da consulta, calculada sempre a partir do agendamento atual. Depois disso, com a consulta cancelada, marcada como falta ou realizada, ou com o formulário da clínica desligado, o formulário aparece como encerrado.
+- **Remarcação:** a consulta remarcada mantém o link, e o prazo acompanha o novo horário na hora.
+- **Troca de `INTAKE_LINK_SECRET`:** os links já enviados param de funcionar. Na próxima vez que a recepção copiar o link ou uma automação enviá-lo, o servidor percebe que o hash guardado não bate e emite um link novo (CAS sobre o hash antigo).
 - **Privacidade da URL:** o app já envia `Referrer-Policy: no-referrer`, então o token não vai para terceiros. O token nunca é registrado em log.
 
 ## Quem vê o quê
@@ -37,7 +39,7 @@
 
 ## Consentimento do WhatsApp
 
-A caixa "Aceito receber lembretes" grava `whatsapp_opt_ins` com `source='paciente'` para o celular **do contato cadastrado** do agendamento, nunca um número digitado no formulário. Se o número já pediu para sair (SAIR), o formulário **não** reverte a saída.
+A caixa "Aceito receber lembretes" grava `whatsapp_opt_ins` com `source='paciente'` para o celular **do contato cadastrado** do agendamento, nunca um número digitado no formulário. Se o número já pediu para sair (SAIR), o formulário **não** reverte a saída, nem quando ela está só na conversa (SAIR antes de qualquer autorização). A tela da recepção mostra o que o paciente marcou naquele envio; a autorização em vigor é a do WhatsApp.
 
 ## API
 
@@ -64,6 +66,10 @@ A caixa "Aceito receber lembretes" grava `whatsapp_opt_ins` com `source='pacient
 - **Tipos de pergunta:** texto, texto longo, data, uma opção, várias opções, sim ou não, CPF, e-mail, telefone, CEP e número.
 - **Campos do cadastro (`field`):** uma pergunta de cadastro pode apontar para um campo conhecido (nome, nascimento, CPF, endereço, convênio, carteirinha, entre outros), para a conferência e o faturamento. Uma pergunta de saúde não pode ter campo.
 - **Condição:** `showIf` mostra a pergunta só quando outra tem certa resposta. Por exemplo, carteirinha só para quem escolheu "Convênio". Uma resposta a pergunta escondida ou inexistente é recusada.
+  - As condições valem em cadeia: esconder uma pergunta esconde as que dependem dela.
+  - Ciclos são recusados.
+  - Uma pergunta da recepção não pode depender de uma resposta de saúde, porque mostrá-la revelaria a resposta.
+  - O que é salvo passa de novo pela validação, depois de limpar os espaços.
 - **Limites:** 12 seções, 60 perguntas, 2.000 caracteres por resposta longa.
 
 ## Segredos (por ambiente)

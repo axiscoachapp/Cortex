@@ -61,12 +61,28 @@ describe('intake links', () => {
 
   it('rebuilds the existing link when the request already exists', async () => {
     const h = harness();
-    h.results.intake_request_ensure = { id: REQ, nonce: 'abcdefghijklmnopqrstuv', status: 'pending', expiresAt: 'x', created: false };
+    h.results.intake_request_ensure = { id: REQ, nonce: 'abcdefghijklmnopqrstuv', status: 'pending', expiresAt: 'x', created: false,
+      tokenHash: await tokenHash(await linkToken(SECRET, REQ, 'abcdefghijklmnopqrstuv')) };
     const r = await intakeLink(h.deps, CLINIC, APPT, null);
     expect(r.url).toBe(`https://app.example.com.br/pre-consulta/${await linkToken(SECRET, REQ, 'abcdefghijklmnopqrstuv')}`);
     const args = h.calls[0][1];
     expect(args).toMatchObject({ p_clinic: CLINIC, p_appointment: APPT, p_actor: null });
     expect(args.p_token_hash).toBe(await tokenHash(await linkToken(SECRET, String(args.p_id), String(args.p_nonce))));
+  });
+});
+
+describe('intake link after a secret change (review 07/11)', () => {
+  it('issues a new link when the stored hash was made with another secret, instead of a dead one', async () => {
+    const h = harness();
+    h.results.intake_request_ensure = { id: REQ, nonce: 'abcdefghijklmnopqrstuv', status: 'pending', expiresAt: 'x', created: false,
+      tokenHash: await tokenHash(await linkToken('an-older-secret-0123456789abcdef-xyz', REQ, 'abcdefghijklmnopqrstuv')) };
+    h.results.intake_request_rekey = true;
+    const r = await intakeLink(h.deps, CLINIC, APPT, null);
+    const rekey = h.calls.find(([n]) => n === 'intake_request_rekey')![1];
+    expect(rekey).toMatchObject({ p_clinic: CLINIC, p_request: REQ, p_expected_hash: (h.results.intake_request_ensure as { tokenHash: string }).tokenHash });
+    const token = r.url.split('/').at(-1)!;
+    expect(await tokenHash(token)).toBe(rekey.p_token_hash);
+    expect(token).toBe(await linkToken(SECRET, REQ, String(rekey.p_nonce)));
   });
 });
 
@@ -139,7 +155,8 @@ describe('intake-api', () => {
 
   it('creates links for staff and passes the actor for the scope check', async () => {
     const h = harness();
-    h.results.intake_request_ensure = { id: REQ, nonce: 'abcdefghijklmnopqrstuv', status: 'pending', expiresAt: 'x', created: false };
+    h.results.intake_request_ensure = { id: REQ, nonce: 'abcdefghijklmnopqrstuv', status: 'pending', expiresAt: 'x', created: false,
+      tokenHash: await tokenHash(await linkToken(SECRET, REQ, 'abcdefghijklmnopqrstuv')) };
     const r = await (await h.api({ action: 'link', appointmentId: APPT })).json();
     expect(r.url).toMatch(/^https:\/\/app\.example\.com\.br\/pre-consulta\/[A-Za-z0-9_-]{43}$/);
     expect(h.calls[0][1]).toMatchObject({ p_actor: RECEPTION });

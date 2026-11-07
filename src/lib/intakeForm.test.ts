@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { answerText, starterForm, validateAnswers, validateForm, type IntakeForm } from '../../supabase/functions/_shared/intakeForm';
+import { answerText, isVisible, starterForm, validateAnswers, validateForm, type IntakeForm } from '../../supabase/functions/_shared/intakeForm';
 
 const base = (): IntakeForm => starterForm('Clínica Exemplo');
 
@@ -55,6 +55,34 @@ describe('pre-consultation form', () => {
     const errors = validateAnswers(base(), bad).errors.join(' | ');
     for (const part of ['CPF inválido', 'data inválida', 'e-mail inválido', 'CEP inválido', 'escolha entre as opções', 'número inválido']) expect(errors).toContain(part);
     expect(validateAnswers(base(), { ...goodAnswers, motivo: 'x'.repeat(2001) }).errors).toEqual([expect.stringContaining('até 2000 caracteres')]);
+  });
+
+  it('hides a whole chain when a parent hides, so a stale answer never blocks sending (review 07/11)', () => {
+    const f = base();
+    f.sections[1].questions.push({ id: 'qual_operadora', label: 'Qual operadora?', type: 'choice', options: ['Regional', 'Nacional'],
+      showIf: { question: 'tipo_atendimento', equals: 'Convênio' } });
+    f.sections[1].questions.push({ id: 'regional_qual', label: 'Qual regional?', type: 'text', required: true, showIf: { question: 'qual_operadora', equals: 'Regional' } });
+    expect(validateForm(f)).toEqual([]);
+    const answers = { ...goodAnswers, tipo_atendimento: 'Particular', qual_operadora: 'Regional' };
+    const third = f.sections[1].questions.find((q) => q.id === 'regional_qual')!;
+    expect(isVisible(f, third, answers)).toBe(false);
+    const visible = Object.fromEntries(Object.entries(answers).filter(([id]) => {
+      const q = f.sections.flatMap((s) => s.questions).find((x) => x.id === id);
+      return q && isVisible(f, q, answers);
+    }));
+    const { operadora: _o, carteirinha: _c, ...rest } = visible as Record<string, unknown>;
+    expect(validateAnswers(f, rest).errors).toEqual([]);
+  });
+
+  it('refuses a reception question that depends on a health answer, and condition cycles', () => {
+    const f = base();
+    f.sections[2].questions.push({ id: 'gravida', label: 'Está grávida?', type: 'choice', options: ['Sim', 'Não'] });
+    f.sections[0].questions.push({ id: 'acompanhante', label: 'Acompanhante do pré-natal', type: 'text', showIf: { question: 'gravida', equals: 'Sim' } });
+    expect(validateForm(f)).toEqual([expect.stringContaining('não pode depender de uma resposta de saúde')]);
+    const g = base();
+    g.sections[1].questions.push({ id: 'a1', label: 'A', type: 'choice', options: ['x', 'y'], showIf: { question: 'b1', equals: 'x' } });
+    g.sections[1].questions.push({ id: 'b1', label: 'B', type: 'choice', options: ['x', 'y'], showIf: { question: 'a1', equals: 'x' } });
+    expect(validateForm(g)).toEqual(expect.arrayContaining([expect.stringContaining('volta a si mesma')]));
   });
 
   it('formats answers for review', () => {

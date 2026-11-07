@@ -67,6 +67,8 @@ export function IntakeFormEditor() {
   const takenIds = new Set(allQuestions.map((x) => x.id));
   const usedFields = new Set(allQuestions.map((x) => x.field).filter(Boolean));
   const choiceQuestions = allQuestions.filter((x) => x.type === 'choice');
+  // A reception question may not depend on a health answer (its visibility would reveal it).
+  const healthIds = new Set(draft.sections.filter((x) => x.audience === 'health').flatMap((x) => x.questions.map((y) => y.id)));
 
   const setQ = (si: number, qi: number, patch: Partial<IntakeQuestion>) => edit((f) => {
     const cur = f.sections[si].questions[qi];
@@ -167,7 +169,7 @@ export function IntakeFormEditor() {
                     <SelectTrigger aria-label="Quando mostrar"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NONE}>Mostrar sempre</SelectItem>
-                      {choiceQuestions.filter((c) => c.id !== x.id).flatMap((c) => (c.options ?? []).map((o) => (
+                      {choiceQuestions.filter((c) => c.id !== x.id && !(s.audience === 'registration' && healthIds.has(c.id))).flatMap((c) => (c.options ?? []).map((o) => (
                         <SelectItem key={`${c.id}::${o}`} value={`${c.id}::${o}`}>Só se "{c.label.slice(0, 30)}" = {o}</SelectItem>
                       )))}
                     </SelectContent>

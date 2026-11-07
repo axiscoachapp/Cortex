@@ -76,7 +76,10 @@ export function IntakeAnswersDialog({ appointmentId, open, onOpenChange }: { app
             <div className="space-y-5">
               <Answers title="Dados cadastrais e convênio" items={r.registration} />
               <p className="text-sm">
-                Mensagens pelo WhatsApp: <strong>{r.whatsappConsent ? 'autorizadas pelo paciente' : 'não autorizadas'}</strong>
+                {/* What the patient ticked in this submission; the effective consent lives in WhatsApp (an earlier SAIR or authorization prevails). */}
+                {r.whatsappConsent
+                  ? 'O paciente marcou, neste envio, que aceita mensagens pelo WhatsApp. Vale para o celular do cadastro, se ele não pediu para sair antes.'
+                  : 'O paciente não marcou a autorização de mensagens neste envio. Uma autorização ou saída registrada antes continua valendo.'}
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 {r.registrationReviewedAt ? (

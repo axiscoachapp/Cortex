@@ -99,7 +99,7 @@ export default function PreConsultaPage() {
   const visible = useMemo(() => {
     const out: Record<string, unknown> = {};
     if (!form) return out;
-    for (const s of form.sections) for (const q of s.questions) if (isVisible(q, answers) && answers[q.id] !== undefined) out[q.id] = answers[q.id];
+    for (const s of form.sections) for (const q of s.questions) if (isVisible(form, q, answers) && answers[q.id] !== undefined) out[q.id] = answers[q.id];
     return out;
   }, [form, answers]);
 
@@ -201,7 +201,7 @@ export default function PreConsultaPage() {
               {s.audience === 'health' ? 'Só o médico da consulta lê estas respostas.' : 'A recepção usa estes dados para o seu cadastro.'}
             </p>
           </div>
-          {s.questions.filter((q) => isVisible(q, answers)).map((q) => (
+          {s.questions.filter((q) => isVisible(form, q, answers)).map((q) => (
             <QuestionField key={q.id} q={q} value={answers[q.id]} error={errorFor(q)} onChange={(v) => setAnswers((a) => ({ ...a, [q.id]: v }))} />
           ))}
         </fieldset>

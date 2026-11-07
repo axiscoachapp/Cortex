@@ -152,4 +152,49 @@ do $$ declare c uuid:='e8200000-0000-4000-8000-000000000001'; r jsonb; h text:=r
   assert public.intake_public_open(h)->>'state'='closed', 'cancelled appointment still open';
   assert pg_temp.sqlstate_of(format($q$select public.intake_public_submit(%L,2,'[]','[]',false,'v1')$q$, h))='55000', 'submit after cancellation';
 end $$;
+-- Review 07/11: the deadline follows the appointment as it is now; turning the form off closes links;
+-- an opt-out recorded only on a conversation is respected; rekey is a CAS on the old hash.
+do $$ declare c uuid:='e8200000-0000-4000-8000-000000000001'; h text:=repeat('5',64); r jsonb; admin uuid:='e8100000-0000-4000-8000-000000000001'; begin
+  r := public.intake_request_ensure(c,'e8700000-0000-4000-8000-000000000001',null,gen_random_uuid(),'eeeeeeeeeeeeeeeeeeeeee',h);
+  h := (select token_hash from public.intake_requests where appointment_id='e8700000-0000-4000-8000-000000000001');
+  assert public.intake_public_open(h)->>'state' in ('open','answered','reviewed'), 'fixture: link not open';
+  -- Moved to an hour that ended 3 h ago: closed without any ensure call.
+  perform pg_temp.as_doctor($q$update public.appointments set start_time=now()-interval '4 hours', end_time=now()-interval '3 hours 30 minutes' where id='e8700000-0000-4000-8000-000000000001'$q$);
+  assert public.intake_public_open(h)->>'state'='closed', 'deadline did not follow the rescheduled slot';
+  -- Moved forward again: open again.
+  perform pg_temp.as_doctor($q$update public.appointments set start_time=now()+interval '9 days', end_time=now()+interval '9 days 30 minutes' where id='e8700000-0000-4000-8000-000000000001'$q$);
+  assert public.intake_public_open(h)->>'state'<>'closed', 'rescheduled forward still closed';
+  -- Form off: closed.
+  update public.intake_forms set enabled=false where clinic_id=c;
+  assert public.intake_public_open(h)->>'state'='closed', 'disabled form left the link open';
+  update public.intake_forms set enabled=true where clinic_id=c;
+  -- Rekey: only with the current hash.
+  assert not public.intake_request_rekey(c,(select id from public.intake_requests where token_hash=h),repeat('9',64),'ffffffffffffffffffffff',repeat('6',64)), 'rekey with a wrong hash';
+  assert public.intake_request_rekey(c,(select id from public.intake_requests where token_hash=h),h,'ffffffffffffffffffffff',repeat('6',64)), 'rekey';
+  assert public.intake_public_open(h) is null and public.intake_public_open(repeat('6',64)) is not null, 'rekey did not replace the link';
+end $$;
+
+reset role;
+select set_config('request.jwt.claim.role','',true);
+insert into public.clinic_contacts(id,clinic_id,name,phone,phone_normalized,created_by,request_id) values
+ ('e8300000-0000-4000-8000-000000000002','e8200000-0000-4000-8000-000000000001','Outra Pessoa','(41) 99999-7002','5541999997002',
+  'e8100000-0000-4000-8000-000000000001',gen_random_uuid());
+insert into public.patient_contact_links(clinic_id,contact_id,patient_id,doctor_user_id,relationship,confirmed_by) values
+ ('e8200000-0000-4000-8000-000000000001','e8300000-0000-4000-8000-000000000002','e8500000-0000-4000-8000-000000000001','e8100000-0000-4000-8000-000000000002','self','e8100000-0000-4000-8000-000000000001');
+insert into public.appointments(id,user_id,patient_id,clinic_id,contact_id,title,start_time,end_time,status,type) values
+ ('e8700000-0000-4000-8000-000000000005','e8100000-0000-4000-8000-000000000002','e8500000-0000-4000-8000-000000000001','e8200000-0000-4000-8000-000000000001','e8300000-0000-4000-8000-000000000002','Consulta',
+  date_trunc('minute',now())+interval '10 days',date_trunc('minute',now())+interval '10 days 30 minutes','agendado','retorno');
+insert into public.whatsapp_channels(id,clinic_id,phone_number_id,waba_id,status,token_sealed) values
+ ('e8400000-0000-4000-8000-000000000001','e8200000-0000-4000-8000-000000000001','500000000001','5000000001','connected','{"v":1,"keyId":"k1","nonce":"x","ciphertext":"y"}');
+-- SAIR before any opt-in row: only the conversation carries the opt-out.
+insert into public.whatsapp_conversations(clinic_id,channel_id,wa_id,status,opted_out_at)
+ values ('e8200000-0000-4000-8000-000000000001','e8400000-0000-4000-8000-000000000001','5541999997002','open',now());
+set local role service_role;
+select set_config('request.jwt.claim.role','service_role',true);
+do $$ declare h text:=repeat('7',64); begin
+  perform public.intake_request_ensure('e8200000-0000-4000-8000-000000000001','e8700000-0000-4000-8000-000000000005',null,gen_random_uuid(),'gggggggggggggggggggggg',h);
+  perform public.intake_public_submit(h, (select form_revision from public.intake_requests where token_hash=h), '[]', '[]', true, 'v1');
+  assert not exists (select 1 from public.whatsapp_opt_ins where clinic_id='e8200000-0000-4000-8000-000000000001' and wa_id='5541999997002'),
+    'form consent written over a conversation opt-out';
+end $$;
 rollback;

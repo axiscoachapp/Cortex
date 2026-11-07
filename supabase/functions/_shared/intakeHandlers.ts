@@ -113,14 +113,26 @@ function fail(deps: IntakeDeps, e: unknown): Response {
  * The same request always yields the same link until it is rotated.
  */
 export async function intakeLink(deps: Pick<IntakeDeps, 'rpc' | 'config'>, clinicId: string, appointmentId: string, actor: string | null) {
-  const id = crypto.randomUUID();
-  const nonce = newNonce();
-  const token = await linkToken(deps.config.linkSecret, id, nonce);
-  const r = (await deps.rpc('intake_request_ensure', {
-    p_clinic: clinicId, p_appointment: appointmentId, p_actor: actor, p_id: id, p_nonce: nonce, p_token_hash: await tokenHash(token),
-  })) as { id: string; nonce: string; status: string; expiresAt: string; created: boolean };
-  const finalToken = r.created ? token : await linkToken(deps.config.linkSecret, r.id, r.nonce);
-  return { url: `${deps.config.appUrl}/pre-consulta/${finalToken}`, requestId: r.id, status: r.status, expiresAt: r.expiresAt };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const id = crypto.randomUUID();
+    const nonce = newNonce();
+    const token = await linkToken(deps.config.linkSecret, id, nonce);
+    const r = (await deps.rpc('intake_request_ensure', {
+      p_clinic: clinicId, p_appointment: appointmentId, p_actor: actor, p_id: id, p_nonce: nonce, p_token_hash: await tokenHash(token),
+    })) as { id: string; nonce: string; tokenHash: string; status: string; expiresAt: string; created: boolean };
+    if (r.created) return { url: `${deps.config.appUrl}/pre-consulta/${token}`, requestId: r.id, status: r.status, expiresAt: r.expiresAt };
+    const rebuilt = await linkToken(deps.config.linkSecret, r.id, r.nonce);
+    if (await tokenHash(rebuilt) === r.tokenHash) return { url: `${deps.config.appUrl}/pre-consulta/${rebuilt}`, requestId: r.id, status: r.status, expiresAt: r.expiresAt };
+    // INTAKE_LINK_SECRET changed since this link was made: the stored link is dead. Issue a new one
+    // (CAS on the old hash); if someone else changed it meanwhile, read again once.
+    const fresh = newNonce();
+    const freshToken = await linkToken(deps.config.linkSecret, r.id, fresh);
+    const ok = await deps.rpc('intake_request_rekey', {
+      p_clinic: clinicId, p_request: r.id, p_expected_hash: r.tokenHash, p_nonce: fresh, p_token_hash: await tokenHash(freshToken),
+    });
+    if (ok === true) return { url: `${deps.config.appUrl}/pre-consulta/${freshToken}`, requestId: r.id, status: r.status, expiresAt: r.expiresAt };
+  }
+  throw new HttpError(409, 'O link mudou ao mesmo tempo; tente de novo.', 'stale');
 }
 
 // ---------------------------------------------------------------- public page
@@ -191,9 +203,12 @@ export async function intakeApiHandler(req: Request, deps: IntakeDeps): Promise<
           sections: f.sections.map((s) => ({ id: s.id, title: s.title.trim(), audience: s.audience, questions: s.questions.map((q) => ({
             id: q.id, label: q.label.trim(), type: q.type, ...(q.required ? { required: true } : {}), ...(q.options ? { options: q.options.map((o) => o.trim()) } : {}),
             ...(q.help?.trim() ? { help: q.help.trim() } : {}), ...(q.field ? { field: q.field } : {}),
-            ...(q.showIf ? { showIf: { question: q.showIf.question, equals: q.showIf.equals } } : {}),
+            ...(q.showIf ? { showIf: { question: q.showIf.question, equals: q.showIf.equals.trim() } } : {}),
           })) })),
         };
+        // Trimming can merge options or break a condition: what is stored is validated again.
+        const after = validateForm(clean);
+        if (after.length) throw new HttpError(400, after[0], 'invalid', { errors: after });
         const r = await call<{ revision: number; updatedAt: string }>(deps, 'intake_form_save', {
           p_clinic: caller.clinicId, p_actor: caller.userId, p_revision: Number(body.revision) || 0, p_enabled: body.enabled === true, p_definition: clean,
         });

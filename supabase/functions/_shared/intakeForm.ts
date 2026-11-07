@@ -92,12 +92,22 @@ export function validateForm(form: unknown): string[] {
   if (all.length > LIMITS.questions) errors.push(`Use até ${LIMITS.questions} perguntas.`);
   const fields = all.filter((q) => q.field).map((q) => q.field);
   if (new Set(fields).size !== fields.length) errors.push('Cada campo cadastral só pode aparecer em uma pergunta.');
+  const audienceOf = new Map<string, string>();
+  for (const s of f.sections) for (const q of s.questions ?? []) audienceOf.set(q?.id, s.audience);
   for (const q of all) {
     if (!q.showIf) continue;
     const ref = all.find((r) => r.id === q.showIf!.question);
-    if (!ref || ref.id === q.id) errors.push(`"${q.label}" depende de uma pergunta que não existe.`);
-    else if ((ref.type === 'choice' || ref.type === 'multi') && !ref.options?.includes(q.showIf.equals))
+    if (!ref || ref.id === q.id) { errors.push(`"${q.label}" depende de uma pergunta que não existe.`); continue; }
+    if ((ref.type === 'choice' || ref.type === 'multi') && !ref.options?.includes(q.showIf.equals))
       errors.push(`"${q.label}" depende de uma resposta que não está entre as opções de "${ref.label}".`);
+    // Whether a reception question is shown would reveal a health answer to the reception.
+    if (audienceOf.get(q.id) === 'registration' && audienceOf.get(ref.id) === 'health')
+      errors.push(`"${q.label}" é vista pela recepção e não pode depender de uma resposta de saúde ("${ref.label}").`);
+    const seen = new Set([q.id]);
+    for (let cur: IntakeQuestion | undefined = ref; cur?.showIf; cur = all.find((r) => r.id === cur!.showIf!.question)) {
+      if (seen.has(cur.id)) { errors.push(`"${q.label}" faz parte de uma cadeia de condições que volta a si mesma.`); break; }
+      seen.add(cur.id);
+    }
   }
   return errors;
 }
@@ -124,10 +134,18 @@ function validDate(v: string): boolean {
 
 const empty = (v: unknown) => v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
 
-/** Whether a question is shown, given the answers so far (one level of dependency). */
-export function isVisible(q: IntakeQuestion, answers: Record<string, unknown>): boolean {
+/**
+ * Whether a question is shown, given the answers so far. A condition holds only if the question it
+ * depends on is itself shown, so hiding a parent hides the whole chain (an answer left in a hidden
+ * question never keeps its children on screen). Cycles are refused by validateForm; the depth limit
+ * only guards a corrupted definition.
+ */
+export function isVisible(form: IntakeForm, q: IntakeQuestion, answers: Record<string, unknown>, depth = 0): boolean {
   if (!q.showIf) return true;
-  const a = answers[q.showIf.question];
+  if (depth > 12) return false;
+  const parent = form.sections.flatMap((s) => s.questions).find((x) => x.id === q.showIf!.question);
+  if (!parent || !isVisible(form, parent, answers, depth + 1)) return false;
+  const a = answers[parent.id];
   return Array.isArray(a) ? a.includes(q.showIf.equals) : a === q.showIf.equals;
 }
 
@@ -181,7 +199,7 @@ export function validateAnswers(form: IntakeForm, answers: unknown): { registrat
   for (const key of Object.keys(answers)) if (!known.has(key)) out.errors.push('Há uma resposta para uma pergunta que não existe.');
   for (const { q, audience } of questions) {
     const raw = answers[q.id];
-    if (!isVisible(q, answers)) {
+    if (!isVisible(form, q, answers)) {
       if (!empty(raw)) out.errors.push(`${q.label}: esta pergunta não se aplica.`);
       continue;
     }

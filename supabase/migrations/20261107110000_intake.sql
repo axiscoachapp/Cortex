@@ -113,7 +113,7 @@ begin
       expires_at = greatest(a.end_time, a.start_time) + interval '2 hours', revision = revision + 1, updated_at = now()
     where id = r.id returning * into r;
   end if;
-  return jsonb_build_object('id', r.id, 'nonce', r.link_nonce, 'status', r.status, 'expiresAt', r.expires_at, 'created', r.id = p_id);
+  return jsonb_build_object('id', r.id, 'nonce', r.link_nonce, 'tokenHash', r.token_hash, 'status', r.status, 'expiresAt', r.expires_at, 'created', r.id = p_id);
 end $$;
 
 -- New nonce and hash: the old link stops working at once. Answers already sent are kept.
@@ -130,6 +130,26 @@ begin
   return jsonb_build_object('id', r.id, 'nonce', r.link_nonce, 'status', r.status, 'expiresAt', r.expires_at);
 end $$;
 
+-- Whether a request still accepts answers, from the appointment as it is now (a rescheduled slot
+-- moves the deadline) and the clinic form (turning the form off closes every link).
+create function public.intake_request_open(r public.intake_requests, a public.appointments) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select r.status <> 'closed' and a.id is not null and coalesce(a.status, 'agendado') in ('agendado', 'confirmado')
+    and greatest(a.end_time, a.start_time) + interval '2 hours' > now()
+    and exists (select 1 from public.intake_forms f where f.clinic_id = r.clinic_id and f.enabled);
+$$;
+
+-- Service only: replaces the link of a request whose stored hash no longer matches the token the Edge
+-- Function derives (INTAKE_LINK_SECRET changed). CAS on the old hash; the scope was checked by the caller.
+create function public.intake_request_rekey(p_clinic uuid, p_request uuid, p_expected_hash text, p_nonce text, p_token_hash text) returns boolean
+language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.role() is distinct from 'service_role' then raise exception 'Not authorized' using errcode = '42501'; end if;
+  update public.intake_requests set link_nonce = p_nonce, token_hash = p_token_hash, revision = revision + 1, updated_at = now()
+  where id = p_request and clinic_id = p_clinic and token_hash = p_expected_hash;
+  return found;
+end $$;
+
 -- What the public page may show: clinic, doctor's display name, date and the form. Never answers,
 -- never the patient's name or contact. Records the first opening.
 create function public.intake_public_open(p_token_hash text) returns jsonb
@@ -142,7 +162,7 @@ begin
   if not found then return null; end if;
   select * into a from public.appointments where id = r.appointment_id;
   state := case
-    when r.status = 'closed' or r.expires_at <= now() or coalesce(a.status, 'agendado') not in ('agendado', 'confirmado') then 'closed'
+    when not public.intake_request_open(r, a) then 'closed'
     when r.registration_reviewed_at is not null then 'reviewed'
     when r.status = 'answered' then 'answered'
     else 'open' end;
@@ -172,7 +192,7 @@ begin
   select * into r from public.intake_requests where token_hash = p_token_hash for update;
   if not found then raise exception 'Link inválido' using errcode = 'P0002'; end if;
   select * into a from public.appointments where id = r.appointment_id;
-  if r.status = 'closed' or r.expires_at <= now() or coalesce(a.status, 'agendado') not in ('agendado', 'confirmado') then
+  if not public.intake_request_open(r, a) then
     raise exception 'Este formulário já foi encerrado' using errcode = '55000';
   end if;
   if r.registration_reviewed_at is not null then raise exception 'A recepção já conferiu as respostas' using errcode = '55000'; end if;
@@ -185,8 +205,11 @@ begin
   if coalesce(p_whatsapp_consent, false) and a.contact_id is not null then
     select c.phone_normalized into phone from public.clinic_contacts c where c.clinic_id = r.clinic_id and c.id = a.contact_id;
     wa := public.whatsapp_safe_phone(phone);
+    -- Never over an opt-out: one recorded in whatsapp_opt_ins, or only on a conversation (SAIR before any opt-in).
     if wa is not null and not exists (select 1 from public.whatsapp_opt_ins o where o.clinic_id = r.clinic_id
-        and o.wa_id = any (public.whatsapp_phone_variants(wa))) then
+        and o.wa_id = any (public.whatsapp_phone_variants(wa)))
+      and not exists (select 1 from public.whatsapp_conversations w where w.clinic_id = r.clinic_id and w.opted_out_at is not null
+        and (w.wa_id = any (public.whatsapp_phone_variants(wa)) or w.linked_wa_id = any (public.whatsapp_phone_variants(wa)))) then
       insert into public.whatsapp_opt_ins (clinic_id, wa_id, source, text_version) values (r.clinic_id, wa, 'paciente', 'pre-consulta-' || p_privacy_version)
       on conflict (clinic_id, wa_id) do nothing;
     end if;
@@ -250,6 +273,10 @@ end $$;
 
 revoke all on function public.intake_list(uuid, uuid, timestamptz, timestamptz) from public, anon, authenticated;
 grant execute on function public.intake_list(uuid, uuid, timestamptz, timestamptz) to service_role;
+
+revoke all on function public.intake_request_open(public.intake_requests, public.appointments), public.intake_request_rekey(uuid, uuid, text, text, text)
+  from public, anon, authenticated;
+grant execute on function public.intake_request_rekey(uuid, uuid, text, text, text) to service_role;
 
 revoke all on function public.intake_form_save(uuid, uuid, integer, boolean, jsonb), public.intake_scope_ok(uuid, uuid, uuid),
   public.intake_request_ensure(uuid, uuid, uuid, uuid, text, text), public.intake_request_rotate(uuid, uuid, uuid, text, text),
