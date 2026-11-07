@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K1/4e: `28594ea8d31d186e033e11896dea4630ec63d5e1`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Adaptador close concluído; botão/confirmação K1/4f ainda pendentes.
+
 Atualizado em 2026-11-07 03:45. **K1/4e — adaptador close:** [provas](../docs/reviews/2026-11-07/whatsapp-close/IMPLEMENTATION.md). Snapshot aberto/próprio só local; corpo act/close/conversationId/revision, recibo closed/revisão+1/assignedTo preservado. Sem retry; needsRefresh depois de início inconclusivo.47RED→172Vitest/quatro arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória dez verificações/nove POST/três hashes estáveis/zero rede. Sem UI/banco/autorização/CAS real; closed_at/by/unread não conferidos no recibo.
 
 Próximo4f: botão/confirmar encerramento com escopo/detalhe frescos e conferência/gerações existentes. Nenhuma mensagem Claude nova;2152 atendida e 2026-11-07-0345_codex-para-claude_k1-contrato-encerrar-conversa.md informativa encerrada sem confirmação. C4/C5 após SHA e dois RED C5 fora desta suíte dirigida; outros comandos/MFA/K7 separados. Automação ACTIVE; main/axiscoachapp sem push/hosted/carga, preservar Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md.
