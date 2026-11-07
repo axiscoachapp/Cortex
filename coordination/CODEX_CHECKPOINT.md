@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K1/4g: `ffc1f43cad2fe35a28b4049dd92432b467cfac80`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Adaptador de reabertura concluído; botão/confirmação K1/4h pendentes.
+
 Atualizado em 2026-11-07 04:19. **K1/4g — adaptador reopen:** [provas](../docs/reviews/2026-11-07/whatsapp-reopen/IMPLEMENTATION.md). Encerrada própria/sem responsável explícito; corpo act/reopen/conversationId/revision, recibo open/revisão+1/dono ou null preservados. Sem assumir/transferir/retry; needsRefresh após início inconclusivo, snapshot validado imune a mutação do input.51RED→223Vitest/cinco arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória doze verificações/onze POST/três hashes estáveis/zero rede. Sem UI/banco/autorização/CAS real; quatro tempos fora do recibo não conferidos.
 
 Próximo4h: reabrir na UI com confirmação humana/contexto fresco/conferência/readVersion, sem assumir automático. Nenhuma mensagem Claude nova:2152 atendida, 2026-11-07-0419_codex-para-claude_k1-contrato-reabrir-conversa.md informativa encerrada; C4/C5 após SHA e dois RED C5 fora da suíte dirigida, outros comandos/MFA/K7 separados. Automação ACTIVE; main/axiscoachapp sem push/hosted/carga, preservar Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md.
