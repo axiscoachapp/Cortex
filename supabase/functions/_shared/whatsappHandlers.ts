@@ -840,8 +840,9 @@ async function eligibleDirectory(deps: WhatsAppDeps, clinicId: string): Promise<
 }
 
 function pageParams(body: Record<string, unknown>) {
-  const limit = body.limit === undefined ? 50 : Number(body.limit);
-  if (!Number.isInteger(limit) || limit < 1 || limit > 50) throw new HttpError(400, 'Limite inválido.', 'invalid');
+  // A JSON integer only: "2", true or [2] are refused, not coerced (Codex 1052).
+  const limit = body.limit === undefined ? 50 : body.limit;
+  if (typeof limit !== 'number' || !Number.isInteger(limit) || limit < 1 || limit > 50) throw new HttpError(400, 'Limite inválido.', 'invalid');
   let after: string | null = null;
   if (body.before !== undefined && body.before !== null) {
     const m = typeof body.before === 'string' ? ASSIGNEE_CURSOR.exec(body.before) : null;
@@ -864,6 +865,21 @@ async function assigneesView(deps: WhatsAppDeps, caller: Caller, body: Record<st
   return pageOf(await eligibleDirectory(deps, caller.clinicId), after, limit);
 }
 
+/**
+ * An ISO 8601 instant with an explicit offset, only if every field exists in the calendar:
+ * 2026-02-30 or 25:00 are refused instead of being normalized by Date.parse (Codex 1052).
+ */
+export function strictInstant(v: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(?:Z|([+-])(\d{2}):(\d{2}))$/.exec(v);
+  if (!m) return null;
+  const n = (x: string | undefined) => Number(x ?? '0');
+  const [y, mo, d, h, mi, sec, oh, om] = [m[1], m[2], m[3], m[4], m[5], m[6], m[8], m[9]].map(n);
+  const daysInMonth = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  if (mo < 1 || mo > 12 || d < 1 || d > daysInMonth || h > 23 || mi > 59 || sec > 59 || oh > 14 || om > 59) return null;
+  const t = Date.parse(v);
+  return Number.isFinite(t) ? t : null;
+}
+
 const AUTHORITY_FIELDS = ['clinicId', 'clinic_id', 'actorId', 'userId', 'user_id', 'role', 'admin', 'reception', 'p_clinic'];
 
 /**
@@ -875,8 +891,8 @@ async function dashboardView(deps: WhatsAppDeps, caller: Caller, body: Record<st
   if (AUTHORITY_FIELDS.some((f) => f in body)) throw new HttpError(400, 'Clínica e pessoa vêm da sessão.', 'invalid');
   const now = (deps.now ?? (() => new Date()))();
   const iso = (v: unknown, what: string) => {
-    const t = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/.test(v) ? Date.parse(v) : NaN;
-    if (!Number.isFinite(t)) throw new HttpError(400, `${what} inválido.`, 'invalid');
+    const t = typeof v === 'string' ? strictInstant(v) : null;
+    if (t === null) throw new HttpError(400, `${what} inválido.`, 'invalid');
     return t;
   };
   const from = iso(body.from, 'Início');

@@ -779,6 +779,24 @@ describe('reception dashboard (K2/1)', () => {
     expect((await h.api(ok)).status).toBe(403);
   });
 
+  it('refuses impossible calendar dates and non-integer limits instead of coercing them (Codex 1052)', async () => {
+    const h = await connectedHarness();
+    h.deps.now = () => new Date('2026-11-07T15:00:00Z');
+    h.rpcResults.whatsapp_dashboard = snapshot;
+    const ok = { action: 'dashboard', from: '2026-11-01T03:00:00Z', to: '2026-11-07T15:00:00Z' };
+    for (const from of ['2026-02-30T00:00:00Z', '2025-02-29T00:00:00Z', '2026-11-01T24:00:00Z', '2026-11-01T03:60:00Z', '2026-11-01T03:00:00+15:00'])
+      expect((await h.api({ ...ok, from })).status, from).toBe(400);
+    for (const limit of [true, '2', [2], 2.5]) expect((await h.api({ ...ok, limit })).status, String(limit)).toBe(400);
+    expect((await h.api({ action: 'assignees', limit: '2' })).status).toBe(400);
+    expect(h.calls.some(([n]) => n === 'whatsapp_dashboard')).toBe(false);
+    // Valid edges still pass: leap day, offsets, milliseconds.
+    expect((await h.api({ ...ok, from: '2026-10-31T23:00:00.000-03:00', limit: 2 })).status).toBe(200);
+    const leap = await connectedHarness();
+    leap.deps.now = () => new Date('2024-03-01T00:00:00Z');
+    leap.rpcResults.whatsapp_dashboard = snapshot;
+    expect((await leap.api({ action: 'dashboard', from: '2024-02-29T00:00:00Z', to: '2024-03-01T00:00:00Z' })).status).toBe(200);
+  });
+
   it('keeps a missing median as null', async () => {
     const h = await connectedHarness();
     h.deps.now = () => new Date('2026-11-07T15:00:00Z');
