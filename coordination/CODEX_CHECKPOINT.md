@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K1/4l: `a77b59408a85e7bf93dbb68e7586833c711ed8bc`, main/axiscoachapp (autor e committer), sem push. Só98caminhos próprios (inclui77artefatos finais do navegador), índice livre; dirt SaaS preservado. Mudança de fila com confirmação/conferência integrada. Catálogo/seletor4j e outros comandos/K1 inteiro continuam abertos.
+
 Atualizado em 2026-11-07 05:39. **K1/4l — mudar fila na UI:** [provas](../docs/reviews/2026-11-07/whatsapp-queue-ui/IMPLEMENTATION.md). Aberta/própria/fresca, destino explícito e confirmação; key id/revisão/readVersion/owner/fila, exclusão/conferência/gerações. Nunca input como fila confirmada: releitura obrigatória inclusive recibo válido, erro bloqueia/retry só leitura. Revisão reproduziu41→40 e removeu maxlength.488Vitest/doze arquivos+26Node/tipos/lint/sintaxe/oitoflags/omissão snapshot/revisão;60estados/76PNGs320–1920/135%,339fontes/31hashes/três overlays/cleanup.232requests/16set_queue só mock (12aplicados/4conflitos), oito403/409-console deliberados, zero outras falhas/JS/clínico/externos; capturas320/1920 inspecionadas e preliminares excluídos.
 
 Próximos: outros comandos em contrato próprio ou MFA/K7; transferência4j depende do catálogo solicitado0506 ao C4. Nenhum novo incoming Claude:2152 atendida/0515 informativa, sem resposta repetida. C4/C5 após SHAs/dois RED C5 fora da suíte dirigida; sem produtor/SQL/CAS/autorização real. Automação ACTIVE, main/axiscoachapp sem push/hosted/Meta/carga, preservar Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md.
