@@ -43,6 +43,13 @@ describe('TOTP metadata including abandoned setups', () => {
     expect(screen.getByLabelText('Código do aplicativo')).toHaveValue('');expect(screen.queryByRole('alert')).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Verificar código'})).toBeDisabled();
     expect(mocks.challengeAndVerify).toHaveBeenCalledTimes(1);expect(screen.queryByText('PRIVATE SYNTHETIC MFA ERROR')).not.toBeInTheDocument();
   });
+  it.each(['over_request_rate_limit','mfa_verification_rejected'])('keeps a rate refusal actionable without inventing a retry deadline (%s)',async(code)=>{
+    mocks.challengeAndVerify.mockResolvedValue({error:Object.assign(new Error('PRIVATE SYNTHETIC RATE ERROR'),{code})});
+    mount();await screen.findByRole('option',{name:active.friendly_name});
+    fireEvent.change(screen.getByLabelText('Código do aplicativo'),{target:{value:'123456'}});fireEvent.click(screen.getByRole('button',{name:'Verificar código'}));
+    const alert=await screen.findByRole('alert');expect(alert).toHaveTextContent(/Muitas tentativas/);expect(alert).not.toHaveTextContent(/minuto|segundo|\d/);expect(alert).toHaveFocus();
+    expect(screen.getByLabelText('Código do aplicativo')).toHaveValue('123456');expect(screen.getByRole('button',{name:'Verificar código'})).toBeEnabled();expect(mocks.challengeAndVerify).toHaveBeenCalledTimes(1);expect(screen.queryByText('PRIVATE SYNTHETIC RATE ERROR')).not.toBeInTheDocument();
+  });
   it('does not carry the old factor code into a newly enrolled setup',async()=>{
     mount();await screen.findByRole('option',{name:active.friendly_name});
     fireEvent.change(screen.getByLabelText('Código do aplicativo'),{target:{value:'123456'}});fireEvent.click(screen.getByRole('button',{name:'Adicionar autenticador'}));

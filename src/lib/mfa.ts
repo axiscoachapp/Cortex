@@ -11,7 +11,7 @@ export function mfaErrorMessage(error: unknown): string {
       return 'Limite de autenticadores atingido. Remova um autenticador antigo antes de adicionar outro.';
     case 'mfa_verification_rejected':
     case 'over_request_rate_limit':
-      return 'Muitas tentativas seguidas. Aguarde um minuto e tente novamente.';
+      return 'Muitas tentativas seguidas. Aguarde um pouco antes de tentar novamente.';
     default:
       return 'Não foi possível concluir. Confira o código e a conexão e tente novamente.';
   }

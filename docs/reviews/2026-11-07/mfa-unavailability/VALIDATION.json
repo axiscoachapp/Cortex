@@ -1,0 +1,85 @@
+{
+  "baseline": "a251786c8c3f4bce2851ffe84e0c1a871c960b8a",
+  "authJsVersion": "2.86.0",
+  "protocolFormats": [
+    "modern version header + code",
+    "legacy error_code"
+  ],
+  "unit": {
+    "redFailed": 2,
+    "passed": 27,
+    "files": 2,
+    "failed": 0,
+    "redPassed": 16
+  },
+  "node": {
+    "passed": 14,
+    "files": 2,
+    "failed": 0
+  },
+  "types": "passed",
+  "lint": {
+    "files": 6,
+    "status": "passed; final helper rechecked"
+  },
+  "syntax": {
+    "status": "passed; final helper rechecked",
+    "scripts": 4
+  },
+  "invalidCli": {
+    "status": "rejected before browser",
+    "combinations": 5
+  },
+  "browser": [
+    {
+      "report": "docs/reviews/2026-11-05/reception-app-audit/mfa-unavailability-network-final/AUDIT.json",
+      "states": 48,
+      "frozenSources": 321,
+      "runtimeSources": 24,
+      "overlays": 1,
+      "hashesStable": true,
+      "requests": 84,
+      "mfaCalls": 66,
+      "expectedHttpErrors": 41,
+      "expectedConsoleErrors": 41,
+      "pageErrors": 0,
+      "failedRequests": 0,
+      "unexpectedResources": 0,
+      "external": 0,
+      "cleanupVerified": true,
+      "checks": 41,
+      "negativeControl": [
+        {
+          "negativeControl": "two-stage timer submits real form",
+          "scheduledAtVirtualMs": 61000,
+          "waitingWindowVirtualMs": 120000,
+          "rejectedByQuietAssertion": true,
+          "extraSyntheticChallengeVerifyCalls": 2,
+          "extraExpected422": 1
+        }
+      ]
+    },
+    {
+      "report": "docs/reviews/2026-11-05/reception-app-audit/mfa-unavailability-verified-regression/AUDIT.json",
+      "states": 40,
+      "frozenSources": 321,
+      "runtimeSources": 24,
+      "overlays": 0,
+      "hashesStable": true,
+      "requests": 66,
+      "mfaCalls": 48,
+      "expectedHttpErrors": 24,
+      "expectedConsoleErrors": 24,
+      "pageErrors": 0,
+      "failedRequests": 0,
+      "unexpectedResources": 0,
+      "external": 0,
+      "cleanupVerified": true,
+      "checks": 16,
+      "negativeControl": []
+    }
+  ],
+  "review": "Three bounded read-only cycles; timer finding fixed and reproduced; additional runtime network drain finding fixed. Final review: no actionable findings.",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "limits": "Synthetic HTTP failures only; 120s virtual + 750ms real observation. Extra two SDK calls/one422 intentionally injected by negative control. No real Auth/TOTP/AAL2, network loss, server cooldown enforcement, successful verification or account recovery proved."
+}

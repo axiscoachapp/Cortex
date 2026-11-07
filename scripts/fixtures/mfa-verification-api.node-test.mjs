@@ -22,3 +22,26 @@ test('MFA verification is independently opt-in and binds one synthetic challenge
     assert.ok(api.mfaFactors.every(f=>['verified','unverified'].includes(f.status)));assert.ok(api.mfaVerification.calls.every(c=>!Object.hasOwn(c,'code')));
   }finally{await api.close();}
 });
+
+test('MFA limits and temporary failures remain phase-specific and never mint a successful session',async()=>{
+  const api=await startClinicFixture({mfaReview:true,mfaVerificationReview:true});
+  try{
+    const original=structuredClone(api.mfaFactors),[factor]=original;
+    const post=(action,body)=>fetch(api.origin+'/auth/v1/factors/'+factor.id+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    for(const format of ['modern','legacy']){
+      api.mfaVerification.reset();api.mfaVerification.setFormat(format);
+      for(const failure of ['over_request_rate_limit','unexpected_failure']){
+        api.mfaVerification.setChallengeFailure(failure);const denied=await post('challenge',{factorId:factor.id}),body=await denied.json();
+        assert.equal(denied.status,failure==='over_request_rate_limit'?429:503);assert.equal(body[format==='modern'?'code':'error_code'],failure);assert.equal(denied.headers.get('retry-after'),failure==='over_request_rate_limit'?'120':null);assert.equal(body.id,undefined);
+      }
+      api.mfaVerification.setChallengeFailure(null);
+      for(const failure of ['unexpected_failure','over_request_rate_limit']){
+        api.mfaVerification.setFailure(failure);const challenge=await (await post('challenge',{factorId:factor.id})).json();
+        const denied=await post('verify',{challenge_id:challenge.id,code:'123456'}),body=await denied.json();assert.equal(denied.status,failure==='over_request_rate_limit'?429:503);assert.equal(body.access_token,undefined);
+        assert.equal((await post('verify',{challenge_id:challenge.id,code:'123456'})).status,400);
+      }
+      api.mfaVerification.reset();assert.equal((await post('challenge',{factorId:factor.id})).status,200);
+    }
+    assert.deepEqual(api.mfaFactors,original);assert.ok(api.mfaVerification.calls.every(c=>!Object.hasOwn(c,'code')));
+  }finally{await api.close();}
+});
