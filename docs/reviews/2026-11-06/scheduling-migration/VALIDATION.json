@@ -1,0 +1,50 @@
+{
+  "completed": true,
+  "scope": "K7/2b Calendar follow-ups, legacy route redirects and removal of generic navigation; post-consultation remains",
+  "syntheticOnly": true,
+  "baseline": "2db154689375b83c042bb8eb80da4fbd8a5d0254",
+  "vitest": {
+    "passed": 53,
+    "files": 4,
+    "redReceptionRoutingCases": 3
+  },
+  "node": {
+    "regression": 4,
+    "passed": 6,
+    "new": 2,
+    "files": 3
+  },
+  "typecheck": "app + node passed",
+  "lint": "16 changed paths passed",
+  "scriptSyntaxFiles": 4,
+  "cliRejectedCases": 3,
+  "browser": {
+    "reportSha256": "2bfb348a51f2812b06bfa20d953389ff3dac26c9d5f876c24c872b4c8fb762be",
+    "aiCalls": 0,
+    "sourceHashesVerified": 27,
+    "interfaceScale": 1.35,
+    "clinicalWrites": 0,
+    "rawHeadAborts": 4,
+    "widths": [
+      375,
+      768,
+      1280,
+      1920
+    ],
+    "expectedUnavailableResponses": 8,
+    "cleanupVerified": true,
+    "receptionClinicalReads": 0,
+    "expectedResourceConsoleErrors": 8,
+    "states": 24,
+    "blockedExternalRequests": 0,
+    "report": "docs/reviews/2026-11-05/reception-app-audit/scheduling-migration-final/AUDIT.json",
+    "pageErrors": 0
+  },
+  "review": "Two scoped independent reviews found no material violation; cross-model skipped scheduled",
+  "remaining": [
+    "K7 post-consultation stage",
+    "Home discovery of browser-only rescue audio",
+    "K6 f837c57 contact/bot/C5 retest",
+    "M2/MFA/sharing/pilot"
+  ]
+}

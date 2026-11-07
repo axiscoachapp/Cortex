@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-06 22:40. **K7/2b — página genérica retirada, acompanhamento na Agenda:** [provas](../docs/reviews/2026-11-06/scheduling-migration/IMPLEMENTATION.md). Painel médico somente metadados/privado por ator, espera/confirmação abertas, fresh/abort/erro/limite50; edição/conclusão/versões no paciente. Pendências sai dos menus; /trabalho substitui histórico para paciente (prioritário), Agenda médica ou agenda administrativa por papel, genérico ao Início. Aliases/prefixo/inatividade preservados, zero leitores clínicos pela recepção.53Vitest/4arquivos,6Node/tipos/lint/sintaxe/três flags,24estados375–1920/135%,27hashes/cleanup; três RED do gate corrigidos. Semana/data e registros preservados, nenhuma escrita/IA/externo no navegador; sem DDL/CAS/grant novo. K7 continua para pós-consulta e áudio local no Início. Próximo candidato K6 contato NOWAIT/robô/C5 f837c57;2152 já atendida2201, sem nova resposta devida.
+
+Automação ACTIVE; main/axiscoachapp, sem push/hosted/Meta/carga. Preservar Claude/PersonalMed/SaaS. Reteste K6 no novo SHA, M2/MFA/compartilhamento/piloto abertos.
+
+---
+
 Entrega K7/2a: `13703bfdca9cdabc49650c513e45791d38c1a063`, main/axiscoachapp (autor e committer), sem push. Índice livre; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas.
 
 Atualizado em 2026-11-06 22:22. **K7/2a — consultas para retomar no Início:** [provas](../docs/reviews/2026-11-06/consultation-recovery/IMPLEMENTATION.md). Metadados privados por ator/vínculo composto, descartes excluídos, limite50 explícito, fresh/abort/erro sem ações antigas. Retoma ID exato fora do diretório ou mesmo paciente; contexto do agendamento preservado só no mesmo paciente, primeira carga falha permite retry. Releitura explícita do chat protege captura e demais promessas/preservação/descarte, sem repetição automática; textos só saem com confirmação. Invalidação dos avisos por ator.58Vitest/5arquivos+4Node, tipos/lint/sintaxe/três flags,20estados375–1920/135%,21hashes/cleanup. Revisão corrigiu leitura antiga, carga falha e writes pendentes; nenhuma escrita/IA/externo no navegador. Próximo K7/2b: espera/confirmações Agenda/Recepção e nav/redirect; pós-consulta e descoberta global de áudio local depois. K7 inteira aberta, K6 f837c57 pendente sem nova mensagem a responder.

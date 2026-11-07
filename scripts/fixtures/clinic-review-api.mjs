@@ -1,12 +1,14 @@
 // Loopback-only synthetic API for browser regression tests. Never use real keys/data.
 import http from 'node:http';
 import { z } from 'zod';
-import { createRecoveryNoticeFixture } from './recovery-notice-api.mjs';
+import { createRecoveryNoticeFixture, recoverySelect } from './recovery-notice-api.mjs';
+import { createSchedulingFixture } from './scheduling-migration-api.mjs';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, patientWorkspaceReview = false, recoveryNoticeReview = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false, mfaCancellationReview = false } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, patientWorkspaceReview = false, recoveryNoticeReview = false, schedulingReview = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false, mfaCancellationReview = false } = {}) {
   if(patientWorkspaceReview&&!workspaceDates)throw new Error('Patient workspace review requires workspace display data');
   if(recoveryNoticeReview&&(!workspaceDates||patientWorkspaceReview))throw new Error('Recovery notice review requires its isolated workspace fixture');
+  if(schedulingReview&&(!workspaceDates||patientWorkspaceReview||recoveryNoticeReview))throw new Error('Scheduling review requires its isolated workspace fixture');
   let patientWorkspaceDenied=false;
   if(delegationDecisions&&!delegationPermissions)throw new Error('Delegation decisions require the permissions fixture');
   if(delegationReplay&&(!delegationPermissions||!delegationDecisions))throw new Error('Delegation replay requires the permissions and decision fixtures');
@@ -28,6 +30,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   const recordRevisions=workspaceDates?[{id:'88888888-8888-4888-8888-888888888888',patient_id:patientId,record_id:visits[0].id,revision:1,snapshot:{soap_note:'Versão sintética da consulta.'},created_at:'2026-11-05T19:05:51Z'}]:[];
   const drafts=workspaceDates?[{id:'99999999-9999-4999-8999-999999999999',user_id:uid,patient_id:patientId,status:'error',chief_complaint:'Consulta sintética recuperável',audio_storage_path:null,content:{audioMimeType:'audio/webm'},updated_at:'2026-11-05T17:03:27Z'}]:[];
   const recoveryNotice=recoveryNoticeReview?createRecoveryNoticeFixture({userId:uid,patients,drafts}):null;
+  const scheduling=schedulingReview?createSchedulingFixture({userId:uid,patients,workItems}):null;
   const displayData={workItems,workRevisions,recordRevisions,drafts};
   if(medicalUI){
     templates.push({id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',user_id:uid,name:'Modelo de revisão sintético',description:'Estrutura sintética particular',content:'Texto sintético do modelo.',created_at:'2026-11-04T12:00:00Z'});
@@ -140,6 +143,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     if(medicalUI && url.pathname==='/functions/v1/signature-session/state' && req.method==='GET')return send({configured:false,active:false,expiresAt:null});
     if(url.pathname.startsWith('/functions/'))return send({error:'Integração externa desativada no teste.'},503);
     if(medicalUI && url.pathname.startsWith('/rest/') && !['GET','HEAD'].includes(req.method)){metrics.medicalWrites++;return send({error:'Read-only medical UI fixture'},405);}
+    const schedulingReply=scheduling?.read(req,url);if(schedulingReply)return send(schedulingReply.body,schedulingReply.status);
     const noticeReply=recoveryNotice?.read(req,url);if(noticeReply)return send(noticeReply.body,noticeReply.status);
     const table=url.pathname.split('/').pop();
     if(patientWorkspaceReview && ['patients','clinical_work_items','clinical_work_revisions','clinical_record_revisions','consultations'].includes(table)) {
@@ -150,6 +154,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     if(workspaceDates && Object.hasOwn(workspaceRows,table) && !['GET','HEAD'].includes(req.method)){metrics.workspaceWrites++;return send({error:'Read-only display fixture'},405);}
     let rows=workspaceRows[table]??(table==='patients'?patients:table==='appointments'?appointments:table==='consultations'?visits:table==='user_settings'?[settings]:table==='document_templates'?templates:table==='knowledge_documents'?knowledge:table==='usage_daily'?[{credits_used:0,calls:0}]:[]);
     for(const field of ['id','patient_id','revision','item_id','record_id','supersedes_document_id']){const filter=url.searchParams.get(field);if(filter?.startsWith('eq.'))rows=rows.filter(row=>String(row[field])===filter.slice(3));}
+    if(table==='consultation_drafts' && url.searchParams.get('select')===recoverySelect) return send(rows.filter(row=>row.user_id===uid&&row.discard_requested_at==null&&['processing','review','error'].includes(row.status)).slice(0,51).map(row=>({id:row.id,patient_id:row.patient_id,status:row.status,updated_at:row.updated_at,patient:patients.filter(patient=>patient.user_id===uid).map(({id,name})=>({id,name})).find(patient=>patient.id===row.patient_id)??null})));
     if(table==='patients' && req.method==='PATCH'){metrics.patientWrites++;rows.forEach(row=>Object.assign(row,input,{revision:row.revision+1}));}
     if(table==='appointments' && req.method==='PATCH'){metrics.appointmentWrites++;rows.forEach(row=>Object.assign(row,input,{revision:row.revision+1}));}
     const offset=Number(url.searchParams.get('offset')??'0');const total=rows.length;rows=rows.slice(offset,offset+Number(url.searchParams.get('limit')??500));headers['content-range']=`0-${Math.max(0,rows.length-1)}/${total}`;
@@ -157,7 +162,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     return send(req.headers.accept?.includes('application/vnd.pgrst.object+json')?(rows[0]??null):rows);
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  return {origin:`http://127.0.0.1:${server.address().port}`,metrics,recoveryNotice,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,mfaFactors:mfaReview?user.factors:null,delegationRows,
+  return {origin:`http://127.0.0.1:${server.address().port}`,metrics,recoveryNotice,scheduling,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,mfaFactors:mfaReview?user.factors:null,delegationRows,
     setPatientWorkspaceDenied(denied){if(!patientWorkspaceReview||typeof denied!=='boolean')throw new Error('Patient workspace mode is not enabled');patientWorkspaceDenied=denied;},
     resetMfaEnrollment(){if(!mfaEnrollmentReview)throw new Error('MFA enrollment fixture is not enabled');user.factors.splice(0,user.factors.length,...structuredClone(initialMfaFactors));},
     setDelegationReadMode(mode){if(!delegationPermissions||!['valid','invalid','denied'].includes(mode))throw new Error('Unsupported delegation fixture mode');delegationReadMode=mode;},

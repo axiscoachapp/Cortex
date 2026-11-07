@@ -16,15 +16,18 @@ import { auditWhatsAppRead } from './fixtures/whatsapp-read-browser.mjs';
 import { auditSettingsAccess } from './fixtures/settings-access-browser.mjs';
 import { auditPatientWorkspace } from './fixtures/patient-workspace-browser.mjs';
 import { auditRecoveryNotice } from './fixtures/recovery-notice-browser.mjs';
+import { auditSchedulingMigration } from './fixtures/scheduling-migration-browser.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|only=new-consultation|only=settings-embedded|only=whatsapp-read|only=settings-access|only=patient-workspace|only=recovery-notice|settings-admin-only|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus|check-mfa-cancellation)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|only=new-consultation|only=settings-embedded|only=whatsapp-read|only=settings-access|only=patient-workspace|only=recovery-notice|only=scheduling-migration|settings-admin-only|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus|check-mfa-cancellation)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
 const timestampOnly = args.includes('--only=short-timestamps');
 const medicalOnly = args.includes('--only=medical-delivery');
 const settingsEmbeddedOnly = args.includes('--only=settings-embedded');
+const schedulingMigrationOnly=args.includes('--only=scheduling-migration');
+assert.ok(!schedulingMigrationOnly||!args.some(arg=>arg.startsWith('--check-')),'Scheduling migration runs its own checks');
 const recoveryNoticeOnly = args.includes('--only=recovery-notice');
 assert.ok(!recoveryNoticeOnly || !args.some(arg=>arg.startsWith('--check-')), 'Recovery notice runs its own checks');
 const patientWorkspaceOnly = args.includes('--only=patient-workspace');
@@ -73,7 +76,7 @@ const baseline = args.find(arg => arg.startsWith('--baseline='))?.slice(11) || g
 const medicalPaths = ['src/components/PatientProfileDrawer.tsx', 'src/pages/PatientManagement.tsx', 'src/pages/KnowledgeBase.tsx', 'src/pages/Templates.tsx', 'src/pages/Assistant.tsx'];
 const medicalDelivery = medicalOnly ? git(['rev-parse', 'f2eb189']) : null;
 const overlays = args.filter(arg => arg.startsWith('--overlay=')).map(arg => arg.slice(10));
-const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace|Index)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation|WelcomeDashboard|ChatPanel|PatientProfileDrawer|NewConsultationModal|PatientAdministrativeFields|PatientWorkspaceDialog|ClinicalWorkEditor|ConsultationRecoveryNotice)\.tsx|src\/lib\/calendarLabels\.ts)$/;
+const allowed = /^(src\/App\.tsx|src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace|Index|LegacyWorkspaceRedirect)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation|WelcomeDashboard|ChatPanel|PatientProfileDrawer|NewConsultationModal|PatientAdministrativeFields|PatientWorkspaceDialog|ClinicalWorkEditor|ConsultationRecoveryNotice|SchedulingFollowups|PatientSidebar)\.tsx|src\/lib\/calendarLabels\.ts)$/;
 for (const path of overlays) assert.match(path, allowed, 'Overlay must be in the Codex audit scope');
 assert.ok(!overlays.includes('src/components/PatientProfileDrawer.tsx') || medicalOnly, 'Profile overlay requires medical delivery mode');
 assert.ok(!medicalOnly || overlays.length <= 1 && overlays.every(path => path === 'src/components/PatientProfileDrawer.tsx'), 'Medical delivery only permits the explicit profile overlay');
@@ -86,6 +89,9 @@ assert.ok(!settingsEmbeddedOnly || overlays.length <= 2 && new Set(overlays).siz
 const patientWorkspacePaths = ['src/pages/Index.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/components/PatientWorkspaceDialog.tsx', 'src/components/ClinicalWorkEditor.tsx'];
 assert.ok(!patientWorkspaceOnly || overlays.length <= 5 && new Set(overlays).size === overlays.length && overlays.every(path => patientWorkspacePaths.includes(path)), 'Patient workspace only permits its five UI overlays');
 assert.ok(patientWorkspaceOnly || !overlays.some(path => path === 'src/components/PatientWorkspaceDialog.tsx' || path === 'src/pages/Index.tsx' && !recoveryNoticeOnly), 'Patient workspace overlay requires focused mode');
+const schedulingMigrationPaths=['src/App.tsx','src/pages/Calendar.tsx','src/pages/ClinicalWorkspace.tsx','src/pages/LegacyWorkspaceRedirect.tsx','src/components/SchedulingFollowups.tsx','src/components/MobileSubpageNavigation.tsx','src/components/PatientSidebar.tsx','src/features/reception/ClinicAccessGate.tsx'];
+assert.ok(!schedulingMigrationOnly||overlays.length<=8&&new Set(overlays).size===overlays.length&&overlays.every(path=>schedulingMigrationPaths.includes(path)),'Scheduling migration only permits its eight route and UI overlays');
+assert.ok(schedulingMigrationOnly||!overlays.some(path=>['src/App.tsx','src/pages/LegacyWorkspaceRedirect.tsx','src/components/SchedulingFollowups.tsx','src/components/PatientSidebar.tsx'].includes(path)),'Scheduling migration overlay requires focused mode');
 const recoveryNoticePaths=['src/pages/Index.tsx','src/components/WelcomeDashboard.tsx','src/components/ChatPanel.tsx','src/components/ConsultationRecoveryNotice.tsx'];
 assert.ok(!recoveryNoticeOnly || overlays.length<=4 && new Set(overlays).size===overlays.length && overlays.every(path=>recoveryNoticePaths.includes(path)), 'Recovery notice only permits its four UI overlays');
 assert.ok(recoveryNoticeOnly || !overlays.includes('src/components/ConsultationRecoveryNotice.tsx'), 'Recovery notice overlay requires focused mode');
@@ -108,7 +114,7 @@ for (const path of paths) {
 }
 if (medicalOnly) for (const path of medicalPaths) assert.equal(sources.get(path).replaceAll('\r\n', '\n').trim(), git(['show', medicalDelivery + ':' + path]), 'Medical delivery source differs: ' + path);
 const medicalBaseSources = medicalOnly ? medicalPaths.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') })) : [];
-for (const path of overlays) { assert.ok(sources.has(path) || recoveryNoticeOnly && path === 'src/components/ConsultationRecoveryNotice.tsx' || patientWorkspaceOnly && path === 'src/components/PatientWorkspaceDialog.tsx' || path === 'src/lib/calendarLabels.ts' || whatsappReadOnly && whatsappPaths.includes(path), 'New source is not allowlisted'); sources.set(path, await readFile(path, 'utf8')); }
+for (const path of overlays) { assert.ok(sources.has(path) || schedulingMigrationOnly && ['src/pages/LegacyWorkspaceRedirect.tsx','src/components/SchedulingFollowups.tsx'].includes(path) || recoveryNoticeOnly && path === 'src/components/ConsultationRecoveryNotice.tsx' || patientWorkspaceOnly && path === 'src/components/PatientWorkspaceDialog.tsx' || path === 'src/lib/calendarLabels.ts' || whatsappReadOnly && whatsappPaths.includes(path), 'New source is not allowlisted'); sources.set(path, await readFile(path, 'utf8')); }
 const overlayHashes = overlays.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') }));
 const frozen = new Map([...sources].map(([path, source]) => [resolve(path).toLowerCase(), { path, source }]));
 const frozenLoads = new Set();
@@ -120,7 +126,7 @@ const tailwindConfiguration = loadConfig(resolve('tailwind.config.ts'));
 const tailwindContent = [...sources].filter(([path]) => /\.(tsx?|jsx?)$/.test(path)).map(([path, raw]) => ({ raw, extension: path.split('.').pop() }));
 const previewEntry = 'scripts/fixtures/settings-embedded-preview.tsx';
 if (settingsEmbeddedOnly) tailwindContent.push({ raw: await readFile(previewEntry, 'utf8'), extension: 'tsx' });
-const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/patient-workspace-browser.mjs', 'scripts/fixtures/recovery-notice-api.mjs', 'scripts/fixtures/recovery-notice-browser.mjs', 'scripts/fixtures/clinic-review-api.mjs', 'scripts/fixtures/reception-api.mjs', 'scripts/fixtures/whatsapp-read-api.mjs', 'scripts/fixtures/whatsapp-read-browser.mjs', 'scripts/fixtures/settings-access-api.mjs', 'scripts/fixtures/settings-access-browser.mjs', ...(settingsEmbeddedOnly ? [previewEntry] : []), ...configurationPaths];
+const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/patient-workspace-browser.mjs', 'scripts/fixtures/recovery-notice-api.mjs', 'scripts/fixtures/recovery-notice-browser.mjs', 'scripts/fixtures/scheduling-migration-api.mjs', 'scripts/fixtures/scheduling-migration-browser.mjs', 'scripts/fixtures/clinic-review-api.mjs', 'scripts/fixtures/reception-api.mjs', 'scripts/fixtures/whatsapp-read-api.mjs', 'scripts/fixtures/whatsapp-read-browser.mjs', 'scripts/fixtures/settings-access-api.mjs', 'scripts/fixtures/settings-access-browser.mjs', ...(settingsEmbeddedOnly ? [previewEntry] : []), ...configurationPaths];
 const ownHashes = await Promise.all(ownPaths.map(async path => ({ path, sha256: createHash('sha256').update(await readFile(path)).digest('hex') })));
 const apps = [], apis = [], contexts = [], errors = [], blocked = [], consoleErrors = [], screens = [], failedRequests = [], errorResponses = [];
 const medicalCaseFailures = []; let medicalCasesAttempted = 0;
@@ -134,7 +140,7 @@ const consultationChecks = [], consultationRequests = [];
 const settingsChecks = [], settingsRequests = [], settingsFixtureMetrics = [];
 const whatsappChecks = [], whatsappRequests = [];
 const settingsAccessChecks = [], settingsAccessRequests = [];
-const patientWorkspaceChecks = [], recoveryNoticeChecks = [];
+const patientWorkspaceChecks = [], recoveryNoticeChecks = [], schedulingMigrationChecks = [];
 const cacheOwner = randomUUID();
 let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false, draftPreserved = false, timestampDataPreserved = false, medicalDataPreserved = false, delegationDataPreserved = false;
 async function appFor(api) {
@@ -306,7 +312,11 @@ try {
   temporaryCache = await mkdtemp(join(tmpdir(), 'cortex-reception-audit-'));
   await writeFile(join(temporaryCache, 'audit-owner'), cacheOwner);
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
-  if (recoveryNoticeOnly) {
+  if(schedulingMigrationOnly){
+    const api=await startClinicFixture({workspaceDates:true,schedulingReview:true});apis.push(api);const app=await appFor(api);
+    const receptionApi=await startReceptionFixture();apis.push(receptionApi);const receptionApp=await appFor(receptionApi);
+    await auditSchedulingMigration({api,app,receptionApi,receptionApp,scene,capture,checks:schedulingMigrationChecks,screens,errors,blocked});
+  } else if (recoveryNoticeOnly) {
     const api=await startClinicFixture({workspaceDates:true,recoveryNoticeReview:true});apis.push(api);
     const app=await appFor(api);
     await auditRecoveryNotice({api,app,scene,capture,checks:recoveryNoticeChecks,screens,errors,blocked});
@@ -925,9 +935,9 @@ try {
   }
   if (checkMobileNavigation) {
     const nav = doctor.getByRole('navigation', { name: 'Navegação principal' });
-    await nav.getByRole('link', { name: 'Pendências', exact: true }).focus(); await doctor.keyboard.press('Enter');
-    await expect(doctor).toHaveURL(doctorApp.origin + '/trabalho');
-    await expect(nav.getByRole('link', { name: 'Pendências', exact: true })).toHaveAttribute('aria-current', 'page');
+    await nav.getByRole('link', { name: 'Pacientes', exact: true }).focus(); await doctor.keyboard.press('Enter');
+    await expect(doctor).toHaveURL(doctorApp.origin + '/gerenciar-pacientes');
+    await expect(nav.getByRole('link', { name: 'Pacientes', exact: true })).toHaveAttribute('aria-current', 'page');
     await nav.getByRole('button', { name: 'Mais páginas', exact: true }).focus(); await doctor.keyboard.press('Enter');
     await expect(doctor.getByRole('menuitem', { name: 'Assistente', exact: true })).toBeFocused();
     await doctor.keyboard.press('ArrowDown');
@@ -978,7 +988,7 @@ try {
   }
   for (const source of [...ownHashes, ...overlayHashes]) assert.equal(createHash('sha256').update(await readFile(source.path)).digest('hex'), source.sha256, 'Audit source changed during run');
   const requiredSources = consultationOnly ? ['src/components/NewConsultationModal.tsx', 'src/components/PatientAdministrativeFields.tsx', 'src/pages/PatientManagement.tsx'] : mfaMode ? ['src/pages/AccountSecurity.tsx', 'src/lib/mfa.ts'] : delegationMode ? ['src/features/reception/DelegationPermissions.tsx', 'src/features/reception/delegationApi.ts'] : medicalOnly ? medicalHistoryOnly ? ['src/components/PatientProfileDrawer.tsx'] : medicalPaths : timestampOnly ? ['src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/lib/recordingRescue.ts'] : chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
-  const requiredEntrySources = recoveryNoticeOnly ? ['src/App.tsx','src/pages/Auth.tsx',...recoveryNoticePaths] : patientWorkspaceOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', ...patientWorkspacePaths, 'src/components/ClinicalWorkEditor.tsx'] : settingsAccessOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', 'src/features/reception/ClinicAccessGate.tsx', 'src/pages/Settings.tsx', 'src/features/settings/WhatsAppSettings.tsx', 'src/features/settings/AutomationEditor.tsx', ...(!settingsAdminOnly ? ['src/features/reception/ReceptionLayout.tsx'] : [])] : whatsappReadOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', ...whatsappPaths, 'src/features/reception/whatsappApi.ts'] : settingsEmbeddedOnly ? ['src/contexts/AuthContext.tsx', 'src/features/reception/TeamSettings.tsx', 'src/features/reception/DelegationPermissions.tsx'] : ['src/App.tsx', 'src/pages/Auth.tsx', ...requiredSources];
+  const requiredEntrySources = schedulingMigrationOnly ? ['src/pages/Auth.tsx',...schedulingMigrationPaths,'src/components/PatientWorkspaceDialog.tsx','src/features/reception/ReceptionCalendar.tsx'] : recoveryNoticeOnly ? ['src/App.tsx','src/pages/Auth.tsx',...recoveryNoticePaths] : patientWorkspaceOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', ...patientWorkspacePaths, 'src/components/ClinicalWorkEditor.tsx'] : settingsAccessOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', 'src/features/reception/ClinicAccessGate.tsx', 'src/pages/Settings.tsx', 'src/features/settings/WhatsAppSettings.tsx', 'src/features/settings/AutomationEditor.tsx', ...(!settingsAdminOnly ? ['src/features/reception/ReceptionLayout.tsx'] : [])] : whatsappReadOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', ...whatsappPaths, 'src/features/reception/whatsappApi.ts'] : settingsEmbeddedOnly ? ['src/contexts/AuthContext.tsx', 'src/features/reception/TeamSettings.tsx', 'src/features/reception/DelegationPermissions.tsx'] : ['src/App.tsx', 'src/pages/Auth.tsx', ...requiredSources];
   for (const path of [...requiredEntrySources, ...overlays]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
   if (medicalOnly) assert.deepEqual(medicalCaseFailures, [], 'Medical delivery has unresolved case failures');
   if (checkMobileNavigation || welcomeOnly) assert.equal(navigationKeyboardVerified, true, 'Keyboard navigation did not complete');
@@ -1002,6 +1012,7 @@ const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, 
   consultationOnly, consultationChecks, consultationRequests, consultationMetrics: consultationOnly ? { ...apis[0]?.metrics } : null,
   settingsEmbeddedOnly, previewEntry: settingsEmbeddedOnly ? previewEntry : null, settingsChecks, settingsRequests, settingsFixtureMetrics,
   whatsappReadOnly, whatsappChecks, whatsappRequests, whatsappFixtureCalls: whatsappReadOnly ? apis[0]?.whatsappRead.calls : null,
+  schedulingMigrationOnly, schedulingMigrationChecks, schedulingMigrationCalls: schedulingMigrationOnly ? apis[0]?.scheduling.calls : null, schedulingMigrationReads: schedulingMigrationOnly ? apis[0]?.scheduling.allReads : null, schedulingMigrationMetrics: schedulingMigrationOnly ? apis[0]?.metrics : null, schedulingReceptionMetrics: schedulingMigrationOnly ? apis[1]?.metrics : null,
   recoveryNoticeOnly, recoveryNoticeChecks, recoveryNoticeCalls: recoveryNoticeOnly ? apis[0]?.recoveryNotice.calls : null, recoveryNoticeMetrics: recoveryNoticeOnly ? apis[0]?.metrics : null,
   patientWorkspaceOnly, patientWorkspaceChecks, patientWorkspaceMetrics: patientWorkspaceOnly ? apis[0]?.metrics : null,
   settingsAccessOnly, settingsAdminOnly, settingsAccessChecks, settingsAccessRequests, settingsAccessCalls: settingsAccessOnly ? apis[0]?.settingsRead.calls : null,

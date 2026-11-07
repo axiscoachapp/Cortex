@@ -46,6 +46,9 @@ function tree(client: QueryClient, initial = '/') {
           <Route element={<ClinicAccessGate><Outlet /></ClinicAccessGate>}>
             <Route path="/" element={<Clinical />} />
             <Route path="/recepcao" element={<p>Ambiente da recepção</p>} />
+            <Route path="/recepcao/agenda" element={<p>Agenda administrativa</p>} />
+            <Route path="/trabalho" element={<Clinical />} />
+            <Route path="/trabalho-extra" element={<Clinical />} />
             <Route path="/configuracoes" element={<SettingsReview />} />
             <Route path="/configuracoes-extra" element={<Clinical />} />
           </Route>
@@ -63,6 +66,18 @@ function mount(initial = '/') {
 async function refetch(client: QueryClient) { await act(async () => { await client.invalidateQueries({ queryKey: ['clinic-access'] }); }); }
 describe('reception routing before clinical components mount', () => {
   beforeEach(() => { vi.resetAllMocks(); mocks.userId = base.actorId; });
+  it.each(['/trabalho?queue=scheduling','/TRABALHO/?queue=scheduling','/%74rabalho?queue=scheduling'])('routes legacy scheduling %s to reception Calendar without private readers',async path=>{
+    mocks.access.mockResolvedValue({...base,kind:'reception',active:true,clinic:{id:base.actorId,name:'Clínica'},doctors:[{id:base.actorId,name:'Médico',specialty:'geral'}]});
+    mount(path);expect(await screen.findByText('Agenda administrativa')).toBeVisible();expect(mocks.clinicalRender).not.toHaveBeenCalled();
+  });
+  it.each(['/trabalho?patient=private&queue=scheduling','/trabalho-extra?queue=scheduling'])('does not treat %s as a reception scheduling link',async path=>{
+    mocks.access.mockResolvedValue({...base,kind:'reception',active:true,clinic:{id:base.actorId,name:'Clínica'},doctors:[{id:base.actorId,name:'Médico',specialty:'geral'}]});
+    mount(path);expect(await screen.findByText('Ambiente da recepção')).toBeVisible();expect(mocks.clinicalRender).not.toHaveBeenCalled();
+  });
+  it('keeps inactive reception blocked on a legacy scheduling link',async()=>{
+    mocks.access.mockResolvedValue({...base,kind:'reception',active:false,clinic:{id:base.actorId,name:'Clínica'},doctors:[{id:base.actorId,name:'Médico',specialty:'geral'}]});
+    mount('/trabalho?queue=scheduling');expect(await screen.findByRole('heading',{name:'Acesso de recepção indisponível'})).toBeVisible();expect(mocks.clinicalRender).not.toHaveBeenCalled();
+  });
   it('redirects reception without mounting clinical data readers', async () => {
     mocks.access.mockResolvedValue({
       ...base,

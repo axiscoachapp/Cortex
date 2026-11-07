@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { useAuth } from '@/contexts/AuthContext';
 
-const main=[{to:'/',label:'Início',icon:Home},{to:'/gerenciar-pacientes',label:'Pacientes',icon:Users},{to:'/agenda',label:'Agenda',icon:CalendarDays},{to:'/trabalho',label:'Pendências',icon:ClipboardList}];
+const main=[{to:'/',label:'Início',icon:Home},{to:'/gerenciar-pacientes',label:'Pacientes',icon:Users},{to:'/agenda',label:'Agenda',icon:CalendarDays}];
 const more=[{to:'/assistente',label:'Assistente',icon:Sparkles},{to:'/modelos',label:'Modelos',icon:FileStack},{to:'/conhecimento',label:'Conhecimento',icon:BookOpen},{to:'/configuracoes',label:'Configurações',icon:Settings2}];
 export function MobileSubpageNavigation() {
   const {pathname}=useLocation();

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,13 +49,6 @@ function workSnapshotText(snapshot: Json): string {
   ]
     .filter(Boolean)
     .join('\n\n');
-}
-
-export default function ClinicalWorkspacePage() {
-  const [params] = useSearchParams();
-  return <ClinicalWorkspace patientId={params.get('patient')} schedulingQueue={params.get('queue') === 'scheduling'}
-    appointmentParam={params.get('appointment') ?? undefined} complaintParam={params.get('complaint') ?? undefined}
-    manual={params.get('new') === '1'} />;
 }
 
 type WorkspaceProps = {

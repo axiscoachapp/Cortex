@@ -1,0 +1,3351 @@
+{
+  "completed": true,
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": null,
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "2db154689375b83c042bb8eb80da4fbd8a5d0254",
+  "overlays": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "206f76935f6317fc955fec84032bd572b1e456534cae72a07dfdb4f2716092a5"
+    },
+    {
+      "path": "src/pages/Calendar.tsx",
+      "sha256": "ee90648a6480cd7f464227c371860d63d5a4ba56661badcdcdcbe1286d8efde9"
+    },
+    {
+      "path": "src/pages/ClinicalWorkspace.tsx",
+      "sha256": "fd9fe34ade0a993c324e484e910127d25d49c89f71f85c1313b593c0b6a5a885"
+    },
+    {
+      "path": "src/pages/LegacyWorkspaceRedirect.tsx",
+      "sha256": "a442103119b0114d1bd10b57bb7b959378ab348b176f0c87827fe7c58d6da840"
+    },
+    {
+      "path": "src/components/SchedulingFollowups.tsx",
+      "sha256": "00a82765d1b416bae63192454160767bea3e4b1551aa4b36b1bcb797ae4d1ed2"
+    },
+    {
+      "path": "src/components/MobileSubpageNavigation.tsx",
+      "sha256": "002997bec2ec23e33e25e9726506e1737b72bc222fedece81079778c3243897f"
+    },
+    {
+      "path": "src/components/PatientSidebar.tsx",
+      "sha256": "950cc7cdce5c96f2e2f93dcbb5eb47a71417da1ff7e0fe3f0dc697371befea0a"
+    },
+    {
+      "path": "src/features/reception/ClinicAccessGate.tsx",
+      "sha256": "4bef1e23e8d3279372a08540d986e20fc8790fb1c6a941b5329571456f80df1a"
+    }
+  ],
+  "frozenTextSourceCount": 314,
+  "frozenTextSourceDigest": "a3fd174704c53b9a18829d673269d6665f606c994f6ad64b4b9b73173797a0f1",
+  "tailwindRawContentCount": 312,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "07aa38e5da6e5b9b039ee5fff78376393ec69752f9807df385caf4a74ec49e45"
+    },
+    {
+      "path": "scripts/fixtures/patient-workspace-browser.mjs",
+      "sha256": "030d6f283f64a71e73a2961aaef8d6c4b7f9f70e4a7acb421c0c19cc275f3295"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-api.mjs",
+      "sha256": "4c47980fd0fce8ab3f0ab4d0dcae254aa37ed6297f1efd6c1b6d0788e48c3037"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-browser.mjs",
+      "sha256": "1fcd98db775bb30ff1ab5f0bf7f9c51df603d51e5c6bdc87e59a0bdc41dc8f8c"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-api.mjs",
+      "sha256": "c83f0095188f1a56f6acd379fd7af7758247895d2a12f6006feb4c5462368cc0"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-browser.mjs",
+      "sha256": "8ef010f48a78e2c6186fefaec215588a530e2fabae9491a7dfc0ef3b970b5598"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "0ded11ae4b2818a316ab6a7b0140876684be3059c703e2398252184486c307c9"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "920d6919ae2e108e623c151a0d8c34044df926002c35d9d21138add44e030b58"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "7bbb023779bb00fd053a067530a025ecf56ef543114a4dd9927872fc039e195c"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-browser.mjs",
+      "sha256": "c144aedb1c26cfea649ebb9635d97a5803bccfe68248603701ceb2f2d47004f7"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-api.mjs",
+      "sha256": "315ac3ff6ba0b3ab5a5ab710c75083eb9443499b4c713a0c9a7ce5b8a042a334"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-browser.mjs",
+      "sha256": "d8a5c98f13043e85a51c7cf385052d75a5219f3b80c97c0b19bdb7cd1472caf7"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": false,
+  "consultationChecks": [],
+  "consultationRequests": [],
+  "consultationMetrics": null,
+  "settingsEmbeddedOnly": false,
+  "previewEntry": null,
+  "settingsChecks": [],
+  "settingsRequests": [],
+  "settingsFixtureMetrics": [],
+  "whatsappReadOnly": false,
+  "whatsappChecks": [],
+  "whatsappRequests": [],
+  "whatsappFixtureCalls": null,
+  "schedulingMigrationOnly": true,
+  "schedulingMigrationChecks": [
+    {
+      "genericHome": true,
+      "noLegacyWorkRead": true
+    },
+    {
+      "width": 375,
+      "legacyCalendar": true,
+      "viewAndDatePreserved": true,
+      "errorLinksHidden": true,
+      "recovered": true,
+      "empty": true
+    },
+    {
+      "width": 768,
+      "legacyCalendar": true,
+      "viewAndDatePreserved": true,
+      "errorLinksHidden": true,
+      "recovered": true,
+      "empty": true
+    },
+    {
+      "width": 1280,
+      "legacyCalendar": true,
+      "viewAndDatePreserved": true,
+      "errorLinksHidden": true,
+      "recovered": true,
+      "empty": true
+    },
+    {
+      "width": 1920,
+      "legacyCalendar": true,
+      "viewAndDatePreserved": true,
+      "errorLinksHidden": true,
+      "recovered": true,
+      "empty": true
+    }
+  ],
+  "schedulingMigrationCalls": [
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    }
+  ],
+  "schedulingMigrationReads": [
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "*",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "order": "updated_at.desc,id.asc",
+        "limit": "50",
+        "patient_id": "eq.22222222-2222-4222-8222-222222222222"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "id,patient_id,title,status,due_date,updated_at,workflow:details->>workflow,stage:details->>stage,availability:details->>availability,patient:patients!clinical_work_items_patient_id_user_id_fkey(id,name)",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "kind": "eq.task",
+        "status": "in.(open,draft)",
+        "details->>workflow": "in.(waitlist,confirmation)",
+        "order": "updated_at.desc,id.asc",
+        "limit": "51"
+      }
+    },
+    {
+      "method": "GET",
+      "query": {
+        "select": "*",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111",
+        "order": "updated_at.desc,id.asc",
+        "limit": "50",
+        "patient_id": "eq.22222222-2222-4222-8222-222222222222"
+      }
+    }
+  ],
+  "schedulingMigrationMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "workspaceWrites": 0
+  },
+  "schedulingReceptionMetrics": {
+    "clinicalReads": [],
+    "externalCalls": [],
+    "unknown": [],
+    "bookings": 0,
+    "contacts": 0,
+    "caseWrites": 0
+  },
+  "recoveryNoticeOnly": false,
+  "recoveryNoticeChecks": [],
+  "recoveryNoticeCalls": null,
+  "recoveryNoticeMetrics": null,
+  "patientWorkspaceOnly": false,
+  "patientWorkspaceChecks": [],
+  "patientWorkspaceMetrics": null,
+  "settingsAccessOnly": false,
+  "settingsAdminOnly": false,
+  "settingsAccessChecks": [],
+  "settingsAccessRequests": [],
+  "settingsAccessCalls": null,
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": null,
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/AppointmentModal.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/CalendarWeekDetails.tsx",
+    "src/components/ChatPanel.tsx",
+    "src/components/ClinicalAnswer.tsx",
+    "src/components/ClinicalMarkdown.tsx",
+    "src/components/ClinicalProposals.tsx",
+    "src/components/ClinicalWorkEditor.tsx",
+    "src/components/CommentProposalCard.tsx",
+    "src/components/ConsultationRecoveryNotice.tsx",
+    "src/components/ConsultationReviewModal.tsx",
+    "src/components/DocumentComposerModal.tsx",
+    "src/components/DocumentPreviewModal.tsx",
+    "src/components/LiveCopilotCard.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/NewConsultationModal.tsx",
+    "src/components/OnboardingCard.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/PatientAdministrativeFields.tsx",
+    "src/components/PatientFiles.tsx",
+    "src/components/PatientProfileDrawer.tsx",
+    "src/components/PatientSidebar.tsx",
+    "src/components/PatientSnapshot.tsx",
+    "src/components/PatientWorkspaceDialog.tsx",
+    "src/components/PrescriptionList.tsx",
+    "src/components/PrescriptionTemplatePicker.tsx",
+    "src/components/ProfileUpdateCard.tsx",
+    "src/components/QuestionChecklistCard.tsx",
+    "src/components/RecordingModeDialog.tsx",
+    "src/components/ReferenceSearch.tsx",
+    "src/components/SchedulingFollowups.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/SignatureControls.tsx",
+    "src/components/SoapNoteView.tsx",
+    "src/components/SpecialtySettingsSheet.tsx",
+    "src/components/UsageMeter.tsx",
+    "src/components/WelcomeDashboard.tsx",
+    "src/components/ui/badge.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/calendar.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/popover.tsx",
+    "src/components/ui/select.tsx",
+    "src/components/ui/sheet.tsx",
+    "src/components/ui/switch.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/data/seedData.ts",
+    "src/features/reception/BookingDialog.tsx",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/ContactSearch.tsx",
+    "src/features/reception/ReceptionAppointmentCard.tsx",
+    "src/features/reception/ReceptionCalendar.tsx",
+    "src/features/reception/ReceptionLayout.tsx",
+    "src/features/reception/ReceptionNotice.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/appointmentTiming.ts",
+    "src/features/reception/contracts.ts",
+    "src/features/reception/dates.ts",
+    "src/features/reception/linkRelationships.ts",
+    "src/features/reception/useRequestId.ts",
+    "src/features/settings/ProfessionalSettingsForm.tsx",
+    "src/hooks/use-mobile.tsx",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useDocumentSnippets.ts",
+    "src/hooks/useRecording.ts",
+    "src/hooks/useSeedPatients.ts",
+    "src/hooks/useSignatureSession.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/hooks/useUsage.ts",
+    "src/hooks/useUserSettings.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/calendarLabels.ts",
+    "src/lib/clinicalWorkspace.ts",
+    "src/lib/cmedPresentation.ts",
+    "src/lib/consultationDrafts.ts",
+    "src/lib/dates.ts",
+    "src/lib/documentSnippets.ts",
+    "src/lib/functionErrors.ts",
+    "src/lib/interfaceScale.ts",
+    "src/lib/medicationMerge.ts",
+    "src/lib/mfa.ts",
+    "src/lib/pagination.ts",
+    "src/lib/patientConversation.ts",
+    "src/lib/patientImport.ts",
+    "src/lib/patientMapper.ts",
+    "src/lib/patientRegistration.ts",
+    "src/lib/prescriberContact.ts",
+    "src/lib/printDoc.ts",
+    "src/lib/recordingRescue.ts",
+    "src/lib/sharing.ts",
+    "src/lib/signatureClient.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/Calendar.tsx",
+    "src/pages/ClinicalWorkspace.tsx",
+    "src/pages/Index.tsx",
+    "src/pages/LegacyWorkspaceRedirect.tsx"
+  ],
+  "screens": [
+    {
+      "role": "clinical",
+      "path": "/trabalho",
+      "variant": "legacy-general",
+      "actualPath": "/",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [
+        {
+          "label": "Assistente",
+          "fullWidth": 84.328125,
+          "availableWidth": 84.328125,
+          "width": 160.5,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Modelos",
+          "fullWidth": 69.65625,
+          "availableWidth": 69.65625,
+          "width": 160.515625,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Conhecimento",
+          "fullWidth": 121.90625,
+          "availableWidth": 121.90625,
+          "width": 160.5,
+          "height": 76.234375,
+          "clipped": false
+        },
+        {
+          "label": "Pacientes",
+          "fullWidth": 80.203125,
+          "availableWidth": 80.203125,
+          "width": 160.515625,
+          "height": 76.234375,
+          "clipped": false
+        }
+      ],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Boa noite",
+        "Consultas para retomar",
+        "Agenda de Hoje",
+        "Pacientes Recentes",
+        "Retornos Pendentes1"
+      ],
+      "screenshot": "clinical--trabalho-legacy-general-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "scheduling-panel",
+      "actualPath": "/agenda",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 30.671875,
+          "right": 67.109375,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 108.359375,
+          "right": 174.203125,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 207.0625,
+          "right": 260.328125,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 310.5625,
+          "right": 341.640625,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "quinta-feira, 5 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 118.78125,
+              "right": 206.0625,
+              "top": 29.6875,
+              "bottom": 55.6875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações"
+      ],
+      "screenshot": "clinical--trabalho-queue-scheduling-scheduling-panel-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "scheduling-unavailable",
+      "actualPath": "/agenda",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 30.671875,
+          "right": 67.109375,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 108.359375,
+          "right": 174.203125,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 207.0625,
+          "right": 260.328125,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 310.5625,
+          "right": 341.640625,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 118.78125,
+              "right": 206.0625,
+              "top": 29.6875,
+              "bottom": 55.6875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível carregar os acompanhamentos. Tentar carregar acompanhamentos"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações",
+        "Consultas da semana"
+      ],
+      "screenshot": "clinical--trabalho-queue-scheduling-scheduling-unavailable-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "scheduling-recovered",
+      "actualPath": "/agenda",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 30.671875,
+          "right": 67.109375,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 108.359375,
+          "right": 174.203125,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 207.0625,
+          "right": 260.328125,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 310.5625,
+          "right": 341.640625,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 118.78125,
+              "right": 206.0625,
+              "top": 29.6875,
+              "bottom": 55.6875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações",
+        "Consultas da semana"
+      ],
+      "screenshot": "clinical--trabalho-queue-scheduling-scheduling-recovered-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "scheduling-empty",
+      "actualPath": "/agenda",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 30.671875,
+          "right": 67.109375,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 108.359375,
+          "right": 174.203125,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 207.0625,
+          "right": 260.328125,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 310.5625,
+          "right": 341.640625,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 118.78125,
+              "right": 206.0625,
+              "top": 29.6875,
+              "bottom": 55.6875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações",
+        "Consultas da semana"
+      ],
+      "screenshot": "clinical--trabalho-queue-scheduling-scheduling-empty-375.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "patient-work-preserved",
+      "actualPath": "/",
+      "width": 375,
+      "dialogActions": [
+        {
+          "name": "Novo registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Registros e acompanhamento",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Linha do tempo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Marcar concluído",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Marcar concluído",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acompanhamento do paciente",
+        "Registro sintético de horários",
+        "Espera sintética preservada",
+        "Espera já concluída",
+        "Resultado fora da fila de agenda"
+      ],
+      "screenshot": "clinical--trabalho-queue-scheduling-patient-work-preserved-375.png",
+      "actionScreenshot": "clinical--trabalho-queue-scheduling-patient-work-preserved-375-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/TRABALHO/?queue=scheduling",
+      "variant": "scheduling-panel",
+      "actualPath": "/agenda",
+      "width": 768,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 79.796875,
+          "right": 116.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 190.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 255.734375,
+          "right": 321.578125,
+          "targetLeft": 196.03125,
+          "targetRight": 381.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 452.6875,
+          "right": 505.953125,
+          "targetLeft": 386.6875,
+          "targetRight": 571.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 654.4375,
+          "right": 685.515625,
+          "targetLeft": 577.34375,
+          "targetRight": 762.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "quinta-feira, 5 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 118.78125,
+              "right": 206.0625,
+              "top": 29.6875,
+              "bottom": 55.6875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações"
+      ],
+      "screenshot": "clinical--TRABALHO--queue-scheduling-scheduling-panel-768.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/TRABALHO/?queue=scheduling",
+      "variant": "scheduling-unavailable",
+      "actualPath": "/agenda",
+      "width": 768,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 79.796875,
+          "right": 116.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 190.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 255.734375,
+          "right": 321.578125,
+          "targetLeft": 196.03125,
+          "targetRight": 381.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 452.6875,
+          "right": 505.953125,
+          "targetLeft": 386.6875,
+          "targetRight": 571.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 654.4375,
+          "right": 685.515625,
+          "targetLeft": 577.34375,
+          "targetRight": 762.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 118.78125,
+              "right": 206.0625,
+              "top": 29.6875,
+              "bottom": 55.6875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível carregar os acompanhamentos. Tentar carregar acompanhamentos"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações",
+        "Consultas da semana"
+      ],
+      "screenshot": "clinical--TRABALHO--queue-scheduling-scheduling-unavailable-768.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/TRABALHO/?queue=scheduling",
+      "variant": "scheduling-recovered",
+      "actualPath": "/agenda",
+      "width": 768,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 79.796875,
+          "right": 116.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 190.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 255.734375,
+          "right": 321.578125,
+          "targetLeft": 196.03125,
+          "targetRight": 381.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 452.6875,
+          "right": 505.953125,
+          "targetLeft": 386.6875,
+          "targetRight": 571.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 654.4375,
+          "right": 685.515625,
+          "targetLeft": 577.34375,
+          "targetRight": 762.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 118.78125,
+              "right": 206.0625,
+              "top": 29.6875,
+              "bottom": 55.6875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações",
+        "Consultas da semana"
+      ],
+      "screenshot": "clinical--TRABALHO--queue-scheduling-scheduling-recovered-768.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/TRABALHO/?queue=scheduling",
+      "variant": "scheduling-empty",
+      "actualPath": "/agenda",
+      "width": 768,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 79.796875,
+          "right": 116.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 190.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 255.734375,
+          "right": 321.578125,
+          "targetLeft": 196.03125,
+          "targetRight": 381.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 452.6875,
+          "right": 505.953125,
+          "targetLeft": 386.6875,
+          "targetRight": 571.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 654.4375,
+          "right": 685.515625,
+          "targetLeft": 577.34375,
+          "targetRight": 762.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 55.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 53.96875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 118.78125,
+              "right": 206.0625,
+              "top": 29.6875,
+              "bottom": 55.6875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações",
+        "Consultas da semana"
+      ],
+      "screenshot": "clinical--TRABALHO--queue-scheduling-scheduling-empty-768.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/%74rabalho?queue=scheduling",
+      "variant": "scheduling-panel",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 143.796875,
+          "right": 180.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 447.734375,
+          "right": 513.578125,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 772.6875,
+          "right": 825.953125,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1102.4375,
+          "right": 1133.515625,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "1–7 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 140.359375,
+              "right": 238.546875,
+              "top": 19.1875,
+              "bottom": 49.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações"
+      ],
+      "screenshot": "clinical---74rabalho-queue-scheduling-scheduling-panel-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/%74rabalho?queue=scheduling",
+      "variant": "scheduling-unavailable",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 143.796875,
+          "right": 180.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 447.734375,
+          "right": 513.578125,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 772.6875,
+          "right": 825.953125,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1102.4375,
+          "right": 1133.515625,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 140.359375,
+              "right": 238.546875,
+              "top": 19.1875,
+              "bottom": 49.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível carregar os acompanhamentos. Tentar carregar acompanhamentos"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações"
+      ],
+      "screenshot": "clinical---74rabalho-queue-scheduling-scheduling-unavailable-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/%74rabalho?queue=scheduling",
+      "variant": "scheduling-recovered",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 143.796875,
+          "right": 180.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 447.734375,
+          "right": 513.578125,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 772.6875,
+          "right": 825.953125,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1102.4375,
+          "right": 1133.515625,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 140.359375,
+              "right": 238.546875,
+              "top": 19.1875,
+              "bottom": 49.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações"
+      ],
+      "screenshot": "clinical---74rabalho-queue-scheduling-scheduling-recovered-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/%74rabalho?queue=scheduling",
+      "variant": "scheduling-empty",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 143.796875,
+          "right": 180.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 447.734375,
+          "right": 513.578125,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 772.6875,
+          "right": 825.953125,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1102.4375,
+          "right": 1133.515625,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 140.359375,
+              "right": 238.546875,
+              "top": 19.1875,
+              "bottom": 49.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações"
+      ],
+      "screenshot": "clinical---74rabalho-queue-scheduling-scheduling-empty-1280.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "scheduling-panel",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "1–7 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 400.359375,
+              "right": 498.546875,
+              "top": 19.1875,
+              "bottom": 49.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações"
+      ],
+      "screenshot": "clinical--trabalho-queue-scheduling-scheduling-panel-1920.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "scheduling-unavailable",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 400.359375,
+              "right": 498.546875,
+              "top": 19.1875,
+              "bottom": 49.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível carregar os acompanhamentos. Tentar carregar acompanhamentos"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações"
+      ],
+      "screenshot": "clinical--trabalho-queue-scheduling-scheduling-unavailable-1920.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "scheduling-recovered",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 400.359375,
+              "right": 498.546875,
+              "top": 19.1875,
+              "bottom": 49.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações"
+      ],
+      "screenshot": "clinical--trabalho-queue-scheduling-scheduling-recovered-1920.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "scheduling-empty",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Agenda",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Conectar Google Calendar",
+              "width": 224.546875,
+              "height": 48.59375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Novo Agendamento",
+              "width": 255.8125,
+              "height": 48.59375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriod": "8–14 de novembro",
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Agenda",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 400.359375,
+              "right": 498.546875,
+              "top": 19.1875,
+              "bottom": 49.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda",
+        "Lista de espera e confirmações"
+      ],
+      "screenshot": "clinical--trabalho-queue-scheduling-scheduling-empty-1920.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "patient-work-preserved",
+      "actualPath": "/",
+      "width": 1920,
+      "dialogActions": [
+        {
+          "name": "Novo registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Registros e acompanhamento",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Linha do tempo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Marcar concluído",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Marcar concluído",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04",
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acompanhamento do paciente",
+        "Registro sintético de horários",
+        "Espera sintética preservada",
+        "Espera já concluída",
+        "Resultado fora da fila de agenda"
+      ],
+      "screenshot": "clinical--trabalho-queue-scheduling-patient-work-preserved-1920.png",
+      "actionScreenshot": "clinical--trabalho-queue-scheduling-patient-work-preserved-1920-actions.png"
+    },
+    {
+      "role": "clinical",
+      "path": "/trabalho?patient=22222222-2222-4222-8222-222222222222&new=1&appointment=old&complaint=synthetic",
+      "variant": "legacy-patient",
+      "actualPath": "/",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Paciente Exemplo A",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Consulta manual",
+              "width": 160.5,
+              "height": 61.375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Acompanhamento",
+              "width": 160.515625,
+              "height": 61.375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Receita / atestado",
+              "width": 160.5,
+              "height": 61.375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": {
+        "label": "Pergunta ao assistente clínico",
+        "placeholder": "Faça uma pergunta",
+        "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+        "textWidth": 186.75523376464844,
+        "availableWidth": 264.79999999999995,
+        "empty": true
+      },
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Paciente Exemplo A",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 91.78125,
+              "right": 287.09375,
+              "top": 18.1875,
+              "bottom": 41.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Paciente Exemplo A"
+      ],
+      "screenshot": "clinical--trabalho-patient-22222222-2222-4222-8222-222222222222-new-1-appointment-old-complaint-synthetic-legacy-patient-375.png"
+    },
+    {
+      "role": "staff",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "legacy-staff-calendar",
+      "actualPath": "/recepcao/agenda",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda da equipe",
+        "06/11/2026"
+      ],
+      "screenshot": "staff--trabalho-queue-scheduling-legacy-staff-calendar-375.png"
+    },
+    {
+      "role": "staff",
+      "path": "/TRABALHO/?queue=scheduling",
+      "variant": "legacy-staff-calendar",
+      "actualPath": "/recepcao/agenda",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda da equipe",
+        "06/11/2026"
+      ],
+      "screenshot": "staff--TRABALHO--queue-scheduling-legacy-staff-calendar-1280.png"
+    },
+    {
+      "role": "staff",
+      "path": "/%74rabalho?queue=scheduling",
+      "variant": "legacy-staff-calendar",
+      "actualPath": "/recepcao/agenda",
+      "width": 1920,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Agenda da equipe",
+        "06/11/2026"
+      ],
+      "screenshot": "staff---74rabalho-queue-scheduling-legacy-staff-calendar-1920.png"
+    },
+    {
+      "role": "staff",
+      "path": "/trabalho?queue=scheduling",
+      "variant": "legacy-staff-inactive",
+      "actualPath": "/trabalho",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acesso de recepção indisponível"
+      ],
+      "screenshot": "staff--trabalho-queue-scheduling-legacy-staff-inactive-375.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    }
+  ],
+  "failedRequests": [
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    }
+  ],
+  "errorResponses": [
+    {
+      "path": "/rest/v1/clinical_work_items",
+      "status": 503
+    },
+    {
+      "path": "/rest/v1/clinical_work_items",
+      "status": 503
+    },
+    {
+      "path": "/rest/v1/clinical_work_items",
+      "status": 503
+    },
+    {
+      "path": "/rest/v1/clinical_work_items",
+      "status": 503
+    },
+    {
+      "path": "/rest/v1/clinical_work_items",
+      "status": 503
+    },
+    {
+      "path": "/rest/v1/clinical_work_items",
+      "status": 503
+    },
+    {
+      "path": "/rest/v1/clinical_work_items",
+      "status": 503
+    },
+    {
+      "path": "/rest/v1/clinical_work_items",
+      "status": 503
+    }
+  ],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

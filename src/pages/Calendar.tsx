@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { isBelowMobileBreakpoint, useIsMobile } from '@/hooks/use-mobile';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar as BigCalendar, dateFnsLocalizer, View, SlotInfo } from 'react-big-calendar';
@@ -26,6 +26,7 @@ import { Appointment, Patient } from '@/types/patient';
 import { mapPatientRow } from '@/lib/patientMapper';
 import { AppointmentModal } from '@/components/AppointmentModal';
 import { CalendarWeekDetails, CompactWeekHeader } from '@/components/CalendarWeekDetails';
+import { SchedulingFollowups } from '@/components/SchedulingFollowups';
 import { formatCalendarDay, formatCalendarWeekRange } from '@/lib/calendarLabels';
 import { useToast } from '@/hooks/use-toast';
 import { fetchAllRows } from '@/lib/pagination';
@@ -103,6 +104,8 @@ const messages = {
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function CalendarPage() {
   const navigate = useNavigate();
+  const [params,setParams]=useSearchParams();
+  const schedulingOpen=params.get('queue')==='scheduling';
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -374,9 +377,10 @@ export default function CalendarPage() {
         </div>
       </header>
       <div className="container mx-auto px-4 pt-3 flex flex-wrap items-center gap-3 text-xs">
-        <Link className="text-primary underline underline-offset-4" to="/trabalho?queue=scheduling">
+        <Button variant="outline" className="h-auto min-h-10 whitespace-normal" aria-expanded={schedulingOpen} aria-controls="calendar-followups"
+          onClick={()=>{const next=new URLSearchParams(params);if(schedulingOpen)next.delete('queue');else next.set('queue','scheduling');setParams(next);}}>
           Lista de espera e confirmações
-        </Link>
+        </Button>
         <span className="text-muted-foreground">
           Acompanhamentos manuais; um registro não envia mensagens nem reserva horários.
         </span>
@@ -385,6 +389,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
+      {schedulingOpen&&<div id="calendar-followups" className="container mx-auto px-4 pt-4"><SchedulingFollowups/></div>}
       {patientsError && (
         <div role="alert" className="container mx-auto px-4 py-3 text-sm flex items-center gap-3">
           <p>Não foi possível carregar os pacientes. Atualize antes de criar ou alterar um vínculo.</p>

@@ -17,7 +17,7 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
   const exit = () => {
     if (confirmSessionExit()) void signOut();
   };
-  const { pathname, key: locationKey } = useLocation();
+  const { pathname, search, key: locationKey } = useLocation();
   // Follow the router's decoding, case and trailing-slash rules. Comparing the
   // raw pathname would miss aliases that still mount the Settings route.
   const settingsPage = matchRoutes([{ path: '/configuracoes' }], pathname) !== null;
@@ -100,7 +100,11 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
           </Button>
         </div>
       );
-    if (!accountPage && !settingsPage && !pathname.startsWith('/recepcao')) return <Navigate to="/recepcao" replace />;
+    if (!accountPage && !settingsPage && !pathname.startsWith('/recepcao')) {
+      const params=new URLSearchParams(search);
+      const scheduling=matchRoutes([{path:'/trabalho'}],pathname)!==null&&!params.get('patient')&&params.get('queue')==='scheduling';
+      return <Navigate to={scheduling?'/recepcao/agenda':'/recepcao'} replace />;
+    }
   } else if (pathname.startsWith('/recepcao') && (!value.clinic || !value.active || !value.admin)) {
     return (
       <div className="max-w-lg mx-auto p-6 space-y-4">

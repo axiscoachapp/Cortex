@@ -28,7 +28,7 @@ const TemplatesPage = lazy(() => import("./pages/Templates"));
 const KnowledgeBasePage = lazy(() => import("./pages/KnowledgeBase"));
 const AssistantPage = lazy(() => import("./pages/Assistant"));
 const SharingPage = lazy(() => import('./pages/Sharing'));
-const ClinicalWorkspacePage = lazy(() => import('./pages/ClinicalWorkspace'));
+const LegacyWorkspaceRedirect = lazy(() => import('./pages/LegacyWorkspaceRedirect'));
 const AccountSecurityPage = lazy(() => import('./pages/AccountSecurity'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -107,7 +107,7 @@ const router = createBrowserRouter([
     { path: '/assistente', element: <AssistantPage /> },
     { path: '/compartilhamento', element: <SharingPage /> },
     { path: '/permissoes-recepcao', element: <DelegationPermissions /> },
-    { path: '/trabalho', element: <ClinicalWorkspacePage /> },
+    { path: '/trabalho', element: <LegacyWorkspaceRedirect /> },
     { path: '/seguranca', element: <AccountSecurityPage /> },
     { path: '/configuracoes', element: <SettingsPage /> },
   ] },
