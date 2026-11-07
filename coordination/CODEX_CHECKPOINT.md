@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-07 03:45. **K1/4e — adaptador close:** [provas](../docs/reviews/2026-11-07/whatsapp-close/IMPLEMENTATION.md). Snapshot aberto/próprio só local; corpo act/close/conversationId/revision, recibo closed/revisão+1/assignedTo preservado. Sem retry; needsRefresh depois de início inconclusivo.47RED→172Vitest/quatro arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória dez verificações/nove POST/três hashes estáveis/zero rede. Sem UI/banco/autorização/CAS real; closed_at/by/unread não conferidos no recibo.
+
+Próximo4f: botão/confirmar encerramento com escopo/detalhe frescos e conferência/gerações existentes. Nenhuma mensagem Claude nova;2152 atendida e 2026-11-07-0345_codex-para-claude_k1-contrato-encerrar-conversa.md informativa encerrada sem confirmação. C4/C5 após SHA e dois RED C5 fora desta suíte dirigida; outros comandos/MFA/K7 separados. Automação ACTIVE; main/axiscoachapp sem push/hosted/carga, preservar Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md.
+
+---
+
 Entrega K1/4d: `70dbb07bc738c5a07a5701f8ce582c87eeb611be`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Devolução de conversa própria integrada; K1 inteiro/outros comandos continuam abertos.
 
 Atualizado em 2026-11-07 03:37. **K1/4d — devolver na UI:** [provas](../docs/reviews/2026-11-07/whatsapp-release-ui/IMPLEMENTATION.md). Só detalhe fresco aberto/próprio; exclusão/conferência/gerações compartilhadas, sem retry/otimismo/assumir automático.12RED→201Vitest/cinco arquivos+12Node/tipos/lint/sintaxe/cincoflags/revisão.32estados320–1920/135%,325fontes/28hashes/dois overlays/cleanup;161requests/12unassign sintéticos (8aplicados/4conflitos), oito403/409-console esperados e zero demais erros/clínico/externos. Capturas320/1280 inspecionadas; helper de expectativa antiga corrigido, dois preliminares excluídos.

@@ -1,0 +1,84 @@
+{
+  "completed": true,
+  "syntheticOnly": true,
+  "realNetwork": false,
+  "sdkVersion": "2.86.0",
+  "sourceMode": "immutable in-memory snapshot; hashes stable before/after",
+  "sources": [
+    {
+      "path": "src/lib/functionErrors.ts",
+      "sha256": "36c8cb268acf947fbe799e9b8080db16dd1f049e7b1f8997c97f300b01c6fd4f"
+    },
+    {
+      "path": "src/features/reception/whatsappClaim.ts",
+      "sha256": "448ad6fe58db5ec7d0246ee1fd96aa11eab89083aad70892cd8b15e6828729f8"
+    },
+    {
+      "path": "src/features/reception/whatsappClose.ts",
+      "sha256": "67f4aa744ff12893bb715e54d88ae74107b0bc500f1cd4b7c068058fd65ad118"
+    }
+  ],
+  "commands": 9,
+  "checks": [
+    {
+      "case": "success",
+      "commands": 1,
+      "result": "receipt-accepted",
+      "needsRefresh": false
+    },
+    {
+      "case": "stale",
+      "commands": 1,
+      "result": "stale",
+      "needsRefresh": true
+    },
+    {
+      "case": "forbidden",
+      "commands": 1,
+      "result": "forbidden",
+      "needsRefresh": true
+    },
+    {
+      "case": "wrong-owner",
+      "commands": 1,
+      "result": "INVALID_RESPONSE",
+      "needsRefresh": true
+    },
+    {
+      "case": "wrong-status",
+      "commands": 1,
+      "result": "INVALID_RESPONSE",
+      "needsRefresh": true
+    },
+    {
+      "case": "extra",
+      "commands": 1,
+      "result": "INVALID_RESPONSE",
+      "needsRefresh": true
+    },
+    {
+      "case": "truncated",
+      "commands": 1,
+      "result": "unavailable",
+      "needsRefresh": true
+    },
+    {
+      "case": "lost",
+      "commands": 1,
+      "result": "unavailable",
+      "needsRefresh": true
+    },
+    {
+      "case": "pre-cancelled, closed snapshot, foreign owner and injected target",
+      "commands": 0
+    },
+    {
+      "case": "cancel-after",
+      "commands": 1,
+      "result": "cancelled",
+      "needsRefresh": true
+    }
+  ],
+  "unexpected": [],
+  "limits": "Adapter/SDK transport only. No UI/server authorization/SQL CAS/idempotency/RLS/Meta proof."
+}

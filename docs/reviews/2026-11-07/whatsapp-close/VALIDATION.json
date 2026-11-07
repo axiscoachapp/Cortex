@@ -1,0 +1,36 @@
+{
+  "baseline": "a685f0527672013b3c6888920216d8625fc66172",
+  "scope": "K1/4e close client adapter only",
+  "unit": {
+    "scaffoldRedTests": 47,
+    "newTests": 47,
+    "existingReleaseTests": 36,
+    "existingClaimTests": 34,
+    "existingReadTests": 55,
+    "passed": 172,
+    "failed": 0,
+    "files": 4
+  },
+  "sdk": {
+    "version": "2.86.0",
+    "checks": 10,
+    "commands": 9,
+    "method": "POST",
+    "realNetwork": false,
+    "sourceHashes": 3,
+    "sourceHashesStable": true,
+    "unexpectedResources": 0
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 3,
+    "status": "passed"
+  },
+  "syntax": {
+    "scripts": 1,
+    "status": "passed"
+  },
+  "review": "Fresh read-only adversarial review: no concrete defects after thorough examination",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "limits": "Adapter/SDK memory transport only; no UI/browser/SQL CAS/RLS/server authorization/concurrency/Meta proof. Local open/owner eligibility does not restrict broader producer policy; unread/closed_at/closed_by are not present in the act receipt."
+}
