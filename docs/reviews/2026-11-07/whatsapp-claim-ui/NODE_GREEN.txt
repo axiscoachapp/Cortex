@@ -1,0 +1,17 @@
+✔ claim fixture is opt-in and refuses target/actor injection (5.9028ms)
+✔ claim fixture models CAS, unconfirmed reply and competitor changes without external operations (0.9347ms)
+✔ conversation paging is opt-in, scoped by filter/search and preserves tied cursor tokens (5.0087ms)
+✔ fixture returns only the requested filter and conversation (1.1663ms)
+✔ fixture refuses writes, foreign actors and authority injection (0.7672ms)
+✔ bot session is a scoped read and distinguishes missing path from a refused read (0.6162ms)
+✔ controlled refusals and malformed DTOs restore without modifying rows (0.769ms)
+✔ new HTTP fixture remains opt-in and only enables synthetic reads (103.3748ms)
+✔ history is opt-in, bounded and advances by the full timestamp/id token (0.8802ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 364.684

@@ -1,0 +1,21 @@
+# K1/4b — assumir conversa com conferência
+
+Baseline `e6612450e4c9228dc4f082fe2df27ebb249bb631`. [Contrato de UI](../../../product/clinic-crm/WHATSAPP_CLAIM_UI.md), sobre o adaptador K1/4a já entregue.
+
+CLAIM: somente clique no detalhe fresco aberto/sem responsável envia um comando; resultado perdido não provoca retry. Ator/clínica/contexto anteriores não recebem efeitos tardios. Uma nova leitura visível determina responsável e próximo botão depois da conferência.
+
+Botão e responsável no detalhe; estado da operação fica na lista por ator/clínica. Ref síncrona evita clique duplicado. Conferência lê detalhe/lista; se falhar, oculta detalhe e oferece apenas leitura ou volta. Filtro, seleção, página, fechamento e desmontagem abortam observação, sem prometer rollback. Assumir nunca chama send/mark_read/vínculo/agendamento, não reabre nem transfere pela UI.
+
+Primeiro RED:54 testes UI, cinco novos falharam/49 passaram (46 anteriores e três casos negativos). Revisão depois encontrou leitura paralela mais antiga anunciando posse e dependência de unmount transitório da lista. `RECONCILE_RED.json` reproduziu o caso de resposta própria antiga versus responsável mais novo. Corrigido com geração explícita na key/query do detalhe, inclusive no refresh global, e feedback neutro. Detalhe fica oculto em conferência/erro; responsável e botão vêm só da leitura fresca dessa geração. Não se adota recibo otimista nem dado paralelo antigo.
+
+Final:148 Vitest/três arquivos (59UI,34adaptador,55leitor), incluindo cache pendente, duplo clique, leitura obrigatória, escopo inativo, fechamento e resposta fora de ordem. `UNIT_RED.json`/`RECONCILE_RED.json`/`UNIT_GREEN.json` preservam os resultados.9Node/dois arquivos, tipos globais, lint de oito arquivos, sintaxe de cinco scripts e quatro combinações inválidas de flags passam. Dois RED C5 preexistentes fora da suíte dirigida permanecem. Uma falha de escrita transitória no arquivo de teste foi contornada por substituição atômica dentro do workspace; execuções anteriores à atualização das expectativas foram excluídas.
+
+Revisão somente leitura em três ciclos: achado de reconciliação corrigido; última leitura sem violação acionável. Cross-model skipped: non-interactive context.
+
+Fonte final: [AUDIT](../../2026-11-05/reception-app-audit/whatsapp-claim-ui-closed-final/AUDIT.json),28estados/28PNGs320/375/1280/1920 a135%, App/providers/SDK2.86 reais sobre323fontes congeladas/27hashes de execução/dois overlays de UI. Hashes antes/depois estáveis/cleanup positivo. Botão disponível/pendente/conferido, encerrada sem ação, conflito/outro responsável, recibo incompleto+leitura403 e retry somente de leitura; imagens320 inspecionadas.161requests/128ações de fixture (leituras incluídas),12assign por clique: oito aplicados sintéticos/quatro conflitos. Corpo somenteact/assign/conversationId/revision, zero envio/mark_read/outro comando. Quatro403/quatro409 e oito avisos de console deliberados; zero erroJS, falha de request, externo ou recurso clínico. Queue/contactId/caseId preservados.
+
+Primeiras execuções `whatsapp-claim-ui-first` e `whatsapp-claim-ui-generation-final` são preliminares excluídas. A fixture de teste guarda ledger cumulativo entre resets de cenário; expectativa inicial de contador reiniciado foi corrigida para medir deltas. Uma edição de wiring da CLI recusou marcador não encontrado antes de gravar/rodar o browser e foi corrigida. A prova não equivale a SQL/CAS/RLS/autorização/concorrência reais; o conflito é modelado e a escrita só existe na fixture local.
+
+Reprodução: `node scripts/reception-app-audit-browser.mjs --baseline=e6612450e4c9228dc4f082fe2df27ebb249bb631 --only=whatsapp-read --check-whatsapp-claim --overlay=src/features/reception/WhatsAppInbox.tsx --overlay=src/features/reception/WhatsAppMessages.tsx --run=<nome-novo>`. Vitest: `npx vitest run src/features/reception/WhatsAppInbox.test.tsx src/features/reception/whatsappClaim.test.ts src/features/reception/whatsappApi.test.ts --pool=forks --maxWorkers=1`.
+
+Recorte assumir concluído. Transferir, liberar, reabrir, enviar ou marcar leitura seguem próprios; C4/C5/MFA/K7 não são aprovados por este resultado. Nenhum produtor Claude, SQL/migration, dado real, Meta, hosted, SaaS, PersonalMed ou push alterado.

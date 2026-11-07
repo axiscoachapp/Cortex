@@ -1,0 +1,50 @@
+{
+  "baseline": "e6612450e4c9228dc4f082fe2df27ebb249bb631",
+  "unit": {
+    "reconciliationRed": "Out-of-order owner snapshot reproduced before explicit generation/neutral feedback",
+    "uiTests": 59,
+    "initialRedFailed": 5,
+    "initialRedPassed": 49,
+    "files": 3,
+    "failed": 0,
+    "passed": 148
+  },
+  "node": {
+    "passed": 9,
+    "files": 2
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 8,
+    "status": "passed after final UI changes"
+  },
+  "syntax": {
+    "status": "passed",
+    "scripts": 5
+  },
+  "invalidCli": {
+    "combinations": 4,
+    "status": "rejected before browser"
+  },
+  "browser": {
+    "frozenSources": 323,
+    "states": 28,
+    "expectedConsoleErrors": 8,
+    "external": 0,
+    "commands": 12,
+    "overlays": 2,
+    "syntheticApplied": 8,
+    "report": "../../2026-11-05/reception-app-audit/whatsapp-claim-ui-closed-final/AUDIT.json",
+    "failedRequests": 0,
+    "expectedHttpErrors": 8,
+    "pageErrors": 0,
+    "pngs": 28,
+    "cleanupVerified": true,
+    "requests": 161,
+    "hashesStable": true,
+    "runtimeHashes": 27
+  },
+  "review": "Three bounded read-only reviews; reconciliation race fixed and reproduced with RED; final review no actionable issues",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "limits": "Synthetic UI/SDK/HTTP only; no actual backend SQL/CAS/RLS/authorization/concurrency proof or Meta operation."
+}

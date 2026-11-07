@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor,within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import WhatsAppInbox from './WhatsAppInbox';
@@ -6,7 +6,9 @@ import { ClinicAccessContext } from './accessContext';
 import type { ClinicAccess } from './contracts';
 import type { WhatsAppConversation } from './whatsappApi';
 
-const mocks = vi.hoisted(() => ({ state: vi.fn(), conversations: vi.fn(), messages: vi.fn(), botSession:vi.fn(), actor: '11111111-1111-4111-8111-111111111111' }));
+const mocks = vi.hoisted(() => ({ state: vi.fn(), conversations: vi.fn(), messages: vi.fn(), botSession:vi.fn(),claim:vi.fn(), actor: '11111111-1111-4111-8111-111111111111' }));
+vi.mock('@/integrations/supabase/client',()=>({supabase:{functions:{invoke:vi.fn()}}}));
+vi.mock('./whatsappClaim',async importOriginal=>{const original=await importOriginal<typeof import('./whatsappClaim')>();return {...original,claimWhatsAppConversation:mocks.claim};});
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: mocks.actor } }) }));
 vi.mock('./whatsappApi', () => ({ whatsappApi: { state: mocks.state, conversations: mocks.conversations, messages: mocks.messages,botSession:mocks.botSession } }));
 const clinic = '22222222-2222-4222-8222-222222222222', id = '33333333-3333-4333-8333-333333333333';
@@ -33,6 +35,55 @@ describe('WhatsApp reception inbox read view', () => {
   beforeEach(() => {
     vi.resetAllMocks(); mocks.actor = access.actorId;
     mocks.state.mockResolvedValue(state); mocks.conversations.mockResolvedValue(page); mocks.messages.mockResolvedValue(detail);mocks.botSession.mockResolvedValue({session:null});
+    mocks.claim.mockResolvedValue({revision:2,status:'open',assignedTo:mocks.actor});
+  });
+  it('claims only by explicit click with the fresh detail revision, then reconciles reads',async()=>{
+    const freshDetail={...detail,conversation:{...conversation,revision:4}};mocks.messages.mockResolvedValue(freshDetail);mount();await select();
+    const claim=await screen.findByRole('button',{name:'Assumir conversa'});expect(mocks.claim).not.toHaveBeenCalled();
+    const owned={...freshDetail,conversation:{...conversation,revision:5,assignedTo:mocks.actor}};mocks.messages.mockResolvedValue(owned);mocks.conversations.mockResolvedValue({conversations:[owned.conversation],nextBefore:null});
+    fireEvent.click(claim);await waitFor(()=>expect(mocks.claim).toHaveBeenCalledExactlyOnceWith({conversationId:id,revision:4},mocks.actor,expect.any(AbortSignal)));
+    expect(await screen.findByText('Dados atualizados. Confira o responsável atual na conversa.')).toBeVisible();expect(screen.queryByRole('button',{name:'Assumir conversa'})).not.toBeInTheDocument();expect(mocks.messages.mock.calls.length).toBeGreaterThan(1);expect(mocks.conversations.mock.calls.length).toBeGreaterThan(1);
+  });
+  it.each([{status:'closed',assignedTo:null},{status:'open',assignedTo:'77777777-7777-4777-8777-777777777777'},{status:'open',assignedTo:access.actorId}])('never offers implicit reopening or reassignment (%j)',async values=>{
+    mocks.messages.mockResolvedValue({...detail,conversation:{...conversation,...values}});mount();await select();await screen.findByText('Mensagem sintética recebida');expect(screen.queryByRole('button',{name:'Assumir conversa'})).not.toBeInTheDocument();expect(mocks.claim).not.toHaveBeenCalled();
+  });
+  it('prevents duplicate clicks while the command is pending',async()=>{
+    let finish!:(value:unknown)=>void;mocks.claim.mockReturnValue(new Promise(resolve=>{finish=resolve;}));mount();await select();const button=await screen.findByRole('button',{name:'Assumir conversa'});fireEvent.click(button);fireEvent.click(button);
+    await waitFor(()=>expect(mocks.claim).toHaveBeenCalledTimes(1));expect(screen.getByRole('button',{name:'Assumindo…'})).toBeDisabled();
+    await act(async()=>finish({revision:2,status:'open',assignedTo:mocks.actor}));await screen.findByText('Dados atualizados. Confira o responsável atual na conversa.');
+  });
+  it('reconciles a lost response without retrying the command',async()=>{
+    mocks.claim.mockRejectedValue(new Error('SYNTHETIC PRIVATE LOST RESPONSE'));mount();await select();const button=await screen.findByRole('button',{name:'Assumir conversa'});
+    const owned={...detail,conversation:{...conversation,revision:2,assignedTo:mocks.actor}};mocks.messages.mockResolvedValue(owned);mocks.conversations.mockResolvedValue({conversations:[owned.conversation],nextBefore:null});fireEvent.click(button);
+    expect(await screen.findByText('Dados atualizados. Confira o responsável atual na conversa.')).toBeVisible();expect(mocks.claim).toHaveBeenCalledTimes(1);expect(screen.queryByText('SYNTHETIC PRIVATE LOST RESPONSE')).not.toBeInTheDocument();
+  });
+  it('requires a successful read reconciliation before another command',async()=>{
+    mocks.claim.mockRejectedValue(new Error('SYNTHETIC PRIVATE COMMAND'));mount();await select();const button=await screen.findByRole('button',{name:'Assumir conversa'});mocks.messages.mockRejectedValue(new Error('SYNTHETIC PRIVATE READ'));fireEvent.click(button);
+    const retry=await screen.findByRole('button',{name:'Conferir responsável'});expect(mocks.claim).toHaveBeenCalledTimes(1);expect(screen.queryByText('SYNTHETIC PRIVATE READ')).not.toBeInTheDocument();expect(screen.queryByText('Mensagem sintética recebida')).not.toBeInTheDocument();
+    mocks.messages.mockResolvedValue(detail);fireEvent.click(retry);await screen.findByText('Dados atualizados. Confira o responsável atual na conversa.');expect(mocks.claim).toHaveBeenCalledTimes(1);
+    await waitFor(()=>expect(screen.getByRole('button',{name:'Assumir conversa'})).toBeEnabled());
+  });
+  it('aborts observation on close and ignores a late command outcome',async()=>{
+    let finish!:(value:unknown)=>void;mocks.claim.mockReturnValue(new Promise(resolve=>{finish=resolve;}));mount();await select();fireEvent.click(await screen.findByRole('button',{name:'Assumir conversa'}));await waitFor(()=>expect(mocks.claim).toHaveBeenCalledTimes(1));
+    const signal=mocks.claim.mock.calls[0][2] as AbortSignal;fireEvent.click(within(screen.getByRole('region',{name:'Conversa selecionada'})).getByRole('button',{name:'Voltar à lista'}));expect(signal.aborted).toBe(true);const reads=mocks.messages.mock.calls.length;
+    await act(async()=>finish({revision:2,status:'open',assignedTo:mocks.actor}));expect(mocks.messages).toHaveBeenCalledTimes(reads);expect(screen.queryByText('Dados atualizados. Confira o responsável atual na conversa.')).not.toBeInTheDocument();
+  });
+  it('does not claim from cached metadata while a new message read is pending',async()=>{
+    mount();await select();await screen.findByRole('button',{name:'Assumir conversa'});let release!:(value:typeof detail)=>void;mocks.messages.mockReturnValueOnce(new Promise(resolve=>{release=resolve;}));
+    fireEvent.click(screen.getByRole('button',{name:'Atualizar mensagens'}));await screen.findByText('Carregando mensagens…');expect(screen.queryByRole('button',{name:'Assumir conversa'})).not.toBeInTheDocument();expect(mocks.claim).not.toHaveBeenCalled();await act(async()=>release(detail));await screen.findByRole('button',{name:'Assumir conversa'});
+  });
+  it('waits for ownership reconciliation before announcing a valid receipt',async()=>{
+    mount();await select();const button=await screen.findByRole('button',{name:'Assumir conversa'});let release!:(value:typeof detail)=>void;const owned={...detail,conversation:{...conversation,revision:2,assignedTo:mocks.actor}};
+    mocks.messages.mockReturnValueOnce(new Promise(resolve=>{release=resolve;})).mockResolvedValue(owned);mocks.conversations.mockResolvedValue({conversations:[owned.conversation],nextBefore:null});fireEvent.click(button);
+    await screen.findByText('Conferindo o responsável e atualizando a lista…');expect(screen.queryByText('Dados atualizados. Confira o responsável atual na conversa.')).not.toBeInTheDocument();await act(async()=>release(owned));expect(await screen.findByText('Dados atualizados. Confira o responsável atual na conversa.')).toBeVisible();expect(mocks.claim).toHaveBeenCalledTimes(1);
+  });
+  it('aborts observation when the clinic scope becomes inactive',async()=>{
+    let finish!:(value:unknown)=>void;mocks.claim.mockReturnValue(new Promise(resolve=>{finish=resolve;}));const view=mount();await select();fireEvent.click(await screen.findByRole('button',{name:'Assumir conversa'}));await waitFor(()=>expect(mocks.claim).toHaveBeenCalledTimes(1));const signal=mocks.claim.mock.calls[0][2] as AbortSignal;
+    view.rerender(view.tree({...access,active:false}));expect(signal.aborted).toBe(true);const reads=mocks.messages.mock.calls.length;await act(async()=>finish({revision:2,status:'open',assignedTo:mocks.actor}));expect(mocks.messages).toHaveBeenCalledTimes(reads);expect(screen.queryByText('Dados atualizados. Confira o responsável atual na conversa.')).not.toBeInTheDocument();
+  });
+  it('global refresh after unresolved outcome still waits for a new detail read',async()=>{
+    mocks.claim.mockRejectedValue(new Error('SYNTHETIC PRIVATE COMMAND'));mount();await select();const button=await screen.findByRole('button',{name:'Assumir conversa'});mocks.messages.mockRejectedValue(new Error('SYNTHETIC PRIVATE READ'));fireEvent.click(button);await screen.findByRole('button',{name:'Conferir responsável'});
+    let release!:(value:typeof detail)=>void;mocks.messages.mockReturnValue(new Promise(resolve=>{release=resolve;}));fireEvent.click(screen.getByRole('button',{name:'Atualizar conversas'}));await screen.findByText('Carregando mensagens…');expect(screen.queryByRole('button',{name:'Assumir conversa'})).not.toBeInTheDocument();await act(async()=>release(detail));await waitFor(()=>expect(screen.getByRole('button',{name:'Assumir conversa'})).toBeEnabled());expect(mocks.claim).toHaveBeenCalledTimes(1);
   });
   it('waits for connection access before reading conversations', async () => {
     let resolve!: (value: typeof state) => void;
@@ -40,6 +91,12 @@ describe('WhatsApp reception inbox read view', () => {
     mount(); expect(screen.getByRole('status')).toHaveTextContent('Verificando WhatsApp'); expect(mocks.conversations).not.toHaveBeenCalled();
     await act(async () => resolve(state)); await screen.findByText(conversation.profileName);
     expect(mocks.state.mock.calls[0][0]).toBeInstanceOf(AbortSignal);
+  });
+  it('does not announce an older self-owned result over a newer displayed owner',async()=>{
+    mount();await select();const button=await screen.findByRole('button',{name:'Assumir conversa'});let release!:(value:typeof detail)=>void;
+    const mine={...detail,conversation:{...conversation,revision:2,assignedTo:mocks.actor}},other={...detail,conversation:{...conversation,revision:3,assignedTo:'77777777-7777-4777-8777-777777777777'}};
+    mocks.messages.mockReturnValueOnce(new Promise(resolve=>{release=resolve;})).mockResolvedValue(other);mocks.conversations.mockResolvedValue({conversations:[other.conversation],nextBefore:null});fireEvent.click(button);await screen.findByText('Conferindo o responsável e atualizando a lista…');await act(async()=>release(mine));
+    await screen.findByText('Dados atualizados. Confira o responsável atual na conversa.');expect(screen.queryByText('Conversa assumida por você.')).not.toBeInTheDocument();expect(await within(screen.getByRole('region',{name:'Conversa selecionada'})).findByText('Outra pessoa',{exact:true})).toBeVisible();expect(screen.queryByRole('button',{name:'Assumir conversa'})).not.toBeInTheDocument();
   });
   it('opens the explicit conversation, shows messages and returns focus to the list', async () => {
     mount(); await select(); expect(await screen.findByText('Mensagem sintética recebida')).toBeVisible();
