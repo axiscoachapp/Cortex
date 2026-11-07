@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K1/6: `629537386f8d329d6df2e246ea631b3fd6dda563`, main/axiscoachapp (autor e committer), sem push. Só44caminhos próprios (28artefatos finais do navegador), índice livre e dirt6/7 preservado por hash. Leituras pausadas protegidas; K1/T41 e catálogo4j continuam separados.
+
 Atualizado em 2026-11-07 07:13. **K1/6 — consultas pausadas:** [provas](../docs/reviews/2026-11-07/whatsapp-paused-reads/IMPLEMENTATION.md). Quatro gates exigem idle, retiram dados/confirmadores antigos e exibem espera; retomada só leitura. Dez RED válidos/um controle/restauração por hash→331Vitest/dez arquivos, tipos reais/lint6/sintaxe2/quatro CLI/revisão.27estados/27PNGs320–1920/135%,348fontes/34hashes/três overlays/cleanup,56requests/39fixture/um403-console esperado e zero demais falhas/JS/clínico/escritas/externos. Browser só lista/mensagens; canal/percurso/confirmadores nos unitários, capturas320/1920 inspecionadas. Próximos comandos K1/MFA/K7 próprios,4j depende0506/C4/C5 após SHAs; dois RED C5 fora da suíte dirigida. Nenhuma entrada Claude nova/2152 atendida, sem confirmação. Automação ACTIVE, main/axiscoachapp sem produtor/C5/SQL/Meta/hosted/carga/push; dirt6/7 preservado.
 
 ---
