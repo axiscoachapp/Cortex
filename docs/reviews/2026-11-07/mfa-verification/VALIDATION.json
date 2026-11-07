@@ -1,0 +1,60 @@
+{
+  "baseline": "72a54d5302bf49ca196803c8f800b506961c3627",
+  "authJsVersion": "2.86.0",
+  "protocolFormats": [
+    "modern: version header + code",
+    "legacy: error_code"
+  ],
+  "vitest": {
+    "passed": 16,
+    "tests": 16,
+    "failed": 0,
+    "files": 1
+  },
+  "node": {
+    "passed": 13,
+    "tests": 13,
+    "files": 2
+  },
+  "types": "passed",
+  "lint": {
+    "status": "passed",
+    "files": 7
+  },
+  "syntax": {
+    "status": "passed",
+    "scripts": 5
+  },
+  "invalidCli": {
+    "combinations": 4,
+    "status": "rejected before browser"
+  },
+  "browser": {
+    "report": "../../2026-11-05/reception-app-audit/mfa-verification-code-final/AUDIT.json",
+    "states": 40,
+    "pngs": 40,
+    "widths": [
+      320,
+      375,
+      1280,
+      1920
+    ],
+    "scale": "135%",
+    "frozenSources": 321,
+    "runtimeSources": 23,
+    "overlays": 1,
+    "hashesStable": true,
+    "requests": 66,
+    "challengeVerifyCalls": 48,
+    "expected422": 24,
+    "expectedConsoleErrors": 24,
+    "pageErrors": 0,
+    "failedRequests": 0,
+    "unexpectedResources": 0,
+    "blockedExternal": 0,
+    "cleanupVerified": true
+  },
+  "review": "Independent read-only review: no actionable findings",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "scope": "Synthetic refusals and explicit retry only. No real Auth/TOTP/AAL2, success verification or production operation."
+}

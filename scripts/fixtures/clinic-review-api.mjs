@@ -3,10 +3,11 @@ import http from 'node:http';
 import { z } from 'zod';
 import { createRecoveryNoticeFixture, recoverySelect } from './recovery-notice-api.mjs';
 import { createPostConsultationFixture } from './post-consultation-api.mjs';
+import { createMfaVerificationFixture } from './mfa-verification-api.mjs';
 import { createSchedulingFixture } from './scheduling-migration-api.mjs';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, patientWorkspaceReview = false, recoveryNoticeReview = false, postConsultationReview = false, postEntryReview = false, schedulingReview = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false, mfaCancellationReview = false } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, patientWorkspaceReview = false, recoveryNoticeReview = false, postConsultationReview = false, postEntryReview = false, schedulingReview = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false, mfaCancellationReview = false, mfaVerificationReview = false } = {}) {
   if(patientWorkspaceReview&&!workspaceDates)throw new Error('Patient workspace review requires workspace display data');
   if(recoveryNoticeReview&&(!workspaceDates||patientWorkspaceReview))throw new Error('Recovery notice review requires its isolated workspace fixture');
   if(schedulingReview&&(!workspaceDates||patientWorkspaceReview||recoveryNoticeReview))throw new Error('Scheduling review requires its isolated workspace fixture');
@@ -19,6 +20,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   if(mfaCleanupReview&&!mfaReview)throw new Error('MFA cleanup review requires its MFA read fixture');
   if(mfaEnrollmentReview&&(!mfaReview||mfaCleanupReview))throw new Error('MFA enrollment requires isolated MFA reads without cleanup-denial mode');
   if(mfaCancellationReview&&!mfaEnrollmentReview)throw new Error('MFA cancellation requires the isolated enrollment fixture');
+  if(mfaVerificationReview&&(!mfaReview||mfaCleanupReview||mfaEnrollmentReview||mfaCancellationReview))throw new Error('MFA verification requires isolated MFA reads');
   const now=new Date().toISOString();
   const user={id:uid,email:'review@example.invalid',aud:'authenticated',role:'authenticated',created_at:now,email_confirmed_at:now,app_metadata:{provider:'email'},user_metadata:{},factors:[]};
   if(mfaReview)user.factors=['verified','verified','unverified'].map((status,index)=>({id:['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','cccccccc-cccc-4ccc-8ccc-cccccccccccc'][index],friendly_name:'Autenticador sintético '+['A','B','pendente'][index],factor_type:'totp',status,created_at:'2026-11-05T12:00:00Z',updated_at:'2026-11-05T12:00:00Z'}));
@@ -47,6 +49,8 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   const medicalData={patients,templates,visits,knowledge,settings};
   if(mfaReview)Object.assign(metrics,{mfaRequests:[],mfaUnexpected:[]});
   const mfaAllowed=new Set(['POST /auth/v1/token','GET /auth/v1/user']);
+  const mfaVerification=mfaVerificationReview?createMfaVerificationFixture(user.factors):null;
+  if(mfaVerificationReview)for(const factor of user.factors.filter(f=>f.status==='verified'&&f.factor_type==='totp'))for(const action of ['challenge','verify'])mfaAllowed.add('POST /auth/v1/factors/'+factor.id+'/'+action);
   const mfaPendingPath=mfaReview?'/auth/v1/factors/'+user.factors[2].id:null;
   if(mfaCleanupReview){metrics.mfaCleanupCalls=[];mfaAllowed.add('DELETE '+mfaPendingPath);}
   if(mfaEnrollmentReview){metrics.mfaEnrollmentCalls=[];mfaAllowed.add('DELETE '+mfaPendingPath);mfaAllowed.add('POST /auth/v1/factors');}
@@ -73,6 +77,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     if(mfaReview){
       const call={method:req.method,path:url.pathname};metrics.mfaRequests.push(call);
       if(!mfaAllowed.has(call.method+' '+call.path)){metrics.mfaUnexpected.push(call);return send({code:'TEST_UNEXPECTED_RESOURCE',message:'Unexpected MFA test resource'},403);}
+      const verificationReply=mfaVerification?.read(req,url,input);if(verificationReply){Object.assign(headers,verificationReply.headers);return send(verificationReply.body,verificationReply.status);}
       if(mfaCleanupReview&&call.method==='DELETE'&&call.path===mfaPendingPath){metrics.mfaCleanupCalls.push({factorId:user.factors[2].id,status:403});return send({code:'insufficient_aal',message:'Synthetic pending factor cleanup denied'},403);}
       if(mfaEnrollmentReview&&call.method==='DELETE'&&(call.path===mfaPendingPath||mfaCancellationReview&&call.path==='/auth/v1/factors/'+newMfaFactorId)){
         const index=user.factors.findIndex(factor=>call.path==='/auth/v1/factors/'+factor.id&&factor.status==='unverified');
@@ -167,7 +172,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     return send(req.headers.accept?.includes('application/vnd.pgrst.object+json')?(rows[0]??null):rows);
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  return {origin:`http://127.0.0.1:${server.address().port}`,metrics,recoveryNotice,postConsultation,scheduling,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,mfaFactors:mfaReview?user.factors:null,delegationRows,
+  return {origin:`http://127.0.0.1:${server.address().port}`,metrics,mfaVerification,recoveryNotice,postConsultation,scheduling,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,mfaFactors:mfaReview?user.factors:null,delegationRows,
     setPatientWorkspaceDenied(denied){if(!patientWorkspaceReview||typeof denied!=='boolean')throw new Error('Patient workspace mode is not enabled');patientWorkspaceDenied=denied;},
     resetMfaEnrollment(){if(!mfaEnrollmentReview)throw new Error('MFA enrollment fixture is not enabled');user.factors.splice(0,user.factors.length,...structuredClone(initialMfaFactors));},
     setDelegationReadMode(mode){if(!delegationPermissions||!['valid','invalid','denied'].includes(mode))throw new Error('Unsupported delegation fixture mode');delegationReadMode=mode;},

@@ -33,6 +33,29 @@ describe('TOTP metadata including abandoned setups', () => {
     expect(screen.getByRole('option', { name: active.friendly_name })).toHaveAttribute('value', active.id);
     expect(mocks.unenroll).not.toHaveBeenCalled(); expect(mocks.enroll).not.toHaveBeenCalled();
   });
+  it('clears a code and its previous verification error when choosing another authenticator',async()=>{
+    const other={...active,id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',friendly_name:'Outro ativo sintético'};
+    mocks.listFactors.mockResolvedValue({data:{all:[active,other]},error:null});
+    mocks.challengeAndVerify.mockResolvedValue({error:Object.assign(new Error('PRIVATE SYNTHETIC MFA ERROR'),{code:'mfa_verification_failed'})});
+    mount();await screen.findByRole('option',{name:active.friendly_name});
+    fireEvent.change(screen.getByLabelText('Código do aplicativo'),{target:{value:'123456'}});fireEvent.click(screen.getByRole('button',{name:'Verificar código'}));await screen.findByRole('alert');
+    fireEvent.change(screen.getByRole('combobox',{name:'Autenticador'}),{target:{value:other.id}});
+    expect(screen.getByLabelText('Código do aplicativo')).toHaveValue('');expect(screen.queryByRole('alert')).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Verificar código'})).toBeDisabled();
+    expect(mocks.challengeAndVerify).toHaveBeenCalledTimes(1);expect(screen.queryByText('PRIVATE SYNTHETIC MFA ERROR')).not.toBeInTheDocument();
+  });
+  it('does not carry the old factor code into a newly enrolled setup',async()=>{
+    mount();await screen.findByRole('option',{name:active.friendly_name});
+    fireEvent.change(screen.getByLabelText('Código do aplicativo'),{target:{value:'123456'}});fireEvent.click(screen.getByRole('button',{name:'Adicionar autenticador'}));
+    await screen.findByRole('heading',{name:'Configurar aplicativo'});expect(screen.getByLabelText('Código do aplicativo')).toHaveValue('');expect(screen.getByRole('button',{name:'Verificar código'})).toBeDisabled();expect(mocks.challengeAndVerify).not.toHaveBeenCalled();
+  });
+  it('locks the verification factor and code until the submitted attempt finishes',async()=>{
+    let finish!:(v:unknown)=>void;mocks.challengeAndVerify.mockReturnValue(new Promise(resolve=>{finish=resolve;}));
+    mount();await screen.findByRole('option',{name:active.friendly_name});fireEvent.change(screen.getByLabelText('Código do aplicativo'),{target:{value:'123456'}});fireEvent.click(screen.getByRole('button',{name:'Verificar código'}));
+    await waitFor(()=>expect(mocks.challengeAndVerify).toHaveBeenCalledTimes(1));
+    try{expect(screen.getByRole('combobox',{name:'Autenticador'})).toBeDisabled();expect(screen.getByLabelText('Código do aplicativo')).toBeDisabled();}
+    finally{await act(async()=>finish({error:Object.assign(new Error('Synthetic expired challenge'),{code:'mfa_challenge_expired'})}));}
+    expect(await screen.findByRole('alert')).toHaveFocus();expect(screen.getByLabelText('Código do aplicativo')).toBeEnabled();
+  });
   it('clears only pending TOTP setups before another enrollment', async () => {
     mount(); await screen.findByRole('option', { name: active.friendly_name });
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar autenticador' }));

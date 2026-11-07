@@ -54,6 +54,7 @@ export default function AccountSecurity() {
       if (error) throw error;
       setSetup({ id: data.id, qr: data.totp.qr_code, secret: data.totp.secret });
       setFactor(data.id);
+      setCode('');
       void client.invalidateQueries({ queryKey: ['mfa-factors', user?.id] });
     });
   const verify = () =>
@@ -175,7 +176,8 @@ export default function AccountSecurity() {
                 aria-label="Autenticador"
                 className="block w-full border rounded p-2 mt-2"
                 value={factor || factors.data?.find((f) => f.status === 'verified')?.id || ''}
-                onChange={(e) => setFactor(e.target.value)}
+                disabled={busy}
+                onChange={(e) => { setFactor(e.target.value); setCode(''); setError(null); setNotice(''); }}
                 required
               >
                 <option value="">Selecione</option>
@@ -196,6 +198,7 @@ export default function AccountSecurity() {
               inputMode="numeric"
               pattern="[0-9]{6}"
               maxLength={6}
+              disabled={busy}
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               required
