@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, BadgeCheck, ChevronRight, Info, KeyRound, MessageCircle, Plug, Settings2, Share2, Shield, ShieldCheck, Users, UserCog,
+  ArrowLeft, BadgeCheck, ChevronRight, ClipboardList, Info, KeyRound, MessageCircle, Plug, Settings2, Share2, Shield, ShieldCheck, Users, UserCog,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -9,10 +9,11 @@ import { useClinicAccess } from '@/features/reception/accessContext';
 import { ProfessionalSettingsForm } from '@/features/settings/ProfessionalSettingsForm';
 import { WhatsAppSettings } from '@/features/settings/WhatsAppSettings';
 import { ConnectionsSettings } from '@/features/settings/ConnectionsSettings';
+import { IntakeFormEditor } from '@/features/intake/IntakeFormEditor';
 import TeamSettings from '@/features/reception/TeamSettings';
 import DelegationPermissions from '@/features/reception/DelegationPermissions';
 
-type SectionId = 'perfil' | 'whatsapp' | 'conexoes' | 'equipe' | 'permissoes' | 'usuarios' | 'seguranca' | 'sobre';
+type SectionId = 'perfil' | 'whatsapp' | 'pre-consulta' | 'conexoes' | 'equipe' | 'permissoes' | 'usuarios' | 'seguranca' | 'sobre';
 /** `ownHeading`: the embedded component (Codex K4) brings its own h2. */
 interface Section { id: SectionId; label: string; icon: typeof Settings2; description: string; ownHeading?: boolean }
 
@@ -40,6 +41,7 @@ export default function SettingsPage() {
   const sections = useMemo<Section[]>(() => [
     ...(clinical ? [{ id: 'perfil' as const, label: 'Perfil profissional', icon: BadgeCheck, description: 'Especialidade, modelo da evolução, dados do prescritor e copiloto.' }] : []),
     ...(admin || reception || clinical ? [{ id: 'whatsapp' as const, label: 'WhatsApp e automações', icon: MessageCircle, description: 'Número da recepção, modelos aprovados e mensagens automáticas da agenda.' }] : []),
+    ...(admin ? [{ id: 'pre-consulta' as const, label: 'Pré-consulta', icon: ClipboardList, description: 'Formulário que o paciente responde antes da consulta, por um link único.' }] : []),
     ...(clinical ? [{ id: 'conexoes' as const, label: 'Conexões', icon: Plug, description: 'Google Agenda e assinatura digital.' }] : []),
     ...(admin ? [{ id: 'equipe' as const, label: 'Equipe da recepção', icon: Users, description: 'Contas da recepção e agendas de cada pessoa.', ownHeading: true }] : []),
     ...(clinical ? [{ id: 'permissoes' as const, label: 'Permissões da recepção', icon: KeyRound, description: 'O que a recepção pode fazer na sua agenda.', ownHeading: true }] : []),
@@ -105,6 +107,10 @@ export default function SettingsPage() {
           )}
 
           {current.id === 'whatsapp' && <WhatsAppSettings key={`${access?.actorId ?? 'none'}:${access?.clinic?.id ?? 'none'}:${admin}`} />}
+
+          {current.id === 'pre-consulta' && admin && (
+            <div className="max-w-3xl"><IntakeFormEditor key={`${access?.actorId ?? 'none'}:${access?.clinic?.id ?? 'none'}`} /></div>
+          )}
 
           {current.id === 'conexoes' && <ConnectionsSettings clinical={clinical} />}
 

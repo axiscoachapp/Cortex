@@ -48,7 +48,7 @@ function decodeCursor(v: unknown): Cursor | null {
   if (extra !== undefined || !at || !id || !TIMESTAMP.test(at) || Number.isNaN(Date.parse(at)) || !UUID.test(id)) return null;
   return { at, id: id.toLowerCase() };
 }
-export type ParamSource = 'paciente_primeiro_nome' | 'data' | 'hora' | 'dia_semana' | 'medico' | 'clinica' | 'link' | 'texto';
+export type ParamSource = 'paciente_primeiro_nome' | 'data' | 'hora' | 'dia_semana' | 'medico' | 'clinica' | 'link' | 'link_pre_consulta' | 'texto';
 export interface AutomationRow {
   id: string; clinic_id: string; name: string; enabled: boolean; trigger: 'before_start' | 'after_end'; offset_minutes: number;
   template_name: string; template_language: string; params: Array<{ source: ParamSource; text?: string }>; link_url: string | null;
@@ -119,6 +119,8 @@ export interface WhatsAppDeps {
   newId?: () => string;
   now?: () => Date;
   log?: (event: string, detail: Record<string, unknown>) => void;
+  /** Pre-consultation link of a clinic appointment (created on first use), or null when the form is off. */
+  intakeLink?: (clinicId: string, appointmentId: string) => Promise<string | null>;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -543,6 +545,7 @@ export const PARAM_SOURCES: Record<ParamSource, string> = {
   medico: 'Nome do médico',
   clinica: 'Nome da clínica',
   link: 'Link da regra',
+  link_pre_consulta: 'Link da pré-consulta (único por consulta)',
   texto: 'Texto fixo',
 };
 const TZ = 'America/Sao_Paulo';
@@ -626,7 +629,7 @@ const firstName = (name: string) => {
 const local = (iso: string, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, ...opts }).format(new Date(iso));
 
 /** The template fields for one appointment; never empty (Meta refuses empty parameters). */
-export function renderParams(rule: Pick<AutomationRow, 'params' | 'link_url'>, c: Candidate): string[] {
+export function renderParams(rule: Pick<AutomationRow, 'params' | 'link_url'>, c: Candidate, preConsulta: string | null = null): string[] {
   return rule.params.map((p) => {
     switch (p.source) {
       case 'paciente_primeiro_nome': return firstName(c.patient_name) || 'paciente';
@@ -636,6 +639,7 @@ export function renderParams(rule: Pick<AutomationRow, 'params' | 'link_url'>, c
       case 'medico': return c.doctor_name.trim() || 'nossa equipe';
       case 'clinica': return c.clinic_name.trim() || 'a clínica';
       case 'link': return rule.link_url ?? '';
+      case 'link_pre_consulta': return preConsulta ?? '';
       case 'texto': return p.text ?? '';
       default: return '';
     }
@@ -683,14 +687,28 @@ export async function automationsHandler(req: Request, deps: WhatsAppDeps): Prom
       : !c.phone || !/^[0-9]{10,15}$/.test(c.phone) ? 'Sem telefone válido no cadastro.'
       : !template || template.status !== 'APPROVED' ? 'Modelo não aprovado.'
       : template.param_count !== rule.params.length ? 'Campos do modelo mudaram; revise a regra.' : null;
-    const params = skip ? [] : renderParams(rule, c);
-    if (!skip && params.some((p) => !p.trim())) { await fail(rule, c, 'Campo do modelo vazio.'); tally.failed++; continue; }
+    // The pre-consultation link is created only for a message that will go out.
+    let preConsulta: string | null = null;
+    let linkSkip: string | null = null;
+    if (!skip && rule.params.some((p) => p.source === 'link_pre_consulta')) {
+      try {
+        preConsulta = deps.intakeLink ? await deps.intakeLink(c.clinic_id, c.appointment_id) : null;
+        if (!preConsulta) linkSkip = 'Pré-consulta não configurada no servidor.';
+      } catch (e) {
+        const code = (e as { code?: string })?.code;
+        linkSkip = code === '55000' ? 'A pré-consulta não está ativa nesta clínica.' : code === '22023' ? 'O agendamento não aceita pré-consulta.' : null;
+        if (!linkSkip) { await fail(rule, c, `Pré-consulta: ${code ?? 'erro'}`); tally.failed++; continue; }
+      }
+    }
+    const finalSkip = skip ?? linkSkip;
+    const params = finalSkip ? [] : renderParams(rule, c, preConsulta);
+    if (!finalSkip && params.some((p) => !p.trim())) { await fail(rule, c, 'Campo do modelo vazio.'); tally.failed++; continue; }
     let begun: { runId: string; messageId?: string; to?: string; skipped: boolean } | null;
     try {
       begun = (await deps.rpc('whatsapp_automation_begin', {
         p_automation: rule.id, p_rule_revision: rule.revision, p_appointment: c.appointment_id, p_start: c.appointment_start,
-        p_wa_id: skip ? null : c.phone, p_skip_reason: skip,
-        p_body: skip ? '' : renderBody(template!.body, params), p_template: skip ? null : { name: rule.template_name, language: rule.template_language, params },
+        p_wa_id: finalSkip ? null : c.phone, p_skip_reason: finalSkip,
+        p_body: finalSkip ? '' : renderBody(template!.body, params), p_template: finalSkip ? null : { name: rule.template_name, language: rule.template_language, params },
       })) as typeof begun;
     } catch (e) {
       await fail(rule, c, `Preparação: ${(e as { code?: string })?.code ?? 'erro'}`);

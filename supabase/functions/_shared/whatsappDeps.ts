@@ -9,6 +9,8 @@ import { AuthError, authResponse, requireUser } from './auth.ts';
 import { fetchWithDeadline } from './http.ts';
 import { parseKeyList } from './psc.ts';
 import { DEFAULT_GRAPH_VERSION, graphClient } from './whatsapp.ts';
+import { intakeConfig } from './intakeDeps.ts';
+import { intakeLink } from './intakeHandlers.ts';
 import type { AssigneeRow, AutomationRow, AutomationRunRow, BotSessionRow, Caller, FlowRow, ChannelRow, ConversationRow, MessageRow, TemplateRow, WhatsAppDeps, WhatsAppStore } from './whatsappHandlers.ts';
 const AUTOMATION_COLUMNS = 'id, clinic_id, name, enabled, trigger, offset_minutes, template_name, template_language, params, link_url, doctor_ids, appointment_types, revision, updated_at';
 
@@ -213,6 +215,16 @@ export function whatsappDeps(): WhatsAppDeps {
     graph: graphClient((input, init) => fetchWithDeadline(input, init, 30_000, 25 * 1024 * 1024), Deno.env.get('WHATSAPP_GRAPH_VERSION') || DEFAULT_GRAPH_VERSION),
     log: (event, detail) => console.log(JSON.stringify({ event, ...detail })),
     now: () => new Date(),
+    intakeLink: async (clinicId, appointmentId) => {
+      const cfg = intakeConfig();
+      if (cfg.linkSecret.length < 32 || !/^https:\/\/[^/]+$/.test(cfg.appUrl)) return null;
+      const rpc = async (name: string, args: Record<string, unknown>) => {
+        const { data, error } = await service.rpc(name, args);
+        if (error) throw Object.assign(new Error(error.message), { code: error.code });
+        return data;
+      };
+      return (await intakeLink({ rpc, config: cfg }, clinicId, appointmentId, null)).url;
+    },
   };
 }
 

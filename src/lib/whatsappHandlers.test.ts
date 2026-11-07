@@ -423,6 +423,30 @@ describe('agenda automations', () => {
     expect(begins).toBe(1);
   });
 
+  it('puts the appointment pre-consultation link in the message, and skips when the form is off', async () => {
+    const h = await connectedHarness();
+    h.deps.now = () => new Date('2026-12-08T15:00:00Z');
+    const rule = { ...(await h.deps.store.automationsByIds([RULE]))[0], params: [{ source: 'paciente_primeiro_nome' as const }, { source: 'link_pre_consulta' as const }] };
+    h.deps.store.automationsByIds = async () => [rule];
+    h.deps.intakeLink = vi.fn(async () => 'https://app.example.com.br/pre-consulta/' + 'A'.repeat(43));
+    h.rpcResults.whatsapp_automation_candidates = [candidate];
+    h.rpcResults.whatsapp_automation_begin = { runId: 'r1', messageId: MSG, to: '5541999990000', skipped: false };
+    expect(await (await cron(h)).json()).toMatchObject({ sent: 1 });
+    expect(h.deps.intakeLink).toHaveBeenCalledWith(candidate.clinic_id, candidate.appointment_id);
+    expect(h.calls.find(([n]) => n === 'whatsapp_automation_begin')![1]).toMatchObject({
+      p_template: { params: ['Maria', 'https://app.example.com.br/pre-consulta/' + 'A'.repeat(43)] } });
+
+    const off = await connectedHarness();
+    off.deps.now = () => new Date('2026-12-08T15:00:00Z');
+    off.deps.store.automationsByIds = async () => [rule];
+    off.deps.intakeLink = vi.fn(async () => { throw Object.assign(new Error('off'), { code: '55000' }); });
+    off.rpcResults.whatsapp_automation_candidates = [candidate];
+    off.rpcResults.whatsapp_automation_begin = { runId: 'r2', skipped: true };
+    expect(await (await cron(off)).json()).toMatchObject({ sent: 0, skipped: 1 });
+    expect(off.calls.find(([n]) => n === 'whatsapp_automation_begin')![1]).toMatchObject({ p_wa_id: null, p_skip_reason: 'A pré-consulta não está ativa nesta clínica.' });
+    expect(off.graph.send).not.toHaveBeenCalled();
+  });
+
   it('does not send when another run already claimed the appointment', async () => {
     const h = await connectedHarness();
     h.deps.now = () => new Date('2026-12-08T15:00:00Z');

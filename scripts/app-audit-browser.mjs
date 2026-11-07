@@ -111,6 +111,8 @@ async function supabase(route) {
   // A clinic without a signing provider yet: the documents tab asks for this.
   if (path === '/functions/v1/signature-session/state') return respond(route, { configured: false, active: false, expiresAt: null });
   if (path === '/functions/v1/whatsapp-api') return respond(route, whatsappAnswer(request.postDataJSON?.() ?? {}));
+  if (path === '/functions/v1/intake-api') return respond(route, intakeAnswer(request.postDataJSON?.() ?? {}));
+  if (path === '/functions/v1/intake-public') return respond(route, intakePublicAnswer(request.postDataJSON?.() ?? {}));
   if (path.startsWith('/functions/')) return respond(route, { error: 'Operação externa bloqueada no ensaio' }, 503);
   if (path.startsWith('/storage/')) return respond(route, []);
   const single = (request.headers()['accept'] ?? '').includes('vnd.pgrst.object');
@@ -166,6 +168,45 @@ function whatsappAnswer(body) {
         info: { title: 'Endereço e horários', text: 'Rua Exemplo, 100. Segunda a sexta, 8h às 18h.', options: [], then: 'close' } } } };
     default: return { error: 'Operação externa bloqueada no ensaio', code: 'server' };
   }
+}
+
+// Pre-consultation (synthetic): the starter form, three appointments and one answered request.
+const INTAKE_FORM = { intro: 'Para agilizar o seu atendimento na Clínica Sintética, responda estas perguntas antes da consulta. Leva cerca de 5 minutos.',
+  thanks: 'Obrigado! Recebemos suas respostas.', sections: [
+    { id: 'dados', title: 'Seus dados', audience: 'registration', questions: [
+      { id: 'nome', label: 'Nome completo', type: 'text', required: true, field: 'name' },
+      { id: 'nascimento', label: 'Data de nascimento', type: 'date', required: true, field: 'birth_date' },
+      { id: 'cpf', label: 'CPF', type: 'cpf', required: true, field: 'cpf' }] },
+    { id: 'convenio', title: 'Convênio', audience: 'registration', questions: [
+      { id: 'tipo_atendimento', label: 'A consulta é particular ou pelo convênio?', type: 'choice', required: true, options: ['Particular', 'Convênio'], field: 'insurance_type' },
+      { id: 'carteirinha', label: 'Número da carteirinha', type: 'text', required: true, field: 'insurance_card', showIf: { question: 'tipo_atendimento', equals: 'Convênio' } }] },
+    { id: 'saude', title: 'Sobre a consulta', audience: 'health', questions: [
+      { id: 'motivo', label: 'Qual o motivo da consulta?', type: 'textarea', required: true },
+      { id: 'condicoes', label: 'Tem alguma destas condições?', type: 'multi', options: ['Pressão alta', 'Diabetes', 'Asma', 'Nenhuma destas'] },
+      { id: 'gestacoes', label: 'Quantas gestações já teve?', type: 'number', help: 'Deixe em branco se não se aplica.' }] }] };
+function intakeAnswer(body) {
+  const item = (n, over) => ({ appointmentId: `d5150000-0000-4000-8000-00000000000${n}`, doctorId: doctorId, doctorName: 'Dra. Ana Exemplo', start: day(n), end: day(n),
+    appointmentStatus: 'agendado', contactId: null, contactName: `Paciente Sintético ${n}`, requestId: null, state: 'none', openedAt: null, answeredAt: null,
+    registrationReviewedAt: null, healthReviewedAt: null, revision: null, ...over });
+  switch (body.action) {
+    case 'state': return { ready: true, canEditForm: true, enabled: true };
+    case 'form': return { starter: false, revision: 2, enabled: true, form: INTAKE_FORM, updatedAt: day(-1) };
+    case 'list': return { items: [
+      item(1, { requestId: 'd5160000-0000-4000-8000-000000000001', state: 'answered', openedAt: day(0), answeredAt: day(0), revision: 3 }),
+      item(2, { requestId: 'd5160000-0000-4000-8000-000000000002', state: 'pending', openedAt: day(0), revision: 1 }),
+      item(3, { contactName: 'Paciente com nome bem comprido para conferir o corte em telas estreitas' }),
+      item(4, { appointmentStatus: 'cancelado' })] };
+    case 'response': return { request: { id: 'd5160000-0000-4000-8000-000000000001', state: 'answered', revision: 3, openedAt: day(0), answeredAt: day(0), submissions: 1,
+      expiresAt: day(2), whatsappConsent: true, registrationReviewedAt: null, healthReviewedAt: null, healthVisible: true,
+      registration: [{ id: 'nome', label: 'Nome completo', value: 'Paciente Sintético 1', field: 'name' }, { id: 'tipo_atendimento', label: 'A consulta é particular ou pelo convênio?', value: 'Convênio', field: 'insurance_type' },
+        { id: 'carteirinha', label: 'Número da carteirinha', value: '0000 1111 2222 3333', field: 'insurance_card' }],
+      health: [{ id: 'motivo', label: 'Qual o motivo da consulta?', value: 'Consulta de rotina (texto sintético).' }, { id: 'condicoes', label: 'Tem alguma destas condições?', value: ['Asma'] }] } };
+    default: return { error: 'Operação externa bloqueada no ensaio', code: 'server' };
+  }
+}
+function intakePublicAnswer(body) {
+  if (body.action === 'open') return { state: 'open', clinicName: 'Clínica Sintética', doctorName: 'Dra. Ana Exemplo', start: day(2), form: INTAKE_FORM, formRevision: 2, answeredAt: null, privacyVersion: 'v1' };
+  return { error: 'Operação externa bloqueada no ensaio', code: 'server' };
 }
 
 /** Automatic findings on the current page. */
@@ -228,6 +269,9 @@ const ROUTES = [
   ['inexistente', '/rota-inexistente'],
   ['configuracoes', '/configuracoes'],
   ['config-whatsapp', '/configuracoes?secao=whatsapp'],
+  ['config-pre-consulta', '/configuracoes?secao=pre-consulta'],
+  ['pre-consultas', '/pre-consultas'],
+  ['pre-consulta-paciente', `/pre-consulta/${'A'.repeat(43)}`],
   ['config-conexoes', '/configuracoes?secao=conexoes'],
   ['config-permissoes', '/configuracoes?secao=permissoes'],
   ['config-equipe', '/configuracoes?secao=equipe'],
@@ -292,6 +336,20 @@ try {
       await page.waitForTimeout(1500);
       await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: true });
       report.routes[`${label} ${path}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+      // Pre-consultation answers dialog (reception list).
+      if (path === '/pre-consultas') {
+        const view = page.getByRole('button', { name: 'Ver respostas' }).first();
+        if (await view.count()) {
+          await view.click();
+          await page.getByRole('dialog').waitFor({ timeout: 5000 }).catch(() => {});
+          await page.waitForTimeout(600);
+          await page.screenshot({ path: resolve(artifacts, `${label}-pre-consulta-respostas.png`), fullPage: true });
+          const box = await page.getByRole('dialog').boundingBox();
+          report.routes[`${label} pre-consulta respostas`] = { ...(await inspect(page, viewport.width)), dialog: box && { left: Math.round(box.x), right: Math.round(box.x + box.width), viewport: viewport.width },
+            pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+          await page.keyboard.press('Escape');
+        } else report.routes[`${label} pre-consulta respostas`] = { missing: 'answers button not found' };
+      }
       // Menu bot: the editor and a local simulated conversation (nothing is sent).
       if (CLINIC_ADMIN && path === '/configuracoes?secao=whatsapp') {
         const editor = page.locator('div.rounded-xl', { has: page.getByText('Robô de atendimento', { exact: true }) }).first();

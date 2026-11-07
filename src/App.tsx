@@ -31,6 +31,9 @@ const SharingPage = lazy(() => import('./pages/Sharing'));
 const LegacyWorkspaceRedirect = lazy(() => import('./pages/LegacyWorkspaceRedirect'));
 const AccountSecurityPage = lazy(() => import('./pages/AccountSecurity'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
+const PreConsultaPage = lazy(() => import('./pages/PreConsulta'));
+const IntakePage = lazy(() => import('./features/intake/IntakePage'));
+const BillingPage = lazy(() => import('./features/billing/BillingPage'));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ReceptionLayout = lazy(() => import('./features/reception/ReceptionLayout'));
 const ReceptionQueue = lazy(() => import('./features/reception/ReceptionQueue'));
@@ -89,6 +92,7 @@ const router = createBrowserRouter([
   { path: '/auth', element: <Auth /> },
   { path: '/sobre', element: <About /> },
   { path: '/aviso-de-privacidade', element: <PrivacyNotice /> },
+  { path: '/pre-consulta/:token', element: <PreConsultaPage /> },
   { element: <ProtectedRoute />, children: [
     { path: '/', element: <Index /> },
     { path: '/recepcao', element: <ReceptionLayout />, children: [
@@ -110,6 +114,8 @@ const router = createBrowserRouter([
     { path: '/trabalho', element: <LegacyWorkspaceRedirect /> },
     { path: '/seguranca', element: <AccountSecurityPage /> },
     { path: '/configuracoes', element: <SettingsPage /> },
+    { path: '/pre-consultas', element: <IntakePage /> },
+    { path: '/financeiro', element: <BillingPage /> },
   ] },
   { path: '*', element: <NotFound /> },
   ] },

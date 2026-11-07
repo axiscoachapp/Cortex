@@ -20,7 +20,7 @@ export interface WhatsAppState {
 
 export interface WhatsAppTemplate { name: string; language: string; category: string; status: string; body: string; paramCount: number }
 
-export type ParamSource = 'paciente_primeiro_nome' | 'data' | 'hora' | 'dia_semana' | 'medico' | 'clinica' | 'link' | 'texto';
+export type ParamSource = 'paciente_primeiro_nome' | 'data' | 'hora' | 'dia_semana' | 'medico' | 'clinica' | 'link' | 'link_pre_consulta' | 'texto';
 export interface AutomationParam { source: ParamSource; text?: string }
 export interface Automation {
   id: string;
@@ -76,10 +76,12 @@ export const PARAM_LABELS: Record<ParamSource, string> = {
   medico: 'Nome do médico',
   clinica: 'Nome da clínica',
   link: 'Link da regra',
+  link_pre_consulta: 'Link da pré-consulta (único por consulta)',
   texto: 'Texto fixo',
 };
 
 export const SAMPLE_VALUES: Record<Exclude<ParamSource, 'link' | 'texto'>, string> = {
+  link_pre_consulta: 'https://…/pre-consulta/…',
   paciente_primeiro_nome: 'Maria',
   data: '10/12',
   hora: '15:00',
@@ -117,7 +119,7 @@ export function previewBody(template: WhatsAppTemplate | undefined, params: Auto
 
 export const AUTOMATION_PRESETS: Array<{ label: string; hint: string; rule: Partial<AutomationRule> }> = [
   { label: 'Lembrete 48 h antes', hint: 'Data, hora e pedido de confirmação', rule: { name: 'Lembrete 48 h antes', trigger: 'before_start', offsetMinutes: 2880 } },
-  { label: 'Link de pré-consulta', hint: 'Formulário ou orientações antes da consulta', rule: { name: 'Link de pré-consulta', trigger: 'before_start', offsetMinutes: 4320 } },
+  { label: 'Link de pré-consulta', hint: 'Formulário do Cortex, com link único por consulta', rule: { name: 'Link de pré-consulta', trigger: 'before_start', offsetMinutes: 4320 } },
   { label: 'Pós-consulta', hint: 'Agradecimento, orientações ou pesquisa', rule: { name: 'Pós-consulta', trigger: 'after_end', offsetMinutes: 120 } },
 ];
 
