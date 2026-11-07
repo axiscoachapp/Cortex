@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K6/5a: `249fd15daf354d7e8dd53d1d305aeb2c586a63fd`, main/axiscoachapp (autor e committer), sem push. Índice livre; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas.
+
 Atualizado em 2026-11-06 22:57. **K6/5a — resíduos da reserva/contato f837c57 retestados:** [provas](../docs/reviews/2026-11-06/whatsapp-k6/RESERVATION_RETEST_F837C57.md).79migrations e duas suítes originais passam;14SQL (revisão/due/filtros/vínculo/alias etc.) e cinco grupos concorrentes com RPC real validam NOWAIT sem recibo, controle de espera observado, barreira ausente reservando snapshot antigo/rollback, nova tentativa após commit e correção bloqueada pela reserva. Definição/ACL restauradas,82fontesSQL/4runner e cleanup positivo.11Node+49Vitest/2arquivos, seis caminhos do produtor conferidos porSHA, probes cursor/parser verdes, lint/sintaxe/duas flags/revisão. Duas falhas de fixture (fins2099 e leitura direta de revisão) corrigidas sem alterar/grantar produtor. Snapshot validado atécommit, sem Meta/hosted/push. K6 completo continua aberto para bot independente/C5; não repetir resíduos já retestados como bloqueios atuais.2152 já atendida2201; este é avanço de testes, sem resposta de confirmação nova.
 
 Próximo K6/5b: bot/comando atômico, depois C5 e comandos K1. K7 pós-consulta/áudio local, M2/MFA/compartilhamento/piloto separados. Automação ACTIVE, main/axiscoachapp sem push/hosted/envios. Preservar Claude/PersonalMed/SaaS.
