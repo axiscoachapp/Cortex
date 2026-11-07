@@ -204,3 +204,16 @@ O handler envia cada mensagem e registra o resultado com `whatsapp_finish_outbou
 - `saveFlow` (`revision`, `flow`) valida e salva com controle de revisão (`stale` se mudou).
 
 **API (recepção e admin):** `botSession` (`conversationId`) devolve `{ session: { status, path, outcome, startedAt, updatedAt } | null }`. `path` traz as opções escolhidas pelo paciente, por exemplo `["Marcar ou remarcar", "Dra. Ana"]`. Os DTOs de conversa e mensagem **não mudaram**, para não quebrar o cliente estrito do K1. Expor a origem da mensagem (pessoa, automação ou robô) fica para quando o cliente aceitar.
+
+## v1.3 (07/11): correções K6/5b e catálogo de atendentes
+
+**Robô (`whatsapp_bot_apply`), sob a trava da conversa:**
+- **Resposta humana:** uma saída com `sent_by` desde a abertura atual da conversa (`opened_at`) recusa qualquer passo com saída: primeiro ciclo, reinício por revisão do fluxo ou inatividade, e ciclo em andamento. Devolve `{applied:false, reason:'taken'}`; uma sessão ativa termina como `human`. Respostas de antes de uma reabertura não contam.
+- **Janela de 24 h:** com `last_inbound_at` nulo ou vencido, o passo é recusado com `{applied:false, reason:'window'}`, sem nenhum efeito em sessão, fila, encerramento ou mensagens. O `runBot` também não chama o passo nesse caso, por exemplo numa mensagem atrasada gravada agora.
+
+**`assignees` (recepção e admin):** quem pode receber uma conversa, pela mesma regra do `act/assign`: recepção ativa (`clinic_staff_members.active`) ou admin ativo da clínica (`clinic_members`).
+- Entrada: `limit` de 1 a 50 (padrão 50) e `before` opcional, o cursor opaco da página anterior. Clínica e ator vêm do servidor.
+- Resposta: `{ items: [{ userId, name, role: 'reception'|'admin', ambiguous }], nextBefore: string|null }`, ordenada por `userId`, sem duplicatas.
+- `ambiguous: true` marca um nome igual ao de outra pessoa elegível, comparado sem diferença de maiúsculas. O seletor deve recusar a escolha ou pedir um rótulo distinto; o UUID não serve de desempate.
+- O nome do admin vem de `user_settings.doctor_name`, ou "Administrador da clínica" quando vazio. Sem e-mail, telefone ou escopos.
+- É um catálogo, não uma autorização: o `assign` confere de novo, e o alvo pode deixar de estar ativo antes do clique.

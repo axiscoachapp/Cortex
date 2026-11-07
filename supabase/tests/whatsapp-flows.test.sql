@@ -91,6 +91,55 @@ do $$ declare c uuid; r jsonb; rev int; begin
   assert r->>'reason'='taken', 'bot answered an assigned conversation';
 end $$;
 
+-- K6/5b P1: a person who answered in the current opening also blocks a first cycle and a restart
+-- (new flow revision or idle), without assignment. An answer from before a reopening does not.
+do $$ declare c uuid; r jsonb; begin
+  -- First cycle after a human answer: nothing reserved, no session.
+  perform public.whatsapp_ingest_inbound('300000000001','5541999910004',null,'Quarta','wamid.B0000030','text','Oi',null,null,now());
+  select id into c from public.whatsapp_conversations where wa_id='5541999910004';
+  perform public.whatsapp_begin_outbound('e7200000-0000-4000-8000-000000000001',c,'e7100000-0000-4000-8000-000000000003',gen_random_uuid(),'text','Bom dia, recepção',null);
+  r := public.whatsapp_bot_apply(c,'wamid.B0000030',0,true,2,'inicio',0,'[]','active',null,'agendamento',false,'[{"kind":"interactive","body":"Menu"}]');
+  assert r->>'reason'='taken', 'first cycle after a human answer: '||r::text;
+  assert not exists (select 1 from public.whatsapp_bot_sessions where conversation_id=c), 'session created after a human answer';
+  assert not exists (select 1 from public.whatsapp_messages where conversation_id=c and bot), 'bot message reserved after a human answer';
+  assert (select queue is distinct from 'agendamento' from public.whatsapp_conversations where id=c), 'queue changed after a human answer';
+
+  -- Restart (new cycle over an active session) after a human answer: refused and the session ends as human.
+  perform public.whatsapp_ingest_inbound('300000000001','5541999910005',null,'Quinta','wamid.B0000040','text','Oi',null,null,now());
+  select id into c from public.whatsapp_conversations where wa_id='5541999910005';
+  r := public.whatsapp_bot_apply(c,'wamid.B0000040',0,true,2,'inicio',0,'[]','active',null,null,false,'[]');
+  assert (r->>'applied')::boolean, 'start before the human answer';
+  perform public.whatsapp_begin_outbound('e7200000-0000-4000-8000-000000000001',c,'e7100000-0000-4000-8000-000000000003',gen_random_uuid(),'text','Pode falar comigo',null);
+  perform public.whatsapp_ingest_inbound('300000000001','5541999910005',null,'','wamid.B0000041','text','Oi de novo',null,null,now()+interval '1 second');
+  r := public.whatsapp_bot_apply(c,'wamid.B0000041',(r->>'revision')::int,true,2,'inicio',0,'[]','active',null,null,false,'[{"kind":"interactive","body":"Menu"}]');
+  assert r->>'reason'='taken', 'restart after a human answer: '||r::text;
+  assert (select status='human' from public.whatsapp_bot_sessions where conversation_id=c), 'restart did not end the cycle as human';
+  assert (select count(*)=0 from public.whatsapp_messages where conversation_id=c and bot), 'restart reserved a bot message';
+
+  -- Reopened conversation: the answer from the previous opening does not block the new cycle.
+  perform public.whatsapp_ingest_inbound('300000000001','5541999910006',null,'Sexta','wamid.B0000050','text','Oi',null,null,now());
+  select id into c from public.whatsapp_conversations where wa_id='5541999910006';
+  perform public.whatsapp_begin_outbound('e7200000-0000-4000-8000-000000000001',c,'e7100000-0000-4000-8000-000000000003',gen_random_uuid(),'text','Resposta antiga',null);
+  update public.whatsapp_messages set created_at=now()-interval '2 hours' where conversation_id=c and direction='out';
+  update public.whatsapp_conversations set opened_at=now()-interval '1 hour' where id=c;
+  r := public.whatsapp_bot_apply(c,'wamid.B0000050',0,true,2,'inicio',0,'[]','active',null,null,false,'[{"kind":"interactive","body":"Menu"}]');
+  assert (r->>'applied')::boolean, 'reopened conversation blocked by an old answer: '||r::text;
+end $$;
+
+-- K6/5b P2: a late message (provider time 25 h ago) leaves the 24-hour window closed; the bot step
+-- is refused with no effect on session, queue, closing or messages.
+do $$ declare c uuid; r jsonb; begin
+  perform public.whatsapp_ingest_inbound('300000000001','5541999910007',null,'Sétima','wamid.B0000060','text','Oi',null,null,now()-interval '25 hours');
+  select id into c from public.whatsapp_conversations where wa_id='5541999910007';
+  assert (select last_inbound_at <= now()-interval '24 hours' from public.whatsapp_conversations where id=c), 'fixture: window still open';
+  r := public.whatsapp_bot_apply(c,'wamid.B0000060',0,true,2,'inicio',0,'[]','handed_off','queue:agendamento','agendamento',true,
+    '[{"kind":"text","body":"Uma pessoa da recepção continua por aqui."}]');
+  assert r->>'reason'='window', 'expired window accepted: '||r::text;
+  assert not exists (select 1 from public.whatsapp_bot_sessions where conversation_id=c), 'session after a refused step';
+  assert not exists (select 1 from public.whatsapp_messages where conversation_id=c and direction='out'), 'message after a refused step';
+  assert (select status='open' and queue is distinct from 'agendamento' from public.whatsapp_conversations where id=c), 'queue or closing after a refused step';
+end $$;
+
 -- Closing step, disabled flow, invalid input, and the bot flag constraint.
 do $$ declare c uuid; r jsonb; begin
   perform public.whatsapp_ingest_inbound('300000000001','5541999910003',null,'Terceira','wamid.B0000020','text','Oi',null,null,now());

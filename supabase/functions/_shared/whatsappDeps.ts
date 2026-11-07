@@ -9,7 +9,7 @@ import { AuthError, authResponse, requireUser } from './auth.ts';
 import { fetchWithDeadline } from './http.ts';
 import { parseKeyList } from './psc.ts';
 import { DEFAULT_GRAPH_VERSION, graphClient } from './whatsapp.ts';
-import type { AutomationRow, AutomationRunRow, BotSessionRow, Caller, FlowRow, ChannelRow, ConversationRow, MessageRow, TemplateRow, WhatsAppDeps, WhatsAppStore } from './whatsappHandlers.ts';
+import type { AssigneeRow, AutomationRow, AutomationRunRow, BotSessionRow, Caller, FlowRow, ChannelRow, ConversationRow, MessageRow, TemplateRow, WhatsAppDeps, WhatsAppStore } from './whatsappHandlers.ts';
 const AUTOMATION_COLUMNS = 'id, clinic_id, name, enabled, trigger, offset_minutes, template_name, template_language, params, link_url, doctor_ids, appointment_types, revision, updated_at';
 
 export const corsHeaders = {
@@ -150,6 +150,24 @@ export function whatsappDeps(): WhatsAppDeps {
         .select('conversation_id, flow_revision, node, attempts, path, status, outcome, revision, started_at, updated_at').eq('conversation_id', conversationId).maybeSingle();
       if (error) fail('robô');
       return (data as BotSessionRow | null) ?? null;
+    },
+    async assignees(clinicId, afterUserId, limit) {
+      // Same eligibility as whatsapp_conversation_action('assign'): active reception staff, or active admins.
+      let staffQ = service.from('clinic_staff_members').select('user_id, name').eq('clinic_id', clinicId).eq('active', true).order('user_id').limit(limit);
+      let adminQ = service.from('clinic_members').select('user_id').eq('clinic_id', clinicId).eq('role', 'admin').eq('status', 'active').order('user_id').limit(limit);
+      if (afterUserId) { staffQ = staffQ.gt('user_id', afterUserId); adminQ = adminQ.gt('user_id', afterUserId); }
+      const [staff, admins] = await Promise.all([staffQ, adminQ]);
+      if (staff.error || admins.error) fail('equipe');
+      const byId = new Map<string, AssigneeRow>();
+      for (const r of (staff.data ?? []) as Array<{ user_id: string; name: string }>) byId.set(r.user_id, { user_id: r.user_id, name: r.name, role: 'reception' });
+      const adminIds = ((admins.data ?? []) as Array<{ user_id: string }>).map((r) => r.user_id).filter((id) => !byId.has(id));
+      if (adminIds.length) {
+        const { data, error } = await service.from('user_settings').select('user_id, doctor_name').in('user_id', adminIds);
+        if (error) fail('equipe');
+        const names = new Map(((data ?? []) as Array<{ user_id: string; doctor_name: string | null }>).map((r) => [r.user_id, r.doctor_name]));
+        for (const id of adminIds) byId.set(id, { user_id: id, name: names.get(id)?.trim() || 'Administrador da clínica', role: 'admin' });
+      }
+      return [...byId.values()].sort((a, b) => (a.user_id < b.user_id ? -1 : a.user_id > b.user_id ? 1 : 0)).slice(0, limit);
     },
     async automationRuns(clinicId, limit) {
       const { data, error } = await service.from('whatsapp_automation_runs')

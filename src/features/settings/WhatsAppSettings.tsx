@@ -87,7 +87,10 @@ export function WhatsAppSettings() {
     onError: (e: Error) => setMessage({ kind: 'error', text: e.message }),
   });
 
-  if (state.isLoading) return <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Verificando o WhatsApp…</p>;
+  // Cached state from an earlier visit (possibly another role) never drives the controls: wait for
+  // this mount's own read, or show its error.
+  if (state.isLoading || (!state.isError && !state.isFetchedAfterMount))
+    return <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Verificando o WhatsApp…</p>;
   if (state.isError || !s)
     return (
       <div role="alert" className="text-sm text-destructive">

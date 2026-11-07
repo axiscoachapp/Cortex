@@ -92,7 +92,11 @@ export interface WhatsAppStore {
   conversationById(id: string): Promise<ConversationRow | null>;
   flowForClinic(clinicId: string): Promise<FlowRow | null>;
   botSession(conversationId: string): Promise<BotSessionRow | null>;
+  /** People who can receive a conversation (same rule as act/assign), ordered by user id, after `afterUserId`. */
+  assignees(clinicId: string, afterUserId: string | null, limit: number): Promise<AssigneeRow[]>;
 }
+
+export interface AssigneeRow { user_id: string; name: string; role: 'reception' | 'admin' }
 
 export interface WhatsAppConfig {
   appSecret: string;
@@ -325,6 +329,7 @@ export async function apiHandler(req: Request, deps: WhatsAppDeps): Promise<Resp
       case 'flow': return json(deps, 200, await getFlow(deps, caller, body));
       case 'saveFlow': return json(deps, 200, await saveFlow(deps, caller, body));
       case 'botSession': return json(deps, 200, await botSessionView(deps, caller, body));
+      case 'assignees': return json(deps, 200, await assigneesView(deps, caller, body));
       case 'saveAutomation': return json(deps, 200, await saveAutomation(deps, caller, body));
       case 'deleteAutomation': {
         requireAdmin(caller);
@@ -782,6 +787,36 @@ async function botSessionView(deps: WhatsAppDeps, caller: Caller, body: Record<s
   };
 }
 
+const ASSIGNEE_CURSOR = /^a1\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+
+/**
+ * Who can receive a conversation: active reception staff or active admins of the caller's clinic,
+ * the same rule act/assign enforces. A catalog, not an authorization: assign checks again.
+ * Pages of up to 50 ordered by user id; `ambiguous` marks names shared by more than one person
+ * on the page set, so the picker can refuse them instead of guessing.
+ */
+async function assigneesView(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireInbox(caller);
+  const limit = body.limit === undefined ? 50 : Number(body.limit);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 50) throw new HttpError(400, 'Limite inválido.', 'invalid');
+  let after: string | null = null;
+  if (body.before !== undefined && body.before !== null) {
+    const m = typeof body.before === 'string' ? ASSIGNEE_CURSOR.exec(body.before) : null;
+    if (!m) throw new HttpError(400, 'Cursor inválido.', 'invalid');
+    after = m[1];
+  }
+  const rows = await deps.store.assignees(caller.clinicId, after, limit + 1);
+  const page = rows.slice(0, limit);
+  const key = (n: string) => n.normalize('NFC').trim().toLocaleLowerCase('pt-BR');
+  const all = await deps.store.assignees(caller.clinicId, null, 500);
+  const counts = new Map<string, number>();
+  for (const r of all) counts.set(key(r.name), (counts.get(key(r.name)) ?? 0) + 1);
+  return {
+    items: page.map((r) => ({ userId: r.user_id, name: r.name.slice(0, 256), role: r.role, ambiguous: (counts.get(key(r.name)) ?? 0) > 1 })),
+    nextBefore: rows.length > limit ? `a1.${page[page.length - 1].user_id}` : null,
+  };
+}
+
 const BOT_KINDS = new Set(['text', 'interactive', 'button', 'image', 'audio', 'video', 'document', 'sticker', 'location', 'contacts']);
 
 /**
@@ -807,6 +842,9 @@ export async function runBot(deps: WhatsAppDeps, m: InboundMessage, conversation
         await deps.rpc('whatsapp_bot_apply', endArgs(conv.id, session, 'human', 'Atendimento assumido pela recepção'));
       return;
     }
+    // A late message (provider time older than 24 h) does not open the window; the SQL step checks it again under the lock.
+    const until = windowOpenUntil(conv.last_inbound_at);
+    if (!until || Date.parse(until) <= now.getTime()) return;
     const idle = session ? now.getTime() - Date.parse(session.updated_at) > SESSION_IDLE_MS : false;
     const reopened = session ? Date.parse(conv.opened_at) > Date.parse(session.started_at) : false;
     const newCycle = !session || reopened || (session.status === 'active' && (idle || session.flow_revision !== flow.revision));

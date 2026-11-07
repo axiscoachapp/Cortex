@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { openSecret, parseKeyList } from '../../supabase/functions/_shared/psc';
 import { GraphError, graphClient, parseWebhook, validSignature, windowOpenUntil, type GraphClient } from '../../supabase/functions/_shared/whatsapp';
 import {
-  apiHandler, automationsHandler, runBot, type BotSessionRow, type FlowRow, inQuietHours, renderBody, renderParams, tokenBinding, webhookHandler, type AutomationRow, type Candidate, type Caller, type ChannelRow, type ConversationRow, type MessageRow, type TemplateRow, type WhatsAppDeps,
+  apiHandler, automationsHandler, runBot, type AssigneeRow, type BotSessionRow, type FlowRow, inQuietHours, renderBody, renderParams, tokenBinding, webhookHandler, type AutomationRow, type Candidate, type Caller, type ChannelRow, type ConversationRow, type MessageRow, type TemplateRow, type WhatsAppDeps,
 } from '../../supabase/functions/_shared/whatsappHandlers';
 
 const CLINIC = '11111111-1111-4111-8111-111111111111';
@@ -100,6 +100,12 @@ describe('whatsapp helpers', () => {
   });
 });
 
+const TEAM: AssigneeRow[] = [
+  { user_id: '10000000-0000-4000-8000-000000000001', name: 'Ana Exemplo', role: 'reception' },
+  { user_id: '10000000-0000-4000-8000-000000000002', name: 'Bruno Exemplo', role: 'admin' },
+  { user_id: '10000000-0000-4000-8000-000000000003', name: 'ana exemplo', role: 'reception' },
+];
+
 function harness(opts: { caller?: Caller; conv?: Partial<ConversationRow>; templates?: TemplateRow[]; channel?: Partial<ChannelRow> | null; config?: Partial<WhatsAppDeps['config']>;
   flow?: Partial<FlowRow> | null; botSession?: BotSessionRow | null } = {}) {
   const flowRow: FlowRow | null = opts.flow === undefined ? null : opts.flow === null ? null : {
@@ -149,6 +155,8 @@ function harness(opts: { caller?: Caller; conv?: Partial<ConversationRow>; templ
     config: { appSecret: SECRET, verifyToken: 'synthetic-verify', keys, webhookUrl: 'https://example.supabase.co/functions/v1/whatsapp-webhook', cronSecret: CRON, ...(opts.config ?? {}) },
     authorize: async () => opts.caller ?? { userId: RECEPTION, clinicId: CLINIC, admin: false, reception: true },
     authFailure: () => null,
+    // Fixed clock, one minute after the synthetic conversation's last inbound message.
+    now: () => new Date('2026-11-06T12:01:00Z'),
     rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
       calls.push([name, args]);
       if (rpcErrors[name]) throw Object.assign(new Error('rpc'), rpcErrors[name]);
@@ -173,6 +181,7 @@ function harness(opts: { caller?: Caller; conv?: Partial<ConversationRow>; templ
       conversationById: async (id) => (id === CONV ? conv : null),
       flowForClinic: async () => flowRow,
       botSession: async () => opts.botSession ?? null,
+      assignees: async (clinicId, after, limit) => (clinicId === CLINIC ? TEAM.filter((r) => !after || r.user_id > after).slice(0, limit) : []),
     },
     graph,
     newId: () => CHANNEL,
@@ -618,6 +627,14 @@ describe('menu bot in the webhook', () => {
     expect(failing.calls.filter(([n]) => n === 'whatsapp_bot_apply').map(([, a]) => a.p_status)).toEqual(['active', 'error']);
   });
 
+  it('does not answer a late message whose 24-hour window already closed', async () => {
+    const h = await connectedHarness({ flow: {}, conv: { last_inbound_at: '2026-11-05T11:00:00Z' } });
+    h.rpcResults.whatsapp_bot_apply = applied();
+    await runBot(h.deps, inbound('Oi'), CONV);
+    expect(h.calls.some(([n]) => n === 'whatsapp_bot_apply')).toBe(false);
+    expect(h.graph.send).not.toHaveBeenCalled();
+  });
+
   it('runs only for messages stored now, never for redeliveries', async () => {
     const h = await connectedHarness({ flow: {} });
     h.rpcResults.whatsapp_record_event = { new: true, processed: false };
@@ -645,5 +662,30 @@ describe('menu bot in the webhook', () => {
     h.deps.authorize = async () => ({ userId: RECEPTION, clinicId: CLINIC, admin: false, reception: true });
     expect((await h.api({ action: 'flow' })).status).toBe(403);
     expect((await h.api({ action: 'botSession', conversationId: CONV })).status).toBe(200);
+  });
+});
+
+describe('assignees catalog', () => {
+  it('lists who can receive a conversation, page by page, and flags repeated names', async () => {
+    const h = await connectedHarness();
+    const first = await (await h.api({ action: 'assignees', limit: 2 })).json();
+    expect(first).toEqual({
+      items: [
+        { userId: TEAM[0].user_id, name: 'Ana Exemplo', role: 'reception', ambiguous: true },
+        { userId: TEAM[1].user_id, name: 'Bruno Exemplo', role: 'admin', ambiguous: false },
+      ],
+      nextBefore: `a1.${TEAM[1].user_id}`,
+    });
+    const second = await (await h.api({ action: 'assignees', limit: 2, before: first.nextBefore })).json();
+    expect(second).toEqual({ items: [{ userId: TEAM[2].user_id, name: 'ana exemplo', role: 'reception', ambiguous: true }], nextBefore: null });
+  });
+
+  it('refuses bad limits and cursors, and callers without the inbox', async () => {
+    const h = await connectedHarness();
+    expect((await h.api({ action: 'assignees', limit: 0 })).status).toBe(400);
+    expect((await h.api({ action: 'assignees', limit: 51 })).status).toBe(400);
+    expect((await h.api({ action: 'assignees', before: TEAM[0].user_id })).status).toBe(400);
+    h.deps.authorize = async () => ({ userId: ADMIN, clinicId: CLINIC, admin: false, reception: false });
+    expect((await h.api({ action: 'assignees' })).status).toBe(403);
   });
 });

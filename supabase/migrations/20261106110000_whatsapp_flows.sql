@@ -111,11 +111,21 @@ begin
     if not has_session or s.status <> 'active' or s.revision is distinct from p_session_revision then
       return jsonb_build_object('applied', false, 'reason', 'revision');
     end if;
-    if exists (select 1 from public.whatsapp_messages m where m.conversation_id = conv.id and m.direction = 'out' and m.sent_by is not null
-        and m.created_at >= s.started_at) then
+  end if;
+  -- A person who answered since the conversation was (re)opened owns it, for a first cycle, a restart
+  -- (new flow revision or idle) and a running cycle alike. Answers from before the current opening
+  -- (a reopened conversation) do not count. Checked under the conversation lock, as the human writer.
+  if exists (select 1 from public.whatsapp_messages m where m.conversation_id = conv.id and m.direction = 'out' and m.sent_by is not null
+      and m.created_at >= conv.opened_at) then
+    if has_session and s.status = 'active' then
       update public.whatsapp_bot_sessions set status = 'human', revision = revision + 1, updated_at = now() where conversation_id = conv.id;
-      return jsonb_build_object('applied', false, 'reason', 'taken');
     end if;
+    return jsonb_build_object('applied', false, 'reason', 'taken');
+  end if;
+  -- Free-form and interactive messages only inside the 24-hour window, the same rule as the human
+  -- writer (P0W01). Refused without any effect: session, queue, closing and messages stay as they are.
+  if conv.last_inbound_at is null or conv.last_inbound_at <= now() - interval '24 hours' then
+    return jsonb_build_object('applied', false, 'reason', 'window');
   end if;
   if not has_session then
     insert into public.whatsapp_bot_sessions (conversation_id, clinic_id, flow_revision, node, attempts, path, status, outcome)

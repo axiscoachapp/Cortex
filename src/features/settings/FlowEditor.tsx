@@ -40,7 +40,7 @@ export function FlowEditor() {
   const flow = useQuery({
     queryKey: ['whatsapp-flow', ...scope],
     queryFn: () => whatsappCall<FlowResponse>('flow', { clinicName: access?.clinic?.name ?? '', doctors }),
-    staleTime: 0,
+    staleTime: 0, retry: false, refetchOnMount: 'always',
   });
   const [draft, setDraft] = useState<FlowSettings | null>(null);
   const [revision, setRevision] = useState(0);
@@ -70,14 +70,16 @@ export function FlowEditor() {
     onError: (e: Error) => setMessage({ kind: 'error', text: e.message }),
   });
 
-  if (flow.isLoading || !draft) return <p className="text-sm text-muted-foreground">Carregando o fluxo…</p>;
-  if (flow.isError)
+  // Error first: a failed first read must show the retry, not "Carregando" forever.
+  if (flow.isError && !dirty)
     return (
       <p role="alert" className="text-sm text-destructive">
         {(flow.error as Error).message}{' '}
         <button type="button" className="underline" onClick={() => flow.refetch()}>Tentar novamente</button>
       </p>
     );
+  // Cached data from an earlier visit is not shown until this mount's read answers.
+  if (!draft || (!dirty && !flow.isFetchedAfterMount)) return <p className="text-sm text-muted-foreground">Carregando o fluxo…</p>;
 
   const nodes = draft.definition.nodes;
   const ids = Object.keys(nodes);
