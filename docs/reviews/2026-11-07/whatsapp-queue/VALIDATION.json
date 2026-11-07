@@ -1,0 +1,43 @@
+{
+  "baseline": "346b8e4def914e1a39af94b7a9f433a33a97d38a",
+  "scope": "K1/4k set_queue adapter only; no UI or producer changes",
+  "unit": {
+    "scaffoldRedTests": 65,
+    "newTests": 65,
+    "existingTransferTests": 52,
+    "existingReopenTests": 51,
+    "existingCloseTests": 47,
+    "existingReleaseTests": 36,
+    "existingClaimTests": 34,
+    "existingReadTests": 55,
+    "passed": 340,
+    "failed": 0,
+    "files": 7
+  },
+  "sdk": {
+    "version": "2.86.0",
+    "checkGroups": 11,
+    "commands": 10,
+    "realNetwork": false,
+    "sourceHashes": 3,
+    "sourceHashesStable": true,
+    "unexpectedResources": 0
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 3,
+    "status": "passed"
+  },
+  "syntax": {
+    "scripts": 1,
+    "status": "passed"
+  },
+  "review": "Fresh read-only adversarial review of adapter, tests, SDK, contract and producer/helpers: no concrete findings after examination",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "readBack": {
+    "mandatoryAfterValidReceipt": true,
+    "queueInProducerReceipt": false,
+    "queueSynthesizedFromInput": false
+  },
+  "limits": "No UI/browser/server authorization/SQL CAS/RLS/concurrency/Meta proof, no queue application proof. Local owner eligibility is not server authority. Global Vitest not run/claimed green; pre-existing C5 RED cases excluded."
+}
