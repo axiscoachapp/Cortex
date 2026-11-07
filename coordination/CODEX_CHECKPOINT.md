@@ -1,6 +1,6 @@
 # Checkpoint do Codex
 
-Atualizado em 2026-11-07 08:12 (America/Sao_Paulo). T44 concluído e validado; SHA do commit local a registrar após commit, main/axiscoachapp (autor e committer), sem push.
+Atualizado em 2026-11-07 08:12 (America/Sao_Paulo). Entrega T44: d2c9dcae906191bb40353779ed66d76e4ea42b09, main/axiscoachapp (autor e committer), sem push.52caminhos próprios (37artefatos finais do navegador); índice livre, dirt6/7 preservado por hash.
 
 Novo atendimento vinculado ao ator/clínica/papel da abertura. Perda de contexto ou sessão oculta retira campos, interrompe próximas etapas/callbacks e exige fechar e abrir janela limpa. Snapshot, trava síncrona, retry com operação estável/contato reutilizado e bloqueio de saída durante envio. Cache limitado a fila/contatos pelo slot da clínica; colisão com texto de busca reproduzida e corrigida. Solicitação já enviada pode ter sido concluída, sem promessa de aborto/rollback.
 
