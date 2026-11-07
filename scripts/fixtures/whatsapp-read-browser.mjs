@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { expect } from '@playwright/test';
-import { whatsappReadIds,whatsappBotSessionFixture } from './whatsapp-read-api.mjs';
+import { whatsappReadIds,whatsappBotSessionFixture,whatsappHistoryCursors } from './whatsapp-read-api.mjs';
 
-export async function auditWhatsAppRead({ api, app, scene, capture, checks, requests, screens, errors, consoleErrors, failedRequests, errorResponses, blocked,botReview=false }) {
+export async function auditWhatsAppRead({ api, app, scene, capture, checks, requests, screens, errors, consoleErrors, failedRequests, errorResponses, blocked,botReview=false,historyReview=false }) {
   const path = '/recepcao?view=conversations&status=open', role = 'recepcao-a';
   const page = await scene(app, role, path);
   const open = async () => {
@@ -88,6 +88,63 @@ export async function auditWhatsAppRead({ api, app, scene, capture, checks, requ
       await capture(page, app, role, path, width, async () => { await expect(page.getByRole('button', { name: 'Abrir conversa com Contato sintético encerrado' })).toBeVisible(); }, 'inbox-closed', { navigate: false });
     }
   }
+  if(historyReview){
+    api.whatsappRead.setHistoryReview(true);
+    const list=page.getByRole('list',{name:'Mensagens da conversa'});
+    const captureHistory=async(width,action,variant,{navigate=false}={})=>capture(page,app,role,path,width,async()=>{
+      await action();
+      const controls=[];
+      for(const button of await page.getByRole('navigation',{name:'Páginas da conversa'}).getByRole('button').all()){
+        await button.scrollIntoViewIfNeeded();
+        controls.push(await button.evaluate(element=>{
+          const bounds=element.getBoundingClientRect(),hit=document.elementFromPoint(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
+          return {width:bounds.width,height:bounds.height,left:bounds.left,right:bounds.right,viewport:innerWidth,onTop:!!hit&&element.contains(hit)};
+        }));
+      }
+      assert.ok(controls.length>0&&controls.every(c=>c.height>=44&&c.left>=-1&&c.right<=c.viewport+1&&c.onTop),'History controls must fit and remain reachable');
+      checks.push({historyVariant:variant,width,controls});
+    },variant,{navigate,viewportOnly:true});
+    const ready=async(count)=>{
+      await expect(list.locator(':scope > li')).toHaveCount(count);
+      await expect(page.getByText('Carregando caminho…',{exact:true})).toHaveCount(0);
+    };
+    for(const width of [320,375,1440]){
+      await captureHistory(width,async()=>{
+        await page.getByRole('button',{name:'Abrir conversa com Contato sintético A',exact:true}).click();await ready(50);
+        await expect(list.locator(':scope > li').first()).toContainText('Mensagem de histórico sintética 101');
+        await expect(list.locator(':scope > li').last()).toContainText('Mensagem de histórico sintética 150');
+      },'history-recent',{navigate:true});
+      await page.getByRole('button',{name:'Mensagens anteriores',exact:true}).click();
+      await captureHistory(width,async()=>{
+        await ready(50);await expect(page.getByRole('heading',{name:'Mensagens da conversa',exact:true})).toBeFocused();
+        await expect(list.locator(':scope > li').first()).toContainText('Mensagem de histórico sintética 51');
+        await expect(page.getByText('Mensagem de histórico sintética 150',{exact:true})).toHaveCount(0);
+      },'history-older',{navigate:false});
+      await page.getByRole('button',{name:'Mensagens anteriores',exact:true}).click();
+      await captureHistory(width,async()=>{
+        await ready(3);await expect(page.getByRole('button',{name:'Mensagens anteriores',exact:true})).toHaveCount(0);
+        await expect(list.locator(':scope > li').first()).toContainText('Mensagem de histórico sintética 48');
+        await expect(page.getByRole('button',{name:'Mensagens mais recentes',exact:true})).toBeVisible();
+      },'history-end',{navigate:false});
+      await page.getByRole('button',{name:'Atualizar mensagens',exact:true}).click();
+      await captureHistory(width,async()=>{await ready(50);await expect(page.getByText('Mensagem de histórico sintética 150',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Mensagens mais recentes',exact:true})).toHaveCount(0);},'history-refreshed',{navigate:false});
+      if(width===375){
+        api.whatsappRead.setFailure('messages','forbidden');await page.getByRole('button',{name:'Mensagens anteriores',exact:true}).click();
+        await captureHistory(width,async()=>{
+          await expect(page.getByRole('button',{name:'Tentar carregar mensagens',exact:true})).toBeVisible();await expect(list).toHaveCount(0);
+          await expect(page.getByRole('button',{name:'Mensagens mais recentes',exact:true})).toBeVisible();
+        },'history-denied',{navigate:false});
+        api.whatsappRead.setFailure('messages',null);await page.getByRole('button',{name:'Tentar carregar mensagens',exact:true}).click();
+        await captureHistory(width,async()=>{await ready(50);await expect(page.getByRole('heading',{name:'Mensagens da conversa',exact:true})).toBeFocused();await expect(page.getByText('Mensagem de histórico sintética 100',{exact:true})).toBeVisible();},'history-recovered',{navigate:false});
+      }
+      checks.push({width,historyPages:3,boundedPageSizes:[50,50,3],pageReplaced:true,resetFromRefresh:true,focusOnHistory:true});
+    }
+    const cursors=api.whatsappRead.calls.filter(call=>call.input.action==='messages'&&call.input.before!=null).map(call=>call.input.before);
+    assert.ok(cursors.includes(whatsappHistoryCursors.first)&&cursors.includes(whatsappHistoryCursors.second));
+    assert.ok(cursors.every(cursor=>Object.values(whatsappHistoryCursors).includes(cursor)),'Cursor changed precision or identity');
+    checks.push({fullHistoryCursorTokens:true,historyRefusalRetry:true});
+    api.whatsappRead.setHistoryReview(false);
+  }
   const admin = await scene(app, 'admin', path);
   for (const width of [375, 1440]) await capture(admin, app, 'admin', path, width, async () => { await expect(admin.getByRole('button', { name: /Abrir conversa com/ })).toHaveCount(2); }, 'inbox-admin');
   const allowedReads = new Set(['POST /auth/v1/token', 'GET /auth/v1/user', 'POST /rest/v1/rpc/clinic_access', 'POST /functions/v1/whatsapp-api']);
@@ -103,9 +160,9 @@ export async function auditWhatsAppRead({ api, app, scene, capture, checks, requ
   for (const key of ['clinicalReads', 'externalCalls', 'unknown']) assert.deepEqual(api.metrics[key], []);
   for (const key of ['bookings', 'contacts', 'caseWrites']) assert.equal(api.metrics[key], 0);
   for (const collection of [errors, failedRequests, blocked]) assert.deepEqual(collection, []);
-  assert.equal(errorResponses.length, botReview?4:3); assert.ok(errorResponses.every(item => item.status === 403 && item.path === '/functions/v1/whatsapp-api'));
-  assert.equal(consoleErrors.length, botReview?4:3); assert.ok(consoleErrors.every(item => /403/.test(item.message)));
-  assert.equal(screens.length, botReview?32:28);
+  assert.equal(errorResponses.length, (botReview?4:3)+(historyReview?1:0)); assert.ok(errorResponses.every(item => item.status === 403 && item.path === '/functions/v1/whatsapp-api'));
+  assert.equal(consoleErrors.length, (botReview?4:3)+(historyReview?1:0)); assert.ok(consoleErrors.every(item => /403/.test(item.message)));
+  assert.equal(screens.length, (botReview?32:28)+(historyReview?14:0));
   for (const screen of screens) {
     assert.ok(screen.overflow <= 1 && !screen.dialogOutsideViewport && !screen.recoveryScreen);
     for (const key of ['missingButtons', 'missingLabels', 'brokenText']) assert.deepEqual(screen[key], []);

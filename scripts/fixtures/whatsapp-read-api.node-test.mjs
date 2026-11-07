@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createWhatsAppReadFixture, whatsappReadIds } from './whatsapp-read-api.mjs';
+import { createWhatsAppReadFixture, whatsappReadIds,whatsappHistoryCursors } from './whatsapp-read-api.mjs';
 import { ids, startReceptionFixture } from './reception-api.mjs';
 const input = { action: 'conversations', filter: 'open', search: '', limit: 50, before: null };
 test('fixture returns only the requested filter and conversation', () => {
@@ -44,4 +44,17 @@ test('new HTTP fixture remains opt-in and only enables synthetic reads', async (
       if (enabled) assert.equal((await response.json()).conversations.length, 2);
     } finally { await api.close(); }
   }
+});
+
+test('history is opt-in, bounded and advances by the full timestamp/id token',()=>{
+  const fixture=createWhatsAppReadFixture(ids),body={action:'messages',conversationId:whatsappReadIds.first,before:null};
+  assert.equal(fixture.handle(ids.a,body).data.messages.length,3);
+  fixture.setHistoryReview(true);
+  const first=fixture.handle(ids.a,body).data,second=fixture.handle(ids.a,{...body,before:first.nextBefore}).data,last=fixture.handle(ids.a,{...body,before:second.nextBefore}).data;
+  assert.equal(first.messages.length,50);assert.equal(second.messages.length,50);assert.equal(last.messages.length,3);assert.equal(last.nextBefore,null);
+  assert.equal(first.nextBefore,whatsappHistoryCursors.first);assert.equal(second.nextBefore,whatsappHistoryCursors.second);
+  assert.equal(new Set([...first.messages,...second.messages,...last.messages].map(m=>m.id)).size,103);
+  assert.equal(first.messages.at(-1).at,second.messages[0].at);assert.ok(first.messages.at(-1).id>second.messages[0].id);
+  assert.equal(fixture.handle(ids.a,{...body,before:whatsappHistoryCursors.first.replace('123456','123455')}).status,400);
+  fixture.setHistoryReview(false);assert.equal(fixture.handle(ids.a,body).data.messages.length,3);
 });

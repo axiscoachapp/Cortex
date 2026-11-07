@@ -87,7 +87,7 @@ export const whatsappApi = {
   },
   async messages(input: z.input<typeof messagesInput>, signal?: AbortSignal) {
     const value = messagesInput.parse(input);
-    return read({ action: 'messages', ...value, before: value.before ?? null }, messagePage.refine(page => page.conversation.id === value.conversationId), signal);
+    return read({ action: 'messages', ...value, before: value.before ?? null }, messagePage.refine(page => page.conversation.id === value.conversationId&&(value.before==null||page.nextBefore!==value.before)), signal);
   },
   async botSession(input:z.input<typeof botInput>,signal?:AbortSignal){
     const value=botInput.parse(input);

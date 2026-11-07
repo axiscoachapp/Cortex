@@ -50,10 +50,15 @@ describe('WhatsApp read adapter', () => {
     await expect(whatsappApi.messages({ conversationId: id, before })).rejects.toThrow(); expect(mocks.invoke).not.toHaveBeenCalled();
   });
   it('preserves the complete v1.1 message cursor and consent state', async () => {
-    mocks.invoke.mockResolvedValue({ data: { conversation, messages: [message], nextBefore: cursor }, error: null });
+    const nextCursor='2026-11-06T18:30:00.123455+00:00|'+other;
+    mocks.invoke.mockResolvedValue({ data: { conversation, messages: [message], nextBefore: nextCursor }, error: null });
     const page = await whatsappApi.messages({ conversationId: id, before: cursor });
-    expect(page.nextBefore).toBe(cursor); expect(page.conversation.consented).toBe(true);
+    expect(page.nextBefore).toBe(nextCursor); expect(page.conversation.consented).toBe(true);
     expect(mocks.invoke.mock.calls[0][1].body.before).toBe(cursor);
+  });
+  it('refuses a repeated message cursor instead of offering a page that cannot advance',async()=>{
+    mocks.invoke.mockResolvedValue({data:{conversation,messages:[message],nextBefore:cursor},error:null});
+    await expect(whatsappApi.messages({conversationId:id,before:cursor})).rejects.toMatchObject({code:'INVALID_RESPONSE'});
   });
   it.each([
     { conversations: [conversation], nextBefore: oversizedTimestamp },

@@ -16,6 +16,9 @@ const state = { serverReady: true, connected: true, canUseInbox: true };
 const conversation: WhatsAppConversation = { id, profileName: 'Contato sintético A', waId: null, contactId: null, caseId: null, queue: 'geral', status: 'open', assignedTo: null, assignedAt: null, openedAt: at, firstResponseAt: null, closedAt: null, lastInboundAt: at, windowOpenUntil: at, lastMessageAt: at, lastMessagePreview: 'Prévia sintética', unreadCount: 2, optedOut: false, consented: true, revision: 1 };
 const page = { conversations: [conversation], nextBefore: null };
 const detail = { conversation, messages: [{ id: '44444444-4444-4444-8444-444444444444', direction: 'in', kind: 'text', body: 'Mensagem sintética recebida', media: null, template: null, status: 'received', error: null, sentBy: null, at }], nextBefore: null };
+const historyCursor=at+'|44444444-4444-4444-8444-444444444444';
+const recentDetail={...detail,nextBefore:historyCursor};
+const olderDetail={...detail,messages:[{...detail.messages[0],id:'55555555-5555-4555-8555-555555555555',body:'Mensagem anterior sintética'}]};
 function mount(value = access) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tree = (next = value) => <QueryClientProvider client={client}><ClinicAccessContext.Provider value={next}><WhatsAppInbox /></ClinicAccessContext.Provider></QueryClientProvider>;
@@ -162,10 +165,59 @@ describe('WhatsApp reception inbox read view', () => {
     expect(screen.queryByText('Mensagem sintética recebida')).not.toBeInTheDocument(); expect(screen.queryByText('SYNTHETIC PRIVATE ERROR')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Tentar carregar mensagens' })); await screen.findByText('Mensagem sintética recebida');
   });
-  it('distinguishes an empty page and labels a bounded recent history', async () => {
+  it('distinguishes an empty page and offers bounded older messages', async () => {
     mocks.conversations.mockResolvedValueOnce({ conversations: [], nextBefore: null }); const view = mount();
     await screen.findByText('Nenhuma conversa neste filtro.'); expect(screen.queryByRole('alert')).not.toBeInTheDocument(); view.unmount();
-    mocks.messages.mockResolvedValue({ ...detail, nextBefore: at }); mount(); await select(); await screen.findByText('Exibindo as 50 mensagens mais recentes.');
+    mocks.messages.mockResolvedValue(recentDetail); mount(); await select(); expect(await screen.findByRole('button',{name:'Mensagens anteriores'})).toBeVisible();
+  });
+  it('replaces a page using the complete cursor and refreshes back to recent messages',async()=>{
+    mocks.messages.mockImplementation((input:{before?:string})=>Promise.resolve(input.before?olderDetail:recentDetail));
+    mount();await select();await screen.findByText('Mensagem sintética recebida');
+    fireEvent.click(await screen.findByRole('button',{name:'Mensagens anteriores'}));
+    expect(await screen.findByText('Mensagem anterior sintética')).toBeVisible();expect(screen.queryByText('Mensagem sintética recebida')).not.toBeInTheDocument();
+    expect(mocks.messages).toHaveBeenLastCalledWith({conversationId:id,before:historyCursor},expect.any(AbortSignal));
+    expect(screen.getByRole('heading',{name:'Mensagens da conversa'})).toHaveFocus();
+    expect(screen.getByRole('button',{name:'Mensagens mais recentes'})).toBeVisible();expect(screen.queryByRole('button',{name:'Mensagens anteriores'})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Atualizar mensagens'}));
+    expect(await screen.findByText('Mensagem sintética recebida')).toBeVisible();expect(screen.queryByText('Mensagem anterior sintética')).not.toBeInTheDocument();
+    expect(mocks.messages).toHaveBeenLastCalledWith({conversationId:id},expect.any(AbortSignal));
+  });
+  it('cancels an older pending page when returning to recent and ignores its late result',async()=>{
+    let resolve!:(value:typeof olderDetail)=>void;
+    mocks.messages.mockResolvedValueOnce(recentDetail).mockImplementationOnce(()=>new Promise(done=>{resolve=done;})).mockResolvedValue(recentDetail);
+    mount();await select();fireEvent.click(await screen.findByRole('button',{name:'Mensagens anteriores'}));
+    await waitFor(()=>expect(mocks.messages).toHaveBeenCalledTimes(2));const signal=mocks.messages.mock.calls[1][1] as AbortSignal;
+    expect(screen.queryByText('Mensagem sintética recebida')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Mensagens mais recentes'}));expect(signal.aborted).toBe(true);
+    expect(await screen.findByText('Mensagem sintética recebida')).toBeVisible();
+    await act(async()=>resolve(olderDetail));expect(screen.queryByText('Mensagem anterior sintética')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading',{name:'Mensagens da conversa'})).toHaveFocus();
+  });
+  it('hides a refused older page and retries its cursor without exposing old data',async()=>{
+    mocks.messages.mockResolvedValueOnce(recentDetail).mockRejectedValueOnce(new Error('SYNTHETIC PRIVATE PAGE ERROR')).mockResolvedValue(olderDetail);
+    mount();await select();fireEvent.click(await screen.findByRole('button',{name:'Mensagens anteriores'}));
+    await screen.findByRole('button',{name:'Tentar carregar mensagens'});
+    expect(screen.queryByText('Mensagem sintética recebida')).not.toBeInTheDocument();expect(screen.queryByText('SYNTHETIC PRIVATE PAGE ERROR')).not.toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'Mensagens mais recentes'})).toBeVisible();
+    fireEvent.click(screen.getByRole('button',{name:'Tentar carregar mensagens'}));
+    expect(await screen.findByText('Mensagem anterior sintética')).toBeVisible();
+    expect(mocks.messages).toHaveBeenLastCalledWith({conversationId:id,before:historyCursor},expect.any(AbortSignal));
+    expect(screen.getByRole('heading',{name:'Mensagens da conversa'})).toHaveFocus();
+  });
+  it('distinguishes the end of an older history and can return to recent messages',async()=>{
+    mocks.messages.mockResolvedValueOnce(recentDetail).mockResolvedValueOnce({...olderDetail,messages:[]}).mockResolvedValue(recentDetail);
+    mount();await select();fireEvent.click(await screen.findByRole('button',{name:'Mensagens anteriores'}));
+    expect(await screen.findByText('Nenhuma mensagem anterior a este ponto.')).toBeVisible();
+    expect(screen.queryByRole('button',{name:'Mensagens anteriores'})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Mensagens mais recentes'}));expect(await screen.findByText('Mensagem sintética recebida')).toBeVisible();
+  });
+  it('starts with recent messages after closing and reopening an older conversation',async()=>{
+    mocks.messages.mockImplementation((input:{before?:string})=>Promise.resolve(input.before?olderDetail:recentDetail));
+    mount();await select();fireEvent.click(await screen.findByRole('button',{name:'Mensagens anteriores'}));await screen.findByText('Mensagem anterior sintética');
+    fireEvent.click(screen.getByRole('button',{name:'Voltar à lista'}));await select();
+    expect(await screen.findByText('Mensagem sintética recebida')).toBeVisible();expect(screen.queryByText('Mensagem anterior sintética')).not.toBeInTheDocument();
+    expect(mocks.messages).toHaveBeenLastCalledWith({conversationId:id},expect.any(AbortSignal));
+    expect(screen.queryByRole('button',{name:'Mensagens mais recentes'})).not.toBeInTheDocument();
   });
   it.each(['actor', 'clinic', 'inactive'])('clears selection and search when %s context changes', async target => {
     const view = mount(); await select(); await screen.findByText('Mensagem sintética recebida');

@@ -9,19 +9,29 @@ const kindLabels: Record<string, string> = { image: 'Imagem', audio: 'Áudio', v
 
 export function WhatsAppMessages({ actor, clinic, conversation, onClose }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void }) {
   const region = useRef<HTMLElement>(null);
+  const pageHeading=useRef<HTMLHeadingElement>(null);
+  const [before,setBefore]=useState<string|null>(null);
   const [botReadGeneration,setBotReadGeneration]=useState(0);
   const messages = useQuery({
-    queryKey: ['reception', actor, clinic, 'whatsapp', 'messages', conversation.id],
-    queryFn: ({ signal }) => whatsappApi.messages({ conversationId: conversation.id }, signal),
+    queryKey: ['reception', actor, clinic, 'whatsapp', 'messages', conversation.id,before],
+    queryFn: ({ signal }) => whatsappApi.messages({ conversationId: conversation.id,...(before?{before}:{}) }, signal),
     retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
   const fresh = messages.isSuccess && messages.isFetchedAfterMount && !messages.isFetching;
-  const refresh=()=>{
+  const nextCursor=fresh?messages.data.nextBefore:null;
+  const retry=()=>{
     // A new generation cannot join a bot read started before this message refresh,
     // even when a fast response coalesces the parent's pending render.
     setBotReadGeneration(generation=>generation+1);
+    pageHeading.current?.focus();
     void messages.refetch();
   };
+  const goTo=(cursor:string|null)=>{
+    setBotReadGeneration(generation=>generation+1);
+    setBefore(cursor);
+    pageHeading.current?.focus();
+  };
+  const refresh=()=>before===null?retry():goTo(null);
   useEffect(() => {
     region.current?.focus({ preventScroll: true });
     const title = region.current?.querySelector('h2')?.getBoundingClientRect();
@@ -35,22 +45,30 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose }: { act
       <Button variant="outline" onClick={onClose}>Voltar à lista</Button>
     </div>
     <Button variant="outline" disabled={messages.isFetching} onClick={refresh}>Atualizar mensagens</Button>
-    {messages.isPending || messages.isFetching ? <p role="status" className="text-sm">Carregando mensagens…</p> : messages.isError ? <div role="alert" className="space-y-3 text-sm">
-      <p>Não foi possível carregar as mensagens. Verifique seu acesso e tente novamente.</p>
-      <Button variant="outline" onClick={refresh}>Tentar carregar mensagens</Button>
-    </div> : null}
     {fresh && <>
       <p className="text-sm [overflow-wrap:anywhere]">Fila atual: <strong>{messages.data.conversation.queue}</strong></p>
       <WhatsAppBotSession key={botReadGeneration} generation={botReadGeneration} actor={actor} clinic={clinic} conversationId={messages.data.conversation.id} />
       {messages.data.conversation.optedOut && <p className="rounded-md bg-muted p-3 text-sm">Este contato pediu para não receber lembretes.</p>}
-      {messages.data.messages.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma mensagem nesta conversa.</p>}
+    </>}
+    <h3 ref={pageHeading} tabIndex={-1} className="font-semibold outline-none">Mensagens da conversa</h3>
+    {before!==null&&<p className="text-sm text-muted-foreground">Página de mensagens anteriores.</p>}
+    {messages.isPending || messages.isFetching ? <p role="status" className="text-sm">Carregando mensagens…</p> : messages.isError ? <div role="alert" className="space-y-3 text-sm">
+      <p>Não foi possível carregar as mensagens. Verifique seu acesso e tente novamente.</p>
+      <Button variant="outline" onClick={retry}>Tentar carregar mensagens</Button>
+    </div> : null}
+    {fresh&&<>
+      {messages.data.messages.length === 0 && <p className="text-sm text-muted-foreground">{before===null?'Nenhuma mensagem nesta conversa.':'Nenhuma mensagem anterior a este ponto.'}</p>}
       <ol aria-label="Mensagens da conversa" className="space-y-3">{messages.data.messages.slice().reverse().map(message => <li key={message.id} className={`min-w-0 rounded-lg border p-3 space-y-2 ${message.direction === 'out' ? 'bg-primary/5' : 'bg-muted/40'}`}>
         <p className="text-xs font-medium">{message.direction === 'in' ? 'Recebida' : 'Enviada'}</p>
         <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{message.body || kindLabels[message.kind] || 'Mensagem sem texto'}</p>
         {message.media?.filename && <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{message.media.filename}</p>}
         <time dateTime={message.at} className="block text-xs text-muted-foreground">{clinicDateLabel(message.at)} · {clinicTime(message.at)}</time>
       </li>)}</ol>
-      {messages.data.nextBefore && <p className="text-xs text-muted-foreground">Exibindo as 50 mensagens mais recentes.</p>}
+      <p className="text-xs text-muted-foreground">Até 50 mensagens por página.</p>
     </>}
+    {(before!==null||nextCursor!==null)&&<nav aria-label="Páginas da conversa" className="flex flex-wrap gap-2">
+      {before!==null&&<Button variant="outline" className="h-auto min-h-10 max-w-full whitespace-normal" onClick={refresh}>Mensagens mais recentes</Button>}
+      {nextCursor!==null&&<Button variant="outline" className="h-auto min-h-10 max-w-full whitespace-normal" onClick={()=>goTo(nextCursor)}>Mensagens anteriores</Button>}
+    </nav>}
   </section>;
 }

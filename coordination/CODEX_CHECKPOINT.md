@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-07 00:12. **K1/3b — histórico em páginas:** [provas](../docs/reviews/2026-11-07/whatsapp-history/IMPLEMENTATION.md). Página<=50 substitui anterior; cursor preservado, recentes acessíveis durante pending/erro, refresh/retry distintos, cancelamento/late result/foco e geração do bot protegidos.90Vitest/2arquivos+6Node/tipos/lint/sintaxe/quatro flags/revisão;103registros50/50/3,46estados (14histórico320/375/1440), controles>=44/hit-test,19hashes/2overlays/319fontes/cleanup. Só5recusas403 deliberadas, zero writes/clínico/externos. Fonte final `whatsapp-history-final`, preliminar42estados excluída.
+
+Nenhuma entrada Claude nova;2152 já atendida2353, sem nova resposta própria/confirmatória. Próximos independentes: paginação da lista de conversas ou K7 pós-consulta/áudio local. Correções C4/C5 com Claude aguardam SHAs para reteste; comandos K1 em recorte próprio. M2/MFA/compartilhamento/piloto abertos. Automação ACTIVE; main/axiscoachapp sem push/hosted/Meta/carga; preservar Claude/PersonalMed/SaaS.
+
+---
+
 Entrega K1/3a: `0fa7e576507ffa6db1cab5252069a38721f6e8eb`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Caminho/fila em leitura concluído; próximos paginação K1 ou K7, com retestes C4/C5 após novos SHAs.
 
 Atualizado em 2026-11-06 23:53. **K1/3a — caminho no robô e fila em leitura:** [provas](../docs/reviews/2026-11-06/whatsapp-bot-read/IMPLEMENTATION.md),2353 atende pedido path/fila2152. DTO botSession estrito/limites/AbortSignal, painel só após conversa fresca e fila das mensagens; ator/clínica/conversa/geração, sem cache antigo em pendente/erro, cancelamento e resposta tardia. Atualizar mensagens não reaproveita pedido anterior do bot, inclusive com resposta imediata.84Vitest/2arquivos+5Node/tipos/lint/sintaxe/três flags/revisão;32estados320–1920/135%,20rótulos medidos/19hashes/3overlays/319fontes/cleanup. Só4recusas403 deliberadas, nenhum write/clínico/externo. Sem DTO origem, inferência de identidade ou agendamento.

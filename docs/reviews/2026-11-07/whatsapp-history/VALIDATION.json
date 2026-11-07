@@ -1,0 +1,74 @@
+{
+  "baseline": "6bef238915578839377f58591c1c96556927bf7c",
+  "syntheticOnly": true,
+  "readOnly": true,
+  "unit": {
+    "tests": 90,
+    "files": 2,
+    "passed": 90
+  },
+  "nodeTests": 6,
+  "typecheckPassed": true,
+  "lintFiles": 8,
+  "syntaxScripts": 4,
+  "invalidCliCases": 4,
+  "browser": {
+    "states": 46,
+    "historyStates": 14,
+    "widths": [
+      320,
+      375,
+      768,
+      1024,
+      1280,
+      1440,
+      1920
+    ],
+    "historyWidths": [
+      320,
+      375,
+      1440
+    ],
+    "scale": 1.35,
+    "pageSizes": [
+      50,
+      50,
+      3
+    ],
+    "uniqueHistoryRows": 103,
+    "microsecondTieOrdering": true,
+    "fullCursorTokensPreserved": true,
+    "overlayHashes": [
+      {
+        "path": "src/features/reception/whatsappApi.ts",
+        "sha256": "a644dac2678d7f40089c7be31aad5cb70f74bf8dcc56b8ffc1afcbae6bb979b9"
+      },
+      {
+        "path": "src/features/reception/WhatsAppMessages.tsx",
+        "sha256": "a20e4934c6ad5d1ca2d9231d58ac928df1c240a19a4cfc31d354781aff969292"
+      }
+    ],
+    "runtimeHashes": 19,
+    "frozenSources": 319,
+    "reachableHistoryControls": true,
+    "historyViewportScreenshots": true,
+    "fullDomAssertions": true,
+    "expected403": 5,
+    "otherErrors": 0,
+    "externalRequests": 0,
+    "clinicalReads": 0,
+    "writes": 0,
+    "cleanupVerified": true
+  },
+  "review": {
+    "independent": true,
+    "actionableFindings": 0,
+    "crossModel": "skipped: non-interactive context"
+  },
+  "commands": {
+    "unit": "npx vitest run src/features/reception/whatsappApi.test.ts src/features/reception/WhatsAppInbox.test.tsx --pool=forks --maxWorkers=1",
+    "browser": "node scripts/reception-app-audit-browser.mjs --baseline=6bef238915578839377f58591c1c96556927bf7c --only=whatsapp-read --check-whatsapp-bot-read --check-whatsapp-history --overlay=src/features/reception/whatsappApi.ts --overlay=src/features/reception/WhatsAppMessages.tsx --run=<new-unique-run>",
+    "node": "node --test scripts/fixtures/whatsapp-read-api.node-test.mjs",
+    "types": "npx tsc -p tsconfig.app.json --noEmit"
+  }
+}

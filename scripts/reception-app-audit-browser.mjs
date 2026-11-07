@@ -19,7 +19,7 @@ import { auditRecoveryNotice } from './fixtures/recovery-notice-browser.mjs';
 import { auditSchedulingMigration } from './fixtures/scheduling-migration-browser.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => arg === '--check-whatsapp-bot-read' || /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|only=new-consultation|only=settings-embedded|only=whatsapp-read|only=settings-access|only=patient-workspace|only=recovery-notice|only=scheduling-migration|settings-admin-only|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus|check-mfa-cancellation)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => ['--check-whatsapp-bot-read','--check-whatsapp-history'].includes(arg) || /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|only=new-consultation|only=settings-embedded|only=whatsapp-read|only=settings-access|only=patient-workspace|only=recovery-notice|only=scheduling-migration|settings-admin-only|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus|check-mfa-cancellation)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
@@ -34,11 +34,13 @@ const patientWorkspaceOnly = args.includes('--only=patient-workspace');
 assert.ok(!patientWorkspaceOnly || !args.some(arg => arg.startsWith('--check-')), 'Patient workspace runs its own checks');
 const whatsappReadOnly = args.includes('--only=whatsapp-read');
 const whatsappBotRead=args.includes('--check-whatsapp-bot-read');
+const whatsappHistory=args.includes('--check-whatsapp-history');
+assert.ok(!whatsappHistory||whatsappReadOnly,'Message history checks require WhatsApp read mode');
 assert.ok(!whatsappBotRead||whatsappReadOnly,'Bot read checks require WhatsApp read mode');
 const settingsAccessOnly = args.includes('--only=settings-access'), settingsAdminOnly = args.includes('--settings-admin-only');
 assert.ok(!settingsAccessOnly || !args.some(arg => arg.startsWith('--check-')), 'Settings access runs its own checks');
 assert.ok(!settingsAdminOnly || settingsAccessOnly, 'Settings admin requires settings access');
-assert.ok(!whatsappReadOnly || !args.some(arg => arg.startsWith('--check-')&&arg!=='--check-whatsapp-bot-read'), 'WhatsApp read runs its own checks');
+assert.ok(!whatsappReadOnly || !args.some(arg => arg.startsWith('--check-')&&!['--check-whatsapp-bot-read','--check-whatsapp-history'].includes(arg)), 'WhatsApp read runs its own checks');
 assert.ok(!settingsEmbeddedOnly || !args.some(arg => arg.startsWith('--check-')), 'Settings embedded runs its own checks');
 const consultationOnly = args.includes('--only=new-consultation');
 assert.ok(!consultationOnly || !args.some(arg => arg.startsWith('--check-')), 'New consultation runs its own layout checks');
@@ -183,13 +185,13 @@ async function scene(app, email, next) {
   }
   return page;
 }
-async function capture(page, app, role, path, width, action, variant = '', { navigate = true } = {}) {
+async function capture(page, app, role, path, width, action, variant = '', { navigate = true,viewportOnly=false } = {}) {
   await page.setViewportSize({ width, height: 1000 });
   if (navigate) await page.goto(app.origin + path);
   await page.waitForLoadState('networkidle');
   if (action) { await action(page); await page.waitForLoadState('networkidle'); }
   const file = `${role}-${path.replace(/[^a-z0-9]/gi, '-')}${variant ? '-' + variant : ''}-${width}.png`;
-  await page.screenshot({ path: resolve(folder, file), fullPage: true, animations: 'disabled' });
+  await page.screenshot({ path: resolve(folder, file), fullPage: !viewportOnly, animations: 'disabled' });
   const measurement = await page.evaluate(() => {
     const visible = element => { const rect = element.getBoundingClientRect(), style = getComputedStyle(element); return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none' && !element.closest('[aria-hidden="true"]'); };
     const name = element => element.getAttribute('aria-label')?.trim() || element.getAttribute('aria-labelledby')?.split(/\s+/).map(id => document.getElementById(id)?.textContent ?? '').join(' ').trim() || [...(element.labels ?? [])].map(label => label.textContent).join(' ').trim() || element.getAttribute('title')?.trim() || '';
@@ -290,8 +292,8 @@ async function capture(page, app, role, path, width, action, variant = '', { nav
   }
   const dialogActionReachable = dialogActions.length ? dialogActions.every(action => action.geometryReachable && action.dialogOnTop && (action.disabled || action.targetOnTop)) : undefined;
   const actionScreenshot = dialogActions.length ? file.replace('.png', '-actions.png') : undefined;
-  if (actionScreenshot) await page.screenshot({ path: resolve(folder, actionScreenshot), fullPage: true, animations: 'disabled' });
-  screens.push({ role, path, variant, actualPath: new URL(page.url()).pathname, width, dialogActions, dialogActionReachable, recoveryScreen: measurement.headings.includes('Não foi possível exibir esta tela'), ...measurement, screenshot: file, actionScreenshot });
+  if (actionScreenshot) await page.screenshot({ path: resolve(folder, actionScreenshot), fullPage: !viewportOnly, animations: 'disabled' });
+  screens.push({ role, path, variant, actualPath: new URL(page.url()).pathname, width,viewportOnly, dialogActions, dialogActionReachable, recoveryScreen: measurement.headings.includes('Não foi possível exibir esta tela'), ...measurement, screenshot: file, actionScreenshot });
   if (checkCalendarHeader && role === 'clinical' && path === '/agenda' && !variant) {
     assert.equal(measurement.headerTitles.length, 1);
     const [title] = measurement.headerTitles;
@@ -337,7 +339,7 @@ try {
   } else if (whatsappReadOnly) {
     const api = await startReceptionFixture({ whatsappReadReview: true }); apis.push(api);
     const app = await appFor(api);
-    await auditWhatsAppRead({ api, app, scene, capture, checks: whatsappChecks, requests: whatsappRequests, screens, errors, consoleErrors, failedRequests, errorResponses, blocked,botReview:whatsappBotRead });
+    await auditWhatsAppRead({ api, app, scene, capture, checks: whatsappChecks, requests: whatsappRequests, screens, errors, consoleErrors, failedRequests, errorResponses, blocked,botReview:whatsappBotRead,historyReview:whatsappHistory });
   } else if (settingsEmbeddedOnly) {
     for (const scenario of ['admin', 'recepcao-a', 'review']) {
       const permissions = scenario === 'review';
@@ -1017,7 +1019,7 @@ try {
 const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, chatOnly, timestampOnly, checkWorkspaceLayout, timestampDataPreserved, timestampMetrics: timestampOnly ? { ...apis[0]?.metrics } : null, draftPreserved, welcomeMetrics: welcomeOnly || chatOnly ? { ...apis[0]?.metrics } : null, fixedClock: focusedOnly || settingsEmbeddedOnly ? '2026-11-05T15:00:00Z' : null, checkTimeLayout, checkMobileNavigation, checkCalendarHeader, navigationKeyboardVerified, syntheticOnly: true, baseline, overlays: overlayHashes, frozenTextSourceCount: sources.size, frozenTextSourceDigest: sourceDigest.digest('hex'), tailwindRawContentCount: tailwindContent.length, runtimeSources: ownHashes,
   consultationOnly, consultationChecks, consultationRequests, consultationMetrics: consultationOnly ? { ...apis[0]?.metrics } : null,
   settingsEmbeddedOnly, previewEntry: settingsEmbeddedOnly ? previewEntry : null, settingsChecks, settingsRequests, settingsFixtureMetrics,
-  whatsappReadOnly, whatsappBotRead, whatsappChecks, whatsappRequests, whatsappFixtureCalls: whatsappReadOnly ? apis[0]?.whatsappRead.calls : null,
+  whatsappReadOnly, whatsappBotRead,whatsappHistory, whatsappChecks, whatsappRequests, whatsappFixtureCalls: whatsappReadOnly ? apis[0]?.whatsappRead.calls : null,
   schedulingMigrationOnly, schedulingMigrationChecks, schedulingMigrationCalls: schedulingMigrationOnly ? apis[0]?.scheduling.calls : null, schedulingMigrationReads: schedulingMigrationOnly ? apis[0]?.scheduling.allReads : null, schedulingMigrationMetrics: schedulingMigrationOnly ? apis[0]?.metrics : null, schedulingReceptionMetrics: schedulingMigrationOnly ? apis[1]?.metrics : null,
   recoveryNoticeOnly, recoveryNoticeChecks, recoveryNoticeCalls: recoveryNoticeOnly ? apis[0]?.recoveryNotice.calls : null, recoveryNoticeMetrics: recoveryNoticeOnly ? apis[0]?.metrics : null,
   patientWorkspaceOnly, patientWorkspaceChecks, patientWorkspaceMetrics: patientWorkspaceOnly ? apis[0]?.metrics : null,

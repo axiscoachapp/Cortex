@@ -2,6 +2,8 @@
 const at = '2026-11-06T18:30:00.123456+00:00';
 export const whatsappReadIds = { first: 'a1000000-0000-4000-8000-000000000001', second: 'a1000000-0000-4000-8000-000000000002', closed: 'a1000000-0000-4000-8000-000000000003' };
 export const whatsappBotSessionFixture={status:'handed_off',path:['Agendamento','Médico sintético'],outcome:'queue:agendamento',startedAt:at,updatedAt:at};
+const historyId=index=>'a2100000-0000-4000-8000-'+String(index).padStart(12,'0');
+export const whatsappHistoryCursors={first:at+'|'+historyId(101),second:at+'|'+historyId(51)};
 export function createWhatsAppReadFixture(ids) {
   const calls = [], failures = new Map();
   const base = { waId: null, contactId: null, caseId: null, queue: 'geral', status: 'open', assignedTo: null, assignedAt: null, openedAt: at, firstResponseAt: null, closedAt: null, lastInboundAt: at, windowOpenUntil: at, lastMessageAt: at, lastMessagePreview: 'Prévia sintética de atendimento', unreadCount: 2, optedOut: false, consented: true, revision: 1 };
@@ -11,7 +13,9 @@ export function createWhatsAppReadFixture(ids) {
     { ...base, id: whatsappReadIds.closed, profileName: 'Contato sintético encerrado', status: 'closed' },
   ];
   const sessions=new Map([[whatsappReadIds.first,structuredClone(whatsappBotSessionFixture)]]);
+  let historyReview=false;
   return {
+    setHistoryReview:enabled=>{historyReview=enabled===true;},
     setBotSession:(id,value)=>sessions.set(id,structuredClone(value)),
     calls, setFailure: (action, failure) => { if (failure) failures.set(action, failure); else failures.delete(action); },
     handle(actor, input) {
@@ -29,9 +33,16 @@ export function createWhatsAppReadFixture(ids) {
         return { status: 200, data: { conversations: rows.filter(row => input.filter === 'closed' ? row.status === 'closed' : row.status === 'open' && (input.filter === 'mine' ? row.assignedTo === actor : input.filter === 'unassigned' ? !row.assignedTo : true)).filter(row => row.profileName.toLowerCase().includes(input.search.toLowerCase())), nextBefore: null } };
       }
       const conversation = rows.find(row => row.id === input.conversationId);
-      if (!conversation || input.before != null) return fail('not_found', 404);
+      if (!conversation) return fail('not_found', 404);
       if(input.action==='botSession')return {status:200,data:{session:structuredClone(sessions.get(conversation.id)??null)}};
       const message = { direction: 'in', kind: 'text', body: 'Mensagem sintética recebida', media: null, template: null, status: 'received', error: null, sentBy: null, at };
+      if(historyReview&&conversation.id===whatsappReadIds.first){
+        const page=input.before==null?0:input.before===whatsappHistoryCursors.first?1:input.before===whatsappHistoryCursors.second?2:-1;
+        if(page<0)return fail('invalid',400);
+        const start=page===0?150:page===1?100:50,count=page===2?3:50;
+        return {status:200,data:{conversation,messages:Array.from({length:count},(_,offset)=>({...message,id:historyId(start-offset),body:`Mensagem de histórico sintética ${start-offset}`})),nextBefore:page===0?whatsappHistoryCursors.first:page===1?whatsappHistoryCursors.second:null}};
+      }
+      if(input.before!=null)return fail('invalid',400);
       return { status: 200, data: { conversation, messages: [
         { ...message, id: 'a2000000-0000-4000-8000-000000000003', kind: 'document', body: '', media: { mime: 'application/pdf', filename: 'arquivo-sintetico-'.repeat(16) + '.pdf', voice: false } },
         { ...message, id: 'a2000000-0000-4000-8000-000000000002', direction: 'out', body: 'Texto sintético longo para conferir a quebra de linhas. '.repeat(10) },
