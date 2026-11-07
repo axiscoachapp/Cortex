@@ -1926,12 +1926,15 @@ export function ChatPanel({
                     ) : message.type === 'soap' ? (
                       <>
                         <SoapNoteView text={message.content} />
-                        {currentConsultationId && index === lastSoapIdx && (
-                          <div className="mt-3 pt-3 border-t border-border/30 flex gap-2 flex-wrap">
+                        {message.consultationId && index === lastSoapIdx && (
+                          <section aria-label="Pós-consulta" className="mt-3 pt-3 border-t border-border/30 space-y-3">
+                            <h5 className="text-sm font-semibold">Pós-consulta</h5>
+                            <p className="text-sm text-muted-foreground">Revise os documentos desta consulta. Registre orientações e retorno no acompanhamento do paciente.</p>
+                            <div className="flex gap-2 flex-wrap">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="gap-1.5 text-xs"
+                              className="gap-1.5 text-xs h-auto min-h-11 max-w-full whitespace-normal"
                               onClick={() => handleGenerateDocument('patient_summary', message.content)}
                             >
                               <ClipboardList className="w-3.5 h-3.5" />
@@ -1940,7 +1943,7 @@ export function ChatPanel({
                             <Button
                               variant="outline"
                               size="sm"
-                              className="gap-1.5 text-xs"
+                              className="gap-1.5 text-xs h-auto min-h-11 max-w-full whitespace-normal"
                               onClick={() => handleGenerateDocument('referral', message.content)}
                             >
                               <Share2 className="w-3.5 h-3.5" />
@@ -1949,14 +1952,16 @@ export function ChatPanel({
                             <Button
                               variant="outline"
                               size="sm"
-                              className="gap-1.5 text-xs"
+                              className="gap-1.5 text-xs h-auto min-h-11 max-w-full whitespace-normal"
                               disabled={generatingRx}
                               onClick={() => handleOpenComposer(message.consultationId)}
                             >
                               <FileSignature className="w-3.5 h-3.5" />
                               Receita / Atestado
                             </Button>
-                          </div>
+                            <Button variant="outline" size="sm" className="gap-1.5 text-xs h-auto min-h-11 max-w-full whitespace-normal" disabled={!onOpenPatientWork} onClick={()=>onOpenPatientWork?.(false)}>Orientações e retorno</Button>
+                            </div>
+                          </section>
                         )}
                       </>
                     ) : (

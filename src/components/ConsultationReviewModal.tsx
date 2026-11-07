@@ -105,9 +105,9 @@ export function ConsultationReviewModal({
       }}
     >
       <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-2xl max-h-[92vh] flex flex-col gap-0 p-0">
-        <DialogHeader className="px-4 md:px-6 py-3 md:py-4 border-b border-border/50 shrink-0">
-          <div className="flex items-center justify-between gap-3">
-            <DialogTitle className="text-base font-semibold">Revisão da Consulta — {patientName}</DialogTitle>
+        <DialogHeader className="px-4 md:px-6 py-3 md:py-4 border-b border-border/50 shrink-0 text-left">
+          <div className="flex flex-wrap items-start justify-between gap-2 pr-7">
+            <DialogTitle className="min-w-0 text-base font-semibold [overflow-wrap:anywhere]">Revisão da Consulta — {patientName}</DialogTitle>
             <span
               className={cn(
                 'flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border shrink-0',

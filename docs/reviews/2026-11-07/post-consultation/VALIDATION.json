@@ -1,0 +1,45 @@
+{
+  "scope": "K7/3a post-consultation entry",
+  "baseline": "5d4fb69baaf4a0edc73a877e31b5746ddfd77214",
+  "unitPassed": 51,
+  "unitFailed": 0,
+  "unitFiles": 4,
+  "nodePassed": 16,
+  "nodeFiles": 3,
+  "typecheckExit": 0,
+  "lintExit": 0,
+  "lintPaths": 10,
+  "syntaxScripts": 5,
+  "invalidCliRefusals": 4,
+  "browser": {
+    "report": "docs/reviews/2026-11-05/reception-app-audit/post-consultation-layout-final/AUDIT.json",
+    "completed": true,
+    "states": 24,
+    "frozenSources": 321,
+    "runtimeHashes": 21,
+    "overlays": [
+      {
+        "path": "src/components/ChatPanel.tsx",
+        "sha256": "c5781b391ce5d7659667d1932a982af2dabec4fc1110e4ea8b7b27b64482d366"
+      },
+      {
+        "path": "src/components/ConsultationReviewModal.tsx",
+        "sha256": "11a3cd7892385edaffbfebca53359ffa139741ca75fec2e57a122718ef41ed84"
+      },
+      {
+        "path": "src/components/PatientWorkspaceDialog.tsx",
+        "sha256": "2eb8983ce43e1e2805d8bc5b850b683272f20e0aaaf823c3d44bcea402308db2"
+      }
+    ],
+    "apiRequests": 130,
+    "syntheticFinalizations": 4,
+    "jsErrors": 0,
+    "consoleErrors": 0,
+    "httpErrors": 0,
+    "historicalHead200Aborts": 4,
+    "externalRequests": 0,
+    "cleanupVerified": true
+  },
+  "review": "Fresh adversarial review; no actionable findings",
+  "crossModel": "Cross-model skipped: non-interactive context."
+}

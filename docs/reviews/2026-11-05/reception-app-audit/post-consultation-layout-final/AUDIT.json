@@ -1,0 +1,3081 @@
+{
+  "completed": true,
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": null,
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "5d4fb69baaf4a0edc73a877e31b5746ddfd77214",
+  "overlays": [
+    {
+      "path": "src/components/ChatPanel.tsx",
+      "sha256": "c5781b391ce5d7659667d1932a982af2dabec4fc1110e4ea8b7b27b64482d366"
+    },
+    {
+      "path": "src/components/ConsultationReviewModal.tsx",
+      "sha256": "11a3cd7892385edaffbfebca53359ffa139741ca75fec2e57a122718ef41ed84"
+    },
+    {
+      "path": "src/components/PatientWorkspaceDialog.tsx",
+      "sha256": "2eb8983ce43e1e2805d8bc5b850b683272f20e0aaaf823c3d44bcea402308db2"
+    }
+  ],
+  "frozenTextSourceCount": 321,
+  "frozenTextSourceDigest": "9ec0d91d354a7f103f44cbba47e87d1da3a1b1a0fc61d0463436e43b7c596d5a",
+  "tailwindRawContentCount": 319,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "028e6ff9236aa8f97cc2a816e56fd0d98f1ac1338ea18f17ad6c9592398a65b4"
+    },
+    {
+      "path": "scripts/fixtures/patient-workspace-browser.mjs",
+      "sha256": "030d6f283f64a71e73a2961aaef8d6c4b7f9f70e4a7acb421c0c19cc275f3295"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-api.mjs",
+      "sha256": "6917242c74a712db4f0de474ee34ee6133bc32264459876805ffe54e58fc1ce2"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-browser.mjs",
+      "sha256": "b060e05143162c09231358b295010c6ae1f4b8eaab8ec05744fadc3e1ad01527"
+    },
+    {
+      "path": "scripts/fixtures/post-consultation-api.mjs",
+      "sha256": "944ccea0c606a9af766a157fdc8156250c455772235ee9b245eb48e9bc3636d6"
+    },
+    {
+      "path": "scripts/fixtures/post-consultation-browser.mjs",
+      "sha256": "039c3e04d5be9e7a46612e0fb8dd1d468fdff1fa980995983b77b4b93c1030bd"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-api.mjs",
+      "sha256": "c83f0095188f1a56f6acd379fd7af7758247895d2a12f6006feb4c5462368cc0"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-browser.mjs",
+      "sha256": "8ef010f48a78e2c6186fefaec215588a530e2fabae9491a7dfc0ef3b970b5598"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "3aa8847a34116665b7b2f93e63395d2db2e2058e5ce1837e913bea50f0cad221"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "920d6919ae2e108e623c151a0d8c34044df926002c35d9d21138add44e030b58"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "3970ec83c33a8cc193a8a2f5c7625510a1d9c08141546535a34027e315d8af40"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-browser.mjs",
+      "sha256": "c01bc7bb0ecc8302a63ab3f17134303aee1d97281ad37805a1fdd10804b7fcfe"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-api.mjs",
+      "sha256": "aadf9dea7e0ae66cf1c34079fcf178c6a85cdcaf3aec1f3e4b29289f35e38e85"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-browser.mjs",
+      "sha256": "df2663ca28208bd6f60fee197777b5b39cb2eade8bee12d9ffb02f3d53d4d6ab"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": false,
+  "consultationChecks": [],
+  "consultationRequests": [],
+  "consultationMetrics": null,
+  "settingsEmbeddedOnly": false,
+  "previewEntry": null,
+  "settingsChecks": [],
+  "settingsRequests": [],
+  "settingsFixtureMetrics": [],
+  "whatsappReadOnly": false,
+  "whatsappBotRead": false,
+  "whatsappHistory": false,
+  "whatsappList": false,
+  "whatsappChecks": [],
+  "whatsappRequests": [],
+  "whatsappFixtureCalls": null,
+  "schedulingMigrationOnly": false,
+  "schedulingMigrationChecks": [],
+  "schedulingMigrationCalls": null,
+  "schedulingMigrationReads": null,
+  "schedulingMigrationMetrics": null,
+  "schedulingReceptionMetrics": null,
+  "recoveryNoticeOnly": true,
+  "localRecordingRecovery": false,
+  "postConsultation": true,
+  "localRecoveryRequests": [
+    {
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patient_files"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/usage_daily"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultation_drafts"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/list_patient_chat_turns"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/finalize-consultation"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/usage_daily"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patient_files"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/clinical_work_items"
+    },
+    {
+      "method": "GET",
+      "path": "/functions/v1/signature-session/state"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_snippets"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patient_files"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/usage_daily"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultation_drafts"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/list_patient_chat_turns"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/finalize-consultation"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/usage_daily"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patient_files"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/clinical_work_items"
+    },
+    {
+      "method": "GET",
+      "path": "/functions/v1/signature-session/state"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_snippets"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patient_files"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/usage_daily"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultation_drafts"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/list_patient_chat_turns"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/finalize-consultation"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/usage_daily"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patient_files"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/clinical_work_items"
+    },
+    {
+      "method": "GET",
+      "path": "/functions/v1/signature-session/state"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_snippets"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patient_files"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/usage_daily"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultation_drafts"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/list_patient_chat_turns"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/finalize-consultation"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/workspace_directory"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/appointments"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/usage_daily"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/user_settings"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patient_files"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/consultations"
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/patients"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/clinical_work_items"
+    },
+    {
+      "method": "GET",
+      "path": "/functions/v1/signature-session/state"
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/document_snippets"
+    }
+  ],
+  "postConsultationCalls": [
+    {
+      "method": "POST",
+      "body": {
+        "patientId": "22222222-2222-4222-8222-222222222222",
+        "draftId": "99999999-9999-4999-8999-999999999999",
+        "chiefComplaint": "Consulta sintética recuperável",
+        "transcription": "",
+        "patientContext": {
+          "name": "Paciente Exemplo A",
+          "age": 0,
+          "diagnoses": [],
+          "medications": [],
+          "allergies": []
+        },
+        "userSpecialty": "geral",
+        "saveDirect": true,
+        "reviewed": true,
+        "soapNote": "Revisão sintética atualizada em outra aba",
+        "whatsappMessage": ""
+      },
+      "accepted": true
+    },
+    {
+      "method": "POST",
+      "body": {
+        "patientId": "22222222-2222-4222-8222-222222222222",
+        "draftId": "99999999-9999-4999-8999-999999999999",
+        "chiefComplaint": "Consulta sintética recuperável",
+        "transcription": "",
+        "patientContext": {
+          "name": "Paciente Exemplo A",
+          "age": 0,
+          "diagnoses": [],
+          "medications": [],
+          "allergies": []
+        },
+        "userSpecialty": "geral",
+        "saveDirect": true,
+        "reviewed": true,
+        "soapNote": "Revisão sintética atualizada em outra aba",
+        "whatsappMessage": ""
+      },
+      "accepted": true
+    },
+    {
+      "method": "POST",
+      "body": {
+        "patientId": "22222222-2222-4222-8222-222222222222",
+        "draftId": "99999999-9999-4999-8999-999999999999",
+        "chiefComplaint": "Consulta sintética recuperável",
+        "transcription": "",
+        "patientContext": {
+          "name": "Paciente Exemplo A",
+          "age": 0,
+          "diagnoses": [],
+          "medications": [],
+          "allergies": []
+        },
+        "userSpecialty": "geral",
+        "saveDirect": true,
+        "reviewed": true,
+        "soapNote": "Revisão sintética atualizada em outra aba",
+        "whatsappMessage": ""
+      },
+      "accepted": true
+    },
+    {
+      "method": "POST",
+      "body": {
+        "patientId": "22222222-2222-4222-8222-222222222222",
+        "draftId": "99999999-9999-4999-8999-999999999999",
+        "chiefComplaint": "Consulta sintética recuperável",
+        "transcription": "",
+        "patientContext": {
+          "name": "Paciente Exemplo A",
+          "age": 0,
+          "diagnoses": [],
+          "medications": [],
+          "allergies": []
+        },
+        "userSpecialty": "geral",
+        "saveDirect": true,
+        "reviewed": true,
+        "soapNote": "Revisão sintética atualizada em outra aba",
+        "whatsappMessage": ""
+      },
+      "accepted": true
+    }
+  ],
+  "recoveryNoticeChecks": [
+    {
+      "width": 320,
+      "controls": [
+        {
+          "height": 59.390625,
+          "left": 52.59375,
+          "right": 271.40625,
+          "viewport": 320,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 52.59375,
+          "right": 271.40625,
+          "viewport": 320,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 52.59375,
+          "right": 265.96875,
+          "viewport": 320,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 52.59375,
+          "right": 265.640625,
+          "viewport": 320,
+          "onTop": true
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "explicitSaveOnly": true,
+      "exactPatientPreserved": true,
+      "keyboardFollowup": true,
+      "guardedUnsavedText": true,
+      "focusReturned": true,
+      "composerOpenedWithoutGeneration": true,
+      "noReload": true,
+      "existingWorkPreserved": true
+    },
+    {
+      "width": 375,
+      "controls": [
+        {
+          "height": 59.390625,
+          "left": 52.59375,
+          "right": 301.921875,
+          "viewport": 375,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 52.59375,
+          "right": 314.703125,
+          "viewport": 375,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 52.59375,
+          "right": 265.96875,
+          "viewport": 375,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 52.59375,
+          "right": 265.640625,
+          "viewport": 375,
+          "onTop": true
+        }
+      ]
+    },
+    {
+      "width": 375,
+      "explicitSaveOnly": true,
+      "exactPatientPreserved": true,
+      "keyboardFollowup": true,
+      "guardedUnsavedText": true,
+      "focusReturned": true,
+      "composerOpenedWithoutGeneration": true,
+      "noReload": true,
+      "existingWorkPreserved": true
+    },
+    {
+      "width": 1280,
+      "controls": [
+        {
+          "height": 59.390625,
+          "left": 63.390625,
+          "right": 312.71875,
+          "viewport": 1280,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 323.515625,
+          "right": 585.625,
+          "viewport": 1280,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 596.421875,
+          "right": 809.796875,
+          "viewport": 1280,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 820.59375,
+          "right": 1033.640625,
+          "viewport": 1280,
+          "onTop": true
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "explicitSaveOnly": true,
+      "exactPatientPreserved": true,
+      "keyboardFollowup": true,
+      "guardedUnsavedText": true,
+      "focusReturned": true,
+      "composerOpenedWithoutGeneration": true,
+      "noReload": true,
+      "existingWorkPreserved": true
+    },
+    {
+      "width": 1920,
+      "controls": [
+        {
+          "height": 59.390625,
+          "left": 364.390625,
+          "right": 613.71875,
+          "viewport": 1920,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 624.515625,
+          "right": 886.625,
+          "viewport": 1920,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 897.421875,
+          "right": 1110.796875,
+          "viewport": 1920,
+          "onTop": true
+        },
+        {
+          "height": 59.390625,
+          "left": 1121.59375,
+          "right": 1334.640625,
+          "viewport": 1920,
+          "onTop": true
+        }
+      ]
+    },
+    {
+      "width": 1920,
+      "explicitSaveOnly": true,
+      "exactPatientPreserved": true,
+      "keyboardFollowup": true,
+      "guardedUnsavedText": true,
+      "focusReturned": true,
+      "composerOpenedWithoutGeneration": true,
+      "noReload": true,
+      "existingWorkPreserved": true
+    }
+  ],
+  "recoveryNoticeCalls": [],
+  "recoveryNoticeMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "workspaceWrites": 0
+  },
+  "patientWorkspaceOnly": false,
+  "patientWorkspaceChecks": [],
+  "patientWorkspaceMetrics": null,
+  "settingsAccessOnly": false,
+  "settingsAdminOnly": false,
+  "settingsAccessChecks": [],
+  "settingsAccessRequests": [],
+  "settingsAccessCalls": null,
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": null,
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/ChatPanel.tsx",
+    "src/components/ClinicalAnswer.tsx",
+    "src/components/ClinicalMarkdown.tsx",
+    "src/components/ClinicalProposals.tsx",
+    "src/components/ClinicalWorkEditor.tsx",
+    "src/components/CommentProposalCard.tsx",
+    "src/components/ConsultationRecoveryNotice.tsx",
+    "src/components/ConsultationReviewModal.tsx",
+    "src/components/DocumentComposerModal.tsx",
+    "src/components/DocumentPreviewModal.tsx",
+    "src/components/LiveCopilotCard.tsx",
+    "src/components/LocalRecordingRecoveryNotice.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/NewConsultationModal.tsx",
+    "src/components/OnboardingCard.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/PatientAdministrativeFields.tsx",
+    "src/components/PatientFiles.tsx",
+    "src/components/PatientProfileDrawer.tsx",
+    "src/components/PatientSidebar.tsx",
+    "src/components/PatientSnapshot.tsx",
+    "src/components/PatientWorkspaceDialog.tsx",
+    "src/components/PrescriptionList.tsx",
+    "src/components/PrescriptionTemplatePicker.tsx",
+    "src/components/ProfileUpdateCard.tsx",
+    "src/components/QuestionChecklistCard.tsx",
+    "src/components/RecordingModeDialog.tsx",
+    "src/components/ReferenceSearch.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/SignatureControls.tsx",
+    "src/components/SoapNoteView.tsx",
+    "src/components/SpecialtySettingsSheet.tsx",
+    "src/components/UsageMeter.tsx",
+    "src/components/WelcomeDashboard.tsx",
+    "src/components/ui/badge.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/select.tsx",
+    "src/components/ui/sheet.tsx",
+    "src/components/ui/switch.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/data/seedData.ts",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/features/settings/ProfessionalSettingsForm.tsx",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useDocumentSnippets.ts",
+    "src/hooks/useRecording.ts",
+    "src/hooks/useSeedPatients.ts",
+    "src/hooks/useSignatureSession.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/hooks/useUsage.ts",
+    "src/hooks/useUserSettings.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/clinicalWorkspace.ts",
+    "src/lib/cmedPresentation.ts",
+    "src/lib/consultationDrafts.ts",
+    "src/lib/dates.ts",
+    "src/lib/documentSnippets.ts",
+    "src/lib/functionErrors.ts",
+    "src/lib/interfaceScale.ts",
+    "src/lib/medicationMerge.ts",
+    "src/lib/mfa.ts",
+    "src/lib/pagination.ts",
+    "src/lib/patientConversation.ts",
+    "src/lib/patientImport.ts",
+    "src/lib/patientMapper.ts",
+    "src/lib/patientRegistration.ts",
+    "src/lib/prescriberContact.ts",
+    "src/lib/printDoc.ts",
+    "src/lib/recordingRescue.ts",
+    "src/lib/sharing.ts",
+    "src/lib/signatureClient.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/ClinicalWorkspace.tsx",
+    "src/pages/Index.tsx"
+  ],
+  "screens": [
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-review",
+      "actualPath": "/",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Fechar e retomar depois",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Confirmar e salvar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Revisão da Consulta — Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-review-320.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-review-320-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-saved",
+      "actualPath": "/",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Paciente Exemplo A",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Consulta manual",
+              "width": 133,
+              "height": 61.375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Acompanhamento",
+              "width": 133.015625,
+              "height": 61.375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Receita / atestado",
+              "width": 133,
+              "height": 61.375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": {
+        "label": "Pergunta ao assistente clínico",
+        "placeholder": "Faça uma pergunta",
+        "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+        "textWidth": 186.75523376464844,
+        "availableWidth": 209.8,
+        "empty": true
+      },
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Paciente Exemplo A",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 91.78125,
+              "right": 287.09375,
+              "top": 18.1875,
+              "bottom": 41.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-saved-320.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-followup",
+      "actualPath": "/",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Novo registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Registros e acompanhamento",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Linha do tempo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acompanhamento do paciente",
+        "Registro sintético de horários"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-followup-320.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-followup-320-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-unsaved-kept",
+      "actualPath": "/",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Novo registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Registros e acompanhamento",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Linha do tempo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Aprovar esta versão",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acompanhamento do paciente",
+        "Documentar e acompanhar",
+        "Registro sintético de horários"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-unsaved-kept-320.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-unsaved-kept-320-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-documents",
+      "actualPath": "/",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Receita simples. Validade 30 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Antimicrobiano. Retenção · validade 10 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Controle especial. Listas C1 e C5 · 2 vias · 30 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Atestado médico. Afastamento com validação por QR",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Solicitação de exames. Lista de exames com QR",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar como modelo",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Adicionar fórmula manipulada",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Gerar documento",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Documento para Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-documents-320.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-documents-320-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-return",
+      "actualPath": "/",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Paciente Exemplo A",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Consulta manual",
+              "width": 133,
+              "height": 61.375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Acompanhamento",
+              "width": 133.015625,
+              "height": 61.375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Receita / atestado",
+              "width": 133,
+              "height": 61.375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": {
+        "label": "Pergunta ao assistente clínico",
+        "placeholder": "Faça uma pergunta",
+        "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+        "textWidth": 186.75523376464844,
+        "availableWidth": 209.8,
+        "empty": true
+      },
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Paciente Exemplo A",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 91.78125,
+              "right": 287.09375,
+              "top": 18.1875,
+              "bottom": 41.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-return-320.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-review",
+      "actualPath": "/",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Fechar e retomar depois",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Confirmar e salvar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Revisão da Consulta — Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-review-375.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-review-375-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-saved",
+      "actualPath": "/",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Paciente Exemplo A",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Consulta manual",
+              "width": 160.5,
+              "height": 61.375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Acompanhamento",
+              "width": 160.515625,
+              "height": 61.375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Receita / atestado",
+              "width": 160.5,
+              "height": 61.375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": {
+        "label": "Pergunta ao assistente clínico",
+        "placeholder": "Faça uma pergunta",
+        "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+        "textWidth": 186.75523376464844,
+        "availableWidth": 264.79999999999995,
+        "empty": true
+      },
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Paciente Exemplo A",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 91.78125,
+              "right": 287.09375,
+              "top": 18.1875,
+              "bottom": 41.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-saved-375.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-followup",
+      "actualPath": "/",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Novo registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Registros e acompanhamento",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Linha do tempo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acompanhamento do paciente",
+        "Registro sintético de horários"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-followup-375.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-followup-375-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-unsaved-kept",
+      "actualPath": "/",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Novo registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Registros e acompanhamento",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Linha do tempo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Aprovar esta versão",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acompanhamento do paciente",
+        "Documentar e acompanhar",
+        "Registro sintético de horários"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-unsaved-kept-375.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-unsaved-kept-375-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-documents",
+      "actualPath": "/",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Receita simples. Validade 30 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Antimicrobiano. Retenção · validade 10 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Controle especial. Listas C1 e C5 · 2 vias · 30 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Atestado médico. Afastamento com validação por QR",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Solicitação de exames. Lista de exames com QR",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar como modelo",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Adicionar fórmula manipulada",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Gerar documento",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Documento para Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-documents-375.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-documents-375-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-return",
+      "actualPath": "/",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Paciente Exemplo A",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Consulta manual",
+              "width": 160.5,
+              "height": 61.375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Acompanhamento",
+              "width": 160.515625,
+              "height": 61.375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Receita / atestado",
+              "width": 160.5,
+              "height": 61.375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": {
+        "label": "Pergunta ao assistente clínico",
+        "placeholder": "Faça uma pergunta",
+        "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+        "textWidth": 186.75523376464844,
+        "availableWidth": 264.79999999999995,
+        "empty": true
+      },
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Paciente Exemplo A",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 91.78125,
+              "right": 287.09375,
+              "top": 18.1875,
+              "bottom": 41.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-return-375.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-review",
+      "actualPath": "/",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Fechar e retomar depois",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Confirmar e salvar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Revisão da Consulta — Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-review-1280.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-review-1280-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-saved",
+      "actualPath": "/",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Paciente Exemplo A",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Consulta manual",
+              "width": 163.125,
+              "height": 43.1875,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Acompanhamento",
+              "width": 179.078125,
+              "height": 43.1875,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Receita / atestado",
+              "width": 200.5,
+              "height": 43.1875,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": {
+        "label": "Pergunta ao assistente clínico",
+        "placeholder": "Faça uma pergunta",
+        "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+        "textWidth": 186.75523376464844,
+        "availableWidth": 953.8,
+        "empty": true
+      },
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Paciente Exemplo A",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 102.578125,
+              "right": 325.796875,
+              "top": 24.59375,
+              "bottom": 50.59375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-saved-1280.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-followup",
+      "actualPath": "/",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Novo registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Registros e acompanhamento",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Linha do tempo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acompanhamento do paciente",
+        "Registro sintético de horários"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-followup-1280.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-followup-1280-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-unsaved-kept",
+      "actualPath": "/",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Novo registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Registros e acompanhamento",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Linha do tempo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Aprovar esta versão",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acompanhamento do paciente",
+        "Documentar e acompanhar",
+        "Registro sintético de horários"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-unsaved-kept-1280.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-unsaved-kept-1280-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-documents",
+      "actualPath": "/",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Receita simples. Validade 30 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Antimicrobiano. Retenção · validade 10 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Controle especial. Listas C1 e C5 · 2 vias · 30 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Atestado médico. Afastamento com validação por QR",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Solicitação de exames. Lista de exames com QR",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar como modelo",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Adicionar fórmula manipulada",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Gerar documento",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Documento para Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-documents-1280.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-documents-1280-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-return",
+      "actualPath": "/",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Paciente Exemplo A",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Consulta manual",
+              "width": 163.125,
+              "height": 43.1875,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Acompanhamento",
+              "width": 179.078125,
+              "height": 43.1875,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Receita / atestado",
+              "width": 200.5,
+              "height": 43.1875,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": {
+        "label": "Pergunta ao assistente clínico",
+        "placeholder": "Faça uma pergunta",
+        "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+        "textWidth": 186.75523376464844,
+        "availableWidth": 953.8,
+        "empty": true
+      },
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Paciente Exemplo A",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 102.578125,
+              "right": 325.796875,
+              "top": 24.59375,
+              "bottom": 50.59375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-return-1280.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-review",
+      "actualPath": "/",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Fechar e retomar depois",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Confirmar e salvar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Revisão da Consulta — Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-review-1920.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-review-1920-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-saved",
+      "actualPath": "/",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Paciente Exemplo A",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Consulta manual",
+              "width": 163.125,
+              "height": 43.1875,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Acompanhamento",
+              "width": 179.078125,
+              "height": 43.1875,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Receita / atestado",
+              "width": 200.5,
+              "height": 43.1875,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [
+        {
+          "label": "Assistente",
+          "fullWidth": 0,
+          "width": 277.40625,
+          "height": 48.59375,
+          "clipped": true
+        },
+        {
+          "label": "Modelos",
+          "fullWidth": 0,
+          "width": 277.40625,
+          "height": 48.59375,
+          "clipped": true
+        },
+        {
+          "label": "Conhecimento",
+          "fullWidth": 0,
+          "width": 277.40625,
+          "height": 48.59375,
+          "clipped": true
+        },
+        {
+          "label": "Pacientes",
+          "fullWidth": 0,
+          "width": 277.40625,
+          "height": 48.59375,
+          "clipped": true
+        }
+      ],
+      "clinicalPrompt": {
+        "label": "Pergunta ao assistente clínico",
+        "placeholder": "Faça uma pergunta",
+        "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+        "textWidth": 186.75523376464844,
+        "availableWidth": 931.8,
+        "empty": true
+      },
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Paciente Exemplo A",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 403.578125,
+              "right": 626.796875,
+              "top": 24.59375,
+              "bottom": 50.59375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-saved-1920.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-followup",
+      "actualPath": "/",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Novo registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Registros e acompanhamento",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Linha do tempo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acompanhamento do paciente",
+        "Registro sintético de horários"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-followup-1920.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-followup-1920-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-unsaved-kept",
+      "actualPath": "/",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Novo registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Registros e acompanhamento",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Linha do tempo",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Aprovar esta versão",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Abrir registro",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Ver versões",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026, 15:04"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acompanhamento do paciente",
+        "Documentar e acompanhar",
+        "Registro sintético de horários"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-unsaved-kept-1920.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-unsaved-kept-1920-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-documents",
+      "actualPath": "/",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Receita simples. Validade 30 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Antimicrobiano. Retenção · validade 10 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Controle especial. Listas C1 e C5 · 2 vias · 30 dias",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Atestado médico. Afastamento com validação por QR",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Solicitação de exames. Lista de exames com QR",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar como modelo",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Adicionar fórmula manipulada",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Gerar documento",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Documento para Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-documents-1920.png",
+      "actionScreenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-documents-1920-actions.png"
+    },
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "post-return",
+      "actualPath": "/",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Paciente Exemplo A",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Consulta manual",
+              "width": 163.125,
+              "height": 43.1875,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Acompanhamento",
+              "width": 179.078125,
+              "height": 43.1875,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Receita / atestado",
+              "width": 200.5,
+              "height": 43.1875,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [
+        {
+          "label": "Assistente",
+          "fullWidth": 0,
+          "width": 277.40625,
+          "height": 48.59375,
+          "clipped": true
+        },
+        {
+          "label": "Modelos",
+          "fullWidth": 0,
+          "width": 277.40625,
+          "height": 48.59375,
+          "clipped": true
+        },
+        {
+          "label": "Conhecimento",
+          "fullWidth": 0,
+          "width": 277.40625,
+          "height": 48.59375,
+          "clipped": true
+        },
+        {
+          "label": "Pacientes",
+          "fullWidth": 0,
+          "width": 277.40625,
+          "height": 48.59375,
+          "clipped": true
+        }
+      ],
+      "clinicalPrompt": {
+        "label": "Pergunta ao assistente clínico",
+        "placeholder": "Faça uma pergunta",
+        "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+        "textWidth": 186.75523376464844,
+        "availableWidth": 931.8,
+        "empty": true
+      },
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Paciente Exemplo A",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 403.578125,
+              "right": 626.796875,
+              "top": 24.59375,
+              "bottom": 50.59375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-post-return-1920.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "failedRequests": [
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    },
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    }
+  ],
+  "errorResponses": [],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

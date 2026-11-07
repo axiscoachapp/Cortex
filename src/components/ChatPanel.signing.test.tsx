@@ -2,7 +2,7 @@
 // exactly the persisted document (its id and PDF hash), keeping the operation;
 // a signature that does not complete never undoes nor repeats the generation.
 // Functions simulated; synthetic patient and ids only.
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Patient } from '@/types/patient';
@@ -94,6 +94,16 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('Gerar e assinar from the consultation', () => {
+  it('post-consultation documents bind the latest saved SOAP instead of a panel-level fallback',async()=>{
+    const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    render(<QueryClientProvider client={client}><ChatPanel messages={['older','latest'].map(id=>({id,type:'soap' as const,title:'Evolução '+id,content:'SOAP '+id,timestamp:new Date(),consultationId:id}))} onMessagesChange={vi.fn()} chiefComplaint="" preBriefing={null} briefingLoading={false} userId="doctor" patient={patient}/></QueryClientProvider>);
+    const panel=await screen.findByRole('region',{name:'Pós-consulta'});expect(screen.getAllByRole('region',{name:'Pós-consulta'})).toHaveLength(1);
+    fireEvent.click(within(panel).getByRole('button',{name:'Receita / Atestado'}));
+    await waitFor(()=>expect(mocks.composer.signing).toEqual({active:true}));
+    await act(async()=>{await mocks.composer.onGenerate!(sickNote(false));});
+    expect(calls('generate-prescription')[0][1].body).toMatchObject({patientId:patient.id,consultationId:'latest'});
+    expect(calls('sign-document')).toHaveLength(0);
+  });
   it('generates once and signs that document by its id and PDF hash; the unsigned preview is not opened', async () => {
     await openComposer();
     await act(async () => { await mocks.composer.onGenerate!(sickNote(true)); });

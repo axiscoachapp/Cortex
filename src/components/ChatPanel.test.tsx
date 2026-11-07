@@ -1,7 +1,7 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { Patient } from '@/types/patient';
+import type { Patient, ChatMessage } from '@/types/patient';
 import { ChatPanel } from './ChatPanel';
 vi.mock('@/components/ClinicalProposals', () => ({ ClinicalProposals: () => null }));
 vi.mock('react-router-dom', () => ({
@@ -116,6 +116,21 @@ afterEach(cleanup);
 afterEach(()=>vi.restoreAllMocks());
 
 describe('patient-scoped asynchronous clinical work', () => {
+  it('offers post-consultation follow-up only for the latest persisted SOAP without issuing commands',async()=>{
+    const client=new QueryClient({defaultOptions:{queries:{retry:false}}}),work=vi.fn();
+    const soap={id:'soap',type:'soap' as const,title:'Evolução salva',content:'SOAP sintético',timestamp:new Date(),consultationId:'consultation-A'};
+    const tree=(messages:ChatMessage[])=><QueryClientProvider client={client}><ChatPanel patient={patient('A')} userId="doctor" messages={messages} onMessagesChange={vi.fn()} chiefComplaint="" preBriefing={null} briefingLoading={false} onOpenPatientWork={work}/></QueryClientProvider>;
+    const v=render(tree([soap]));const panel=await screen.findByRole('region',{name:'Pós-consulta'});
+    fireEvent.click(within(panel).getByRole('button',{name:'Orientações e retorno'}));expect(work).toHaveBeenCalledExactlyOnceWith(false);expect(mocks.invoke).not.toHaveBeenCalled();
+    v.rerender(tree([soap,{...soap,id:'draft',consultationId:undefined}]));expect(screen.queryByRole('region',{name:'Pós-consulta'})).not.toBeInTheDocument();
+  });
+  it('uses the saved SOAP content for an explicit post-consultation summary',async()=>{
+    const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    render(<QueryClientProvider client={client}><ChatPanel patient={patient('A')} userId="doctor" messages={[{id:'soap',type:'soap',title:'Evolução salva',content:'SOAP da consulta escolhida',timestamp:new Date(),consultationId:'consultation-A'}]} onMessagesChange={vi.fn()} chiefComplaint="" preBriefing={null} briefingLoading={false}/></QueryClientProvider>);
+    const panel=await screen.findByRole('region',{name:'Pós-consulta'});expect(mocks.invoke).not.toHaveBeenCalled();
+    fireEvent.click(within(panel).getByRole('button',{name:'Resumo para Paciente'}));
+    await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledWith('generate-document',expect.objectContaining({body:expect.objectContaining({type:'patient_summary',soapNote:'SOAP da consulta escolhida'})})));
+  });
   it.each(['preserve','discard'])('does not reload while a %s draft mutation is pending', async mode => {
     const request=deferred();
     mocks.loadDraft.mockResolvedValue({id:'draft-A',patientId:'A',status:mode==='preserve'?'review':'error',soapDraft:'Rascunho sintético',chiefComplaint:'Queixa sintética'});
