@@ -1,0 +1,37 @@
+{
+  "baseline": "63a5d3586a546af248fdb67dd32474cd678a19b7",
+  "scope": "K1/4g reopen adapter only",
+  "unit": {
+    "scaffoldRedTests": 51,
+    "newTests": 51,
+    "existingCloseTests": 47,
+    "existingReleaseTests": 36,
+    "existingClaimTests": 34,
+    "existingReadTests": 55,
+    "passed": 223,
+    "failed": 0,
+    "files": 5
+  },
+  "sdk": {
+    "version": "2.86.0",
+    "checks": 12,
+    "commands": 11,
+    "method": "POST",
+    "realNetwork": false,
+    "sourceHashes": 3,
+    "sourceHashesStable": true,
+    "unexpectedResources": 0
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 3,
+    "status": "passed"
+  },
+  "syntax": {
+    "scripts": 1,
+    "status": "passed"
+  },
+  "review": "Fresh read-only adversarial review: no concrete defects after thorough examination",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "limits": "No UI/browser/server authorization/SQL CAS/RLS/concurrency/Meta proof. Local closed/owner eligibility does not restrict broader producer policy. Four timestamps outside act receipt are not verified."
+}

@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-07 04:19. **K1/4g — adaptador reopen:** [provas](../docs/reviews/2026-11-07/whatsapp-reopen/IMPLEMENTATION.md). Encerrada própria/sem responsável explícito; corpo act/reopen/conversationId/revision, recibo open/revisão+1/dono ou null preservados. Sem assumir/transferir/retry; needsRefresh após início inconclusivo, snapshot validado imune a mutação do input.51RED→223Vitest/cinco arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória doze verificações/onze POST/três hashes estáveis/zero rede. Sem UI/banco/autorização/CAS real; quatro tempos fora do recibo não conferidos.
+
+Próximo4h: reabrir na UI com confirmação humana/contexto fresco/conferência/readVersion, sem assumir automático. Nenhuma mensagem Claude nova:2152 atendida, 2026-11-07-0419_codex-para-claude_k1-contrato-reabrir-conversa.md informativa encerrada; C4/C5 após SHA e dois RED C5 fora da suíte dirigida, outros comandos/MFA/K7 separados. Automação ACTIVE; main/axiscoachapp sem push/hosted/carga, preservar Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md.
+
+---
+
 Entrega K1/4f: `9dc5eb7ec5fccee80069d2ded97f1ddad38abec9`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Encerramento próprio com confirmação integrado; reabertura/transferência/outros comandos e K1 inteiro abertos.
 
 Atualizado em 2026-11-07 04:11. **K1/4f — confirmação close:** [provas](../docs/reviews/2026-11-07/whatsapp-close-ui/IMPLEMENTATION.md). Fresca/aberta/própria, Cancelar/Escape sem envio, confirmação explícita e exclusão/conferência/gerações. ReadVersion local corrige RED de refetch imediato com DTO idêntico; rótulos pendentes por kind.270Vitest/sete arquivos+16Node/tipos/lint/sintaxe/seisflags/revisão;44estados/48PNGs320–1920/135%,329fontes/29hashes/três overlays/cleanup.160requests/12close sintéticos (8aplicados/4conflitos), oito403/409-console esperados, zero outros erros/clínico/externos. Capturas320 inspecionadas; dois preflights corrigidos sem browser aberto.
