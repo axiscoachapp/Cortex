@@ -57,6 +57,14 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
   const quantity = Number(form.quantity);
   const total = Number.isFinite(unit) && Number.isInteger(quantity) ? Math.round(unit * quantity * 100) / 100 : NaN;
 
+  // Changing the plan never keeps the previous plan's price: the same procedure code is looked up in the
+  // new table, and without a match the value is cleared for the person to fill in.
+  const changePayer = (payerId: string) => {
+    const same = prices.find((x) => x.active && (x.payerId ?? PARTICULAR) === payerId && x.procedureCode === form.procedureCode && x.tableCode === form.tableCode);
+    if (same) set({ payerId, priceId: same.id, description: same.description, guideType: same.guideType, unitAmount: moneyInput(same.amount),
+      quantity: same.guideType === 'consulta' ? '1' : form.quantity });
+    else set({ payerId, priceId: MANUAL, unitAmount: '' });
+  };
   const pickPrice = (id: string) => {
     const p = prices.find((x) => x.id === id);
     if (!p) { set({ priceId: MANUAL }); return; }
@@ -120,7 +128,7 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
               <Input id="charge-date" type="date" value={form.serviceDate} onChange={(e) => set({ serviceDate: e.target.value })} />
             </Field>
             <Field id="charge-payer" label="Convênio">
-              <Select value={form.payerId} onValueChange={(v) => set({ payerId: v, priceId: MANUAL })}>
+              <Select value={form.payerId} onValueChange={changePayer}>
                 <SelectTrigger id="charge-payer" aria-label="Convênio"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={PARTICULAR}>Particular</SelectItem>

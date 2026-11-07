@@ -167,6 +167,18 @@ export function BatchesTab({ scope, state }: { scope: string[]; state: BillingSt
     onSuccess: () => { setUndoing(null); toast({ title: 'Lote desfeito', description: 'As guias voltaram para "Em aberto".' }); refresh(); },
     onError: fail('Não foi possível desfazer o lote'),
   });
+  const [reopening, setReopening] = useState<Batch | null>(null);
+  const reopen = useMutation({
+    mutationFn: (b: Batch) => billingCall('reopenBatch', { batchId: b.id, revision: b.revision }),
+    onSuccess: () => { setReopening(null); toast({ title: 'Retorno reaberto', description: 'Lance de novo o que o convênio pagou em cada guia.' }); refresh(); },
+    onError: fail('Não foi possível reabrir o retorno'),
+  });
+  const [nfse, setNfse] = useState<{ batch: Batch; value: string } | null>(null);
+  const saveNfse = useMutation({
+    mutationFn: (v: { batch: Batch; value: string }) => billingCall('updateBatch', { batchId: v.batch.id, revision: v.batch.revision, nfseNumber: v.value.trim() }),
+    onSuccess: () => { setNfse(null); toast({ title: 'Nota fiscal registrada no lote' }); refresh(); },
+    onError: fail('Não foi possível salvar a nota fiscal'),
+  });
   const [sending, setSending] = useState<Batch | null>(null);
   const [settling, setSettling] = useState<Batch | null>(null);
   const charges = open.data?.charges ?? [];
@@ -235,7 +247,7 @@ export function BatchesTab({ scope, state }: { scope: string[]; state: BillingSt
                   <p className="font-medium">Lote {b.number} · {payerName(b.payerId)} · {GUIDE_LABELS[b.guideType]}</p>
                   <p className="text-sm text-muted-foreground tabular-nums">
                     Total {brl(b.totalAmount)}{b.status === 'closed' ? ` · pago ${brl(b.paidAmount)} · glosado ${brl(b.deniedAmount)}` : ''}
-                    {b.sentAt ? ` · enviado em ${dateBr(b.sentAt)}` : ''}{b.protocol ? ` · protocolo ${b.protocol}` : ''}
+                    {b.sentAt ? ` · enviado em ${dateBr(b.sentAt)}` : ''}{b.protocol ? ` · protocolo ${b.protocol}` : ''}{b.nfseNumber ? ` · NFS-e ${b.nfseNumber}` : ''}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -248,6 +260,12 @@ export function BatchesTab({ scope, state }: { scope: string[]; state: BillingSt
                   {b.status === 'draft' && b.xmlHash && <Button size="sm" onClick={() => setSending(b)} aria-label={`Marcar o lote ${b.number} como enviado`}>Marcar como enviado</Button>}
                   {b.status === 'draft' && <Button size="sm" variant="ghost" onClick={() => setUndoing(b)} aria-label={`Desfazer o lote ${b.number}`}>Desfazer lote</Button>}
                   {b.status === 'sent' && <Button size="sm" onClick={() => setSettling(b)} aria-label={`Lançar o retorno do lote ${b.number}`}>Lançar retorno</Button>}
+                  {b.status === 'closed' && <Button size="sm" variant="ghost" onClick={() => setReopening(b)} aria-label={`Corrigir o retorno do lote ${b.number}`}>Corrigir retorno</Button>}
+                  {b.status !== 'draft' && (
+                    <Button size="sm" variant="ghost" onClick={() => setNfse({ batch: b, value: b.nfseNumber ?? '' })} aria-label={`Nota fiscal do lote ${b.number}`}>
+                      {b.nfseNumber ? 'NFS-e' : 'Registrar NFS-e'}
+                    </Button>
+                  )}
                 </div>
               </li>
             ))}
@@ -257,11 +275,42 @@ export function BatchesTab({ scope, state }: { scope: string[]; state: BillingSt
 
       <SentDialog batch={sending} onOpenChange={(o) => !o && setSending(null)} onDone={() => { toast({ title: 'Lote marcado como enviado' }); refresh(); }} />
       <SettleDialog batch={settling} scope={scope} onOpenChange={(o) => !o && setSettling(null)} onDone={() => { toast({ title: 'Retorno lançado e lote fechado' }); refresh(); }} />
+      <AlertDialog open={!!reopening} onOpenChange={(o) => !o && setReopening(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Corrigir o retorno do lote {reopening?.number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Os valores pagos e as glosas lançados são desfeitos e o recebimento do lote é estornado no caixa (fica registrado). Depois, lance o retorno de novo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); if (reopening) reopen.mutate(reopening); }} disabled={reopen.isPending}>Reabrir retorno</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <Dialog open={!!nfse} onOpenChange={(o) => !o && setNfse(null)}>
+        <DialogContent className={`${DIALOG_CLASS} max-w-md`}>
+          <DialogHeader>
+            <DialogTitle>Nota fiscal do lote {nfse?.batch.number}</DialogTitle>
+            <DialogDescription>Número da NFS-e emitida para este lote no Emissor Nacional. Deixe vazio para apagar.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); if (nfse) saveNfse.mutate(nfse); }} className="space-y-4">
+            <Field id="nfse-number" label="Número da NFS-e">
+              <Input id="nfse-number" value={nfse?.value ?? ''} maxLength={30} onChange={(e) => setNfse((v) => (v ? { ...v, value: e.target.value } : v))} />
+            </Field>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setNfse(null)}>Cancelar</Button>
+              <Button type="submit" disabled={saveNfse.isPending}>{saveNfse.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       <AlertDialog open={!!undoing} onOpenChange={(o) => !o && setUndoing(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Desfazer o lote {undoing?.number}?</AlertDialogTitle>
-            <AlertDialogDescription>Use se o XML ainda não foi enviado ao convênio. As guias voltam para "Em aberto" e mantêm os números.</AlertDialogDescription>
+            <AlertDialogDescription>Use se o XML ainda não foi enviado ao convênio. As guias voltam para "Em aberto" e mantêm os números; o número deste lote não é usado de novo.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Voltar</AlertDialogCancel>

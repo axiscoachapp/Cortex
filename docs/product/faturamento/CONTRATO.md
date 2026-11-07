@@ -58,7 +58,7 @@ O financeiro mostra o nome do paciente e o procedimento, que é dado de saúde i
 
 | Ação | Papel | Faz |
 |---|---|---|
-| `state` | todos | Papel, dados da clínica, convênios, médicos e profissionais. A recepção recebe só os médicos do seu escopo, e o médico só a si mesmo |
+| `state` | todos | Papel, dados da clínica, convênios, médicos e profissionais. A recepção recebe só os médicos do seu escopo e nenhum dado de repasse; o médico, só os próprios |
 | `saveSettings`, `savePayer`, `savePrice`, `deletePrice`, `saveProfessional` | admin | Cadastros. CAS por `revision` (409 se mudou) |
 | `prices` | todos | Tabela de preços |
 | `toBill` `{from,to}` | admin, recepção | Consultas atendidas sem cobrança, com carteirinhas salvas e o convênio da pré-consulta |
@@ -69,14 +69,23 @@ O financeiro mostra o nome do paciente e o procedimento, que é dado de saúde i
 | `cancelPayment` `{paymentId}` | admin | Estorno de um pagamento particular |
 | `batches`, `openForBatch` `{payerId,guideType}`, `batchCharges` `{batchId}` | admin | Leituras dos lotes |
 | `createBatch` `{payerId,guideType,chargeIds}` | admin | `billing_batch_create` |
-| `cancelBatch` `{batchId,revision}` | admin | Só um lote em rascunho. As guias voltam a ficar em aberto e mantêm o número |
-| `batchXml` `{batchId}` | admin | Devolve `{fileName, contentType, base64, hash, revision}`. Em rascunho, gera o XML e grava o hash e o conteúdo |
+| `cancelBatch` `{batchId,revision}` | admin | Só um lote em rascunho. As guias voltam a ficar em aberto e mantêm o número. O número do lote não é usado de novo (contador por convênio) |
+| `batchXml` `{batchId}` | admin | Devolve `{fileName, contentType, base64, hash, revision}`. Na primeira vez, gera o XML e grava o hash e o conteúdo; depois, inclusive em rascunho, devolve sempre o mesmo arquivo |
 | `markSent` `{batchId,revision,sentAt,protocol}` | admin | Só depois do XML gerado |
-| `updateBatch` `{batchId,revision,nfseNumber,notes}` | admin | Número da NFS-e e observações |
+| `updateBatch` `{batchId,revision,nfseNumber?,notes?}` | admin | Número da NFS-e e observações. Só muda o que vier; NFS-e vazia apaga |
+| `reopenBatch` `{batchId,revision}` | admin | Reabre um lote com retorno lançado, para corrigir um valor digitado errado: as guias voltam a "Enviada" sem valores, e o recebimento do lote fica estornado (registrado) |
 | `settle` `{batchId,revision,paymentDate,items:[{chargeId,paid,denialCode?,denialNote?}]}` | admin | Retorno do convênio: uma linha por guia; código obrigatório quando há glosa |
 | `cash` `{from,to}` | admin, recepção | Recebimentos do período, com `patientName` e `description` da cobrança particular, e despesas (só a administração). A recepção vê só os recebimentos particulares do seu escopo; o lote do convênio fica com a administração |
 | `saveExpense`, `deleteExpense` | admin | Despesas |
 | `report` `{from,to}` | admin, médico | Produção, repasse e glosas |
+
+## Revisão de 07/11 (revisor independente; o Codex estava parado)
+
+- **Leituras paginadas:** as listas de cobranças, recebimentos, despesas e consultas a faturar passam do limite de 1.000 linhas da API. Acima de 20.000 linhas no período, a resposta pede um intervalo menor (413), em vez de mostrar uma lista incompleta.
+- **Médico que saiu:** a administração vê as cobranças, a produção e os saldos de médicos que saíram da clínica.
+- **Cobrança avulsa:** só para médico ativo da clínica. O contato vem só do agendamento, nunca do pedido.
+- **Caixa:** despesas pagas contam pela data do pagamento, e as a pagar, pelo vencimento.
+- **SP/SADT:** uma descrição sem texto comum é recusada antes de gerar o XML, porque o XSD exige a descrição.
 
 ## Fora da v1
 

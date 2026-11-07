@@ -54,6 +54,11 @@ describe('TISS batch', () => {
     expect(() => buildBatchXml(base({ provider: { ...base().provider, cnes: '' } }))).toThrow('CNES');
   });
 
+  it('refuses an SP/SADT description with no Latin-1 text (the XSD requires it)', () => {
+    const g = { ...base().guides[0], consultationType: undefined, description: '\u{1F489}\u{1F489}' };
+    expect(checkBatch(base({ guideType: 'sadt', guides: [g] }))).toEqual([expect.stringContaining('descrição do procedimento')]);
+  });
+
   it('escapes XML and keeps only Latin-1 text', () => {
     expect(tissText('  Dra.\tAna  & <Exemplo> 😀 ', 70)).toBe('Dra. Ana & <Exemplo>');
     const r = buildBatchXml(base({ guides: [{ ...base().guides[0], professional: { ...base().guides[0].professional, name: 'Dra. Ana & Filhos <SA>' } }] }));

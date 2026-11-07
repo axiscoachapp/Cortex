@@ -163,6 +163,7 @@ export function checkBatch(b: TissBatch): string[] {
       if (g.quantity !== 1) e.push(`${at}: a guia de consulta tem um procedimento.`);
     }
     if (g.authorization?.date && !DATE.test(g.authorization.date)) e.push(`${at}: data da autorização inválida.`);
+    if (b.guideType === 'sadt' && !tissText(g.description, 150)) e.push(`${at}: a descrição do procedimento precisa ter texto comum (letras e números).`);
   }
   return e;
 }

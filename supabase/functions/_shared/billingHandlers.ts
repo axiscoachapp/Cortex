@@ -62,13 +62,14 @@ export interface BillingStore {
   professionals(clinic: string): Promise<ProfessionalRow[]>;
   saveProfessional(clinic: string, revision: number | null, row: Omit<ProfessionalRow, 'clinic_id' | 'revision'>): Promise<ProfessionalRow | null>;
   doctors(clinic: string): Promise<DoctorRow[]>;
-  appointmentsToBill(clinic: string, doctors: string[], from: string, to: string): Promise<AppointmentToBill[]>;
+  /** `doctors` null = every doctor of the clinic, including those who left (admin). */
+  appointmentsToBill(clinic: string, doctors: string[] | null, from: string, to: string): Promise<AppointmentToBill[]>;
   billedAppointments(clinic: string, ids: string[]): Promise<string[]>;
   coverages(clinic: string, contactIds: string[]): Promise<CoverageRow[]>;
   saveCoverage(clinic: string, row: CoverageRow): Promise<void>;
   intakeInsurance(clinic: string, appointmentIds: string[]): Promise<Record<string, { payer?: string; card?: string; validUntil?: string; type?: string }>>;
   appointment(clinic: string, id: string): Promise<AppointmentToBill | null>;
-  charges(clinic: string, doctors: string[], filter: { from: string; to: string; status?: string; payerId?: string }): Promise<ChargeRow[]>;
+  charges(clinic: string, doctors: string[] | null, filter: { from: string; to: string; status?: string; payerId?: string }): Promise<ChargeRow[]>;
   charge(clinic: string, id: string): Promise<ChargeRow | null>;
   chargesByIds(clinic: string, ids: string[]): Promise<ChargeRow[]>;
   openCharges(clinic: string, payerId: string, guideType: GuideType): Promise<ChargeRow[]>;
@@ -217,6 +218,9 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
   const admin = () => { if (role !== 'admin') throw new HttpError(403, 'Só a administração da clínica faz isso.', 'forbidden'); };
   const staff = () => { if (role === 'doctor') throw new HttpError(403, 'O médico só consulta a própria produção.', 'forbidden'); };
   const visible = () => call<string[]>(deps, 'billing_visible_doctors', { p_clinic: clinic, p_actor: caller.userId });
+  // The admin sees every doctor's charges, including doctors who left the clinic (open balances,
+  // last month's production); the others see their own scope.
+  const scopeOf = async (): Promise<string[] | null> => (role === 'admin' ? null : visible());
   const doctorOk = async (doctor: string) => {
     if (!(await call<boolean>(deps, 'billing_doctor_ok', { p_clinic: clinic, p_doctor: doctor, p_actor: caller.userId })))
       throw new HttpError(403, 'Sem permissão para a agenda deste médico.', 'forbidden');
@@ -238,7 +242,8 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
         payers: payers.map(payerDto),
         // Reception sees only the doctors in its scope; a doctor sees only themself.
         doctors: role === 'admin' ? doctors : doctors.filter((d) => inScope.has(d.id)),
-        professionals: professionals.map(professionalDto),
+        // Payout percentages and TISS identity: the admin sees all, a doctor only their own, the reception none.
+        professionals: (role === 'admin' ? professionals : role === 'doctor' ? professionals.filter((p) => p.user_id === caller.userId) : []).map(professionalDto),
       };
     }
 
@@ -311,7 +316,7 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
     case 'toBill': {
       staff();
       const { from, to } = period();
-      const doctors = await visible();
+      const doctors = await scopeOf();
       const list = await s.appointmentsToBill(clinic, doctors, from, to);
       const billed = new Set(await s.billedAppointments(clinic, list.map((a) => a.id)));
       const pending = list.filter((a) => !billed.has(a.id));
@@ -330,7 +335,7 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
     }
     case 'charges': {
       const { from, to } = period();
-      const doctors = await visible();
+      const doctors = await scopeOf();
       const rows = await s.charges(clinic, doctors, {
         from, to, ...(typeof body.status === 'string' ? { status: body.status } : {}), ...(typeof body.payerId === 'string' && UUID.test(body.payerId) ? { payerId: body.payerId } : {}),
       });
@@ -340,7 +345,8 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
       staff();
       const appointmentId = body.appointmentId ? uuid(body.appointmentId, 'Agendamento') : null;
       let doctorId = body.doctorId ? uuid(body.doctorId, 'Médico') : null;
-      let contactId = body.contactId ? uuid(body.contactId, 'Contato') : null;
+      // The contact comes only from the appointment (a manual charge has none), never from the request.
+      let contactId: string | null = null;
       if (appointmentId) {
         const a = await s.appointment(clinic, appointmentId);
         if (!a) throw new HttpError(404, 'Agendamento não encontrado na agenda da clínica.', 'not_found');
@@ -349,6 +355,8 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
       }
       if (!doctorId) throw new HttpError(400, 'Informe o médico.', 'invalid');
       await doctorOk(doctorId);
+      if (!appointmentId && !(await s.doctors(clinic)).some((d) => d.id === doctorId))
+        throw new HttpError(404, 'Médico não encontrado entre os ativos da clínica.', 'not_found');
       const payerId = body.payerId ? uuid(body.payerId, 'Convênio') : null;
       const payer = payerId ? (await s.payers(clinic)).find((p) => p.id === payerId && p.active) : null;
       if (payerId && !payer) throw new HttpError(404, 'Convênio não encontrado ou inativo.', 'not_found');
@@ -447,9 +455,17 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
       admin();
       const r = await call<BatchRow>(deps, 'billing_batch_update', {
         p_clinic: clinic, p_actor: caller.userId, p_batch: uuid(body.batchId, 'Lote'), p_revision: int(body.revision, 'Revisão', 1, 1_000_000),
-        p_patch: { nfseNumber: str(body.nfseNumber, 'NFS-e', 30, { optional: true }) ?? '', notes: str(body.notes ?? '', 'Observações', 1000, { min: 0 }) },
+        // Only the fields sent change; an empty NFS-e clears it.
+        p_patch: {
+          ...('nfseNumber' in body ? { nfseNumber: str(body.nfseNumber, 'NFS-e', 30, { optional: true }) ?? '' } : {}),
+          ...('notes' in body ? { notes: str(body.notes ?? '', 'Observações', 1000, { min: 0 }) } : {}),
+        },
       });
       return batchDto(r);
+    }
+    case 'reopenBatch': {
+      admin();
+      return call(deps, 'billing_batch_reopen', { p_clinic: clinic, p_actor: caller.userId, p_batch: uuid(body.batchId, 'Lote'), p_revision: int(body.revision, 'Revisão', 1, 1_000_000) });
     }
     case 'settle': {
       admin();
@@ -501,7 +517,7 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
     }
     case 'report': {
       const { from, to } = period();
-      const doctors = role === 'admin' ? await visible() : role === 'doctor' ? [caller.userId] : (() => { throw new HttpError(403, 'Relatórios ficam com a administração e cada médico.', 'forbidden'); })();
+      const doctors = role === 'admin' ? null : role === 'doctor' ? [caller.userId] : (() => { throw new HttpError(403, 'Relatórios ficam com a administração e cada médico.', 'forbidden'); })();
       const [charges, professionals, payers] = await Promise.all([s.charges(clinic, doctors, { from, to }), s.professionals(clinic), s.payers(clinic)]);
       return productionReport(charges.filter((c) => c.status !== 'cancelled'), professionals, payers);
     }
@@ -549,7 +565,8 @@ async function batchFile(deps: BillingDeps, clinic: string, actor: string, batch
     for (const x of file) bin += String.fromCharCode(x);
     return { fileName: payer.zip_required ? name.replace(/\.xml$/, '.zip') : name, contentType: payer.zip_required ? 'application/zip' : 'application/xml', base64: btoa(bin) };
   };
-  if (b.status !== 'draft') {
+  // Once generated, the file is fixed: a later download returns the same bytes the portal may already have.
+  if (b.status !== 'draft' || (b.xml_payload && b.xml_hash)) {
     if (!b.xml_payload || !b.xml_hash) throw new HttpError(409, 'Este lote não tem XML guardado.', 'unavailable');
     return { ...encode(b.xml_payload, `${String(b.number).padStart(20, '0')}_${b.xml_hash}.xml`), hash: b.xml_hash, revision: b.revision };
   }

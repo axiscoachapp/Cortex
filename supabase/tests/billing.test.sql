@@ -125,4 +125,33 @@ begin
   assert pg_temp.sqlstate_of(format($q$select public.billing_payment_cancel(%L,%L,%L)$q$, c, admin, (select id from public.billing_payments where batch_id=b)))='55000',
     'batch payment reversed as private';
 end $$;
+-- Self-review 07/11: a settled batch can be reopened to correct the statement; batch numbers are never
+-- reused after an undo; only the batch fields sent change.
+do $$ declare c uuid:='e9200000-0000-4000-8000-000000000001'; admin uuid:='e9100000-0000-4000-8000-000000000001';
+  rec uuid:='e9100000-0000-4000-8000-000000000003'; payer uuid:='e9300000-0000-4000-8000-000000000001'; b uuid; r jsonb; n int;
+begin
+  select id into b from public.billing_batches where clinic_id=c and status='closed' limit 1;
+  assert pg_temp.sqlstate_of(format($q$select public.billing_batch_reopen(%L,%L,%L,%s)$q$, c, rec, b, (select revision from public.billing_batches where id=b)))='42501', 'reception reopened';
+  r := public.billing_batch_reopen(c, admin, b, (select revision from public.billing_batches where id=b));
+  assert r->>'status'='sent', 'reopen';
+  assert (select bool_and(status='sent' and paid_amount=0 and denied_amount=0 and denial_code is null) from public.billing_charges where batch_id=b), 'charges not reset';
+  assert (select bool_and(cancelled_at is not null) from public.billing_payments where batch_id=b), 'batch payment not reversed';
+  r := public.billing_batch_settle(c, admin, b, (r->>'revision')::int, current_date, (select jsonb_agg(jsonb_build_object('chargeId', id, 'paid', amount)) from public.billing_charges where batch_id=b));
+  assert (r->>'denied')::numeric=0 and (select status='closed' from public.billing_batches where id=b), 'settled again';
+  assert (select count(*) from public.billing_payments where batch_id=b and cancelled_at is null)=1, 'one live batch payment';
+  -- Partial update: notes kept when only the NFS-e is sent; an empty NFS-e clears it.
+  r := public.billing_batch_update(c, admin, b, (select revision from public.billing_batches where id=b), '{"notes":"conferido"}');
+  r := public.billing_batch_update(c, admin, b, (r->>'revision')::int, '{"nfseNumber":"777"}');
+  assert r->>'notes'='conferido' and r->>'nfse_number'='777', 'partial update: '||r::text;
+  r := public.billing_batch_update(c, admin, b, (r->>'revision')::int, '{"nfseNumber":""}');
+  assert r->>'nfse_number' is null and r->>'notes'='conferido', 'clear NFS-e: '||r::text;
+  -- Undo never frees a batch number.
+  insert into public.billing_charges(id,clinic_id,doctor_id,patient_name,payer_id,card_number,guide_type,procedure_code,description,unit_amount,amount,service_date,consultation_type)
+  values ('e9400000-0000-4000-8000-000000000009',c,'e9100000-0000-4000-8000-000000000002','Paciente Nove',payer,'0009','consulta','10101012','Consulta',150,150,current_date,'1');
+  r := public.billing_batch_create(c, admin, payer, 'consulta', array['e9400000-0000-4000-8000-000000000009']::uuid[]);
+  n := (r->>'number')::int;
+  perform public.billing_batch_cancel(c, admin, (r->>'id')::uuid, (r->>'revision')::int);
+  r := public.billing_batch_create(c, admin, payer, 'consulta', array['e9400000-0000-4000-8000-000000000009']::uuid[]);
+  assert (r->>'number')::int = n + 1, 'batch number reused after undo: '||n||' -> '||(r->>'number');
+end $$;
 rollback;

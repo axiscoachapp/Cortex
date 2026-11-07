@@ -2,6 +2,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { AuthError, authResponse, requireUser } from './auth.ts';
 import { fetchWithDeadline } from './http.ts';
+import { HttpError } from './billingHandlers.ts';
 import type {
   AppointmentToBill, BatchRow, BillingCaller, BillingDeps, ChargeRow, CoverageRow, DoctorRow, ExpenseRow, PayerRow, PaymentRow, PriceRow, ProfessionalRow, SettingsRow,
 } from './billingHandlers.ts';
@@ -26,6 +27,27 @@ export function billingDeps(): BillingDeps {
     throw new Error(`Banco indisponível (${what})`);
   };
   const nextDay = (d: string) => new Date(Date.parse(`${d}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+  // Reads page through the API row cap (1000) instead of stopping silently at it; beyond CAP the
+  // caller is told to narrow the period rather than receiving a partial list.
+  const PAGE = 1000;
+  const CAP = 20000;
+  async function pages<T>(what: string, build: (from: number, to: number) => PromiseLike<{ data: unknown; error: { code?: string; message?: string } | null }>): Promise<T[]> {
+    const out: T[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await build(from, from + PAGE - 1);
+      if (error) fail(what, error);
+      const rows = (data ?? []) as T[];
+      out.push(...rows);
+      if (rows.length < PAGE) return out;
+      if (out.length >= CAP) throw new HttpError(413, 'Período com dados demais; escolha um intervalo menor.', 'too_large');
+    }
+  }
+  // Long id lists go in groups (URL length of the hosted gateway).
+  async function chunked<T>(ids: string[], run: (part: string[]) => Promise<T[]>): Promise<T[]> {
+    const out: T[] = [];
+    for (let i = 0; i < ids.length; i += 200) out.push(...(await run(ids.slice(i, i + 200))));
+    return out;
+  }
 
   return {
     corsHeaders: cors,
@@ -123,46 +145,51 @@ export function billingDeps(): BillingDeps {
           .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
       },
       async appointmentsToBill(clinic, doctors, from, to) {
-        if (!doctors.length) return [];
+        if (doctors && !doctors.length) return [];
         // Attended appointments of the clinic agenda: done, or checked in and not cancelled.
-        const { data, error } = await service.from('appointments').select('id, user_id, start_time, type, status, contact_id, checked_in_at')
-          .eq('clinic_id', clinic).in('user_id', doctors).gte('start_time', `${from}T00:00:00-03:00`).lt('start_time', `${nextDay(to)}T00:00:00-03:00`)
-          .order('start_time').limit(1000);
-        if (error) fail('agenda', error);
-        const rows = ((data ?? []) as Array<{ id: string; user_id: string; start_time: string; type: string | null; status: string | null; contact_id: string | null; checked_in_at: string | null }>)
-          .filter((a) => a.status === 'realizado' || (a.checked_in_at && !['cancelado', 'faltou'].includes(a.status ?? '')));
+        const rows = await pages<{ id: string; user_id: string; start_time: string; type: string | null; status: string | null; contact_id: string | null }>('agenda', (a, b) => {
+          let q = service.from('appointments').select('id, user_id, start_time, type, status, contact_id')
+            .eq('clinic_id', clinic).gte('start_time', `${from}T00:00:00-03:00`).lt('start_time', `${nextDay(to)}T00:00:00-03:00`)
+            .or('status.eq.realizado,and(checked_in_at.not.is.null,status.not.in.(cancelado,faltou))');
+          if (doctors) q = q.in('user_id', doctors);
+          return q.order('start_time').order('id').range(a, b);
+        });
         const contactIds = [...new Set(rows.map((r) => r.contact_id).filter((x): x is string => !!x))];
         const names = new Map<string, string>();
-        if (contactIds.length) {
-          const { data: contacts, error: e2 } = await service.from('clinic_contacts').select('id, name').eq('clinic_id', clinic).in('id', contactIds);
-          if (e2) fail('contatos', e2);
-          for (const c of (contacts ?? []) as Array<{ id: string; name: string }>) names.set(c.id, c.name);
-        }
+        for (const c of await chunked(contactIds, async (part) => {
+          const { data, error } = await service.from('clinic_contacts').select('id, name').eq('clinic_id', clinic).in('id', part);
+          if (error) fail('contatos', error);
+          return (data ?? []) as Array<{ id: string; name: string }>;
+        })) names.set(c.id, c.name);
         return rows.map((a): AppointmentToBill => ({ id: a.id, doctor_id: a.user_id, start_time: a.start_time, type: a.type, status: a.status, contact_id: a.contact_id,
           contact_name: a.contact_id ? names.get(a.contact_id) ?? null : null }));
       },
       async billedAppointments(clinic, ids) {
-        if (!ids.length) return [];
-        const { data, error } = await service.from('billing_charges').select('appointment_id').eq('clinic_id', clinic).in('appointment_id', ids).neq('status', 'cancelled');
-        if (error) fail('cobranças', error);
-        return ((data ?? []) as Array<{ appointment_id: string }>).map((r) => r.appointment_id);
+        return chunked(ids, async (part) => {
+          const { data, error } = await service.from('billing_charges').select('appointment_id').eq('clinic_id', clinic).in('appointment_id', part).neq('status', 'cancelled');
+          if (error) fail('cobranças', error);
+          return ((data ?? []) as Array<{ appointment_id: string }>).map((r) => r.appointment_id);
+        });
       },
       async coverages(clinic, contactIds) {
-        if (!contactIds.length) return [];
-        const { data, error } = await service.from('billing_coverages').select('contact_id, payer_id, card_number, card_valid_until, plan').eq('clinic_id', clinic).in('contact_id', contactIds);
-        if (error) fail('carteirinhas', error);
-        return (data ?? []) as CoverageRow[];
+        return chunked(contactIds, async (part) => {
+          const { data, error } = await service.from('billing_coverages').select('contact_id, payer_id, card_number, card_valid_until, plan').eq('clinic_id', clinic).in('contact_id', part);
+          if (error) fail('carteirinhas', error);
+          return (data ?? []) as CoverageRow[];
+        });
       },
       async saveCoverage(clinic, row) {
         const { error } = await service.from('billing_coverages').upsert({ ...row, clinic_id: clinic, updated_at: new Date().toISOString() }, { onConflict: 'clinic_id,contact_id,payer_id' });
         if (error) fail('carteirinha', error);
       },
       async intakeInsurance(clinic, appointmentIds) {
-        if (!appointmentIds.length) return {};
-        const { data, error } = await service.from('intake_requests').select('appointment_id, registration').eq('clinic_id', clinic).eq('status', 'answered').in('appointment_id', appointmentIds);
-        if (error) fail('pré-consulta', error);
+        const rows = await chunked(appointmentIds, async (part) => {
+          const { data, error } = await service.from('intake_requests').select('appointment_id, registration').eq('clinic_id', clinic).eq('status', 'answered').in('appointment_id', part);
+          if (error) fail('pré-consulta', error);
+          return (data ?? []) as Array<{ appointment_id: string; registration: Array<{ field?: string; value: unknown }> | null }>;
+        });
         const out: Record<string, { payer?: string; card?: string; validUntil?: string; type?: string }> = {};
-        for (const r of (data ?? []) as Array<{ appointment_id: string; registration: Array<{ field?: string; value: unknown }> | null }>) {
+        for (const r of rows) {
           const get = (f: string) => { const v = r.registration?.find((a) => a.field === f)?.value; return typeof v === 'string' ? v : undefined; };
           out[r.appointment_id] = { type: get('insurance_type'), payer: get('insurance_payer'), card: get('insurance_card'), validUntil: get('insurance_card_valid_until') };
         }
@@ -176,13 +203,14 @@ export function billingDeps(): BillingDeps {
         return { id: a.id, doctor_id: a.user_id, start_time: a.start_time, type: a.type, status: a.status, contact_id: a.contact_id, contact_name: null };
       },
       async charges(clinic, doctors, f) {
-        if (!doctors.length) return [];
-        let q = service.from('billing_charges').select(CHARGE_COLUMNS).eq('clinic_id', clinic).in('doctor_id', doctors).gte('service_date', f.from).lte('service_date', f.to);
-        if (f.status && STATUSES.has(f.status)) q = q.eq('status', f.status);
-        if (f.payerId) q = q.eq('payer_id', f.payerId);
-        const { data, error } = await q.order('service_date', { ascending: false }).order('created_at', { ascending: false }).limit(2000);
-        if (error) fail('cobranças', error);
-        return (data ?? []) as unknown as ChargeRow[];
+        if (doctors && !doctors.length) return [];
+        return pages<ChargeRow>('cobranças', (a, b) => {
+          let q = service.from('billing_charges').select(CHARGE_COLUMNS).eq('clinic_id', clinic).gte('service_date', f.from).lte('service_date', f.to);
+          if (doctors) q = q.in('doctor_id', doctors);
+          if (f.status && STATUSES.has(f.status)) q = q.eq('status', f.status);
+          if (f.payerId) q = q.eq('payer_id', f.payerId);
+          return q.order('service_date', { ascending: false }).order('created_at', { ascending: false }).order('id').range(a, b);
+        });
       },
       async charge(clinic, id) {
         const { data, error } = await service.from('billing_charges').select(CHARGE_COLUMNS).eq('clinic_id', clinic).eq('id', id).maybeSingle();
@@ -232,16 +260,15 @@ export function billingDeps(): BillingDeps {
         return (data ?? []) as unknown as ChargeRow[];
       },
       async payments(clinic, from, to) {
-        const { data, error } = await service.from('billing_payments').select('id, charge_id, batch_id, method, amount, received_on, notes, cancelled_at, created_at')
-          .eq('clinic_id', clinic).gte('received_on', from).lte('received_on', to).order('received_on', { ascending: false }).limit(3000);
-        if (error) fail('recebimentos', error);
-        return (data ?? []) as PaymentRow[];
+        return pages<PaymentRow>('recebimentos', (a, b) => service.from('billing_payments')
+          .select('id, charge_id, batch_id, method, amount, received_on, notes, cancelled_at, created_at')
+          .eq('clinic_id', clinic).gte('received_on', from).lte('received_on', to).order('received_on', { ascending: false }).order('id').range(a, b));
       },
       async expenses(clinic, from, to) {
-        const { data, error } = await service.from('billing_expenses').select('id, description, category, amount, due_on, paid_on, method, notes, revision')
-          .eq('clinic_id', clinic).gte('due_on', from).lte('due_on', to).order('due_on').limit(2000);
-        if (error) fail('despesas', error);
-        return (data ?? []) as ExpenseRow[];
+        // Due in the period or paid in it: the cash view counts paid ones by payment date.
+        return pages<ExpenseRow>('despesas', (a, b) => service.from('billing_expenses')
+          .select('id, description, category, amount, due_on, paid_on, method, notes, revision').eq('clinic_id', clinic)
+          .or(`and(due_on.gte.${from},due_on.lte.${to}),and(paid_on.gte.${from},paid_on.lte.${to})`).order('due_on').order('id').range(a, b));
       },
       async saveExpense(clinic, id, revision, row, actor) {
         const q = id

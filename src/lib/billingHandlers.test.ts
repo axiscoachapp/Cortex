@@ -63,7 +63,8 @@ function harness(opts: { role?: BillingRole | null; caller?: string; payer?: Par
   const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
     calls.push([name, args]);
     if (name === 'billing_role') return opts.role === undefined ? 'admin' : opts.role;
-    if (name === 'billing_doctor_ok') return args.p_doctor === DOCTOR;
+    // As in SQL: the admin passes for any doctor id; others only for their scope.
+    if (name === 'billing_doctor_ok') return (opts.role === undefined || opts.role === 'admin') ? true : args.p_doctor === DOCTOR;
     if (name === 'billing_visible_doctors') return [DOCTOR];
     if (name === 'billing_batch_update') return { ...batch(), revision: 2, xml_hash: (args.p_patch as { xmlHash: string }).xmlHash };
     return null;
@@ -168,5 +169,49 @@ describe('production report', () => {
 
   it('formats São Paulo time for the transaction header', () => {
     expect(saoPaulo(new Date('2026-11-07T02:15:09Z'))).toEqual({ date: '2026-11-06', time: '23:15:09' });
+  });
+});
+
+describe('billing-api after the self-review (07/11)', () => {
+  it('gives payout percentages to the admin, only their own to a doctor, none to the reception', async () => {
+    const other = { ...professional, user_id: ADMIN, tiss_name: 'OUTRO', share_percent: 45 };
+    const admin = await (await harness({ professionals: [professional, other] }).api({ action: 'state' })).json();
+    expect(admin.professionals).toHaveLength(2);
+    const doctor = await (await harness({ role: 'doctor', caller: DOCTOR, professionals: [professional, other] }).api({ action: 'state' })).json();
+    expect(doctor.professionals.map((p: { userId: string }) => p.userId)).toEqual([DOCTOR]);
+    const rec = await (await harness({ role: 'reception', caller: RECEPTION, professionals: [professional, other] }).api({ action: 'state' })).json();
+    expect(rec.professionals).toEqual([]);
+  });
+
+  it('lets the admin list charges of every doctor, including those who left (no doctor filter)', async () => {
+    const h = harness();
+    let seen: unknown = 'unset';
+    h.deps.store.charges = async (_c, doctors) => { seen = doctors; return []; };
+    await h.api({ action: 'charges', from: '2026-11-01', to: '2026-11-30' });
+    expect(seen).toBeNull();
+    const rec = harness({ role: 'reception', caller: RECEPTION });
+    rec.deps.store.charges = async (_c, doctors) => { seen = doctors; return []; };
+    await rec.api({ action: 'charges', from: '2026-11-01', to: '2026-11-30' });
+    expect(seen).toEqual([DOCTOR]);
+  });
+
+  it('refuses a manual charge for someone who is not an active doctor of the clinic, and ignores a contact from the request', async () => {
+    const h = harness();
+    const base = { action: 'createCharge', patientName: 'X', procedureCode: '10101012', description: 'Consulta', unitAmount: 1, serviceDate: '2026-11-06' };
+    expect((await h.api({ ...base, doctorId: 'e9100000-0000-4000-8000-0000000000ff' })).status).toBe(404);
+    expect((await h.api({ ...base, doctorId: DOCTOR, contactId: 'e9700000-0000-4000-8000-0000000000ff' })).status).toBe(200);
+    expect(h.inserted.at(-1)).toMatchObject({ contact_id: null });
+  });
+
+  it('returns the stored file of a draft already generated, and sends only the batch fields given', async () => {
+    const stored = '<?xml version="1.0" encoding="ISO-8859-1"?>\n<ans:mensagemTISS/>';
+    const h = harness({ batch: { status: 'draft', xml_payload: stored, xml_hash: 'a'.repeat(32) } });
+    const r = await (await h.api({ action: 'batchXml', batchId: BATCH })).json();
+    expect(new TextDecoder('latin1').decode(decode(r.base64))).toBe(stored);
+    expect(h.calls.some(([n]) => n === 'billing_batch_update')).toBe(false);
+    await h.api({ action: 'updateBatch', batchId: BATCH, revision: 1, nfseNumber: '123' });
+    expect(h.calls.at(-1)).toEqual(['billing_batch_update', expect.objectContaining({ p_patch: { nfseNumber: '123' } })]);
+    await h.api({ action: 'reopenBatch', batchId: BATCH, revision: 4 });
+    expect(h.calls.at(-1)).toEqual(['billing_batch_reopen', { p_clinic: CLINIC, p_actor: ADMIN, p_batch: BATCH, p_revision: 4 }]);
   });
 });

@@ -120,8 +120,10 @@ export function CashTab({ scope, state, range }: { scope: string[]; state: Billi
   const payments = q.data?.payments ?? [];
   const expenses = q.data?.expenses ?? [];
   const received = payments.reduce((a, p) => a + p.amount, 0);
-  const paidExpenses = expenses.filter((e) => e.paidOn).reduce((a, e) => a + e.amount, 0);
-  const openExpenses = expenses.filter((e) => !e.paidOn).reduce((a, e) => a + e.amount, 0);
+  // Paid expenses count by payment date and open ones by due date, both inside the month.
+  const inMonth = (d: string | null) => !!d && d >= range.from && d <= range.to;
+  const paidExpenses = expenses.filter((e) => inMonth(e.paidOn)).reduce((a, e) => a + e.amount, 0);
+  const openExpenses = expenses.filter((e) => !e.paidOn && inMonth(e.dueOn)).reduce((a, e) => a + e.amount, 0);
   const byMethod = Object.entries(payments.reduce<Record<string, number>>((m, p) => ({ ...m, [p.method]: (m[p.method] ?? 0) + p.amount }), {}));
 
   return (

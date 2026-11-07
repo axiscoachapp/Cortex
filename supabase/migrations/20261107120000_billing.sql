@@ -34,6 +34,8 @@ create table public.billing_payers (
   payment_days integer check (payment_days is null or payment_days between 1 and 365),
   active boolean not null default true,
   notes text not null default '' check (length(notes) <= 1000),
+  -- Batch numbers are never reused, not even after a draft is undone (the file may have reached the portal).
+  next_batch_number integer not null default 1 check (next_batch_number >= 1),
   revision integer not null default 1 check (revision >= 1),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -252,7 +254,7 @@ begin
      or cardinality(p_charges) <> (select count(distinct x) from unnest(p_charges) x) then
     raise exception 'Escolha de 1 a 100 cobranças diferentes' using errcode = '22023';
   end if;
-  perform 1 from public.billing_payers where clinic_id = p_clinic and id = p_payer and active for share;
+  select next_batch_number into n from public.billing_payers where clinic_id = p_clinic and id = p_payer and active for update;
   if not found then raise exception 'Convênio não encontrado' using errcode = 'P0002'; end if;
   insert into public.billing_settings (clinic_id) values (p_clinic) on conflict (clinic_id) do nothing;
   select next_guide_number into next_guide from public.billing_settings where clinic_id = p_clinic for update;
@@ -264,7 +266,7 @@ begin
   if exists (select 1 from public.billing_charges where id = any (p_charges) and status <> 'open') then
     raise exception 'Alguma cobrança mudou; atualize a lista' using errcode = '40001';
   end if;
-  select coalesce(max(number), 0) + 1 into n from public.billing_batches where clinic_id = p_clinic and payer_id = p_payer;
+  update public.billing_payers set next_batch_number = n + 1 where clinic_id = p_clinic and id = p_payer;
   insert into public.billing_batches (clinic_id, payer_id, number, guide_type, created_by) values (p_clinic, p_payer, n, p_guide_type, p_actor)
   returning * into b;
   -- A charge keeps the guide number it got in an undone batch; only new ones consume numbers.
@@ -317,9 +319,12 @@ begin
     update public.billing_batches set status = 'sent', sent_at = (p_patch->>'sentAt')::date, protocol = nullif(trim(p_patch->>'protocol'), '') where id = b.id;
     update public.billing_charges set status = 'sent', revision = revision + 1, updated_at = now() where batch_id = b.id and status = 'batched';
   end if;
-  if p_patch ? 'nfseNumber' or p_patch ? 'notes' then
-    update public.billing_batches set nfse_number = coalesce(nullif(trim(p_patch->>'nfseNumber'), ''), nfse_number),
-      notes = coalesce(p_patch->>'notes', notes) where id = b.id;
+  -- Only the fields present change; an empty NFS-e number clears it.
+  if p_patch ? 'nfseNumber' then
+    update public.billing_batches set nfse_number = nullif(trim(p_patch->>'nfseNumber'), '') where id = b.id;
+  end if;
+  if p_patch ? 'notes' then
+    update public.billing_batches set notes = left(coalesce(p_patch->>'notes', ''), 1000) where id = b.id;
   end if;
   update public.billing_batches set revision = revision + 1, updated_at = now() where id = b.id returning * into b;
   return to_jsonb(b);
@@ -365,6 +370,27 @@ begin
   update public.billing_batches set status = 'closed', paid_amount = total_paid, denied_amount = total_denied, payment_date = p_payment_date,
     revision = revision + 1, updated_at = now() where id = b.id returning * into b;
   return jsonb_build_object('paid', total_paid, 'denied', total_denied, 'revision', b.revision);
+end $$;
+
+-- Reopens a settled batch to correct the plan's statement (a typo in a paid amount): the charges go
+-- back to 'sent' with paid/denied cleared, the batch payment is marked cancelled (kept for audit), and
+-- the batch can be settled again. Admin only.
+create function public.billing_batch_reopen(p_clinic uuid, p_actor uuid, p_batch uuid, p_revision integer) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare b public.billing_batches;
+begin
+  if auth.role() is distinct from 'service_role' then raise exception 'Not authorized' using errcode = '42501'; end if;
+  if public.billing_role(p_clinic, p_actor) is distinct from 'admin' then raise exception 'Só a administração corrige o retorno do convênio' using errcode = '42501'; end if;
+  select * into b from public.billing_batches where clinic_id = p_clinic and id = p_batch for update;
+  if not found then raise exception 'Lote não encontrado' using errcode = 'P0002'; end if;
+  if b.revision is distinct from p_revision then raise exception 'O lote mudou; atualize' using errcode = '40001'; end if;
+  if b.status <> 'closed' then raise exception 'Só um lote com retorno lançado pode ser reaberto' using errcode = '55000'; end if;
+  update public.billing_charges set status = 'sent', paid_amount = 0, denied_amount = 0, denial_code = null, denial_note = null,
+    revision = revision + 1, updated_at = now() where batch_id = b.id;
+  update public.billing_payments set cancelled_at = now(), cancelled_by = p_actor where batch_id = b.id and cancelled_at is null;
+  update public.billing_batches set status = 'sent', paid_amount = 0, denied_amount = 0, payment_date = null, revision = revision + 1, updated_at = now()
+  where id = b.id returning * into b;
+  return jsonb_build_object('status', b.status, 'revision', b.revision);
 end $$;
 
 -- Payment of a private charge (one or more installments up to the amount). Admin or scoped reception.
@@ -417,6 +443,7 @@ do $$ declare f text; begin
   foreach f in array array['public.billing_role(uuid,uuid)', 'public.billing_doctor_ok(uuid,uuid,uuid)', 'public.billing_visible_doctors(uuid,uuid)',
     'public.billing_batch_create(uuid,uuid,uuid,text,uuid[])', 'public.billing_batch_cancel(uuid,uuid,uuid,integer)',
     'public.billing_batch_update(uuid,uuid,uuid,integer,jsonb)', 'public.billing_batch_settle(uuid,uuid,uuid,integer,date,jsonb)',
+    'public.billing_batch_reopen(uuid,uuid,uuid,integer)',
     'public.billing_charge_pay(uuid,uuid,uuid,integer,numeric,text,date,text)', 'public.billing_payment_cancel(uuid,uuid,uuid)'] loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
     execute format('grant execute on function %s to service_role', f);
