@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K1/4c: `a9c748b4d601ac22927989d5e3184ca096a4ad10`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Adaptador unassign concluído; botão K1/4d ainda pendente.
+
 Atualizado em 2026-11-07 03:20. **K1/4c — adaptador unassign:** [provas](../docs/reviews/2026-11-07/whatsapp-release/IMPLEMENTATION.md), [contrato](../docs/product/clinic-crm/WHATSAPP_RELEASE_COMMAND.md). Próprio apenas como conferência local do snapshot, sem identidade no corpo; recibo open/revisão+1/assignedTo null, sem retry e needsRefresh após início inconclusivo.36RED→125Vitest/três arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória com nove verificações/oito comandos/três hashes estáveis/zero rede. Não prova autorização/SQL/CAS/Meta nem integra botão.
 
 Próximo K1/4d: devolver à fila na UI só aberta/própria, escopo/detalhe frescos e reconciliação por gerações. Nenhuma mensagem Claude nova;2152 atendida2353, 2026-11-07-0320_codex-para-claude_k1-contrato-devolver-fila.md informativa encerrada sem confirmação. C4/C5 aguardam SHA; dois RED C5 fora desta suíte dirigida. Automação ACTIVE; main/axiscoachapp sem push/hosted/SQL/carga, preservar Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md.
