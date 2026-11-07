@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { useClinicAccess } from './accessContext';
 import { kinds } from './contracts';
 import { useRequestId } from './useRequestId';
 import { ReceptionNotice } from './ReceptionNotice';
+import { ContactSearch } from './ContactSearch';
 
 export interface ContactOption {
   id: string;
@@ -29,7 +30,6 @@ export function NewCaseDialog({
   const client = useQueryClient();
   const field = useId();
   const [mode, setMode] = useState<'existing' | 'new'>('existing');
-  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<ContactOption | null>(contact ?? null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -44,12 +44,6 @@ export function NewCaseDialog({
     !!(name || phone || subject),
     'Há um atendimento não salvo. Deseja sair e descartar o preenchimento?',
   );
-  const results = useQuery({
-    queryKey: ['reception', access?.actorId, 'contacts', access?.clinic?.id, search],
-    queryFn: () => receptionApi.contacts(access!.clinic!.id, search),
-    enabled: !!access?.clinic && mode === 'existing' && !selected && search.trim().length >= 2,
-    retry: false,
-  });
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (busy || !access?.clinic) return;
@@ -126,43 +120,7 @@ export function NewCaseDialog({
                   </label>
                 </fieldset>
                 {mode === 'existing' ? (
-                  <div className="space-y-2">
-                    <Label htmlFor={field + 'search'}>Buscar contato por nome ou telefone</Label>
-                    <Input
-                      id={field + 'search'}
-                      value={search}
-                      maxLength={200}
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
-                    <ReceptionNotice
-                      loading={results.isFetching}
-                      error={results.error}
-                      onRetry={() => void results.refetch()}
-                    />
-                    {search.trim().length < 2 ? (
-                      <p className="text-xs text-muted-foreground">Digite ao menos dois caracteres.</p>
-                    ) : (
-                      results.data?.items.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className="block w-full rounded-lg border p-3 text-left hover:bg-muted text-sm"
-                          onClick={() => setSelected(item)}
-                        >
-                          <span className="font-medium">{item.name}</span>
-                          <span className="block text-xs text-muted-foreground">{item.phone || 'Sem telefone'}</span>
-                        </button>
-                      ))
-                    )}
-                    {results.data?.items.length === 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Nenhum contato encontrado. Você pode cadastrar um novo.
-                      </p>
-                    )}
-                    {results.data?.nextCursor && (
-                      <p className="text-xs text-muted-foreground">Refine a busca para localizar o contato.</p>
-                    )}
-                  </div>
+                  <ContactSearch onSelect={setSelected} />
                 ) : (
                   <div className="space-y-3">
                     <div>

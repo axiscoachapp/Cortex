@@ -1,0 +1,35 @@
+{
+  "syntax": 3,
+  "rejected": 4,
+  "checks": [
+    {
+      "args": [
+        "--only=contact-search",
+        "--check-whatsapp-paused"
+      ],
+      "rejected": true
+    },
+    {
+      "args": [
+        "--only=contact-search",
+        "--only=whatsapp-read"
+      ],
+      "rejected": true
+    },
+    {
+      "args": [
+        "--only=contact-search",
+        "--overlay=src/features/reception/WhatsAppInbox.tsx"
+      ],
+      "rejected": true
+    },
+    {
+      "args": [
+        "--only=contact-search",
+        "--overlay=src/features/reception/ContactSearch.tsx",
+        "--overlay=src/features/reception/ContactSearch.tsx"
+      ],
+      "rejected": true
+    }
+  ]
+}

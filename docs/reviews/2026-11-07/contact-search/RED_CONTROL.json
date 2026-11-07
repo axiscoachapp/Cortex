@@ -1,0 +1,26 @@
+{
+  "baseline": "b37e7d5befa684b4957fc9c998776e2b8742342d",
+  "failed": 19,
+  "passed": 3,
+  "total": 22,
+  "noGenericTimeouts": true,
+  "controls": [
+    {
+      "path": "src/features/reception/ContactSearch.tsx",
+      "fixedSha256": "890bb6544e8bc0a93f0e1a92a6195a5cb32340ab5e1b8b4c53410f5c1dc3aa0c",
+      "restoredSha256": "890bb6544e8bc0a93f0e1a92a6195a5cb32340ab5e1b8b4c53410f5c1dc3aa0c"
+    },
+    {
+      "path": "src/features/reception/NewCaseDialog.tsx",
+      "fixedSha256": "fa986b3a4ec27e8bc998595ad79c9e026d9ef55e3238824f2952514f13fb7793",
+      "restoredSha256": "fa986b3a4ec27e8bc998595ad79c9e026d9ef55e3238824f2952514f13fb7793"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "fixedSha256": "428c6d23aa13cec5515d64e83a8c90ede7d2e332da1d8cdcadd87c098f46eb00",
+      "restoredSha256": "428c6d23aa13cec5515d64e83a8c90ede7d2e332da1d8cdcadd87c098f46eb00"
+    }
+  ],
+  "restored": true,
+  "excluded": "Initial tests used a brittle whitespace-specific accessible name and four missing-signal waits timed out; refined role matcher and direct signal assertion validated against original sources. First GREEN preparation hit an incomplete JSX replacement, corrected before final verification."
+}

@@ -52,9 +52,19 @@ type RpcName =
   | 'reception_block_time'
   | 'reception_unblock_time';
 
-async function rpc<T>(name: RpcName, args: Record<string, unknown>, schema: z.ZodType<T>): Promise<T> {
-  // RPC names and arguments are centralized here; all returned projections are validated.
-  const { data, error, status } = await supabase.rpc(name as never, args as never).abortSignal(AbortSignal.timeout(20_000));
+function checkCancellation(signal?: AbortSignal) {
+  if (signal?.aborted) throw new ReceptionError('A consulta foi cancelada.', 'cancelled');
+}
+async function rpc<T>(name: RpcName, args: Record<string, unknown>, schema: z.ZodType<T>, signal?: AbortSignal): Promise<T> {
+  // Existing callers keep the same deadline and projections. Only readers opt into caller cancellation.
+  checkCancellation(signal);
+  const deadline = AbortSignal.timeout(20_000);
+  const requestSignal = signal ? AbortSignal.any([signal, deadline]) : deadline;
+  const { data, error, status } = await Promise.resolve(supabase.rpc(name as never, args as never).abortSignal(requestSignal)).catch(error => {
+    checkCancellation(signal);
+    throw error;
+  });
+  checkCancellation(signal);
   if (error) {
     if (name === 'clinic_access' && isClinicAccessTransportFailure(status, error)) throw new ClinicAccessTransportError();
     const unavailableAppointment = name === 'reception_change_appointment' && error.code === '42501' && error.message === 'Agendamento indisponível';
@@ -90,8 +100,8 @@ export const receptionApi = {
   teamDoctors: (clinic: string) => rpc('reception_team_doctors', { p_clinic: clinic }, teamDoctorsSchema),
   updateStaff: (staff: string, doctors: string[], active: boolean) =>
     rpc('update_reception_staff', { p_staff: staff, p_doctors: doctors, p_active: active }, z.boolean()),
-  contacts: (clinic: string, search = '', before: string | null = null) =>
-    rpc('reception_contacts', { p_clinic: clinic, p_search: search, p_before: before }, contactPageSchema),
+  contacts: (clinic: string, search = '', before: string | null = null, signal?: AbortSignal) =>
+    rpc('reception_contacts', { p_clinic: clinic, p_search: search, p_before: before }, contactPageSchema, signal),
   contact: (id: string) => rpc('reception_contact', { p_contact: id }, contactSchema),
   contactEdit: (id: string) => rpc('reception_contact_edit', { p_contact: id }, contactEditSchema),
   linkEdit: (contact: string, patient: string) =>

@@ -1,0 +1,178 @@
+{
+  "baseline": "b37e7d5befa684b4957fc9c998776e2b8742342d",
+  "scope": "T43 fresh contact search reused in new reception cases and booking; no submissions",
+  "unit": {
+    "redFailed": 19,
+    "redPassed": 3,
+    "redTotal": 22,
+    "controlledOriginalSources": true,
+    "restoredByteForByte": true,
+    "passed": 118,
+    "failed": 0,
+    "files": 12,
+    "newUI": 16,
+    "newAPI": 6,
+    "existing": 96,
+    "filesAndCounts": [
+      {
+        "name": "accessApi.test.ts",
+        "count": 20
+      },
+      {
+        "name": "appointmentApi.test.ts",
+        "count": 5
+      },
+      {
+        "name": "BookingDialog.test.tsx",
+        "count": 6
+      },
+      {
+        "name": "BookingRelationshipRecovery.test.tsx",
+        "count": 10
+      },
+      {
+        "name": "ContactCorrectionDialog.test.tsx",
+        "count": 7
+      },
+      {
+        "name": "contactLinksApi.test.ts",
+        "count": 11
+      },
+      {
+        "name": "ContactLinksDialog.test.tsx",
+        "count": 12
+      },
+      {
+        "name": "ContactSearch.test.tsx",
+        "count": 16
+      },
+      {
+        "name": "contactSearchApi.test.ts",
+        "count": 6
+      },
+      {
+        "name": "linkApi.test.ts",
+        "count": 6
+      },
+      {
+        "name": "linkStateApi.test.ts",
+        "count": 7
+      },
+      {
+        "name": "teamApi.test.ts",
+        "count": 12
+      }
+    ]
+  },
+  "sdk": {
+    "version": "2.86.0",
+    "groups": 8,
+    "posts": 7,
+    "sourceHashes": 3,
+    "sourceHashesStable": true,
+    "nativeNetworkCalls": 0,
+    "preAbortNoRPC": true,
+    "lateResultRejected": true,
+    "inFlightAbortObserved": true,
+    "deadline": "Existing20s value and composed deadline cancellation verified by a controlled signal in unit test, without waiting20real seconds."
+  },
+  "browser": {
+    "raw": "docs/reviews/2026-11-05/reception-app-audit/contact-search-reviewed-final/AUDIT.json",
+    "states": 35,
+    "pngs": 66,
+    "widths": [
+      320,
+      375,
+      1280,
+      1920
+    ],
+    "scalePercent": 135,
+    "frozenSources": 349,
+    "runtimeHashes": 35,
+    "overlays": 3,
+    "sourceHashesStable": true,
+    "requests": 33,
+    "interceptedRead403": 4,
+    "expectedConsole403": 4,
+    "jsErrors": 0,
+    "failedRequests": 0,
+    "externalRequests": 0,
+    "clinicalReads": 0,
+    "contactsCreated": 0,
+    "casesWritten": 0,
+    "bookings": 0,
+    "unreachableActions": 0,
+    "cleanupVerified": true,
+    "manualImagesInspected": [
+      "contact-search-results-320",
+      "contact-search-results-320-actions",
+      "contact-search-error-1920"
+    ],
+    "limits": "Real UI/SDK and loopback fixture for successful RPCs; four reception_contacts403 responses intercepted locally. Browser checks visible selection, search-only mode reset, subject preservation and error/retry. Does not submit a contact ID or test pending/paused/cache/context/physical abort; those are unit/SDK evidence.44px measured on initial result rows only; mobile dialogs use internal scrolling."
+  },
+  "typescript": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json --pretty false",
+    "exitCode": 0
+  },
+  "lint": {
+    "files": 8,
+    "exitCode": 0,
+    "finalHelperRechecked": true
+  },
+  "syntax": {
+    "scripts": 3,
+    "exitCode": 0
+  },
+  "cli": {
+    "invalidCombinationsRejected": 4
+  },
+  "review": {
+    "cycles": 3,
+    "actionable": [
+      "Harness did not reject dialogActionReachable:false; strict gate added."
+    ],
+    "final": "No further findings in read-only reconciliation",
+    "crossModel": "Cross-model skipped: non-interactive context."
+  },
+  "excluded": [
+    "Initial whitespace-specific role matcher and missing-signal waits refined before controlled19RED",
+    "First GREEN preparation failed due incomplete nested JSX replacement; corrected",
+    "Second GREEN exposed active=false retaining query observer; scoped child now unmounts and cancels",
+    "contact-search-final stopped at34states because booking selected label has Contato: prefix; corrected in final run"
+  ],
+  "sources": [
+    {
+      "path": "src/features/reception/ContactSearch.tsx",
+      "sha256": "890bb6544e8bc0a93f0e1a92a6195a5cb32340ab5e1b8b4c53410f5c1dc3aa0c"
+    },
+    {
+      "path": "src/features/reception/NewCaseDialog.tsx",
+      "sha256": "fa986b3a4ec27e8bc998595ad79c9e026d9ef55e3238824f2952514f13fb7793"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "428c6d23aa13cec5515d64e83a8c90ede7d2e332da1d8cdcadd87c098f46eb00"
+    },
+    {
+      "path": "src/features/reception/ContactSearch.test.tsx",
+      "sha256": "9d26823394b725ee962774b033fac9abd39f1077aa61130811855871d5568cf5"
+    },
+    {
+      "path": "src/features/reception/contactSearchApi.test.ts",
+      "sha256": "a747f7bc484d92743eb3358eb61fc3a6c9e1d6a1d62e92c90b1d9b3a2ab74426"
+    },
+    {
+      "path": "scripts/reviews/contact-search-sdk.mjs",
+      "sha256": "ec57f13fcfbcc7c1c80faa4c3eedaf7b7d52d0f0720bdcab5560c143ebe13a9e"
+    },
+    {
+      "path": "scripts/fixtures/contact-search-browser.mjs",
+      "sha256": "3c348274b1028d4a2bb09999031954304ac131249e06e4bce781e39edf081d53"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "41151b26a4b594e275e77ecc443b1253a1b3b19b16ad8d215178f5af93084ed1"
+    }
+  ],
+  "limits": "No real Auth/authorization/RLS/DB or record/identity/booking changes validated. Existing preselected-contact, submit and draft-context policies are not redesigned. No producer/C5/schema/PersonalMed/SaaS, hosted, Meta, carga or push. Directed suite only; known C5 RED cases excluded."
+}

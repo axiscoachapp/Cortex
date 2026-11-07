@@ -1,0 +1,129 @@
+{
+  "syntheticOnly": true,
+  "nativeNetworkCalls": 0,
+  "sdkVersion": "2.86.0",
+  "checks": [
+    {
+      "case": "success",
+      "calls": 1,
+      "outcome": "page"
+    },
+    {
+      "case": "forbidden",
+      "calls": 1,
+      "outcome": "42501"
+    },
+    {
+      "case": "wrong",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "extra",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "lost",
+      "calls": 1,
+      "outcome": ""
+    },
+    {
+      "case": "pre-aborted",
+      "calls": 0,
+      "outcome": "cancelled"
+    },
+    {
+      "case": "late",
+      "calls": 1,
+      "outcome": "cancelled"
+    },
+    {
+      "case": "in-flight-aborted",
+      "calls": 1,
+      "outcome": "cancelled"
+    }
+  ],
+  "calls": [
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts",
+      "body": {
+        "p_clinic": "22222222-2222-4222-8222-222222222222",
+        "p_search": "Co",
+        "p_before": null
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts",
+      "body": {
+        "p_clinic": "22222222-2222-4222-8222-222222222222",
+        "p_search": "Co",
+        "p_before": null
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts",
+      "body": {
+        "p_clinic": "22222222-2222-4222-8222-222222222222",
+        "p_search": "Co",
+        "p_before": null
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts",
+      "body": {
+        "p_clinic": "22222222-2222-4222-8222-222222222222",
+        "p_search": "Co",
+        "p_before": null
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts",
+      "body": {
+        "p_clinic": "22222222-2222-4222-8222-222222222222",
+        "p_search": "Co",
+        "p_before": null
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts",
+      "body": {
+        "p_clinic": "22222222-2222-4222-8222-222222222222",
+        "p_search": "Co",
+        "p_before": null
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts",
+      "body": {
+        "p_clinic": "22222222-2222-4222-8222-222222222222",
+        "p_search": "Co",
+        "p_before": null
+      }
+    }
+  ],
+  "unexpected": [],
+  "sources": [
+    {
+      "path": "src/features/reception/contracts.ts",
+      "sha256": "8c5f7f329416fd0e5b8dcdb155f99721015606699ce5fb5f9de07599640047a7"
+    },
+    {
+      "path": "src/features/reception/accessErrors.ts",
+      "sha256": "028c54d78744d934925be421a21e63ebfa1b7aea8785b2d1042884a66f0bd221"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "428c6d23aa13cec5515d64e83a8c90ede7d2e332da1d8cdcadd87c098f46eb00"
+    }
+  ],
+  "sourceHashesStable": true,
+  "limits": "Installed client and PostgREST transport only; no real DB/Auth/permissions, records or booking."
+}

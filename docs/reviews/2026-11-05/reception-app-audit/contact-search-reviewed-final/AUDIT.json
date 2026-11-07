@@ -1,0 +1,2608 @@
+{
+  "completed": true,
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": "2026-11-05T15:00:00Z",
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "b37e7d5befa684b4957fc9c998776e2b8742342d",
+  "overlays": [
+    {
+      "path": "src/features/reception/ContactSearch.tsx",
+      "sha256": "890bb6544e8bc0a93f0e1a92a6195a5cb32340ab5e1b8b4c53410f5c1dc3aa0c"
+    },
+    {
+      "path": "src/features/reception/NewCaseDialog.tsx",
+      "sha256": "fa986b3a4ec27e8bc998595ad79c9e026d9ef55e3238824f2952514f13fb7793"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "428c6d23aa13cec5515d64e83a8c90ede7d2e332da1d8cdcadd87c098f46eb00"
+    }
+  ],
+  "frozenTextSourceCount": 349,
+  "frozenTextSourceDigest": "96d6bf363d485ad92268838ec548154cb6500011addb2da0dc382496d6256058",
+  "tailwindRawContentCount": 347,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "41151b26a4b594e275e77ecc443b1253a1b3b19b16ad8d215178f5af93084ed1"
+    },
+    {
+      "path": "scripts/fixtures/contact-search-browser.mjs",
+      "sha256": "3c348274b1028d4a2bb09999031954304ac131249e06e4bce781e39edf081d53"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-paused-browser.mjs",
+      "sha256": "5dc4c63c335c4ca36ba29dc3cfba6d1d918ecad39187fe48840f09af50a763f5"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-templates-browser.mjs",
+      "sha256": "239474f2ffc6b65a31922125f79c23470897c21bf89b2d411f33484563eefaec"
+    },
+    {
+      "path": "scripts/fixtures/patient-workspace-browser.mjs",
+      "sha256": "030d6f283f64a71e73a2961aaef8d6c4b7f9f70e4a7acb421c0c19cc275f3295"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-api.mjs",
+      "sha256": "6917242c74a712db4f0de474ee34ee6133bc32264459876805ffe54e58fc1ce2"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-browser.mjs",
+      "sha256": "b060e05143162c09231358b295010c6ae1f4b8eaab8ec05744fadc3e1ad01527"
+    },
+    {
+      "path": "scripts/fixtures/post-consultation-api.mjs",
+      "sha256": "d7f82be146346f7875eb01da59af0db32f6164fd80ee2911cdb14503a20456c8"
+    },
+    {
+      "path": "scripts/fixtures/post-consultation-browser.mjs",
+      "sha256": "c02499409baf4a4e46467b0c7440e16fc6ebab09259b0fa59777ab3041c9d36e"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-api.mjs",
+      "sha256": "c83f0095188f1a56f6acd379fd7af7758247895d2a12f6006feb4c5462368cc0"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-browser.mjs",
+      "sha256": "8ef010f48a78e2c6186fefaec215588a530e2fabae9491a7dfc0ef3b970b5598"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "7555b5db674ff31de1df4c37ca27e87ad4773ad7970e4b03aa6900fcf5bf0f7a"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "3a94b77284518c05911b890f5e264640535a9921eff918f9898f9e6898956bd9"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "cb4b16a94335f943f37e6ef52495361d42d30e9de5433c828811d7ff511e099e"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-browser.mjs",
+      "sha256": "c01bc7bb0ecc8302a63ab3f17134303aee1d97281ad37805a1fdd10804b7fcfe"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-claim-browser.mjs",
+      "sha256": "d0daac763c2495e5260408251f0c9885b5728c7e9149a5c14bb7cf496c8a42a3"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-release-browser.mjs",
+      "sha256": "a27fe2b4e8878afc396e2b8a6ce097a70534b4f8c53e1ac8374158ba4d3b27c8"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-close-browser.mjs",
+      "sha256": "2cd245615410a62d6957129a1491801fb928ee1f62ca110091714e1d20628539"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-reopen-browser.mjs",
+      "sha256": "b00e19bed4a535756c2041eb1dcf5ff438cfec14233d878d9e4da4e87e4de73e"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-queue-browser.mjs",
+      "sha256": "58cfe5ee83d2c5e74aec6c77f272c2ccd9c08ce95268f4709eee1326289769b5"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-revoke-consent-browser.mjs",
+      "sha256": "6fa095cd1fb937b91ec750e383e178eca08f8036c7ea9333f8f8e3a396e4abf1"
+    },
+    {
+      "path": "scripts/fixtures/mfa-verification-api.mjs",
+      "sha256": "189c608838b9d8b2584be3d6454194a8f87f3753dbbd15d50e4fac2b775f60cd"
+    },
+    {
+      "path": "scripts/fixtures/mfa-verification-browser.mjs",
+      "sha256": "8ecbf6c51b07a70c87e6489bbb10de2c4202837de9decfce51e7c3f6b1ea9b38"
+    },
+    {
+      "path": "scripts/fixtures/mfa-unavailability-browser.mjs",
+      "sha256": "de347477550b63afa6d8fa48ede0440cbad6d440d726106b156a9387a5d8af8d"
+    },
+    {
+      "path": "scripts/fixtures/mfa-inline-browser.mjs",
+      "sha256": "f5be6434d1a266f8ef6074b50ad45e99bc31ec8ac7c5fddba9f0a8c0af58f59e"
+    },
+    {
+      "path": "scripts/fixtures/mfa-success-browser.mjs",
+      "sha256": "74fee2638acbca94a23e077417d15720868659171247757b668c415a2d5e207a"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-api.mjs",
+      "sha256": "aadf9dea7e0ae66cf1c34079fcf178c6a85cdcaf3aec1f3e4b29289f35e38e85"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-browser.mjs",
+      "sha256": "df2663ca28208bd6f60fee197777b5b39cb2eade8bee12d9ffb02f3d53d4d6ab"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": false,
+  "consultationChecks": [],
+  "consultationRequests": [],
+  "consultationMetrics": null,
+  "settingsEmbeddedOnly": false,
+  "previewEntry": null,
+  "settingsChecks": [],
+  "settingsRequests": [],
+  "settingsFixtureMetrics": [],
+  "contactSearchOnly": true,
+  "contactSearchChecks": [
+    {
+      "width": 320,
+      "newCaseSharedPicker": true,
+      "explicitSelection": true,
+      "modeResetSearchOnly": true,
+      "subjectPreserved": true,
+      "readErrorAndExplicitRetry": true,
+      "noRecordCreated": true
+    },
+    {
+      "width": 375,
+      "newCaseSharedPicker": true,
+      "explicitSelection": true,
+      "modeResetSearchOnly": true,
+      "subjectPreserved": true,
+      "readErrorAndExplicitRetry": true,
+      "noRecordCreated": true
+    },
+    {
+      "width": 1280,
+      "newCaseSharedPicker": true,
+      "explicitSelection": true,
+      "modeResetSearchOnly": true,
+      "subjectPreserved": true,
+      "readErrorAndExplicitRetry": true,
+      "noRecordCreated": true
+    },
+    {
+      "width": 1920,
+      "newCaseSharedPicker": true,
+      "explicitSelection": true,
+      "modeResetSearchOnly": true,
+      "subjectPreserved": true,
+      "readErrorAndExplicitRetry": true,
+      "noRecordCreated": true
+    },
+    {
+      "agendaSharedPicker": true,
+      "noBooking": true,
+      "requests": 33,
+      "interceptedDenials": 4,
+      "expected403": 4,
+      "screens": 35
+    }
+  ],
+  "contactSearchRequests": [
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_queue"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_queue"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_queue"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_queue"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_queue"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_queue"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_appointments"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact"
+    }
+  ],
+  "contactSearchMetrics": {
+    "clinicalReads": [],
+    "externalCalls": [],
+    "unknown": [],
+    "bookings": 0,
+    "contacts": 0,
+    "caseWrites": 0
+  },
+  "whatsappPaused": false,
+  "whatsappTemplates": false,
+  "whatsappRevokeConsent": false,
+  "whatsappRevokeConsentCalls": null,
+  "whatsappQueue": false,
+  "whatsappQueueCalls": null,
+  "whatsappReopen": false,
+  "whatsappReopenCalls": null,
+  "whatsappClose": false,
+  "whatsappCloseCalls": null,
+  "whatsappRelease": false,
+  "whatsappReleaseCalls": null,
+  "whatsappClaim": false,
+  "whatsappClaimCalls": null,
+  "whatsappReadOnly": false,
+  "whatsappBotRead": false,
+  "whatsappHistory": false,
+  "whatsappList": false,
+  "whatsappChecks": [],
+  "whatsappRequests": [],
+  "whatsappFixtureCalls": null,
+  "schedulingMigrationOnly": false,
+  "schedulingMigrationChecks": [],
+  "schedulingMigrationCalls": null,
+  "schedulingMigrationReads": null,
+  "schedulingMigrationMetrics": null,
+  "schedulingReceptionMetrics": null,
+  "recoveryNoticeOnly": false,
+  "localRecordingRecovery": false,
+  "postConsultation": false,
+  "postEntries": false,
+  "localRecoveryRequests": [],
+  "postEntryWrites": null,
+  "postConsultationCalls": null,
+  "recoveryNoticeChecks": [],
+  "recoveryNoticeCalls": null,
+  "recoveryNoticeMetrics": null,
+  "patientWorkspaceOnly": false,
+  "patientWorkspaceChecks": [],
+  "patientWorkspaceMetrics": null,
+  "settingsAccessOnly": false,
+  "settingsAdminOnly": false,
+  "settingsAccessChecks": [],
+  "settingsAccessRequests": [],
+  "settingsAccessCalls": null,
+  "mfaSuccessOnly": false,
+  "mfaInlineOnly": false,
+  "mfaUnavailabilityOnly": false,
+  "mfaVerificationOnly": false,
+  "mfaVerificationCalls": null,
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": null,
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/alert-dialog.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/BookingDialog.tsx",
+    "src/features/reception/CaseWorkspace.tsx",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/ContactSearch.tsx",
+    "src/features/reception/DoctorSuggestion.tsx",
+    "src/features/reception/LinkRelationshipDialog.tsx",
+    "src/features/reception/NewCaseDialog.tsx",
+    "src/features/reception/ReceptionAppointmentCard.tsx",
+    "src/features/reception/ReceptionCalendar.tsx",
+    "src/features/reception/ReceptionLayout.tsx",
+    "src/features/reception/ReceptionNotice.tsx",
+    "src/features/reception/ReceptionQueue.tsx",
+    "src/features/reception/WhatsAppBotSession.tsx",
+    "src/features/reception/WhatsAppCloseAction.tsx",
+    "src/features/reception/WhatsAppInbox.tsx",
+    "src/features/reception/WhatsAppMessages.tsx",
+    "src/features/reception/WhatsAppQueueAction.tsx",
+    "src/features/reception/WhatsAppReopenAction.tsx",
+    "src/features/reception/WhatsAppRevokeConsentAction.tsx",
+    "src/features/reception/WhatsAppTemplateCatalog.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/appointmentTiming.ts",
+    "src/features/reception/contracts.ts",
+    "src/features/reception/dates.ts",
+    "src/features/reception/linkRelationships.ts",
+    "src/features/reception/routing.ts",
+    "src/features/reception/useCaseDraft.ts",
+    "src/features/reception/useRequestId.ts",
+    "src/features/reception/whatsappApi.ts",
+    "src/features/reception/whatsappClaim.ts",
+    "src/features/reception/whatsappClose.ts",
+    "src/features/reception/whatsappQueue.ts",
+    "src/features/reception/whatsappRelease.ts",
+    "src/features/reception/whatsappReopen.ts",
+    "src/features/reception/whatsappRevokeConsent.ts",
+    "src/features/reception/whatsappTemplates.ts",
+    "src/hooks/use-mobile.tsx",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/functionErrors.ts",
+    "src/lib/interfaceScale.ts",
+    "src/lib/mfa.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx"
+  ],
+  "screens": [
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-opened",
+      "actualPath": "/recepcao",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-opened-320.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-opened-320-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-results",
+      "actualPath": "/recepcao",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Selecionar contato Família Exemplo · (41) 99999-0000",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-results-320.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-results-320-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-new-mode",
+      "actualPath": "/recepcao",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-new-mode-320.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-new-mode-320-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-existing-reset",
+      "actualPath": "/recepcao",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-existing-reset-320.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-existing-reset-320-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-error",
+      "actualPath": "/recepcao",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Tentar buscar contatos",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível buscar contatos. Verifique o acesso e tente novamente.Tentar buscar contatos"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-error-320.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-error-320-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-recovered",
+      "actualPath": "/recepcao",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Selecionar contato Família Exemplo · (41) 99999-0000",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-recovered-320.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-recovered-320-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-selected",
+      "actualPath": "/recepcao",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-selected-320.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-selected-320-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-closed",
+      "actualPath": "/recepcao",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Fila de atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-closed-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-opened",
+      "actualPath": "/recepcao",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-opened-375.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-opened-375-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-results",
+      "actualPath": "/recepcao",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Selecionar contato Família Exemplo · (41) 99999-0000",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-results-375.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-results-375-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-new-mode",
+      "actualPath": "/recepcao",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-new-mode-375.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-new-mode-375-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-existing-reset",
+      "actualPath": "/recepcao",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-existing-reset-375.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-existing-reset-375-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-error",
+      "actualPath": "/recepcao",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Tentar buscar contatos",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível buscar contatos. Verifique o acesso e tente novamente.Tentar buscar contatos"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-error-375.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-error-375-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-recovered",
+      "actualPath": "/recepcao",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Selecionar contato Família Exemplo · (41) 99999-0000",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-recovered-375.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-recovered-375-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-selected",
+      "actualPath": "/recepcao",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-selected-375.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-selected-375-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-closed",
+      "actualPath": "/recepcao",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Fila de atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-closed-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-opened",
+      "actualPath": "/recepcao",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-opened-1280.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-opened-1280-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-results",
+      "actualPath": "/recepcao",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Selecionar contato Família Exemplo · (41) 99999-0000",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-results-1280.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-results-1280-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-new-mode",
+      "actualPath": "/recepcao",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-new-mode-1280.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-new-mode-1280-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-existing-reset",
+      "actualPath": "/recepcao",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-existing-reset-1280.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-existing-reset-1280-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-error",
+      "actualPath": "/recepcao",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Tentar buscar contatos",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível buscar contatos. Verifique o acesso e tente novamente.Tentar buscar contatos"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-error-1280.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-error-1280-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-recovered",
+      "actualPath": "/recepcao",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Selecionar contato Família Exemplo · (41) 99999-0000",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-recovered-1280.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-recovered-1280-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-selected",
+      "actualPath": "/recepcao",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-selected-1280.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-selected-1280-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-closed",
+      "actualPath": "/recepcao",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Fila de atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-closed-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-opened",
+      "actualPath": "/recepcao",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-opened-1920.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-opened-1920-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-results",
+      "actualPath": "/recepcao",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Selecionar contato Família Exemplo · (41) 99999-0000",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-results-1920.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-results-1920-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-new-mode",
+      "actualPath": "/recepcao",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-new-mode-1920.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-new-mode-1920-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-existing-reset",
+      "actualPath": "/recepcao",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-existing-reset-1920.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-existing-reset-1920-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-error",
+      "actualPath": "/recepcao",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Tentar buscar contatos",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível buscar contatos. Verifique o acesso e tente novamente.Tentar buscar contatos"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-error-1920.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-error-1920-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-recovered",
+      "actualPath": "/recepcao",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Selecionar contato Família Exemplo · (41) 99999-0000",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-recovered-1920.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-recovered-1920-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-selected",
+      "actualPath": "/recepcao",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Adicionar à fila",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Novo atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-selected-1920.png",
+      "actionScreenshot": "recepcao-a--recepcao-status-open-contact-search-selected-1920-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?status=open",
+      "variant": "contact-search-closed",
+      "actualPath": "/recepcao",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Fila de atendimento"
+      ],
+      "screenshot": "recepcao-a--recepcao-status-open-contact-search-closed-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/agenda",
+      "variant": "contact-search-booking-opened",
+      "actualPath": "/recepcao/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Confirmar agendamento",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:start",
+          "value": "09:00",
+          "width": 308.21875,
+          "top": 752.84375,
+          "bottom": 806.84375
+        },
+        {
+          "id": ":r5:end",
+          "value": "09:30",
+          "width": 308.21875,
+          "top": 855.421875,
+          "bottom": 909.421875
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Confirmar agendamento"
+      ],
+      "screenshot": "recepcao-a--recepcao-agenda-contact-search-booking-opened-375.png",
+      "actionScreenshot": "recepcao-a--recepcao-agenda-contact-search-booking-opened-375-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/agenda",
+      "variant": "contact-search-booking-results",
+      "actualPath": "/recepcao/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Selecionar contato Família Exemplo · (41) 99999-0000",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Confirmar agendamento",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:start",
+          "value": "09:00",
+          "width": 308.21875,
+          "top": 446.625,
+          "bottom": 500.625
+        },
+        {
+          "id": ":r5:end",
+          "value": "09:30",
+          "width": 308.21875,
+          "top": 549.203125,
+          "bottom": 603.203125
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Confirmar agendamento"
+      ],
+      "screenshot": "recepcao-a--recepcao-agenda-contact-search-booking-results-375.png",
+      "actionScreenshot": "recepcao-a--recepcao-agenda-contact-search-booking-results-375-actions.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/agenda",
+      "variant": "contact-search-booking-selected",
+      "actualPath": "/recepcao/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Paciente SintéticoNascimento: 01/01/2000",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Confirmar agendamento",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:start",
+          "value": "09:00",
+          "width": 308.21875,
+          "top": 392.921875,
+          "bottom": 446.921875
+        },
+        {
+          "id": ":r5:end",
+          "value": "09:30",
+          "width": 308.21875,
+          "top": 495.5,
+          "bottom": 549.5
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Confirmar agendamento"
+      ],
+      "screenshot": "recepcao-a--recepcao-agenda-contact-search-booking-selected-375.png",
+      "actionScreenshot": "recepcao-a--recepcao-agenda-contact-search-booking-selected-375-actions.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    {
+      "path": "/recepcao",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    },
+    {
+      "path": "/recepcao",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    },
+    {
+      "path": "/recepcao",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    },
+    {
+      "path": "/recepcao",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    }
+  ],
+  "failedRequests": [],
+  "errorResponses": [
+    {
+      "path": "/rest/v1/rpc/reception_contacts",
+      "status": 403
+    },
+    {
+      "path": "/rest/v1/rpc/reception_contacts",
+      "status": 403
+    },
+    {
+      "path": "/rest/v1/rpc/reception_contacts",
+      "status": 403
+    },
+    {
+      "path": "/rest/v1/rpc/reception_contacts",
+      "status": 403
+    }
+  ],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}
