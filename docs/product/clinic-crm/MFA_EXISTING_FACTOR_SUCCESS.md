@@ -1,0 +1,9 @@
+# T39/3c/2c/2b/4 — sucesso de um fator já ativo
+
+Validar a confirmação explícita de um autenticador já verificado na página de segurança, após uma recusa. Um novo desafio deve estar ligado ao fator escolhido; o sucesso limpa o código e mostra o aviso existente. A sessão sintética deve passar de aal1 para aal2 no SDK instalado e continuar assim após recarregar, mantendo ator e fatores. Nenhum dado clínico é consultado.
+
+O transporte de sucesso é opt-in separado. Os modos negativos existentes continuam incapazes de emitir sessão de verificação bem-sucedida. Só uma verificação válida, com desafio novo/vinculado/não consumido/dentro do prazo declarado e o código fictício fixado na fixture, pode receber o DTO de sessão sintética. Replay, expiração (inclusive no limite exato) e troca de fator/desafio são recusados. Não registrar códigos, tokens ou chaves nas métricas/provas; registrar apenas ação, IDs sintéticos, comprimento e resultado. As capturas MFA mascaram o campo do código pelo recurso de screenshot, mantendo as asserções sobre o valor real no DOM.
+
+Navegador isolado com App/Auth providers/SDK reais, sem overlay de produto: formatos atual e legado para a recusa anterior, quatro larguras320–1920 a135%, estado inicial/recusa/sucesso/reload. Conferir nível pelo SDK real sem devolver credenciais ao runner; fingerprint de armazenamento deve mudar no sucesso e permanecer no reload. Código, ator, fatores, geometria e chamadas conferidos; sem cadastro/remoção de fator, recurso clínico ou externo.
+
+O JWT de resposta tem assinatura fictícia e existe apenas no servidor local descartável. A prova valida o consumo/persistência pelo cliente, não valida assinatura/TOTP/AAL2 de Auth real. Cadastro seguido de confirmação, desbloqueio clínico positivo, recuperação, perda de transporte e limites reais permanecem recortes próprios.

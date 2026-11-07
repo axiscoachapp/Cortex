@@ -7,7 +7,7 @@ import { createMfaVerificationFixture } from './mfa-verification-api.mjs';
 import { createSchedulingFixture } from './scheduling-migration-api.mjs';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, patientWorkspaceReview = false, recoveryNoticeReview = false, postConsultationReview = false, postEntryReview = false, schedulingReview = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false, mfaCancellationReview = false, mfaVerificationReview = false } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, patientWorkspaceReview = false, recoveryNoticeReview = false, postConsultationReview = false, postEntryReview = false, schedulingReview = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false, mfaCancellationReview = false, mfaVerificationReview = false, mfaVerificationSuccessReview = false } = {}) {
   if(patientWorkspaceReview&&!workspaceDates)throw new Error('Patient workspace review requires workspace display data');
   if(recoveryNoticeReview&&(!workspaceDates||patientWorkspaceReview))throw new Error('Recovery notice review requires its isolated workspace fixture');
   if(schedulingReview&&(!workspaceDates||patientWorkspaceReview||recoveryNoticeReview))throw new Error('Scheduling review requires its isolated workspace fixture');
@@ -21,6 +21,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   if(mfaEnrollmentReview&&(!mfaReview||mfaCleanupReview))throw new Error('MFA enrollment requires isolated MFA reads without cleanup-denial mode');
   if(mfaCancellationReview&&!mfaEnrollmentReview)throw new Error('MFA cancellation requires the isolated enrollment fixture');
   if(mfaVerificationReview&&(!mfaReview||mfaCleanupReview||mfaEnrollmentReview||mfaCancellationReview))throw new Error('MFA verification requires isolated MFA reads');
+  if(mfaVerificationSuccessReview&&!mfaVerificationReview)throw new Error('MFA verification success requires isolated verification fixture');
   const now=new Date().toISOString();
   const user={id:uid,email:'review@example.invalid',aud:'authenticated',role:'authenticated',created_at:now,email_confirmed_at:now,app_metadata:{provider:'email'},user_metadata:{},factors:[]};
   if(mfaReview)user.factors=['verified','verified','unverified'].map((status,index)=>({id:['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','cccccccc-cccc-4ccc-8ccc-cccccccccccc'][index],friendly_name:'Autenticador sintético '+['A','B','pendente'][index],factor_type:'totp',status,created_at:'2026-11-05T12:00:00Z',updated_at:'2026-11-05T12:00:00Z'}));
@@ -49,7 +50,12 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   const medicalData={patients,templates,visits,knowledge,settings};
   if(mfaReview)Object.assign(metrics,{mfaRequests:[],mfaUnexpected:[]});
   const mfaAllowed=new Set(['POST /auth/v1/token','GET /auth/v1/user']);
-  const mfaVerification=mfaVerificationReview?createMfaVerificationFixture(user.factors):null;
+  const syntheticVerifiedSession=()=>{
+    const timestamp=Math.floor(Date.now()/1000),payload={sub:uid,role:'authenticated',aud:'authenticated',aal:'aal2',exp:timestamp+86400,iat:timestamp,amr:[{method:'totp',timestamp}]};
+    const accessToken=[{alg:'HS256',typ:'JWT'},payload].map(value=>Buffer.from(JSON.stringify(value)).toString('base64url')).join('.')+'.synthetic-signature';
+    return {access_token:accessToken,refresh_token:'synthetic-mfa-refresh',expires_in:86400,expires_at:payload.exp,token_type:'bearer',user:structuredClone(user)};
+  };
+  const mfaVerification=mfaVerificationReview?createMfaVerificationFixture(user.factors,mfaVerificationSuccessReview?{onVerified:syntheticVerifiedSession}:{}):null;
   if(mfaVerificationReview)for(const factor of user.factors.filter(f=>f.status==='verified'&&f.factor_type==='totp'))for(const action of ['challenge','verify'])mfaAllowed.add('POST /auth/v1/factors/'+factor.id+'/'+action);
   const mfaPendingPath=mfaReview?'/auth/v1/factors/'+user.factors[2].id:null;
   if(mfaCleanupReview){metrics.mfaCleanupCalls=[];mfaAllowed.add('DELETE '+mfaPendingPath);}

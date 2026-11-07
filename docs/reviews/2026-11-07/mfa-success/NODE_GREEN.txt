@@ -1,0 +1,24 @@
+✔ MFA cancellation requires the isolated enrollment fixture (5.2126ms)
+✔ synthetic cancellation removes only the newly enrolled pending setup and protects verification (121.172ms)
+✔ MFA enrollment requires isolated reads and excludes cleanup-denial mode (0.6041ms)
+✔ synthetic enrollment validates input, cleans the stale setup, protects active factors and resets (40.851ms)
+✔ MFA cleanup denial requires its read fixture, denies only the pending DELETE and never enrolls (14.167ms)
+✔ MFA review is isolated from other fixtures and leaves the default user unchanged (10.0408ms)
+✔ MFA review exposes only synthetic factor reads and refuses enrollment, challenge and removal (17.0047ms)
+✔ reply replay requires explicit decision and permissions options; arming validates the pending UUID (10.5917ms)
+✔ a truncated reply follows one write; an identical retry replays while changed bindings conflict (27.0818ms)
+✔ a denied read hides the DTO and can recover without mutating requests or allowing decisions (15.1968ms)
+✔ revision control requires the decision fixture and an existing pending UUID (5.8008ms)
+✔ a stale confirmation conflicts without writing; the fresh revision can be approved explicitly (10.3093ms)
+✔ MFA verification is independently opt-in and binds one synthetic challenge to its selected verified factor (149.211ms)
+✔ successful verification needs a separate opt-in, exact synthetic code and unused bound challenge (53.1108ms)
+✔ successful verification enforces the advertised challenge deadline, including its exact boundary (3.2247ms)
+✔ MFA limits and temporary failures remain phase-specific and never mint a successful session (48.2897ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 732.7477

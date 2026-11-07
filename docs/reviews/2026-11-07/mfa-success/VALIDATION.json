@@ -1,0 +1,72 @@
+{
+  "baseline": "e2da0a673385d02624fd2443602740909f287222",
+  "authJsVersion": "2.86.0",
+  "productChanges": false,
+  "unit": {
+    "files": 3,
+    "passed": 40,
+    "failed": 0
+  },
+  "node": {
+    "files": 2,
+    "passed": 16,
+    "failed": 0,
+    "deadlineRed": "200 != 422, before correction",
+    "boundaryCases": "-1ms, exact deadline, +1ms and replay"
+  },
+  "lint": {
+    "status": "passed after correction",
+    "files": 5
+  },
+  "syntax": {
+    "scripts": 5,
+    "status": "passed after correction"
+  },
+  "invalidCli": {
+    "status": "rejected before browser",
+    "combinations": 4
+  },
+  "browser": [
+    {
+      "report": "docs/reviews/2026-11-05/reception-app-audit/mfa-success-masked-final/AUDIT.json",
+      "states": 32,
+      "frozenSources": 321,
+      "runtimeHashes": 26,
+      "overlays": 0,
+      "hashesStable": true,
+      "requests": 66,
+      "mfaCalls": 32,
+      "successfulSyntheticVerifications": 8,
+      "expected422": 8,
+      "expectedConsoleErrors": 8,
+      "pageErrors": 0,
+      "failedRequests": 0,
+      "unexpected": 0,
+      "external": 0,
+      "codesMasked": true,
+      "cleanupVerified": true
+    },
+    {
+      "report": "docs/reviews/2026-11-05/reception-app-audit/mfa-success-masked-negative-final/AUDIT.json",
+      "states": 40,
+      "frozenSources": 321,
+      "runtimeHashes": 26,
+      "overlays": 0,
+      "hashesStable": true,
+      "requests": 66,
+      "mfaCalls": 48,
+      "successfulSyntheticVerifications": 0,
+      "expected422": 24,
+      "expectedConsoleErrors": 24,
+      "pageErrors": 0,
+      "failedRequests": 0,
+      "unexpected": 0,
+      "external": 0,
+      "codesMasked": true,
+      "cleanupVerified": true
+    }
+  ],
+  "review": "Two bounded read-only reviews. Code masking and expired-challenge acceptance fixed. Final review no actionable findings.",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "limits": "Only existing verified factor, explicit clicks, synthetic unsigned session. SDK reads aal2/TOTP and persists after reload; no real Auth/TOTP/AAL2 or signature validation. No clinical positive unlock/enrollment/recovery/transport-loss/server-rate proof."
+}
