@@ -1,0 +1,21 @@
+{
+  "baseline": "b67232f34037337b9dadf1d12e3ba4bd1ce61dce",
+  "originalPageGitBlobSha256": "9af3c75e2b37a3b0d729bd31842966851439f1cdf7222bfb379229b8d998f6fc",
+  "initial": {
+    "tests": 23,
+    "failed": 22,
+    "passed": 1,
+    "testedBeforeProductEdits": true
+  },
+  "scopeRegression": {
+    "tests": 28,
+    "failed": 3,
+    "passed": 0,
+    "selected": "restarts pagination after role/hidden/inactive context change",
+    "observed": "4 calls instead of3; previous cursor automatically refetched"
+  },
+  "noGenericTimeouts": true,
+  "noSourceSwap": true,
+  "excludedFalseGreen": "../contact-directory-preliminary/SCOPE_GREEN_INCORRECT_FIXTURE.json",
+  "fixtureCorrection": "First attempted role control returned nextCursor:null for the refetched first page and naturally stopped. Corrected fixture retains nextCursor; all3 component regressions fail before mount-suffix fix."
+}

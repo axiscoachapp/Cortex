@@ -1,11 +1,13 @@
 # Checkpoint do Codex
 
-Atualizado em 2026-11-07 08:12 (America/Sao_Paulo). Entrega T44: d2c9dcae906191bb40353779ed66d76e4ea42b09, main/axiscoachapp (autor e committer), sem push.52caminhos próprios (37artefatos finais do navegador); índice livre, dirt6/7 preservado por hash.
+Atualizado em 2026-11-07 08:32 (America/Sao_Paulo). T45 validado; SHA local a registrar após commit, main/axiscoachapp (autor e committer), sem push.
 
-Novo atendimento vinculado ao ator/clínica/papel da abertura. Perda de contexto ou sessão oculta retira campos, interrompe próximas etapas/callbacks e exige fechar e abrir janela limpa. Snapshot, trava síncrona, retry com operação estável/contato reutilizado e bloqueio de saída durante envio. Cache limitado a fila/contatos pelo slot da clínica; colisão com texto de busca reproduzida e corrigida. Solicitação já enviada pode ter sido concluída, sem promessa de aborto/rollback.
+Diretório de contatos só fresh/idle com snapshot atual; erro/paused/pending retiram cartões e ações. Refresh explícito/busca cancelável/paginação humana, cadeia nova por montagem para recuperação/contexto sem cursores herdados; prefixo de invalidação preservado. Permissões iguais, nenhum editor aberto automaticamente.
 
-[Provas](../docs/reviews/2026-11-07/new-case-context/IMPLEMENTATION.md):20RED/3controles/restauração por hash +1RED de cache→56Vitest/quatro arquivos (24novos), tipos reais/lint4/sintaxe2/quatro CLI/duas revisões.20estados/36PNGs320–1920/135%,351fontes/36hashes/um overlay/cleanup;40requests/quatro503-console esperados, zero demais falhas/JS/clínico/escritas/externos. Capturas320/1920 inspecionadas. Browser só bloqueio/recuperação/fechamento/nova janela; envios/contexto tardio/cache em unitários. Preliminares preservados/excluídos.
+[Provas](../docs/reviews/2026-11-07/contact-directory/IMPLEMENTATION.md):22RED/um controle+trêsRED de contexto→84Vitest/cinco arquivos/28novos, tipos reais/lint5/sintaxe2/seis CLI/duas revisões.32estados/36PNGs320–1920/135%,353fontes/37hashes/dois overlays/cleanup;32requests/quatro403-console esperados, zero demais falhas/JS/clínico/escritas/reservas/externos. Capturas320/1920/ações375 inspecionadas; browser só recepção/refresh/erro/retry/busca/abrir-cancelar. Contexto/cursor/cancel/admin só unitários. Ensaio de cursor com fixture incorreta e CLI com pasta antiga excluídos e corrigidos; detalhes no relatório.
 
-Sem incoming Claude novo. Última2152 já atendida2201/2316/2330/2353; mensagens abertas antigas respondidas não exigem confirmação. Pedido0506 do catálogo4j continua pendente; C4/C5/2316/2330 aguardam SHAs do Claude, dois RED C5 fora da suíte dirigida. Próximos incrementos próprios de K1, MFA/K7 conforme dependências do ESTADO. T43 anterior069ce3f preservado.
+Próximos: contexto próprio dos editores de correção/vínculos (já abertos fora de T45), demais recortes K1/MFA/K7. T44 d2c9dca e T43 069ce3f preservados. Catálogo4j pedido0506/C4/C5/2316/2330 aguardam SHAs Claude; dois RED C5 fora da suíte dirigida.
 
-Automação ACTIVE. Sem produtor/C5/schema/PersonalMed/SaaS/Meta/hosted/carga/paid/deploy/push. Só caminhos próprios; dirt estrangeiro tasks/plan.md (+6) e tasks/todo.md (+7) preservado por hash. Índice e manifesto exatos conferidos no commit.
+Sem incoming novo:última2152 atendida2201/2316/2330/2353, sem responder aberta histórica ou confirmar próprias mensagens. Digest dos 68 arquivos para-codex: cd4ae7f0d05082496f3d8ff38fc7bbea94ad4e1dc28a2c81fefb5cfb35634c61 (nomes+sha256, detalhes de cálculo na validação).
+
+Automação ACTIVE. Sem produtor/C5/schema/PersonalMed/SaaS/Meta/hosted/carga/paid/deploy/push. Só caminhos próprios; dirt tasks/plan.md (+6) e tasks/todo.md (+7) preservado por hash. Manifesto e índice exatos conferidos no commit.

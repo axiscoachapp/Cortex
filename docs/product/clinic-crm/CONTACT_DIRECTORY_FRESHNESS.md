@@ -1,0 +1,9 @@
+# T45 — diretório de contatos fresco
+
+O diretório da recepção consulta apenas no contexto ativo do ator autenticado, clínica e papel permitido (recepção ou administração), com sessão visível. Troca desse contexto desmonta o leitor e reinicia busca/paginação. Cada instância montada tem sua própria cadeia de páginas, inclusive após recuperação imediata de ocultação/inatividade antes da coleta do cache. O prefixo de ator/família/clínica continua compatível com a invalidação existente. A consulta usa o sinal já suportado por receptionApi.contacts; não muda contrato RPC, identidade ou normalização.
+
+Cartões, contagem vazia, paginação e ações de cada contato aparecem apenas após leitura bem-sucedida nesta montagem e com fetchStatus idle. Cache pendente, pausado ou com erro não serve como diretório autorizado. Releitura e próxima página retiram as ações anteriores; reconexão conclui só a leitura, sem abrir editor/atendimento. Erro público é estático, retry explícito só consulta. Há atualização manual. Paginação continua humana e respeita o cursor do servidor, sem carregar tudo automaticamente.
+
+Cada clique verifica o snapshot ainda atual no QueryClient e a instância montada antes de abrir atendimento/correção/vínculos; clique antigo anterior à notificação React não usa dados substituídos ou em releitura. Permissões dos botões de correção e consulta de vínculos permanecem as mesmas. Busca/cursor da clínica anterior não atravessam a troca de contexto.
+
+Recorte: leitura e callbacks do diretório em ContactsPage. Os editores de correção/vínculos e seus próprios fluxos assíncronos não são redesenhados, nem é prometido seu cancelamento/rollback. Novo atendimento mantém T44. Zero criação, correção, vínculo ou agendamento automático, inferência de paciente ou ampliação clínica. Guardas locais não substituem autorização SQL; ensaios só sintéticos/isolados, sem hospedado, Meta, carga ou push.

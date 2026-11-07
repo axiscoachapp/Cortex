@@ -1,0 +1,210 @@
+{
+  "time": "2026-11-07 08:32:32",
+  "baseline": "b67232f34037337b9dadf1d12e3ba4bd1ce61dce",
+  "syntheticOnly": true,
+  "sourceHashes": [
+    {
+      "path": "src/features/reception/ContactDirectory.tsx",
+      "sha256": "0c7a85baa315fa5b84bf3cdb809d6ebe76ba1b3326175a0dba7f891691c79ce9"
+    },
+    {
+      "path": "src/features/reception/ContactsPage.tsx",
+      "sha256": "5cb8828926dc4f37f1e941fbb56b7f6b2f69bff62d00d1ed132b258bc8bbeb2d"
+    },
+    {
+      "path": "src/features/reception/ContactDirectory.test.tsx",
+      "sha256": "d1abf22029897ec65fce334155dbfcbaf8305d168ab1b551ca516e641ed7aece"
+    },
+    {
+      "path": "scripts/fixtures/contact-directory-browser.mjs",
+      "sha256": "0ae2ab73ec62512982030f27311dfd845ab75eae4953fd44d61a2ae0a8249114"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "463f8f63ed09d7a38b9a7e0d23c3edb78ffebcb3aa47da2cb0b1257c79b41554"
+    }
+  ],
+  "red": {
+    "initialFailed": 22,
+    "initialControls": 1,
+    "scopeFailed": 3,
+    "noGenericTimeouts": true
+  },
+  "green": {
+    "passed": 84,
+    "failed": 0,
+    "files": 5,
+    "newCases": 28
+  },
+  "types": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json --pretty false",
+    "exitCode": 0,
+    "preliminaryFix": "Removed unsupported TestingLibrary getByRole exact option from one test; final check passed."
+  },
+  "lint": {
+    "files": [
+      "src/features/reception/ContactDirectory.tsx",
+      "src/features/reception/ContactsPage.tsx",
+      "src/features/reception/ContactDirectory.test.tsx",
+      "scripts/fixtures/contact-directory-browser.mjs",
+      "scripts/reception-app-audit-browser.mjs"
+    ],
+    "exitCode": 0
+  },
+  "syntax": {
+    "files": [
+      "scripts/fixtures/contact-directory-browser.mjs",
+      "scripts/reception-app-audit-browser.mjs"
+    ],
+    "exitCode": 0
+  },
+  "cli": {
+    "validRejections": 6,
+    "allMatched": true,
+    "preliminaryFailure": "Missing-source control reached mkdir before source validation and initially hit pre-existing baseline directory. Rerun with unique --run reached expected assertion; no EEXIST counted as valid."
+  },
+  "browser": {
+    "report": "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/AUDIT.json",
+    "states": 32,
+    "pngs": 36,
+    "artifacts": 37,
+    "sourceCount": 353,
+    "runtimeHashes": 37,
+    "overlays": [
+      {
+        "path": "src/features/reception/ContactsPage.tsx",
+        "sha256": "5cb8828926dc4f37f1e941fbb56b7f6b2f69bff62d00d1ed132b258bc8bbeb2d"
+      },
+      {
+        "path": "src/features/reception/ContactDirectory.tsx",
+        "sha256": "0c7a85baa315fa5b84bf3cdb809d6ebe76ba1b3326175a0dba7f891691c79ce9"
+      }
+    ],
+    "requests": 32,
+    "expected403": 4,
+    "expectedConsole403": 4,
+    "pageErrors": 0,
+    "failedRequests": 0,
+    "external": 0,
+    "fontSizes": [
+      "21.6px"
+    ],
+    "metrics": {
+      "clinicalReads": [],
+      "externalCalls": [],
+      "unknown": [],
+      "bookings": 0,
+      "contacts": 0,
+      "caseWrites": 0
+    },
+    "cleanupVerified": true,
+    "manualInspection": [
+      "denied-320",
+      "initial-1920",
+      "selected-375-actions"
+    ],
+    "limits": "Only reception role, held refresh/error/retry/empty/filter/open-cancel. Context/pagination/cancellation/admin callbacks unit-only; no submissions."
+  },
+  "reviews": [
+    {
+      "cycle": 1,
+      "classification": "valid + actionable",
+      "issue": "P2 same-key pagination survives immediate role/hidden/inactive remount",
+      "proof": "SCOPE_RED.json",
+      "fix": "Per-mounted-reader useId suffix after compatible actor/contacts/clinic/search prefix"
+    },
+    {
+      "cycle": 2,
+      "actionable": [],
+      "cacheTests": "Legacy seeded keys test prior-reader isolation; same-instance pending/error/paused tests prove cache retirement."
+    }
+  ],
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "foreignPreserved": [
+    {
+      "path": "tasks/plan.md",
+      "sha256": "d4091e88d0f622bf15e9ad80f79957ffd801edaea968870274a5b8b8370023b6"
+    },
+    {
+      "path": "tasks/todo.md",
+      "sha256": "a60d951ead6051eae4411e87b5a7c22e94b57bf07fb46b2b143bde2c27762e49"
+    }
+  ],
+  "incoming": {
+    "count": 68,
+    "latest": "2026-11-06-2152_claude-para-codex_robo-de-fluxo-entregue.md",
+    "digest": "cd4ae7f0d05082496f3d8ff38fc7bbea94ad4e1dc28a2c81fefb5cfb35634c61",
+    "noNewOrChangedIncoming": true,
+    "digestAlgorithm": "SHA256(JSON.stringify(sorted files mapped to {name,sha256(raw bytes)}))"
+  },
+  "excludedPreliminary": [
+    "docs/reviews/2026-11-07/contact-directory-preliminary/",
+    "docs/reviews/2026-11-05/reception-app-audit/contact-directory-missing-source-control/"
+  ],
+  "boundaries": [
+    "Already-open correction/link editors unchanged",
+    "No SQL/Auth/server authorization or rollback proof",
+    "No import/schema/Claude/SaaS/Meta/hosted/paid/external/push/deploy operation"
+  ],
+  "gitManifest": {
+    "expectedPaths": [
+      "coordination/CODEX_CHECKPOINT.md",
+      "coordination/ESTADO.md",
+      "docs/product/clinic-crm/CONTACT_DIRECTORY_FRESHNESS.md",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/AUDIT.json",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-closed-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-closed-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-closed-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-closed-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-denied-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-denied-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-denied-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-denied-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-empty-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-empty-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-empty-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-empty-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-filtered-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-filtered-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-filtered-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-filtered-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-initial-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-initial-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-initial-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-initial-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-pending-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-pending-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-pending-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-pending-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-recovered-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-recovered-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-recovered-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-recovered-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-selected-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-selected-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-selected-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-selected-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-selected-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-selected-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-selected-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-directory-final/recepcao-a--recepcao-contatos-contact-directory-selected-375.png",
+      "docs/reviews/2026-11-07/contact-directory/CLI.json",
+      "docs/reviews/2026-11-07/contact-directory/IMPLEMENTATION.md",
+      "docs/reviews/2026-11-07/contact-directory/RED_CONTROL.json",
+      "docs/reviews/2026-11-07/contact-directory/SCOPE_RED.json",
+      "docs/reviews/2026-11-07/contact-directory/UNIT_GREEN.json",
+      "docs/reviews/2026-11-07/contact-directory/UNIT_RED.json",
+      "docs/reviews/2026-11-07/contact-directory/VALIDATION.json",
+      "scripts/fixtures/contact-directory-browser.mjs",
+      "scripts/reception-app-audit-browser.mjs",
+      "src/features/reception/ContactDirectory.test.tsx",
+      "src/features/reception/ContactDirectory.tsx",
+      "src/features/reception/ContactsPage.tsx",
+      "tasks/clinic-crm/todo.md"
+    ],
+    "branch": "main",
+    "identity": "axiscoachapp",
+    "foreignIndexBefore": [],
+    "onlyCommit": true
+  }
+}

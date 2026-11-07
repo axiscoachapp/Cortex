@@ -1,0 +1,66 @@
+[
+  {
+    "args": [
+      "--check-contact-directory"
+    ],
+    "exitCode": 1,
+    "reason": "Contact directory requires isolated contact mode",
+    "matched": true
+  },
+  {
+    "args": [
+      "--baseline=b67232f34037337b9dadf1d12e3ba4bd1ce61dce",
+      "--only=whatsapp-read",
+      "--check-contact-directory"
+    ],
+    "exitCode": 1,
+    "reason": "Contact directory requires isolated contact mode",
+    "matched": true
+  },
+  {
+    "args": [
+      "--baseline=b67232f34037337b9dadf1d12e3ba4bd1ce61dce",
+      "--only=contact-search",
+      "--check-contact-directory",
+      "--check-new-case-context"
+    ],
+    "exitCode": 1,
+    "reason": "Contact directory requires isolated contact mode",
+    "matched": true
+  },
+  {
+    "args": [
+      "--baseline=b67232f34037337b9dadf1d12e3ba4bd1ce61dce",
+      "--only=contact-search",
+      "--check-contact-directory",
+      "--overlay=src/features/reception/NewCaseDialog.tsx"
+    ],
+    "exitCode": 1,
+    "reason": "Contact search only permits its scoped picker/form/client overlays",
+    "matched": true
+  },
+  {
+    "args": [
+      "--baseline=b67232f34037337b9dadf1d12e3ba4bd1ce61dce",
+      "--only=contact-search",
+      "--check-contact-directory",
+      "--overlay=src/features/reception/ContactsPage.tsx",
+      "--run=contact-directory-missing-source-control"
+    ],
+    "exitCode": 1,
+    "reason": "Contact directory source must be explicitly included in snapshot",
+    "matched": true
+  },
+  {
+    "args": [
+      "--baseline=b67232f34037337b9dadf1d12e3ba4bd1ce61dce",
+      "--only=contact-search",
+      "--check-contact-directory",
+      "--overlay=src/features/reception/ContactDirectory.tsx",
+      "--overlay=src/features/reception/ContactDirectory.tsx"
+    ],
+    "exitCode": 1,
+    "reason": "Contact search only permits its scoped picker/form/client overlays",
+    "matched": true
+  }
+]
