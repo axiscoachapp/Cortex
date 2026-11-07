@@ -6,7 +6,11 @@
 // clinic_access()), never from the body. Logs carry ids and codes only.
 
 import { openSecret, sealSecret } from './psc.ts';
-import { GraphError, parseWebhook, sha256Hex, validSignature, windowOpenUntil, type GraphClient } from './whatsapp.ts';
+import { GraphError, parseWebhook, sha256Hex, validSignature, windowOpenUntil, type GraphClient, type InboundMessage } from './whatsapp.ts';
+import {
+  decideStep, isOpenNow, isQuietWord, SESSION_IDLE_MS, starterFlow, validateFlow,
+  type BusinessHours, type FlowDefinition, type FlowNode, type FlowSettings, type SessionState,
+} from './whatsappFlow.ts';
 
 type KeyList = { current: string; keys: Record<string, Uint8Array> };
 type Sealed = { v: 1; keyId: string; nonce: string; ciphertext: string };
@@ -54,6 +58,14 @@ export interface AutomationRunRow {
   id: string; automation_id: string; appointment_id: string; appointment_start: string; status: string; reason: string | null;
   reply: string | null; replied_at: string | null; created_at: string;
 }
+export interface FlowRow {
+  clinic_id: string; enabled: boolean; definition: FlowDefinition; hours: BusinessHours; after_hours_text: string; handoff_text: string;
+  default_queue: string; revision: number; updated_at: string;
+}
+export interface BotSessionRow {
+  conversation_id: string; flow_revision: number; node: string; attempts: number; path: string[];
+  status: 'active' | 'handed_off' | 'closed' | 'human' | 'error'; outcome: string | null; revision: number; started_at: string; updated_at: string;
+}
 export interface Candidate {
   automation_id: string; clinic_id: string; appointment_id: string; appointment_start: string; appointment_end: string;
   doctor_id: string; patient_name: string; phone: string | null; doctor_name: string; clinic_name: string; opted_out: boolean;
@@ -76,6 +88,10 @@ export interface WhatsAppStore {
   automationsByIds(ids: string[]): Promise<AutomationRow[]>;
   deleteAutomation(clinicId: string, id: string): Promise<boolean>;
   automationRuns(clinicId: string, limit: number): Promise<AutomationRunRow[]>;
+  /** Conversation by id regardless of the caller (webhook/bot only). */
+  conversationById(id: string): Promise<ConversationRow | null>;
+  flowForClinic(clinicId: string): Promise<FlowRow | null>;
+  botSession(conversationId: string): Promise<BotSessionRow | null>;
 }
 
 export interface WhatsAppConfig {
@@ -185,10 +201,12 @@ export async function webhookHandler(req: Request, deps: WhatsAppDeps): Promise<
   let failure: string | null = null;
   for (const m of messages) {
     try {
-      await deps.rpc('whatsapp_ingest_inbound', {
+      const ingested = await deps.rpc('whatsapp_ingest_inbound', {
         p_phone_number_id: m.phoneNumberId, p_wa_id: m.waId, p_user_id: m.userId, p_profile_name: m.profileName, p_wamid: m.wamid,
         p_kind: m.kind, p_body: m.body, p_media: m.media, p_context_wamid: m.contextWamid, p_provider_at: m.providerAt,
-      });
+      }) as { conversationId?: string; duplicate?: boolean } | null;
+      // The bot answers only a message stored now (a redelivery never answers twice).
+      if (ingested?.conversationId && ingested.duplicate === false) await runBot(deps, m, ingested.conversationId);
     } catch (e) { failure = `ingest ${(e as { code?: string })?.code ?? 'error'}`; }
   }
   for (const c of identityChanges) {
@@ -304,6 +322,9 @@ export async function apiHandler(req: Request, deps: WhatsAppDeps): Promise<Resp
       case 'act': return json(deps, 200, await act(deps, caller, body));
       case 'media': return await media(deps, caller, body);
       case 'automations': return json(deps, 200, await listAutomations(deps, caller));
+      case 'flow': return json(deps, 200, await getFlow(deps, caller, body));
+      case 'saveFlow': return json(deps, 200, await saveFlow(deps, caller, body));
+      case 'botSession': return json(deps, 200, await botSessionView(deps, caller, body));
       case 'saveAutomation': return json(deps, 200, await saveAutomation(deps, caller, body));
       case 'deleteAutomation': {
         requireAdmin(caller);
@@ -685,3 +706,141 @@ export async function automationsHandler(req: Request, deps: WhatsAppDeps): Prom
   deps.log?.('whatsapp_automations', { candidates: list.length, ...tally });
   return json(deps, 200, { quiet: false, candidates: list.length, ...tally });
 }
+
+// ---------------------------------------------------------------- menu bot ("robô de fluxo")
+
+const flowDto = (row: FlowRow | null, clinicName: string, doctors: string[]) => {
+  if (!row) return { ...starterFlow(clinicName, doctors), revision: 0, updatedAt: null, starter: true };
+  return {
+    enabled: row.enabled, definition: row.definition, hours: row.hours, afterHoursText: row.after_hours_text, handoffText: row.handoff_text,
+    defaultQueue: row.default_queue, revision: row.revision, updatedAt: row.updated_at, starter: false,
+  };
+};
+
+async function getFlow(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireAdmin(caller);
+  const clinicName = typeof body.clinicName === 'string' ? body.clinicName.slice(0, 120) : '';
+  const doctors = Array.isArray(body.doctors) ? (body.doctors as unknown[]).filter((d): d is string => typeof d === 'string').map((d) => d.slice(0, 60)).slice(0, 8) : [];
+  return flowDto(await deps.store.flowForClinic(caller.clinicId), clinicName, doctors);
+}
+
+/** Only the fields of the flow, re-built from the request; anything else is dropped. */
+function cleanFlow(raw: unknown): FlowSettings | null {
+  const f = raw as Record<string, unknown> | null;
+  if (!f || typeof f !== 'object') return null;
+  const def = f.definition as Record<string, unknown> | null;
+  if (!def || typeof def !== 'object' || typeof def.start !== 'string' || !def.nodes || typeof def.nodes !== 'object') return null;
+  const nodes: Record<string, FlowNode> = {};
+  for (const [id, value] of Object.entries(def.nodes as Record<string, unknown>)) {
+    const n = value as Record<string, unknown>;
+    if (!n || typeof n !== 'object') return null;
+    nodes[id] = {
+      title: typeof n.title === 'string' ? n.title.trim() : '',
+      text: typeof n.text === 'string' ? n.text.trim() : '',
+      options: Array.isArray(n.options)
+        ? (n.options as Array<Record<string, unknown>>).map((o) => ({ label: typeof o?.label === 'string' ? o.label.trim() : '', goto: typeof o?.goto === 'string' ? o.goto : '' }))
+        : [],
+      ...(typeof n.then === 'string' && n.then ? { then: n.then } : {}),
+    };
+  }
+  const hours: BusinessHours = {};
+  for (const [day, range] of Object.entries((f.hours as Record<string, unknown>) ?? {})) {
+    if (Array.isArray(range)) hours[day as keyof BusinessHours] = [String(range[0] ?? ''), String(range[1] ?? '')];
+    else return null;
+  }
+  return {
+    enabled: f.enabled === true,
+    definition: { start: def.start, nodes },
+    hours,
+    afterHoursText: typeof f.afterHoursText === 'string' ? f.afterHoursText.trim() : '',
+    handoffText: typeof f.handoffText === 'string' ? f.handoffText.trim() : '',
+    defaultQueue: typeof f.defaultQueue === 'string' ? f.defaultQueue.trim() : '',
+  };
+}
+
+async function saveFlow(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireAdmin(caller);
+  const flow = cleanFlow(body.flow);
+  if (!flow) throw new HttpError(400, 'Fluxo inválido.', 'invalid');
+  const errors = validateFlow(flow);
+  if (errors.length) throw new HttpError(400, errors.slice(0, 5).join(' '), 'invalid');
+  const revision = typeof body.revision === 'number' && Number.isInteger(body.revision) && body.revision >= 0 ? body.revision : -1;
+  if (revision < 0) throw new HttpError(400, 'Revisão do fluxo ausente.', 'invalid');
+  try {
+    return await deps.rpc('whatsapp_flow_save', { p_clinic: caller.clinicId, p_actor: caller.userId, p_revision: revision, p_flow: flow });
+  } catch (e) { throw rpcError(e); }
+}
+
+async function botSessionView(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireInbox(caller);
+  const conversationId = uuid(body.conversationId, 'Conversa');
+  const conv = await deps.store.conversation(caller.clinicId, conversationId);
+  if (!conv) throw new HttpError(404, 'Conversa não encontrada.', 'not_found');
+  const s = await deps.store.botSession(conversationId);
+  return {
+    session: s ? { status: s.status, path: s.path, outcome: s.outcome, startedAt: s.started_at, updatedAt: s.updated_at } : null,
+  };
+}
+
+const BOT_KINDS = new Set(['text', 'interactive', 'button', 'image', 'audio', 'video', 'document', 'sticker', 'location', 'contacts']);
+
+/**
+ * Runs the bot for one freshly ingested inbound message. Never throws: a failure leaves the
+ * conversation to the reception (the session ends as "error").
+ */
+export async function runBot(deps: WhatsAppDeps, m: InboundMessage, conversationId: string): Promise<void> {
+  try {
+    if (!BOT_KINDS.has(m.kind) || isQuietWord(m.body)) return;
+    const conv = await deps.store.conversationById(conversationId);
+    if (!conv) return;
+    const flow = await deps.store.flowForClinic(conv.clinic_id);
+    if (!flow?.enabled) return;
+    const settings: FlowSettings = {
+      enabled: flow.enabled, definition: flow.definition, hours: flow.hours, afterHoursText: flow.after_hours_text,
+      handoffText: flow.handoff_text, defaultQueue: flow.default_queue,
+    };
+    if (validateFlow(settings).length) return;
+    const session = await deps.store.botSession(conv.id);
+    const now = (deps.now ?? (() => new Date()))();
+    if (conv.status !== 'open' || conv.assigned_to) {
+      if (session?.status === 'active')
+        await deps.rpc('whatsapp_bot_apply', endArgs(conv.id, session, 'human', 'Atendimento assumido pela recepção'));
+      return;
+    }
+    const idle = session ? now.getTime() - Date.parse(session.updated_at) > SESSION_IDLE_MS : false;
+    const reopened = session ? Date.parse(conv.opened_at) > Date.parse(session.started_at) : false;
+    const newCycle = !session || reopened || (session.status === 'active' && (idle || session.flow_revision !== flow.revision));
+    // A cycle that already handed off, closed or was taken stays with the reception until the conversation reopens.
+    if (!newCycle && session!.status !== 'active') return;
+    const state: SessionState | null = newCycle ? null : { node: session!.node, attempts: session!.attempts, path: session!.path };
+    const step = decideStep(settings, state, { kind: m.kind, body: m.body, replyId: m.replyId }, isOpenNow(settings.hours, now));
+    const applied = (await deps.rpc('whatsapp_bot_apply', {
+      p_conversation: conv.id, p_trigger_wamid: m.wamid, p_session_revision: session?.revision ?? 0, p_new_cycle: newCycle,
+      p_flow_revision: flow.revision, p_node: step.node, p_attempts: step.attempts, p_path: step.path, p_status: step.status,
+      p_outcome: step.queue ? `queue:${step.queue}` : step.close ? 'close' : null, p_queue: step.queue, p_close: step.close,
+      p_messages: step.messages.map((x) => ({ kind: x.kind, body: x.body })),
+    })) as { applied: boolean; revision?: number; messageIds?: string[]; to?: string | null; recipient?: string | null } | null;
+    if (!applied?.applied || !applied.messageIds?.length) return;
+    const ch = await deps.store.channelForClinic(conv.clinic_id);
+    if (!ch) return;
+    const token = await channelToken(deps, ch);
+    const address = applied.to ? { to: applied.to } : applied.recipient ? { recipient: applied.recipient } : null;
+    if (!address) return;
+    for (let i = 0; i < applied.messageIds.length; i++) {
+      const outcome = await deliver(deps, ch, token, applied.messageIds[i], { ...address, ...step.messages[i].graph });
+      if (outcome.status !== 'sent') {
+        // Stop the bot; the reception sees the conversation and the failed message.
+        if (step.status === 'active')
+          await deps.rpc('whatsapp_bot_apply', endArgs(conv.id, { revision: applied.revision ?? 0 }, 'error', 'Falha no envio do robô')).catch(() => null);
+        break;
+      }
+    }
+  } catch (e) {
+    deps.log?.('whatsapp_bot_error', { conversation: conversationId, kind: (e as Error)?.name ?? 'unknown' });
+  }
+}
+
+const endArgs = (conversationId: string, session: { revision: number }, status: 'human' | 'error', outcome: string) => ({
+  p_conversation: conversationId, p_trigger_wamid: null, p_session_revision: session.revision, p_new_cycle: false, p_flow_revision: 1,
+  p_node: 'fim', p_attempts: 0, p_path: [], p_status: status, p_outcome: outcome, p_queue: null, p_close: false, p_messages: [],
+});

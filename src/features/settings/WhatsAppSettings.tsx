@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { AutomationEditor } from './AutomationEditor';
+import { FlowEditor } from './FlowEditor';
 import {
   AUTOMATION_PRESETS, describeWhen, whatsappCall,
   type Automation, type AutomationRule, type AutomationRun, type WhatsAppState, type WhatsAppTemplate,
@@ -21,8 +22,11 @@ const dateTime = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateSt
 export function WhatsAppSettings() {
   const access = useClinicAccess();
   const queryClient = useQueryClient();
-  const scope = [access?.clinic?.id ?? 'none', access?.actorId ?? 'none'];
-  const state = useQuery({ queryKey: ['whatsapp-state', ...scope], queryFn: () => whatsappCall<WhatsAppState>('state'), retry: false });
+  // Role is part of the scope: losing admin never shows cached admin data, even during a refetch.
+  const scope = [access?.clinic?.id ?? 'none', access?.actorId ?? 'none', access?.admin ? 'admin' : 'member'];
+  const state = useQuery({
+    queryKey: ['whatsapp-state', ...scope], queryFn: () => whatsappCall<WhatsAppState>('state'), retry: false, staleTime: 0, refetchOnMount: 'always',
+  });
   const s = state.data;
   const templates = useQuery({
     queryKey: ['whatsapp-templates', ...scope],
@@ -216,6 +220,9 @@ export function WhatsAppSettings() {
           )}
         </div>
       )}
+
+      {/* Menu bot */}
+      {s.connected && s.canManage && <FlowEditor />}
 
       {/* Automations */}
       {s.connected && s.canManage && (

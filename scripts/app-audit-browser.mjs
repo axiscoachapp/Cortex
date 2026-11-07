@@ -155,6 +155,15 @@ function whatsappAnswer(body) {
         { id: 'd5140000-0000-4000-8000-000000000002', automationId: 'd5130000-0000-4000-8000-000000000001', appointmentId: 'd5150000-0000-4000-8000-000000000002',
         appointmentStart: day(2), status: 'skipped', reason: 'Sem telefone válido no cadastro.', reply: null, repliedAt: null, at: day(0) }],
       sources: {}, quietHours: { start: 8, end: 20 } };
+    case 'flow': return { enabled: true, revision: 2, updatedAt: day(-1), starter: false, defaultQueue: 'geral', hours: { 1: ['08:00', '18:00'], 2: ['08:00', '18:00'] },
+      afterHoursText: 'Estamos fora do horário; respondemos a partir das 8h.', handoffText: 'Obrigado! Uma pessoa da recepção vai continuar por aqui.',
+      definition: { start: 'inicio', nodes: {
+        inicio: { title: 'Boas-vindas', text: 'Olá! Você está falando com a Clínica Sintética. Como podemos ajudar?', options: [
+          { label: 'Marcar ou remarcar', goto: 'medico' }, { label: 'Resultado de exame', goto: 'queue:resultados' },
+          { label: 'Endereço e horários', goto: 'info' }, { label: 'Falar com a recepção', goto: 'queue:geral' }] },
+        medico: { title: 'Escolha do médico', text: 'Com qual médico você quer marcar?', options: [
+          { label: 'Dra. Ana Exemplo', goto: 'queue:agendamento' }, { label: 'Ainda não sei', goto: 'queue:agendamento' }] },
+        info: { title: 'Endereço e horários', text: 'Rua Exemplo, 100. Segunda a sexta, 8h às 18h.', options: [], then: 'close' } } } };
     default: return { error: 'Operação externa bloqueada no ensaio', code: 'server' };
   }
 }
@@ -283,6 +292,22 @@ try {
       await page.waitForTimeout(1500);
       await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: true });
       report.routes[`${label} ${path}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+      // Menu bot: the editor and a local simulated conversation (nothing is sent).
+      if (CLINIC_ADMIN && path === '/configuracoes?secao=whatsapp') {
+        const editor = page.locator('div.rounded-xl', { has: page.getByText('Robô de atendimento', { exact: true }) }).first();
+        if (await editor.count()) {
+          await editor.scrollIntoViewIfNeeded();
+          await editor.screenshot({ path: resolve(artifacts, `${label}-robo-editor.png`) });
+          const sim = page.getByLabel('Simulador do robô');
+          await sim.getByLabel('Mensagem do paciente (simulação)').fill('Oi');
+          await sim.getByRole('button', { name: 'Enviar na simulação' }).click();
+          await sim.getByRole('button', { name: 'Marcar ou remarcar' }).first().click();
+          await sim.getByRole('button', { name: 'Dra. Ana Exemplo' }).first().click();
+          await sim.scrollIntoViewIfNeeded();
+          await sim.screenshot({ path: resolve(artifacts, `${label}-robo-simulador.png`) });
+          report.routes[`${label} robo simulador`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        } else report.routes[`${label} robo simulador`] = { missing: 'bot editor not found' };
+      }
     }
     // Interactions: the patient's full profile (history, documents, files).
     if (!only) {

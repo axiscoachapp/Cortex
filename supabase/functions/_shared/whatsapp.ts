@@ -18,6 +18,8 @@ export interface InboundMessage {
   profileName: string;
   /** wamid of the message this one replies to (template quick replies). */
   contextWamid: string | null;
+  /** Id of the tapped button or list row (menu bot), or the quick-reply payload. */
+  replyId: string | null;
   wamid: string;
   kind: InboundKind;
   body: string;
@@ -90,33 +92,33 @@ function mediaOf(value: unknown): InboundMessage['media'] {
   };
 }
 
-function inboundOf(m: Obj): Pick<InboundMessage, 'kind' | 'body' | 'media'> {
+function inboundOf(m: Obj): Pick<InboundMessage, 'kind' | 'body' | 'media' | 'replyId'> {
   const type = str(m.type, 40);
   switch (type) {
-    case 'text': return { kind: 'text', body: str(obj(m.text).body), media: null };
+    case 'text': return { kind: 'text', body: str(obj(m.text).body), media: null, replyId: null };
     case 'image': case 'video': case 'document': case 'audio': case 'sticker':
-      return { kind: type, body: str(obj(m[type]).caption), media: mediaOf(m[type]) };
+      return { kind: type, body: str(obj(m[type]).caption), media: mediaOf(m[type]), replyId: null };
     case 'location': {
       const l = obj(m.location);
       const label = [str(l.name, 200), str(l.address, 300)].filter(Boolean).join(' — ');
       const coord = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? String(v) : typeof v === 'string' ? v.slice(0, 20) : '');
-      return { kind: 'location', body: label || `${coord(l.latitude)},${coord(l.longitude)}`, media: null };
+      return { kind: 'location', body: label || `${coord(l.latitude)},${coord(l.longitude)}`, media: null, replyId: null };
     }
     case 'contacts': {
       const names = arr(m.contacts).map((c) => str(obj(obj(c).name).formatted_name, 120)).filter(Boolean);
-      return { kind: 'contacts', body: names.join(', '), media: null };
+      return { kind: 'contacts', body: names.join(', '), media: null, replyId: null };
     }
     case 'interactive': {
       const i = obj(m.interactive);
       const r = obj(i.button_reply ?? i.list_reply);
-      return { kind: 'interactive', body: str(r.title, 200), media: null };
+      return { kind: 'interactive', body: str(r.title, 200), media: null, replyId: str(r.id, 256) || null };
     }
     case 'button': {
       const b = obj(m.button);
-      return { kind: 'button', body: str(b.text ?? b.payload, 200), media: null };
+      return { kind: 'button', body: str(b.text ?? b.payload, 200), media: null, replyId: str(b.payload, 256) || null };
     }
-    case 'reaction': return { kind: 'reaction', body: str(obj(m.reaction).emoji, 16), media: null };
-    default: return { kind: 'unsupported', body: '', media: null };
+    case 'reaction': return { kind: 'reaction', body: str(obj(m.reaction).emoji, 16), media: null, replyId: null };
+    default: return { kind: 'unsupported', body: '', media: null, replyId: null };
   }
 }
 

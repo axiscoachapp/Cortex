@@ -89,7 +89,7 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
 
   return (
     <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{initial ? 'Editar automação' : 'Nova automação'}</DialogTitle>
           <DialogDescription>Envia um modelo aprovado do WhatsApp a cada consulta que atender às condições.</DialogDescription>
@@ -103,7 +103,7 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
 
           <fieldset className="space-y-1.5">
             <legend className="text-sm font-medium">Quando enviar</legend>
-            <div className="grid grid-cols-[5.5rem_7rem_1fr] gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-[5.5rem_7rem_1fr] [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
               <Input aria-label="Quantidade" type="number" min={0} max={unit === 'd' ? 14 : unit === 'h' ? 336 : 20160} value={amount}
                 onChange={(e) => setAmount(Number(e.target.value))} />
               <Select value={unit} onValueChange={(v) => setUnit(v as Unit)}>
@@ -149,7 +149,7 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">Campos do modelo</legend>
               {params.map((p, i) => (
-                <div key={i} className="grid grid-cols-[3rem_1fr] items-start gap-2">
+                <div key={i} className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-2">
                   <span className="pt-2 text-sm font-mono text-muted-foreground">{`{{${i + 1}}}`}</span>
                   <div className="space-y-1.5">
                     <Select value={p.source} onValueChange={(v) => setParam(i, { source: v as ParamSource })}>
@@ -220,7 +220,7 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
           {(localError || error) && <p role="alert" className="text-sm text-destructive">{localError || error}</p>}
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
           <Button onClick={submit} disabled={saving}>{saving ? 'Salvando…' : 'Salvar automação'}</Button>
         </DialogFooter>

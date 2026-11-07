@@ -166,3 +166,41 @@ O administrador cria regras em Configurações. Cada regra combina:
 - **Custo:** o registro de categoria e preço por mensagem (`pricing` nos status) não está implementado.
 - **Retenção:** sem regra de retenção para conversas e mensagens. Decidir com a clínica (LGPD).
 - **Produção:** nada foi publicado. A migration e as três funções precisam de aplicação explícita, junto com os segredos e o cron.
+
+## Robô de fluxo (v1.2)
+
+Migration `20261106110000_whatsapp_flows.sql`; lógica pura em `supabase/functions/_shared/whatsappFlow.ts`, que o simulador de Configurações também usa. O robô roda dentro do webhook, só depois de uma mensagem gravada agora: uma reentrega nunca responde duas vezes.
+
+**O que faz:** responde quem escreve para a clínica com um menu (até 3 botões ou uma lista de até 10 opções) e cada opção leva a:
+- outra etapa;
+- uma fila da recepção (`queue:<fila>`): a conversa fica aberta, sem responsável e com a fila marcada;
+- encerrar (`close`).
+
+Uma etapa sem opções termina em encerrar ou em fila.
+
+**Mensagens automáticas e limites:**
+- Fora do horário configurado, a mensagem de fora do horário vai antes do menu.
+- Resposta não entendida: repete o menu uma vez e depois encaminha para a fila padrão.
+- "atendente", "recepção" ou "humano" encaminham a qualquer momento.
+- "SAIR" e "VOLTAR" não acionam o robô.
+
+**Quando para:**
+- quando alguém é atribuído à conversa;
+- quando uma pessoa responde durante o ciclo;
+- quando o ciclo já encaminhou ou encerrou: só recomeça quando a conversa for reaberta;
+- depois de 24 h parado, ou se o fluxo mudar de revisão, recomeça do início.
+
+**Proibido por desenho:** perguntas de saúde (política do WhatsApp) e marcar consulta sozinho.
+
+**Atomicidade:** `whatsapp_bot_apply` faz cada passo numa transação:
+- confere que a conversa continua aberta e sem responsável, sem resposta humana no ciclo, com a mensagem gatilho sendo a última recebida, e confere as revisões da sessão e do fluxo;
+- atualiza a sessão e aplica fila ou encerramento;
+- reserva as mensagens (`bot = true`, `sent_by` nulo).
+
+O handler envia cada mensagem e registra o resultado com `whatsapp_finish_outbound`. Falha no envio encerra o ciclo como `error`, e a conversa fica para a recepção.
+
+**API (admin):**
+- `flow` (`clinicName?`, `doctors?`) devolve o fluxo salvo ou um inicial (`starter: true`, `revision: 0`).
+- `saveFlow` (`revision`, `flow`) valida e salva com controle de revisão (`stale` se mudou).
+
+**API (recepção e admin):** `botSession` (`conversationId`) devolve `{ session: { status, path, outcome, startedAt, updatedAt } | null }`. `path` traz as opções escolhidas pelo paciente, por exemplo `["Marcar ou remarcar", "Dra. Ana"]`. Os DTOs de conversa e mensagem **não mudaram**, para não quebrar o cliente estrito do K1. Expor a origem da mensagem (pessoa, automação ou robô) fica para quando o cliente aceitar.

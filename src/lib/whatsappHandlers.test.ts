@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { openSecret, parseKeyList } from '../../supabase/functions/_shared/psc';
 import { GraphError, graphClient, parseWebhook, validSignature, windowOpenUntil, type GraphClient } from '../../supabase/functions/_shared/whatsapp';
 import {
-  apiHandler, automationsHandler, inQuietHours, renderBody, renderParams, tokenBinding, webhookHandler, type AutomationRow, type Candidate, type Caller, type ChannelRow, type ConversationRow, type MessageRow, type TemplateRow, type WhatsAppDeps,
+  apiHandler, automationsHandler, runBot, type BotSessionRow, type FlowRow, inQuietHours, renderBody, renderParams, tokenBinding, webhookHandler, type AutomationRow, type Candidate, type Caller, type ChannelRow, type ConversationRow, type MessageRow, type TemplateRow, type WhatsAppDeps,
 } from '../../supabase/functions/_shared/whatsappHandlers';
 
 const CLINIC = '11111111-1111-4111-8111-111111111111';
@@ -100,7 +100,16 @@ describe('whatsapp helpers', () => {
   });
 });
 
-function harness(opts: { caller?: Caller; conv?: Partial<ConversationRow>; templates?: TemplateRow[]; channel?: Partial<ChannelRow> | null; config?: Partial<WhatsAppDeps['config']> } = {}) {
+function harness(opts: { caller?: Caller; conv?: Partial<ConversationRow>; templates?: TemplateRow[]; channel?: Partial<ChannelRow> | null; config?: Partial<WhatsAppDeps['config']>;
+  flow?: Partial<FlowRow> | null; botSession?: BotSessionRow | null } = {}) {
+  const flowRow: FlowRow | null = opts.flow === undefined ? null : opts.flow === null ? null : {
+    clinic_id: CLINIC, enabled: true, hours: {}, after_hours_text: '', handoff_text: 'Uma pessoa da recepção continua por aqui.', default_queue: 'geral',
+    revision: 3, updated_at: '2026-11-06T12:00:00Z',
+    definition: { start: 'inicio', nodes: { inicio: { title: 'Início', text: 'Como podemos ajudar?', options: [
+      { label: 'Agendar', goto: 'queue:agendamento' }, { label: 'Endereço', goto: 'info' }] },
+      info: { title: 'Info', text: 'Rua Exemplo, 100.', options: [], then: 'close' } } },
+    ...opts.flow,
+  };
   const calls: Array<[string, Record<string, unknown>]> = [];
   const rpcResults: Record<string, unknown> = {};
   const rpcErrors: Record<string, { code: string }> = {};
@@ -161,6 +170,9 @@ function harness(opts: { caller?: Caller; conv?: Partial<ConversationRow>; templ
       automationsByIds: async (ids) => automations.filter((a) => ids.includes(a.id) && a.enabled),
       deleteAutomation: async () => true,
       automationRuns: async () => [],
+      conversationById: async (id) => (id === CONV ? conv : null),
+      flowForClinic: async () => flowRow,
+      botSession: async () => opts.botSession ?? null,
     },
     graph,
     newId: () => CHANNEL,
@@ -539,5 +551,99 @@ describe('K6 residuals (2058)', () => {
     h.rpcResults.whatsapp_automation_begin = null;
     await automationsHandler(new Request('https://x', { method: 'POST', headers: { 'x-cortex-cron': CRON } }), h.deps);
     expect(h.calls.find(([n]) => n === 'whatsapp_automation_begin')?.[1]).toMatchObject({ p_automation: RULE, p_rule_revision: 1 });
+  });
+});
+
+describe('menu bot in the webhook', () => {
+  const inbound = (body: string, replyId: string | null = null) => ({
+    phoneNumberId: '200000000001', waId: '5541999990000', userId: null, profileName: 'Paciente', wamid: 'wamid.BOT0001',
+    kind: replyId ? 'interactive' as const : 'text' as const, body, media: null, providerAt: null, contextWamid: null, replyId,
+  });
+  const applied = (ids = ['m1']) => ({ applied: true, revision: 1, messageIds: ids, to: '5541999990000', recipient: null });
+
+  it('answers the first message with the menu and records the outcome', async () => {
+    const h = await connectedHarness({ flow: {} });
+    h.rpcResults.whatsapp_bot_apply = applied();
+    await runBot(h.deps, inbound('Oi'), CONV);
+    const apply = h.calls.find(([n]) => n === 'whatsapp_bot_apply')![1];
+    expect(apply).toMatchObject({ p_conversation: CONV, p_trigger_wamid: 'wamid.BOT0001', p_new_cycle: true, p_session_revision: 0, p_flow_revision: 3,
+      p_status: 'active', p_node: 'inicio', p_messages: [{ kind: 'interactive', body: 'Como podemos ajudar?\n\n1. Agendar\n2. Endereço' }] });
+    expect(vi.mocked(h.graph.send).mock.calls[0][2]).toMatchObject({ to: '5541999990000', type: 'interactive', interactive: { type: 'button' } });
+    expect(h.calls).toContainEqual(['whatsapp_finish_outbound', { p_message: 'm1', p_wamid: 'wamid.OUT2', p_error: null, p_unknown: false }]);
+  });
+
+  it('follows the tapped option and hands off to the queue', async () => {
+    const session: BotSessionRow = { conversation_id: CONV, flow_revision: 3, node: 'inicio', attempts: 0, path: [], status: 'active', outcome: null, revision: 4,
+      started_at: '2026-11-06T12:05:00Z', updated_at: '2026-11-06T12:05:00Z' };
+    const h = await connectedHarness({ flow: {}, botSession: session, conv: { opened_at: '2026-11-06T12:00:00Z' } });
+    h.deps.now = () => new Date('2026-11-06T12:06:00Z');
+    h.rpcResults.whatsapp_bot_apply = applied();
+    await runBot(h.deps, inbound('Agendar', 'o:inicio:0'), CONV);
+    expect(h.calls.find(([n]) => n === 'whatsapp_bot_apply')![1]).toMatchObject({ p_new_cycle: false, p_session_revision: 4, p_status: 'handed_off',
+      p_queue: 'agendamento', p_path: ['Agendar'] });
+  });
+
+  it('stays quiet when the flow is off, a person has the conversation, or the cycle already handed off', async () => {
+    const off = await connectedHarness({ flow: { enabled: false } });
+    await runBot(off.deps, inbound('Oi'), CONV);
+    expect(off.calls.some(([n]) => n === 'whatsapp_bot_apply')).toBe(false);
+
+    const active: BotSessionRow = { conversation_id: CONV, flow_revision: 3, node: 'inicio', attempts: 0, path: [], status: 'active', outcome: null, revision: 2,
+      started_at: '2026-11-06T12:05:00Z', updated_at: '2026-11-06T12:05:00Z' };
+    const taken = await connectedHarness({ flow: {}, botSession: active, conv: { assigned_to: RECEPTION, assigned_at: '2026-11-06T12:06:00Z' } });
+    await runBot(taken.deps, inbound('1'), CONV);
+    expect(taken.calls.find(([n]) => n === 'whatsapp_bot_apply')![1]).toMatchObject({ p_status: 'human', p_session_revision: 2 });
+    expect(taken.graph.send).not.toHaveBeenCalled();
+
+    const handed = await connectedHarness({ flow: {}, botSession: { ...active, status: 'handed_off' }, conv: { opened_at: '2026-11-06T12:00:00Z' } });
+    handed.deps.now = () => new Date('2026-11-06T12:10:00Z');
+    await runBot(handed.deps, inbound('Mais uma coisa'), CONV);
+    expect(handed.calls.some(([n]) => n === 'whatsapp_bot_apply')).toBe(false);
+
+    const quiet = await connectedHarness({ flow: {} });
+    await runBot(quiet.deps, inbound('SAIR'), CONV);
+    expect(quiet.calls.some(([n]) => n === 'whatsapp_bot_apply')).toBe(false);
+  });
+
+  it('sends nothing when the step was not applied, and stops the bot when sending fails', async () => {
+    const h = await connectedHarness({ flow: {} });
+    h.rpcResults.whatsapp_bot_apply = { applied: false, reason: 'taken' };
+    await runBot(h.deps, inbound('Oi'), CONV);
+    expect(h.graph.send).not.toHaveBeenCalled();
+
+    const failing = await connectedHarness({ flow: {} });
+    failing.rpcResults.whatsapp_bot_apply = applied();
+    vi.mocked(failing.graph.send).mockRejectedValueOnce(new GraphError('O WhatsApp recusou o pedido.', 400, 100));
+    await runBot(failing.deps, inbound('Oi'), CONV);
+    expect(failing.calls.filter(([n]) => n === 'whatsapp_bot_apply').map(([, a]) => a.p_status)).toEqual(['active', 'error']);
+  });
+
+  it('runs only for messages stored now, never for redeliveries', async () => {
+    const h = await connectedHarness({ flow: {} });
+    h.rpcResults.whatsapp_record_event = { new: true, processed: false };
+    h.rpcResults.whatsapp_ingest_inbound = { conversationId: CONV, duplicate: true };
+    const body = JSON.stringify(textDelivery);
+    await webhookHandler(new Request('https://x/w', { method: 'POST', body, headers: { 'x-hub-signature-256': sign(body) } }), h.deps);
+    expect(h.calls.some(([n]) => n === 'whatsapp_bot_apply')).toBe(false);
+    h.rpcResults.whatsapp_ingest_inbound = { conversationId: CONV, duplicate: false };
+    h.rpcResults.whatsapp_bot_apply = applied();
+    await webhookHandler(new Request('https://x/w', { method: 'POST', body, headers: { 'x-hub-signature-256': sign(body) } }), h.deps);
+    expect(h.calls.some(([n]) => n === 'whatsapp_bot_apply')).toBe(true);
+  });
+
+  it('lets only the admin read and save the flow, and validates it on save', async () => {
+    const h = await connectedHarness();
+    const starter = await (await h.api({ action: 'flow', clinicName: 'Clínica Exemplo', doctors: ['Dra. Ana Exemplo'] })).json();
+    expect(starter).toMatchObject({ starter: true, revision: 0, enabled: false, definition: { start: 'inicio' } });
+    const broken = { ...starter, definition: { start: 'inicio', nodes: { inicio: { title: 'x', text: 'Oi', options: [{ label: 'A', goto: 'lugar_nenhum' }] } } } };
+    const bad = await h.api({ action: 'saveFlow', revision: 0, flow: broken });
+    expect([bad.status, (await bad.json()).error]).toEqual([400, expect.stringContaining('não leva a lugar válido')]);
+    h.rpcResults.whatsapp_flow_save = { revision: 1 };
+    expect((await h.api({ action: 'saveFlow', revision: 0, flow: starter })).status).toBe(200);
+    expect(h.calls.at(-1)?.[1]).toMatchObject({ p_clinic: CLINIC, p_actor: ADMIN, p_revision: 0, p_flow: { definition: { start: 'inicio' } } });
+    expect(h.calls.at(-1)?.[1].p_flow).not.toHaveProperty('starter');
+    h.deps.authorize = async () => ({ userId: RECEPTION, clinicId: CLINIC, admin: false, reception: true });
+    expect((await h.api({ action: 'flow' })).status).toBe(403);
+    expect((await h.api({ action: 'botSession', conversationId: CONV })).status).toBe(200);
   });
 });

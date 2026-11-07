@@ -140,6 +140,7 @@ Atualizado em 2026-11-06 21:31 por Codex (gate C5 e D26 recebida); linhas de pro
 
 | Número | Assunto | Dono | Situação |
 |---|---|---|---|
+| `20261106110000` | WhatsApp: robô de fluxo (fluxo da clínica, sessão do robô, flag `bot` nas mensagens) | Claude | Reservada e escrita em 06/11 22:00 a pedido do usuário; revisão do Codex (K6). Não aplicada em produção |
 | `20261106100000` | WhatsApp: canal, conversas, mensagens, eventos, modelos, consentimento, automações da agenda | Claude | Escrita em `ebb866a`; achados K6 corrigidos em `40e90c1` (20:09/20:31) e `accbba6` (resíduos 20:58, contato sem lock aceito como resíduo). Aguarda reteste K6. Não aplicada em produção |
 | `20261105270000` | T32/L10: pré-filtrar agenda por médicos autorizados | Codex | Reserva17:05 prévia preservada; implementada/verificada:77migrations/dezSQL/89fontes, mesmoJSON,1023→3chamadas/índice por médico/mediana sintética998,156→10,913ms. Sintaxe/lint/hash/cleanup/revisão aprovados; mesmos DTO/origem/limites/helper. Sem carga/hosted/domínioClaude |
 | `20261105260000` | T32/1c: leitura limitada de intervalos zero/invertidos nas bordas da janela | Codex | Reserva16:35 prévia preservada; implementada/verificada:RED75/P0004, GREEN76migrations/dezSQL/88fontes/1000→1001/negativos, lint/sintaxe/hash/cleanup. Mesmo DTO/limites/origem/escopos; sem frontend/tipos/hosted/importação ou domínioClaude |

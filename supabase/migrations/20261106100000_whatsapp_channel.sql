@@ -595,7 +595,14 @@ begin
       end;
     end if;
     if reason is null then
-      select c.phone_normalized into phone from public.clinic_contacts c where c.clinic_id = a.clinic_id and c.id = ap.contact_id;
+      -- Snapshot of the recipient until the reservation commits. NOWAIT: a contact being corrected right
+      -- now is not waited for (no lock cycle); nothing is claimed and the next run reads the new phone.
+      begin
+        select c.phone_normalized into phone from public.clinic_contacts c where c.clinic_id = a.clinic_id and c.id = ap.contact_id
+        for share nowait;
+      exception when lock_not_available then
+        return null;
+      end;
       if phone is null or p_wa_id is null or not (p_wa_id = any (public.whatsapp_phone_variants(phone))) then
         reason := 'O telefone do contato mudou ou não é válido.';
       elsif not exists (select 1 from public.whatsapp_opt_ins o where o.clinic_id = a.clinic_id and o.revoked_at is null

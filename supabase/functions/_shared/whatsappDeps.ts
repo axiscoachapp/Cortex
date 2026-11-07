@@ -9,7 +9,7 @@ import { AuthError, authResponse, requireUser } from './auth.ts';
 import { fetchWithDeadline } from './http.ts';
 import { parseKeyList } from './psc.ts';
 import { DEFAULT_GRAPH_VERSION, graphClient } from './whatsapp.ts';
-import type { AutomationRow, AutomationRunRow, Caller, ChannelRow, ConversationRow, MessageRow, TemplateRow, WhatsAppDeps, WhatsAppStore } from './whatsappHandlers.ts';
+import type { AutomationRow, AutomationRunRow, BotSessionRow, Caller, FlowRow, ChannelRow, ConversationRow, MessageRow, TemplateRow, WhatsAppDeps, WhatsAppStore } from './whatsappHandlers.ts';
 const AUTOMATION_COLUMNS = 'id, clinic_id, name, enabled, trigger, offset_minutes, template_name, template_language, params, link_url, doctor_ids, appointment_types, revision, updated_at';
 
 export const corsHeaders = {
@@ -134,6 +134,23 @@ export function whatsappDeps(): WhatsAppDeps {
       if (error) fail('automações');
       return (data ?? []).length === 1;
     },
+    async conversationById(id) {
+      const { data, error } = await service.from('whatsapp_conversations').select(CONVERSATION_COLUMNS).eq('id', id).maybeSingle();
+      if (error) fail('conversa');
+      return (data as ConversationRow | null) ?? null;
+    },
+    async flowForClinic(clinicId) {
+      const { data, error } = await service.from('whatsapp_flows')
+        .select('clinic_id, enabled, definition, hours, after_hours_text, handoff_text, default_queue, revision, updated_at').eq('clinic_id', clinicId).maybeSingle();
+      if (error) fail('fluxo');
+      return (data as FlowRow | null) ?? null;
+    },
+    async botSession(conversationId) {
+      const { data, error } = await service.from('whatsapp_bot_sessions')
+        .select('conversation_id, flow_revision, node, attempts, path, status, outcome, revision, started_at, updated_at').eq('conversation_id', conversationId).maybeSingle();
+      if (error) fail('robô');
+      return (data as BotSessionRow | null) ?? null;
+    },
     async automationRuns(clinicId, limit) {
       const { data, error } = await service.from('whatsapp_automation_runs')
         .select('id, automation_id, appointment_id, appointment_start, status, reason, reply, replied_at, created_at')
@@ -177,6 +194,7 @@ export function whatsappDeps(): WhatsAppDeps {
     store,
     graph: graphClient((input, init) => fetchWithDeadline(input, init, 30_000, 25 * 1024 * 1024), Deno.env.get('WHATSAPP_GRAPH_VERSION') || DEFAULT_GRAPH_VERSION),
     log: (event, detail) => console.log(JSON.stringify({ event, ...detail })),
+    now: () => new Date(),
   };
 }
 
