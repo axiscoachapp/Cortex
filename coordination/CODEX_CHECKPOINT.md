@@ -1,6 +1,6 @@
 # Checkpoint do Codex
 
-Atualizado em 2026-11-07 10:35 (America/Sao_Paulo). K1/4j1 entregue localmente em main/axiscoachapp; SHA será registrado após commit.23 caminhos próprios, sem push. Preservar Claude/SaaS e índice compartilhado.
+Atualizado em 2026-11-07 10:35 (America/Sao_Paulo). K1/4j1 entregue localmente em main/axiscoachapp; Entrega d02bcf4301141ce9a27b6dba3898470f50138b2f:23 caminhos conferidos, autor/committer axiscoachapp, índice livre após commit --only.23 caminhos próprios, sem push. Preservar Claude/SaaS e índice compartilhado.
 
 Leitor assignees compatível com be5b794/b7f424d: before/limit1–50, DTO/IDs/ordem/cursor/flags estritos, cancelamento e erros locais/sem retry. Não escolhe alvo nem concede autorização; colisão visível exige ambiguous true para todos. [Provas](../docs/reviews/2026-11-07/whatsapp-assignees/REVIEW.md):73 RED no stub inicial →239 testes/quatro arquivos/74 novos, SDK16 grupos/14POST/dois hashes, controle negativo de asserções capturadas, tipos reais/lint5/sintaxe3/três revisões. Sem UI/transferência/SQL/Meta/hosted/carga/push.
 
