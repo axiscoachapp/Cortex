@@ -1,0 +1,7 @@
+export type WhatsAppDashboardInput={from:string;to:string;before?:string|null;limit?:number};
+export class WhatsAppDashboardReadError extends Error{
+  constructor(message:string,readonly code:string){super(message);this.name='WhatsAppDashboardReadError';}
+}
+export async function readWhatsAppDashboard(_input:WhatsAppDashboardInput,_signal?:AbortSignal):Promise<never>{
+  throw new WhatsAppDashboardReadError('Leitor ainda não implementado.','unavailable');
+}

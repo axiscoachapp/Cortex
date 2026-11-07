@@ -37,6 +37,7 @@ const BillingPage = lazy(() => import('./features/billing/BillingPage'));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ReceptionLayout = lazy(() => import('./features/reception/ReceptionLayout'));
 const ReceptionQueue = lazy(() => import('./features/reception/ReceptionQueue'));
+const ReceptionDashboard = lazy(() => import('./features/reception/ReceptionDashboard'));
 const ReceptionCalendar = lazy(() => import('./features/reception/ReceptionCalendar'));
 const ReceptionContacts = lazy(() => import('./features/reception/ContactsPage'));
 const ReceptionTeam = lazy(() => import('./features/reception/TeamSettings'));
@@ -97,6 +98,7 @@ const router = createBrowserRouter([
     { path: '/', element: <Index /> },
     { path: '/recepcao', element: <ReceptionLayout />, children: [
       { index: true, element: <ReceptionQueue /> },
+      { path: 'painel', element: <ReceptionDashboard /> },
       { path: 'agenda', element: <ReceptionCalendar /> },
       { path: 'contatos', element: <ReceptionContacts /> },
       { path: 'equipe', element: <ReceptionTeam /> },

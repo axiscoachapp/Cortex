@@ -1,0 +1,6621 @@
+{
+  "completed": true,
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": "2026-11-05T15:00:00Z",
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "30ff47cbb8bc707eb16703ce84f2cbf5a01ffc4d",
+  "overlays": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "e517aaebf1262e2ef240770d99fc20eb07f85100eb1f9a3b65da6cde39dadfca"
+    },
+    {
+      "path": "src/features/reception/ReceptionLayout.tsx",
+      "sha256": "405fd5be5501738f73715a184df01964b89db4d9bdb91ee72da1c14d7815cfa5"
+    },
+    {
+      "path": "src/features/reception/ReceptionDashboard.tsx",
+      "sha256": "2479acb3b65265513ef3d444c188dcfdc030c83cd42e6970d4bf7ab68f9f6559"
+    },
+    {
+      "path": "src/features/reception/ReceptionDashboardSummary.tsx",
+      "sha256": "f17d0f8412a5b8ab9265f1b7fe764e4e83d707cf670d468a9819a3bd02d93390"
+    },
+    {
+      "path": "src/features/reception/whatsappDashboard.ts",
+      "sha256": "0567a4e3129d7d99394670af19f1613612aef0c301ba0fee612ca1a131365e52"
+    }
+  ],
+  "frozenTextSourceCount": 419,
+  "frozenTextSourceDigest": "c032fb42a8e61254c3e9a31048946a3f2975bf72f8490f6a0a6932f3bba2938f",
+  "tailwindRawContentCount": 417,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "2f8a1f8d8fbdff28ad56afca12e54ea971d915812cb48f395a1d0b604d6ab059"
+    },
+    {
+      "path": "scripts/fixtures/reception-dashboard-browser.mjs",
+      "sha256": "42e2a55af58fb442dfeaa153f2d9309e8f6a8c1b6f904992a3dcae854060596d"
+    },
+    {
+      "path": "scripts/fixtures/contact-link-reads-browser.mjs",
+      "sha256": "ac1bc004f1329d306be760e103c858e9c3f452372ba3a7220c5d18df10b9d2ff"
+    },
+    {
+      "path": "scripts/fixtures/contact-correction-reads-browser.mjs",
+      "sha256": "02013cea7e2896ea72ee415c249f47ed2d8e6dbacca456bfd8ce28d9ff5660e5"
+    },
+    {
+      "path": "scripts/fixtures/contact-correction-context-browser.mjs",
+      "sha256": "191a04a939b43a3c4f0c72ea243043c06674738db7d45817e4901d9a65a13f4b"
+    },
+    {
+      "path": "scripts/fixtures/contact-directory-browser.mjs",
+      "sha256": "0ae2ab73ec62512982030f27311dfd845ab75eae4953fd44d61a2ae0a8249114"
+    },
+    {
+      "path": "scripts/fixtures/new-case-context-browser.mjs",
+      "sha256": "37f6d23eeaec2c771f9a52e5ba9c74e9a885e130a3d963192c7029d5123b0d24"
+    },
+    {
+      "path": "scripts/fixtures/contact-search-browser.mjs",
+      "sha256": "3c348274b1028d4a2bb09999031954304ac131249e06e4bce781e39edf081d53"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-paused-browser.mjs",
+      "sha256": "5dc4c63c335c4ca36ba29dc3cfba6d1d918ecad39187fe48840f09af50a763f5"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-templates-browser.mjs",
+      "sha256": "239474f2ffc6b65a31922125f79c23470897c21bf89b2d411f33484563eefaec"
+    },
+    {
+      "path": "scripts/fixtures/patient-workspace-browser.mjs",
+      "sha256": "030d6f283f64a71e73a2961aaef8d6c4b7f9f70e4a7acb421c0c19cc275f3295"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-api.mjs",
+      "sha256": "6917242c74a712db4f0de474ee34ee6133bc32264459876805ffe54e58fc1ce2"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-browser.mjs",
+      "sha256": "b060e05143162c09231358b295010c6ae1f4b8eaab8ec05744fadc3e1ad01527"
+    },
+    {
+      "path": "scripts/fixtures/post-consultation-api.mjs",
+      "sha256": "d7f82be146346f7875eb01da59af0db32f6164fd80ee2911cdb14503a20456c8"
+    },
+    {
+      "path": "scripts/fixtures/post-consultation-browser.mjs",
+      "sha256": "c02499409baf4a4e46467b0c7440e16fc6ebab09259b0fa59777ab3041c9d36e"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-api.mjs",
+      "sha256": "c83f0095188f1a56f6acd379fd7af7758247895d2a12f6006feb4c5462368cc0"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-browser.mjs",
+      "sha256": "8ef010f48a78e2c6186fefaec215588a530e2fabae9491a7dfc0ef3b970b5598"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "7555b5db674ff31de1df4c37ca27e87ad4773ad7970e4b03aa6900fcf5bf0f7a"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "3a94b77284518c05911b890f5e264640535a9921eff918f9898f9e6898956bd9"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "cb4b16a94335f943f37e6ef52495361d42d30e9de5433c828811d7ff511e099e"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-browser.mjs",
+      "sha256": "c01bc7bb0ecc8302a63ab3f17134303aee1d97281ad37805a1fdd10804b7fcfe"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-claim-browser.mjs",
+      "sha256": "d0daac763c2495e5260408251f0c9885b5728c7e9149a5c14bb7cf496c8a42a3"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-release-browser.mjs",
+      "sha256": "a27fe2b4e8878afc396e2b8a6ce097a70534b4f8c53e1ac8374158ba4d3b27c8"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-close-browser.mjs",
+      "sha256": "2cd245615410a62d6957129a1491801fb928ee1f62ca110091714e1d20628539"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-reopen-browser.mjs",
+      "sha256": "b00e19bed4a535756c2041eb1dcf5ff438cfec14233d878d9e4da4e87e4de73e"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-queue-browser.mjs",
+      "sha256": "58cfe5ee83d2c5e74aec6c77f272c2ccd9c08ce95268f4709eee1326289769b5"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-revoke-consent-browser.mjs",
+      "sha256": "6fa095cd1fb937b91ec750e383e178eca08f8036c7ea9333f8f8e3a396e4abf1"
+    },
+    {
+      "path": "scripts/fixtures/mfa-verification-api.mjs",
+      "sha256": "189c608838b9d8b2584be3d6454194a8f87f3753dbbd15d50e4fac2b775f60cd"
+    },
+    {
+      "path": "scripts/fixtures/mfa-verification-browser.mjs",
+      "sha256": "8ecbf6c51b07a70c87e6489bbb10de2c4202837de9decfce51e7c3f6b1ea9b38"
+    },
+    {
+      "path": "scripts/fixtures/mfa-unavailability-browser.mjs",
+      "sha256": "de347477550b63afa6d8fa48ede0440cbad6d440d726106b156a9387a5d8af8d"
+    },
+    {
+      "path": "scripts/fixtures/mfa-inline-browser.mjs",
+      "sha256": "f5be6434d1a266f8ef6074b50ad45e99bc31ec8ac7c5fddba9f0a8c0af58f59e"
+    },
+    {
+      "path": "scripts/fixtures/mfa-success-browser.mjs",
+      "sha256": "74fee2638acbca94a23e077417d15720868659171247757b668c415a2d5e207a"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-api.mjs",
+      "sha256": "aadf9dea7e0ae66cf1c34079fcf178c6a85cdcaf3aec1f3e4b29289f35e38e85"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-browser.mjs",
+      "sha256": "df2663ca28208bd6f60fee197777b5b39cb2eade8bee12d9ffb02f3d53d4d6ab"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": false,
+  "consultationChecks": [],
+  "consultationRequests": [],
+  "consultationMetrics": null,
+  "settingsEmbeddedOnly": false,
+  "previewEntry": null,
+  "settingsChecks": [],
+  "settingsRequests": [],
+  "settingsFixtureMetrics": [],
+  "dashboardOnly": true,
+  "dashboardChecks": [
+    {
+      "width": 320,
+      "fieldsAndControls44px": true,
+      "unavailableNotZero": true,
+      "fullSnapshotReplaced": true,
+      "longNames": true
+    },
+    {
+      "width": 375,
+      "fieldsAndControls44px": true,
+      "unavailableNotZero": true,
+      "fullSnapshotReplaced": true,
+      "longNames": true
+    },
+    {
+      "width": 1280,
+      "fieldsAndControls44px": true,
+      "unavailableNotZero": true,
+      "fullSnapshotReplaced": true,
+      "longNames": true
+    },
+    {
+      "width": 1920,
+      "fieldsAndControls44px": true,
+      "unavailableNotZero": true,
+      "fullSnapshotReplaced": true,
+      "longNames": true
+    },
+    {
+      "width": 768,
+      "fieldsAndControls44px": false,
+      "unavailableNotZero": true,
+      "fullSnapshotReplaced": false,
+      "longNames": true
+    },
+    {
+      "width": 1024,
+      "fieldsAndControls44px": false,
+      "unavailableNotZero": true,
+      "fullSnapshotReplaced": false,
+      "longNames": true
+    },
+    {
+      "width": 1440,
+      "fieldsAndControls44px": false,
+      "unavailableNotZero": true,
+      "fullSnapshotReplaced": false,
+      "longNames": true
+    },
+    {
+      "states": 59,
+      "dashboardReads": 23,
+      "expected403": 4,
+      "zeroWrites": true,
+      "clock": "2026-11-05T15:00:00Z",
+      "scope": "synthetic transport; authorization and aggregation checked separately"
+    }
+  ],
+  "dashboardRequests": [
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    }
+  ],
+  "dashboardMetrics": {
+    "clinicalReads": [],
+    "externalCalls": [],
+    "unknown": [],
+    "bookings": 0,
+    "contacts": 0,
+    "caseWrites": 0
+  },
+  "contactLinkReads": false,
+  "contactCorrectionReads": false,
+  "contactCorrectionContext": false,
+  "contactDirectory": false,
+  "newCaseContext": false,
+  "contactSearchOnly": false,
+  "contactSearchChecks": [],
+  "contactSearchRequests": [],
+  "contactSearchMetrics": null,
+  "whatsappPaused": false,
+  "whatsappTemplates": false,
+  "whatsappRevokeConsent": false,
+  "whatsappRevokeConsentCalls": null,
+  "whatsappQueue": false,
+  "whatsappQueueCalls": null,
+  "whatsappReopen": false,
+  "whatsappReopenCalls": null,
+  "whatsappClose": false,
+  "whatsappCloseCalls": null,
+  "whatsappRelease": false,
+  "whatsappReleaseCalls": null,
+  "whatsappClaim": false,
+  "whatsappClaimCalls": null,
+  "whatsappReadOnly": false,
+  "whatsappBotRead": false,
+  "whatsappHistory": false,
+  "whatsappList": false,
+  "whatsappChecks": [],
+  "whatsappRequests": [],
+  "whatsappFixtureCalls": null,
+  "schedulingMigrationOnly": false,
+  "schedulingMigrationChecks": [],
+  "schedulingMigrationCalls": null,
+  "schedulingMigrationReads": null,
+  "schedulingMigrationMetrics": null,
+  "schedulingReceptionMetrics": null,
+  "recoveryNoticeOnly": false,
+  "localRecordingRecovery": false,
+  "postConsultation": false,
+  "postEntries": false,
+  "localRecoveryRequests": [],
+  "postEntryWrites": null,
+  "postConsultationCalls": null,
+  "recoveryNoticeChecks": [],
+  "recoveryNoticeCalls": null,
+  "recoveryNoticeMetrics": null,
+  "patientWorkspaceOnly": false,
+  "patientWorkspaceChecks": [],
+  "patientWorkspaceMetrics": null,
+  "settingsAccessOnly": false,
+  "settingsAdminOnly": false,
+  "settingsAccessChecks": [],
+  "settingsAccessRequests": [],
+  "settingsAccessCalls": null,
+  "mfaSuccessOnly": false,
+  "mfaInlineOnly": false,
+  "mfaUnavailabilityOnly": false,
+  "mfaVerificationOnly": false,
+  "mfaVerificationCalls": null,
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": null,
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/ReceptionDashboard.tsx",
+    "src/features/reception/ReceptionDashboardSummary.tsx",
+    "src/features/reception/ReceptionLayout.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/features/reception/dates.ts",
+    "src/features/reception/whatsappDashboard.ts",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/functionErrors.ts",
+    "src/lib/mfa.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx"
+  ],
+  "screens": [
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-initial-pending",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -311.65625,
+              "bottom": -272.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -268.453125,
+              "bottom": -229.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": 130.078125,
+          "bottom": 194.875
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": 427.015625,
+          "bottom": 491.8125
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-initial-pending-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-first-page",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -317.65625,
+              "bottom": -278.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -274.453125,
+              "bottom": -235.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": 124.078125,
+          "bottom": 188.875
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": 421.015625,
+          "bottom": 485.8125
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-first-page-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-form-end",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -738.65625,
+              "bottom": -699.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -695.453125,
+              "bottom": -656.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -296.921875,
+          "bottom": -232.125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": 0.015625,
+          "bottom": 64.8125
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-form-end-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-cohort",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -1269.65625,
+              "bottom": -1230.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -1226.453125,
+              "bottom": -1187.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -827.921875,
+          "bottom": -763.125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -530.984375,
+          "bottom": -466.1875
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-cohort-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-owners",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -2742.65625,
+              "bottom": -2703.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -2699.453125,
+              "bottom": -2660.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -2300.921875,
+          "bottom": -2236.125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -2003.984375,
+          "bottom": -1939.1875
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-owners-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-availability",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -5766.65625,
+              "bottom": -5727.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -5723.453125,
+              "bottom": -5684.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -5324.921875,
+          "bottom": -5260.125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -5027.984375,
+          "bottom": -4963.1875
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-availability-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-first-human",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -1968.65625,
+              "bottom": -1929.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -1925.453125,
+              "bottom": -1886.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -1526.921875,
+          "bottom": -1462.125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -1229.984375,
+          "bottom": -1165.1875
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-first-human-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-long-owner",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -3483.65625,
+              "bottom": -3444.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -3440.453125,
+              "bottom": -3401.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -3041.921875,
+          "bottom": -2977.125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -2744.984375,
+          "bottom": -2680.1875
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-long-owner-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-next-page",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -3483.65625,
+              "bottom": -3444.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -3440.453125,
+              "bottom": -3401.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:02 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -3041.921875,
+          "bottom": -2977.125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -2744.984375,
+          "bottom": -2680.1875
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-next-page-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-refresh-pending",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -311.65625,
+              "bottom": -272.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -268.453125,
+              "bottom": -229.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": 130.078125,
+          "bottom": 194.875
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": 427.015625,
+          "bottom": 491.8125
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-refresh-pending-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-denied",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -558.65625,
+              "bottom": -519.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -515.453125,
+              "bottom": -476.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível carregar o painel. Verifique o acesso e tente novamente.Tentar carregar painel"
+      ],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -116.921875,
+          "bottom": -52.125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": 180.015625,
+          "bottom": 244.8125
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-denied-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-empty-cohort",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -2189.65625,
+              "bottom": -2150.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -2146.453125,
+              "bottom": -2107.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -1747.921875,
+          "bottom": -1683.125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -1450.984375,
+          "bottom": -1386.1875
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-empty-cohort-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-invalid-period",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -208.65625,
+              "bottom": -169.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -165.453125,
+              "bottom": -126.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Informe um início anterior ao fim e um intervalo de até 31 dias, com datas e horários válidos."
+      ],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": 233.078125,
+          "bottom": 297.875
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": 530.015625,
+          "bottom": 594.8125
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-invalid-period-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-applied-no-owners",
+      "actualPath": "/recepcao/painel",
+      "width": 320,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 169,
+              "top": -3462.65625,
+              "bottom": -3423.65625
+            },
+            {
+              "left": 21.59375,
+              "right": 168.9375,
+              "top": -3419.453125,
+              "bottom": -3380.453125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "02/11/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -3020.921875,
+          "bottom": -2956.125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 231.625,
+          "top": -2723.984375,
+          "bottom": -2659.1875
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-applied-no-owners-320.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-initial-pending",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -268.640625,
+              "bottom": -229.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": 129.890625,
+          "bottom": 194.6875
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": 426.828125,
+          "bottom": 491.625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-initial-pending-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-first-page",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -274.640625,
+              "bottom": -235.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": 123.890625,
+          "bottom": 188.6875
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": 420.828125,
+          "bottom": 485.625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-first-page-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-form-end",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -695.640625,
+              "bottom": -656.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -297.109375,
+          "bottom": -232.3125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -0.171875,
+          "bottom": 64.625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-form-end-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-cohort",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -1226.640625,
+              "bottom": -1187.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -828.109375,
+          "bottom": -763.3125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -531.171875,
+          "bottom": -466.375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-cohort-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-owners",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -2515.640625,
+              "bottom": -2476.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -2117.109375,
+          "bottom": -2052.3125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -1820.171875,
+          "bottom": -1755.375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-owners-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-availability",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -4967.640625,
+              "bottom": -4928.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -4569.109375,
+          "bottom": -4504.3125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -4272.171875,
+          "bottom": -4207.375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-availability-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-first-human",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -1865.640625,
+              "bottom": -1826.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -1467.109375,
+          "bottom": -1402.3125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -1170.171875,
+          "bottom": -1105.375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-first-human-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-long-owner",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -3213.640625,
+              "bottom": -3174.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -2815.109375,
+          "bottom": -2750.3125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -2518.171875,
+          "bottom": -2453.375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-long-owner-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-next-page",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -3213.640625,
+              "bottom": -3174.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:02 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -2815.109375,
+          "bottom": -2750.3125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -2518.171875,
+          "bottom": -2453.375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-next-page-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-refresh-pending",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -268.640625,
+              "bottom": -229.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": 129.890625,
+          "bottom": 194.6875
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": 426.828125,
+          "bottom": 491.625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-refresh-pending-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-denied",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -496.640625,
+              "bottom": -457.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível carregar o painel. Verifique o acesso e tente novamente.Tentar carregar painel"
+      ],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -98.109375,
+          "bottom": -33.3125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": 198.828125,
+          "bottom": 263.625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-denied-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-empty-cohort",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -2032.640625,
+              "bottom": -1993.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -1634.109375,
+          "bottom": -1569.3125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -1337.171875,
+          "bottom": -1272.375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-empty-cohort-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-invalid-period",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -144.640625,
+              "bottom": -105.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Informe um início anterior ao fim e um intervalo de até 31 dias, com datas e horários válidos."
+      ],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": 253.890625,
+          "bottom": 318.6875
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": 550.828125,
+          "bottom": 615.625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-invalid-period-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-applied-no-owners",
+      "actualPath": "/recepcao/painel",
+      "width": 375,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": -3161.640625,
+              "bottom": -3122.640625
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "02/11/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -2763.109375,
+          "bottom": -2698.3125
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 286.625,
+          "top": -2466.171875,
+          "bottom": -2401.375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-applied-no-owners-375.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-initial-pending",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-initial-pending-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-first-page",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": -226,
+              "bottom": -187
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -0.234375,
+          "bottom": 64.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -0.234375,
+          "bottom": 64.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-first-page-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-form-end",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": -226,
+              "bottom": -187
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -0.234375,
+          "bottom": 64.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -0.234375,
+          "bottom": 64.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-form-end-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-cohort",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": -649,
+              "bottom": -610
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -423.234375,
+          "bottom": -358.4375
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -423.234375,
+          "bottom": -358.4375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-cohort-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-owners",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": -1376,
+              "bottom": -1337
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -1150.234375,
+          "bottom": -1085.4375
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -1150.234375,
+          "bottom": -1085.4375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-owners-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-availability",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": -2528,
+              "bottom": -2489
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -2302.234375,
+          "bottom": -2237.4375
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -2302.234375,
+          "bottom": -2237.4375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-availability-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-first-human",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": -980,
+              "bottom": -941
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -754.234375,
+          "bottom": -689.4375
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -754.234375,
+          "bottom": -689.4375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-first-human-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-long-owner",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": -1719,
+              "bottom": -1680
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -1493.234375,
+          "bottom": -1428.4375
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -1493.234375,
+          "bottom": -1428.4375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-long-owner-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-next-page",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": -1635,
+              "bottom": -1596
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:02 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -1409.234375,
+          "bottom": -1344.4375
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -1409.234375,
+          "bottom": -1344.4375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-next-page-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-refresh-pending",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-refresh-pending-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-denied",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 156,
+              "bottom": 195
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível carregar o painel. Verifique o acesso e tente novamente.Tentar carregar painel"
+      ],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": 381.765625,
+          "bottom": 446.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": 381.765625,
+          "bottom": 446.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-denied-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-empty-cohort",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": -1067,
+              "bottom": -1028
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -841.234375,
+          "bottom": -776.4375
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -841.234375,
+          "bottom": -776.4375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-empty-cohort-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-invalid-period",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Informe um início anterior ao fim e um intervalo de até 31 dias, com datas e horários válidos."
+      ],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-invalid-period-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-applied-no-owners",
+      "actualPath": "/recepcao/painel",
+      "width": 1280,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": -1391,
+              "bottom": -1352
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "02/11/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -1165.234375,
+          "bottom": -1100.4375
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 276.3125,
+          "top": -1165.234375,
+          "bottom": -1100.4375
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-applied-no-owners-1280.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-initial-pending",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-initial-pending-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-first-page",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-first-page-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-form-end",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-form-end-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-cohort",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-cohort-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-owners",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-owners-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-availability",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-availability-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-first-human",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-first-human-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-long-owner",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-long-owner-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-next-page",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:02 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-next-page-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-refresh-pending",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-refresh-pending-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-denied",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível carregar o painel. Verifique o acesso e tente novamente.Tentar carregar painel"
+      ],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-denied-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-empty-cohort",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-empty-cohort-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-invalid-period",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Informe um início anterior ao fim e um intervalo de até 31 dias, com datas e horários válidos."
+      ],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-invalid-period-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-applied-no-owners",
+      "actualPath": "/recepcao/painel",
+      "width": 1920,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "02/11/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 383.5,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 383.515625,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-applied-no-owners-1920.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-breakpoint",
+      "actualPath": "/recepcao/painel",
+      "width": 768,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 86.125,
+          "right": 109.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 190.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 262.03125,
+          "right": 315.296875,
+          "targetLeft": 196.03125,
+          "targetRight": 381.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 449.15625,
+          "right": 509.46875,
+          "targetLeft": 386.6875,
+          "targetRight": 571.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 649.953125,
+          "right": 689.984375,
+          "targetLeft": 577.34375,
+          "targetRight": 762.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": 275.1875,
+              "bottom": 314.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 679.625,
+          "top": 619.71875,
+          "bottom": 684.515625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 679.625,
+          "top": 916.65625,
+          "bottom": 981.453125
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-breakpoint-768.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-breakpoint",
+      "actualPath": "/recepcao/painel",
+      "width": 1024,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 118.125,
+          "right": 141.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 254.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 358.03125,
+          "right": 411.296875,
+          "targetLeft": 260.03125,
+          "targetRight": 509.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 609.15625,
+          "right": 669.46875,
+          "targetLeft": 514.6875,
+          "targetRight": 763.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 873.953125,
+          "right": 913.984375,
+          "targetLeft": 769.34375,
+          "targetRight": 1018.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 324.46875,
+              "top": 221.203125,
+              "bottom": 260.203125
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 459.71875,
+          "top": 441.5625,
+          "bottom": 506.359375
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 459.71875,
+          "top": 614.328125,
+          "bottom": 679.125
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-breakpoint-1024.png"
+    },
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao/painel",
+      "variant": "dashboard-breakpoint",
+      "actualPath": "/recepcao/painel",
+      "width": 1440,
+      "viewportOnly": false,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 170.125,
+          "right": 193.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 358.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 514.03125,
+          "right": 567.296875,
+          "targetLeft": 364.03125,
+          "targetRight": 717.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 869.15625,
+          "right": 929.46875,
+          "targetLeft": 722.6875,
+          "targetRight": 1075.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1237.953125,
+          "right": 1277.984375,
+          "targetLeft": 1081.34375,
+          "targetRight": 1434.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Painel da recepção",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Painel da recepção",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 32.390625,
+              "right": 335.265625,
+              "top": 232,
+              "bottom": 271
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [
+        "Atualizado em 05/11/2026 às 12:01 · São Paulo",
+        "29/10/2026 às 12:00 até 05/11/2026 às 12:00"
+      ],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [
+        {
+          "id": ":r5:-from-time",
+          "value": "12:00",
+          "width": 316.3125,
+          "top": 457.765625,
+          "bottom": 522.5625
+        },
+        {
+          "id": ":r5:-to-time",
+          "value": "12:00",
+          "width": 316.3125,
+          "top": 457.765625,
+          "bottom": 522.5625
+        }
+      ],
+      "brokenText": [],
+      "headings": [
+        "Painel da recepção",
+        "Entradas no período",
+        "Em aberto agora",
+        "Indicadores ainda indisponíveis"
+      ],
+      "screenshot": "recepcao-a--recepcao-painel-dashboard-breakpoint-1440.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    {
+      "path": "/recepcao/painel",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    },
+    {
+      "path": "/recepcao/painel",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    },
+    {
+      "path": "/recepcao/painel",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    },
+    {
+      "path": "/recepcao/painel",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    }
+  ],
+  "failedRequests": [],
+  "errorResponses": [
+    {
+      "path": "/functions/v1/whatsapp-api",
+      "status": 403
+    },
+    {
+      "path": "/functions/v1/whatsapp-api",
+      "status": 403
+    },
+    {
+      "path": "/functions/v1/whatsapp-api",
+      "status": 403
+    },
+    {
+      "path": "/functions/v1/whatsapp-api",
+      "status": 403
+    }
+  ],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

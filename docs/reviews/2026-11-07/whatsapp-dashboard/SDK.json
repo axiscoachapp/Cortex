@@ -1,0 +1,346 @@
+{
+  "syntheticOnly": true,
+  "nativeNetworkCalls": 0,
+  "sdkVersion": "2.86.0",
+  "checks": [
+    {
+      "case": "success",
+      "calls": 1,
+      "outcome": "aggregate"
+    },
+    {
+      "case": "first",
+      "calls": 1,
+      "outcome": "aggregate"
+    },
+    {
+      "case": "next",
+      "calls": 1,
+      "outcome": "aggregate"
+    },
+    {
+      "case": "empty",
+      "calls": 1,
+      "outcome": "aggregate"
+    },
+    {
+      "case": "denominators",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "false-zero",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "wrong-window",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "extra",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "wrong-cursor",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "dropped-owner",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "overflow",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "wrong-coverage",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "invented-availability",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "forbidden",
+      "calls": 1,
+      "outcome": "forbidden"
+    },
+    {
+      "case": "directory_unavailable",
+      "calls": 1,
+      "outcome": "directory_unavailable"
+    },
+    {
+      "case": "lost",
+      "calls": 1,
+      "outcome": "unavailable"
+    },
+    {
+      "case": "truncated",
+      "calls": 1,
+      "outcome": "unavailable"
+    },
+    {
+      "case": "impossible-date",
+      "calls": 0,
+      "outcome": "invalid"
+    },
+    {
+      "case": "boolean-limit",
+      "calls": 0,
+      "outcome": "invalid"
+    },
+    {
+      "case": "authority",
+      "calls": 0,
+      "outcome": "invalid"
+    },
+    {
+      "case": "pre-aborted",
+      "calls": 0,
+      "outcome": "cancelled"
+    },
+    {
+      "case": "late",
+      "calls": 1,
+      "outcome": "cancelled"
+    },
+    {
+      "case": "in-flight",
+      "calls": 1,
+      "outcome": "cancelled"
+    }
+  ],
+  "calls": [
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 1
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": "a1.00000000-0000-4000-8000-000000000001",
+        "limit": 1
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "dashboard",
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "before": null,
+        "limit": 50
+      }
+    }
+  ],
+  "unexpected": [],
+  "sources": [
+    {
+      "path": "src/lib/functionErrors.ts",
+      "sha256": "36c8cb268acf947fbe799e9b8080db16dd1f049e7b1f8997c97f300b01c6fd4f"
+    },
+    {
+      "path": "src/features/reception/whatsappDashboard.ts",
+      "sha256": "0567a4e3129d7d99394670af19f1613612aef0c301ba0fee612ca1a131365e52"
+    }
+  ],
+  "sourceHashesStable": true,
+  "limits": "Installed FunctionsClient only, memory fetch; no UI,real Auth/SQL/clinical data or commands. Owner pages are separate snapshots, not concatenated totals."
+}

@@ -33,6 +33,7 @@ export default function ReceptionLayout() {
         <nav aria-label="Recepção" className="flex flex-wrap gap-2">
           {[
             { to: '/recepcao', label: 'Fila de atendimento' },
+            { to: '/recepcao/painel', label: 'Painel' },
             { to: '/recepcao/agenda', label: 'Agenda da equipe' },
             { to: '/recepcao/contatos', label: 'Contatos' },
             { to: '/configuracoes', label: 'Configurações' },

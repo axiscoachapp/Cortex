@@ -1,0 +1,386 @@
+{
+  "syntheticOnly": true,
+  "localOnly": true,
+  "baseline": "30ff47cbb8bc707eb16703ce84f2cbf5a01ffc4d",
+  "incomingCount": 71,
+  "incomingDigest": "c96e7af6821439f9f4ef2aab9fb6cba68f6b8543915ebac1fe7213371c5a8f07",
+  "foreignPreserved": [
+    {
+      "path": "tasks/plan.md",
+      "sha256": "d4091e88d0f622bf15e9ad80f79957ffd801edaea968870274a5b8b8370023b6"
+    },
+    {
+      "path": "tasks/todo.md",
+      "sha256": "a60d951ead6051eae4411e87b5a7c22e94b57bf07fb46b2b143bde2c27762e49"
+    }
+  ],
+  "checks": {
+    "unitPassed": 352,
+    "unitFiles": 6,
+    "unitNew": 113,
+    "sqlCases": 14,
+    "sqlMigrations": 83,
+    "sqlSuites": 2,
+    "sqlSources": 86,
+    "handlerPassed": 23,
+    "handlerContractFailures": 5,
+    "handlerDefectsPending": 2,
+    "sdkGroups": 23,
+    "sdkPosts": 19,
+    "browserStates": 59,
+    "browserRequests": 37,
+    "browserDashboardReads": 23,
+    "expected403": 4,
+    "sourceAndRuntimeHashesStable": true,
+    "cleanupVerified": true,
+    "tsc": true,
+    "lint": true,
+    "syntax": true
+  },
+  "sources": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "e517aaebf1262e2ef240770d99fc20eb07f85100eb1f9a3b65da6cde39dadfca"
+    },
+    {
+      "path": "src/features/reception/ReceptionLayout.tsx",
+      "sha256": "405fd5be5501738f73715a184df01964b89db4d9bdb91ee72da1c14d7815cfa5"
+    },
+    {
+      "path": "src/features/reception/ReceptionDashboard.tsx",
+      "sha256": "2479acb3b65265513ef3d444c188dcfdc030c83cd42e6970d4bf7ab68f9f6559"
+    },
+    {
+      "path": "src/features/reception/ReceptionDashboardSummary.tsx",
+      "sha256": "f17d0f8412a5b8ab9265f1b7fe764e4e83d707cf670d468a9819a3bd02d93390"
+    },
+    {
+      "path": "src/features/reception/ReceptionDashboard.test.tsx",
+      "sha256": "90717c084232b2f41c5e74bf651db73c375dec54e6e031e602dc81895f512e7a"
+    },
+    {
+      "path": "src/features/reception/whatsappDashboard.ts",
+      "sha256": "0567a4e3129d7d99394670af19f1613612aef0c301ba0fee612ca1a131365e52"
+    },
+    {
+      "path": "src/features/reception/whatsappDashboard.test.ts",
+      "sha256": "7ed3f2d294e7dfc20a07b1ca5d4b808e58d4aa3d64ea4b0427545cf97198e11e"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "2f8a1f8d8fbdff28ad56afca12e54ea971d915812cb48f395a1d0b604d6ab059"
+    },
+    {
+      "path": "scripts/fixtures/reception-dashboard-browser.mjs",
+      "sha256": "42e2a55af58fb442dfeaa153f2d9309e8f6a8c1b6f904992a3dcae854060596d"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-dashboard-cases.mjs",
+      "sha256": "980b61e4e554156870f7e103ffaa3348983fa5304e8a510d3336017d651500ac"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-dashboard-sql.mjs",
+      "sha256": "13d962bfd93d3ab7f042a4b71cd99f9af0d83b41d88ccd1f81be536c9dd98b48"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-dashboard-handler.mjs",
+      "sha256": "f3f6e9298ae4e8154cf4d8307e27742ed6e918f2fcc5854c152dfc17dfc015fd"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-dashboard-sdk.mjs",
+      "sha256": "82f09f514a442bbe8192f27d9b588e071861d9cb0b0cd69b0010cf7172dfc7e1"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-dashboard/HANDLER.json",
+      "sha256": "9b1e5d825a03d1bbd296a411415e9d362bdc6841845d6177030036be19a1e89b"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-dashboard/INITIAL_READER.ts.txt",
+      "sha256": "e99e514381baea2a8a3ab9f5bc6bceaf8699c603fdffe7d10502e2de202fd46c"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-dashboard/INITIAL_UI.tsx.txt",
+      "sha256": "74eb1a9a852586973e377c7599de126249e587d568559839021e9dab0760aaa8"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-dashboard/REVIEW.md",
+      "sha256": "bc09dc688b3cc5bb15c07b0f414d33577c1e959bec88bf6c27d1cdcaaa0ee394"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-dashboard/SDK.json",
+      "sha256": "7cd61b33ccb4b9c016ea74fd87bb9c70abeb683f929a8f22751723e6bd0e637e"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-dashboard/UI_RED.json",
+      "sha256": "3e05f7171f625bca35eb9848336a2047d1a9e0b54f501bd758de6770b30cb7d1"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-dashboard/UNIT_RED.json",
+      "sha256": "ebd68bf6a2e0a4397f053a6e5a1a7a6c25e909987c84be1a518ed2f068a6dadb"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-dashboard/UNIT_FINAL.json",
+      "sha256": "6a2f7aa63b2bbcaa358c6f99567a4a8c09efb0d2cc0073e3185d1bd352abc18f"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-dashboard/aggregate-verified/SQL.json",
+      "sha256": "b2ec114497195a8b26f48443cd3246524fb5075cb7104680fbef27e502e63df1"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/AUDIT.json",
+      "sha256": "15a433db52330c5c8feabe20a95af70762f49264d1d2de85bcc7d225e2adb882"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-applied-no-owners-1280.png",
+      "sha256": "41f4cf5ce02e21f49cff65301c73f8359e8117bddf71613aec9362eec977faed"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-applied-no-owners-1920.png",
+      "sha256": "7e7900624e4c9e7a7abf71804f2db694b6d8e7f4428bff6f311d220316f43f4d"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-applied-no-owners-320.png",
+      "sha256": "2bfd3e0ef0959701c00ea07781b4fb202366f5f376cd2365115580bd018d79d5"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-applied-no-owners-375.png",
+      "sha256": "fb5df44e712d1c17d7b5fc4791739d0fee4d5330b058b5699f30b040275973af"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-availability-1280.png",
+      "sha256": "74b0c9d7e62e22efe847d02d51d40b5240ca88daf2fa32db0803f97c165fb6d4"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-availability-1920.png",
+      "sha256": "48a333354dda8bf4da87a4e1e69f3a8ca91891fed89b9731a12c332170b1a733"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-availability-320.png",
+      "sha256": "acb707aebffc3502ec98932f124ceca25d243436173c6608798ab043d42b365b"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-availability-375.png",
+      "sha256": "33f7066d86b1d4c96e881a0740077238bf9821ebf2eec49cb873edfeaa5e985b"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-breakpoint-1024.png",
+      "sha256": "165a0eaf706ab22e6e3a6e4ba3c36734287da6139cd373142bd5ecafaa6fb24d"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-breakpoint-1440.png",
+      "sha256": "c98749d6cdf068391e2e3a76ace18928b802aa13939f3b064efa5971b176cc9a"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-breakpoint-768.png",
+      "sha256": "62b970935228b8cdf26927fb330738b2281b85c8820bd6a5fa872ae501d2f780"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-cohort-1280.png",
+      "sha256": "92ee753a058dfb7d2bb5eeb947cedd238f95fae355ee17fecd450517a6d24030"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-cohort-1920.png",
+      "sha256": "48a333354dda8bf4da87a4e1e69f3a8ca91891fed89b9731a12c332170b1a733"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-cohort-320.png",
+      "sha256": "f3d9ee17962b1422cde4e5c37af79339320a1f6bde27610022b587ec2f5f7240"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-cohort-375.png",
+      "sha256": "6f42fae51d4c2dd13cff6a8382cef85475fe5036250884736597114010a4a881"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-denied-1280.png",
+      "sha256": "d9a3e1ffac33b43453f7aa84708af87f7534623469691d164255490bdc1cdeed"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-denied-1920.png",
+      "sha256": "2ff88e26b6f54ffcb68d63bfbf36e388ee9fc0d0fcfbac46d7aa901551682bbf"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-denied-320.png",
+      "sha256": "4b5e27ba2e11b22e2dc1e0130a31fc8f506a75d0894248c953ae9d58dcf56021"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-denied-375.png",
+      "sha256": "e1aa177840b6f9643cfb8505be1f0a443c6665725c727e71107fd78895fba11d"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-empty-cohort-1280.png",
+      "sha256": "0dc16414e5993927411613f0aec8872635a8a4106a4ebcfe08ea3504f266e468"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-empty-cohort-1920.png",
+      "sha256": "a8ad460cbec33210f8623108066a908796777df6f3d81b9a18704fa959c67185"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-empty-cohort-320.png",
+      "sha256": "1e2b55c7be860f5f3741c718337d786c78a001ca85905daca4f570b2ddbd200a"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-empty-cohort-375.png",
+      "sha256": "aa577a63f56cddcf9e70d30b5b493d1e3c55593d370168d0bc6ee4b7af18df0f"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-first-human-1280.png",
+      "sha256": "9a7e5486b47eccad49bdf7bda1e60df1899b2774c4cc67ee0a196b804c35f45f"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-first-human-1920.png",
+      "sha256": "48a333354dda8bf4da87a4e1e69f3a8ca91891fed89b9731a12c332170b1a733"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-first-human-320.png",
+      "sha256": "fe200658cb766b82eada53c56fbe5443080b064abb1d7adf510e4fdf0795c02b"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-first-human-375.png",
+      "sha256": "29e307dd1490d462dc17c58024a3370ce563d2667466d44fe940d1798cce7b5a"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-first-page-1280.png",
+      "sha256": "cc7c680f58e28b5671adb53b42dda3966111aed6b7c9bf854144e81855f723cc"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-first-page-1920.png",
+      "sha256": "48a333354dda8bf4da87a4e1e69f3a8ca91891fed89b9731a12c332170b1a733"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-first-page-320.png",
+      "sha256": "4236876718c7184e8240ee089f44c8b18b76e8bd85933452a429be1ab030127e"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-first-page-375.png",
+      "sha256": "a6916edc89e9da60ed8f260fcb85e0d6e83a86c69d6b1516e89273255b508d5d"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-form-end-1280.png",
+      "sha256": "cc7c680f58e28b5671adb53b42dda3966111aed6b7c9bf854144e81855f723cc"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-form-end-1920.png",
+      "sha256": "48a333354dda8bf4da87a4e1e69f3a8ca91891fed89b9731a12c332170b1a733"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-form-end-320.png",
+      "sha256": "ba828348df375c2651b435ca048ba730dd89b29f98e70c5c5502b141e3abd0e4"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-form-end-375.png",
+      "sha256": "40737c10d44017b3a0bb799379bd447e3d3dd8ae64e5ba2ba1a70b123316f444"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-initial-pending-1280.png",
+      "sha256": "82172c921518d0c49fef2c8caa03f35404c3077848fd321b5b77fe258e68286e"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-initial-pending-1920.png",
+      "sha256": "ee85c01f6749be5772109169448db9da9f516fabc0967ba54fce83649d220a89"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-initial-pending-320.png",
+      "sha256": "bbbe6572524d4a0f3b77a192f431ca94966f95858f354b648001ad93dbaaa7da"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-initial-pending-375.png",
+      "sha256": "a0456817e235d3eb8e94070a9f8915b3e34676fb44e9fa42442e5d93f97c66ac"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-invalid-period-1280.png",
+      "sha256": "5394dcc8fc7a8e2a5d55fbb1f9be734e94839b9c7e8eba73ecfdcff9acc7d439"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-invalid-period-1920.png",
+      "sha256": "f2c358843f0f646768f4e676aec64cfd603812ea1f359b06f59a7e9a1e0efa87"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-invalid-period-320.png",
+      "sha256": "f490fea5de2981859b83c313e43244b381ef7949f7ea737283665533b0cd3e95"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-invalid-period-375.png",
+      "sha256": "1e926cde99c90119bb83e36818da010bdc9111e473f1cb1982e54ef6bb9f405d"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-long-owner-1280.png",
+      "sha256": "30b78b8b387a451c6bbf0178c25f4382ca33f380e45d5d61bbacf3e3b87f727e"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-long-owner-1920.png",
+      "sha256": "48a333354dda8bf4da87a4e1e69f3a8ca91891fed89b9731a12c332170b1a733"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-long-owner-320.png",
+      "sha256": "aa3efbcfe7ffe7f6f0b66ba72e34c2b87cde10fb6aa58e9cd4b2443cd76f36b5"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-long-owner-375.png",
+      "sha256": "a899c57cb06c86477c8cf2b474236e3e839a894d2ab08f18cd67cb3c319c6d15"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-next-page-1280.png",
+      "sha256": "fe455bc0d4977a60aa97177d009fef577dfd4deb865192130cf7511f7fdab915"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-next-page-1920.png",
+      "sha256": "9e0493342fba9ab14249b015a159ba6b0f88da13b4e570961da974e9741fa06d"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-next-page-320.png",
+      "sha256": "ec53de5aebaa98fd1cd605591d70cb0e29f4a91ed0d387e1bec30ec335e9635d"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-next-page-375.png",
+      "sha256": "80b082392391dcdbf7fceb1fed245aef0a2c588b4ccdff0e6b9818c5995f01cb"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-owners-1280.png",
+      "sha256": "c7f7895f62c5e2cc73bd9dcafe1d481b8f54840b72376c7efb3e8b9eeefe224c"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-owners-1920.png",
+      "sha256": "48a333354dda8bf4da87a4e1e69f3a8ca91891fed89b9731a12c332170b1a733"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-owners-320.png",
+      "sha256": "edb7fade836a1302e15856a60ab1b93185f622483532911b23d8ec1d707f1224"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-owners-375.png",
+      "sha256": "25bfa533ff3ee93d2eafef65307bc3339d0ee566a9e5d059039996171505b4f0"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-refresh-pending-1280.png",
+      "sha256": "82172c921518d0c49fef2c8caa03f35404c3077848fd321b5b77fe258e68286e"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-refresh-pending-1920.png",
+      "sha256": "ee85c01f6749be5772109169448db9da9f516fabc0967ba54fce83649d220a89"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-refresh-pending-320.png",
+      "sha256": "bbbe6572524d4a0f3b77a192f431ca94966f95858f354b648001ad93dbaaa7da"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/dashboard-final-visual/recepcao-a--recepcao-painel-dashboard-refresh-pending-375.png",
+      "sha256": "a0456817e235d3eb8e94070a9f8915b3e34676fb44e9fa42442e5d93f97c66ac"
+    }
+  ],
+  "reviews": {
+    "source": "dashboard_source_review",
+    "consumer": "dashboard_consumer_review",
+    "ui": "dashboard_ui_review",
+    "browser": "dashboard_browser_review",
+    "actionableFindingsRemaining": "two C4 validation defects in message1052; proof gaps closed",
+    "crossModel": "skipped non-interactive"
+  },
+  "limits": [
+    "synthetic SQL/transport and isolated UI only",
+    "existing reception gate preserved",
+    "no deployment or hosted authorization claim",
+    "handler not fully accepted"
+  ]
+}

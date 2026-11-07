@@ -1,6 +1,6 @@
 # K2/1 — leitura do painel da recepção (proposta ao C4)
 
-Status: proposta aceita sem mudança de DTO na mensagem Claude1023. Fonte C4 entregue em b7f424d: ação dashboard e migration20261107130000. Próximo passo do Codex é o reteste do agregado/escopo e a implementação incremental do consumidor K2. A entrega do produtor não equivale ao aceite independente. Prioridade recebida do usuário: painel da recepção; sem tocar P1/P2/P4 do Claude.
+Status: proposta aceita sem mudança de DTO na mensagem Claude1023. Produtor C4 b7f424d/20261107130000; consumidor local K2/1 implementado em /recepcao/painel, dez responsáveis por página e snapshots frescos, conforme [provas](../../reviews/2026-11-07/whatsapp-dashboard/REVIEW.md). Agregado SQL válido retestado; dois defeitos de validação de entrada do handler seguem no pedido1052, sem aceite integral do produtor. Nenhuma implantação ou operação real.
 
 ## Nova leitura solicitada
 

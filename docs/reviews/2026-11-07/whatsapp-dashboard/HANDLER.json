@@ -1,0 +1,366 @@
+{
+  "baseline": "b7f424d2191013693fd64118020f9f100bee0bc1",
+  "syntheticOnly": true,
+  "nativeNetworkCalls": 0,
+  "completed": true,
+  "accepted": false,
+  "checks": [
+    {
+      "case": "reception_server_clinic_and_exact_projection",
+      "passed": true
+    },
+    {
+      "case": "admin_explicit_owner_pages_preserve_complete_totals",
+      "passed": true
+    },
+    {
+      "case": "vanished_owner_moves_to_ineligible",
+      "passed": true
+    },
+    {
+      "case": "empty_cohort_preserves_null",
+      "passed": true
+    },
+    {
+      "case": "authority_clinicId",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "authority_clinic_id",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "authority_actorId",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "authority_userId",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "authority_role",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "authority_admin",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "authority_reception",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "authority_p_clinic",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "date_only",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "reversed",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "future",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "over_31days",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "limit_zero",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "limit_51",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "limit_fraction",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "bad_cursor",
+      "passed": true,
+      "category": "pass",
+      "status": 400,
+      "rpcCalls": 0,
+      "directoryCalls": 0
+    },
+    {
+      "case": "ordinary_doctor_denied_before_rpc",
+      "passed": true
+    },
+    {
+      "case": "impossible_calendar_start",
+      "passed": false,
+      "category": "contract_failure",
+      "status": 200,
+      "rpcCalls": 1,
+      "directoryCalls": 1,
+      "returnedWindow": {
+        "from": "2026-03-02T00:00:00.000Z",
+        "to": "2026-03-03T00:00:00.000Z",
+        "timeZone": "America/Sao_Paulo"
+      },
+      "returnedOwnerCount": 2
+    },
+    {
+      "case": "non_leap_calendar_start",
+      "passed": false,
+      "category": "contract_failure",
+      "status": 200,
+      "rpcCalls": 1,
+      "directoryCalls": 1,
+      "returnedWindow": {
+        "from": "2025-03-01T00:00:00.000Z",
+        "to": "2025-03-03T00:00:00.000Z",
+        "timeZone": "America/Sao_Paulo"
+      },
+      "returnedOwnerCount": 2
+    },
+    {
+      "case": "boolean_limit",
+      "passed": false,
+      "category": "contract_failure",
+      "status": 200,
+      "rpcCalls": 1,
+      "directoryCalls": 1,
+      "returnedWindow": {
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "timeZone": "America/Sao_Paulo"
+      },
+      "returnedOwnerCount": 1
+    },
+    {
+      "case": "string_limit",
+      "passed": false,
+      "category": "contract_failure",
+      "status": 200,
+      "rpcCalls": 1,
+      "directoryCalls": 1,
+      "returnedWindow": {
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "timeZone": "America/Sao_Paulo"
+      },
+      "returnedOwnerCount": 2
+    },
+    {
+      "case": "array_limit",
+      "passed": false,
+      "category": "contract_failure",
+      "status": 200,
+      "rpcCalls": 1,
+      "directoryCalls": 1,
+      "returnedWindow": {
+        "from": "2026-11-01T00:00:00.000Z",
+        "to": "2026-11-07T00:00:00.000Z",
+        "timeZone": "America/Sao_Paulo"
+      },
+      "returnedOwnerCount": 2
+    },
+    {
+      "case": "valid_leap_day",
+      "passed": true
+    },
+    {
+      "case": "exact_31days",
+      "passed": true
+    }
+  ],
+  "rpcCalls": [
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2026-11-01T00:00:00.000Z",
+      "p_to": "2026-11-07T00:00:00.000Z"
+    },
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2026-11-01T00:00:00.000Z",
+      "p_to": "2026-11-07T00:00:00.000Z"
+    },
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2026-11-01T00:00:00.000Z",
+      "p_to": "2026-11-07T00:00:00.000Z"
+    },
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2026-11-01T00:00:00.000Z",
+      "p_to": "2026-11-07T00:00:00.000Z"
+    },
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2026-11-01T00:00:00.000Z",
+      "p_to": "2026-11-07T00:00:00.000Z"
+    },
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2026-03-02T00:00:00.000Z",
+      "p_to": "2026-03-03T00:00:00.000Z"
+    },
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2025-03-01T00:00:00.000Z",
+      "p_to": "2025-03-03T00:00:00.000Z"
+    },
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2026-11-01T00:00:00.000Z",
+      "p_to": "2026-11-07T00:00:00.000Z"
+    },
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2026-11-01T00:00:00.000Z",
+      "p_to": "2026-11-07T00:00:00.000Z"
+    },
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2026-11-01T00:00:00.000Z",
+      "p_to": "2026-11-07T00:00:00.000Z"
+    },
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2024-02-29T00:00:00.000Z",
+      "p_to": "2024-03-01T00:00:00.000Z"
+    },
+    {
+      "p_clinic": "00000000-0000-4000-8000-000000000100",
+      "p_from": "2026-10-01T00:00:00.000Z",
+      "p_to": "2026-11-01T00:00:00.000Z"
+    }
+  ],
+  "directoryCalls": [
+    {
+      "after": null,
+      "limit": 1000
+    },
+    {
+      "after": null,
+      "limit": 1000
+    },
+    {
+      "after": null,
+      "limit": 1000
+    },
+    {
+      "after": null,
+      "limit": 1000
+    },
+    {
+      "after": null,
+      "limit": 1000
+    },
+    {
+      "after": null,
+      "limit": 1000
+    },
+    {
+      "after": null,
+      "limit": 1000
+    },
+    {
+      "after": null,
+      "limit": 1000
+    },
+    {
+      "after": null,
+      "limit": 1000
+    },
+    {
+      "after": null,
+      "limit": 1000
+    },
+    {
+      "after": null,
+      "limit": 1000
+    },
+    {
+      "after": null,
+      "limit": 1000
+    }
+  ],
+  "sources": [
+    {
+      "path": "supabase/functions/_shared/whatsappHandlers.ts",
+      "sha256": "b8dcdb38b425d5eece9433a2b8d1b0687bf5bbcd93747f5fd78b55d2b84090eb"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "sha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71"
+    },
+    {
+      "path": "supabase/functions/_shared/whatsapp.ts",
+      "sha256": "8e62962e04e51dd9d4e8448bd78c01d7a52b09076bb81861e5aa6167df0a8320"
+    },
+    {
+      "path": "supabase/functions/_shared/whatsappFlow.ts",
+      "sha256": "f160540c5dd983fa20de02efa5767f432181926282a095d9bfd56cb870f3b599"
+    }
+  ],
+  "limits": "Frozen apiHandler with mocked authorization, directory and aggregate RPC; no real Auth/SQL/clinic data. Invalid-input cases are independent from valid aggregate semantics."
+}

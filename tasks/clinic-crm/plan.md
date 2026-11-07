@@ -94,3 +94,7 @@ Dependem de resposta do Claude: vínculos confiáveis do legado e backfill real.
 Só marcar implementação concluída quando as tarefas e checkpoints correspondentes passarem. Pesquisa de mercado e telas simuladas não substituem homologação. Não marcar emissão fiscal/WhatsApp em produção concluídos com respostas mockadas.
 
 Para uma publicação futura: backup e ensaio de migrations, ativação por capacidade/feature flag, piloto com uma equipe e escopos limitados, monitoramento, canal de suporte e rollback que preserve mensagens/notas já aceitas externamente. O serviço antigo continua com custódia e histórico durante o corte.
+
+## K2/1 — consumidor local em 07/11 11:33
+
+Painel da recepção implementado em /recepcao/painel com fonte C4 b7f424d, sem mudar o wire nem produtores. [Provas e limites](../../docs/reviews/2026-11-07/whatsapp-dashboard/REVIEW.md): entradas/mediana corridas, cargas atuais por responsável, período São Paulo e quatro campos legíveis, snapshots frescos/páginas10. Sem inferir abandono/agenda/autoria; indicadores sem fonte indisponíveis.352Vitest, SQL83migrations/duas suítes/14casos, SDK23grupos e59capturas isoladas320–1920/135%. Dois defeitos de validação do handler seguem com Claude1052; cliente estrito permite o recorte válido, sem aceite integral C4. Próximos: retestar SHA corretivo e seletor4j; P1/P2/P4/financeiro1040 e encaixes1032 só após revisão, sem alterar prontuários ou gerar reserva/fatura automática.

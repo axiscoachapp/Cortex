@@ -1,0 +1,32 @@
+# K2/1 — painel local da recepção
+
+Entrega local, sem implantação. Contrato [RECEPTION_DASHBOARD_READ](../../../product/clinic-crm/RECEPTION_DASHBOARD_READ.md), produtor congelado `b7f424d2191013693fd64118020f9f100bee0bc1`; consumidor sobre `30ff47cbb8bc707eb16703ce84f2cbf5a01ffc4d` com cinco overlays explícitos. Nenhum arquivo de produção do Claude foi alterado.
+
+## Resultado
+
+Rota `/recepcao/painel` e entrada Painel no cabeçalho da recepção. Intervalo inicial de sete dias, final arredondado ao minuto; quatro campos independentes de data/hora no fuso America/Sao_Paulo. Rascunho oculta o resultado e exige Aplicar período; valida calendário, ordem e até31dias. Dados ficam ocultos durante leitura, pausa, falha, troca de contexto ou sessão oculta. Cada página substitui o snapshot completo; dez responsáveis por página, sem somar páginas nem usar nomes como autoridade. Atualizar volta à primeira página.
+
+Entradas consideram somente o último ciclo; mediana de segundos corridos até registro do primeiro envio humano posteriormente confirmado. Não mede entrega/leitura nem expediente. Carga em aberto é atual, independente do período; responsável atual não identifica autor histórico nem mede produtividade. Colisões de nome preservam o aviso sem exibir UUID. Abandono, confirmações e faltas dizem Não disponível; não viram zero, estimativa ou agendamento automático.
+
+O gate existente não foi ampliado: recepção sem agendas delegadas continua bloqueada na entrada geral. Testes isolados do componente não provam esse gate nem autorização hospedada. Prontuários, P1/P2/P4, calendário médico, navegação inferior e produtores permanecem fora deste recorte.
+
+## Provas separadas
+
+- SQL: [aggregate-verified/SQL.json](aggregate-verified/SQL.json), 83 migrations e duas suítes originais verdes, 14 casos independentes verdes,86 fontes congeladas, cleanup verificado. Docker Desktop local, imagem pgvector existente, rede none/sem portas e banco descartável. Fronteiras semiabertas, primeira entrada, tipos de envio humano/bot/mediana, reabertura, relógio provider ignorado, dono atual distinto de respondente, cargas fora do período, clínica/eligibilidade, vazio/nulo,31dias, papel42501 e snapshots integrais antes/depois da leitura. Não testa Auth hospedada nem Meta.
+- Handler: [HANDLER.json](HANDLER.json),28 casos/23verdes/cinco RED, sem fixture_failure. Dois defeitos permanecem com Claude na [mensagem1052](../../../../coordination/mensagens/2026-11-07-1052_codex-para-claude_dashboard-validacao-entrada.md): calendário impossível normalizado (P2) e limite coercível boolean/string/array (P3). Requests e handler reais, portas Auth/store/RPC falsas, quatro fontes congeladas. Não aprova o handler inteiro. Cliente estrito recusa essas entradas antes da invocação, permitindo o recorte válido local.
+- Cliente/TDD:98RED no stub inicial [INITIAL_READER.ts.txt](INITIAL_READER.ts.txt)/[UNIT_RED.json](UNIT_RED.json); UI15RED no stub inicial [INITIAL_UI.tsx.txt](INITIAL_UI.tsx.txt)/[UI_RED.json](UI_RED.json). Final [UNIT_FINAL.json](UNIT_FINAL.json):352verdes/seis arquivos (98dashboard,15UI,74assignees,55leitura,58templates,52transfer). Cancelamento, escopo/contexto, rascunho, pausa, falha sanitizada, clique capturado após invalidação, paginação com totais/mediana/asOf diferentes, vazio distinto de carga atual e mediana0 preservada. Sem retry automático, mutação ou alvo inferido.
+- SDK instalado2.86.0: [SDK.json](SDK.json),23grupos/19POST em memória, dois hashes estáveis, zero rede nativa. Erros/abort/DTO inválido não mostram falso sucesso; asserções de Requests registradas fora do fetch para não serem engolidas pelo FunctionsClient.
+- Navegador final: [AUDIT.json](../../2026-11-05/reception-app-audit/dashboard-final-visual/AUDIT.json), Edge isolado/loopback,59capturas,320/375/768/1024/1280/1440/1920px, escala135%,419fontes congeladas e41fontes runtime com hashes estáveis; cinco overlays.23leituras dashboard/37Requests permitidos; zero escrita de contato/caso/reserva, leitura clínica, destino externo ou requisição desconhecida. Zero erro JS/transbordamento/label ausente; quatro403/console esperados no transporte sintético, cleanup do cache marcado/isolado verificado. Capturas específicas do formulário, coorte, mediana, responsáveis/nome256, indisponíveis, página seguinte, pendência, erro, vazio, intervalo inválido e aplicado. Não prova banco/Auth/Meta reais. [PROOF.json](PROOF.json) registra hashes e verificação dos artefatos.
+- `tsc --noEmit -p tsconfig.app.json`, lint13caminhos (cinco repetidos após ajuste final) e sintaxe dos seis scripts aprovados. Quatro combinações inválidas de CLI verificadas por revisão: modo+check, overlay alheio, dois modos e App duplicado recusados antes de mkdir.
+
+## Revisão e correções da própria prova
+
+Revisores fresh-context somente leitura, conforme DDD: fonte SQL/handler; consumidor/SDK; UI; harness. Cross-model externo pulado por contexto não interativo. Sem agentes de implementação, comandos pagos ou arquivos editados pelos revisores.
+
+A primeira fixture SQL tentou duplicar user_id entre clínicas apesar da PK. Corrigida para mover a linha sintética; `aggregate-first` é preliminar excluído, não defeito de produto. A primeira UI_RED é do stub verdadeiro; uma execução intermediária UI_GREEN tinha um teste esperando abort de uma leitura já concluída. Corrigido para leitura pendente, como exigido pelo caso, sem mudar contrato.
+
+Capturas `dashboard-first` omitiram conteúdo devido ao scroll interno e exibiram corte interno do datetime-local320. A UI passou a data/hora separadas e as capturas passaram a scroll explícito block:start de cada seção. Revisão também mostrou que totais iguais entre páginas não provavam substituição integral; fixtures agora variam mediana/asOf/total e testes conferem os novos valores. `dashboard-reviewed`/`dashboard-final` são intermediárias; somente `dashboard-final-visual` fundamenta o aceite visual final. Os três breakpoints extras têm só captura de layout; não são contados como teste completo de estados/controles. Revisão visual humana das capturas320/1280 concluiu campos legíveis, alinhamento e conteúdo sem corte horizontal.
+
+## Próximo recorte
+
+Retestar as duas correções do handler quando Claude informar SHA, preservando os RED atuais; sem aguardar resposta vazia para contrato já aceito. Seletor4j usa leitor assignees pronto em recorte próprio. P1/P2/P4, menus/encaixes e revisão P2 recebida1040 continuam separados. Nenhuma carga real, importação/schema, execução fiscal, envio, deploy, hosted ou push.
