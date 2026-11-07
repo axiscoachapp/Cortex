@@ -1,19 +1,27 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef,useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { whatsappApi, type WhatsAppConversation } from './whatsappApi';
 import { clinicDateLabel, clinicTime } from './dates';
+import { WhatsAppBotSession } from './WhatsAppBotSession';
 
 const kindLabels: Record<string, string> = { image: 'Imagem', audio: 'Áudio', video: 'Vídeo', document: 'Documento', sticker: 'Figurinha', location: 'Localização', unsupported: 'Mensagem não disponível' };
 
 export function WhatsAppMessages({ actor, clinic, conversation, onClose }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void }) {
   const region = useRef<HTMLElement>(null);
+  const [botReadGeneration,setBotReadGeneration]=useState(0);
   const messages = useQuery({
     queryKey: ['reception', actor, clinic, 'whatsapp', 'messages', conversation.id],
     queryFn: ({ signal }) => whatsappApi.messages({ conversationId: conversation.id }, signal),
     retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
   const fresh = messages.isSuccess && messages.isFetchedAfterMount && !messages.isFetching;
+  const refresh=()=>{
+    // A new generation cannot join a bot read started before this message refresh,
+    // even when a fast response coalesces the parent's pending render.
+    setBotReadGeneration(generation=>generation+1);
+    void messages.refetch();
+  };
   useEffect(() => {
     region.current?.focus({ preventScroll: true });
     const title = region.current?.querySelector('h2')?.getBoundingClientRect();
@@ -26,12 +34,14 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose }: { act
       <h2 className="min-w-0 font-semibold [overflow-wrap:anywhere]">{conversation.profileName || 'Contato sem nome'}</h2>
       <Button variant="outline" onClick={onClose}>Voltar à lista</Button>
     </div>
-    <Button variant="outline" disabled={messages.isFetching} onClick={() => void messages.refetch()}>Atualizar mensagens</Button>
+    <Button variant="outline" disabled={messages.isFetching} onClick={refresh}>Atualizar mensagens</Button>
     {messages.isPending || messages.isFetching ? <p role="status" className="text-sm">Carregando mensagens…</p> : messages.isError ? <div role="alert" className="space-y-3 text-sm">
       <p>Não foi possível carregar as mensagens. Verifique seu acesso e tente novamente.</p>
-      <Button variant="outline" onClick={() => void messages.refetch()}>Tentar carregar mensagens</Button>
+      <Button variant="outline" onClick={refresh}>Tentar carregar mensagens</Button>
     </div> : null}
     {fresh && <>
+      <p className="text-sm [overflow-wrap:anywhere]">Fila atual: <strong>{messages.data.conversation.queue}</strong></p>
+      <WhatsAppBotSession key={botReadGeneration} generation={botReadGeneration} actor={actor} clinic={clinic} conversationId={messages.data.conversation.id} />
       {messages.data.conversation.optedOut && <p className="rounded-md bg-muted p-3 text-sm">Este contato pediu para não receber lembretes.</p>}
       {messages.data.messages.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma mensagem nesta conversa.</p>}
       <ol aria-label="Mensagens da conversa" className="space-y-3">{messages.data.messages.slice().reverse().map(message => <li key={message.id} className={`min-w-0 rounded-lg border p-3 space-y-2 ${message.direction === 'out' ? 'bg-primary/5' : 'bg-muted/40'}`}>

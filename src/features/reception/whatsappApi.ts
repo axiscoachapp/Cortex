@@ -35,6 +35,13 @@ const message = z.object({
 }).strict();
 const listInput = z.object({ filter: z.enum(['unassigned', 'mine', 'open', 'closed']).default('open'), search: z.string().trim().max(80).default(''), before: cursor.nullish(), limit: z.number().int().min(1).max(100).default(50) }).strict();
 const messagesInput = z.object({ conversationId: uuid, before: cursor.nullish() }).strict();
+const botInput=z.object({conversationId:uuid}).strict();
+const botSession=z.object({
+  status:z.enum(['active','handed_off','closed','human','error']),
+  path:z.array(z.string().min(1).max(24)).max(20),outcome:z.string().max(80).nullable(),
+  startedAt:timestamp,updatedAt:timestamp,
+}).strict();
+const botResponse=z.object({session:botSession.nullable()}).strict();
 const uniqueIds = (rows: { id: string }[]) => new Set(rows.map(row => row.id)).size === rows.length;
 const conversationPage = z.object({ conversations: z.array(conversation).max(100), nextBefore: cursor.nullable() }).strict().refine(page => uniqueIds(page.conversations));
 const messagePage = z.object({ conversation, messages: z.array(message).max(50), nextBefore: cursor.nullable() }).strict().refine(page => uniqueIds(page.messages));
@@ -42,6 +49,7 @@ const messagePage = z.object({ conversation, messages: z.array(message).max(50),
 export type WhatsAppConversation = z.infer<typeof conversation>;
 export type WhatsAppMessage = z.infer<typeof message>;
 export type WhatsAppInboxFilter = z.infer<typeof listInput>['filter'];
+export type WhatsAppBotSession=z.infer<typeof botSession>;
 export class WhatsAppReadError extends Error {
   constructor(message: string, readonly code: string) { super(message); }
 }
@@ -80,5 +88,9 @@ export const whatsappApi = {
   async messages(input: z.input<typeof messagesInput>, signal?: AbortSignal) {
     const value = messagesInput.parse(input);
     return read({ action: 'messages', ...value, before: value.before ?? null }, messagePage.refine(page => page.conversation.id === value.conversationId), signal);
+  },
+  async botSession(input:z.input<typeof botInput>,signal?:AbortSignal){
+    const value=botInput.parse(input);
+    return read({action:'botSession',...value},botResponse,signal);
   },
 };

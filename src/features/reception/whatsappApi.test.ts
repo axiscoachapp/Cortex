@@ -10,6 +10,7 @@ const oversizedTimestamp = '2026-11-06T18:30:00.' + '1'.repeat(128) + 'Z';
 const state = { serverReady: true, connected: true, status: 'connected', displayPhone: 'Número sintético', verifiedName: 'Clínica sintética', quality: null, connectedAt: at, canManage: false, canUseInbox: true };
 const conversation = { id, waId: null, profileName: 'Contato sintético', contactId: null, caseId: null, queue: 'geral', status: 'open', assignedTo: null, assignedAt: null, openedAt: at, firstResponseAt: null, closedAt: null, lastInboundAt: at, windowOpenUntil: at, lastMessageAt: at, lastMessagePreview: 'Mensagem sintética', unreadCount: 2, optedOut: false, consented: true, revision: 1 };
 const message = { id: other, direction: 'in', kind: 'text', body: 'Mensagem sintética', media: null, template: null, status: 'received', error: null, sentBy: null, at };
+const session = { status: 'handed_off', path: ['Agendamento', 'Médico sintético'], outcome: 'queue:agendamento', startedAt: at, updatedAt: at };
 describe('WhatsApp read adapter', () => {
   beforeEach(() => vi.resetAllMocks());
   it('reads connection state without sending actor or clinic and forwards cancellation', async () => {
@@ -112,5 +113,40 @@ describe('WhatsApp read adapter', () => {
   it('normalizes thrown transport failures without exposing their contents', async () => {
     mocks.invoke.mockRejectedValue(new Error('SYNTHETIC PRIVATE TRANSPORT DETAIL'));
     await expect(whatsappApi.state()).rejects.toMatchObject({ code: 'unavailable', message: 'Não foi possível carregar o WhatsApp. Verifique o acesso e tente novamente.' });
+  });
+});
+
+describe('WhatsApp bot session read contract v1.2',()=>{
+  beforeEach(()=>vi.resetAllMocks());
+  it('reads only the selected conversation with cancellation and preserves the path',async()=>{
+    mocks.invoke.mockResolvedValue({data:{session},error:null});
+    const signal=new AbortController().signal;
+    expect(await whatsappApi.botSession({conversationId:id},signal)).toEqual({session});
+    expect(mocks.invoke).toHaveBeenCalledExactlyOnceWith('whatsapp-api',{body:{action:'botSession',conversationId:id},signal});
+  });
+  it('distinguishes no bot session from an unavailable response',async()=>{
+    mocks.invoke.mockResolvedValue({data:{session:null},error:null});
+    expect(await whatsappApi.botSession({conversationId:id})).toEqual({session:null});
+  });
+  it.each(['active','handed_off','closed','human','error'])('accepts the explicit %s status',async status=>{
+    mocks.invoke.mockResolvedValue({data:{session:{...session,status}},error:null});
+    expect((await whatsappApi.botSession({conversationId:id})).session?.status).toBe(status);
+  });
+  it.each([
+    {session:{...session,status:'sent'}},
+    {session:{...session,path:Array(21).fill('Sintético')}},
+    {session:{...session,path:['x'.repeat(25)]}},
+    {session:{...session,path:[{}]}},
+    {session:{...session,outcome:'x'.repeat(81)}},
+    {session:{...session,updatedAt:oversizedTimestamp}},
+    {session:{...session,patientNotes:'Synthetic forbidden field'}},
+    {session,conversationId:id},
+    {},
+  ])('refuses malformed or unexpected bot metadata',async data=>{
+    mocks.invoke.mockResolvedValue({data,error:null});
+    await expect(whatsappApi.botSession({conversationId:id})).rejects.toMatchObject({code:'INVALID_RESPONSE'});
+  });
+  it.each([{conversationId:'invalid'},{conversationId:id,clinicId:other},{conversationId:id,actorId:other}])('refuses invalid identity or authority input before transport',async input=>{
+    await expect(whatsappApi.botSession(input as never)).rejects.toThrow();expect(mocks.invoke).not.toHaveBeenCalled();
   });
 });

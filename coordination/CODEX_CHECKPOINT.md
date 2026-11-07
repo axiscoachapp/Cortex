@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-06 23:53. **K1/3a — caminho no robô e fila em leitura:** [provas](../docs/reviews/2026-11-06/whatsapp-bot-read/IMPLEMENTATION.md),2353 atende pedido path/fila2152. DTO botSession estrito/limites/AbortSignal, painel só após conversa fresca e fila das mensagens; ator/clínica/conversa/geração, sem cache antigo em pendente/erro, cancelamento e resposta tardia. Atualizar mensagens não reaproveita pedido anterior do bot, inclusive com resposta imediata.84Vitest/2arquivos+5Node/tipos/lint/sintaxe/três flags/revisão;32estados320–1920/135%,20rótulos medidos/19hashes/3overlays/319fontes/cleanup. Só4recusas403 deliberadas, nenhum write/clínico/externo. Sem DTO origem, inferência de identidade ou agendamento.
+
+Próximos candidatos independentes: paginação de leitura K1 ou K7 pós-consulta/áudio local. Comandos só no próprio contrato/revisão, sem enviar ou marcar sozinho. Claude mantém correções C4/C5/2316/2330 e informa SHAs para reteste; não repetir bloqueios sem mudança, modal91px e reserva/contato K6/5a encerrados no recorte. M2/MFA/compartilhamento/piloto abertos. Automação ACTIVE; main/axiscoachapp sem push/hosted/Meta/carga; preservar Claude/PersonalMed/SaaS.
+
+---
+
 Entrega K6/5c1: `038a7943bbe78ac0a41b56280e30c4062f66ba83`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; mudanças SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Modal/gate verdes no recorte; dois resíduos C5 enviados2330 para correção. Próximo independente K1 leitura path/fila.
 
 Atualizado em 2026-11-06 23:30. **K6/5c1 — C5 retestado:** [provas](../docs/reviews/2026-11-06/settings-c5-retest/REVIEW.md), mensagem2330.20estados375/1280/1920 a135%, sem overlay: modal sem overflow/ações alcançáveis, antigo91px encerrado; gate/portal/recuperação/Equipe/Permissões preservados.19hashes/cleanup e só3erros503 esperados, sem writes/clínico/externos.9Vitest:7verdes/2RED de C5 (erro inicial do fluxo mascarado por loading e controles do cache durante releitura). Isolamento por papel passa; não é bypass servidor.3Node/tipos/lint/sintaxe/três flags/revisão, cinco fontes C5 porSHA/seis hashes estáveis; nenhuma implementação Claude editada.

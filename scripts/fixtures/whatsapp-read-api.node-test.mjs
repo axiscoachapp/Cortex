@@ -17,6 +17,17 @@ test('fixture refuses writes, foreign actors and authority injection', () => {
   assert.equal(fixture.handle(ids.doctor, input).status, 403);
   for (const body of [{ action: 'send' }, { action: 'act' }, { ...input, clinicId: ids.clinic }, { ...input, actorId: ids.admin }]) assert.equal(fixture.handle(ids.a, body).status, 400);
 });
+
+test('bot session is a scoped read and distinguishes missing path from a refused read',()=>{
+  const fixture=createWhatsAppReadFixture(ids),body={action:'botSession',conversationId:whatsappReadIds.first};
+  assert.equal(fixture.handle(ids.a,body).data.session.status,'handed_off');
+  assert.deepEqual(fixture.handle(ids.a,{...body,conversationId:whatsappReadIds.second}).data,{session:null});
+  assert.equal(fixture.handle(ids.a,{...body,conversationId:ids.clinic}).status,404);
+  assert.equal(fixture.handle(ids.doctor,body).status,403);
+  assert.equal(fixture.handle(ids.a,{...body,clinicId:ids.clinic}).status,400);
+  fixture.setFailure('botSession','forbidden');assert.equal(fixture.handle(ids.a,body).status,403);
+  fixture.setFailure('botSession',null);assert.equal(fixture.handle(ids.a,body).data.session.path.length,2);
+});
 test('controlled refusals and malformed DTOs restore without modifying rows', () => {
   const fixture = createWhatsAppReadFixture(ids), original = fixture.handle(ids.a, input);
   fixture.setFailure('conversations', 'forbidden'); assert.equal(fixture.handle(ids.a, input).status, 403);

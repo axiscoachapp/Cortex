@@ -1,0 +1,67 @@
+{
+  "baseline": "063332375ce0338603b782cf9cb8231ee2195e19",
+  "syntheticOnly": true,
+  "readOnly": true,
+  "unitTests": {
+    "files": 2,
+    "total": 84,
+    "passed": 84
+  },
+  "nodeTests": 5,
+  "typecheckPassed": true,
+  "lintFiles": 9,
+  "syntaxScripts": 4,
+  "invalidCliCases": 3,
+  "browser": {
+    "states": 32,
+    "widths": [
+      320,
+      375,
+      768,
+      1024,
+      1280,
+      1440,
+      1920
+    ],
+    "scale": 1.35,
+    "frozenSources": 319,
+    "overlayHashes": [
+      {
+        "path": "src/features/reception/whatsappApi.ts",
+        "sha256": "374611b85e2a81b0e1c8b6800f486af846894a0e9dd7722da818637875d815b9"
+      },
+      {
+        "path": "src/features/reception/WhatsAppMessages.tsx",
+        "sha256": "753c0ced95c66126bee1a4f63bbe64c308bf066fe0797ffd4dddc7e923c19167"
+      },
+      {
+        "path": "src/features/reception/WhatsAppBotSession.tsx",
+        "sha256": "b3dab16899a02f8b4c3c285422c6de821b69ef20761b81f9ad7fddb5e8faeac5"
+      }
+    ],
+    "runtimeHashes": 19,
+    "cleanupVerified": true,
+    "expected403": 4,
+    "otherErrors": 0,
+    "longLabelsMeasured": 20,
+    "previousPathHiddenAfterRefusal": true,
+    "queueStatusAndTimeChecked": true,
+    "externalRequests": 0,
+    "clinicalReads": 0,
+    "writes": 0
+  },
+  "review": {
+    "cycles": 3,
+    "lastFinding": "pre-refresh pending bot request could be reused",
+    "reproduced": true,
+    "fixed": "new local generation per message refresh in query and component keys",
+    "regressionGreen": true,
+    "crossModel": "skipped: non-interactive context"
+  },
+  "commands": {
+    "unit": "npx vitest run src/features/reception/whatsappApi.test.ts src/features/reception/WhatsAppInbox.test.tsx --pool=forks --maxWorkers=1",
+    "browser": "node scripts/reception-app-audit-browser.mjs --baseline=063332375ce0338603b782cf9cb8231ee2195e19 --only=whatsapp-read --check-whatsapp-bot-read --overlay=src/features/reception/whatsappApi.ts --overlay=src/features/reception/WhatsAppMessages.tsx --overlay=src/features/reception/WhatsAppBotSession.tsx --run=<new-unique-run>",
+    "node": "node --test scripts/fixtures/whatsapp-read-api.node-test.mjs",
+    "types": "npx tsc -p tsconfig.app.json --noEmit"
+  }
+}

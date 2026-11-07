@@ -6,9 +6,9 @@ import { ClinicAccessContext } from './accessContext';
 import type { ClinicAccess } from './contracts';
 import type { WhatsAppConversation } from './whatsappApi';
 
-const mocks = vi.hoisted(() => ({ state: vi.fn(), conversations: vi.fn(), messages: vi.fn(), actor: '11111111-1111-4111-8111-111111111111' }));
+const mocks = vi.hoisted(() => ({ state: vi.fn(), conversations: vi.fn(), messages: vi.fn(), botSession:vi.fn(), actor: '11111111-1111-4111-8111-111111111111' }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: mocks.actor } }) }));
-vi.mock('./whatsappApi', () => ({ whatsappApi: { state: mocks.state, conversations: mocks.conversations, messages: mocks.messages } }));
+vi.mock('./whatsappApi', () => ({ whatsappApi: { state: mocks.state, conversations: mocks.conversations, messages: mocks.messages,botSession:mocks.botSession } }));
 const clinic = '22222222-2222-4222-8222-222222222222', id = '33333333-3333-4333-8333-333333333333';
 const at = '2026-11-06T18:30:00.123456+00:00';
 const access: ClinicAccess = { actorId: mocks.actor, active: true, admin: false, kind: 'reception', clinic: { id: clinic, name: 'Clínica sintética' }, doctors: [], staff: [] };
@@ -26,7 +26,7 @@ async function select() { fireEvent.click(await screen.findByRole('button', { na
 describe('WhatsApp reception inbox read view', () => {
   beforeEach(() => {
     vi.resetAllMocks(); mocks.actor = access.actorId;
-    mocks.state.mockResolvedValue(state); mocks.conversations.mockResolvedValue(page); mocks.messages.mockResolvedValue(detail);
+    mocks.state.mockResolvedValue(state); mocks.conversations.mockResolvedValue(page); mocks.messages.mockResolvedValue(detail);mocks.botSession.mockResolvedValue({session:null});
   });
   it('waits for connection access before reading conversations', async () => {
     let resolve!: (value: typeof state) => void;
@@ -43,6 +43,86 @@ describe('WhatsApp reception inbox read view', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Voltar à lista' }));
     expect(screen.queryByText('Mensagem sintética recebida')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Lista de conversas' })).toHaveFocus();
+  });
+  it('waits for fresh messages before reading the bot path, and shows the fresh queue',async()=>{
+    let resolve!:(value:typeof detail)=>void;
+    mocks.messages.mockReturnValue(new Promise(done=>{resolve=done;}));
+    mocks.botSession.mockResolvedValue({session:{status:'handed_off',path:['Agendamento','Médico sintético'],outcome:'queue:agenda',startedAt:at,updatedAt:at}});
+    mount();await select();await waitFor(()=>expect(mocks.messages).toHaveBeenCalledTimes(1));
+    expect(mocks.botSession).not.toHaveBeenCalled();
+    await act(async()=>resolve({...detail,conversation:{...conversation,queue:'agenda-atual'}}));
+    expect(await screen.findByText('Médico sintético')).toBeVisible();
+    expect(screen.getByText('agenda-atual')).toBeVisible();
+    expect(mocks.botSession).toHaveBeenCalledWith({conversationId:id},expect.any(AbortSignal));
+  });
+  it('hides a refused bot path without hiding fresh messages and retries only that read',async()=>{
+    mocks.botSession.mockResolvedValueOnce({session:{status:'active',path:['Percurso anterior'],outcome:null,startedAt:at,updatedAt:at}});
+    mount();await select();await screen.findByText('Percurso anterior');
+    let reject!:(error:Error)=>void;mocks.botSession.mockImplementationOnce(()=>new Promise((_,fail)=>{reject=fail;}));
+    fireEvent.click(screen.getByRole('button',{name:'Atualizar mensagens'}));
+    await screen.findByText('Carregando caminho…');expect(screen.queryByText('Percurso anterior')).not.toBeInTheDocument();
+    await waitFor(()=>expect(mocks.botSession).toHaveBeenCalledTimes(2));
+    await act(async()=>reject(new Error('SYNTHETIC PRIVATE BOT ERROR')));
+    expect(await screen.findByRole('button',{name:'Tentar carregar caminho'})).toBeVisible();
+    expect(screen.queryByText('Percurso anterior')).not.toBeInTheDocument();
+    expect(screen.getByText('Mensagem sintética recebida')).toBeVisible();
+    expect(screen.queryByText('SYNTHETIC PRIVATE BOT ERROR')).not.toBeInTheDocument();
+    mocks.botSession.mockResolvedValue({session:{status:'human',path:['Percurso sintético'],outcome:null,startedAt:at,updatedAt:at}});
+    const messageReads=mocks.messages.mock.calls.length;
+    fireEvent.click(screen.getByRole('button',{name:'Tentar carregar caminho'}));
+    expect(await screen.findByText('Percurso sintético')).toBeVisible();expect(mocks.messages).toHaveBeenCalledTimes(messageReads);
+  });
+  it('aborts the bot read on close and ignores its late path',async()=>{
+    let resolve!:(value:unknown)=>void;mocks.botSession.mockReturnValue(new Promise(done=>{resolve=done;}));
+    mount();await select();await screen.findByText('Mensagem sintética recebida');
+    await waitFor(()=>expect(mocks.botSession).toHaveBeenCalledTimes(1));const signal=mocks.botSession.mock.calls[0][1] as AbortSignal;
+    fireEvent.click(screen.getByRole('button',{name:'Voltar à lista'}));expect(signal.aborted).toBe(true);
+    await act(async()=>resolve({session:{status:'active',path:['Percurso antigo'],outcome:null,startedAt:at,updatedAt:at}}));
+    expect(screen.queryByText('Percurso antigo')).not.toBeInTheDocument();
+  });
+  it('distinguishes no session from a cycle without chosen options',async()=>{
+    const view=mount();await select();expect(await screen.findByText('Nenhum percurso do robô registrado nesta conversa.')).toBeVisible();
+    view.unmount();mocks.botSession.mockResolvedValue({session:{status:'active',path:[],outcome:null,startedAt:at,updatedAt:at}});
+    mount();await select();expect(await screen.findByText('Nenhuma opção escolhida neste percurso.')).toBeVisible();expect(screen.getByText('Em andamento')).toBeVisible();
+  });
+  it('renders path labels as text and never as links or markup',async()=>{
+    mocks.botSession.mockResolvedValue({session:{status:'handed_off',path:['<b>Destino</b>','https://example.invalid'],outcome:'queue:geral',startedAt:at,updatedAt:at}});
+    mount();await select();expect(await screen.findByText('<b>Destino</b>')).toBeVisible();
+    expect(screen.getByText('https://example.invalid').closest('a')).toBeNull();
+    expect(screen.getByText('<b>Destino</b>').querySelector('b')).toBeNull();
+    expect(screen.queryByText('queue:geral')).not.toBeInTheDocument();
+  });
+  it('withholds a previously read path while a reopened conversation is being verified',async()=>{
+    const session={status:'active',path:['Percurso anterior'],outcome:null,startedAt:at,updatedAt:at};
+    mocks.botSession.mockResolvedValue({session});mount();await select();await screen.findByText('Percurso anterior');
+    fireEvent.click(screen.getByRole('button',{name:'Voltar à lista'}));
+    let resolve!:(value:unknown)=>void;mocks.botSession.mockReturnValue(new Promise(done=>{resolve=done;}));
+    await select();await screen.findByText('Carregando caminho…');expect(screen.queryByText('Percurso anterior')).not.toBeInTheDocument();
+    await act(async()=>resolve({session:{...session,path:['Percurso atual']}}));expect(await screen.findByText('Percurso atual')).toBeVisible();
+  });
+  it('supersedes a bot request started before a fast message refresh',async()=>{
+    let resolveOld!:(value:unknown)=>void;
+    mocks.botSession.mockImplementationOnce(()=>new Promise(done=>{resolveOld=done;}));
+    mount();await select();await waitFor(()=>expect(mocks.botSession).toHaveBeenCalledTimes(1));
+    const oldSignal=mocks.botSession.mock.calls[0][1] as AbortSignal;
+    const session={status:'handed_off',path:['Percurso após atualização'],outcome:null,startedAt:at,updatedAt:at};
+    mocks.messages.mockResolvedValue({...detail,conversation:{...conversation,queue:'fila-atualizada'}});
+    mocks.botSession.mockResolvedValue({session});
+    fireEvent.click(screen.getByRole('button',{name:'Atualizar mensagens'}));
+    await waitFor(()=>expect(mocks.botSession).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('Percurso após atualização')).toBeVisible();expect(screen.getByText('fila-atualizada')).toBeVisible();
+    expect(oldSignal.aborted).toBe(true);
+    await act(async()=>resolveOld({session:{...session,path:['Percurso antes da atualização']}}));
+    expect(screen.queryByText('Percurso antes da atualização')).not.toBeInTheDocument();expect(screen.getByText('Percurso após atualização')).toBeVisible();
+  });
+  it.each(['actor','clinic'])('aborts a pending path and ignores it after changing %s',async target=>{
+    let resolve!:(value:unknown)=>void;mocks.botSession.mockReturnValue(new Promise(done=>{resolve=done;}));
+    const view=mount();await select();await waitFor(()=>expect(mocks.botSession).toHaveBeenCalledTimes(1));const signal=mocks.botSession.mock.calls[0][1] as AbortSignal;
+    mocks.conversations.mockResolvedValue({conversations:[],nextBefore:null});if(target==='actor')mocks.actor=clinic;
+    view.rerender(view.tree(target==='actor'?{...access,actorId:clinic}:{...access,clinic:{id,name:'Outra clínica sintética'}}));
+    expect(signal.aborted).toBe(true);
+    await act(async()=>resolve({session:{status:'human',path:['Percurso da conta anterior'],outcome:null,startedAt:at,updatedAt:at}}));
+    expect(screen.queryByText('Percurso da conta anterior')).not.toBeInTheDocument();
   });
   it.each([
     { ...access, active: false }, { ...access, kind: 'clinical' as const }, { ...access, actorId: clinic }, { ...access, clinic: null },
