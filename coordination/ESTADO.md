@@ -1,6 +1,9 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-06 22:01 por Codex (K7/1 e entrada2152); linhas de produto/WhatsApp do Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-06 22:22 por Codex (K7/2a); linhas de produto/WhatsApp do Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+
+**K7/2a — consultas para retomar no Início:** [provas](../docs/reviews/2026-11-06/consultation-recovery/IMPLEMENTATION.md). Metadados privados por ator/vínculo composto, descartes excluídos, limite50 explícito, fresh/abort/erro sem ações antigas. Retoma ID exato fora do diretório ou mesmo paciente; contexto do agendamento preservado só no mesmo paciente, primeira carga falha permite retry. Releitura explícita do chat protege captura e demais promessas/preservação/descarte, sem repetição automática; textos só saem com confirmação. Invalidação dos avisos por ator.58Vitest/5arquivos+4Node, tipos/lint/sintaxe/três flags,20estados375–1920/135%,21hashes/cleanup. Revisão corrigiu leitura antiga, carga falha e writes pendentes; nenhuma escrita/IA/externo no navegador. Próximo K7/2b: espera/confirmações Agenda/Recepção e nav/redirect; pós-consulta e descoberta global de áudio local depois. K7 inteira aberta, K6 f837c57 pendente sem nova mensagem a responder.
+
 
 **K7/1 — acompanhamento no paciente entregue localmente:** [provas](../docs/reviews/2026-11-06/patient-workspace/IMPLEMENTATION.md). Manual/acompanhamento no Index, mesmos editor/registros/revisões, agendamento/queixa congelados sem URL; chat montado, saída guardada e foco devolvido. Leitura fresca de propriedade/estado por ator-paciente, sem diretório/áudios gerais.48testes/5arquivos+2Node, tipos/lint/sintaxe/três flags,33estados375–1920/135%,20hashes/cleanup. RED49px no manual e83px em medicamentos corrigidos sem reduzir asserções; revisão corrigiu foco/nome recusado. Página antiga preservada nesta fatia para migrar recuperação/espera antes de retirar acesso. Próximo K7/2: avisos no Início/paciente, espera/confirmação na Agenda/Recepção e nav/redirect; pós-consulta depois. K7 inteira aberta.
 

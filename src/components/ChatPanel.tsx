@@ -113,6 +113,8 @@ interface ChatPanelProps {
   onWorkStateChange?: (busy: boolean) => void;
   onCaptureStateChange?: (busy: boolean) => void;
   onOpenPatientWork?: (manual: boolean) => void;
+  /** Explicit Home resume; never reloads automatically after a blocked request. */
+  recoveryRequest?: number;
 }
 
 export function ChatPanel({
@@ -136,6 +138,7 @@ export function ChatPanel({
   onWorkStateChange,
   onCaptureStateChange,
   onOpenPatientWork,
+  recoveryRequest = 0,
 }: ChatPanelProps) {
   const sessionHidden = useSessionHidden();
   const [showBriefing, setShowBriefing] = useState(true);
@@ -153,6 +156,7 @@ export function ChatPanel({
   const [draftLoading, setDraftLoading] = useState(true);
   const [draftLoadError, setDraftLoadError] = useState(false);
   const [draftRetryKey, setDraftRetryKey] = useState(0);
+  const [draftMutations, setDraftMutations] = useState(0);
   const recoveryInputRef = useRef<HTMLInputElement>(null);
   // Audio whose upload did not complete, keyed by draft id. Kept only in this
   // tab (never written to disk unless the doctor explicitly downloads it).
@@ -307,6 +311,22 @@ export function ChatPanel({
   recordingRef.current = recording;
   const selectedPatientId = patient?.id ?? null;
   const [modeDialogOpen, setModeDialogOpen] = useState(false);
+  const lastRecoveryRequest = useRef(recoveryRequest);
+  const recoveryPending = isRecording || recording.isStarting || recording.isStopping || isProcessing || audioTasks > 0 ||
+    isGeneratingFinal || isChatLoading || savingNote || generatingRx || attachingFile || !!documentModal?.isLoading ||
+    checklistLoading || copilotRefreshing || draftLoading || draftMutations > 0;
+  const recoveryDirty = !!reviewData || !!recoveryDraft || composerOpen || !!documentModal || !!editingId ||
+    !!inputValue.trim() || consultationComments.length > 0;
+  useEffect(() => {
+    if (lastRecoveryRequest.current === recoveryRequest) return;
+    lastRecoveryRequest.current = recoveryRequest;
+    if (recoveryPending) {
+      toast({title:'Consulta em andamento',description:'Aguarde o trabalho atual terminar e tente retomar novamente. A consulta aberta foi preservada.'});
+      return;
+    }
+    if (recoveryDirty && !window.confirm('Retomar a versão salva desta consulta? Textos não salvos serão descartados.')) return;
+    setDraftRetryKey(key => key + 1);
+  }, [recoveryRequest, recoveryPending, recoveryDirty, toast]);
 
   useEffect(() => {
     const busy =
@@ -323,6 +343,7 @@ export function ChatPanel({
       composerOpen ||
       !!documentModal ||
       attachingFile ||
+      draftMutations > 0 ||
       !!editingId ||
       !!inputValue.trim();
     onWorkStateChange?.(busy);
@@ -341,6 +362,7 @@ export function ChatPanel({
     composerOpen,
     documentModal,
     attachingFile,
+    draftMutations,
     editingId,
     inputValue,
     onWorkStateChange,
@@ -928,6 +950,7 @@ export function ChatPanel({
         status: 'review' as const,
       };
       await saveConsultationDraft(userId, revised);
+      void queryClient.invalidateQueries({queryKey:['consultation-recovery',userId]});
       if (isCurrentPatient(draft.patientId)) {
         setReviewData(revised);
         toast({ title: 'Rascunho revisado', description: 'Confira o novo texto e confirme para salvar.' });
@@ -1013,6 +1036,7 @@ export function ChatPanel({
     let audioOnServer = !!draft.audioStoragePath && !localAudioRef.current.has(draft.id);
     try {
       await saveConsultationDraft(userId, { ...draft, status: 'processing' });
+      void queryClient.invalidateQueries({queryKey:['consultation-recovery',userId]});
       if (!audioOnServer) {
         const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('ogg') ? 'ogg' : 'webm';
         const path = `consultations/${userId}/${draft.id}.${ext}`;
@@ -1078,6 +1102,7 @@ export function ChatPanel({
     } finally {
       if (mountedRef.current) setAudioTasks((count) => Math.max(0, count - 1));
       if (isCurrentPatient(draft.patientId)) setIsProcessing(false);
+      void queryClient.invalidateQueries({queryKey:['consultation-recovery',userId]});
     }
   }
 
@@ -1113,17 +1138,23 @@ export function ChatPanel({
 
   const discardSavedDraft = async (draft: ConsultationDraft) => {
     if (!window.confirm('Excluir este rascunho e seu áudio? Esta ação não pode ser desfeita.')) return;
-    const { error } = await supabase.functions.invoke('discard-consultation', { body: { draftId: draft.id } });
-    if (error) {
-      toast({
-        title: 'Não foi possível excluir o rascunho',
-        description: await functionErrorMessage(error, 'Tente novamente.'),
-        variant: 'destructive',
-      });
-      return;
+    setDraftMutations(count => count + 1);
+    try {
+      const { error } = await supabase.functions.invoke('discard-consultation', { body: { draftId: draft.id } });
+      if (error) {
+        toast({
+          title: 'Não foi possível excluir o rascunho',
+          description: await functionErrorMessage(error, 'Tente novamente.'),
+          variant: 'destructive',
+        });
+        return;
+      }
+      localAudioRef.current.delete(draft.id);
+      if (isCurrentPatient(draft.patientId)) setRecoveryDraft(null);
+    } finally {
+      setDraftMutations(count => count - 1);
+      void queryClient.invalidateQueries({queryKey:['consultation-recovery',userId]});
     }
-    localAudioRef.current.delete(draft.id);
-    if (isCurrentPatient(draft.patientId)) setRecoveryDraft(null);
   };
 
   const handleSendMessage = async () => {
@@ -1339,6 +1370,7 @@ export function ChatPanel({
 
   const handleReviewCancel = async (comments: string, reviewedText?: string) => {
     if (!reviewData) return;
+    setDraftMutations(count => count + 1);
     const preserved = { ...reviewData, pendingComments: comments, soapDraft: reviewedText ?? reviewData.soapDraft };
     setRecoveryDraft(preserved);
     setReviewData(null);
@@ -1350,6 +1382,9 @@ export function ChatPanel({
         description: 'Retome a revisão e tente novamente antes de sair.',
         variant: 'destructive',
       });
+    } finally {
+      setDraftMutations(count => count - 1);
+      void queryClient.invalidateQueries({queryKey:['consultation-recovery',userId]});
     }
   };
 

@@ -40,6 +40,7 @@ const Index = () => {
   const [captureBusy, setCaptureBusy] = useState(false);
   const [patientLoading,setPatientLoading]=useState(false);
   const [profileRequest,setProfileRequest]=useState(0);
+  const [recoveryRequest,setRecoveryRequest]=useState(0);
   const [patientWork, setPatientWork] = useState<{ actor: string; patientId: string; manual: boolean; appointmentId?: string; initialTitle: string } | null>(null);
   const patientWorkExit = useRef<() => boolean>(() => true);
   const patientWorkTrigger = useRef<HTMLElement | null>(null);
@@ -131,7 +132,7 @@ const Index = () => {
     catch { toast({title:'Não foi possível sair da conta',description:'A sessão continua aberta. Verifique sua conexão e tente novamente.',variant:'destructive'}); }
   };
 
-  const activatePatient = async (patient: Patient, complaint?: string, followUrl = false) => {
+  const activatePatient = async (patient: Pick<Patient, 'id'>, complaint?: string, followUrl = false) => {
     const requestedId = patient.id;
     const alreadyActive=selectedPatientIdRef.current===requestedId && !!selectedPatient;
     if(alreadyActive && captureBusy){setMobileView('chat');return;}
@@ -344,7 +345,7 @@ const Index = () => {
     // 'Nova Consulta' is unscheduled: drop any appointment selected earlier
     // (it belongs to another patient and would fail the draft's appointment FK).
     setSelectedAppointmentId(null);
-    void activatePatient({ ...patient, status: 'atendimento' }, complaint);
+    void activatePatient({id:patient.id}, complaint);
     toast({ title: 'Consulta iniciada', description: `Consulta com ${patient.name} iniciada.` });
   };
 
@@ -406,6 +407,7 @@ const Index = () => {
               mobileView === 'chat' || (!isMobile && mobileView !== 'home') ? 'flex' : 'hidden',
             )}>
               <ChatPanel
+                recoveryRequest={recoveryRequest}
                 appointmentId={selectedAppointmentId}
                 patient={selectedPatient}
                 messages={chatMessages}
@@ -428,7 +430,7 @@ const Index = () => {
                 onRetryBriefing={() => { if (selectedPatient) void loadBriefing(selectedPatient); }}
                 briefingLoading={briefingLoading}
                 userId={user?.id ?? ''}
-                onConsultationSaved={() => { preBriefingCache.current.clear(); briefingRequestRef.current++; }}
+                onConsultationSaved={() => { preBriefingCache.current.clear(); briefingRequestRef.current++; void queryClient.invalidateQueries({queryKey:['consultation-recovery',user?.id]}); }}
                 onWorkStateChange={setChatBusy}
               />
             </div>
@@ -440,6 +442,16 @@ const Index = () => {
               counts={directory?.counts}
               onSelectPatient={handleSelectPatient}
               onNewConsultation={() => setShowNewConsultationModal(true)}
+              onResumeConsultation={patientId => {
+                if (!confirmPatientChange(patientId)) return;
+                if (patientId === selectedPatientIdRef.current && selectedPatient?.id === patientId) {
+                  setMobileView('chat');
+                  setRecoveryRequest(value => value + 1);
+                  return;
+                }
+                if (patientId !== selectedPatientIdRef.current) setSelectedAppointmentId(null);
+                void activatePatient({id:patientId});
+              }}
               userId={user?.id ?? ''}
             />
           )}

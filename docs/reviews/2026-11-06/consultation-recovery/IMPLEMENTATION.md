@@ -1,0 +1,22 @@
+# K7/2a — consultas para retomar no Início
+
+O Início mostra consultas preservadas com paciente, estado e data. Cada aviso abre o paciente exato e os comandos já existentes no prontuário. Estados: processamento pendente, aguardando revisão e nova tentativa necessária. O aviso não processa áudio, confirma consulta, envia mensagem ou altera o rascunho.
+
+A leitura é privada por conta, limitada a51 linhas para mostrar50 e informar quando existem mais. Usa o vínculo composto `draft_patient_owner_fk`, exclui `discard_requested_at` e seleciona somente metadados; não consulta texto clínico nem caminho do áudio. Falha, metadados inconsistentes, mudança de ator ou nova leitura escondem as ações anteriores. A consulta é cancelada na desmontagem e refeita ao abrir; o botão permite atualizar/recuperar a leitura. Resultado vazio não ocupa um cartão no Início. Gravações guardadas somente no navegador continuam no fluxo existente do paciente; sua descoberta no Início não faz parte desta fatia.
+
+## Retomada e trabalho em andamento
+
+Uma retomada fora da lista recente usa a ativação existente por ID. Uma falha de carregamento permite tentar novamente. Outro paciente perde o contexto do agendamento anterior; o mesmo paciente mantém seu agendamento.
+
+Se o paciente já está montado, uma solicitação explícita atualiza a leitura do rascunho. Captura/processamento, finalização, chat, comentários, documentos, anexos, geração de roteiro/copiloto e leitura/preservação/descarte pendentes impedem essa atualização. A solicitação é consumida e não se repete ao terminar a operação. Textos/revisões já abertos exigem confirmação de descarte antes de recarregar. O chat permanece montado, e as escritas existentes mantêm seu contrato. Preservação/processamento/descarte/finalização invalidam os avisos somente da conta correspondente.
+
+## Evidências
+
+- RED inicial do componente ausente; outro RED mostra que o chat montado não relia o rascunho ao retomar o mesmo paciente. Revisão independente encontrou ainda a repetição após carga de paciente falha e as promessas de preservação/descarte sem indicador pendente. Foram corrigidas e cobertas por testes. A terceira leitura não encontrou outra falha material. Cross-model não executado: tarefa agendada não interativa, sem autorização para CLI externo.
+-58 testes Vitest em cinco arquivos: avisos, Index, WelcomeDashboard, ChatPanel e assinatura. Incluem troca de ator/resposta tardia, cache recusado, limite50, vínculo inválido, paciente fora do diretório, repetição depois de falha, agendamento, releitura do mesmo paciente, cancelamento de descarte e operações pendentes sem repetição automática. Duas falhas transitórias do ensaio de descarte eram um locator incorreto (`Descartar` versus o botão existente `Excluir rascunho`), corrigido sem alterar o produto ou reduzir as asserções.
+- Quatro testes Node: dois novos para opt-in/projeção/escopo/modos/escrita bloqueada da fixture e dois de regressão da fixture de acompanhamento. Tipos app/node e lint dos12 caminhos alterados, sintaxe de quatro scripts e três combinações inválidas de flags aprovados.
+- App/Auth/providers/SDK reais do snapshot `ff2662e99ef57dcfb9fde5812709928109061954`, quatro overlays próprios, Edge headless e HTTP loopback com dados sintéticos. Fixture exige conta/filtro de descarte/estados/ordem/limite/projeção exatos. Simula mudança de revisão em outra aba, sem processamento ou aprovação.
+-20 estados em375/768/1280/1920 com escala135%: avisos com nome longo, erro/recuperação no mesmo documento, vazio, retomada por teclado e releitura da revisão no paciente já aberto em375/1920. Zero recorte, erro JS, controle sem nome, chamada externa, IA ou gravação clínica. Oito503/console esperados na indisponibilidade simulada; HEAD200/ERR_ABORTED brutos ficam no relatório sem inferir causa.
+- [VALIDATION.json](VALIDATION.json) e `docs/reviews/2026-11-05/reception-app-audit/recovery-notice-final/AUDIT.json`: fontes congeladas, hashes/cleanup conferidos. A primeira rodada aprovada antecede apenas a invalidação dos avisos e ajuste de indentação; foi substituída pela rodada final da fonte exata.
+
+Isso não prova Auth/RLS reais nem operação em produção. Próximo K7/2b: colocar espera/confirmações na Agenda/Recepção e retirar a navegação genérica com redirecionamentos legados. Pós-consulta e descoberta global de áudio local continuam posteriores. Nenhuma página/registro foi removido nesta fatia; K7 inteira permanece aberta. K6 do novo transporte/robô/C5 continua pendente, sem novo aceite por relato.

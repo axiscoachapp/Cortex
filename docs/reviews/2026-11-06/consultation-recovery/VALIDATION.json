@@ -1,0 +1,48 @@
+{
+  "completed": true,
+  "scope": "K7/2a server draft recovery notices on Home; legacy navigation and local browser discovery remain",
+  "syntheticOnly": true,
+  "baseline": "ff2662e99ef57dcfb9fde5812709928109061954",
+  "vitest": {
+    "passed": 58,
+    "files": 5
+  },
+  "node": {
+    "passed": 4,
+    "new": 2,
+    "regression": 2
+  },
+  "typecheck": "app + node passed",
+  "lint": "12 changed code/test/script paths passed",
+  "scriptSyntaxFiles": 4,
+  "cliRejectedCases": 3,
+  "browser": {
+    "pageErrors": 0,
+    "rawHeadAborts": 6,
+    "expectedResourceConsoleErrors": 8,
+    "expectedUnavailableResponses": 8,
+    "reportSha256": "cc9a702d8583ecb58969d1de9ada565ccdb16a107c469a6b253dce8746d0353c",
+    "aiCalls": 0,
+    "report": "docs/reviews/2026-11-05/reception-app-audit/recovery-notice-final/AUDIT.json",
+    "blockedExternalRequests": 0,
+    "clinicalWrites": 0,
+    "sourceHashesVerified": 21,
+    "states": 20,
+    "widths": [
+      375,
+      768,
+      1280,
+      1920
+    ],
+    "interfaceScale": 1.35,
+    "cleanupVerified": true
+  },
+  "review": "Three bounded reviews; stale mounted draft, failed load retry and pending draft writes corrected; last review no material issue. Cross-model skipped scheduled.",
+  "remaining": [
+    "K7/2b Calendar/Reception waitlist and confirmations",
+    "Remove generic navigation and redirect /trabalho",
+    "Post-consultation stage",
+    "Home discovery of browser-only rescue audio",
+    "K6 f837c57 contact/bot/C5 retest"
+  ]
+}

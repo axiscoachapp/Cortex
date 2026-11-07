@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-06 22:22. **K7/2a — consultas para retomar no Início:** [provas](../docs/reviews/2026-11-06/consultation-recovery/IMPLEMENTATION.md). Metadados privados por ator/vínculo composto, descartes excluídos, limite50 explícito, fresh/abort/erro sem ações antigas. Retoma ID exato fora do diretório ou mesmo paciente; contexto do agendamento preservado só no mesmo paciente, primeira carga falha permite retry. Releitura explícita do chat protege captura e demais promessas/preservação/descarte, sem repetição automática; textos só saem com confirmação. Invalidação dos avisos por ator.58Vitest/5arquivos+4Node, tipos/lint/sintaxe/três flags,20estados375–1920/135%,21hashes/cleanup. Revisão corrigiu leitura antiga, carga falha e writes pendentes; nenhuma escrita/IA/externo no navegador. Próximo K7/2b: espera/confirmações Agenda/Recepção e nav/redirect; pós-consulta e descoberta global de áudio local depois. K7 inteira aberta, K6 f837c57 pendente sem nova mensagem a responder.
+
+Automação ACTIVE, main/axiscoachapp, sem push/hosted/Meta/carga. Sem nova entrada Claude;2152 atendida2201. Preservar Claude/PersonalMed/SaaS. K6 novoSHA, M2/MFA/compartilhamento/piloto continuam abertos.
+
+---
+
 Entrega K7/1: `ddf54f243292c4f347aed41ef59e6e53a8b5ac6d`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; mudanças SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas.
 
 Atualizado em06/11/2026 22:01. **K7/1 entregue:** [provas](../docs/reviews/2026-11-06/patient-workspace/IMPLEMENTATION.md). Manual/acompanhamento no paciente sem rota/queixa no URL, mesmo editor/registros/versões, contexto congelado/chat montado/saída guardada/foco. Propriedade fresca/ator-paciente e sem diretório/áudios gerais.48Vitest/5arquivos+2Node,8editor repetidos, tipos/lint/sintaxe/três flags,33estados375–1920/135%,20hashes/cleanup. RED49/83px corrigidos; revisão foco/nome sem acesso corrigida. Página antiga ainda acessível nesta fatia: K7/2 precisa migrar avisos/espera antes de nav/redirect; pós-consulta posterior, K7 inteira aberta.

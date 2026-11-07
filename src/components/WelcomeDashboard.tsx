@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { SpecialtySettingsSheet } from '@/components/SpecialtySettingsSheet';
 import { OnboardingCard } from '@/components/OnboardingCard';
+import { ConsultationRecoveryNotice } from '@/components/ConsultationRecoveryNotice';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Patient } from '@/types/patient';
@@ -53,6 +54,7 @@ interface WelcomeDashboardProps {
   onSelectPatient: (patient: Patient, appointmentId?: string) => void;
   onNewConsultation: () => void;
   userId: string;
+  onResumeConsultation?: (patientId: string) => void;
 }
 
 const typeLabels: Record<string, string> = {
@@ -104,6 +106,7 @@ export function WelcomeDashboard({
   onSelectPatient,
   onNewConsultation,
   userId,
+  onResumeConsultation,
 }: WelcomeDashboardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -229,6 +232,8 @@ export function WelcomeDashboard({
           <Plus className="w-4 h-4" />
           Nova Consulta
         </Button>
+
+        {onResumeConsultation && <ConsultationRecoveryNotice userId={userId} onResume={onResumeConsultation} />}
 
         {/* First-run onboarding checklist */}
         <OnboardingCard

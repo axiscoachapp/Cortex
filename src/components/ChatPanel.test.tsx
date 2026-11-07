@@ -60,16 +60,19 @@ vi.mock('@/components/ConsultationReviewModal', () => ({
     open,
     soapDraft,
     onConfirm,
+    onCancel,
   }: {
     open: boolean;
     soapDraft: string;
     onConfirm: (comments: string) => void;
+    onCancel: (comments: string, text: string) => void;
   }) =>
     open ? (
       <div>
         <p>{soapDraft}</p>
         <button onClick={() => onConfirm('')}>Confirmar revisão</button>
         <button onClick={() => onConfirm('Correção adicional')}>Regerar rascunho</button>
+        <button onClick={() => onCancel('Comentários novos','Rascunho sintético editado')}>Voltar depois</button>
       </div>
     ) : null,
 }));
@@ -107,8 +110,72 @@ beforeEach(() => {
   HTMLElement.prototype.scrollIntoView = vi.fn();
 });
 afterEach(cleanup);
+afterEach(()=>vi.restoreAllMocks());
 
 describe('patient-scoped asynchronous clinical work', () => {
+  it.each(['preserve','discard'])('does not reload while a %s draft mutation is pending', async mode => {
+    const request=deferred();
+    mocks.loadDraft.mockResolvedValue({id:'draft-A',patientId:'A',status:mode==='preserve'?'review':'error',soapDraft:'Rascunho sintético',chiefComplaint:'Queixa sintética'});
+    if(mode==='preserve')mocks.saveDraft.mockReturnValue(request.promise);else mocks.invoke.mockReturnValue(request.promise);
+    const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    client.setQueryData(['consultation-recovery','doctor'],[]);
+    client.setQueryData(['consultation-recovery','other-doctor'],[]);
+    const props={messages:[],onMessagesChange:vi.fn(),chiefComplaint:'',preBriefing:null,briefingLoading:false,userId:'doctor',patient:patient('A')};
+    const chart=(recoveryRequest:number)=><QueryClientProvider client={client}><ChatPanel {...props} recoveryRequest={recoveryRequest}/></QueryClientProvider>;
+    const {rerender}=render(chart(0));
+    const action=await screen.findByRole('button',{name:mode==='preserve'?'Voltar depois':'Excluir rascunho'});
+    vi.spyOn(window,'confirm').mockReturnValue(true); fireEvent.click(action);
+    await waitFor(()=>expect(mode==='preserve'?mocks.saveDraft:mocks.invoke).toHaveBeenCalledTimes(1));
+    rerender(chart(1)); await act(async()=>{});
+    expect(mocks.loadDraft).toHaveBeenCalledTimes(1);
+    expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({title:'Consulta em andamento'}));
+    await act(async()=>request.resolve(mode==='preserve'?undefined:{data:{},error:null}));
+    expect(mocks.loadDraft).toHaveBeenCalledTimes(1);
+    expect(client.getQueryState(['consultation-recovery','doctor'])?.isInvalidated).toBe(true);
+    expect(client.getQueryState(['consultation-recovery','other-doctor'])?.isInvalidated).toBe(false);
+  });
+  it('rereads a saved draft when Home explicitly resumes the same mounted patient', async () => {
+    const client = new QueryClient({defaultOptions:{queries:{retry:false}}});
+    const props = { messages: [], onMessagesChange: vi.fn(), chiefComplaint: '', preBriefing: null, briefingLoading: false, userId: 'doctor' };
+    const chart = (recoveryRequest: number) => <QueryClientProvider client={client}><ChatPanel {...props} patient={patient('A')} recoveryRequest={recoveryRequest} /></QueryClientProvider>;
+    const {rerender}=render(chart(0));
+    await waitFor(()=>expect(mocks.loadDraft).toHaveBeenCalledTimes(1));
+    mocks.loadDraft.mockResolvedValue({id:'draft-A',patientId:'A',status:'review',soapDraft:'Revisão salva em outra aba',chiefComplaint:'Queixa sintética'});
+    rerender(chart(1));
+    expect(await screen.findByText('Revisão salva em outra aba')).toBeVisible();
+    expect(mocks.loadDraft).toHaveBeenCalledTimes(2);
+    expect(mocks.invoke).not.toHaveBeenCalled();
+    expect(mocks.saveDraft).not.toHaveBeenCalled();
+  });
+  it('preserves unsent text when the doctor declines a same-patient reload', async () => {
+    const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    const props={messages:[],onMessagesChange:vi.fn(),chiefComplaint:'',preBriefing:null,briefingLoading:false,userId:'doctor',patient:patient('A')};
+    const chart=(recoveryRequest:number)=><QueryClientProvider client={client}><ChatPanel {...props} recoveryRequest={recoveryRequest}/></QueryClientProvider>;
+    const {rerender}=render(chart(0)); await act(async()=>{});
+    fireEvent.change(screen.getByLabelText('Pergunta ao assistente clínico'),{target:{value:'Texto sintético não enviado'}});
+    const confirm=vi.spyOn(window,'confirm').mockReturnValue(false);
+    rerender(chart(1)); await act(async()=>{});
+    expect(screen.getByLabelText('Pergunta ao assistente clínico')).toHaveValue('Texto sintético não enviado');
+    expect(mocks.loadDraft).toHaveBeenCalledTimes(1);
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Textos não salvos'));
+    confirm.mockRestore();
+  });
+  it('does not reset pending non-audio work or retry automatically after it finishes', async () => {
+    const request=deferred(); mocks.invoke.mockReturnValue(request.promise);
+    const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    const props={messages:[],onMessagesChange:vi.fn(),chiefComplaint:'',preBriefing:null,briefingLoading:false,userId:'doctor',patient:patient('A')};
+    const chart=(recoveryRequest:number)=><QueryClientProvider client={client}><ChatPanel {...props} recoveryRequest={recoveryRequest}/></QueryClientProvider>;
+    const {rerender}=render(chart(0)); await act(async()=>{});
+    fireEvent.change(screen.getByLabelText('Pergunta ao assistente clínico'),{target:{value:'Pergunta sintética'}});
+    fireEvent.click(screen.getByRole('button',{name:'Enviar pergunta'}));
+    await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledTimes(1));
+    rerender(chart(1)); await act(async()=>{});
+    expect(mocks.loadDraft).toHaveBeenCalledTimes(1);
+    expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({title:'Consulta em andamento'}));
+    await act(async()=>request.resolve({data:{message:'Resposta sintética',sources:[]},error:null}));
+    expect(mocks.loadDraft).toHaveBeenCalledTimes(1);
+    expect(mocks.invoke).toHaveBeenCalledTimes(1);
+  });
   it('generates questions only on request and clears checks for another patient with the same questions', async () => {
     mocks.invoke.mockResolvedValue({ data: { questions: ['Como está seu sono?'] }, error: null });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

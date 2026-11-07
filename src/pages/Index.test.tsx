@@ -58,6 +58,7 @@ const fixture = vi.hoisted(() => ({
   chatMount: vi.fn(),
   update: vi.fn(),
   workspaceExit: true,
+  patientFailure: false,
 }));
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'doctor' }, loading: false, signOut: fixture.signOut }),
@@ -82,7 +83,7 @@ vi.mock('@/integrations/supabase/client', () => ({
           return query;
         },
         limit: async () => ({ data: fixture.rows, error: null }),
-        single: async () => ({ data: fixture.rows.find((row) => row.id === requestedId), error: null }),
+        single: async () => ({ data: fixture.patientFailure ? null : [...fixture.rows,{...fixture.rows[0],id:'outside',name:'Patient outside'}].find((row) => row.id === requestedId), error: fixture.patientFailure ? new Error('Unavailable') : null }),
         range: async (from: number, to: number) => ({ data: fixture.rows.slice(from, to + 1), error: null }),
         then: (done: (v: { data: typeof fixture.rows; error: null }) => void) =>
           Promise.resolve({ data: fixture.rows, error: null }).then(done),
@@ -105,7 +106,7 @@ vi.mock('@/components/PatientSidebar', () => ({
     </aside>
   ),
 }));
-vi.mock('@/components/WelcomeDashboard', () => ({ WelcomeDashboard: () => <h1>Dashboard</h1> }));
+vi.mock('@/components/WelcomeDashboard', () => ({ WelcomeDashboard: ({onResumeConsultation}) => <div><h1>Dashboard</h1><button onClick={()=>onResumeConsultation('A')}>Resume A</button><button onClick={()=>onResumeConsultation('outside')}>Resume outside</button></div> }));
 vi.mock('@/components/PatientSnapshot', () => ({ PatientSnapshot: () => null }));
 vi.mock('@/components/ChatPanel', () => ({
   ChatPanel: ({ patient, preBriefing, briefingError, onCaptureStateChange, onRetryBriefing, onOpenPatientWork }) => {
@@ -139,6 +140,7 @@ vi.mock('@/components/NewConsultationModal', () => ({
 
 beforeEach(() => {
   fixture.workspaceExit = true;
+  fixture.patientFailure = false;
   fixture.invoke.mockReset();
   fixture.chatMount.mockClear();
   fixture.update.mockClear();
@@ -185,6 +187,40 @@ function setup(entry = '/') {
 }
 
 describe('patient activation', () => {
+  it('retries a notice after the first patient activation fails', async () => {
+    setup(); await screen.findByRole('heading',{name:'Dashboard'});
+    fixture.patientFailure=true;
+    await userEvent.click(screen.getByRole('button',{name:'Resume outside'}));
+    await waitFor(()=>expect(fixture.toast).toHaveBeenCalledWith(expect.objectContaining({title:'Paciente indisponível'})));
+    await screen.findByRole('heading',{name:'Dashboard'});
+    fixture.patientFailure=false;
+    await userEvent.click(screen.getByRole('button',{name:'Resume outside'}));
+    expect(await screen.findByRole('heading',{name:'Patient outside'})).toBeVisible();
+  });
+  it('resumes the already-selected patient from Home and preserves its appointment', async () => {
+    const {router}=setup('/?patient=A');
+    await screen.findByRole('heading',{name:'Patient A'});
+    await userEvent.click(screen.getByRole('button',{name:'Appointment A'}));
+    await userEvent.click(screen.getByRole('button',{name:'Home'}));
+    await screen.findByRole('heading',{name:'Dashboard'});
+    await userEvent.click(screen.getByRole('button',{name:'Resume A'}));
+    expect(screen.queryByRole('heading',{name:'Dashboard'})).not.toBeInTheDocument();
+    expect(router.state.location.search).toBe('?patient=A');
+    await userEvent.click(screen.getByRole('button',{name:'Manual fixture'}));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('"appointmentId":"appointment-A"');
+  });
+  it('resumes a patient outside the directory with exact identity and clears another patient appointment', async () => {
+    const {router}=setup('/?patient=A');
+    await screen.findByRole('heading',{name:'Patient A'});
+    await userEvent.click(screen.getByRole('button',{name:'Appointment A'}));
+    await userEvent.click(screen.getByRole('button',{name:'Home'}));
+    await userEvent.click(screen.getByRole('button',{name:'Resume outside'}));
+    await screen.findByRole('heading',{name:'Patient outside'});
+    expect(router.state.location.search).toBe('?patient=outside');
+    await userEvent.click(screen.getByRole('button',{name:'Manual fixture'}));
+    expect(await screen.findByRole('dialog')).toHaveTextContent(JSON.stringify({patientId:'outside',manual:true,initialTitle:''}));
+    expect(fixture.invoke).not.toHaveBeenCalled();
+  });
   it('opens work in the same chart and carries the exact appointment without remounting capture', async () => {
     const { router } = setup('/?patient=A');
     await screen.findByRole('heading', { name: 'Patient A' });
