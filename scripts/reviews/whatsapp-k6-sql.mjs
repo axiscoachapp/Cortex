@@ -8,8 +8,9 @@ import { cleanupOwnedContainer } from './whatsapp-k6-cleanup.mjs';
 import { adaptReservationFixture } from './whatsapp-k6-fixture.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|run=[a-z0-9-]+|contact-concurrency|bot)$/.test(arg)));
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|run=[a-z0-9-]+|contact-concurrency|bot|bot-window-guard)$/.test(arg)));
 assert.ok(!(args.includes('--bot')&&args.includes('--contact-concurrency')),'Bot and contact concurrency require separate disposable databases');
+assert.ok(!args.includes('--bot-window-guard')||args.includes('--bot'),'Window-guard retest requires bot mode');
 const baseline = args.find(arg => arg.startsWith('--baseline='))?.slice(11);
 assert.ok(baseline, 'An explicit source commit is required');
 const run = args.find(arg => arg.startsWith('--run='))?.slice(6) ?? 'baseline';
@@ -20,6 +21,7 @@ const requireSuccess = result => { assert.equal(result.status, 0, result.stderr 
 const git = values => requireSuccess(command('git', values));
 const contactConcurrency=args.includes('--contact-concurrency');
 const bot=args.includes('--bot');
+const botWindowGuard=args.includes('--bot-window-guard');
 const runtimePaths=['scripts/reviews/whatsapp-k6-sql.mjs','scripts/reviews/whatsapp-k6-cleanup.mjs','scripts/reviews/whatsapp-k6-fixture.mjs',...(contactConcurrency?['scripts/reviews/whatsapp-k6-contact-concurrency.mjs']:[]),...(bot?['scripts/reviews/whatsapp-k6-bot-cases.mjs','scripts/reviews/whatsapp-k6-bot-concurrency.mjs','scripts/reviews/whatsapp-k6-bot-handler.mjs']:[])];
 const runtimeSources=await Promise.all(runtimePaths.map(async path=>({path,sha256:createHash('sha256').update(await readFile(path)).digest('hex')})));
 const hashes = [], cache=new Map();
@@ -159,7 +161,7 @@ if(revisioned)cases.push(
     assert r is null and not exists(select 1 from public.whatsapp_automation_runs),'K6_CHANGED_TYPE_FILTER_RESERVED';
   end $$;`],
 );
-const report = { completed: false, accepted: false, scope:bot?'bot contract probes and reservation regressions; not full C4/C5 approval':'automation reservation regressions; not full C4/C5 approval',revisioned,contactConcurrency,bot,runtimeSources,contactCases:[],botCases:[],botRaces:[],botHandler:[],flowSuite:null,baseline, image, syntheticOnly: true, migrations: 0, existingSuite: null, cases: [], sources: hashes, cleanupVerified: false, failure: null };
+const report = { completed: false, accepted: false, scope:bot?'bot contract probes and reservation regressions; not full C4/C5 approval':'automation reservation regressions; not full C4/C5 approval',revisioned,contactConcurrency,bot,botWindowGuard,runtimeSources,contactCases:[],botCases:[],botRaces:[],botHandler:[],flowSuite:null,baseline, image, syntheticOnly: true, migrations: 0, existingSuite: null, cases: [], sources: hashes, cleanupVerified: false, failure: null };
 try {
   const createdId = requireSuccess(docker(['run','--detach','--rm','--name',container,'--network','none','--env','POSTGRES_HOST_AUTH_METHOD=trust',image])).trim();
   assert.match(createdId, /^[0-9a-f]{64}$/); containerId = createdId;
@@ -176,13 +178,14 @@ try {
   if(contactConcurrency){const {exerciseContactFence}=await import('./whatsapp-k6-contact-concurrency.mjs');report.contactCases=await exerciseContactFence({docker,containerId,seed,setup:adaptReservationFixture(setup,revisioned)});}
   if(bot){
     const {probeBotHandler}=await import('./whatsapp-k6-bot-handler.mjs');
-    report.botHandler=await probeBotHandler({source});
-    const {botCases}=await import('./whatsapp-k6-bot-cases.mjs');
-    for(const [name,body] of botCases){
+    report.botHandler=await probeBotHandler({source,expectWindowGuard:botWindowGuard});
+    const {botCases,botWindowCases}=await import('./whatsapp-k6-bot-cases.mjs');
+    for(const [name,body] of [...botCases,...(botWindowGuard?botWindowCases:[])]){
       const result=sql(seed+body+'\nrollback;');
       const error=result.stderr?.match(/(?:ERROR|CONTEXT):[^\n]*/g)?.join('\n')??result.stderr;
-      const category=result.status===0?'pass':error.includes('K6_')?'contract_failure':'fixture_failure';
-      report.botCases.push({name,passed:result.status===0,category,error:result.status===0?null:error});
+      const fixtureControl=name.startsWith('harness_');
+      const category=result.status===0?'pass':fixtureControl?'fixture_failure':error.includes('K6_')?'contract_failure':'fixture_failure';
+      report.botCases.push({name,passed:result.status===0,fixtureControl,category,error:result.status===0?null:error});
       console.log(JSON.stringify(report.botCases.at(-1)));
     }
     const {exerciseBotRaces}=await import('./whatsapp-k6-bot-concurrency.mjs');

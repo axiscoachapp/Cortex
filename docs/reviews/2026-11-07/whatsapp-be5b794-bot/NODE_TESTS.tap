@@ -1,0 +1,112 @@
+TAP version 13
+# Subtest: a handler that ignores every message reports all seven scenarios
+ok 1 - a handler that ignores every message reports all seven scenarios
+  ---
+  duration_ms: 145.3531
+  type: 'test'
+  ...
+# Subtest: a throwing handler records failures without discarding later scenarios
+ok 2 - a throwing handler records failures without discarding later scenarios
+  ---
+  duration_ms: 30.4651
+  type: 'test'
+  ...
+# Subtest: source initialization failure is explicit and distinct from contract failures
+ok 3 - source initialization failure is explicit and distinct from contract failures
+  ---
+  duration_ms: 0.8834
+  type: 'test'
+  ...
+# Subtest: window-guard contract distinguishes all quiet cases from reachable output steps
+ok 4 - window-guard contract distinguishes all quiet cases from reachable output steps
+  ---
+  duration_ms: 18.5629
+  type: 'test'
+  ...
+# Subtest: be5b794 satisfies the guarded window contract including the positive boundary control
+ok 5 - be5b794 satisfies the guarded window contract including the positive boundary control
+  ---
+  duration_ms: 1309.672
+  type: 'test'
+  ...
+# Subtest: f837c57 remains reachable under its old contract and fails the three new window guards
+ok 6 - f837c57 remains reachable under its old contract and fails the three new window guards
+  ---
+  duration_ms: 1189.5141
+  type: 'test'
+  ...
+# Subtest: stops only the owned full ID and positively verifies absence
+ok 7 - stops only the owned full ID and positively verifies absence
+  ---
+  duration_ms: 5.7838
+  type: 'test'
+  ...
+# Subtest: a failed Docker query never proves absence
+ok 8 - a failed Docker query never proves absence
+  ---
+  duration_ms: 0.3563
+  type: 'test'
+  ...
+# Subtest: a surviving container fails cleanup
+ok 9 - a surviving container fails cleanup
+  ---
+  duration_ms: 0.3241
+  type: 'test'
+  ...
+# Subtest: a stop exception is recorded and the absence query still runs
+ok 10 - a stop exception is recorded and the absence query still runs
+  ---
+  duration_ms: 2.5786
+  type: 'test'
+  ...
+# Subtest: a query exception becomes a failed result instead of skipping the report
+ok 11 - a query exception becomes a failed result instead of skipping the report
+  ---
+  duration_ms: 0.6173
+  type: 'test'
+  ...
+# Subtest: without a successful creation, verifies the unique name and never stops it
+ok 12 - without a successful creation, verifies the unique name and never stops it
+  ---
+  duration_ms: 0.2958
+  type: 'test'
+  ...
+# Subtest: rejects invalid ownership identifiers before any Docker operation
+ok 13 - rejects invalid ownership identifiers before any Docker operation
+  ---
+  duration_ms: 3.0425
+  type: 'test'
+  ...
+# Subtest: historical reservation contract remains byte-for-byte unchanged
+ok 14 - historical reservation contract remains byte-for-byte unchanged
+  ---
+  duration_ms: 2.6921
+  type: 'test'
+  ...
+# Subtest: revision contract receives the current revision without changing recipient or payload
+ok 15 - revision contract receives the current revision without changing recipient or payload
+  ---
+  duration_ms: 0.5728
+  type: 'test'
+  ...
+# Subtest: candidate clock and all appointment controls become eligible relative to the same transaction clock
+ok 16 - candidate clock and all appointment controls become eligible relative to the same transaction clock
+  ---
+  duration_ms: 0.7266
+  type: 'test'
+  ...
+# Subtest: all thirty-minute appointment intervals keep their matching relative end
+ok 17 - all thirty-minute appointment intervals keep their matching relative end
+  ---
+  duration_ms: 1.1906
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4128.2681

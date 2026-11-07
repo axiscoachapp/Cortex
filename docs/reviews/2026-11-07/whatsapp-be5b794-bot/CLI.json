@@ -1,0 +1,21 @@
+[
+  {
+    "args": [
+      "--bot-window-guard"
+    ],
+    "reason": "Window-guard retest requires bot mode",
+    "exitCode": 1,
+    "matched": true
+  },
+  {
+    "args": [
+      "--baseline=be5b794dcdf6aea51cde7cc896c5a44204e6cfee",
+      "--bot",
+      "--bot-window-guard",
+      "--contact-concurrency"
+    ],
+    "reason": "Bot and contact concurrency require separate disposable databases",
+    "exitCode": 1,
+    "matched": true
+  }
+]

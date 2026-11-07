@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import ts from 'typescript';
 
-export async function probeBotHandler({source}) {
+export async function probeBotHandler({source,expectWindowGuard=false}) {
   const moduleUrl=text=>'data:text/javascript;base64,'+Buffer.from(ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64');
   let runBot;
   try {
@@ -20,14 +20,19 @@ export async function probeBotHandler({source}) {
     {name:'first_cycle',session:null,revision:1,expectedNewCycle:true},
     {name:'flow_restart',session:current,revision:2,expectedNewCycle:true},
     {name:'idle_restart',session:{...current,started_at:'2026-11-05T20:00:00Z',updated_at:'2026-11-05T21:00:00Z'},revision:1,expectedNewCycle:true},
-    {name:'expired_window',session:null,revision:1,expectedNewCycle:true,lastInboundAt:'2026-11-05T21:00:00Z'},
+    {name:'expired_window',session:null,revision:1,expectedNewCycle:true,lastInboundAt:'2026-11-05T21:00:00Z',expectQuiet:expectWindowGuard},
     {name:'active_continuation',session:current,revision:1,expectedNewCycle:false},
     {name:'already_handed_off',session:{...current,status:'handed_off'},revision:1,expectQuiet:true},
     {name:'quiet_opt_out',session:null,revision:1,body:'SAIR',expectQuiet:true},
+    ...(expectWindowGuard?[
+      {name:'missing_window',session:null,revision:1,lastInboundAt:null,expectQuiet:true},
+      {name:'window_exactly_24h',session:null,revision:1,lastInboundAt:'2026-11-05T23:00:00Z',expectQuiet:true},
+      {name:'window_inside_24h',session:null,revision:1,lastInboundAt:'2026-11-05T23:00:00.001Z',expectedNewCycle:true},
+    ]:[]),
   ]) {
     const calls=[];
     const deps={now:()=>now,store:{
-      conversationById:async()=>({id,clinic_id:'e6200000-0000-4000-8000-000000000001',status:'open',assigned_to:null,opened_at:'2026-11-05T19:00:00Z',last_inbound_at:scenario.lastInboundAt??now.toISOString()}),
+      conversationById:async()=>({id,clinic_id:'e6200000-0000-4000-8000-000000000001',status:'open',assigned_to:null,opened_at:'2026-11-05T19:00:00Z',last_inbound_at:Object.hasOwn(scenario,'lastInboundAt')?scenario.lastInboundAt:now.toISOString()}),
       flowForClinic:async()=>({enabled:true,definition,hours:{},after_hours_text:'',handoff_text:'Synthetic handoff',default_queue:'geral',revision:scenario.revision}),
       botSession:async()=>scenario.session,
       channelForClinic:async()=>{throw new Error('Rejected SQL step must never request a channel');},

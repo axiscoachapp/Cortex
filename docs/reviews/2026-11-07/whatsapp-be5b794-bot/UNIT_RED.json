@@ -1,0 +1,12 @@
+{
+  "kind": "observed command result before implementation",
+  "command": "node --test scripts/reviews/whatsapp-k6-bot-handler.node-test.mjs",
+  "exitCode": 1,
+  "tests": 6,
+  "passed": 3,
+  "failed": 3,
+  "assertion": "7 !== 10 in all three new window-contract tests",
+  "handlerSourceRef": "1b59679c5452821035802b92b0ce0c8578d57093:scripts/reviews/whatsapp-k6-bot-handler.mjs",
+  "testSourceSha256": "ae2bd214a9d008db17180944deeafaef6c69d6b03c615774b9e940cd70ab7d55",
+  "noProductSourceChanged": true
+}

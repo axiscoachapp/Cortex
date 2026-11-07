@@ -60,7 +60,10 @@ export async function exerciseBotRaces({docker,containerId,seed}) {
     const firstBlock=await waitOn(firstBot,humanFirst);
     await finish(humanFirst);await marker(firstBot,'K6_RESULT=');await finish(firstBot);
     const firstResult=response(firstBot),firstCount=count(first);
-    proof.push({name:'bot_waits_for_human_before_first_cycle',passed:firstResult.applied===false&&firstCount===0,category:firstResult.applied===false&&firstCount===0?'pass':'contract_failure',barrier:firstBlock,result:firstResult.applied,botMessages:firstCount,humanCommitted:true});
+    const humanCount=Number(sql(`select count(*) from public.whatsapp_messages where conversation_id='${first}' and sent_by is not null;`));
+    const sessionCount=Number(sql(`select count(*) from public.whatsapp_bot_sessions where conversation_id='${first}';`));
+    const firstPassed=firstResult.applied===false&&firstResult.reason==='taken'&&firstCount===0&&humanCount===1&&sessionCount===0;
+    proof.push({name:'bot_waits_for_human_before_first_cycle',passed:firstPassed,category:firstPassed?'pass':'contract_failure',barrier:firstBlock,result:firstResult.applied,reason:firstResult.reason??null,botMessages:firstCount,humanMessages:humanCount,botSessions:sessionCount,humanCommitted:true});
 
     phase='concurrent identical start uses revision CAS';
     const second=newConversation('5541999950009','wamid.K6BOT_CAS');

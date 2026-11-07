@@ -1,0 +1,237 @@
+{
+  "time": "2026-11-07 10:03:56",
+  "syntheticOnly": true,
+  "green": {
+    "report": "docs/reviews/2026-11-06/whatsapp-k6/bot-be5b794-window-reviewed/SQL_REVIEW.json",
+    "baseline": "be5b794dcdf6aea51cde7cc896c5a44204e6cfee",
+    "completed": true,
+    "accepted": true,
+    "migrations": 79,
+    "existingSuite": {
+      "passed": true,
+      "error": null
+    },
+    "flowSuite": {
+      "passed": true,
+      "error": null
+    },
+    "counts": {
+      "cases": {
+        "total": 14,
+        "passed": 14,
+        "failed": []
+      },
+      "botCases": {
+        "total": 18,
+        "passed": 18,
+        "failed": []
+      },
+      "botRaces": {
+        "total": 3,
+        "passed": 3,
+        "failed": []
+      },
+      "botHandler": {
+        "total": 10,
+        "passed": 10,
+        "failed": []
+      }
+    },
+    "sourceCount": 86,
+    "runtimeCount": 6,
+    "cleanupVerified": true,
+    "failure": null
+  },
+  "red": {
+    "report": "docs/reviews/2026-11-06/whatsapp-k6/bot-f837c57-window-reviewed-control/SQL_REVIEW.json",
+    "baseline": "f837c5769322579c145cb9c6f2588b5d00a77643",
+    "completed": true,
+    "accepted": false,
+    "migrations": 79,
+    "existingSuite": {
+      "passed": true,
+      "error": null
+    },
+    "flowSuite": {
+      "passed": true,
+      "error": null
+    },
+    "counts": {
+      "cases": {
+        "total": 14,
+        "passed": 14,
+        "failed": []
+      },
+      "botCases": {
+        "total": 18,
+        "passed": 10,
+        "failed": [
+          "bot_human_before_first_cycle",
+          "bot_human_before_flow_restart",
+          "bot_human_before_idle_restart",
+          "bot_expired_window",
+          "bot_null_window_zero_effects",
+          "bot_expired_window_zero_effects",
+          "bot_exactly_24h_zero_effects",
+          "bot_expired_active_session_unchanged"
+        ]
+      },
+      "botRaces": {
+        "total": 3,
+        "passed": 2,
+        "failed": [
+          "bot_waits_for_human_before_first_cycle"
+        ]
+      },
+      "botHandler": {
+        "total": 10,
+        "passed": 7,
+        "failed": [
+          "expired_window",
+          "missing_window",
+          "window_exactly_24h"
+        ]
+      }
+    },
+    "sourceCount": 86,
+    "runtimeCount": 6,
+    "cleanupVerified": true,
+    "failure": null,
+    "expectedContractFailures": 12
+  },
+  "sourceHashes": [
+    {
+      "path": "scripts/reviews/whatsapp-k6-sql.mjs",
+      "sha256": "3154691141a57b77f97ddf4e7492726cfb1b339e910689b38a16ced65f730858"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-k6-bot-cases.mjs",
+      "sha256": "c1f6e773f7f47ef99b8a0f9824c3540f9da03fee08d66cf5b61790be890c50e5"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-k6-bot-concurrency.mjs",
+      "sha256": "df1e3b9117be05526e441c997ae5f33291bedf5ad056c117a19cb5e12bdd8617"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-k6-bot-handler.mjs",
+      "sha256": "eb4feef647b429aa9c5b364084960c0e47151881f4cfa261de7e786778c0968e"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-k6-bot-handler.node-test.mjs",
+      "sha256": "ae2bd214a9d008db17180944deeafaef6c69d6b03c615774b9e940cd70ab7d55"
+    }
+  ],
+  "frozenSourcesAndRuntimeHashesVerified": true,
+  "harnessControl": "pg_temp mutating refusal changes body with same count; full-row snapshot detects and nested exception rolls it back",
+  "node": {
+    "report": "NODE_TESTS.tap",
+    "tests": 17,
+    "passed": 17,
+    "failed": 0,
+    "redReport": "UNIT_RED.json",
+    "newRed": 3
+  },
+  "lint": {
+    "files": [
+      "scripts/reviews/whatsapp-k6-sql.mjs",
+      "scripts/reviews/whatsapp-k6-bot-cases.mjs",
+      "scripts/reviews/whatsapp-k6-bot-concurrency.mjs",
+      "scripts/reviews/whatsapp-k6-bot-handler.mjs",
+      "scripts/reviews/whatsapp-k6-bot-handler.node-test.mjs"
+    ],
+    "exitCode": 0
+  },
+  "syntax": {
+    "files": [
+      "scripts/reviews/whatsapp-k6-sql.mjs",
+      "scripts/reviews/whatsapp-k6-bot-cases.mjs",
+      "scripts/reviews/whatsapp-k6-bot-concurrency.mjs",
+      "scripts/reviews/whatsapp-k6-bot-handler.mjs",
+      "scripts/reviews/whatsapp-k6-bot-handler.node-test.mjs"
+    ],
+    "exitCode": 0
+  },
+  "cli": {
+    "report": "CLI.json",
+    "matched": 2
+  },
+  "reviews": [
+    {
+      "cycle": 1,
+      "classification": "valid + actionable",
+      "issue": "Message count missed same-count mutation",
+      "fix": "Ordered full-row JSONB snapshot plus mutating fixture control"
+    },
+    {
+      "cycle": 2,
+      "actionable": []
+    }
+  ],
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "excludedPreliminary": [
+    "docs/reviews/2026-11-06/whatsapp-k6/bot-be5b794-window-final/",
+    "docs/reviews/2026-11-06/whatsapp-k6/bot-f837c57-window-control/"
+  ],
+  "preflightCorrection": "Removed incorrect trim from hash verification; all172 source hashes verified from exact git bytes, no SQL rerun needed",
+  "incoming": {
+    "count": 69,
+    "digest": "0c96e738b70263e8728819d55bf812dc7f7ad090aa32ace2775a3a117edaeade",
+    "unchanged": true,
+    "newMessage": false,
+    "completedRequestedRetest": "2026-11-07-0926_claude-para-codex_correcoes-k6-c5-e-quatro-frentes.md",
+    "evidenceUpdate": "coordination/mensagens/2026-11-07-1002_codex-para-claude_bot-be5b794-retestado.md"
+  },
+  "boundaries": [
+    "Only frozen-source local synthetic SQL and mocked handler",
+    "No product or Claude sources edited",
+    "No C4/C5 full acceptance,Meta,AuthHTTP,hosted,realdata,paid,deploy,push",
+    "K2 priority; dependent adapter/UI waits agreed contract/source; assignees4j separate"
+  ],
+  "foreignPreserved": [
+    {
+      "path": "tasks/plan.md",
+      "sha256": "d4091e88d0f622bf15e9ad80f79957ffd801edaea968870274a5b8b8370023b6"
+    },
+    {
+      "path": "tasks/todo.md",
+      "sha256": "a60d951ead6051eae4411e87b5a7c22e94b57bf07fb46b2b143bde2c27762e49"
+    }
+  ],
+  "gitManifest": {
+    "expectedPaths": [
+      "coordination/CODEX_CHECKPOINT.md",
+      "coordination/ESTADO.md",
+      "coordination/mensagens/2026-11-07-1002_codex-para-claude_bot-be5b794-retestado.md",
+      "docs/reviews/2026-11-06/whatsapp-k6/bot-be5b794-window-reviewed/SQL_REVIEW.json",
+      "docs/reviews/2026-11-06/whatsapp-k6/bot-f837c57-window-reviewed-control/SQL_REVIEW.json",
+      "docs/reviews/2026-11-07/whatsapp-be5b794-bot/CLI.json",
+      "docs/reviews/2026-11-07/whatsapp-be5b794-bot/NODE_TESTS.tap",
+      "docs/reviews/2026-11-07/whatsapp-be5b794-bot/REVIEW.md",
+      "docs/reviews/2026-11-07/whatsapp-be5b794-bot/UNIT_RED.json",
+      "docs/reviews/2026-11-07/whatsapp-be5b794-bot/VALIDATION.json",
+      "scripts/reviews/whatsapp-k6-bot-cases.mjs",
+      "scripts/reviews/whatsapp-k6-bot-concurrency.mjs",
+      "scripts/reviews/whatsapp-k6-bot-handler.mjs",
+      "scripts/reviews/whatsapp-k6-bot-handler.node-test.mjs",
+      "scripts/reviews/whatsapp-k6-sql.mjs",
+      "tasks/clinic-crm/todo.md"
+    ],
+    "branch": "main",
+    "identity": "axiscoachapp",
+    "onlyCommit": true,
+    "foreignIndexBefore": [],
+    "parallelDirtyExcluded": [
+      "scripts/app-audit-browser.mjs",
+      "src/App.tsx",
+      "src/features/settings/whatsappApi.ts",
+      "src/lib/whatsappHandlers.test.ts",
+      "src/pages/Settings.tsx",
+      "supabase/config.toml",
+      "supabase/functions/_shared/whatsappDeps.ts",
+      "supabase/functions/_shared/whatsappHandlers.ts",
+      "tasks/plan.md",
+      "tasks/todo.md"
+    ],
+    "baseHead": "1b59679c5452821035802b92b0ce0c8578d57093"
+  }
+}
