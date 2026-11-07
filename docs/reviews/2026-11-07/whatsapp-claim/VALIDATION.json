@@ -1,0 +1,32 @@
+{
+  "baseline": "cdb429ca686df34efd4c1270d520e4365843656a",
+  "scope": "K1/4a client adapter only",
+  "unit": {
+    "existingReadTests": 55,
+    "newTests": 34,
+    "failed": 0,
+    "passed": 89,
+    "files": 2,
+    "scaffoldRedTests": 32
+  },
+  "sdk": {
+    "commands": 8,
+    "realNetwork": false,
+    "sourceHashesStable": true,
+    "version": "2.86.0",
+    "unexpectedResources": 0,
+    "checks": 9
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 3,
+    "status": "passed"
+  },
+  "syntax": {
+    "scripts": 1,
+    "status": "passed"
+  },
+  "review": "Fresh read-only adversarial review: no actionable issues",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "limits": "No UI integration, browser proof, SQL/CAS/RLS/authentication/server idempotency proof or actual network. Unknown mutation outcomes require fresh reconciliation before another human action."
+}
