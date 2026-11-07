@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K1/3c: `5022c976dab1b5b3396475848ae2d7734e126103`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Paginação de lista concluída; próximos K7 ou comandos K1 no contrato próprio, retestes C4/C5 após novos SHAs.
+
 Atualizado em 2026-11-07 00:27. **K1/3c — paginação da lista:** [provas](../docs/reviews/2026-11-07/whatsapp-list/IMPLEMENTATION.md). Uma página<=50/cursor completo, recentes acessíveis em pending/erro, filtro/busca/contexto reiniciam; detalhe e resposta tardia cancelados, foco/retry protegidos.101Vitest/2arquivos+7Node/tipos/lint/sintaxe/quatro flags/revisão;103conversas50/50/3,66estados (20lista320/375/1440 a135%),19hashes/2overlays/319fontes/cleanup. Só6recusas403 deliberadas, zero writes/leitores clínicos/externos. Fonte final `whatsapp-list-verified`; primeira tentativa com SHA transcrito errado parou antes do servidor e ficou excluída.
 
 Nenhuma entrada Claude nova:2152 já atendida2353. Próximos independentes K7 pós-consulta/descoberta global de áudio local ou comandos K1 no contrato próprio. Retestes C4/C5 aguardam SHAs do dono; dois RED C5 preexistentes fora desta suíte dirigida, sem alegação de teste global verde. M2/MFA/compartilhamento/piloto abertos. Automação ACTIVE; main/axiscoachapp sem push/hosted/Meta/carga, preservar Claude/PersonalMed/SaaS.
