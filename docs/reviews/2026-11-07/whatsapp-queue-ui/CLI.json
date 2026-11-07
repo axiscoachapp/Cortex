@@ -1,0 +1,44 @@
+{
+  "passed": 8,
+  "invalidCombinations": [
+    [
+      "--check-whatsapp-queue"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-queue",
+      "--check-whatsapp-claim"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-queue",
+      "--check-whatsapp-release"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-queue",
+      "--check-whatsapp-close"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-queue",
+      "--check-whatsapp-reopen"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-queue",
+      "--check-whatsapp-history"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-queue",
+      "--check-whatsapp-list"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-queue",
+      "--check-whatsapp-bot-read"
+    ]
+  ],
+  "snapshotOmissionRejectedBeforeBrowser": true
+}

@@ -1,0 +1,28 @@
+{
+  "baseline": "ded70b56456e37b5f1a7b4ed305697ec7123d4c3",
+  "syntheticOnly": true,
+  "case": "native browser input silently truncated 41 typed/pasted characters to 40",
+  "expectedLength": 41,
+  "receivedLength": 40,
+  "commands": 0,
+  "cleanupVerified": true,
+  "failure": {
+    "name": "Error",
+    "message": "expect(locator).toHaveValue(expected) failed\n\nLocator:  getByRole('alertdialog', { name: 'Mudar fila desta conversa?' }).getByLabel('Nova fila', { exact: true })\nExpected: \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\nReceived: \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\nTimeout:  5000ms\n\nCall log:\n  - Expect \"toHaveValue\" getByRole('alertdialog', { name: 'Mudar fila desta conversa?' }).getByLabel('Nova fila', { exact: true }) with timeout 5000ms\n  - waiting for getByRole('alertdialog', { name: 'Mudar fila desta conversa?' }).getByLabel('Nova fila', { exact: true })\n    14 × locator resolved to <input id=\":r8:\" maxlength=\"40\" autocorrect=\"off\" spellcheck=\"false\" autocapitalize=\"none\" aria-describedby=\":r8:-hint\" placeholder=\"Ex.: agendamento\" value=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" class=\"flex w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-v…/>\n       - unexpected value \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n"
+  },
+  "sourceDigest": "6cac48a3673487ea8ff0c6f79e169e21df463bfc7f7c6baf1fa765af9a17a0c6",
+  "overlays": [
+    {
+      "path": "src/features/reception/WhatsAppInbox.tsx",
+      "sha256": "1c2c72b446ad3a4f96595c001f615f0676355f0acb86438c127161bb031739e3"
+    },
+    {
+      "path": "src/features/reception/WhatsAppMessages.tsx",
+      "sha256": "8943ea5cb3bb5d418158eaed0e88113c778e548cb447adf6dca4166f58d5c04c"
+    },
+    {
+      "path": "src/features/reception/WhatsAppQueueAction.tsx",
+      "sha256": "b0f420cd705ca44cda47e98e17706546cc406ada333850b1dc14a67ed4e35211"
+    }
+  ]
+}

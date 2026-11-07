@@ -1,0 +1,41 @@
+✖ queue fixture changes only queue and revision and never invents queue in act receipt (11.9013ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 238.8922
+
+✖ failing tests:
+
+test at scripts\fixtures\whatsapp-queue-api.node-test.mjs:6:1
+✖ queue fixture changes only queue and revision and never invents queue in act receipt (11.9013ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+    {
+      data: {
+  +     code: 'invalid',
+  +     error: 'Synthetic read failure'
+  -     assignedTo: '33333333-3333-4333-8333-333333333333',
+  -     revision: 2,
+  -     status: 'open'
+      },
+  +   status: 400
+  -   status: 200
+    }
+
+      at TestContext.<anonymous> (file:///E:/Work/Cortex/cortex/scripts/fixtures/whatsapp-queue-api.node-test.mjs:6:238)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.start (node:internal/test_runner/test:1003:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { status: 400, data: { code: 'invalid', error: 'Synthetic read failure' } },
+    expected: { status: 200, data: { revision: 2, status: 'open', assignedTo: '33333333-3333-4333-8333-333333333333' } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

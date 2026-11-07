@@ -1,0 +1,76 @@
+{
+  "baseline": "ded70b56456e37b5f1a7b4ed305697ec7123d4c3",
+  "scope": "K1/4l explicit queue input, confirmation and mandatory read-back UI",
+  "unit": {
+    "directedRed": 1,
+    "newUiTests": 27,
+    "passed": 488,
+    "failed": 0,
+    "files": 12
+  },
+  "fixture": {
+    "directedRed": 1,
+    "passed": 26,
+    "failed": 0,
+    "files": 6,
+    "textTrailingWhitespaceNormalized": true
+  },
+  "browser": {
+    "raw": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-queue-ui-reviewed-final/AUDIT.json",
+    "states": 60,
+    "pngs": 76,
+    "widths": [
+      320,
+      375,
+      1280,
+      1920
+    ],
+    "scalePercent": 135,
+    "frozenSources": 339,
+    "runtimeHashes": 31,
+    "overlays": 3,
+    "requests": 232,
+    "fixtureCalls": 172,
+    "commands": 16,
+    "applied": 12,
+    "conflicts": 4,
+    "expectedHttp403": 4,
+    "expectedHttp409": 4,
+    "expectedConsoleErrors": 8,
+    "jsErrors": 0,
+    "failedRequests": 0,
+    "externalRequests": 0,
+    "cleanupVerified": true,
+    "manualImagesInspected": [
+      "valid-confirmation-320",
+      "valid-confirmation-320-actions",
+      "overlength-target-320-actions",
+      "valid-confirmation-1920"
+    ]
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 9,
+    "status": "passed"
+  },
+  "syntax": {
+    "scripts": 5,
+    "status": "passed"
+  },
+  "cli": {
+    "invalidCombinationsRejected": 8,
+    "snapshotComponentOmissionRejected": true
+  },
+  "review": {
+    "cycles": 2,
+    "actionable": "P2 native maxLength silently truncated target; reproduced in real browser (41 to40), removed native truncation and added full-input/disabled-confirmation check",
+    "final": "No additional concrete findings in revised delta"
+  },
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "excluded": [
+    "whatsapp-queue-ui-final: initial56-state run before native-length fix",
+    "whatsapp-queue-ui-overlength-red: directed RED (3 states,0 commands, cleanup true)",
+    "Fixture patch guard rejected an ambiguous replacement before writing; the accidental old-code rerun is not final GREEN evidence"
+  ],
+  "limits": "Synthetic local UI/transport only, no server authorization/SQL CAS/RLS/concurrency or real queue application proof. Broader writer policy intact. No global Vitest green claim; pre-existing C5 RED cases excluded. No Meta/hosted/carga/push."
+}
