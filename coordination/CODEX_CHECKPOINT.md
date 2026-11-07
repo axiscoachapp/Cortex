@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega T43: `069ce3f6cf06a225bd34182f87f36e6de02e4989`, main/axiscoachapp (autor e committer), sem push. Só86caminhos próprios (67artefatos finais do navegador), índice livre e dirt6/7 preservado por hash. Busca de contatos fresca e cancelável; submissão/contexto posterior do rascunho e dependências K1 separados.
+
 Atualizado em 2026-11-07 07:45. **T43 — busca fresca de contatos:** [provas](../docs/reviews/2026-11-07/contact-search/IMPLEMENTATION.md). Picker compartilhado Novo atendimento/agenda, scope atual/fresh/idle e snapshot contra clique antigo; cancelamento mantém deadline20s, sem mudar RPCs sem sinal.19RED/3controles/restauração por hash→118Vitest/doze arquivos+SDK8grupos/sete POST/três hashes memória, tipos reais/lint8/sintaxe3/quatro CLI/revisões.35estados/66PNGs320–1920/135%,349fontes/35hashes/três overlays/cleanup;33requests/quatro403-console esperados, zero demais falhas/JS/clínico/criações/reservas/externos. Capturas320/1920 inspecionadas; browser só seleção visível/modo/assunto/retry, demais guardas unit/SDK, preliminar excluído. Não redesenha rascunho após seleção/submissão nem prova SQL real. Próximos contexto do formulário/MFA/K7 ou comandos K1;4j0506/C4/C5 após SHAs separados. Sem incoming novo/2152 atendida, sem confirmação. Automação ACTIVE, main/axiscoachapp sem produtor/C5/schema/Meta/hosted/carga/push; dirt6/7 preservado.
 
 ---
