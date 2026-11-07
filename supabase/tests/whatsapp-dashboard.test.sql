@@ -58,6 +58,11 @@ do $$ declare a uuid; rec uuid:='ea100000-0000-4000-8000-000000000002'; admin uu
   -- 6: started before the window: not in the cohort. Open, owned by a doctor who is not eligible (not admin, not staff).
   a := pg_temp.conv(6, 1, 'open', interval '-10 days', doctor);
   perform pg_temp.msg(a, 'in', interval '-10 days');
+  -- 8: started by an automation and then only a 'system' notice (number change): not a person writing, not in the cohort.
+  a := pg_temp.conv(8, 1, 'closed', interval '3 hours');
+  perform pg_temp.msg(a, 'out', interval '3 hours', 'sent');
+  insert into public.whatsapp_messages(clinic_id,conversation_id,direction,kind,body,status,created_at)
+  values ('ea200000-0000-4000-8000-000000000001', a, 'in', 'system', 'O número mudou', 'received', (select at from t0)+interval '3 hours 1 minute');
   -- 7: another clinic: never counted.
   a := pg_temp.conv(7, 2, 'open', interval '0');
   perform pg_temp.msg(a, 'in', interval '0');

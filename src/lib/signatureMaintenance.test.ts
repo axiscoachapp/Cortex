@@ -73,4 +73,17 @@ describe('signature maintenance executor', () => {
     expect(res).toMatchObject({ removed: 0, busy: 1, errors: 1 });
     expect(h.calls.some(([n]) => n === 'signature_cleanup_done')).toBe(false);
   });
+
+  it('still reconciles when expiring sessions fails, and answers 503 when the listing fails', async () => {
+    const h = harness([item(12, 'failed', 'remove_candidate')]);
+    const rpc = h.deps.rpc;
+    h.deps.rpc = vi.fn(async (name: string, args?: Record<string, unknown>) => {
+      if (name === 'signature_expire_sessions') throw new Error('timeout');
+      return rpc(name, args);
+    });
+    expect(await (await h.run()).json()).toMatchObject({ removed: 1, errors: 1 });
+    const down = harness([]);
+    down.deps.rpc = vi.fn(async (name: string) => { if (name === 'signature_pending_work') throw new Error('down'); return 0; });
+    expect((await down.run()).status).toBe(503);
+  });
 });

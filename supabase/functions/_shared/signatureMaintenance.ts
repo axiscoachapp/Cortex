@@ -49,8 +49,20 @@ export async function maintenanceHandler(req: Request, deps: MaintenanceDeps): P
     return json(401, { error: 'Não autorizado.' });
   }
   const tally = { expiredSessions: 0, failed: 0, ambiguous: 0, cancelled: 0, unchanged: 0, removed: 0, busy: 0, skipped: 0, errors: 0 };
-  tally.expiredSessions = Number(await deps.rpc('signature_expire_sessions')) || 0;
-  const work = ((await deps.rpc('signature_pending_work', { p_limit: 100 })) ?? []) as PendingItem[];
+  // Each step fails on its own: an error expiring sessions does not stop the reconciliation.
+  try {
+    tally.expiredSessions = Number(await deps.rpc('signature_expire_sessions')) || 0;
+  } catch (e) {
+    tally.errors++;
+    deps.log?.('signature_maintenance_error', { step: 'expire_sessions', error: String((e as Error)?.message ?? e).slice(0, 200) });
+  }
+  let work: PendingItem[];
+  try {
+    work = ((await deps.rpc('signature_pending_work', { p_limit: 100 })) ?? []) as PendingItem[];
+  } catch (e) {
+    deps.log?.('signature_maintenance_error', { step: 'pending_work', error: String((e as Error)?.message ?? e).slice(0, 200) });
+    return json(503, { ...tally, errors: tally.errors + 1 });
+  }
   for (const item of Array.isArray(work) ? work : []) {
     try {
       if (item.kind === 'remove_candidate') {

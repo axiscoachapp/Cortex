@@ -64,6 +64,16 @@ create table public.whatsapp_conversations (
   check (status <> 'closed' or closed_at is not null),
   check ((assigned_to is null) = (assigned_at is null))
 );
+-- When the owner's account is deleted, the foreign key sets assigned_to to null; this keeps the pair
+-- (assigned_to, assigned_at) consistent so the deletion is not refused by the check above.
+create function public.whatsapp_conversation_assignment_pair() returns trigger language plpgsql set search_path = '' as $$
+begin
+  if new.assigned_to is null then new.assigned_at := null; end if;
+  return new;
+end $$;
+create trigger whatsapp_conversation_assignment_pair before update of assigned_to on public.whatsapp_conversations
+  for each row execute function public.whatsapp_conversation_assignment_pair();
+
 create index whatsapp_conversations_inbox on public.whatsapp_conversations (clinic_id, status, last_message_at desc, id desc);
 create index whatsapp_conversations_assignee on public.whatsapp_conversations (clinic_id, assigned_to, status);
 

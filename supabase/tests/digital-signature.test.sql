@@ -842,7 +842,8 @@ do $$ begin
  assert exists(select 1 from cortex_private.signature_sessions where user_id='d1700000-0000-4000-8000-000000000001'),'Session lost with a patient';
 end $$;
 -- P4 (20261107100000): what the executor discovers. Rows are written directly (triggers and FKs
--- off, inside a block that is rolled back) to set states and ages the writers never produce.
+-- off, inside a block that is rolled back) only to set ages; every row is a state the writers can
+-- reach (cleanup_pending only on an abandoned terminal state).
 do $$ declare w jsonb; u uuid:='d1700000-0000-4000-8000-000000000001';
  ins text:='insert into cortex_private.signature_operations(operation_id,user_id,prescription_id,session_id,session_generation,shown_pdf_sha256,cert_sha256,
   signing_time,state,prepared_pdf_sha256,to_be_signed_sha256,policy_oid,psc_attempts,staged_path,signed_pdf_sha256,stored_at,cleanup_pending,updated_at) values ';
@@ -850,17 +851,28 @@ begin
  perform set_config('session_replication_role','replica',true);
  execute ins||format($v$
   ('e1740000-0000-4000-8000-000000000001',%1$L,'e1720000-0000-4000-8000-000000000001','d1730000-0000-4000-8000-000000000003',1,repeat('a',64),repeat('c',64),now(),
-   'stored',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',1,'rx/'||%1$L||'/e1720000-0000-4000-8000-000000000001/signed-e1740000-0000-4000-8000-000000000001.pdf',repeat('f',64),now()-interval '1 hour',true,now()-interval '1 hour'),
+   'stored',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',1,'rx/'||%1$L||'/e1720000-0000-4000-8000-000000000001/signed-e1740000-0000-4000-8000-000000000001.pdf',repeat('f',64),now()-interval '1 hour',false,now()-interval '1 hour'),
   ('e1740000-0000-4000-8000-000000000002',%1$L,'e1720000-0000-4000-8000-000000000002','d1730000-0000-4000-8000-000000000003',1,repeat('a',64),repeat('c',64),now(),
-   'stored',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',2,'rx/'||%1$L||'/e1720000-0000-4000-8000-000000000002/signed-e1740000-0000-4000-8000-000000000002.pdf',repeat('f',64),now()-interval '25 hours',true,now()-interval '25 hours'),
+   'stored',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',2,'rx/'||%1$L||'/e1720000-0000-4000-8000-000000000002/signed-e1740000-0000-4000-8000-000000000002.pdf',repeat('f',64),now()-interval '25 hours',false,now()-interval '25 hours'),
   ('e1740000-0000-4000-8000-000000000003',%1$L,'e1720000-0000-4000-8000-000000000003','d1730000-0000-4000-8000-000000000003',1,repeat('a',64),repeat('c',64),now(),
-   'completed',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',1,'rx/'||%1$L||'/e1720000-0000-4000-8000-000000000003/signed-e1740000-0000-4000-8000-000000000003.pdf',repeat('f',64),now()-interval '2 days',true,now()-interval '2 days'),
+   'completed',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',1,'rx/'||%1$L||'/e1720000-0000-4000-8000-000000000003/signed-e1740000-0000-4000-8000-000000000003.pdf',repeat('f',64),now()-interval '2 days',false,now()-interval '2 days'),
   ('e1740000-0000-4000-8000-000000000004',%1$L,'e1720000-0000-4000-8000-000000000004','d1730000-0000-4000-8000-000000000003',1,repeat('a',64),repeat('c',64),now(),
-   'ambiguous',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',3,null,null,null,true,now()-interval '2 days'),
+   'ambiguous',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',3,null,null,null,false,now()-interval '2 days'),
   ('e1740000-0000-4000-8000-000000000005',%1$L,'e1720000-0000-4000-8000-000000000005','d1730000-0000-4000-8000-000000000003',1,repeat('a',64),repeat('c',64),now(),
-   'psc_requested',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',4,null,null,null,true,now()-interval '20 minutes')
+   'psc_requested',repeat('d',64),repeat('e',64),'2.16.76.1.7.1.11.1.1',4,null,null,null,false,now()-interval '20 minutes')
  $v$, u);
+ -- An abandoned candidate of an account being deleted is skipped (signature_lock refuses it), while
+ -- the same case for another account is listed.
+ execute ins||$v$
+  ('e1740000-0000-4000-8000-000000000006','d1700000-0000-4000-8000-000000000004','e1720000-0000-4000-8000-000000000006','d1730000-0000-4000-8000-000000000007',1,repeat('a',64),repeat('c',64),now(),
+   'failed',null,null,null,0,null,null,null,true,now()-interval '1 hour'),
+  ('e1740000-0000-4000-8000-000000000007','d1700000-0000-4000-8000-000000000001','e1720000-0000-4000-8000-000000000007','d1730000-0000-4000-8000-000000000003',1,repeat('a',64),repeat('c',64),now(),
+   'failed',null,null,null,0,null,null,null,true,now()-interval '1 hour')
+ $v$;
  w:=public.signature_pending_work(500);
+ assert exists(select 1 from public.account_deletion_requests where user_id='d1700000-0000-4000-8000-000000000004'),'fixture: no deletion request';
+ assert not exists(select 1 from jsonb_array_elements(w) e where e->>'operationId'='e1740000-0000-4000-8000-000000000006'),'Account being deleted listed';
+ assert exists(select 1 from jsonb_array_elements(w) e where e->>'operationId'='e1740000-0000-4000-8000-000000000007' and e->>'kind'='remove_candidate'),'Abandoned candidate not listed';
  assert not exists(select 1 from jsonb_array_elements(w) e where e->>'operationId'='e1740000-0000-4000-8000-000000000001'),'Stored candidate waiting for the doctor listed';
  assert exists(select 1 from jsonb_array_elements(w) e where e->>'operationId'='e1740000-0000-4000-8000-000000000002' and e->>'kind'='stuck' and (e->>'attempt')::int=2),
   'Stored for 24 h not listed as stuck with its attempt';

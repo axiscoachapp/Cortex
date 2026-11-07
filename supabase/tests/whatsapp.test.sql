@@ -309,4 +309,15 @@ do $$ begin
   assert (select opted_out_at is not null from public.whatsapp_conversations where wa_id='5541999940007'), 'split phone conversation not opted out';
   assert (select count(*) from public.whatsapp_conversations where wa_id='5541999940007' or user_id='BR.7777')=2, 'identities merged';
 end $$;
+-- Review 07/11 (X1): when the owner's account goes, the foreign key sets assigned_to to null (an
+-- UPDATE of that column only). The pair must follow, or the check refuses the account deletion.
+reset role;
+do $$ declare c uuid; begin
+  select id into c from public.whatsapp_conversations where clinic_id='e6200000-0000-4000-8000-000000000001' order by created_at limit 1;
+  update public.whatsapp_conversations set assigned_to='e6100000-0000-4000-8000-000000000003', assigned_at=now() where id=c;
+  update public.whatsapp_conversations set assigned_to=null where id=c; -- what ON DELETE SET NULL does
+  assert (select assigned_to is null and assigned_at is null from public.whatsapp_conversations where id=c), 'owner removal left the pair inconsistent';
+  assert exists (select 1 from pg_constraint k join pg_attribute a on a.attrelid=k.conrelid and a.attnum=any(k.conkey)
+    where k.conrelid='public.whatsapp_conversations'::regclass and k.contype='f' and a.attname='assigned_to' and k.confdeltype='n'), 'assigned_to is not ON DELETE SET NULL';
+end $$;
 rollback;

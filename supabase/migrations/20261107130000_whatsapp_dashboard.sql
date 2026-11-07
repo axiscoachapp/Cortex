@@ -5,7 +5,7 @@
 --
 -- - Cycle: only the latest opening of each conversation (opened_at); reopenings replace history,
 --   so coverage is 'latest_cycle_only'.
--- - Start: earliest inbound message created_at at or after opened_at; the cohort is the cycles that
+-- - Start: earliest inbound message (not a 'system' notice) created_at at or after opened_at; the cohort is the cycles that
 --   started in [p_from, p_to).
 -- - First human send: earliest outbound message with sent_by set, status sent/delivered/read, created_at
 --   at or after the start. Bot and automation messages (sent_by null), pending, unknown and failed do
@@ -20,11 +20,13 @@ begin
   if p_from is null or p_to is null or not isfinite(p_from) or not isfinite(p_to) or p_to <= p_from or p_to - p_from > interval '31 days' then
     raise exception 'Escolha um período de até 31 dias' using errcode = '22023';
   end if;
-  with cycles as (
+  -- Only cycles opened before the window ends can start inside it (start >= opened_at); the start is
+  -- computed once per cycle. A 'system' notice (number change) is not a person writing.
+  with cycles as materialized (
     select c.id, c.status,
       (select min(m.created_at) from public.whatsapp_messages m
-        where m.conversation_id = c.id and m.direction = 'in' and m.created_at >= c.opened_at) as started_at
-    from public.whatsapp_conversations c where c.clinic_id = p_clinic
+        where m.conversation_id = c.id and m.direction = 'in' and m.kind <> 'system' and m.created_at >= c.opened_at) as started_at
+    from public.whatsapp_conversations c where c.clinic_id = p_clinic and c.opened_at < p_to
   ), cohort_rows as (
     select y.status, y.started_at,
       (select min(m.created_at) from public.whatsapp_messages m
