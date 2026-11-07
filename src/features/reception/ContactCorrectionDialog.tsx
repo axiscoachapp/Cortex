@@ -22,6 +22,8 @@ export function ContactCorrectionDialog({ contactId, onClose }: { contactId: str
   const scope = user && access?.clinic && user.id === access.actorId
     ? [user.id, access.clinic.id, access.admin, access.kind].join(':') : null;
   const origin = useRef({ scope, actor: access?.actorId, clinic: access?.clinic?.id, contactId });
+  const reader = useId();
+  const [queryKey] = useState(() => ['reception', origin.current.actor, 'contact-edit', origin.current.clinic, origin.current.contactId, reader]);
   const mounted = useRef(false), current = useRef(false), invalidated = useRef(false), started = useRef(false);
   const operation = useRef<'save' | 'recover' | null>(null);
   const validContext = !!scope && scope === origin.current.scope && contactId === origin.current.contactId && !!access?.active && access.admin && !hidden;
@@ -36,17 +38,30 @@ export function ContactCorrectionDialog({ contactId, onClose }: { contactId: str
   const [reloadCount, setReloadCount] = useState(0);
   const [recovering, setRecovering] = useState(false);
   const [reloadError, setReloadError] = useState<unknown>(null);
+  const [baseline, setBaseline] = useState<ContactEdit | null>(null);
+  const readVersion = useRef(0);
   const snapshot = useQuery({
-    queryKey: ['reception', origin.current.actor, 'contact-edit', origin.current.clinic, origin.current.contactId],
-    queryFn: async () => {
-      const contact = await receptionApi.contactEdit(origin.current.contactId);
+    queryKey,
+    queryFn: async ({ signal }) => {
+      const contact = await receptionApi.contactEdit(origin.current.contactId, signal);
       if (contact.id !== origin.current.contactId) throw new Error('Não foi possível conferir o contato solicitado. Tente novamente.');
-      return contact;
+      return { contact, readVersion: ++readVersion.current };
     },
     enabled: !blocked,
-    retry: false,
+    retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
+  const readerReady = snapshot.isSuccess && snapshot.isFetchedAfterMount && snapshot.fetchStatus === 'idle' && snapshot.data.contact.id === origin.current.contactId;
+  useLayoutEffect(() => {
+    if (blocked) void client.cancelQueries({ queryKey, exact: true });
+  }, [blocked, client, queryKey]);
+  useLayoutEffect(() => {
+    if (!blocked && !baseline && readerReady) setBaseline(snapshot.data.contact);
+  }, [blocked, baseline, readerReady, snapshot.data]);
+  const maySubmit = () => {
+    const latest = client.getQueryState(queryKey);
+    return mayContinue() && readerReady && latest?.status === 'success' && latest.fetchStatus === 'idle' && latest.data === snapshot.data;
+  };
   const invalidateRelated = async () => {
     if (!mayContinue()) return;
     await client.invalidateQueries({
@@ -56,14 +71,18 @@ export function ContactCorrectionDialog({ contactId, onClose }: { contactId: str
     });
   };
   const recover = async () => {
-    if (operation.current || !mayContinue()) return;
+    if (operation.current || !maySubmit()) return;
     operation.current = 'recover';
     setRecovering(true); setReloadError(null);
     try {
       const result = await snapshot.refetch();
-      if (!mayContinue() || result.error) return;
+      if (!mayContinue() || !result.isSuccess || result.fetchStatus !== 'idle') return;
       await invalidateRelated();
-      if (mayContinue()) setReloadCount(value => value + 1);
+      const latest = client.getQueryState(queryKey);
+      if (mayContinue() && latest?.status === 'success' && latest.fetchStatus === 'idle' && latest.data === result.data) {
+        setBaseline(result.data.contact);
+        setReloadCount(value => value + 1);
+      }
     } catch {
       if (mayContinue()) setReloadError(new Error('Não foi possível recuperar o cadastro. Tente novamente.'));
     } finally {
@@ -94,19 +113,27 @@ export function ContactCorrectionDialog({ contactId, onClose }: { contactId: str
             família.
           </DialogDescription>
         </DialogHeader>
-        <ReceptionNotice loading={snapshot.isPending} error={reloadError || snapshot.error} onRetry={() => {
-          if (mayContinue()) { setReloadError(null); void snapshot.refetch(); }
-        }} />
-        {snapshot.data?.id === origin.current.contactId && (
-          <div hidden={snapshot.isError}>
+        {snapshot.fetchStatus === 'paused' ? <p role="status" className="text-sm">Aguardando conexão de rede para conferir o cadastro…</p>
+          : snapshot.isPending || snapshot.fetchStatus === 'fetching' ? <ReceptionNotice loading />
+          : (reloadError || snapshot.isError) ? <div role="alert" className="min-w-0 rounded-lg border p-4 space-y-3 text-sm">
+            <p>Não foi possível conferir o cadastro. Verifique o acesso e tente novamente.</p>
+            <Button type="button" variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" onClick={() => {
+              if (mayContinue()) { setReloadError(null); void snapshot.refetch(); }
+            }}>Tentar novamente</Button>
+          </div> : null}
+        {recovering && !readerReady && <Button type="button" disabled className="h-auto min-h-11 max-w-full whitespace-normal">Recuperando cadastro…</Button>}
+        {baseline && (
             <CorrectionForm
               key={reloadCount}
-              initial={snapshot.data}
+              initial={baseline}
+              ready={readerReady && !reloadError}
+              readVersion={snapshot.data?.readVersion ?? 0}
               onClose={onClose}
               onReload={() => void recover()}
               mayContinue={mayContinue}
+              maySubmit={maySubmit}
               beginSave={() => {
-                if (operation.current || !mayContinue()) return false;
+                if (operation.current || !maySubmit()) return false;
                 operation.current = 'save';
                 return true;
               }}
@@ -122,7 +149,6 @@ export function ContactCorrectionDialog({ contactId, onClose }: { contactId: str
               recovering={recovering}
               closeCheck={canClose}
             />
-          </div>
         )}
       </DialogContent>
     </Dialog>
@@ -140,6 +166,9 @@ function CorrectionForm({
   endSave,
   onStart,
   onSaved,
+  ready,
+  maySubmit,
+  readVersion,
 }: {
   initial: ContactEdit;
   onClose: () => void;
@@ -151,6 +180,9 @@ function CorrectionForm({
   endSave: () => void;
   onStart: () => void;
   onSaved: () => Promise<void>;
+  ready: boolean;
+  maySubmit: () => boolean;
+  readVersion: number;
 }) {
   const [initial] = useState(loaded);
   const field = useId();
@@ -160,7 +192,7 @@ function CorrectionForm({
   const dirty = name !== initial.name || phone !== initial.phone;
   const save = useMutation({
     mutationFn: (payload: { name: string; phone: string }) => {
-      if (!mayContinue()) throw new Error('Correção interrompida. Confira o cadastro antes de continuar.');
+      if (!maySubmit()) throw new Error('Correção interrompida. Confira o cadastro antes de continuar.');
       onStart();
       return receptionApi.updateContact(initial.id, initial.revision, payload.name, payload.phone);
     },
@@ -185,6 +217,8 @@ function CorrectionForm({
       closeCheck.current = () => true;
     };
   });
+  useLayoutEffect(() => { setConfirmed(false); }, [ready, readVersion]);
+  if (!ready) return null;
   return (
     <form
       className="space-y-4"

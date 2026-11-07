@@ -1,0 +1,266 @@
+{
+  "time": "2026-11-07 09:18:15",
+  "baseline": "da72f282747a9c12c79572f4bc1351ef2a7c5597",
+  "syntheticOnly": true,
+  "sourceHashes": [
+    {
+      "path": "src/features/reception/ContactCorrectionDialog.tsx",
+      "sha256": "c22d41120d418f6d6fd0e26d608cc474e9ac1294daaa481b3dc894db72f235f2"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "546c7ff998c557aa734d481625aa4a46d22f41883a8003d6cbabcb01e9b31b50"
+    },
+    {
+      "path": "src/features/reception/ContactCorrectionDialog.test.tsx",
+      "sha256": "7483f04d151d4629b9cb86944d95e94d58f424de9ddae9cbbfe9cc16119b5e2d"
+    },
+    {
+      "path": "src/features/reception/ContactCorrectionReads.test.tsx",
+      "sha256": "5d2201ae67ed09085c0023fd1bc1eae03474418c78f670b7b952317b3e37b699"
+    },
+    {
+      "path": "src/features/reception/contactCorrectionReadApi.test.ts",
+      "sha256": "b61dad85e20d760d505c22b5d72da707cefc496eb71e3dfb1066ce69208e14ce"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "50a44822f8362c3ff3b4fb18014828de730962836c918656151160f01cc0c38b"
+    },
+    {
+      "path": "scripts/fixtures/contact-correction-reads-browser.mjs",
+      "sha256": "02013cea7e2896ea72ee415c249f47ed2d8e6dbacca456bfd8ce28d9ff5660e5"
+    },
+    {
+      "path": "scripts/reviews/contact-correction-sdk.mjs",
+      "sha256": "a54e6d5f61548e44dd5980c6be22aea7b470af61acd0f4aa12ea0075ef0fd6cd"
+    }
+  ],
+  "red": {
+    "failed": 15,
+    "controls": 2,
+    "initialCases": 17,
+    "restored": true,
+    "intermediateParentHash": "7c53b06e31b5e5cd6529e37236d4303a2a277653127e7651f8e98d8254c4ca54",
+    "note": "Initial restoration precedes readVersion/layout fix; final hash is separate."
+  },
+  "coalesced": {
+    "failed": 1,
+    "kind": "Removed readVersion reset dependency, retaining ready; waited for actual React notification",
+    "restored": true,
+    "finalHash": "c22d41120d418f6d6fd0e26d608cc474e9ac1294daaa481b3dc894db72f235f2"
+  },
+  "green": {
+    "passed": 149,
+    "failed": 0,
+    "files": 10,
+    "newCases": 18
+  },
+  "types": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json --pretty false",
+    "exitCode": 0
+  },
+  "lint": {
+    "files": [
+      "src/features/reception/ContactCorrectionDialog.tsx",
+      "src/features/reception/api.ts",
+      "src/features/reception/ContactCorrectionDialog.test.tsx",
+      "src/features/reception/ContactCorrectionReads.test.tsx",
+      "src/features/reception/contactCorrectionReadApi.test.ts",
+      "scripts/reception-app-audit-browser.mjs",
+      "scripts/fixtures/contact-correction-reads-browser.mjs",
+      "scripts/reviews/contact-correction-sdk.mjs"
+    ],
+    "exitCode": 0
+  },
+  "syntax": {
+    "files": [
+      "scripts/reception-app-audit-browser.mjs",
+      "scripts/fixtures/contact-correction-reads-browser.mjs",
+      "scripts/reviews/contact-correction-sdk.mjs"
+    ],
+    "exitCode": 0
+  },
+  "cli": {
+    "validRejections": 6,
+    "allMatched": true
+  },
+  "sdk": {
+    "report": "SDK.json",
+    "version": "2.86.0",
+    "groups": 9,
+    "postCalls": 8,
+    "hashes": 3,
+    "sourceHashesStillCurrent": true,
+    "nativeNetworkCalls": 0,
+    "limits": "Real installed Supabase/PostgREST, memory fetch. Deadline tested with controlled native signal/unit20_000 argument; no real20s wait or DB/Auth/authorization proof."
+  },
+  "browser": {
+    "report": "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/AUDIT.json",
+    "states": 28,
+    "pngs": 48,
+    "artifacts": 49,
+    "sourceCount": 355,
+    "runtimeHashes": 39,
+    "overlays": [
+      {
+        "path": "src/features/reception/ContactCorrectionDialog.tsx",
+        "sha256": "c22d41120d418f6d6fd0e26d608cc474e9ac1294daaa481b3dc894db72f235f2"
+      },
+      {
+        "path": "src/features/reception/api.ts",
+        "sha256": "546c7ff998c557aa734d481625aa4a46d22f41883a8003d6cbabcb01e9b31b50"
+      }
+    ],
+    "requests": 34,
+    "expected403": 4,
+    "expectedConsole403": 4,
+    "nativeConfirmations": 8,
+    "pageErrors": 0,
+    "failedRequests": 0,
+    "external": 0,
+    "fontSizes": [
+      "21.6px"
+    ],
+    "metrics": {
+      "clinicalReads": [],
+      "externalCalls": [],
+      "unknown": [],
+      "bookings": 0,
+      "contacts": 0,
+      "caseWrites": 0
+    },
+    "cleanupVerified": true,
+    "manualInspection": [
+      "recovery-pending-320",
+      "retried-draft-375-actions"
+    ],
+    "limits": "Admin initial held read/recovery held403/retry retained draft/review reset/explicit discard baseline/close; no saves. Paused, abort, stale writes and revision payload only unit/SDK."
+  },
+  "reviews": [
+    {
+      "cycle": 1,
+      "classification": "valid + actionable",
+      "issue": "P2 coalesced successful refetch retained review",
+      "fix": "Internal {contact,readVersion} response and confirmation dependency",
+      "proof": "COALESCED_RED.json plus COALESCED_CONTROL.json"
+    },
+    {
+      "cycle": 2,
+      "actionable": [],
+      "note": "Initial immediate assertion was timing-sensitive; final control awaits React and omits version dependency deliberately."
+    }
+  ],
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "excludedPreliminary": [
+    "docs/reviews/2026-11-07/contact-correction-reads-preliminary/",
+    "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-final/",
+    "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-reviewed-final/"
+  ],
+  "preliminaryCorrections": [
+    "Copied deadline test referenced contact search variables; controlled RED repeated after correction",
+    "Old tests used detached inputs or expected hidden fields/raw read errors; adjusted to field removal/static read errors",
+    "Pending capture waited networkidle until native20s timeout; waitForNetwork false only for held states with explicit pending status assertions",
+    "Read-error button2px and recovery indicator20px narrow overflow fixed by wrapping; final strict layout passed"
+  ],
+  "foreignPreserved": [
+    {
+      "path": "tasks/plan.md",
+      "sha256": "d4091e88d0f622bf15e9ad80f79957ffd801edaea968870274a5b8b8370023b6"
+    },
+    {
+      "path": "tasks/todo.md",
+      "sha256": "a60d951ead6051eae4411e87b5a7c22e94b57bf07fb46b2b143bde2c27762e49"
+    }
+  ],
+  "incoming": {
+    "count": 68,
+    "latest": "2026-11-06-2152_claude-para-codex_robo-de-fluxo-entregue.md",
+    "digest": "cd4ae7f0d05082496f3d8ff38fc7bbea94ad4e1dc28a2c81fefb5cfb35634c61",
+    "digestAlgorithm": "SHA256(JSON.stringify(sorted files mapped to {name,sha256(raw bytes)}))",
+    "unchanged": true
+  },
+  "boundaries": [
+    "Read cancellation only; already-sent writes governed by T46",
+    "Wire DTO/body/deadline unchanged; optional signal only",
+    "No SQL/schema/Claude/PersonalMed/SaaS/Meta/hosted/load/paid/deploy/push operation"
+  ],
+  "gitManifest": {
+    "expectedPaths": [
+      "coordination/CODEX_CHECKPOINT.md",
+      "coordination/ESTADO.md",
+      "docs/product/clinic-crm/CONTACT_CORRECTION_READS.md",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/AUDIT.json",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-closed-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-closed-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-closed-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-closed-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-denied-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-denied-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-denied-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-denied-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-denied-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-denied-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-denied-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-denied-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-draft-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-draft-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-draft-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-draft-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-draft-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-draft-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-draft-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-draft-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-explicit-baseline-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-explicit-baseline-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-explicit-baseline-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-explicit-baseline-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-explicit-baseline-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-explicit-baseline-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-explicit-baseline-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-explicit-baseline-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-initial-pending-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-initial-pending-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-initial-pending-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-initial-pending-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-recovery-pending-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-recovery-pending-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-recovery-pending-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-recovery-pending-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-recovery-pending-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-recovery-pending-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-recovery-pending-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-recovery-pending-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-retried-draft-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-retried-draft-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-retried-draft-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-retried-draft-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-retried-draft-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-retried-draft-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-retried-draft-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-correction-reads-layout-final/admin--recepcao-contatos-contact-correction-reads-retried-draft-375.png",
+      "docs/reviews/2026-11-07/contact-correction-reads/CLI.json",
+      "docs/reviews/2026-11-07/contact-correction-reads/COALESCED_CONTROL.json",
+      "docs/reviews/2026-11-07/contact-correction-reads/COALESCED_RED.json",
+      "docs/reviews/2026-11-07/contact-correction-reads/IMPLEMENTATION.md",
+      "docs/reviews/2026-11-07/contact-correction-reads/RED_CONTROL.json",
+      "docs/reviews/2026-11-07/contact-correction-reads/SDK.json",
+      "docs/reviews/2026-11-07/contact-correction-reads/UNIT_GREEN.json",
+      "docs/reviews/2026-11-07/contact-correction-reads/UNIT_RED.json",
+      "docs/reviews/2026-11-07/contact-correction-reads/VALIDATION.json",
+      "scripts/fixtures/contact-correction-reads-browser.mjs",
+      "scripts/reception-app-audit-browser.mjs",
+      "scripts/reviews/contact-correction-sdk.mjs",
+      "src/features/reception/ContactCorrectionDialog.test.tsx",
+      "src/features/reception/ContactCorrectionDialog.tsx",
+      "src/features/reception/ContactCorrectionReads.test.tsx",
+      "src/features/reception/api.ts",
+      "src/features/reception/contactCorrectionReadApi.test.ts",
+      "tasks/clinic-crm/todo.md"
+    ],
+    "branch": "main",
+    "identity": "axiscoachapp",
+    "foreignIndexBefore": [],
+    "onlyCommit": true
+  }
+}

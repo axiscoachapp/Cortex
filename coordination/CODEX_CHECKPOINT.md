@@ -1,13 +1,13 @@
 # Checkpoint do Codex
 
-Atualizado em 2026-11-07 08:50 (America/Sao_Paulo). Entrega T46: 74191df212d8e18004ce3630d4da0a6570647741, main/axiscoachapp (autor e committer), sem push.55caminhos próprios (37artefatos finais do navegador); índice livre e dirt6/7 preservado por hash.
+Atualizado em 2026-11-07 09:18 (America/Sao_Paulo). T47 validado; SHA local a registrar após commit, main/axiscoachapp (autor e committer), sem push.
 
-Correção vinculada ao ator/clínica/admin/papel/contato da abertura. Perda de contexto/sessão oculta retira campos e exige fechar/reabrir; resposta com outro id recusada. Trava comum salvar/recuperar, snapshot/revisão/conferência/telefone preservados, respostas tardias sem sucesso/fechamento/cache fora de contexto. Pedido já enviado pode ter sido concluído; sem promessa de aborto/rollback.
+Leitura de correção por instância/fresh/idle/id. Campos retirados em releitura/pausa/erro, rascunho/baseline preservados; retry exige conferência nova, só recuperação explícita substitui texto/revisão. ReadVersion interno cobre coalescência, snapshot guarda clique/mutação enfileirada. Signal opcional mantém corpo/DTO/deadline20s, só leitor é cancelado; T46/mutex/resultado já enviado preservados.
 
-[Provas](../docs/reviews/2026-11-07/contact-correction-context/IMPLEMENTATION.md):sete controles originais+25RED/cinco controles+doisREDmutex+umREDid/um controle→125Vitest/sete arquivos/34novos, tipos reais/lint5/sintaxe2/seis CLI/revisão sem achados.20estados/36PNGs320–1920/135%,354fontes/38hashes/um overlay/cleanup;34requests/quatro503-console esperados, zero demais falhas/JS/clínico/escritas/reservas/externos. Capturas320/1920 inspecionadas. Browser só admin/ocultação/recuperação/fechar-reabrir, sem salvar ou prova de fresh read; demais fronteiras unitárias.
+[Provas](../docs/reviews/2026-11-07/contact-correction-reads/IMPLEMENTATION.md):15RED/dois controles/restauração+umRED de dependência/restauração→149Vitest/dez arquivos/18novos, SDK9grupos/oitoPOST/três hashes memória, tipos reais/lint8/sintaxe3/seis CLI/duas revisões.28estados/48PNGs320–1920/135%,355fontes/39hashes/dois overlays/cleanup;34requests/quatro403-console esperados/oito confirmações de recuperação, zero demais falhas/JS/clínico/escritas/reservas/externos. Capturas320/ações375 inspecionadas. Cortes2/20px corrigidos; preliminares inválidos preservados/excluídos. Browser sem salvar, pausa/cancelamento/queued writes/revisão só unit/SDK; sem servidor/RLS/Auth/rollback real.
 
-Próximos: frescor/cancelamento do leitor da correção no mesmo contexto e ciclo dos vínculos; demais K1/MFA/K7 conforme ESTADO. T45 3ba9982/T44 d2c9dca preservados. Catálogo4j pedido0506/C4/C5/2316/2330 aguardam SHAs Claude, dois RED C5 fora da suíte dirigida.
+Próximos: ciclo de vínculos e demais K1/MFA/K7 conforme ESTADO. T46 74191df/T45 3ba9982/T44 d2c9dca preservados. Catálogo4j pedido0506/C4/C5/2316/2330 aguardam SHAs Claude, dois RED C5 fora da suíte dirigida.
 
-Sem incoming novo/alterado:última2152 atendida2201/2316/2330/2353, sem responder aberta histórica ou confirmar próprias mensagens. Digest dos68 arquivos para-codex: cd4ae7f0d05082496f3d8ff38fc7bbea94ad4e1dc28a2c81fefb5cfb35634c61, algoritmo na validação.
+Sem incoming novo/alterado:última2152 atendida2201/2316/2330/2353, sem aberta histórica/confirmar próprias mensagens. Digest dos68 arquivos para-codex: cd4ae7f0d05082496f3d8ff38fc7bbea94ad4e1dc28a2c81fefb5cfb35634c61, algoritmo na validação.
 
-Automação ACTIVE. Sem API/RPC/SQL/schema/Claude/PersonalMed/SaaS/Meta/hosted/carga/paid/deploy/push. Só caminhos próprios; dirt tasks/plan.md (+6) e tasks/todo.md (+7) preservado por hash. Manifesto e índice exatos conferidos no commit.
+Automação ACTIVE. Sem SQL/schema/Claude/PersonalMed/SaaS/Meta/hosted/carga/paid/deploy/push. Só caminhos próprios; dirt tasks/plan.md (+6) e tasks/todo.md (+7) preservado por hash. Manifesto e índice exatos conferidos no commit.

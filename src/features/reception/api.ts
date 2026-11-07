@@ -103,7 +103,7 @@ export const receptionApi = {
   contacts: (clinic: string, search = '', before: string | null = null, signal?: AbortSignal) =>
     rpc('reception_contacts', { p_clinic: clinic, p_search: search, p_before: before }, contactPageSchema, signal),
   contact: (id: string) => rpc('reception_contact', { p_contact: id }, contactSchema),
-  contactEdit: (id: string) => rpc('reception_contact_edit', { p_contact: id }, contactEditSchema),
+  contactEdit: (id: string, signal?: AbortSignal) => rpc('reception_contact_edit', { p_contact: id }, contactEditSchema, signal),
   linkEdit: (contact: string, patient: string) =>
     rpc('reception_link_edit', { p_contact: contact, p_patient: patient }, linkEditSchema),
   contactLinks: (clinic: string, contact: string, after: string | null = null, limit = 50) =>

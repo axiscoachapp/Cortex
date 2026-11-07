@@ -1,0 +1,20 @@
+{
+  "baseline": "da72f282747a9c12c79572f4bc1351ef2a7c5597",
+  "failed": 15,
+  "passed": 2,
+  "total": 17,
+  "sourceRestored": true,
+  "restored": [
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "546c7ff998c557aa734d481625aa4a46d22f41883a8003d6cbabcb01e9b31b50"
+    },
+    {
+      "path": "src/features/reception/ContactCorrectionDialog.tsx",
+      "sha256": "7c53b06e31b5e5cd6529e37236d4303a2a277653127e7651f8e98d8254c4ca54"
+    }
+  ],
+  "noGenericTimeouts": true,
+  "excluded": "../contact-correction-reads-preliminary/",
+  "corrections": "Initial deadline test still referenced contact search variables; corrected and controlled RED repeated. Old tests updated to await returned fields rather than detached inputs and accept static read errors/removed fields."
+}

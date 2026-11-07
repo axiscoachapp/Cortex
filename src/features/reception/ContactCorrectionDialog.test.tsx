@@ -52,7 +52,7 @@ describe('administrative contact correction', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /Conferi a identidade/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('O contato mudou');
-    expect(name).toHaveValue('Meu preenchimento');
+    await waitFor(() => expect(screen.getByLabelText('Nome do contato')).toHaveValue('Meu preenchimento'), { timeout: 1500 });
     expect(mocks.close).not.toHaveBeenCalled();
     const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
     fireEvent.click(screen.getByRole('button', { name: 'Recuperar cadastro do servidor' }));
@@ -79,11 +79,11 @@ describe('administrative contact correction', () => {
     await act(async () => {
       await client.invalidateQueries({ queryKey: ['reception'] });
     });
-    expect(name).toHaveValue('Meu preenchimento');
+    await waitFor(() => expect(screen.getByLabelText('Nome do contato')).toHaveValue('Meu preenchimento'), { timeout: 1500 });
     mocks.update.mockRejectedValue(new Error('Revisão antiga'));
     fireEvent.click(screen.getByRole('checkbox', { name: /Conferi a identidade/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Revisão antiga');
+    expect(await screen.findByRole('alert', {}, { timeout: 1500 })).toHaveTextContent('Revisão antiga');
     expect(mocks.update).toHaveBeenCalledWith(original.id, 1, 'Meu preenchimento', original.phone);
   });
   it('preserves a dirty editor through a background failure and subsequent retry', async () => {
@@ -94,13 +94,12 @@ describe('administrative contact correction', () => {
     await act(async () => {
       await client.invalidateQueries({ queryKey: ['reception'] });
     });
-    expect(await screen.findByRole('alert')).toHaveTextContent('Servidor indisponível');
-    expect(name).toHaveValue('Texto para preservar');
-    expect(name).not.toBeVisible();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível conferir o cadastro');
+    expect(screen.queryByLabelText('Nome do contato')).not.toBeInTheDocument();
     mocks.snapshot.mockResolvedValue({ ...original, revision: 2 });
     fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
-    await waitFor(() => expect(name).toBeVisible());
-    expect(name).toHaveValue('Texto para preservar');
+    await waitFor(() => expect(screen.getByLabelText('Nome do contato')).toBeVisible(), { timeout: 1500 });
+    expect(screen.getByLabelText('Nome do contato')).toHaveValue('Texto para preservar');
   });
   it('blocks session exit while a correction is still in flight', async () => {
     let finish: (value: number) => void;
@@ -137,8 +136,8 @@ describe('administrative contact correction', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Recuperar cadastro do servidor' }));
     expect(await screen.findByRole('button', { name: 'Recuperando cadastro…' })).toBeDisabled();
-    expect(screen.getByLabelText('Nome do contato')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Salvar correção' })).toBeDisabled();
+    expect(screen.queryByLabelText('Nome do contato')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar correção' })).not.toBeInTheDocument();
     const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
     expect(confirmSessionExit()).toBe(false);
     expect(alert).toHaveBeenCalledWith('Aguarde a recuperação do cadastro antes de sair.');

@@ -1,0 +1,9 @@
+{
+  "mutation": "Removed readVersion reset dependency only; ready dependency retained",
+  "failed": 1,
+  "selected": "immediate refetch coalesced",
+  "assertionWaitMs": 1500,
+  "noGenericTimeouts": true,
+  "sourceRestored": true,
+  "restoredSha256": "c22d41120d418f6d6fd0e26d608cc474e9ac1294daaa481b3dc894db72f235f2"
+}

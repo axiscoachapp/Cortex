@@ -1,0 +1,14 @@
+import {beforeEach,describe,expect,it,vi} from 'vitest';
+import {receptionApi,ReceptionError} from './api';
+const mocks=vi.hoisted(()=>({rpc:vi.fn(),abortSignal:vi.fn()}));
+vi.mock('@/integrations/supabase/client',()=>({supabase:{rpc:mocks.rpc}}));
+const id='33333333-3333-4333-8333-333333333333',page={id,name:'Contato sintético',phone:'Telefone sintético',revision:4};
+beforeEach(()=>{vi.resetAllMocks();mocks.rpc.mockReturnValue({abortSignal:mocks.abortSignal});mocks.abortSignal.mockResolvedValue({data:page,error:null,status:200});});
+describe('contact correction read cancellation',()=>{
+ it('preserves the RPC body and combines caller cancellation with the existing deadline',async()=>{const controller=new AbortController();expect(await receptionApi.contactEdit(id,controller.signal)).toEqual(page);expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith('reception_contact_edit',{p_contact:id});const composed=mocks.abortSignal.mock.calls[0][0] as AbortSignal;expect(composed.aborted).toBe(false);controller.abort();expect(composed.aborted).toBe(true);});
+ it('does not invoke an already cancelled search',async()=>{const controller=new AbortController();controller.abort();await expect(receptionApi.contactEdit(id,controller.signal)).rejects.toMatchObject({code:'cancelled'});expect(mocks.rpc).not.toHaveBeenCalled();});
+ it('rejects late data even when transport ignored cancellation',async()=>{const controller=new AbortController();mocks.abortSignal.mockImplementation(async()=>{controller.abort();return {data:page,error:null,status:200};});await expect(receptionApi.contactEdit(id,controller.signal)).rejects.toMatchObject({code:'cancelled'});expect(mocks.rpc).toHaveBeenCalledTimes(1);});
+ it('classifies cancellation when the transport rejects',async()=>{const controller=new AbortController();mocks.abortSignal.mockImplementation(async()=>{controller.abort();throw new Error('PRIVATE SYNTHETIC');});const error=await receptionApi.contactEdit(id,controller.signal).catch(e=>e);expect(error).toBeInstanceOf(ReceptionError);expect(error.code).toBe('cancelled');expect(error.message).not.toContain('PRIVATE');});
+ it('keeps the20second deadline effective alongside caller cancellation',async()=>{const deadline=new AbortController(),caller=new AbortController(),timer=vi.spyOn(AbortSignal,'timeout').mockReturnValue(deadline.signal);try{await receptionApi.contactEdit(id,caller.signal);expect(timer).toHaveBeenCalledExactlyOnceWith(20_000);const composed=mocks.abortSignal.mock.calls[0][0] as AbortSignal;deadline.abort();expect(composed.aborted).toBe(true);}finally{timer.mockRestore();}});
+ it('keeps existing calls without a caller signal compatible',async()=>{expect(await receptionApi.contactEdit(id)).toEqual(page);expect(mocks.abortSignal.mock.calls[0][0]).toBeInstanceOf(AbortSignal);});
+});

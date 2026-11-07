@@ -1,0 +1,127 @@
+{
+  "syntheticOnly": true,
+  "nativeNetworkCalls": 0,
+  "sdkVersion": "2.86.0",
+  "checks": [
+    {
+      "case": "success",
+      "calls": 1,
+      "outcome": "page"
+    },
+    {
+      "case": "forbidden",
+      "calls": 1,
+      "outcome": "42501"
+    },
+    {
+      "case": "wrong",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "extra",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "lost",
+      "calls": 1,
+      "outcome": ""
+    },
+    {
+      "case": "pre-aborted",
+      "calls": 0,
+      "outcome": "cancelled"
+    },
+    {
+      "case": "late",
+      "calls": 1,
+      "outcome": "cancelled"
+    },
+    {
+      "case": "in-flight-aborted",
+      "calls": 1,
+      "outcome": "cancelled"
+    },
+    {
+      "case": "without-caller-signal",
+      "calls": 1,
+      "outcome": "same DTO and deadline"
+    }
+  ],
+  "calls": [
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "body": {
+        "p_contact": "33333333-3333-4333-8333-333333333333"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "body": {
+        "p_contact": "33333333-3333-4333-8333-333333333333"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "body": {
+        "p_contact": "33333333-3333-4333-8333-333333333333"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "body": {
+        "p_contact": "33333333-3333-4333-8333-333333333333"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "body": {
+        "p_contact": "33333333-3333-4333-8333-333333333333"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "body": {
+        "p_contact": "33333333-3333-4333-8333-333333333333"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "body": {
+        "p_contact": "33333333-3333-4333-8333-333333333333"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "body": {
+        "p_contact": "33333333-3333-4333-8333-333333333333"
+      }
+    }
+  ],
+  "unexpected": [],
+  "sources": [
+    {
+      "path": "src/features/reception/contracts.ts",
+      "sha256": "8c5f7f329416fd0e5b8dcdb155f99721015606699ce5fb5f9de07599640047a7"
+    },
+    {
+      "path": "src/features/reception/accessErrors.ts",
+      "sha256": "028c54d78744d934925be421a21e63ebfa1b7aea8785b2d1042884a66f0bd221"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "546c7ff998c557aa734d481625aa4a46d22f41883a8003d6cbabcb01e9b31b50"
+    }
+  ],
+  "sourceHashesStable": true,
+  "limits": "Installed client and PostgREST transport only; no real DB/Auth/permissions, records or booking."
+}

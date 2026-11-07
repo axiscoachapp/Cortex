@@ -1,0 +1,2084 @@
+{
+  "completed": true,
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": "2026-11-05T15:00:00Z",
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "da72f282747a9c12c79572f4bc1351ef2a7c5597",
+  "overlays": [
+    {
+      "path": "src/features/reception/ContactCorrectionDialog.tsx",
+      "sha256": "c22d41120d418f6d6fd0e26d608cc474e9ac1294daaa481b3dc894db72f235f2"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "546c7ff998c557aa734d481625aa4a46d22f41883a8003d6cbabcb01e9b31b50"
+    }
+  ],
+  "frozenTextSourceCount": 355,
+  "frozenTextSourceDigest": "33e7f7a7fdde0e0ee9327b3570b309b6058aa9b7b57b11592b2af25a6f1bb96b",
+  "tailwindRawContentCount": 353,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "50a44822f8362c3ff3b4fb18014828de730962836c918656151160f01cc0c38b"
+    },
+    {
+      "path": "scripts/fixtures/contact-correction-reads-browser.mjs",
+      "sha256": "02013cea7e2896ea72ee415c249f47ed2d8e6dbacca456bfd8ce28d9ff5660e5"
+    },
+    {
+      "path": "scripts/fixtures/contact-correction-context-browser.mjs",
+      "sha256": "191a04a939b43a3c4f0c72ea243043c06674738db7d45817e4901d9a65a13f4b"
+    },
+    {
+      "path": "scripts/fixtures/contact-directory-browser.mjs",
+      "sha256": "0ae2ab73ec62512982030f27311dfd845ab75eae4953fd44d61a2ae0a8249114"
+    },
+    {
+      "path": "scripts/fixtures/new-case-context-browser.mjs",
+      "sha256": "37f6d23eeaec2c771f9a52e5ba9c74e9a885e130a3d963192c7029d5123b0d24"
+    },
+    {
+      "path": "scripts/fixtures/contact-search-browser.mjs",
+      "sha256": "3c348274b1028d4a2bb09999031954304ac131249e06e4bce781e39edf081d53"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-paused-browser.mjs",
+      "sha256": "5dc4c63c335c4ca36ba29dc3cfba6d1d918ecad39187fe48840f09af50a763f5"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-templates-browser.mjs",
+      "sha256": "239474f2ffc6b65a31922125f79c23470897c21bf89b2d411f33484563eefaec"
+    },
+    {
+      "path": "scripts/fixtures/patient-workspace-browser.mjs",
+      "sha256": "030d6f283f64a71e73a2961aaef8d6c4b7f9f70e4a7acb421c0c19cc275f3295"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-api.mjs",
+      "sha256": "6917242c74a712db4f0de474ee34ee6133bc32264459876805ffe54e58fc1ce2"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-browser.mjs",
+      "sha256": "b060e05143162c09231358b295010c6ae1f4b8eaab8ec05744fadc3e1ad01527"
+    },
+    {
+      "path": "scripts/fixtures/post-consultation-api.mjs",
+      "sha256": "d7f82be146346f7875eb01da59af0db32f6164fd80ee2911cdb14503a20456c8"
+    },
+    {
+      "path": "scripts/fixtures/post-consultation-browser.mjs",
+      "sha256": "c02499409baf4a4e46467b0c7440e16fc6ebab09259b0fa59777ab3041c9d36e"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-api.mjs",
+      "sha256": "c83f0095188f1a56f6acd379fd7af7758247895d2a12f6006feb4c5462368cc0"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-browser.mjs",
+      "sha256": "8ef010f48a78e2c6186fefaec215588a530e2fabae9491a7dfc0ef3b970b5598"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "7555b5db674ff31de1df4c37ca27e87ad4773ad7970e4b03aa6900fcf5bf0f7a"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "3a94b77284518c05911b890f5e264640535a9921eff918f9898f9e6898956bd9"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "cb4b16a94335f943f37e6ef52495361d42d30e9de5433c828811d7ff511e099e"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-browser.mjs",
+      "sha256": "c01bc7bb0ecc8302a63ab3f17134303aee1d97281ad37805a1fdd10804b7fcfe"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-claim-browser.mjs",
+      "sha256": "d0daac763c2495e5260408251f0c9885b5728c7e9149a5c14bb7cf496c8a42a3"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-release-browser.mjs",
+      "sha256": "a27fe2b4e8878afc396e2b8a6ce097a70534b4f8c53e1ac8374158ba4d3b27c8"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-close-browser.mjs",
+      "sha256": "2cd245615410a62d6957129a1491801fb928ee1f62ca110091714e1d20628539"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-reopen-browser.mjs",
+      "sha256": "b00e19bed4a535756c2041eb1dcf5ff438cfec14233d878d9e4da4e87e4de73e"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-queue-browser.mjs",
+      "sha256": "58cfe5ee83d2c5e74aec6c77f272c2ccd9c08ce95268f4709eee1326289769b5"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-revoke-consent-browser.mjs",
+      "sha256": "6fa095cd1fb937b91ec750e383e178eca08f8036c7ea9333f8f8e3a396e4abf1"
+    },
+    {
+      "path": "scripts/fixtures/mfa-verification-api.mjs",
+      "sha256": "189c608838b9d8b2584be3d6454194a8f87f3753dbbd15d50e4fac2b775f60cd"
+    },
+    {
+      "path": "scripts/fixtures/mfa-verification-browser.mjs",
+      "sha256": "8ecbf6c51b07a70c87e6489bbb10de2c4202837de9decfce51e7c3f6b1ea9b38"
+    },
+    {
+      "path": "scripts/fixtures/mfa-unavailability-browser.mjs",
+      "sha256": "de347477550b63afa6d8fa48ede0440cbad6d440d726106b156a9387a5d8af8d"
+    },
+    {
+      "path": "scripts/fixtures/mfa-inline-browser.mjs",
+      "sha256": "f5be6434d1a266f8ef6074b50ad45e99bc31ec8ac7c5fddba9f0a8c0af58f59e"
+    },
+    {
+      "path": "scripts/fixtures/mfa-success-browser.mjs",
+      "sha256": "74fee2638acbca94a23e077417d15720868659171247757b668c415a2d5e207a"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-api.mjs",
+      "sha256": "aadf9dea7e0ae66cf1c34079fcf178c6a85cdcaf3aec1f3e4b29289f35e38e85"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-browser.mjs",
+      "sha256": "df2663ca28208bd6f60fee197777b5b39cb2eade8bee12d9ffb02f3d53d4d6ab"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": false,
+  "consultationChecks": [],
+  "consultationRequests": [],
+  "consultationMetrics": null,
+  "settingsEmbeddedOnly": false,
+  "previewEntry": null,
+  "settingsChecks": [],
+  "settingsRequests": [],
+  "settingsFixtureMetrics": [],
+  "contactCorrectionReads": true,
+  "contactCorrectionContext": false,
+  "contactDirectory": false,
+  "newCaseContext": false,
+  "contactSearchOnly": true,
+  "contactSearchChecks": [
+    {
+      "width": 320,
+      "initialReadVerifiedBeforeFields": true,
+      "fieldsRemovedDuringReadAndError": true,
+      "draftPreservedOnRetry": true,
+      "reviewReset": true,
+      "onlyExplicitRecoveryReplacesDraft": true,
+      "noSubmission": true
+    },
+    {
+      "width": 375,
+      "initialReadVerifiedBeforeFields": true,
+      "fieldsRemovedDuringReadAndError": true,
+      "draftPreservedOnRetry": true,
+      "reviewReset": true,
+      "onlyExplicitRecoveryReplacesDraft": true,
+      "noSubmission": true
+    },
+    {
+      "width": 1280,
+      "initialReadVerifiedBeforeFields": true,
+      "fieldsRemovedDuringReadAndError": true,
+      "draftPreservedOnRetry": true,
+      "reviewReset": true,
+      "onlyExplicitRecoveryReplacesDraft": true,
+      "noSubmission": true
+    },
+    {
+      "width": 1920,
+      "initialReadVerifiedBeforeFields": true,
+      "fieldsRemovedDuringReadAndError": true,
+      "draftPreservedOnRetry": true,
+      "reviewReset": true,
+      "onlyExplicitRecoveryReplacesDraft": true,
+      "noSubmission": true
+    },
+    {
+      "states": 28,
+      "requests": 34,
+      "expected403": 4,
+      "nativeConfirmations": 8,
+      "zeroWrites": true,
+      "pausedCancellationAndStaleWrites": "unit/SDK only"
+    }
+  ],
+  "contactSearchRequests": [
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contact_edit"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_contacts"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    }
+  ],
+  "contactSearchMetrics": {
+    "clinicalReads": [],
+    "externalCalls": [],
+    "unknown": [],
+    "bookings": 0,
+    "contacts": 0,
+    "caseWrites": 0
+  },
+  "whatsappPaused": false,
+  "whatsappTemplates": false,
+  "whatsappRevokeConsent": false,
+  "whatsappRevokeConsentCalls": null,
+  "whatsappQueue": false,
+  "whatsappQueueCalls": null,
+  "whatsappReopen": false,
+  "whatsappReopenCalls": null,
+  "whatsappClose": false,
+  "whatsappCloseCalls": null,
+  "whatsappRelease": false,
+  "whatsappReleaseCalls": null,
+  "whatsappClaim": false,
+  "whatsappClaimCalls": null,
+  "whatsappReadOnly": false,
+  "whatsappBotRead": false,
+  "whatsappHistory": false,
+  "whatsappList": false,
+  "whatsappChecks": [],
+  "whatsappRequests": [],
+  "whatsappFixtureCalls": null,
+  "schedulingMigrationOnly": false,
+  "schedulingMigrationChecks": [],
+  "schedulingMigrationCalls": null,
+  "schedulingMigrationReads": null,
+  "schedulingMigrationMetrics": null,
+  "schedulingReceptionMetrics": null,
+  "recoveryNoticeOnly": false,
+  "localRecordingRecovery": false,
+  "postConsultation": false,
+  "postEntries": false,
+  "localRecoveryRequests": [],
+  "postEntryWrites": null,
+  "postConsultationCalls": null,
+  "recoveryNoticeChecks": [],
+  "recoveryNoticeCalls": null,
+  "recoveryNoticeMetrics": null,
+  "patientWorkspaceOnly": false,
+  "patientWorkspaceChecks": [],
+  "patientWorkspaceMetrics": null,
+  "settingsAccessOnly": false,
+  "settingsAdminOnly": false,
+  "settingsAccessChecks": [],
+  "settingsAccessRequests": [],
+  "settingsAccessCalls": null,
+  "mfaSuccessOnly": false,
+  "mfaInlineOnly": false,
+  "mfaUnavailabilityOnly": false,
+  "mfaVerificationOnly": false,
+  "mfaVerificationCalls": null,
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": null,
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/ContactCorrectionDialog.tsx",
+    "src/features/reception/ContactDirectory.tsx",
+    "src/features/reception/ContactLinksDialog.tsx",
+    "src/features/reception/ContactSearch.tsx",
+    "src/features/reception/ContactsPage.tsx",
+    "src/features/reception/LinkRelationshipDialog.tsx",
+    "src/features/reception/LinkStateDialog.tsx",
+    "src/features/reception/NewCaseDialog.tsx",
+    "src/features/reception/ReceptionLayout.tsx",
+    "src/features/reception/ReceptionNotice.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/features/reception/linkRelationships.ts",
+    "src/features/reception/useRequestId.ts",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/mfa.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx"
+  ],
+  "screens": [
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-initial-pending",
+      "actualPath": "/recepcao/contatos",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-initial-pending-320.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-draft",
+      "actualPath": "/recepcao/contatos",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-draft-320.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-draft-320-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-recovery-pending",
+      "actualPath": "/recepcao/contatos",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperando cadastro…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-recovery-pending-320.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-recovery-pending-320-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-denied",
+      "actualPath": "/recepcao/contatos",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Tentar novamente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível conferir o cadastro. Verifique o acesso e tente novamente.Tentar novamente"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-denied-320.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-denied-320-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-retried-draft",
+      "actualPath": "/recepcao/contatos",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-retried-draft-320.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-retried-draft-320-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-explicit-baseline",
+      "actualPath": "/recepcao/contatos",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-explicit-baseline-320.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-explicit-baseline-320-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-closed",
+      "actualPath": "/recepcao/contatos",
+      "width": 320,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 21.90625,
+          "right": 45.6875,
+          "targetLeft": 5.390625,
+          "targetRight": 62.21875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 69.390625,
+          "right": 122.65625,
+          "targetLeft": 67.609375,
+          "targetRight": 124.453125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 129.84375,
+          "right": 190.15625,
+          "targetLeft": 129.84375,
+          "targetRight": 190.15625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Equipe",
+          "left": 199.90625,
+          "right": 248,
+          "targetLeft": 195.546875,
+          "targetRight": 252.375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 266.171875,
+          "right": 306.203125,
+          "targetLeft": 257.765625,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Contatos da recepção",
+        "Família Exemplo"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-closed-320.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-initial-pending",
+      "actualPath": "/recepcao/contatos",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-initial-pending-375.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-draft",
+      "actualPath": "/recepcao/contatos",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-draft-375.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-draft-375-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-recovery-pending",
+      "actualPath": "/recepcao/contatos",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperando cadastro…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-recovery-pending-375.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-recovery-pending-375-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-denied",
+      "actualPath": "/recepcao/contatos",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Tentar novamente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível conferir o cadastro. Verifique o acesso e tente novamente.Tentar novamente"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-denied-375.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-denied-375-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-retried-draft",
+      "actualPath": "/recepcao/contatos",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-retried-draft-375.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-retried-draft-375-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-explicit-baseline",
+      "actualPath": "/recepcao/contatos",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-explicit-baseline-375.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-explicit-baseline-375-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-closed",
+      "actualPath": "/recepcao/contatos",
+      "width": 375,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 27.765625,
+          "right": 51.546875,
+          "targetLeft": 5.390625,
+          "targetRight": 73.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 86.9375,
+          "right": 140.203125,
+          "targetLeft": 79.3125,
+          "targetRight": 147.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 157.34375,
+          "right": 217.65625,
+          "targetLeft": 153.234375,
+          "targetRight": 221.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Equipe",
+          "left": 237.375,
+          "right": 285.46875,
+          "targetLeft": 227.15625,
+          "targetRight": 295.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 315.328125,
+          "right": 355.359375,
+          "targetLeft": 301.078125,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Contatos da recepção",
+        "Família Exemplo"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-closed-375.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-initial-pending",
+      "actualPath": "/recepcao/contatos",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-initial-pending-1280.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-draft",
+      "actualPath": "/recepcao/contatos",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-draft-1280.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-draft-1280-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-recovery-pending",
+      "actualPath": "/recepcao/contatos",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperando cadastro…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-recovery-pending-1280.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-recovery-pending-1280-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-denied",
+      "actualPath": "/recepcao/contatos",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Tentar novamente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível conferir o cadastro. Verifique o acesso e tente novamente.Tentar novamente"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-denied-1280.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-denied-1280-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-retried-draft",
+      "actualPath": "/recepcao/contatos",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-retried-draft-1280.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-retried-draft-1280-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-explicit-baseline",
+      "actualPath": "/recepcao/contatos",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-explicit-baseline-1280.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-explicit-baseline-1280-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-closed",
+      "actualPath": "/recepcao/contatos",
+      "width": 1280,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 118.265625,
+          "right": 142.046875,
+          "targetLeft": 5.390625,
+          "targetRight": 254.921875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 358.4375,
+          "right": 411.703125,
+          "targetLeft": 260.3125,
+          "targetRight": 509.84375,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 609.84375,
+          "right": 670.15625,
+          "targetLeft": 515.234375,
+          "targetRight": 764.765625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Equipe",
+          "left": 870.875,
+          "right": 918.96875,
+          "targetLeft": 770.15625,
+          "targetRight": 1019.6875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1129.828125,
+          "right": 1169.859375,
+          "targetLeft": 1025.078125,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Contatos da recepção",
+        "Família Exemplo"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-closed-1280.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-initial-pending",
+      "actualPath": "/recepcao/contatos",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-initial-pending-1920.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-draft",
+      "actualPath": "/recepcao/contatos",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-draft-1920.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-draft-1920-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-recovery-pending",
+      "actualPath": "/recepcao/contatos",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperando cadastro…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-recovery-pending-1920.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-recovery-pending-1920-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-denied",
+      "actualPath": "/recepcao/contatos",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Tentar novamente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Não foi possível conferir o cadastro. Verifique o acesso e tente novamente.Tentar novamente"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-denied-1920.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-denied-1920-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-retried-draft",
+      "actualPath": "/recepcao/contatos",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-retried-draft-1920.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-retried-draft-1920-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-explicit-baseline",
+      "actualPath": "/recepcao/contatos",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [
+        {
+          "name": "Recuperar cadastro do servidor",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Voltar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar correção",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Corrigir contato"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-explicit-baseline-1920.png",
+      "actionScreenshot": "admin--recepcao-contatos-contact-correction-reads-explicit-baseline-1920-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/recepcao/contatos",
+      "variant": "contact-correction-reads-closed",
+      "actualPath": "/recepcao/contatos",
+      "width": 1920,
+      "viewportOnly": true,
+      "mfaCodeMasked": false,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Contatos da recepção",
+        "Família Exemplo"
+      ],
+      "screenshot": "admin--recepcao-contatos-contact-correction-reads-closed-1920.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    {
+      "path": "/recepcao/contatos",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    },
+    {
+      "path": "/recepcao/contatos",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    },
+    {
+      "path": "/recepcao/contatos",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    },
+    {
+      "path": "/recepcao/contatos",
+      "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    }
+  ],
+  "failedRequests": [],
+  "errorResponses": [
+    {
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "status": 403
+    },
+    {
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "status": 403
+    },
+    {
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "status": 403
+    },
+    {
+      "path": "/rest/v1/rpc/reception_contact_edit",
+      "status": 403
+    }
+  ],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}
