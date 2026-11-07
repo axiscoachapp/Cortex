@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K7/2a: `13703bfdca9cdabc49650c513e45791d38c1a063`, main/axiscoachapp (autor e committer), sem push. Índice livre; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas.
+
 Atualizado em 2026-11-06 22:22. **K7/2a — consultas para retomar no Início:** [provas](../docs/reviews/2026-11-06/consultation-recovery/IMPLEMENTATION.md). Metadados privados por ator/vínculo composto, descartes excluídos, limite50 explícito, fresh/abort/erro sem ações antigas. Retoma ID exato fora do diretório ou mesmo paciente; contexto do agendamento preservado só no mesmo paciente, primeira carga falha permite retry. Releitura explícita do chat protege captura e demais promessas/preservação/descarte, sem repetição automática; textos só saem com confirmação. Invalidação dos avisos por ator.58Vitest/5arquivos+4Node, tipos/lint/sintaxe/três flags,20estados375–1920/135%,21hashes/cleanup. Revisão corrigiu leitura antiga, carga falha e writes pendentes; nenhuma escrita/IA/externo no navegador. Próximo K7/2b: espera/confirmações Agenda/Recepção e nav/redirect; pós-consulta e descoberta global de áudio local depois. K7 inteira aberta, K6 f837c57 pendente sem nova mensagem a responder.
 
 Automação ACTIVE, main/axiscoachapp, sem push/hosted/Meta/carga. Sem nova entrada Claude;2152 atendida2201. Preservar Claude/PersonalMed/SaaS. K6 novoSHA, M2/MFA/compartilhamento/piloto continuam abertos.
