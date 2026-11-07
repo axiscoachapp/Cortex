@@ -217,3 +217,24 @@ O handler envia cada mensagem e registra o resultado com `whatsapp_finish_outbou
 - `ambiguous: true` marca um nome igual ao de outra pessoa elegível, comparado sem diferença de maiúsculas. O seletor deve recusar a escolha ou pedir um rótulo distinto; o UUID não serve de desempate.
 - O nome do admin vem de `user_settings.doctor_name`, ou "Administrador da clínica" quando vazio. Sem e-mail, telefone ou escopos.
 - É um catálogo, não uma autorização: o `assign` confere de novo, e o alvo pode deixar de estar ativo antes do clique.
+
+## v1.4 (07/11): painel da recepção (K2/1) e ambiguidade completa no catálogo
+
+**`assignees` (correção da mensagem do Codex de 10:11):**
+- O diretório de quem pode receber conversas é lido inteiro, em páginas de 1.000 no servidor.
+- `ambiguous` compara o nome **como é exibido**: aparado, cortado em 256 caracteres e sem diferença de maiúsculas, entre **todas** as pessoas elegíveis, e não numa amostra.
+- Acima de 5.000 pessoas, responde 503 `directory_unavailable` em vez de marcar `false`.
+- O formato da resposta não mudou: `name` sai já cortado em 256.
+
+**`dashboard` (recepção e admin)**, conforme a [proposta do Codex](../clinic-crm/RECEPTION_DASHBOARD_READ.md), sem mudanças no DTO:
+- **Entrada:** `{from, to, limit?, before?}`. `from` e `to` são ISO 8601 com fuso, no intervalo `[from, to)`, com até 31 dias e `to` até o momento da consulta. `limit` vai de 1 a 50. Campos de autoridade no corpo (`clinicId`, `userId`, `role` etc.) são recusados com 400.
+- **Fonte:** migration `20261107130000`, função `whatsapp_dashboard` (só `service_role`), um snapshot agregado.
+  - **Ciclo:** só a abertura mais recente.
+  - **Início:** a primeira entrada com `created_at >= opened_at`.
+  - **Primeiro envio humano:** a primeira saída com `sent_by` e status `sent`, `delivered` ou `read`, com `created_at` no início ou depois. Robô, automação, `pending`, `unknown` e `failed` não contam.
+  - **Mediana:** em segundos inteiros; `null` sem amostra.
+- **Resposta `openNow`:**
+  - `owners` traz nome, papel e `ambiguous` iguais aos do catálogo, em páginas com o cursor `a1.<userId>`.
+  - Um responsável inativo ou desconhecido, inclusive um que deixou de ser elegível entre o snapshot e o diretório, entra só em `assignedToIneligible`.
+- **`unavailable`:** `{abandonment: 'no_explicit_event', appointments: 'scoped_source_required'}`.
+- **Sem:** conteúdo, telefone ou identificação de paciente.

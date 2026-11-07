@@ -713,3 +713,77 @@ describe('assignees catalog', () => {
     expect((await h.api({ action: 'assignees' })).status).toBe(403);
   });
 });
+
+describe('assignees ambiguity over the whole directory (Codex 1011)', () => {
+  const uid = (n: number) => `20000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  const store = (rows: AssigneeRow[]) => async (_c: string, after: string | null, limit: number) =>
+    rows.filter((r) => !after || r.user_id > after).sort((a, b) => (a.user_id < b.user_id ? -1 : 1)).slice(0, limit);
+
+  it('flags a repeated name between the first and the 501st person, on different pages', async () => {
+    const rows = Array.from({ length: 501 }, (_, i) => ({ user_id: uid(i + 1), name: i === 0 || i === 500 ? 'Ana Exemplo' : `Pessoa ${i + 1}`, role: 'reception' as const }));
+    const h = await connectedHarness();
+    h.deps.store.assignees = store(rows);
+    const first = await (await h.api({ action: 'assignees', limit: 1 })).json();
+    expect(first.items[0]).toMatchObject({ userId: uid(1), ambiguous: true });
+    let page = first;
+    let last = null;
+    while (page.nextBefore) { last = page; page = await (await h.api({ action: 'assignees', limit: 50, before: page.nextBefore })).json(); }
+    expect(page.items.at(-1)).toMatchObject({ userId: uid(501), ambiguous: true });
+    expect(last).not.toBeNull();
+  });
+
+  it('compares the name as shown (cut at 256 characters)', async () => {
+    const prefix = 'N'.repeat(256);
+    const h = await connectedHarness();
+    h.deps.store.assignees = store([{ user_id: uid(1), name: `${prefix}A`, role: 'admin' }, { user_id: uid(2), name: `${prefix}B`, role: 'admin' }]);
+    const r = await (await h.api({ action: 'assignees' })).json();
+    expect(r.items.map((i: { name: string; ambiguous: boolean }) => [i.name.length, i.ambiguous])).toEqual([[256, true], [256, true]]);
+  });
+
+  it('reports the directory unavailable instead of guessing when it is too large', async () => {
+    const h = await connectedHarness();
+    h.deps.store.assignees = store(Array.from({ length: 5001 }, (_, i) => ({ user_id: uid(i + 1), name: `P${i}`, role: 'reception' as const })));
+    const r = await h.api({ action: 'assignees' });
+    expect([r.status, (await r.json()).code]).toEqual([503, 'directory_unavailable']);
+  });
+});
+
+describe('reception dashboard (K2/1)', () => {
+  const snapshot = { cohort: { incomingCycles: 5, withHumanSend: 3, withoutHumanSend: 2, medianFirstHumanSendSeconds: 420, closedWithoutHumanSend: 1 },
+    openNow: { total: 7, unassigned: 2, assignedToIneligible: 1, owners: [{ userId: TEAM[0].user_id, openCount: 3 }, { userId: '30000000-0000-4000-8000-000000000009', openCount: 1 }] } };
+
+  it('returns the aggregate with owners named like the catalog, and moves a vanished owner to ineligible', async () => {
+    const h = await connectedHarness();
+    h.deps.now = () => new Date('2026-11-07T15:00:00Z');
+    h.rpcResults.whatsapp_dashboard = snapshot;
+    const r = await (await h.api({ action: 'dashboard', from: '2026-11-01T03:00:00Z', to: '2026-11-07T15:00:00Z' })).json();
+    expect(h.calls.find(([n]) => n === 'whatsapp_dashboard')![1]).toEqual({ p_clinic: CLINIC, p_from: '2026-11-01T03:00:00.000Z', p_to: '2026-11-07T15:00:00.000Z' });
+    expect(r).toMatchObject({ schemaVersion: 1, asOf: '2026-11-07T15:00:00.000Z', coverage: 'latest_cycle_only',
+      window: { timeZone: 'America/Sao_Paulo' }, cohort: snapshot.cohort,
+      openNow: { total: 7, unassigned: 2, assignedToIneligible: 2,
+        owners: { items: [{ userId: TEAM[0].user_id, name: 'Ana Exemplo', role: 'reception', ambiguous: true, openCount: 3 }], nextBefore: null } },
+      unavailable: { abandonment: 'no_explicit_event', appointments: 'scoped_source_required' } });
+  });
+
+  it('refuses authority fields, future ends, long windows and callers without the inbox', async () => {
+    const h = await connectedHarness();
+    h.deps.now = () => new Date('2026-11-07T15:00:00Z');
+    h.rpcResults.whatsapp_dashboard = snapshot;
+    const ok = { action: 'dashboard', from: '2026-11-01T03:00:00Z', to: '2026-11-07T15:00:00Z' };
+    expect((await h.api({ ...ok, clinicId: CLINIC })).status).toBe(400);
+    expect((await h.api({ ...ok, to: '2026-11-07T15:00:01Z' })).status).toBe(400);
+    expect((await h.api({ ...ok, from: '2026-10-07T14:59:59Z' })).status).toBe(400);
+    expect((await h.api({ ...ok, from: '2026-11-01' })).status).toBe(400);
+    expect((await h.api({ ...ok, limit: 51 })).status).toBe(400);
+    h.deps.authorize = async () => ({ userId: ADMIN, clinicId: CLINIC, admin: false, reception: false });
+    expect((await h.api(ok)).status).toBe(403);
+  });
+
+  it('keeps a missing median as null', async () => {
+    const h = await connectedHarness();
+    h.deps.now = () => new Date('2026-11-07T15:00:00Z');
+    h.rpcResults.whatsapp_dashboard = { ...snapshot, cohort: { ...snapshot.cohort, withHumanSend: 0, withoutHumanSend: 5, medianFirstHumanSendSeconds: null } };
+    const r = await (await h.api({ action: 'dashboard', from: '2026-11-01T03:00:00Z', to: '2026-11-07T15:00:00Z' })).json();
+    expect(r.cohort.medianFirstHumanSendSeconds).toBeNull();
+  });
+});

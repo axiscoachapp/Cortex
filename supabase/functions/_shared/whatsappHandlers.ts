@@ -332,6 +332,7 @@ export async function apiHandler(req: Request, deps: WhatsAppDeps): Promise<Resp
       case 'saveFlow': return json(deps, 200, await saveFlow(deps, caller, body));
       case 'botSession': return json(deps, 200, await botSessionView(deps, caller, body));
       case 'assignees': return json(deps, 200, await assigneesView(deps, caller, body));
+      case 'dashboard': return json(deps, 200, await dashboardView(deps, caller, body));
       case 'saveAutomation': return json(deps, 200, await saveAutomation(deps, caller, body));
       case 'deleteAutomation': {
         requireAdmin(caller);
@@ -806,15 +807,39 @@ async function botSessionView(deps: WhatsAppDeps, caller: Caller, body: Record<s
 }
 
 const ASSIGNEE_CURSOR = /^a1\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+/** The directory is read whole to certify name uniqueness; beyond this size it is reported unavailable. */
+export const DIRECTORY_MAX = 5000;
+const DIRECTORY_PAGE = 1000;
+
+interface DirectoryEntry { userId: string; name: string; role: 'reception' | 'admin'; ambiguous: boolean }
 
 /**
- * Who can receive a conversation: active reception staff or active admins of the caller's clinic,
- * the same rule act/assign enforces. A catalog, not an authorization: assign checks again.
- * Pages of up to 50 ordered by user id; `ambiguous` marks names shared by more than one person
- * on the page set, so the picker can refuse them instead of guessing.
+ * Everyone who can receive a conversation (active reception staff or active admins, the act/assign
+ * rule), ordered by user id. `ambiguous` compares the name exactly as shown (trimmed, cut at 256,
+ * case-insensitive) across the whole directory, never a sample. A directory too large to read whole
+ * is refused as unavailable instead of being marked unambiguous.
  */
-async function assigneesView(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
-  requireInbox(caller);
+async function eligibleDirectory(deps: WhatsAppDeps, clinicId: string): Promise<DirectoryEntry[]> {
+  const rows: AssigneeRow[] = [];
+  let after: string | null = null;
+  for (;;) {
+    const page = await deps.store.assignees(clinicId, after, DIRECTORY_PAGE);
+    rows.push(...page);
+    if (rows.length > DIRECTORY_MAX) throw new HttpError(503, 'A equipe é grande demais para conferir nomes repetidos.', 'directory_unavailable');
+    if (page.length < DIRECTORY_PAGE) break;
+    after = page[page.length - 1].user_id;
+  }
+  const shown = (n: string) => n.normalize('NFC').trim().slice(0, 256);
+  const key = (n: string) => shown(n).toLocaleLowerCase('pt-BR');
+  const counts = new Map<string, number>();
+  for (const r of rows) counts.set(key(r.name), (counts.get(key(r.name)) ?? 0) + 1);
+  const seen = new Set<string>();
+  return rows.filter((r) => !seen.has(r.user_id) && seen.add(r.user_id))
+    .sort((a, b) => (a.user_id < b.user_id ? -1 : a.user_id > b.user_id ? 1 : 0))
+    .map((r) => ({ userId: r.user_id, name: shown(r.name), role: r.role, ambiguous: (counts.get(key(r.name)) ?? 0) > 1 }));
+}
+
+function pageParams(body: Record<string, unknown>) {
   const limit = body.limit === undefined ? 50 : Number(body.limit);
   if (!Number.isInteger(limit) || limit < 1 || limit > 50) throw new HttpError(400, 'Limite inválido.', 'invalid');
   let after: string | null = null;
@@ -823,15 +848,61 @@ async function assigneesView(deps: WhatsAppDeps, caller: Caller, body: Record<st
     if (!m) throw new HttpError(400, 'Cursor inválido.', 'invalid');
     after = m[1];
   }
-  const rows = await deps.store.assignees(caller.clinicId, after, limit + 1);
-  const page = rows.slice(0, limit);
-  const key = (n: string) => n.normalize('NFC').trim().toLocaleLowerCase('pt-BR');
-  const all = await deps.store.assignees(caller.clinicId, null, 500);
-  const counts = new Map<string, number>();
-  for (const r of all) counts.set(key(r.name), (counts.get(key(r.name)) ?? 0) + 1);
+  return { limit, after };
+}
+
+function pageOf<T extends { userId: string }>(list: T[], after: string | null, limit: number) {
+  const rest = after ? list.filter((x) => x.userId > after) : list;
+  const items = rest.slice(0, limit);
+  return { items, nextBefore: rest.length > limit ? `a1.${items[items.length - 1].userId}` : null };
+}
+
+/** Who can receive a conversation, in pages of up to 50. A catalog, not an authorization: assign checks again. */
+async function assigneesView(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireInbox(caller);
+  const { limit, after } = pageParams(body);
+  return pageOf(await eligibleDirectory(deps, caller.clinicId), after, limit);
+}
+
+const AUTHORITY_FIELDS = ['clinicId', 'clinic_id', 'actorId', 'userId', 'user_id', 'role', 'admin', 'reception', 'p_clinic'];
+
+/**
+ * Reception dashboard (K2/1): latest-cycle cohort of [from, to) and the open conversations now, by
+ * current owner. Counts and user ids only. Contract: docs/product/clinic-crm/RECEPTION_DASHBOARD_READ.md.
+ */
+async function dashboardView(deps: WhatsAppDeps, caller: Caller, body: Record<string, unknown>) {
+  requireInbox(caller);
+  if (AUTHORITY_FIELDS.some((f) => f in body)) throw new HttpError(400, 'Clínica e pessoa vêm da sessão.', 'invalid');
+  const now = (deps.now ?? (() => new Date()))();
+  const iso = (v: unknown, what: string) => {
+    const t = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/.test(v) ? Date.parse(v) : NaN;
+    if (!Number.isFinite(t)) throw new HttpError(400, `${what} inválido.`, 'invalid');
+    return t;
+  };
+  const from = iso(body.from, 'Início');
+  const to = iso(body.to, 'Fim');
+  if (!(from < to) || to > now.getTime() || to - from > 31 * 86_400_000) throw new HttpError(400, 'Escolha um período de até 31 dias, terminando até agora.', 'invalid');
+  const { limit, after } = pageParams(body);
+  let snap: { cohort: { incomingCycles: number; withHumanSend: number; withoutHumanSend: number; medianFirstHumanSendSeconds: number | null;
+    closedWithoutHumanSend: number }; openNow: { total: number; unassigned: number; assignedToIneligible: number; owners: Array<{ userId: string; openCount: number }> } };
+  try {
+    snap = (await deps.rpc('whatsapp_dashboard', { p_clinic: caller.clinicId, p_from: new Date(from).toISOString(), p_to: new Date(to).toISOString() })) as typeof snap;
+  } catch (e) { throw rpcError(e); }
+  const directory = new Map((await eligibleDirectory(deps, caller.clinicId)).map((d) => [d.userId, d]));
+  // An owner the SQL saw as eligible but the directory no longer lists (changed in between) is counted as ineligible.
+  const owners = snap.openNow.owners.filter((o) => directory.has(o.userId)).map((o) => ({ ...directory.get(o.userId)!, openCount: Number(o.openCount) }));
+  const vanished = snap.openNow.owners.filter((o) => !directory.has(o.userId)).reduce((a, o) => a + Number(o.openCount), 0);
+  const c = snap.cohort;
   return {
-    items: page.map((r) => ({ userId: r.user_id, name: r.name.slice(0, 256), role: r.role, ambiguous: (counts.get(key(r.name)) ?? 0) > 1 })),
-    nextBefore: rows.length > limit ? `a1.${page[page.length - 1].user_id}` : null,
+    schemaVersion: 1, asOf: now.toISOString(),
+    window: { from: new Date(from).toISOString(), to: new Date(to).toISOString(), timeZone: 'America/Sao_Paulo' },
+    coverage: 'latest_cycle_only',
+    cohort: { incomingCycles: Number(c.incomingCycles), withHumanSend: Number(c.withHumanSend), withoutHumanSend: Number(c.withoutHumanSend),
+      medianFirstHumanSendSeconds: c.medianFirstHumanSendSeconds === null ? null : Number(c.medianFirstHumanSendSeconds),
+      closedWithoutHumanSend: Number(c.closedWithoutHumanSend) },
+    openNow: { total: Number(snap.openNow.total), unassigned: Number(snap.openNow.unassigned),
+      assignedToIneligible: Number(snap.openNow.assignedToIneligible) + vanished, owners: pageOf(owners, after, limit) },
+    unavailable: { abandonment: 'no_explicit_event', appointments: 'scoped_source_required' },
   };
 }
 
