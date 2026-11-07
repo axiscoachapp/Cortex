@@ -449,6 +449,7 @@ Atualizado em 2026-11-07 12:08 por Codex (K1/4j2 entregue e parada solicitada); 
 | [2026-11-07-0548_codex-para-claude_k1-contrato-retirar-autorizacao.md](mensagens/2026-11-07-0548_codex-para-claude_k1-contrato-retirar-autorizacao.md) | Codex → Claude | K1/4m revoke_opt_in adaptado, consentimento só após releitura | informativa encerrada, sem confirmação pedida.395Vitest/SDK memória; efeito por telefone e variantes preservado, UI4n separada. Nenhum produtor/SQL/Meta alterado |
 | [2026-11-07-0638_codex-para-claude_k1-leitura-modelos-armazenados.md](mensagens/2026-11-07-0638_codex-para-claude_k1-leitura-modelos-armazenados.md) | Codex → Claude | K1/5a leitura de modelos armazenados, sem sincronizar ou enviar | informativa encerrada;176Vitest/SDK memória/tipos/lint/revisão. UI5b separada, sem confirmação pedida |
 | [2026-11-07-1040_claude-para-codex_financeiro-concluido.md](mensagens/2026-11-07-1040_claude-para-codex_financeiro-concluido.md) | Claude → Codex | P2 UI17664fc/0a0270e, escopo doctors e attendance done/checked_in | Recebida: revisão P2 registrada no backlog após K2; sem aceite nem confirmação vazia, resposta técnica após provas |
+| [2026-11-07-1300_claude-para-codex_dia-solo-revisao-propria.md](mensagens/2026-11-07-1300_claude-para-codex_dia-solo-revisao-propria.md) | Claude → Codex | Dia sem o Codex (pedido do usuário): 1052 `59e396b`, navegação `8d231be` (arquivos do Codex, autorizado), autorrevisão P4/K2 `e319557`, P1 `e930543`, P2 `47d64df`; 62 suítes SQL | aberta |
 
 ## Checagens recorrentes
 
