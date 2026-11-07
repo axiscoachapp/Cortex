@@ -1,0 +1,83 @@
+src/features/reception/WhatsAppQueueUI.test.tsx(25,64): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions, waitForElementOptions?: waitForOptions): Promise<HTMLElement>', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions, waitForElementOptions?: waitForOptions): Promise<HTMLElement>', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppQueueUI.test.tsx(30,138): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppQueueUI.test.tsx(31,314): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppQueueUI.test.tsx(33,602): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppQueueUI.test.tsx(34,344): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppQueueUI.test.tsx(36,646): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppQueueUI.test.tsx(38,382): error TS2345: Argument of type '(data: { conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; } & { ...; }) => { ...; }' is not assignable to parameter of type 'Updater<{ conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; } & { ...; }, { ...; }...'.
+  Type '(data: { conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; } & { ...; }) => { ...; }' is not assignable to type '(input: { conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; } & { ...; }) => { ......'.
+    Type '{ conversation: { queue: string; assignedTo?: string; revision: number; status: "open" | "closed"; id: string; profileName: string; openedAt: string; lastMessageAt: string; lastMessagePreview: string; ... 10 more ...; windowOpenUntil?: string; } | { ...; } | { ...; } | { ...; }; messages: { ...; }[]; nextBefore: any...' is not assignable to type '{ conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; } & { ...; }'.
+      Type '{ conversation: { queue: string; assignedTo?: string; revision: number; status: "open" | "closed"; id: string; profileName: string; openedAt: string; lastMessageAt: string; lastMessagePreview: string; ... 10 more ...; windowOpenUntil?: string; } | { ...; } | { ...; } | { ...; }; messages: { ...; }[]; nextBefore: any...' is not assignable to type '{ conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; }'.
+        Types of property 'conversation' are incompatible.
+          Type '{ queue: string; assignedTo?: string; revision: number; status: "open" | "closed"; id: string; profileName: string; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; ... 9 more ...; windowOpenUntil?: string; } | { ...; } | { ...; } | { ...; }' is not assignable to type '{ id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; consented: boolean; ... 9 more ...; windowOpenUntil?: string; }'.
+            Type '{ status: string; queue: string; assignedTo?: string; revision: number; id: string; profileName: string; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; ... 9 more ...; windowOpenUntil?: string; }' is not assignable to type '{ id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; consented: boolean; ... 9 more ...; windowOpenUntil?: string; }'.
+              Types of property 'status' are incompatible.
+                Type 'string' is not assignable to type '"open" | "closed"'.
+src/features/reception/WhatsAppRevokeConsentUI.test.tsx(26,73): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions, waitForElementOptions?: waitForOptions): Promise<HTMLElement>', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions, waitForElementOptions?: waitForOptions): Promise<HTMLElement>', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppRevokeConsentUI.test.tsx(31,174): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppRevokeConsentUI.test.tsx(32,413): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppRevokeConsentUI.test.tsx(34,509): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppRevokeConsentUI.test.tsx(35,360): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppRevokeConsentUI.test.tsx(35,1049): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppRevokeConsentUI.test.tsx(37,566): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/reception/WhatsAppRevokeConsentUI.test.tsx(39,421): error TS2345: Argument of type '(data: { conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; } & { ...; }) => { ...; }' is not assignable to parameter of type 'Updater<{ conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; } & { ...; }, { ...; }...'.
+  Type '(data: { conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; } & { ...; }) => { ...; }' is not assignable to type '(input: { conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; } & { ...; }) => { ......'.
+    Type '{ conversation: { assignedTo: string; revision: number; status: "open" | "closed"; waId?: string; consented: boolean; optedOut: boolean; id: string; profileName: string; queue: string; openedAt: string; ... 9 more ...; windowOpenUntil?: string; } | ... 4 more ... | { ...; }; messages: { ...; }[]; nextBefore: any; re...' is not assignable to type '{ conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; } & { ...; }'.
+      Type '{ conversation: { assignedTo: string; revision: number; status: "open" | "closed"; waId?: string; consented: boolean; optedOut: boolean; id: string; profileName: string; queue: string; openedAt: string; ... 9 more ...; windowOpenUntil?: string; } | ... 4 more ... | { ...; }; messages: { ...; }[]; nextBefore: any; re...' is not assignable to type '{ conversation: { id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; ... 10 more ...; windowOpenUntil?: string; }; messages: { ...; }[]; nextBefore: any; }'.
+        Types of property 'conversation' are incompatible.
+          Type '{ assignedTo: string; revision: number; status: "open" | "closed"; waId?: string; consented: boolean; optedOut: boolean; id: string; profileName: string; queue: string; openedAt: string; lastMessageAt: string; ... 8 more ...; windowOpenUntil?: string; } | ... 4 more ... | { ...; }' is not assignable to type '{ id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; consented: boolean; ... 9 more ...; windowOpenUntil?: string; }'.
+            Type '{ status: string; assignedTo?: string; revision: number; waId?: string; consented: boolean; optedOut: boolean; id: string; profileName: string; queue: string; openedAt: string; lastMessageAt: string; ... 8 more ...; windowOpenUntil?: string; }' is not assignable to type '{ id: string; profileName: string; queue: string; status: "open" | "closed"; openedAt: string; lastMessageAt: string; lastMessagePreview: string; unreadCount: number; optedOut: boolean; consented: boolean; ... 9 more ...; windowOpenUntil?: string; }'.
+              Types of property 'status' are incompatible.
+                Type 'string' is not assignable to type '"open" | "closed"'.

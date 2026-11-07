@@ -1,0 +1,147 @@
+{
+  "syntheticOnly": true,
+  "nativeNetworkCalls": 0,
+  "sdkVersion": "2.86.0",
+  "checks": [
+    {
+      "case": "success",
+      "calls": 1,
+      "outcome": "catalog"
+    },
+    {
+      "case": "empty",
+      "calls": 1,
+      "outcome": "catalog"
+    },
+    {
+      "case": "duplicate",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "oversized",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "extra",
+      "calls": 1,
+      "outcome": "INVALID_RESPONSE"
+    },
+    {
+      "case": "truncated",
+      "calls": 1,
+      "outcome": "unavailable"
+    },
+    {
+      "case": "forbidden",
+      "calls": 1,
+      "outcome": "forbidden"
+    },
+    {
+      "case": "server_not_ready",
+      "calls": 1,
+      "outcome": "server_not_ready"
+    },
+    {
+      "case": "lost",
+      "calls": 1,
+      "outcome": "unavailable"
+    },
+    {
+      "case": "pre-aborted",
+      "calls": 0,
+      "outcome": "cancelled"
+    },
+    {
+      "case": "cancel-after",
+      "calls": 1,
+      "outcome": "cancelled"
+    }
+  ],
+  "calls": [
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "templates"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "templates"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "templates"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "templates"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "templates"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "templates"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "templates"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "templates"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "templates"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api",
+      "body": {
+        "action": "templates"
+      }
+    }
+  ],
+  "unexpected": [],
+  "sources": [
+    {
+      "path": "src/lib/functionErrors.ts",
+      "sha256": "36c8cb268acf947fbe799e9b8080db16dd1f049e7b1f8997c97f300b01c6fd4f"
+    },
+    {
+      "path": "src/features/reception/whatsappTemplates.ts",
+      "sha256": "c67b94eca0d7e899709d2f8f8105f32e726bbfaba9d606999bfcdec96a467ca4"
+    }
+  ],
+  "sourceHashesStable": true,
+  "limits": "Read adapter only. No UI, real Auth, DB, channel completeness, Meta approval or send validation."
+}

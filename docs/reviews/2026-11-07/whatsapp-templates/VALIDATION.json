@@ -1,0 +1,85 @@
+{
+  "baseline": "6949ca2fcc31c09c7886d22e1fd67b6c10aeb520",
+  "scope": "K1/5a stored template catalog reader plus type-only repairs in two existing Codex UI tests",
+  "unit": {
+    "stubRed": 58,
+    "newTests": 58,
+    "existingRead": 55,
+    "existingQueueUI": 27,
+    "existingRevokeUI": 36,
+    "passed": 176,
+    "failed": 0,
+    "files": 4
+  },
+  "sdk": {
+    "version": "2.86.0",
+    "checkGroups": 11,
+    "posts": 10,
+    "onlyAction": "templates",
+    "sourceHashes": 2,
+    "sourceHashesStable": true,
+    "unexpectedResources": 0,
+    "nativeNetworkCalls": 0
+  },
+  "typescript": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json --pretty false",
+    "exitCode": 0,
+    "priorOwnTestDiagnostics": 15,
+    "redEvidence": "TYPES_RED.txt",
+    "redRoots": [
+      "src/vite-env.d.ts",
+      "src/test/setup.ts",
+      "src/features/reception/WhatsAppQueueUI.test.tsx",
+      "src/features/reception/WhatsAppRevokeConsentUI.test.tsx"
+    ],
+    "excludedPreparatoryChecks": "Root tsc --noEmit has files:[] and is not application type evidence. Initial scoped compiler probes without environment/setup declarations excluded."
+  },
+  "typeRepairs": {
+    "roleOption": "Removed unsupported exact:true only for role queries; string name matching remains exact by default.",
+    "patches": "Partial<WhatsAppConversation> preserves status literal union.",
+    "control": "Reverse only the two edits and byte-compare normalized source with HEAD: passed for both files.",
+    "runtimeBehaviorChanged": false
+  },
+  "lint": {
+    "files": 5,
+    "exitCode": 0
+  },
+  "syntax": {
+    "scripts": 1,
+    "exitCode": 0
+  },
+  "review": {
+    "agent": "/root/whatsapp_templates_reader_review",
+    "mode": "fresh-context read-only adversarial static review",
+    "findings": 0,
+    "inspected": "Adapter, tests, SDK, contract, C4 producer/schema and installed SDK fetch chain",
+    "crossModel": "Cross-model skipped: non-interactive context."
+  },
+  "sources": [
+    {
+      "path": "src/features/reception/whatsappTemplates.ts",
+      "sha256": "c67b94eca0d7e899709d2f8f8105f32e726bbfaba9d606999bfcdec96a467ca4"
+    },
+    {
+      "path": "src/features/reception/whatsappTemplates.test.ts",
+      "sha256": "773fad74bf6d871dd9abd263de52c5a1f5977923fdc6293ebabaed8715bfb980"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-templates-sdk.mjs",
+      "sha256": "b01601b34acef4ea3ccfff7e7ba207e2c3e2dcb1c920f64557509dea677cfaad"
+    },
+    {
+      "path": "src/features/reception/WhatsAppQueueUI.test.tsx",
+      "sha256": "c6b7b5c7ce2f2a0f469cb93f907bf2780b8b026d6c1227186dd5c158a3df79f3"
+    },
+    {
+      "path": "src/features/reception/WhatsAppRevokeConsentUI.test.tsx",
+      "sha256": "3164dd8abf28c18170d0bd559a6f7acd38e1b68adacc0fbbc9f7ba2d178ab417"
+    },
+    {
+      "path": "docs/product/clinic-crm/WHATSAPP_TEMPLATES_READ.md",
+      "sha256": "ba81d320aa35ca2e81de18dccf7298c1c34122cefbf36237d0d83183d105d25c"
+    }
+  ],
+  "limits": "No UI/browser, real Auth/permissions, DB, channel completeness, Meta approval, sync or sending validated. No producer/schema/C5 changes or external operation. Directed Vitest only; known C5 RED cases excluded."
+}

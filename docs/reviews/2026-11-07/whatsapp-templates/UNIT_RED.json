@@ -1,0 +1,10 @@
+{
+  "baseline": "6949ca2fcc31c09c7886d22e1fd67b6c10aeb520",
+  "phase": "stub before implementation",
+  "command": "npx vitest run src/features/reception/whatsappTemplates.test.ts --pool=forks --maxWorkers=1 --reporter=json --outputFile=node_modules/.cache/whatsapp-templates-red.json",
+  "total": 58,
+  "passed": 0,
+  "failed": 58,
+  "rawReportSha256": "7d1ee524bdb2b5cb67c571649631763de7240d31fce8210c819ac1b7a79462aa",
+  "firstFailure": "Error: Not implemented"
+}
