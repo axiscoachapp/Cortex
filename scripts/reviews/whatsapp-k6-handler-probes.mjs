@@ -15,7 +15,8 @@ const read = path => {
 const moduleUrl = text => 'data:text/javascript;base64,' + Buffer.from(ts.transpileModule(text, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText).toString('base64');
 const pure = moduleUrl(read('supabase/functions/_shared/whatsapp.ts'));
 const psc = moduleUrl(read('supabase/functions/_shared/psc.ts'));
-const handlers = read('supabase/functions/_shared/whatsappHandlers.ts').replaceAll("'./psc.ts'", JSON.stringify(psc)).replaceAll("'./whatsapp.ts'", JSON.stringify(pure));
+let handlers = read('supabase/functions/_shared/whatsappHandlers.ts').replaceAll("'./psc.ts'", JSON.stringify(psc)).replaceAll("'./whatsapp.ts'", JSON.stringify(pure));
+if(handlers.includes("'./whatsappFlow.ts'"))handlers=handlers.replaceAll("'./whatsappFlow.ts'",JSON.stringify(moduleUrl(read('supabase/functions/_shared/whatsappFlow.ts'))));
 const { apiHandler, webhookHandler } = await import(moduleUrl(handlers)), { parseWebhook } = await import(pure);
 const id = '55555555-5555-4555-8555-555555555555';
 let seen;

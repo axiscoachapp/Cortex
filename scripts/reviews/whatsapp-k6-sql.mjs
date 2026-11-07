@@ -2,12 +2,13 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { randomUUID, createHash } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { cleanupOwnedContainer } from './whatsapp-k6-cleanup.mjs';
+import { adaptReservationFixture } from './whatsapp-k6-fixture.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|run=[a-z0-9-]+)$/.test(arg)));
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|run=[a-z0-9-]+|contact-concurrency)$/.test(arg)));
 const baseline = args.find(arg => arg.startsWith('--baseline='))?.slice(11);
 assert.ok(baseline, 'An explicit source commit is required');
 const run = args.find(arg => arg.startsWith('--run='))?.slice(6) ?? 'baseline';
@@ -16,8 +17,11 @@ await mkdir(resolve(folder, '..'), { recursive: true }); await mkdir(folder);
 const command = (binary, values, input) => spawnSync(binary, values, { input, encoding: 'utf8', windowsHide: true, maxBuffer: 16 * 1024 * 1024 });
 const requireSuccess = result => { assert.equal(result.status, 0, result.stderr || result.error?.message || result.stdout); return result.stdout; };
 const git = values => requireSuccess(command('git', values));
-const hashes = [];
-const source = path => { const text = git(['show', baseline + ':' + path]); hashes.push({ path, sha256: createHash('sha256').update(text).digest('hex') }); return text; };
+const contactConcurrency=args.includes('--contact-concurrency');
+const runtimePaths=['scripts/reviews/whatsapp-k6-sql.mjs','scripts/reviews/whatsapp-k6-cleanup.mjs','scripts/reviews/whatsapp-k6-fixture.mjs',...(contactConcurrency?['scripts/reviews/whatsapp-k6-contact-concurrency.mjs']:[])];
+const runtimeSources=await Promise.all(runtimePaths.map(async path=>({path,sha256:createHash('sha256').update(await readFile(path)).digest('hex')})));
+const hashes = [], cache=new Map();
+const source = path => { if(cache.has(path))return cache.get(path);const text = git(['show', baseline + ':' + path]); hashes.push({ path, sha256: createHash('sha256').update(text).digest('hex') }); cache.set(path,text);return text; };
 const docker = (values, input) => command('docker', ['--context', 'desktop-linux', ...values], input);
 const endpoint = requireSuccess(docker(['context', 'inspect', 'desktop-linux', '--format', '{{json .Endpoints.docker.Host}}'])).trim();
 assert.equal(JSON.parse(endpoint), 'npipe:////./pipe/dockerDesktopLinuxEngine', 'Only the verified local Docker Desktop endpoint is permitted');
@@ -27,6 +31,8 @@ let containerId = null;
 const sql = text => docker(['exec', '-i', containerId, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '--quiet'], text);
 const testPath = 'supabase/tests/whatsapp.test.sql', original = source(testPath);
 assert.ok(original.includes('-- Inbound:') && original.startsWith('-- WhatsApp'));
+const revisioned=source('supabase/migrations/20261106100000_whatsapp_channel.sql').includes('p_rule_revision integer');
+assert.ok(!contactConcurrency||revisioned,'Contact concurrency requires the revisioned reservation contract');
 const seed = original.slice(0, original.indexOf('-- Inbound:'));
 const setup = `
 reset role;
@@ -130,7 +136,28 @@ const cases = [
     end $$;`],
   ] : []),
 ];
-const report = { completed: false, accepted: false, baseline, image, syntheticOnly: true, migrations: 0, existingSuite: null, cases: [], sources: hashes, cleanupVerified: false, failure: null };
+if(revisioned)cases.push(
+  ['changed_rule_revision',setup+`do $$ declare old_revision integer;r jsonb;begin
+    assert exists(select 1 from public.whatsapp_automation_candidates('2099-12-08T16:00Z',100) where appointment_id='e6700000-0000-4000-8000-000000000003'),'Positive due control missing';
+    select revision into old_revision from public.whatsapp_automations where id=(select id from rule);
+    update public.whatsapp_automations set revision=revision+1 where id=(select id from rule);
+    r:=public.whatsapp_automation_begin(p_automation=>(select id from rule),p_rule_revision=>old_revision,p_appointment=>'e6700000-0000-4000-8000-000000000003',p_start=>'2099-12-10T16:00Z',p_wa_id=>'5541999980002',p_skip_reason=>null,p_body=>'Synthetic',p_template=>'{}');
+    assert r is null and not exists(select 1 from public.whatsapp_automation_runs),'K6_OLD_RULE_REVISION_RESERVED';
+  end $$;`],
+  ['before_due',setup+`do $$ declare r jsonb;begin
+    assert exists(select 1 from public.whatsapp_automation_candidates('2099-12-08T16:00Z',100) where appointment_id='e6700000-0000-4000-8000-000000000003'),'Positive due control missing';
+    update public.whatsapp_automations set offset_minutes=60 where id=(select id from rule);
+    r:=public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000003','2099-12-10T16:00Z','5541999980002',null,'Synthetic','{}');
+    assert r is null and not exists(select 1 from public.whatsapp_automation_runs),'K6_BEFORE_DUE_RESERVED';
+  end $$;`],
+  ['changed_type_filter',setup+`do $$ declare r jsonb;begin
+    assert exists(select 1 from public.whatsapp_automation_candidates('2099-12-08T16:00Z',100) where appointment_id='e6700000-0000-4000-8000-000000000003'),'Positive due control missing';
+    update public.whatsapp_automations set appointment_types=array['novo'] where id=(select id from rule);
+    r:=public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000003','2099-12-10T16:00Z','5541999980002',null,'Synthetic','{}');
+    assert r is null and not exists(select 1 from public.whatsapp_automation_runs),'K6_CHANGED_TYPE_FILTER_RESERVED';
+  end $$;`],
+);
+const report = { completed: false, accepted: false, scope:'automation reservation regressions; not full C4/C5 approval',revisioned,contactConcurrency,runtimeSources,contactCases:[],flowSuite:null,baseline, image, syntheticOnly: true, migrations: 0, existingSuite: null, cases: [], sources: hashes, cleanupVerified: false, failure: null };
 try {
   const createdId = requireSuccess(docker(['run','--detach','--rm','--name',container,'--network','none','--env','POSTGRES_HOST_AUTH_METHOD=trust',image])).trim();
   assert.match(createdId, /^[0-9a-f]{64}$/); containerId = createdId;
@@ -141,9 +168,13 @@ try {
   const migrations = git(['ls-tree','-r','--name-only',baseline,'--','supabase/migrations']).trim().split('\n').map(path=>path.trim()).filter(path=>path.endsWith('.sql')).sort();
   for(const path of migrations){requireSuccess(sql(source(path)));report.migrations++;}
   const originalResult=sql(original);report.existingSuite={passed:originalResult.status===0,error:originalResult.status===0?null:originalResult.stderr};
-  for(const [name,body] of cases){const result=sql(seed+body+'\nrollback;');const error=result.stderr?.match(/(?:ERROR|CONTEXT):[^\n]*/g)?.join('\n')??result.stderr;const category=result.status===0?'pass':error.includes('K6_')?'contract_failure':'fixture_failure';report.cases.push({name,passed:result.status===0,category,error:result.status===0?null:error});console.log(JSON.stringify(report.cases.at(-1)));}
-  report.completed=!report.cases.some(item=>item.category==='fixture_failure');report.accepted=report.completed&&report.existingSuite.passed&&report.cases.every(item=>item.passed);
-}catch(error){report.failure=error.message;}
+  const flowPath='supabase/tests/whatsapp-flows.test.sql';
+  if(git(['ls-tree','--name-only',baseline,'--',flowPath]).trim()){const result=sql(source(flowPath));report.flowSuite={passed:result.status===0,error:result.status===0?null:result.stderr};}
+  for(const [name,body] of cases){const result=sql(adaptReservationFixture(seed+body+'\nrollback;',revisioned));const error=result.stderr?.match(/(?:ERROR|CONTEXT):[^\n]*/g)?.join('\n')??result.stderr;const category=result.status===0?'pass':error.includes('K6_')?'contract_failure':'fixture_failure';report.cases.push({name,passed:result.status===0,category,error:result.status===0?null:error});console.log(JSON.stringify(report.cases.at(-1)));}
+  if(contactConcurrency){const {exerciseContactFence}=await import('./whatsapp-k6-contact-concurrency.mjs');report.contactCases=await exerciseContactFence({docker,containerId,seed,setup:adaptReservationFixture(setup,revisioned)});}
+  for(const proof of runtimeSources)assert.equal(createHash('sha256').update(await readFile(proof.path)).digest('hex'),proof.sha256,'Harness source changed during run');
+  report.completed=!report.cases.some(item=>item.category==='fixture_failure');report.accepted=report.completed&&report.existingSuite.passed&&(!report.flowSuite||report.flowSuite.passed)&&report.cases.every(item=>item.passed)&&report.contactCases.every(item=>item.passed);
+}catch(error){report.failure=error.message;if(error.contactProof)report.contactCases=error.contactProof;}
 finally{
   report.cleanup = cleanupOwnedContainer({ docker, name: container, id: containerId });
   report.cleanupVerified = report.cleanup.verified;

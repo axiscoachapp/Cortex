@@ -1,0 +1,47 @@
+{
+  "completed": true,
+  "scope": "automation reservation regressions; not full C4/C5 approval",
+  "baseline": "f837c5769322579c145cb9c6f2588b5d00a77643",
+  "syntheticOnly": true,
+  "sql": {
+    "runtimeHashes": 4,
+    "cleanupVerified": true,
+    "migrations": 79,
+    "inputs": 82,
+    "sha256": "5b70e234607e26abf21211f6fba56d2c8630aad441e804c88a320f6d23ca04a0",
+    "originalSuites": 2,
+    "report": "docs/reviews/2026-11-06/whatsapp-k6/reservation-f837c57-contact-rpc/SQL_REVIEW.json",
+    "regressionCases": 14,
+    "concurrencyGroups": 5
+  },
+  "node": {
+    "passed": 11,
+    "cleanup": 7,
+    "fixture": 4
+  },
+  "vitest": {
+    "passed": 49,
+    "producerCodeTestPathsVerified": 6,
+    "files": 2
+  },
+  "handlerProbes": {
+    "sourceModules": 4,
+    "networkUsed": false,
+    "report": "docs/reviews/2026-11-06/whatsapp-k6/HANDLER_PROBES_F837C57.json",
+    "sha256": "39c8b6287e15db7473f5fac9595d8a8a03824e2002bac5f5facadd2cb63c32d0",
+    "count": 2
+  },
+  "lint": "5 changed scripts passed",
+  "scriptSyntaxFiles": 4,
+  "rejectedCliCases": 2,
+  "review": "Independent adversarial review found no material defect; cross-model skipped scheduled",
+  "remaining": [
+    "Independent bot concurrency review",
+    "C5 retest f837c57",
+    "K1 commands and bot path UI",
+    "K7 post-consultation and browser-only audio discovery",
+    "M2/MFA/sharing/pilot"
+  ],
+  "externalCalls": 0,
+  "producerFilesChanged": 0
+}
