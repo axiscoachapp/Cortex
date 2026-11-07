@@ -1,0 +1,342 @@
+{
+  "completed": false,
+  "failure": {
+    "name": "AssertionError",
+    "message": "Mobile search and filter must use the available width"
+  },
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": null,
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "5aaa469bfd1c9f5969211522db83669a1a3aea06",
+  "overlays": [
+    {
+      "path": "src/features/reception/ReceptionQueue.tsx",
+      "sha256": "0426d8d6794d897c3e585a41d8945931747840847f1db5441ed19c5bd85c3d50"
+    },
+    {
+      "path": "src/features/reception/WhatsAppInbox.tsx",
+      "sha256": "b1d004494954823ba2822c53df4a00a3ebe296f7cd2e3fa6f09c67fb80ea4d86"
+    },
+    {
+      "path": "src/features/reception/WhatsAppMessages.tsx",
+      "sha256": "b78301f9b7abadec06d8d033a618d6d7a79b309f8525956b8e942925f017967c"
+    },
+    {
+      "path": "src/features/reception/whatsappApi.ts",
+      "sha256": "1056b8bcff1e82dd6470e92863de424533d2b05953dd3dcabfefa467d70e1d31"
+    }
+  ],
+  "frozenTextSourceCount": 297,
+  "frozenTextSourceDigest": "034e6dea67ba1dd07b9410948e41fdd566a1c6f7f3a2df602edebabbd21656e8",
+  "tailwindRawContentCount": 295,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "dbf3eabcb3a4270ff05735513ab394e314f7a037410f677493f11498d7949a66"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "4dd734d772088faa3f5b5a5bbed384ff37ee0fdb88ea60843d9e6c422d119895"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "c96ab556072576d09c65abf63bcad89f89748b119bf6d89d370c16fc78f03d2c"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "7bbb023779bb00fd053a067530a025ecf56ef543114a4dd9927872fc039e195c"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-browser.mjs",
+      "sha256": "41bf7b76cd87cdece5e31bfa88d354229189cd4e4ec4c695b441acb2748d5094"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": false,
+  "consultationChecks": [],
+  "consultationRequests": [],
+  "consultationMetrics": null,
+  "settingsEmbeddedOnly": false,
+  "previewEntry": null,
+  "settingsChecks": [],
+  "settingsRequests": [],
+  "settingsFixtureMetrics": [],
+  "whatsappReadOnly": true,
+  "whatsappChecks": [
+    {
+      "width": 320,
+      "controls": {
+        "available": 276.79999999999995,
+        "search": 38.25,
+        "filter": 222.375
+      }
+    }
+  ],
+  "whatsappRequests": [
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    }
+  ],
+  "whatsappFixtureCalls": [
+    {
+      "actor": "33333333-3333-4333-8333-333333333333",
+      "input": {
+        "action": "state"
+      }
+    },
+    {
+      "actor": "33333333-3333-4333-8333-333333333333",
+      "input": {
+        "action": "conversations",
+        "filter": "open",
+        "search": "",
+        "limit": 50,
+        "before": null
+      }
+    }
+  ],
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": null,
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/BookingDialog.tsx",
+    "src/features/reception/CaseWorkspace.tsx",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/ContactSearch.tsx",
+    "src/features/reception/DoctorSuggestion.tsx",
+    "src/features/reception/LinkRelationshipDialog.tsx",
+    "src/features/reception/NewCaseDialog.tsx",
+    "src/features/reception/ReceptionLayout.tsx",
+    "src/features/reception/ReceptionNotice.tsx",
+    "src/features/reception/ReceptionQueue.tsx",
+    "src/features/reception/WhatsAppInbox.tsx",
+    "src/features/reception/WhatsAppMessages.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/features/reception/dates.ts",
+    "src/features/reception/linkRelationships.ts",
+    "src/features/reception/routing.ts",
+    "src/features/reception/useCaseDraft.ts",
+    "src/features/reception/useRequestId.ts",
+    "src/features/reception/whatsappApi.ts",
+    "src/hooks/use-mobile.tsx",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/functionErrors.ts",
+    "src/lib/interfaceScale.ts",
+    "src/lib/mfa.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx"
+  ],
+  "screens": [
+    {
+      "role": "recepcao-a",
+      "path": "/recepcao?view=conversations&status=open",
+      "variant": "inbox-list",
+      "actualPath": "/recepcao",
+      "width": 320,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 30.125,
+          "right": 53.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 78.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 94.03125,
+          "right": 147.296875,
+          "targetLeft": 84.03125,
+          "targetRight": 157.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 169.15625,
+          "right": 229.46875,
+          "targetLeft": 162.6875,
+          "targetRight": 235.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 257.953125,
+          "right": 297.984375,
+          "targetLeft": 241.34375,
+          "targetRight": 314.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Conversas",
+          "clipped": false,
+          "controls": []
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Conversas",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 21.59375,
+              "right": 163.609375,
+              "top": 539.75,
+              "bottom": 572.75
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Conversas",
+        "Lista de conversas"
+      ],
+      "screenshot": "recepcao-a--recepcao-view-conversations-status-open-inbox-list-320.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "errorResponses": [],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

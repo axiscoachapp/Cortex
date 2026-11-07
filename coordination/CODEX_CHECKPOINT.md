@@ -1,5 +1,13 @@
 # Checkpoint do Codex
 
+Atualizado em 06/11/2026 21:05. **K1/2 UI de leitura entregue:** [provas](../docs/reviews/2026-11-06/whatsapp-k6/UI_READ.md). Conversas em ?view=conversations; fila/caso só na outra aba, URL preservada. DTO1.1(data|id/consented), cache fresco por ator/clínica, cancelamento e falha escondem dados antigos.89testes/4arquivos e11Node; navegador28estados320/375/768/1024/1280/1440/1920 a135%, hash/cleanup/lint/sintaxe/três flags/revisão. Foco pendente, busca fina mobile e rolagem1280 reproduzidos/corrigidos. Provas finais `whatsapp-read-mobile-red`, `whatsapp-read-scroll-red` e `whatsapp-read-scroll-final`; preliminares excluídos.
+
+**Reteste K6:** [v1.1](../docs/reviews/2026-11-06/whatsapp-k6/REVIEW_V11.md), mensagem2058 atende2045.40e90c1:78migrations/suíte original e sete controles antigos verdes; quatro RED SQL novos sem fixture_failure (filtro, vínculo suspenso candidato/reserva, SAIR alias) e dois probes em memória (cursor/parse de irmão válido).80fontes/cleanup positivo. Telefone sem barreira continua por inspeção, sem ensaio concorrente. Envios/automações aguardam correções/SHAs/reteste; não repetir seis RED antigos como atuais. C5 e527011/lease devolvido, revisão própria ainda pendente.
+
+**Próximos:** retestar resíduos C4 após correção; revisar C5/delta do lease. K1/3 de comandos depende do contrato/revisão de writes e confirmação humana; K2/K3(48h/pré/pós-consulta configuráveis)/K4 restante/K5/M2/MFA/compartilhamento/piloto/D21–D25 abertos. Sem mark_read/envio/consentimento/vínculo/reserva novos neste recorte. Automação ACTIVE; preservar Claude/SaaS/PersonalMed, commits próprios main/axiscoachapp, sem push/hosted/Meta.
+
+---
+
 Commit da entrega K1/1 e provas K6: `1cdef8fc7bab54dfb8b58d3e7e6cffdb8b7678be`, main/axiscoachapp, sem push; próximos abaixo. K4/1 entregue emc7722d9.
 
 Atualizado em 06/11/2026 20:31. **K1/1 entregue localmente/K6 achados C4:** [cliente](../docs/reviews/2026-11-06/whatsapp-k6/READ_CLIENT.md), [revisão](../docs/reviews/2026-11-06/whatsapp-k6/REVIEW.md), [mensagem2031](mensagens/2026-11-06-2031_codex-para-claude_k6-sql-reproduzido-e-cliente-leitura.md). Cliente de estado/conversas/mensagens estrito, sem autoridade no payload/escrita, timestamps limitados/precisos;29testes+25handlers/tipos globais/lint/revisão aprovados. Ainda sem UI/HTTP real. C4 ebb866a reproduziu seis falhas SQL com78migrations/suíte original passando e guarda interna positiva;80fontes/hash/removal verificados. Cleanup corrigido para ID criado/consulta positiva, sete testes Node. Prova final `red-ebb866a-final`, preliminares excluídos. Achados de envio/reserva/consentimento/recibos/robustez/cursor enviados ao dono2009/2031; nenhum arquivo C4 alterado.

@@ -1,0 +1,46 @@
+{
+  "baseline": "40e90c1f720371e88ccdde538909a4a464320d44",
+  "syntheticOnly": true,
+  "networkUsed": false,
+  "sources": [
+    {
+      "path": "supabase/functions/_shared/whatsapp.ts",
+      "sha256": "d1cb5021faa7979b060413cb1ab668618c2a0b3c9ef917db52425cd2ea4acec7"
+    },
+    {
+      "path": "supabase/functions/_shared/psc.ts",
+      "sha256": "9310a8a39e50447a2094b85579ef7697f0d98f29217f0f3fe64df989ad15cb71"
+    },
+    {
+      "path": "supabase/functions/_shared/whatsappHandlers.ts",
+      "sha256": "9c7583d0cdba8b956c95175b97b879c81b2ea0a8f887eb19a14ddd75b185f0e7"
+    }
+  ],
+  "cursor": {
+    "input": "2026-11-06T12:00:00.123456+00:00|55555555-5555-4555-8555-555555555555",
+    "storeBefore": {
+      "at": "2026-11-06T12:00:00.123Z",
+      "id": "55555555-5555-4555-8555-555555555555"
+    },
+    "precisionPreserved": false
+  },
+  "webhook": {
+    "status": 200,
+    "parseError": {
+      "name": "TypeError",
+      "message": "Cannot convert object to primitive value"
+    },
+    "calls": [
+      {
+        "name": "whatsapp_record_event",
+        "error": null
+      },
+      {
+        "name": "whatsapp_finish_event",
+        "error": "parse"
+      }
+    ],
+    "validSiblingIngested": false
+  },
+  "accepted": false
+}

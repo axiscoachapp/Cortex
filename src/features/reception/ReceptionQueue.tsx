@@ -11,8 +11,24 @@ import { NewCaseDialog } from './NewCaseDialog';
 import { ReceptionNotice } from './ReceptionNotice';
 import { CaseWorkspace } from './CaseWorkspace';
 import { isBelowMobileBreakpoint } from '@/hooks/use-mobile';
+import WhatsAppInbox from './WhatsAppInbox';
 
 export default function ReceptionQueue() {
+  const [params, setParams] = useSearchParams();
+  const conversations = params.get('view') === 'conversations';
+  return <div className="space-y-4">
+    <nav aria-label="Área de atendimento" className="flex flex-wrap gap-2">
+      {[{ label: 'Atendimentos', value: false }, { label: 'Conversas', value: true }].map(item => <Button key={item.label} variant={conversations === item.value ? 'default' : 'outline'} aria-pressed={conversations === item.value} onClick={() => setParams(old => {
+        const next = new URLSearchParams(old);
+        if (item.value) next.set('view', 'conversations'); else next.delete('view');
+        return next;
+      })}>{item.label}</Button>)}
+    </nav>
+    {conversations ? <WhatsAppInbox /> : <CaseQueue />}
+  </div>;
+}
+
+function CaseQueue() {
   const access = useClinicAccess();
   const [params, setParams] = useSearchParams();
   const [creating, setCreating] = useState(false);

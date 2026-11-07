@@ -41,9 +41,23 @@ insert into public.appointments(id,user_id,patient_id,title,start_time,end_time,
 ('e6700000-0000-4000-8000-000000000003',auth.uid(),'e6500000-0000-4000-8000-000000000001','Synthetic clinic control','2099-12-10T16:00Z','2099-12-10T16:30Z','agendado','retorno','e6200000-0000-4000-8000-000000000001','e6300000-0000-4000-8000-000000000001');
 set local role service_role;
 select set_config('request.jwt.claim.role','service_role',true);
+do $$ begin
+  if to_regclass('public.whatsapp_opt_ins') is not null then
+    execute $q$insert into public.whatsapp_opt_ins(clinic_id,wa_id,source,recorded_by) values
+      ('e6200000-0000-4000-8000-000000000001','5541999980002','recepcao','e6100000-0000-4000-8000-000000000001')$q$;
+  end if;
+end $$;
 create temp table rule(id uuid) on commit drop;
 insert into rule select (public.whatsapp_automation_save('e6200000-0000-4000-8000-000000000001','e6100000-0000-4000-8000-000000000001',null,null,
 '{"name":"Synthetic review","enabled":true,"trigger":"before_start","offsetMinutes":2880,"templateName":"lembrete_consulta","templateLanguage":"pt_BR","params":[{"source":"texto","value":"Synthetic"}]}')->>'id')::uuid;
+`;
+const suspend = `
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','e6100000-0000-4000-8000-000000000001',true);
+select public.reception_set_link_active('e6300000-0000-4000-8000-000000000001','e6500000-0000-4000-8000-000000000001',1,false);
+set local role service_role;
+select set_config('request.jwt.claim.role','service_role',true);
 `;
 const cases = [
   ['private_appointment', setup + `do $$ begin
@@ -70,6 +84,7 @@ const cases = [
   end $$;`],
   ['cross_conversation_reply', setup + `do $$ declare r jsonb; begin
     r:=public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000003','2099-12-10T16:00Z','5541999980002',null,'Synthetic','{}');
+    assert r->>'skipped'='false' and r->>'messageId' is not null, 'Positive reminder control missing';
     perform public.whatsapp_finish_outbound((r->>'messageId')::uuid,'wamid.K6_REMINDER',null);
     perform public.whatsapp_ingest_inbound('200000000001','5541999960005',null,'Other synthetic','wamid.K6_WRONG_REPLY','interactive','Confirmar',null,'wamid.K6_REMINDER',now());
     assert (select reply is null from public.whatsapp_automation_runs where id=(r->>'runId')::uuid), 'K6_REPLY_BOUND_TO_OTHER_CONVERSATION';
@@ -79,12 +94,41 @@ const cases = [
     perform public.whatsapp_ingest_inbound('200000000001',null,'BR.K6','Synthetic user','wamid.K6_USER','text','Synthetic',null,null,now());
     assert (select count(*) from public.whatsapp_conversations)=2,'Separate alias controls missing';
     assert pg_temp.sqlstate_of($q$select public.whatsapp_ingest_inbound('200000000001','5541999990001','BR.K6','Synthetic','wamid.K6_BOTH','text','Synthetic',null,null,now())$q$)='ok', 'K6_IDENTITY_ALIAS_COLLISION';
+    assert (select count(*) from public.whatsapp_conversations)=2, 'K6_IDENTITY_ALIASES_SILENTLY_MERGED';
   end $$;`],
   ['internal_guard_with_execute_granted', `reset role; grant execute on function public.whatsapp_record_event(text,jsonb) to authenticated;
     set local role authenticated; select set_config('request.jwt.claim.role','authenticated',true);
     do $$ begin assert has_function_privilege('authenticated','public.whatsapp_record_event(text,jsonb)','execute'),'Execute control missing';
       assert pg_temp.sqlstate_of($q$select public.whatsapp_record_event(repeat('d',64),'{}')$q$)='42501','K6_INTERNAL_GUARD_MISSING';
     end $$;`],
+  ...(original.includes('whatsapp_opt_ins') ? [
+    ['changed_rule_filter', setup + `do $$ declare r jsonb; begin
+      assert exists(select 1 from public.whatsapp_automation_candidates('2099-12-08T16:00Z',100) where appointment_id='e6700000-0000-4000-8000-000000000003'), 'Positive candidate control missing';
+      update public.whatsapp_automations set doctor_ids=array['e6100000-0000-4000-8000-000000000004'::uuid] where id=(select id from rule);
+      assert not exists(select 1 from public.whatsapp_automation_candidates('2099-12-08T16:00Z',100) where appointment_id='e6700000-0000-4000-8000-000000000003'), 'Changed filter control missing';
+      r:=public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000003','2099-12-10T16:00Z','5541999980002',null,'Synthetic','{}');
+      assert r is null or coalesce((r->>'skipped')::boolean,false), 'K6_CHANGED_RULE_FILTER_RESERVED';
+    end $$;`],
+    ['suspended_link_candidate', setup + suspend + `do $$ begin
+      assert exists(select 1 from public.patient_contact_links where contact_id='e6300000-0000-4000-8000-000000000001' and not active), 'Suspension control missing';
+      assert not exists(select 1 from public.whatsapp_automation_candidates('2099-12-08T16:00Z',100) where appointment_id='e6700000-0000-4000-8000-000000000003'), 'K6_SUSPENDED_LINK_CANDIDATE';
+    end $$;`],
+    ['suspended_link_reservation', setup + suspend + `do $$ declare r jsonb; begin
+      assert exists(select 1 from public.patient_contact_links where contact_id='e6300000-0000-4000-8000-000000000001' and not active), 'Suspension control missing';
+      r:=public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000003','2099-12-10T16:00Z','5541999980002',null,'Synthetic','{}');
+      assert r is null or coalesce((r->>'skipped')::boolean,false), 'K6_SUSPENDED_LINK_RESERVED';
+    end $$;`],
+    ['split_alias_opt_out', setup + `do $$ declare r jsonb; begin
+      perform public.whatsapp_ingest_inbound('200000000001','5541999980002',null,'Synthetic phone','wamid.K6_STOP_PHONE','text','Synthetic',null,null,now());
+      perform public.whatsapp_ingest_inbound('200000000001',null,'BR.K6STOP','Synthetic user','wamid.K6_STOP_USER','text','Synthetic',null,null,now());
+      perform public.whatsapp_ingest_inbound('200000000001','5541999980002','BR.K6STOP','Synthetic both','wamid.K6_STOP_BOTH','text','Synthetic',null,null,now());
+      perform public.whatsapp_ingest_inbound('200000000001',null,'BR.K6STOP','Synthetic user','wamid.K6_STOP_ONLY_USER','text','SAIR',null,null,now());
+      assert exists(select 1 from public.whatsapp_conversations where user_id='BR.K6STOP' and opted_out_at is not null), 'BSUID opt-out control missing';
+      assert (select count(*) from public.whatsapp_conversations)=2, 'Split identity control missing';
+      r:=public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000003','2099-12-10T16:00Z','5541999980002',null,'Synthetic','{}');
+      assert r is null or coalesce((r->>'skipped')::boolean,false), 'K6_SPLIT_ALIAS_OPT_OUT_RESERVED';
+    end $$;`],
+  ] : []),
 ];
 const report = { completed: false, accepted: false, baseline, image, syntheticOnly: true, migrations: 0, existingSuite: null, cases: [], sources: hashes, cleanupVerified: false, failure: null };
 try {

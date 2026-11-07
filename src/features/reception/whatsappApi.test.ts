@@ -5,9 +5,10 @@ const mocks = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { functions: { invoke: mocks.invoke } } }));
 const id = '11111111-1111-4111-8111-111111111111', other = '22222222-2222-4222-8222-222222222222';
 const at = '2026-11-06T18:30:00.123456+00:00';
+const cursor = at + '|' + id;
 const oversizedTimestamp = '2026-11-06T18:30:00.' + '1'.repeat(128) + 'Z';
 const state = { serverReady: true, connected: true, status: 'connected', displayPhone: 'Número sintético', verifiedName: 'Clínica sintética', quality: null, connectedAt: at, canManage: false, canUseInbox: true };
-const conversation = { id, waId: null, profileName: 'Contato sintético', contactId: null, caseId: null, queue: 'geral', status: 'open', assignedTo: null, assignedAt: null, openedAt: at, firstResponseAt: null, closedAt: null, lastInboundAt: at, windowOpenUntil: at, lastMessageAt: at, lastMessagePreview: 'Mensagem sintética', unreadCount: 2, optedOut: false, revision: 1 };
+const conversation = { id, waId: null, profileName: 'Contato sintético', contactId: null, caseId: null, queue: 'geral', status: 'open', assignedTo: null, assignedAt: null, openedAt: at, firstResponseAt: null, closedAt: null, lastInboundAt: at, windowOpenUntil: at, lastMessageAt: at, lastMessagePreview: 'Mensagem sintética', unreadCount: 2, optedOut: false, consented: true, revision: 1 };
 const message = { id: other, direction: 'in', kind: 'text', body: 'Mensagem sintética', media: null, template: null, status: 'received', error: null, sentBy: null, at };
 describe('WhatsApp read adapter', () => {
   beforeEach(() => vi.resetAllMocks());
@@ -26,9 +27,9 @@ describe('WhatsApp read adapter', () => {
     await expect(whatsappApi.state()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
   it('sends only the explicit read filter and preserves opaque timestamp precision', async () => {
-    mocks.invoke.mockResolvedValue({ data: { conversations: [conversation], nextBefore: at }, error: null });
-    expect(await whatsappApi.conversations({ filter: 'mine', search: '  exemplo  ', before: at, limit: 25 })).toEqual({ conversations: [conversation], nextBefore: at });
-    expect(mocks.invoke).toHaveBeenCalledExactlyOnceWith('whatsapp-api', { body: { action: 'conversations', filter: 'mine', search: 'exemplo', before: at, limit: 25 }, signal: undefined });
+    mocks.invoke.mockResolvedValue({ data: { conversations: [conversation], nextBefore: cursor }, error: null });
+    expect(await whatsappApi.conversations({ filter: 'mine', search: '  exemplo  ', before: cursor, limit: 25 })).toEqual({ conversations: [conversation], nextBefore: cursor });
+    expect(mocks.invoke).toHaveBeenCalledExactlyOnceWith('whatsapp-api', { body: { action: 'conversations', filter: 'mine', search: 'exemplo', before: cursor, limit: 25 }, signal: undefined });
   });
   it('uses bounded default list parameters', async () => {
     mocks.invoke.mockResolvedValue({ data: { conversations: [], nextBefore: null }, error: null });
@@ -36,13 +37,22 @@ describe('WhatsApp read adapter', () => {
     expect(mocks.invoke.mock.calls[0][1].body).toEqual({ action: 'conversations', filter: 'open', search: '', before: null, limit: 50 });
   });
   it('rejects a page larger than the requested limit', async () => {
-    mocks.invoke.mockResolvedValue({ data: { conversations: [conversation, { ...conversation, id: other }], nextBefore: at }, error: null });
+    mocks.invoke.mockResolvedValue({ data: { conversations: [conversation, { ...conversation, id: other }], nextBefore: cursor }, error: null });
     await expect(whatsappApi.conversations({ limit: 1 })).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
   it('rejects an oversized timestamp cursor before transport', async () => {
     mocks.invoke.mockResolvedValue({ data: { conversations: [], nextBefore: null }, error: null });
     await expect(whatsappApi.conversations({ before: oversizedTimestamp })).rejects.toThrow();
     expect(mocks.invoke).not.toHaveBeenCalled();
+  });
+  it.each([at, at + '|invalid', cursor + '|extra', 'not-a-date|' + id])('refuses malformed v1.1 cursors before transport', async before => {
+    await expect(whatsappApi.messages({ conversationId: id, before })).rejects.toThrow(); expect(mocks.invoke).not.toHaveBeenCalled();
+  });
+  it('preserves the complete v1.1 message cursor and consent state', async () => {
+    mocks.invoke.mockResolvedValue({ data: { conversation, messages: [message], nextBefore: cursor }, error: null });
+    const page = await whatsappApi.messages({ conversationId: id, before: cursor });
+    expect(page.nextBefore).toBe(cursor); expect(page.conversation.consented).toBe(true);
+    expect(mocks.invoke.mock.calls[0][1].body.before).toBe(cursor);
   });
   it.each([
     { conversations: [conversation], nextBefore: oversizedTimestamp },

@@ -1,6 +1,7 @@
 // Synthetic loopback transport for UI tests. Authorization itself is verified in PostgreSQL.
 import http from 'node:http';
 import { randomUUID } from 'node:crypto';
+import { createWhatsAppReadFixture } from './whatsapp-read-api.mjs';
 export const ids = {
   admin: '11111111-1111-4111-8111-111111111111',
   doctor: '22222222-2222-4222-8222-222222222222',
@@ -11,7 +12,8 @@ export const ids = {
   contact: '77777777-7777-4777-8777-777777777777',
   case: '88888888-8888-4888-8888-888888888888',
 };
-export async function startReceptionFixture() {
+export async function startReceptionFixture({ whatsappReadReview = false } = {}) {
+  const whatsapp = whatsappReadReview ? createWhatsAppReadFixture(ids) : null;
   let teamDirectoryFailure = false;
   let clinicAccessFailure = null;
   const now = () => new Date().toISOString();
@@ -132,6 +134,9 @@ export async function startReceptionFixture() {
       const member = staff.find((s) => s.id === actor);
       const permitted = (doctor) =>
         (actor === ids.admin && (!doctor || doctor === ids.admin)) || (member?.active && (!doctor || member.doctorIds.includes(doctor)));
+      if (whatsapp && url.pathname === '/functions/v1/whatsapp-api') {
+        const reply = whatsapp.handle(actor, input); return send(reply.data, reply.status);
+      }
       if (url.pathname === '/functions/v1/create-clinic-receptionist' && actor === ids.admin) {
         const id = randomUUID();
         staff.push({ id, name: input.name, active: true, doctorIds: input.doctorIds });
@@ -432,6 +437,7 @@ export async function startReceptionFixture() {
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   return {
     origin: `http://127.0.0.1:${server.address().port}`,
+    whatsappRead: whatsapp,
     setTeamDirectoryFailure: (failed) => { teamDirectoryFailure = failed; },
     setClinicAccessFailure: (failure) => { clinicAccessFailure = failure; },
     metrics,

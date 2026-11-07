@@ -1,0 +1,117 @@
+{
+  "date": "2026-11-06",
+  "uiBaseline": "5aaa469bfd1c9f5969211522db83669a1a3aea06",
+  "c4Baseline": "40e90c1f720371e88ccdde538909a4a464320d44",
+  "workingTreeBytes": true,
+  "sources": [
+    {
+      "path": "src/features/reception/WhatsAppInbox.tsx",
+      "sha256": "4064e29840fb0d4f0b35a7b555962ab23962ef0350d7c16f446a106eb6d3b063"
+    },
+    {
+      "path": "src/features/reception/WhatsAppMessages.tsx",
+      "sha256": "b938f66c4728b48305f6ba4c096ede93902c12a0800c331b2ff2d5a405e387d9"
+    },
+    {
+      "path": "src/features/reception/WhatsAppInbox.test.tsx",
+      "sha256": "c385bcb35b980c55da63e107126ce55700eb316240cfac74ab63b2e80262fba6"
+    },
+    {
+      "path": "src/features/reception/ReceptionQueue.tsx",
+      "sha256": "0426d8d6794d897c3e585a41d8945931747840847f1db5441ed19c5bd85c3d50"
+    },
+    {
+      "path": "src/features/reception/ReceptionQueue.test.tsx",
+      "sha256": "f26d272ee982945670a2d3e74f94638ad984c76fb2fcba282625578b393c8a7e"
+    },
+    {
+      "path": "src/features/reception/whatsappApi.ts",
+      "sha256": "1056b8bcff1e82dd6470e92863de424533d2b05953dd3dcabfefa467d70e1d31"
+    },
+    {
+      "path": "src/features/reception/whatsappApi.test.ts",
+      "sha256": "9f5e227b16b1fd068b37c5385f5041c05e5b06a2f893c5b9bc2e8bc032e387ea"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "dbf3eabcb3a4270ff05735513ab394e314f7a037410f677493f11498d7949a66"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "c96ab556072576d09c65abf63bcad89f89748b119bf6d89d370c16fc78f03d2c"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "7bbb023779bb00fd053a067530a025ecf56ef543114a4dd9927872fc039e195c"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.node-test.mjs",
+      "sha256": "b22d99df44f91d3f7c5c312234feec985d76cdc161e9d68977ed1517311d574d"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-browser.mjs",
+      "sha256": "c144aedb1c26cfea649ebb9635d97a5803bccfe68248603701ceb2f2d47004f7"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-k6-sql.mjs",
+      "sha256": "1cad8f5546f4da06981db7921f736b39088d081b822afea61f49d1742598000f"
+    },
+    {
+      "path": "scripts/reviews/whatsapp-k6-handler-probes.mjs",
+      "sha256": "1edb0dcc467c124525268dc239c6e488906153c8c218db234e889461c8b51690"
+    }
+  ],
+  "checks": {
+    "vitest": {
+      "inbox": 22,
+      "tabs": 1,
+      "readClient": 34,
+      "producer": 32,
+      "total": 89,
+      "files": 4,
+      "exitCode": 0,
+      "fileIsolation": true
+    },
+    "nodeTests": {
+      "fixture": 4,
+      "cleanup": 7,
+      "total": 11,
+      "exitCode": 0
+    },
+    "typecheck": {
+      "app": 0,
+      "node": 0
+    },
+    "lint": {
+      "app": 0,
+      "nodeAndBrowserHarness": 0,
+      "warnings": 0
+    },
+    "syntaxScripts": 7,
+    "invalidOptionsRejected": 3,
+    "uiScreens": 28,
+    "uiErrors": 0,
+    "expected403": 3,
+    "uiCleanup": true,
+    "uiRuntimeAndOverlayHashes": 16,
+    "frozenC4Hashes": 83,
+    "sqlControlsPassed": 7,
+    "sqlResidualFailures": 4,
+    "sqlFixtureFailures": 0,
+    "sqlCleanup": true,
+    "handlerResidualProbes": 2
+  },
+  "review": "Fresh-context review: pending focus and 1280 viewport issues reproduced and fixed; final delta no actionable finding",
+  "artifacts": {
+    "ui": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-read-scroll-final/AUDIT.json",
+    "sql": "docs/reviews/2026-11-06/whatsapp-k6/residual-40e90c1/SQL_REVIEW.json",
+    "handlers": "docs/reviews/2026-11-06/whatsapp-k6/HANDLER_PROBES_40E90C1.json"
+  },
+  "limits": [
+    "SDK and App real, Auth/API loopback synthetic",
+    "no hosted database, Meta, sends, mark_read, booking or deployment",
+    "no complete history pagination until C4 precision fix",
+    "C5 lease changes received; separate review pending",
+    "concurrent contact-phone barrier finding remains static, not a two-connection runtime proof"
+  ]
+}

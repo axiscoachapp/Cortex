@@ -6,6 +6,12 @@ import { functionErrorBody } from '@/lib/functionErrors';
 const uuid = z.string().uuid().toLowerCase();
 const timestamp = z.string().max(40).datetime({ offset: true });
 const nullableTime = timestamp.nullable();
+// Validate the tuple without normalizing its PostgreSQL timestamp or UUID bytes.
+const cursor = z.string().max(80).refine(value => {
+  if (value.length > 80) return false;
+  const parts = value.split('|');
+  return parts.length === 2 && timestamp.safeParse(parts[0]).success && uuid.safeParse(parts[1]).success;
+});
 const stateFields = {
   serverReady: z.boolean(), connected: z.boolean(), status: z.enum(['none', 'connected', 'disconnected', 'error']),
   displayPhone: z.string().max(256).nullable(), verifiedName: z.string().max(256).nullable(), quality: z.string().max(128).nullable(),
@@ -19,7 +25,7 @@ const conversation = z.object({
   id: uuid, waId: z.string().max(128).nullable(), profileName: z.string().max(256), contactId: uuid.nullable(), caseId: uuid.nullable(),
   queue: z.string().max(128), status: z.enum(['open', 'closed']), assignedTo: uuid.nullable(), assignedAt: nullableTime,
   openedAt: timestamp, firstResponseAt: nullableTime, closedAt: nullableTime, lastInboundAt: nullableTime, windowOpenUntil: nullableTime,
-  lastMessageAt: timestamp, lastMessagePreview: z.string().max(4096), unreadCount: z.number().int().nonnegative(), optedOut: z.boolean(), revision: z.number().int().positive(),
+  lastMessageAt: timestamp, lastMessagePreview: z.string().max(4096), unreadCount: z.number().int().nonnegative(), optedOut: z.boolean(), consented: z.boolean(), revision: z.number().int().positive(),
 }).strict();
 const message = z.object({
   id: uuid, direction: z.enum(['in', 'out']), kind: z.string().min(1).max(64), body: z.string().max(4096),
@@ -27,11 +33,11 @@ const message = z.object({
   template: z.object({ name: z.string().max(512), language: z.string().max(64) }).strict().nullable(),
   status: z.string().min(1).max(64), error: z.string().max(4096).nullable(), sentBy: uuid.nullable(), at: timestamp,
 }).strict();
-const listInput = z.object({ filter: z.enum(['unassigned', 'mine', 'open', 'closed']).default('open'), search: z.string().trim().max(80).default(''), before: timestamp.nullish(), limit: z.number().int().min(1).max(100).default(50) }).strict();
-const messagesInput = z.object({ conversationId: uuid, before: timestamp.nullish() }).strict();
+const listInput = z.object({ filter: z.enum(['unassigned', 'mine', 'open', 'closed']).default('open'), search: z.string().trim().max(80).default(''), before: cursor.nullish(), limit: z.number().int().min(1).max(100).default(50) }).strict();
+const messagesInput = z.object({ conversationId: uuid, before: cursor.nullish() }).strict();
 const uniqueIds = (rows: { id: string }[]) => new Set(rows.map(row => row.id)).size === rows.length;
-const conversationPage = z.object({ conversations: z.array(conversation).max(100), nextBefore: nullableTime }).strict().refine(page => uniqueIds(page.conversations));
-const messagePage = z.object({ conversation, messages: z.array(message).max(50), nextBefore: nullableTime }).strict().refine(page => uniqueIds(page.messages));
+const conversationPage = z.object({ conversations: z.array(conversation).max(100), nextBefore: cursor.nullable() }).strict().refine(page => uniqueIds(page.conversations));
+const messagePage = z.object({ conversation, messages: z.array(message).max(50), nextBefore: cursor.nullable() }).strict().refine(page => uniqueIds(page.messages));
 
 export type WhatsAppConversation = z.infer<typeof conversation>;
 export type WhatsAppMessage = z.infer<typeof message>;
