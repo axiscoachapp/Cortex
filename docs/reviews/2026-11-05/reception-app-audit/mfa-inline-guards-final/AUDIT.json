@@ -1,0 +1,3800 @@
+{
+  "completed": true,
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": "2026-11-05T15:00:00Z",
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "2f927fed453c7b145c2ecb35190feea9ca372d99",
+  "overlays": [
+    {
+      "path": "src/components/SessionAssurance.tsx",
+      "sha256": "1240956d1a92a6eb2c0af20a7121650d637d1056005b002eae2d5fd08a7202a8"
+    }
+  ],
+  "frozenTextSourceCount": 321,
+  "frozenTextSourceDigest": "a77144fb9b1996d6e6eab43824e579e059aa22379906c258104ce2795a594372",
+  "tailwindRawContentCount": 319,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "b7aba65c9705c97bae2b7fc9a09c1eefd3544d28ecc0f595587c8dd35138b582"
+    },
+    {
+      "path": "scripts/fixtures/patient-workspace-browser.mjs",
+      "sha256": "030d6f283f64a71e73a2961aaef8d6c4b7f9f70e4a7acb421c0c19cc275f3295"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-api.mjs",
+      "sha256": "6917242c74a712db4f0de474ee34ee6133bc32264459876805ffe54e58fc1ce2"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-browser.mjs",
+      "sha256": "b060e05143162c09231358b295010c6ae1f4b8eaab8ec05744fadc3e1ad01527"
+    },
+    {
+      "path": "scripts/fixtures/post-consultation-api.mjs",
+      "sha256": "d7f82be146346f7875eb01da59af0db32f6164fd80ee2911cdb14503a20456c8"
+    },
+    {
+      "path": "scripts/fixtures/post-consultation-browser.mjs",
+      "sha256": "c02499409baf4a4e46467b0c7440e16fc6ebab09259b0fa59777ab3041c9d36e"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-api.mjs",
+      "sha256": "c83f0095188f1a56f6acd379fd7af7758247895d2a12f6006feb4c5462368cc0"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-browser.mjs",
+      "sha256": "8ef010f48a78e2c6186fefaec215588a530e2fabae9491a7dfc0ef3b970b5598"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "6a515dffbc4f86e6d3eb835a19478df14bbe69aeb80a693272f91a0b3fd10a4b"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "920d6919ae2e108e623c151a0d8c34044df926002c35d9d21138add44e030b58"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "3970ec83c33a8cc193a8a2f5c7625510a1d9c08141546535a34027e315d8af40"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-browser.mjs",
+      "sha256": "c01bc7bb0ecc8302a63ab3f17134303aee1d97281ad37805a1fdd10804b7fcfe"
+    },
+    {
+      "path": "scripts/fixtures/mfa-verification-api.mjs",
+      "sha256": "e4d8f0eba899eae5b55a5ab6c7b82ef9e92419661025bd32796da6cc791afd15"
+    },
+    {
+      "path": "scripts/fixtures/mfa-verification-browser.mjs",
+      "sha256": "8ecbf6c51b07a70c87e6489bbb10de2c4202837de9decfce51e7c3f6b1ea9b38"
+    },
+    {
+      "path": "scripts/fixtures/mfa-unavailability-browser.mjs",
+      "sha256": "de347477550b63afa6d8fa48ede0440cbad6d440d726106b156a9387a5d8af8d"
+    },
+    {
+      "path": "scripts/fixtures/mfa-inline-browser.mjs",
+      "sha256": "f5be6434d1a266f8ef6074b50ad45e99bc31ec8ac7c5fddba9f0a8c0af58f59e"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-api.mjs",
+      "sha256": "aadf9dea7e0ae66cf1c34079fcf178c6a85cdcaf3aec1f3e4b29289f35e38e85"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-browser.mjs",
+      "sha256": "df2663ca28208bd6f60fee197777b5b39cb2eade8bee12d9ffb02f3d53d4d6ab"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": false,
+  "consultationChecks": [],
+  "consultationRequests": [],
+  "consultationMetrics": null,
+  "settingsEmbeddedOnly": false,
+  "previewEntry": null,
+  "settingsChecks": [],
+  "settingsRequests": [],
+  "settingsFixtureMetrics": [],
+  "whatsappReadOnly": false,
+  "whatsappBotRead": false,
+  "whatsappHistory": false,
+  "whatsappList": false,
+  "whatsappChecks": [],
+  "whatsappRequests": [],
+  "whatsappFixtureCalls": null,
+  "schedulingMigrationOnly": false,
+  "schedulingMigrationChecks": [],
+  "schedulingMigrationCalls": null,
+  "schedulingMigrationReads": null,
+  "schedulingMigrationMetrics": null,
+  "schedulingReceptionMetrics": null,
+  "recoveryNoticeOnly": false,
+  "localRecordingRecovery": false,
+  "postConsultation": false,
+  "postEntries": false,
+  "localRecoveryRequests": [],
+  "postEntryWrites": null,
+  "postConsultationCalls": null,
+  "recoveryNoticeChecks": [],
+  "recoveryNoticeCalls": null,
+  "recoveryNoticeMetrics": null,
+  "patientWorkspaceOnly": false,
+  "patientWorkspaceChecks": [],
+  "patientWorkspaceMetrics": null,
+  "settingsAccessOnly": false,
+  "settingsAdminOnly": false,
+  "settingsAccessChecks": [],
+  "settingsAccessRequests": [],
+  "settingsAccessCalls": null,
+  "mfaInlineOnly": true,
+  "mfaUnavailabilityOnly": false,
+  "mfaVerificationOnly": false,
+  "mfaVerificationCalls": [
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000001"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000001",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000002"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000002",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000003"
+    },
+    {
+      "action": "verify",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000003",
+      "codeLength": 6,
+      "errorCode": "mfa_challenge_expired"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000004"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000004",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000005"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000005",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000006"
+    },
+    {
+      "action": "verify",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000006",
+      "codeLength": 6,
+      "errorCode": "mfa_challenge_expired"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000007"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000007",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000008"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000008",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000009"
+    },
+    {
+      "action": "verify",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000009",
+      "codeLength": 6,
+      "errorCode": "mfa_challenge_expired"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000010"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000010",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000011"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000011",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000012"
+    },
+    {
+      "action": "verify",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "modern",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000012",
+      "codeLength": 6,
+      "errorCode": "mfa_challenge_expired"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000013"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000013",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000014"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000014",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000015"
+    },
+    {
+      "action": "verify",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000015",
+      "codeLength": 6,
+      "errorCode": "mfa_challenge_expired"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000016"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000016",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000017"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000017",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000018"
+    },
+    {
+      "action": "verify",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000018",
+      "codeLength": 6,
+      "errorCode": "mfa_challenge_expired"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000019"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000019",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000020"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000020",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000021"
+    },
+    {
+      "action": "verify",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000021",
+      "codeLength": 6,
+      "errorCode": "mfa_challenge_expired"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000022"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000022",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000023"
+    },
+    {
+      "action": "verify",
+      "factorId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000023",
+      "codeLength": 6,
+      "errorCode": "mfa_verification_failed"
+    },
+    {
+      "action": "challenge",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000024"
+    },
+    {
+      "action": "verify",
+      "factorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "format": "legacy",
+      "valid": true,
+      "challengeId": "e1000000-0000-4000-8000-000000000024",
+      "codeLength": 6,
+      "errorCode": "mfa_challenge_expired"
+    }
+  ],
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [
+    {
+      "format": "modern",
+      "width": 320,
+      "errorFocused": {
+        "left": 32.390625,
+        "right": 287.609375,
+        "top": 642.484375,
+        "bottom": 777.484375,
+        "width": 320,
+        "height": 1000
+      },
+      "pendingFieldsLocked": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "modern",
+      "width": 320,
+      "manualAttempts": 3,
+      "freshChallenges": 3,
+      "repeatedRefusalFocused": true,
+      "noCommandOnSelection": true,
+      "sessionAndFactorsPreserved": true,
+      "sameDocument": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "modern",
+      "width": 375,
+      "errorFocused": {
+        "left": 32.390625,
+        "right": 342.609375,
+        "top": 610.09375,
+        "bottom": 718.09375,
+        "width": 375,
+        "height": 1000
+      },
+      "pendingFieldsLocked": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "modern",
+      "width": 375,
+      "manualAttempts": 3,
+      "freshChallenges": 3,
+      "repeatedRefusalFocused": true,
+      "noCommandOnSelection": true,
+      "sessionAndFactorsPreserved": true,
+      "sameDocument": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "modern",
+      "width": 1280,
+      "errorFocused": {
+        "left": 294.40625,
+        "right": 985.59375,
+        "top": 475.109375,
+        "bottom": 529.109375,
+        "width": 1280,
+        "height": 1000
+      },
+      "pendingFieldsLocked": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "modern",
+      "width": 1280,
+      "manualAttempts": 3,
+      "freshChallenges": 3,
+      "repeatedRefusalFocused": true,
+      "noCommandOnSelection": true,
+      "sessionAndFactorsPreserved": true,
+      "sameDocument": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "modern",
+      "width": 1920,
+      "errorFocused": {
+        "left": 614.40625,
+        "right": 1305.59375,
+        "top": 475.109375,
+        "bottom": 529.109375,
+        "width": 1920,
+        "height": 1000
+      },
+      "pendingFieldsLocked": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "modern",
+      "width": 1920,
+      "manualAttempts": 3,
+      "freshChallenges": 3,
+      "repeatedRefusalFocused": true,
+      "noCommandOnSelection": true,
+      "sessionAndFactorsPreserved": true,
+      "sameDocument": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "legacy",
+      "width": 320,
+      "errorFocused": {
+        "left": 32.390625,
+        "right": 287.609375,
+        "top": 642.484375,
+        "bottom": 777.484375,
+        "width": 320,
+        "height": 1000
+      },
+      "pendingFieldsLocked": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "legacy",
+      "width": 320,
+      "manualAttempts": 3,
+      "freshChallenges": 3,
+      "repeatedRefusalFocused": true,
+      "noCommandOnSelection": true,
+      "sessionAndFactorsPreserved": true,
+      "sameDocument": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "legacy",
+      "width": 375,
+      "errorFocused": {
+        "left": 32.390625,
+        "right": 342.609375,
+        "top": 610.09375,
+        "bottom": 718.09375,
+        "width": 375,
+        "height": 1000
+      },
+      "pendingFieldsLocked": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "legacy",
+      "width": 375,
+      "manualAttempts": 3,
+      "freshChallenges": 3,
+      "repeatedRefusalFocused": true,
+      "noCommandOnSelection": true,
+      "sessionAndFactorsPreserved": true,
+      "sameDocument": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "legacy",
+      "width": 1280,
+      "errorFocused": {
+        "left": 294.40625,
+        "right": 985.59375,
+        "top": 475.109375,
+        "bottom": 529.109375,
+        "width": 1280,
+        "height": 1000
+      },
+      "pendingFieldsLocked": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "legacy",
+      "width": 1280,
+      "manualAttempts": 3,
+      "freshChallenges": 3,
+      "repeatedRefusalFocused": true,
+      "noCommandOnSelection": true,
+      "sessionAndFactorsPreserved": true,
+      "sameDocument": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "legacy",
+      "width": 1920,
+      "errorFocused": {
+        "left": 614.40625,
+        "right": 1305.59375,
+        "top": 475.109375,
+        "bottom": 529.109375,
+        "width": 1920,
+        "height": 1000
+      },
+      "pendingFieldsLocked": true,
+      "clinicalContentAbsent": true
+    },
+    {
+      "format": "legacy",
+      "width": 1920,
+      "manualAttempts": 3,
+      "freshChallenges": 3,
+      "repeatedRefusalFocused": true,
+      "noCommandOnSelection": true,
+      "sessionAndFactorsPreserved": true,
+      "sameDocument": true,
+      "clinicalContentAbsent": true
+    }
+  ],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "mfaRequests": [
+      {
+        "method": "POST",
+        "path": "/auth/v1/token"
+      },
+      {
+        "method": "GET",
+        "path": "/auth/v1/user"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/token"
+      },
+      {
+        "method": "GET",
+        "path": "/auth/v1/user"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/token"
+      },
+      {
+        "method": "GET",
+        "path": "/auth/v1/user"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/token"
+      },
+      {
+        "method": "GET",
+        "path": "/auth/v1/user"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/token"
+      },
+      {
+        "method": "GET",
+        "path": "/auth/v1/user"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/token"
+      },
+      {
+        "method": "GET",
+        "path": "/auth/v1/user"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/token"
+      },
+      {
+        "method": "GET",
+        "path": "/auth/v1/user"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/token"
+      },
+      {
+        "method": "GET",
+        "path": "/auth/v1/user"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/token"
+      },
+      {
+        "method": "GET",
+        "path": "/auth/v1/user"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/challenge"
+      },
+      {
+        "method": "POST",
+        "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify"
+      }
+    ],
+    "mfaUnexpected": []
+  },
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/mfa.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/AccountSecurity.tsx",
+    "src/pages/Auth.tsx"
+  ],
+  "screens": [
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-initial",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-initial-320.png",
+      "actionScreenshot": "security--agenda-inline-modern-initial-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-pending",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificando…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-pending-320.png",
+      "actionScreenshot": "security--agenda-inline-modern-pending-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-invalid",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-invalid-320.png",
+      "actionScreenshot": "security--agenda-inline-modern-invalid-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-repeated",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-repeated-320.png",
+      "actionScreenshot": "security--agenda-inline-modern-repeated-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-changed-factor",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-changed-factor-320.png",
+      "actionScreenshot": "security--agenda-inline-modern-changed-factor-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-expired",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-expired-320.png",
+      "actionScreenshot": "security--agenda-inline-modern-expired-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-initial",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-initial-375.png",
+      "actionScreenshot": "security--agenda-inline-modern-initial-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-pending",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificando…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-pending-375.png",
+      "actionScreenshot": "security--agenda-inline-modern-pending-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-invalid",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-invalid-375.png",
+      "actionScreenshot": "security--agenda-inline-modern-invalid-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-repeated",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-repeated-375.png",
+      "actionScreenshot": "security--agenda-inline-modern-repeated-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-changed-factor",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-changed-factor-375.png",
+      "actionScreenshot": "security--agenda-inline-modern-changed-factor-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-expired",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-expired-375.png",
+      "actionScreenshot": "security--agenda-inline-modern-expired-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-initial",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-initial-1280.png",
+      "actionScreenshot": "security--agenda-inline-modern-initial-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-pending",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificando…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-pending-1280.png",
+      "actionScreenshot": "security--agenda-inline-modern-pending-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-invalid",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-invalid-1280.png",
+      "actionScreenshot": "security--agenda-inline-modern-invalid-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-repeated",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-repeated-1280.png",
+      "actionScreenshot": "security--agenda-inline-modern-repeated-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-changed-factor",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-changed-factor-1280.png",
+      "actionScreenshot": "security--agenda-inline-modern-changed-factor-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-expired",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-expired-1280.png",
+      "actionScreenshot": "security--agenda-inline-modern-expired-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-initial",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-initial-1920.png",
+      "actionScreenshot": "security--agenda-inline-modern-initial-1920-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-pending",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificando…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-pending-1920.png",
+      "actionScreenshot": "security--agenda-inline-modern-pending-1920-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-invalid",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-invalid-1920.png",
+      "actionScreenshot": "security--agenda-inline-modern-invalid-1920-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-repeated",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-repeated-1920.png",
+      "actionScreenshot": "security--agenda-inline-modern-repeated-1920-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-changed-factor",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-changed-factor-1920.png",
+      "actionScreenshot": "security--agenda-inline-modern-changed-factor-1920-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-modern-expired",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-modern-expired-1920.png",
+      "actionScreenshot": "security--agenda-inline-modern-expired-1920-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-initial",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-initial-320.png",
+      "actionScreenshot": "security--agenda-inline-legacy-initial-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-pending",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificando…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-pending-320.png",
+      "actionScreenshot": "security--agenda-inline-legacy-pending-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-invalid",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-invalid-320.png",
+      "actionScreenshot": "security--agenda-inline-legacy-invalid-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-repeated",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-repeated-320.png",
+      "actionScreenshot": "security--agenda-inline-legacy-repeated-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-changed-factor",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-changed-factor-320.png",
+      "actionScreenshot": "security--agenda-inline-legacy-changed-factor-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-expired",
+      "actualPath": "/agenda",
+      "width": 320,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-expired-320.png",
+      "actionScreenshot": "security--agenda-inline-legacy-expired-320-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-initial",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-initial-375.png",
+      "actionScreenshot": "security--agenda-inline-legacy-initial-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-pending",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificando…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-pending-375.png",
+      "actionScreenshot": "security--agenda-inline-legacy-pending-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-invalid",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-invalid-375.png",
+      "actionScreenshot": "security--agenda-inline-legacy-invalid-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-repeated",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-repeated-375.png",
+      "actionScreenshot": "security--agenda-inline-legacy-repeated-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-changed-factor",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-changed-factor-375.png",
+      "actionScreenshot": "security--agenda-inline-legacy-changed-factor-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-expired",
+      "actualPath": "/agenda",
+      "width": 375,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-expired-375.png",
+      "actionScreenshot": "security--agenda-inline-legacy-expired-375-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-initial",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-initial-1280.png",
+      "actionScreenshot": "security--agenda-inline-legacy-initial-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-pending",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificando…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-pending-1280.png",
+      "actionScreenshot": "security--agenda-inline-legacy-pending-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-invalid",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-invalid-1280.png",
+      "actionScreenshot": "security--agenda-inline-legacy-invalid-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-repeated",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-repeated-1280.png",
+      "actionScreenshot": "security--agenda-inline-legacy-repeated-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-changed-factor",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-changed-factor-1280.png",
+      "actionScreenshot": "security--agenda-inline-legacy-changed-factor-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-expired",
+      "actualPath": "/agenda",
+      "width": 1280,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-expired-1280.png",
+      "actionScreenshot": "security--agenda-inline-legacy-expired-1280-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-initial",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-initial-1920.png",
+      "actionScreenshot": "security--agenda-inline-legacy-initial-1920-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-pending",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificando…",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-pending-1920.png",
+      "actionScreenshot": "security--agenda-inline-legacy-pending-1920-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-invalid",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-invalid-1920.png",
+      "actionScreenshot": "security--agenda-inline-legacy-invalid-1920-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-repeated",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-repeated-1920.png",
+      "actionScreenshot": "security--agenda-inline-legacy-repeated-1920-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-changed-factor",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": true,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": null
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-changed-factor-1920.png",
+      "actionScreenshot": "security--agenda-inline-legacy-changed-factor-1920-actions.png"
+    },
+    {
+      "role": "security",
+      "path": "/agenda",
+      "variant": "inline-legacy-expired",
+      "actualPath": "/agenda",
+      "width": 1920,
+      "viewportOnly": true,
+      "dialogActions": [
+        {
+          "name": "Verificar código",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Código incorreto ou expirado. Confira se o horário do celular está automático e tente o código atual."
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verifique seu acesso"
+      ],
+      "screenshot": "security--agenda-inline-legacy-expired-1920.png",
+      "actionScreenshot": "security--agenda-inline-legacy-expired-1920-actions.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    },
+    {
+      "path": "/agenda",
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    }
+  ],
+  "failedRequests": [],
+  "errorResponses": [
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/verify",
+      "status": 422
+    },
+    {
+      "path": "/auth/v1/factors/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/verify",
+      "status": 422
+    }
+  ],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

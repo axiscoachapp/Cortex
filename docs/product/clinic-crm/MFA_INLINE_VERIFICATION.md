@@ -1,0 +1,7 @@
+# T39/3c/2c/2b/3 — verificação no bloqueio clínico
+
+O formulário de autenticação dentro do bloqueio clínico segue as mesmas regras de seleção do gerenciamento de autenticadores: mudar manualmente o fator limpa código e erro anteriores, sem enviar desafio; durante uma tentativa, fator/código/envio ficam bloqueados. Uma recusa preserva código e seleção para correção explícita e recebe foco, inclusive se a mensagem se repetir.
+
+O bloqueio de sessão continua controlado pela consulta de assurance existente. Nenhuma recusa permite montar/exibir o ambiente clínico ou sinaliza verificação concluída. O trabalho previamente autorizado continua sob as guardas existentes; não se altera revalidação, recuperação, troca de ator, logout, cache, sessão ou backend.
+
+Prova dirigida: componente e App/Auth providers/SDK reais em navegador isolado, transporte sintético nos formatos atual e legado. Larguras320/375/1280/1920 a135%, tentativa retida para observar campos bloqueados, recusa repetida no mesmo fator antes da troca, recusa expirada focada no outro fator e troca sem reuso do código. Medir chamadas e ausência de recursos clínicos/externos, preservar fatores/sessão. A tentativa retida usa rota interceptada antes do servidor; o estado pendente é comprovado pelo interceptador ativo, campos bloqueados e apenas desafio no ledger, sem alegar perda/latência real de transporte. Sucesso/AAL2/TOTP/recuperação reais e limites efetivos do servidor permanecem fora deste recorte.

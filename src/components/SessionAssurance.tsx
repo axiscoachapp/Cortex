@@ -14,7 +14,9 @@ function InlineFactorVerification({ onVerified }: { onVerified: () => void }) {
   const { user } = useAuth();
   const [code, setCode] = useState('');
   const [factorId, setFactorId] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<{ message: string } | null>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => { errorRef.current?.focus(); }, [error]);
   const [busy, setBusy] = useState(false);
   const factors = useQuery({
     queryKey: ['mfa-factors-inline', user?.id],
@@ -30,14 +32,14 @@ function InlineFactorVerification({ onVerified }: { onVerified: () => void }) {
   const submit = async () => {
     if (busy || code.length !== 6 || !selected || factors.isError) return;
     setBusy(true);
-    setError('');
+    setError(null);
     try {
       const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: selected, code });
       if (error) throw error;
       setCode('');
       onVerified();
     } catch (err) {
-      setError(mfaErrorMessage(err));
+      setError({ message: mfaErrorMessage(err) });
     } finally {
       setBusy(false);
     }
@@ -56,7 +58,8 @@ function InlineFactorVerification({ onVerified }: { onVerified: () => void }) {
           <select
             className="block w-full border rounded p-2 mt-2"
             value={selected}
-            onChange={(e) => setFactorId(e.target.value)}
+            disabled={busy}
+            onChange={(e) => { setFactorId(e.target.value); setCode(''); setError(null); }}
           >
             {verified.map((f) => (
               <option key={f.id} value={f.id}>
@@ -73,13 +76,14 @@ function InlineFactorVerification({ onVerified }: { onVerified: () => void }) {
           autoComplete="one-time-code"
           inputMode="numeric"
           maxLength={6}
+          disabled={busy}
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
         />
       </label>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
+        <p ref={errorRef} tabIndex={-1} role="alert" className="text-sm text-destructive">
+          {error.message}
         </p>
       )}
       {factors.isError && <div role="alert" className="space-y-2 text-sm">

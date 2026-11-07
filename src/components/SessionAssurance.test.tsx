@@ -1,4 +1,4 @@
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -38,6 +38,27 @@ const setup = () => {
   return client;
 };
 describe('session assurance', () => {
+  const twoFactors=()=>mock.factors.mockResolvedValue({data:{totp:[{id:'factor-a',friendly_name:'Sintético A',status:'verified'},{id:'factor-b',friendly_name:'Sintético B',status:'verified'}]},error:null});
+  it('clears the code and old refusal when selecting another inline authenticator',async()=>{
+    mock.level.mockResolvedValue({data:{currentLevel:'aal1',nextLevel:'aal2'},error:null});twoFactors();
+    mock.verify.mockResolvedValue({error:{code:'mfa_verification_failed',message:'PRIVATE SYNTHETIC ERROR'}});setup();
+    const selector=await screen.findByRole('combobox',{name:'Autenticador'}),code=screen.getByLabelText('Código de 6 dígitos');
+    fireEvent.change(code,{target:{value:'123456'}});fireEvent.click(screen.getByRole('button',{name:'Verificar código'}));await screen.findByRole('alert');
+    fireEvent.change(selector,{target:{value:'factor-b'}});expect(code).toHaveValue('');expect(screen.queryByRole('alert')).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Verificar código'})).toBeDisabled();expect(mock.verify).toHaveBeenCalledTimes(1);expect(screen.queryByText('Private clinical chart')).not.toBeInTheDocument();
+  });
+  it('locks the inline factor and code during verification, then focuses the refusal',async()=>{
+    mock.level.mockResolvedValue({data:{currentLevel:'aal1',nextLevel:'aal2'},error:null});twoFactors();let finish!:(value:unknown)=>void;mock.verify.mockReturnValue(new Promise(resolve=>{finish=resolve;}));setup();
+    const selector=await screen.findByRole('combobox',{name:'Autenticador'}),code=screen.getByLabelText('Código de 6 dígitos');
+    fireEvent.change(code,{target:{value:'123456'}});fireEvent.click(screen.getByRole('button',{name:'Verificar código'}));await waitFor(()=>expect(mock.verify).toHaveBeenCalledTimes(1));
+    expect(selector).toBeDisabled();expect(code).toBeDisabled();expect(screen.getByRole('button',{name:'Verificando…'})).toBeDisabled();
+    await act(async()=>finish({error:{code:'mfa_verification_failed',message:'PRIVATE SYNTHETIC ERROR'}}));const alert=await screen.findByRole('alert');expect(alert).toHaveFocus();expect(selector).toBeEnabled();expect(code).toBeEnabled();expect(code).toHaveValue('123456');expect(screen.queryByText('PRIVATE SYNTHETIC ERROR')).not.toBeInTheDocument();expect(screen.queryByText('Private clinical chart')).not.toBeInTheDocument();
+  });
+  it('focuses a repeated identical inline refusal while preserving the clinical lock',async()=>{
+    mock.level.mockResolvedValue({data:{currentLevel:'aal1',nextLevel:'aal2'},error:null});mock.verify.mockResolvedValue({error:{code:'mfa_challenge_expired'}});setup();
+    const code=await screen.findByLabelText('Código de 6 dígitos');fireEvent.change(code,{target:{value:'123456'}});
+    fireEvent.click(screen.getByRole('button',{name:'Verificar código'}));await screen.findByRole('alert');code.focus();fireEvent.click(screen.getByRole('button',{name:'Verificar código'}));
+    await waitFor(()=>expect(mock.verify).toHaveBeenCalledTimes(2));await waitFor(()=>expect(screen.getByRole('alert')).toHaveFocus());expect(screen.queryByText('Private clinical chart')).not.toBeInTheDocument();
+  });
   it('can recover with a real document modal already open without losing its draft', async () => {
     const user = userEvent.setup();
     mock.level.mockResolvedValue({ data: { currentLevel: 'aal2', nextLevel: 'aal2' }, error: null });
