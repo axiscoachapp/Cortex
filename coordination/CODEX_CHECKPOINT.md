@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K1/4k: `1f1811d8a8bcdcd4fc6b5cddad4a6f32ae3f9535`, main/axiscoachapp (autor e committer), sem push. Só13caminhos próprios no commit, índice livre/dirt SaaS preservado. Adaptador de fila concluído; UI4l com confirmação/conferência é o próximo independente do catálogo4j.
+
 Atualizado em 2026-11-07 05:15. **K1/4k — mudar fila:** [provas](../docs/reviews/2026-11-07/whatsapp-queue/IMPLEMENTATION.md). Adaptador aberto/próprio/destino novo conforme grammar, corpo act/set_queue/tuple/queue. Recibo sem queue nunca confirma fila: resultado {receipt,needsRefresh:true} também no transporte válido, sem preenchimento otimista/retry.65RED→340Vitest/sete arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória onze grupos/dez POST/três hashes estáveis/zero rede. Sem UI/banco/produtor/autorização/CAS real.
 
 Próximo4l: controle e confirmação humana/contexto fresco/exclusão/readVersion/releitura de lista+detalhe; inconclusivo mantém comando bloqueado, independente de4j. Catálogo de responsáveis segue pedido0506; nenhum novo incoming Claude,2152 já atendida, registro0515 informativo encerrado. C4/C5 após SHAs/dois RED C5 fora da suíte dirigida. Automação ACTIVE; main/axiscoachapp sem push/hosted/Meta/carga, Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md preservados.
