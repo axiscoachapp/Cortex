@@ -63,7 +63,7 @@ export async function auditSettingsAccess({ api, app, scene, capture, checks, re
   }
   const allow = new Set(['POST /auth/v1/token', 'GET /auth/v1/user', 'POST /rest/v1/rpc/clinic_access', 'POST /rest/v1/rpc/reception_queue', 'POST /rest/v1/rpc/reception_team_doctors', 'POST /rest/v1/rpc/reception_delegation_requests', 'POST /functions/v1/whatsapp-api']);
   assert.ok(requests.every(call => allow.has(call.method + ' ' + call.path)), 'Unexpected settings resource');
-  assert.ok(api.settingsRead.calls.every(call => ['state', 'templates', 'automations'].includes(call.input.action)));
+  assert.ok(api.settingsRead.calls.every(call => ['state', 'templates', 'automations', 'flow'].includes(call.input.action)));
   assert.deepEqual({ staff: api.staff, cases: api.cases, contacts: api.contacts, appointments: api.appointments }, before);
   for (const key of ['clinicalReads', 'externalCalls', 'unknown']) assert.deepEqual(api.metrics[key], []);
   for (const key of ['bookings', 'contacts', 'caseWrites']) assert.equal(api.metrics[key], 0);

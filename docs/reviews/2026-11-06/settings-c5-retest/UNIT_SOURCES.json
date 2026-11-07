@@ -1,0 +1,31 @@
+{
+  "baseline": "c8d9c9edd309a30a8a7215a2f518c7a7633ab106",
+  "matchingBefore": true,
+  "matchingAfter": true,
+  "files": [
+    {
+      "path": "src/features/settings/WhatsAppSettings.tsx",
+      "sha256": "955e622ba9e39cea077bbb2e6164ded01d73165b3e3c2d7a47cb9aa14c5ba2b6"
+    },
+    {
+      "path": "src/features/settings/FlowEditor.tsx",
+      "sha256": "8279cc9c1d63a492c72674e1e5ad69f15df61121707f2c6393cb071f1dc16e35"
+    },
+    {
+      "path": "src/features/settings/AutomationEditor.tsx",
+      "sha256": "99999ea21be1fef7c004f6026dcc2b3bdbab7c3335191394b33f4cb8b7a69c55"
+    },
+    {
+      "path": "src/features/settings/whatsappApi.ts",
+      "sha256": "d4072aba4f36b8f9e32efaec9057add56497cdf6617124be9317e7ea72fbd198"
+    },
+    {
+      "path": "supabase/functions/_shared/whatsappFlow.ts",
+      "sha256": "f160540c5dd983fa20de02efa5767f432181926282a095d9bfd56cb870f3b599"
+    },
+    {
+      "path": "src/features/reception/settingsWhatsAppReview.test.tsx",
+      "sha256": "8f73ab128687f1e18ddcb3e390261c247cfd74b8a6cb535ec01581ef9159ac54"
+    }
+  ]
+}

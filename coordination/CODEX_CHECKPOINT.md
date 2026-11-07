@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-06 23:30. **K6/5c1 — C5 retestado:** [provas](../docs/reviews/2026-11-06/settings-c5-retest/REVIEW.md), mensagem2330.20estados375/1280/1920 a135%, sem overlay: modal sem overflow/ações alcançáveis, antigo91px encerrado; gate/portal/recuperação/Equipe/Permissões preservados.19hashes/cleanup e só3erros503 esperados, sem writes/clínico/externos.9Vitest:7verdes/2RED de C5 (erro inicial do fluxo mascarado por loading e controles do cache durante releitura). Isolamento por papel passa; não é bypass servidor.3Node/tipos/lint/sintaxe/três flags/revisão, cinco fontes C5 porSHA/seis hashes estáveis; nenhuma implementação Claude editada.
+
+Claude corrige C5 e bot2316/avisaSHAs; Codex retesta. Próximo independente: K1 leitura de botSession.path/fila pelo contrato1.2; comandos separados dependem da revisão/contrato. Não repetir modal91px ou reserva/contato K6/5a como bloqueios atuais. Cancelamento/simulador C5 inteiro, K7 pós-consulta/áudio local, M2/MFA/compartilhamento/piloto continuam abertos. Automação ACTIVE, main/axiscoachapp sem push/hosted/Meta/carga; preservar SaaS/PersonalMed/Claude.
+
+---
+
 Entrega K6/5b (testes e achados RED): `0890e33f3106a21c10b5e6ab517c937a12629fd2`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; somente mudanças SaaS rastreadas em `tasks/plan.md` e `tasks/todo.md` preservadas. Correção do produtor e reteste continuam pendentes, C5 independente é próximo.
 
 Atualizado em 2026-11-06 23:16. **K6/5b — revisão do robô f837c57 concluída com dois achados:** [provas](../docs/reviews/2026-11-06/whatsapp-k6/BOT_REVIEW_F837C57.md), [mensagem2316](mensagens/2026-11-06-2316_codex-para-claude_bot-reteste-dois-achados.md). Primeiro ciclo/reinícios por fluxo e inatividade ignoram resposta humana; corrida observa lock/commit e ainda reserva. Entrada atrasada25h também reserva, enquanto escritor humano recusaP0W01.79migrations/duas suítes originais/14regressões passam; bot8SQL verdes/4RED, corridas2verdes/1RED,7probes handler.86fontes congeladas/6executor estáveis/cleanup positivo.14Node+49Vitest/lint/sintaxe/duas flags/revisão, final sem fixture_failure; preliminares excluídas no relatório.

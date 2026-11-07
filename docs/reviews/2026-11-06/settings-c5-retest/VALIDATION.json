@@ -1,0 +1,39 @@
+{
+  "baseline": "c8d9c9edd309a30a8a7215a2f518c7a7633ab106",
+  "scope": "C5 modal and gate visual retest; unit review of state freshness and initial flow error",
+  "browser": {
+    "completed": true,
+    "states": 20,
+    "widths": [
+      375,
+      1280,
+      1920
+    ],
+    "interfaceScale": 1.35,
+    "runtimeHashes": 19,
+    "frozenTextSources": 317,
+    "cleanupVerified": true,
+    "externalCalls": 0,
+    "clinicalWrites": 0,
+    "settingsWrites": 0,
+    "expectedTransportErrors": 3,
+    "flowLoaded": true
+  },
+  "nodeTests": 3,
+  "vitest": {
+    "total": 9,
+    "passed": 7,
+    "failed": 2,
+    "expectedRed": [
+      "cached admin controls during pending remount verification",
+      "initial flow failure hidden by loading branch"
+    ],
+    "retryAfterFixNotReached": true
+  },
+  "typecheckPassed": true,
+  "lintFiles": 5,
+  "syntaxScripts": 4,
+  "invalidCliCases": 3,
+  "producerFilesEdited": false,
+  "crossModel": "skipped: non-interactive context"
+}

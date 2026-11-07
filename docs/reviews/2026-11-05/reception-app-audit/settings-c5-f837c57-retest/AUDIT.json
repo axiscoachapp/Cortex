@@ -1,0 +1,2313 @@
+{
+  "completed": true,
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": null,
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "c8d9c9edd309a30a8a7215a2f518c7a7633ab106",
+  "overlays": [],
+  "frozenTextSourceCount": 317,
+  "frozenTextSourceDigest": "70477afc06f0a63a0c920710a62d2c8f8dad77286f3616a405ea4274c084ad37",
+  "tailwindRawContentCount": 315,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "7cdc122a9c6c37778151c704b41994e7a9be5cd5b0e5ddf8a5f7510d26bce294"
+    },
+    {
+      "path": "scripts/fixtures/patient-workspace-browser.mjs",
+      "sha256": "030d6f283f64a71e73a2961aaef8d6c4b7f9f70e4a7acb421c0c19cc275f3295"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-api.mjs",
+      "sha256": "4c47980fd0fce8ab3f0ab4d0dcae254aa37ed6297f1efd6c1b6d0788e48c3037"
+    },
+    {
+      "path": "scripts/fixtures/recovery-notice-browser.mjs",
+      "sha256": "1fcd98db775bb30ff1ab5f0bf7f9c51df603d51e5c6bdc87e59a0bdc41dc8f8c"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-api.mjs",
+      "sha256": "c83f0095188f1a56f6acd379fd7af7758247895d2a12f6006feb4c5462368cc0"
+    },
+    {
+      "path": "scripts/fixtures/scheduling-migration-browser.mjs",
+      "sha256": "8ef010f48a78e2c6186fefaec215588a530e2fabae9491a7dfc0ef3b970b5598"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "0ded11ae4b2818a316ab6a7b0140876684be3059c703e2398252184486c307c9"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "920d6919ae2e108e623c151a0d8c34044df926002c35d9d21138add44e030b58"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "7bbb023779bb00fd053a067530a025ecf56ef543114a4dd9927872fc039e195c"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-browser.mjs",
+      "sha256": "c144aedb1c26cfea649ebb9635d97a5803bccfe68248603701ceb2f2d47004f7"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-api.mjs",
+      "sha256": "aadf9dea7e0ae66cf1c34079fcf178c6a85cdcaf3aec1f3e4b29289f35e38e85"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-browser.mjs",
+      "sha256": "df2663ca28208bd6f60fee197777b5b39cb2eade8bee12d9ffb02f3d53d4d6ab"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": false,
+  "consultationChecks": [],
+  "consultationRequests": [],
+  "consultationMetrics": null,
+  "settingsEmbeddedOnly": false,
+  "previewEntry": null,
+  "settingsChecks": [],
+  "settingsRequests": [],
+  "settingsFixtureMetrics": [],
+  "whatsappReadOnly": false,
+  "whatsappChecks": [],
+  "whatsappRequests": [],
+  "whatsappFixtureCalls": null,
+  "schedulingMigrationOnly": false,
+  "schedulingMigrationChecks": [],
+  "schedulingMigrationCalls": null,
+  "schedulingMigrationReads": null,
+  "schedulingMigrationMetrics": null,
+  "schedulingReceptionMetrics": null,
+  "recoveryNoticeOnly": false,
+  "recoveryNoticeChecks": [],
+  "recoveryNoticeCalls": null,
+  "recoveryNoticeMetrics": null,
+  "patientWorkspaceOnly": false,
+  "patientWorkspaceChecks": [],
+  "patientWorkspaceMetrics": null,
+  "settingsAccessOnly": true,
+  "settingsAdminOnly": false,
+  "settingsAccessChecks": [
+    {
+      "role": "staff",
+      "width": 375,
+      "exactSettingsRoute": true,
+      "administrativeSectionsAbsent": true
+    },
+    {
+      "role": "staff",
+      "width": 1280,
+      "exactSettingsRoute": true,
+      "administrativeSectionsAbsent": true
+    },
+    {
+      "role": "staff",
+      "width": 1920,
+      "exactSettingsRoute": true,
+      "administrativeSectionsAbsent": true
+    },
+    {
+      "role": "admin",
+      "width": 375,
+      "pathname": "/configuracoes",
+      "settingsUnmounted": true,
+      "portalRemoved": true,
+      "draftCleared": true,
+      "retrySameDocument": true
+    },
+    {
+      "role": "admin",
+      "width": 1280,
+      "pathname": "/CONFIGURACOES/",
+      "settingsUnmounted": true,
+      "portalRemoved": true,
+      "draftCleared": true,
+      "retrySameDocument": true
+    },
+    {
+      "role": "admin",
+      "width": 1920,
+      "pathname": "/configura%63oes",
+      "settingsUnmounted": true,
+      "portalRemoved": true,
+      "draftCleared": true,
+      "retrySameDocument": true
+    }
+  ],
+  "settingsAccessRequests": [
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_queue"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "GET",
+      "path": "/auth/v1/user"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/functions/v1/whatsapp-api"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_team_doctors"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_delegation_requests"
+    },
+    {
+      "actor": "admin",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_team_doctors"
+    }
+  ],
+  "settingsAccessCalls": [
+    {
+      "actor": "33333333-3333-4333-8333-333333333333",
+      "input": {
+        "action": "state"
+      }
+    },
+    {
+      "actor": "33333333-3333-4333-8333-333333333333",
+      "input": {
+        "action": "templates"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "state"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "flow",
+        "clinicName": "Haddad Nicola",
+        "doctors": [
+          "Dra. Ana Exemplo"
+        ]
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "templates"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "automations"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "flow",
+        "clinicName": "Haddad Nicola",
+        "doctors": [
+          "Dra. Ana Exemplo"
+        ]
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "state"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "state"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "flow",
+        "clinicName": "Haddad Nicola",
+        "doctors": [
+          "Dra. Ana Exemplo"
+        ]
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "templates"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "automations"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "flow",
+        "clinicName": "Haddad Nicola",
+        "doctors": [
+          "Dra. Ana Exemplo"
+        ]
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "state"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "state"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "flow",
+        "clinicName": "Haddad Nicola",
+        "doctors": [
+          "Dra. Ana Exemplo"
+        ]
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "templates"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "automations"
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "flow",
+        "clinicName": "Haddad Nicola",
+        "doctors": [
+          "Dra. Ana Exemplo"
+        ]
+      }
+    },
+    {
+      "actor": "11111111-1111-4111-8111-111111111111",
+      "input": {
+        "action": "state"
+      }
+    }
+  ],
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": null,
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/badge.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/checkbox.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/select.tsx",
+    "src/components/ui/switch.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/BookingDialog.tsx",
+    "src/features/reception/CaseWorkspace.tsx",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/ContactSearch.tsx",
+    "src/features/reception/DelegationPermissions.tsx",
+    "src/features/reception/DoctorSuggestion.tsx",
+    "src/features/reception/LinkRelationshipDialog.tsx",
+    "src/features/reception/NewCaseDialog.tsx",
+    "src/features/reception/ReceptionLayout.tsx",
+    "src/features/reception/ReceptionNotice.tsx",
+    "src/features/reception/ReceptionQueue.tsx",
+    "src/features/reception/StaffAccessProvenance.tsx",
+    "src/features/reception/TeamSettings.tsx",
+    "src/features/reception/WhatsAppInbox.tsx",
+    "src/features/reception/WhatsAppMessages.tsx",
+    "src/features/reception/WithdrawDelegation.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/features/reception/dates.ts",
+    "src/features/reception/delegationApi.ts",
+    "src/features/reception/linkRelationships.ts",
+    "src/features/reception/routing.ts",
+    "src/features/reception/useCaseDraft.ts",
+    "src/features/reception/useRequestId.ts",
+    "src/features/reception/whatsappApi.ts",
+    "src/features/settings/AutomationEditor.tsx",
+    "src/features/settings/ConnectionsSettings.tsx",
+    "src/features/settings/FlowEditor.tsx",
+    "src/features/settings/ProfessionalSettingsForm.tsx",
+    "src/features/settings/WhatsAppSettings.tsx",
+    "src/features/settings/whatsappApi.ts",
+    "src/hooks/use-mobile.tsx",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useSignatureSession.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/hooks/useUserSettings.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/functionErrors.ts",
+    "src/lib/interfaceScale.ts",
+    "src/lib/mfa.ts",
+    "src/lib/pagination.ts",
+    "src/lib/patientRegistration.ts",
+    "src/lib/prescriberContact.ts",
+    "src/lib/signatureClient.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/AccountSecurity.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/Settings.tsx",
+    "supabase/functions/_shared/whatsappFlow.ts"
+  ],
+  "screens": [
+    {
+      "role": "staff",
+      "path": "/configuracoes?secao=seguranca",
+      "variant": "settings-security",
+      "actualPath": "/configuracoes",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 134.96875,
+              "right": 294.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "Segurança e privacidade"
+      ],
+      "screenshot": "staff--configuracoes-secao-seguranca-settings-security-375.png"
+    },
+    {
+      "role": "staff",
+      "path": "/configuracoes?secao=seguranca",
+      "variant": "settings-security",
+      "actualPath": "/configuracoes",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 150.125,
+          "right": 173.90625,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 454.03125,
+          "right": 507.296875,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 769.15625,
+          "right": 829.46875,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 1097.953125,
+          "right": 1137.984375,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 134.96875,
+              "right": 294.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "Segurança e privacidade"
+      ],
+      "screenshot": "staff--configuracoes-secao-seguranca-settings-security-1280.png"
+    },
+    {
+      "role": "staff",
+      "path": "/configuracoes?secao=seguranca",
+      "variant": "settings-security",
+      "actualPath": "/configuracoes",
+      "width": 1920,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 394.96875,
+              "right": 554.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "Segurança e privacidade"
+      ],
+      "screenshot": "staff--configuracoes-secao-seguranca-settings-security-1920.png"
+    },
+    {
+      "role": "staff",
+      "path": "/configuracoes?secao=seguranca",
+      "variant": "settings-entry-link",
+      "actualPath": "/configuracoes",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 134.96875,
+              "right": 294.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "WhatsApp e automações"
+      ],
+      "screenshot": "staff--configuracoes-secao-seguranca-settings-entry-link-375.png"
+    },
+    {
+      "role": "staff",
+      "path": "/seguranca",
+      "variant": "security-outside-settings",
+      "actualPath": "/seguranca",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Segurança da conta"
+      ],
+      "screenshot": "staff--seguranca-security-outside-settings-375.png"
+    },
+    {
+      "role": "staff",
+      "path": "/configuracoes?secao=seguranca",
+      "variant": "settings-inactive",
+      "actualPath": "/configuracoes",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Acesso de recepção indisponível"
+      ],
+      "screenshot": "staff--configuracoes-secao-seguranca-settings-inactive-375.png"
+    },
+    {
+      "role": "admin",
+      "path": "/configuracoes?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-admin",
+      "actualPath": "/configuracoes",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 30.671875,
+          "right": 67.109375,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 108.359375,
+          "right": 174.203125,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 207.0625,
+          "right": 260.328125,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 310.5625,
+          "right": 341.640625,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 134.96875,
+              "right": 294.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "WhatsApp e automações"
+      ],
+      "screenshot": "admin--configuracoes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-admin-375.png"
+    },
+    {
+      "role": "admin",
+      "path": "/configuracoes?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-editor",
+      "actualPath": "/configuracoes",
+      "width": 375,
+      "dialogActions": [
+        {
+          "name": "Unidade",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Referência",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Escolha um modelo aprovado",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Automação ativa",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar automação",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova automação"
+      ],
+      "screenshot": "admin--configuracoes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-editor-375.png",
+      "actionScreenshot": "admin--configuracoes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-editor-375-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/configuracoes?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-access-failed",
+      "actualPath": "/configuracoes",
+      "width": 375,
+      "dialogActions": [
+        {
+          "name": "Tentar novamente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Verificação de acessoAtualize a verificação para continuar com segurança.Não foi possível verificar seu acesso à clínica.Tentar novamenteVerifique seu acesso para reabrir as configurações.Sair"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verificação de acesso"
+      ],
+      "screenshot": "admin--configuracoes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-access-failed-375.png",
+      "actionScreenshot": "admin--configuracoes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-access-failed-375-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/configuracoes?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-access-recovered",
+      "actualPath": "/configuracoes",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 30.671875,
+          "right": 67.109375,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 108.359375,
+          "right": 174.203125,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 207.0625,
+          "right": 260.328125,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 310.5625,
+          "right": 341.640625,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 134.96875,
+              "right": 294.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "WhatsApp e automações"
+      ],
+      "screenshot": "admin--configuracoes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-access-recovered-375.png"
+    },
+    {
+      "role": "admin",
+      "path": "/CONFIGURACOES/?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-admin",
+      "actualPath": "/CONFIGURACOES/",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 143.796875,
+          "right": 180.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 447.734375,
+          "right": 513.578125,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 772.6875,
+          "right": 825.953125,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1102.4375,
+          "right": 1133.515625,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 134.96875,
+              "right": 294.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "WhatsApp e automações"
+      ],
+      "screenshot": "admin--CONFIGURACOES--secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-admin-1280.png"
+    },
+    {
+      "role": "admin",
+      "path": "/CONFIGURACOES/?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-editor",
+      "actualPath": "/CONFIGURACOES/",
+      "width": 1280,
+      "dialogActions": [
+        {
+          "name": "Unidade",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Referência",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Escolha um modelo aprovado",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Automação ativa",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar automação",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova automação"
+      ],
+      "screenshot": "admin--CONFIGURACOES--secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-editor-1280.png",
+      "actionScreenshot": "admin--CONFIGURACOES--secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-editor-1280-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/CONFIGURACOES/?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-access-failed",
+      "actualPath": "/CONFIGURACOES/",
+      "width": 1280,
+      "dialogActions": [
+        {
+          "name": "Tentar novamente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Verificação de acessoAtualize a verificação para continuar com segurança.Não foi possível verificar seu acesso à clínica.Tentar novamenteVerifique seu acesso para reabrir as configurações.Sair"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verificação de acesso"
+      ],
+      "screenshot": "admin--CONFIGURACOES--secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-access-failed-1280.png",
+      "actionScreenshot": "admin--CONFIGURACOES--secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-access-failed-1280-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/CONFIGURACOES/?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-access-recovered",
+      "actualPath": "/CONFIGURACOES/",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 143.796875,
+          "right": 180.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 447.734375,
+          "right": 513.578125,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 772.6875,
+          "right": 825.953125,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1102.4375,
+          "right": 1133.515625,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 134.96875,
+              "right": 294.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "WhatsApp e automações"
+      ],
+      "screenshot": "admin--CONFIGURACOES--secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-access-recovered-1280.png"
+    },
+    {
+      "role": "admin",
+      "path": "/configura%63oes?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-admin",
+      "actualPath": "/configura%63oes",
+      "width": 1920,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 394.96875,
+              "right": 554.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "WhatsApp e automações"
+      ],
+      "screenshot": "admin--configura-63oes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-admin-1920.png"
+    },
+    {
+      "role": "admin",
+      "path": "/configura%63oes?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-editor",
+      "actualPath": "/configura%63oes",
+      "width": 1920,
+      "dialogActions": [
+        {
+          "name": "Unidade",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Referência",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Escolha um modelo aprovado",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Automação ativa",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Cancelar",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Salvar automação",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Nova automação"
+      ],
+      "screenshot": "admin--configura-63oes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-editor-1920.png",
+      "actionScreenshot": "admin--configura-63oes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-editor-1920-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/configura%63oes?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-access-failed",
+      "actualPath": "/configura%63oes",
+      "width": 1920,
+      "dialogActions": [
+        {
+          "name": "Tentar novamente",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        },
+        {
+          "name": "Sair",
+          "disabled": false,
+          "geometryReachable": true,
+          "dialogOnTop": true,
+          "targetOnTop": true
+        }
+      ],
+      "dialogActionReachable": true,
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [
+        "Verificação de acessoAtualize a verificação para continuar com segurança.Não foi possível verificar seu acesso à clínica.Tentar novamenteVerifique seu acesso para reabrir as configurações.Sair"
+      ],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Verificação de acesso"
+      ],
+      "screenshot": "admin--configura-63oes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-access-failed-1920.png",
+      "actionScreenshot": "admin--configura-63oes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-access-failed-1920-actions.png"
+    },
+    {
+      "role": "admin",
+      "path": "/configura%63oes?secao=whatsapp&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-access-recovered",
+      "actualPath": "/configura%63oes",
+      "width": 1920,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 394.96875,
+              "right": 554.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "WhatsApp e automações"
+      ],
+      "screenshot": "admin--configura-63oes-secao-whatsapp-clinica-55555555-5555-4555-8555-555555555555-settings-access-recovered-1920.png"
+    },
+    {
+      "role": "admin",
+      "path": "/configuracoes?secao=equipe&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-embedded-equipe",
+      "actualPath": "/configuracoes",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 143.796875,
+          "right": 180.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 447.734375,
+          "right": 513.578125,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 772.6875,
+          "right": 825.953125,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1102.4375,
+          "right": 1133.515625,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 134.96875,
+              "right": 294.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "Equipe e permissões"
+      ],
+      "screenshot": "admin--configuracoes-secao-equipe-clinica-55555555-5555-4555-8555-555555555555-settings-embedded-equipe-1280.png"
+    },
+    {
+      "role": "admin",
+      "path": "/configuracoes?secao=permissoes&clinica=55555555-5555-4555-8555-555555555555",
+      "variant": "settings-embedded-permissoes",
+      "actualPath": "/configuracoes",
+      "width": 1280,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Início",
+          "left": 143.796875,
+          "right": 180.234375,
+          "targetLeft": 5.390625,
+          "targetRight": 318.640625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Pacientes",
+          "left": 447.734375,
+          "right": 513.578125,
+          "targetLeft": 324.03125,
+          "targetRight": 637.296875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 772.6875,
+          "right": 825.953125,
+          "targetLeft": 642.6875,
+          "targetRight": 955.953125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Mais",
+          "left": 1102.4375,
+          "right": 1133.515625,
+          "targetLeft": 961.34375,
+          "targetRight": 1274.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [
+        {
+          "text": "Configurações",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Voltar",
+              "width": 54,
+              "height": 54,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Configurações",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 134.96875,
+              "right": 294.890625,
+              "top": 29.984375,
+              "bottom": 55.984375
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Configurações",
+        "Permissões da recepção"
+      ],
+      "screenshot": "admin--configuracoes-secao-permissoes-clinica-55555555-5555-4555-8555-555555555555-settings-embedded-permissoes-1280.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    {
+      "path": "/configuracoes",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "path": "/CONFIGURACOES/",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "path": "/configura%63oes",
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    }
+  ],
+  "failedRequests": [],
+  "errorResponses": [
+    {
+      "path": "/rest/v1/rpc/clinic_access",
+      "status": 503
+    },
+    {
+      "path": "/rest/v1/rpc/clinic_access",
+      "status": 503
+    },
+    {
+      "path": "/rest/v1/rpc/clinic_access",
+      "status": 503
+    }
+  ],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

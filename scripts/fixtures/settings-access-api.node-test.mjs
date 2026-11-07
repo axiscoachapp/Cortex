@@ -23,3 +23,17 @@ test('default fixture continues to block settings function requests', async () =
   try { assert.equal((await call(api, ids.admin, 'state')).status, 503); }
   finally { await api.close(); }
 });
+
+test('flow read is admin-only and never enables a write or authority override',async()=>{
+  const api=await startReceptionFixture({settingsReview:true});
+  const context={clinicName:'Clínica sintética',doctors:['Médico sintético']};
+  try {
+    const flow=await call(api,ids.admin,'flow',context);
+    assert.equal(flow.status,200);assert.equal(flow.body.revision,0);assert.equal(flow.body.enabled,false);
+    assert.equal(flow.body.definition.start,'inicio');
+    assert.equal((await call(api,ids.a,'flow',context)).status,403);
+    assert.equal((await call(api,ids.admin,'flow',{...context,clinicId:ids.clinic})).status,400);
+    assert.equal((await call(api,ids.admin,'flow',{...context,doctors:[{}]})).status,400);
+    assert.equal((await call(api,ids.admin,'saveFlow',{revision:0,flow:flow.body})).status,400);
+  } finally {await api.close();}
+});
