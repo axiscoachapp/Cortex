@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-07 00:50. **K7/2c — descoberta de áudio local:** [provas](../docs/reviews/2026-11-07/local-recording/IMPLEMENTATION.md). Leitor IndexedDB readonly devolve<=51 metadados/sem blob/comentários/nome antigo;50 agrupados com propriedade atual/exclusão nula, indisponíveis anônimos/preservados. Abre paciente exato/relê mesmo paciente sob guardas existentes, sem processamento. Dois achados da revisão corrigidos e retestados: exclusão solicitada e abort entre evento/handler do cursor (RED real/um abort/um close/arquivo preservado).69Vitest/6arquivos+15Node/tipos/lint/sintaxe/cincoflags;42estados320–1920/135%,320fontes/19hashes/4overlays/cleanup.206requests de leitura/login, zero IA/writes/transporte áudio/externos;12HTTP503 deliberados,10HEAD200/ERR_ABORTED históricos brutos. Fonte final `local-recording-final`/44PNGs; preliminares excluídas, última correção da fixture aguarda evento nativo explicitamente.
+
+Nenhuma entrada Claude nova:2152 atendida2353, sem resposta duplicada. Próximos independentes K7 pós-consulta ou comandos K1 no próprio contrato; retestes C4/C5 após SHAs do dono. Dois RED C5 fora desta suíte, sem alegação de teste global verde. M2/MFA/compartilhamento/piloto abertos. Automação ACTIVE; main/axiscoachapp, sem push/hosted/Meta/carga, preservar Claude/SaaS/PersonalMed.
+
+---
+
 Entrega K1/3c: `5022c976dab1b5b3396475848ae2d7734e126103`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Paginação de lista concluída; próximos K7 ou comandos K1 no contrato próprio, retestes C4/C5 após novos SHAs.
 
 Atualizado em 2026-11-07 00:27. **K1/3c — paginação da lista:** [provas](../docs/reviews/2026-11-07/whatsapp-list/IMPLEMENTATION.md). Uma página<=50/cursor completo, recentes acessíveis em pending/erro, filtro/busca/contexto reiniciam; detalhe e resposta tardia cancelados, foco/retry protegidos.101Vitest/2arquivos+7Node/tipos/lint/sintaxe/quatro flags/revisão;103conversas50/50/3,66estados (20lista320/375/1440 a135%),19hashes/2overlays/319fontes/cleanup. Só6recusas403 deliberadas, zero writes/leitores clínicos/externos. Fonte final `whatsapp-list-verified`; primeira tentativa com SHA transcrito errado parou antes do servidor e ficou excluída.

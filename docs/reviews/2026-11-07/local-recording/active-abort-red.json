@@ -1,0 +1,26 @@
+{
+  "completed": false,
+  "source": "src/lib/recordingRescue.ts",
+  "sha256": "0db94a5b21a9dab5d4fd18716e1d8ca61cfb403c0641390d8ea3b2f2b79f865c",
+  "result": {
+    "aborted": "AbortError",
+    "transactionAborted": 1,
+    "closed": 1,
+    "preservedMetadata": [
+      {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "patientId": "11111111-1111-4111-8111-111111111111",
+        "createdAt": "2026-11-07T01:00:00Z"
+      }
+    ]
+  },
+  "errors": [
+    "Failed to execute 'abort' on 'IDBTransaction': The transaction has finished."
+  ],
+  "blocked": [],
+  "failure": {
+    "name": "AssertionError",
+    "message": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   \"Failed to execute 'abort' on 'IDBTransaction': The transaction has finished.\"\n+ ]\n- []\n"
+  },
+  "cleanupVerified": true
+}

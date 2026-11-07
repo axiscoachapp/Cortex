@@ -125,7 +125,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     if(url.pathname==='/auth/v1/user')return send(user);
     if(url.pathname==='/auth/v1/logout')return send({});
     if(url.pathname==='/rest/v1/rpc/clinic_access')return send({kind:'clinical',active:false,admin:false,actorId:uid,clinic:null,doctors:[],staff:[]});
-    if(url.pathname==='/rest/v1/rpc/workspace_directory')return send({patients,counts:{total:patients.length,new:0,returns:1}});
+    if(url.pathname==='/rest/v1/rpc/workspace_directory'){const visible=recoveryNoticeReview?patients.filter(p=>!p.deletion_requested_at):patients;return send({patients:visible,counts:{total:visible.length,new:0,returns:1}});}
     if(url.pathname==='/rest/v1/rpc/list_patient_chat_turns')return send(input.p_patient_id===patientId?turns:[]);
     if(url.pathname==='/rest/v1/rpc/get_integration_status')return send({google_connected:false});
     if(url.pathname==='/rest/v1/rpc/sharing_overview')return send({memberships:[],members:[],received:[],granted:[]});

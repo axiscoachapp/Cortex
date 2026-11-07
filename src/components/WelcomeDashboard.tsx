@@ -23,6 +23,7 @@ import {
 import { SpecialtySettingsSheet } from '@/components/SpecialtySettingsSheet';
 import { OnboardingCard } from '@/components/OnboardingCard';
 import { ConsultationRecoveryNotice } from '@/components/ConsultationRecoveryNotice';
+import { LocalRecordingRecoveryNotice } from '@/components/LocalRecordingRecoveryNotice';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Patient } from '@/types/patient';
@@ -234,6 +235,7 @@ export function WelcomeDashboard({
         </Button>
 
         {onResumeConsultation && <ConsultationRecoveryNotice userId={userId} onResume={onResumeConsultation} />}
+        {onResumeConsultation && <LocalRecordingRecoveryNotice userId={userId} onResume={onResumeConsultation} />}
 
         {/* First-run onboarding checklist */}
         <OnboardingCard

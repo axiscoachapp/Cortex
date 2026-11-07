@@ -1,0 +1,9 @@
+# K7/2c — descoberta de gravações locais no Início
+
+O Início médico procura gravações interrompidas do ator atual no IndexedDB existente deste navegador. O leitor percorre o store readonly e conserva no máximo51 metadados (ID da gravação, ID do paciente, criação), ordenados por criação/ID decrescentes. Não devolve blob, comentários, MIME ou nome guardado; não altera schema, arquivos ou registros. Falha de armazenamento é um erro explícito, nunca uma lista vazia. O cancelamento impede resultado tardio e encerra a transação quando possível; conexão sempre fechada.
+
+As50 gravações mais recentes são agrupadas por paciente, com aviso de limite quando houver outra. Antes de exibir nome ou ação, uma leitura privada `patients(id,name)` com `user_id` do ator, `deletion_requested_at IS NULL` e os IDs exatos verifica a disponibilidade atual. Usa o nome dessa leitura, nunca o nome antigo da gravação. Paciente indisponível (inclusive exclusão solicitada) gera apenas contagem sem identidade e nenhuma ação; o áudio fica preservado. Arquivamento sozinho não impede a retomada privada por ID. Não há fusão ou inferência de identidade.
+
+Chave por ator, gc/stale0, releitura ao montar, sem metadados antigos durante pending/erro. Atualizar/retry são explícitos. Sem ator, nada é lido; sem gravações, não consulta pacientes e não ocupa o Início. O aviso é específico deste navegador, não inventário de outros dispositivos/áudios remotos.
+
+O clique abre o paciente via fluxo já existente de recuperação, com proteção do trabalho atual e conferência fresca do prontuário. Se o paciente já estiver montado, a retomada autorizada também relê os áudios locais, respeitando as guardas de captura, trabalho pendente e confirmação de texto não salvo. Não processa, baixa, apaga, reproduz ou envia áudio no Início. Comandos existentes dentro do paciente ficam sob ação humana explícita; nenhuma alteração em seus escritores neste incremento.

@@ -292,7 +292,7 @@ export function ChatPanel({
     return () => {
       active = false;
     };
-  }, [userId, patient?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userId, patient?.id, draftRetryKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const processRescued = async (entry: RescuedRecording) => {
     setRescued((list) => list.filter((item) => item.id !== entry.id));

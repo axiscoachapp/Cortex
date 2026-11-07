@@ -32,3 +32,17 @@ test('recovery metadata and simulated cross-tab revision never permit a draft wr
     assert.throws(()=>api.recoveryNotice.setMode('unsupported'));
   }finally{await api.close();}
 });
+
+test('local recording ownership read projects only current private patient identities',async()=>{
+  const api=await startClinicFixture({workspaceDates:true,recoveryNoticeReview:true});
+  const target=api.displayData.drafts[0].patient_id;
+  const query=new URLSearchParams({select:'id,name',user_id:'eq.'+uid,deletion_requested_at:'is.null',id:`in.(${target},dddddddd-dddd-4ddd-8ddd-dddddddddddd)`,limit:'51'});
+  try{
+    const read=()=>fetch(api.origin+'/rest/v1/patients?'+query);
+    const reply=await read();assert.equal(reply.status,200);const rows=await reply.json();assert.equal(rows.length,1);
+    assert.deepEqual(Object.keys(rows[0]).sort(),['id','name']);assert.equal(rows[0].id,target);
+    api.recoveryNotice.setLocalMode('unavailable');assert.equal((await read()).status,503);
+    api.recoveryNotice.setLocalMode('valid');query.set('user_id','eq.other');assert.equal((await read()).status,400);
+    assert.equal(api.recoveryNotice.unexpected.length,1);
+  }finally{await api.close();}
+});

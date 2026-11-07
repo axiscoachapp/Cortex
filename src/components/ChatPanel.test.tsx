@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   upload: vi.fn(),
   from: vi.fn(),
   profileUpdate: vi.fn(),
+  rescued: vi.fn(),
   capture: { isRecording: false, isStarting: false, isStopping: false },
   recording: { onStop: null as null | ((blob: Blob, mime: string, comments: string[]) => Promise<void>) },
 }));
@@ -53,6 +54,7 @@ vi.mock('@/lib/consultationDrafts', () => ({
   loadConsultationDraft: mocks.loadDraft,
   saveConsultationDraft: mocks.saveDraft,
 }));
+vi.mock('@/lib/recordingRescue',()=>({listRescuedRecordings:mocks.rescued,saveRescuedRecording:vi.fn(),deleteRescuedRecording:vi.fn()}));
 vi.mock('@/components/UsageMeter', () => ({ UsageMeter: () => null, UsageOverBanner: () => null }));
 vi.mock('@/components/LiveCopilotCard', () => ({ LiveCopilotCard: () => null }));
 vi.mock('@/components/ConsultationReviewModal', () => ({
@@ -103,6 +105,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.from.mockReset();
   mocks.loadDraft.mockResolvedValue(null);
+  mocks.rescued.mockResolvedValue([]);
   mocks.saveDraft.mockResolvedValue(undefined);
   mocks.upload.mockResolvedValue({ error: null });
   Object.assign(mocks.capture, { isRecording: false, isStarting: false, isStopping: false });
@@ -144,6 +147,7 @@ describe('patient-scoped asynchronous clinical work', () => {
     rerender(chart(1));
     expect(await screen.findByText('Revisão salva em outra aba')).toBeVisible();
     expect(mocks.loadDraft).toHaveBeenCalledTimes(2);
+    expect(mocks.rescued).toHaveBeenCalledTimes(2);
     expect(mocks.invoke).not.toHaveBeenCalled();
     expect(mocks.saveDraft).not.toHaveBeenCalled();
   });
@@ -158,6 +162,7 @@ describe('patient-scoped asynchronous clinical work', () => {
     expect(screen.getByLabelText('Pergunta ao assistente clínico')).toHaveValue('Texto sintético não enviado');
     expect(mocks.loadDraft).toHaveBeenCalledTimes(1);
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Textos não salvos'));
+    expect(mocks.rescued).toHaveBeenCalledTimes(1);
     confirm.mockRestore();
   });
   it('does not reset pending non-audio work or retry automatically after it finishes', async () => {
