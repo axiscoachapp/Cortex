@@ -11,3 +11,5 @@ Próximos: ciclo de vínculos e demais K1/MFA/K7 conforme ESTADO. T46 74191df/T4
 Sem incoming novo/alterado:última2152 atendida2201/2316/2330/2353, sem aberta histórica/confirmar próprias mensagens. Digest dos68 arquivos para-codex: cd4ae7f0d05082496f3d8ff38fc7bbea94ad4e1dc28a2c81fefb5cfb35634c61, algoritmo na validação.
 
 Automação ACTIVE. Sem SQL/schema/Claude/PersonalMed/SaaS/Meta/hosted/carga/paid/deploy/push. Só caminhos próprios; dirt tasks/plan.md (+6) e tasks/todo.md (+7) preservado por hash. Manifesto e índice exatos conferidos no commit.
+
+Ao encerrar, apareceram três caminhos C4 em edição paralela (handlers, teste e migration de fluxo), fora de ambos os commits próprios. Preservar; reteste somente após SHA/mensagem do Claude.
