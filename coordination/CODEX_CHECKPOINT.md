@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K7/2b: `b1915181641c15e5868f81738dbe74ec7055299f`, main/axiscoachapp (autor e committer), sem push. Índice livre; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas.
+
 Atualizado em 2026-11-06 22:40. **K7/2b — página genérica retirada, acompanhamento na Agenda:** [provas](../docs/reviews/2026-11-06/scheduling-migration/IMPLEMENTATION.md). Painel médico somente metadados/privado por ator, espera/confirmação abertas, fresh/abort/erro/limite50; edição/conclusão/versões no paciente. Pendências sai dos menus; /trabalho substitui histórico para paciente (prioritário), Agenda médica ou agenda administrativa por papel, genérico ao Início. Aliases/prefixo/inatividade preservados, zero leitores clínicos pela recepção.53Vitest/4arquivos,6Node/tipos/lint/sintaxe/três flags,24estados375–1920/135%,27hashes/cleanup; três RED do gate corrigidos. Semana/data e registros preservados, nenhuma escrita/IA/externo no navegador; sem DDL/CAS/grant novo. K7 continua para pós-consulta e áudio local no Início. Próximo candidato K6 contato NOWAIT/robô/C5 f837c57;2152 já atendida2201, sem nova resposta devida.
 
 Automação ACTIVE; main/axiscoachapp, sem push/hosted/Meta/carga. Preservar Claude/PersonalMed/SaaS. Reteste K6 no novo SHA, M2/MFA/compartilhamento/piloto abertos.
