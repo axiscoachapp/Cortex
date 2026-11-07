@@ -1,0 +1,34 @@
+{
+  "baseline": "d8142f1d0d18f27da3b043824161dc9fe3869c44",
+  "scope": "K1/4c release client adapter only",
+  "unit": {
+    "scaffoldRedTests": 36,
+    "newTests": 36,
+    "existingClaimTests": 34,
+    "existingReadTests": 55,
+    "passed": 125,
+    "failed": 0,
+    "files": 3
+  },
+  "sdk": {
+    "version": "2.86.0",
+    "checks": 9,
+    "commands": 8,
+    "realNetwork": false,
+    "sourceHashes": 3,
+    "sourceHashesStable": true,
+    "unexpectedResources": 0
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 3,
+    "status": "passed"
+  },
+  "syntax": {
+    "scripts": 1,
+    "status": "passed"
+  },
+  "review": "Fresh read-only adversarial review: no concrete issues after thorough examination",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "limits": "No UI/browser/server authorization/SQL CAS/RLS/Meta proof. Local ownership snapshot check is not server authorization; existing broader unassign policy is unchanged. Unknown command outcomes require fresh reconciliation before another human action."
+}

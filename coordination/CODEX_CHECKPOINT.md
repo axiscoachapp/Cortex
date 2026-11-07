@@ -1,5 +1,12 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-07 03:20. **K1/4c — adaptador unassign:** [provas](../docs/reviews/2026-11-07/whatsapp-release/IMPLEMENTATION.md), [contrato](../docs/product/clinic-crm/WHATSAPP_RELEASE_COMMAND.md). Próprio apenas como conferência local do snapshot, sem identidade no corpo; recibo open/revisão+1/assignedTo null, sem retry e needsRefresh após início inconclusivo.36RED→125Vitest/três arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória com nove verificações/oito comandos/três hashes estáveis/zero rede. Não prova autorização/SQL/CAS/Meta nem integra botão.
+
+Próximo K1/4d: devolver à fila na UI só aberta/própria, escopo/detalhe frescos e reconciliação por gerações. Nenhuma mensagem Claude nova;2152 atendida2353, 2026-11-07-0320_codex-para-claude_k1-contrato-devolver-fila.md informativa encerrada sem confirmação. C4/C5 aguardam SHA; dois RED C5 fora desta suíte dirigida. Automação ACTIVE; main/axiscoachapp sem push/hosted/SQL/carga, preservar Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md.
+
+---
+
+
 Entrega K1/4b: `ce583d616c1b8f1600ecf8ac93771cfea917919b`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Botão de assumir/conferência concluído; outros comandos continuam em recortes próprios.
 
 Atualizado em 2026-11-07 03:07. **K1/4b — assumir na UI:** [provas](../docs/reviews/2026-11-07/whatsapp-claim-ui/IMPLEMENTATION.md). Clique só no detalhe fresco aberto/sem responsável; conferência de detalhe/lista sem retry do comando. Em erro/conferência, detalhe oculto; gerações explícitas e feedback neutro corrigem RED de resposta antiga/conteúdo antigo.148Vitest+9Node/tipos/lint/sintaxe/quatroflags/revisão;28estados320–1920/135%,323fontes/27hashes/dois overlays/cleanup.161requests/12assign só mock (8aplicados/4conflitos), oito403/409-console deliberados; zero JS/falhas/clínico/externos/Meta. Final `whatsapp-claim-ui-closed-final`/28PNGs; preliminares excluídos.
