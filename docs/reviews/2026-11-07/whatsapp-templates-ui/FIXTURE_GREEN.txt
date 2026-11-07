@@ -1,0 +1,32 @@
+✔ queue fixture changes only queue and revision and never invents queue in act receipt (6.2818ms)
+✔ queue fixture requires exclusive opt-in and rejects injected authority (2.746ms)
+✔ queue fixture models forbidden, conflict, unconfirmed and a subsequent different queue (0.8679ms)
+✔ queue fixture keeps broader producer policy separate from local UI eligibility (0.6261ms)
+✔ conversation paging is opt-in, scoped by filter/search and preserves tied cursor tokens (7.8659ms)
+✔ fixture returns only the requested filter and conversation (1.1112ms)
+✔ fixture refuses writes, foreign actors and authority injection (0.812ms)
+✔ bot session is a scoped read and distinguishes missing path from a refused read (1.1711ms)
+✔ controlled refusals and malformed DTOs restore without modifying rows (1.3194ms)
+✔ new HTTP fixture remains opt-in and only enables synthetic reads (108.6214ms)
+✔ history is opt-in, bounded and advances by the full timestamp/id token (1.0413ms)
+✔ withdrawal fixture revokes only matching phone variants without changing identity or inventing receipt flags (5.1918ms)
+✔ withdrawal fixture requires exclusive opt-in and rejects authority or extra target flags (4.304ms)
+✔ withdrawal fixture models forbidden, conflict, unconfirmed and a later independent consent change (1.2075ms)
+✔ withdrawal fixture keeps broader producer policy separate from local ownership eligibility (1.1574ms)
+✔ withdrawal fixture changes a different phone without revoking the original phone variants (0.6872ms)
+✔ subsequent consent change stays scoped to its target phone after another phone was withdrawn (1.7703ms)
+✔ stored template read is exact and leaves conversations untouched (4.7968ms)
+✔ templates reject authority, send inputs and unauthorized callers (0.6707ms)
+✔ template fixture snapshots are isolated and can represent empty results (0.5478ms)
+✔ template failure modes are independent of conversation reads (0.5763ms)
+✔ template HTTP read is opt-in and exercises loopback only (102.385ms)
+✔ template browser guard permits only authentication and scoped reads (1.4289ms)
+✔ template browser guard rejects fixture writes and unrelated readers (2.3ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 929.1032

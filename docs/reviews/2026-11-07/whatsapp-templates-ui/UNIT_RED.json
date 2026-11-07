@@ -1,0 +1,9 @@
+{
+  "baseline": "99be03e3c509bbaec045af17571fd17c7364a643",
+  "failed": 1,
+  "passed": 0,
+  "pending": 20,
+  "title": "stored template catalog in the reception inbox opens a fresh catalog only after explicit request and fresh channel permission",
+  "message": "Error: Unable to find role=\"button\" and name \"Consultar modelos\"\n\nIgnored nodes: comments, script, style\n\u001b[36m<body>\u001b[39m\n  \u001b[36m<div>\u001b[39m\n    \u001b[36m<div\u001b[39m\n      \u001b[33mclass\u001b[39m=\u001b[32m\"space-y-4\"\u001b[39m\n    \u001b[36m>\u001b[39m\n      \u001b[36m<header\u001b[39m\n        \u001b[33mclass\u001b[39m=\u001b[32m\"space-y-2\"\u001b[39m\n      \u001b[36m>\u001b[39m\n        \u001b[36m<h1\u001b[39m\n          \u001b[33mclass\u001b[39m=\u001b[32m\"text-xl font-semibold\"\u001b[39m\n        \u001b[36m>\u001b[39m\n          \u001b[0mConversas\u001b[0m\n        \u001b[36m</h1>\u001b[39m\n        \u001b[36m<p\u001b[39m\n          \u001b[33mcla",
+  "excluded": "Earlier parser failure was test preparation and is not behavioral RED."
+}

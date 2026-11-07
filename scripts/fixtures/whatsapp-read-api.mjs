@@ -9,6 +9,11 @@ export const whatsappListCursors={first:at+'|'+listId(101),second:at+'|'+listId(
 export function createWhatsAppReadFixture(ids,{claimReview=false,releaseReview=false,closeReview=false,reopenReview=false,queueReview=false,revokeReview=false}={}) {
   if([claimReview,releaseReview,closeReview,reopenReview,queueReview,revokeReview].filter(Boolean).length>1)throw new Error('Command fixtures must be isolated');
   const calls = [], failures = new Map();
+  let templates=[
+    {name:'modelo_sintetico',language:'pt_BR',category:'UTILITY',status:'APPROVED',body:'Texto <b>literal</b> {{1}} https://example.invalid/ · '+'PalavraSinteticaLonga'.repeat(28),paramCount:1},
+    {name:'modelo_sintetico',language:'en_US',category:'',status:'FUTURE_STATUS',body:'Segundo idioma sintético.',paramCount:0},
+    {name:'modelo_'+ 's'.repeat(500),language:'por_BR',category:'FUTURE_CATEGORY',status:'REJECTED',body:'Corpo sintético para leitura. '.repeat(100),paramCount:100},
+  ];
   const base = { waId: null, contactId: null, caseId: null, queue: 'geral', status: 'open', assignedTo: null, assignedAt: null, openedAt: at, firstResponseAt: null, closedAt: null, lastInboundAt: at, windowOpenUntil: at, lastMessageAt: at, lastMessagePreview: 'Prévia sintética de atendimento', unreadCount: 2, optedOut: false, consented: true, revision: 1 };
   const rows = [
     { ...base, id: whatsappReadIds.first, profileName: (closeReview||reopenReview||queueReview||revokeReview)?'Contato sintético A · '+'PerfilSintéticoLongo'.repeat(7):'Contato sintético A', assignedTo: ids.a,queue:'agendamento' },
@@ -37,6 +42,8 @@ export function createWhatsAppReadFixture(ids,{claimReview=false,releaseReview=f
     resetClaims(){if(!claimReview)throw new Error('Claim fixture is not enabled');rows.splice(0,rows.length,...structuredClone(initialRows));claimMode='success';failures.clear();},
     setClaimMode(value){if(!claimReview||!['success','stale','unconfirmed','forbidden'].includes(value))throw new Error('Invalid claim fixture mode');claimMode=value;},
     snapshotRows:()=>structuredClone(rows),
+    snapshotTemplates:()=>structuredClone(templates),
+    setTemplates:value=>{templates=structuredClone(value);},
     setListReview:enabled=>{listReview=enabled===true;},
     setHistoryReview:enabled=>{historyReview=enabled===true;},
     setBotSession:(id,value)=>sessions.set(id,structuredClone(value)),
@@ -45,7 +52,7 @@ export function createWhatsAppReadFixture(ids,{claimReview=false,releaseReview=f
       calls.push({ actor, input: structuredClone(input) });
       const fail = (code, status) => ({ status, data: { code, error: 'Synthetic read failure' } });
       if (![ids.admin, ids.a, ids.b].includes(actor)) return fail('forbidden', 403);
-      const allowed = { state: [], conversations: ['filter', 'search', 'limit', 'before'], messages: ['conversationId', 'before'],botSession:['conversationId'],...(claimReview||releaseReview||closeReview||reopenReview||queueReview||revokeReview?{act:['conversationId','operation','revision',...(queueReview?['queue']:[])]}:{}) };
+      const allowed = { templates: [], state: [], conversations: ['filter', 'search', 'limit', 'before'], messages: ['conversationId', 'before'],botSession:['conversationId'],...(claimReview||releaseReview||closeReview||reopenReview||queueReview||revokeReview?{act:['conversationId','operation','revision',...(queueReview?['queue']:[])]}:{}) };
       if (!Object.hasOwn(allowed, input.action) || Object.keys(input).some(key => key !== 'action' && !allowed[input.action].includes(key))) return fail('invalid', 400);
       if(input.action==='act'){
         if(input.operation!==(revokeReview?'revoke_opt_in':queueReview?'set_queue':reopenReview?'reopen':closeReview?'close':releaseReview?'unassign':'assign')||!Number.isInteger(input.revision)||input.revision<0||input.revision>2147483646)return fail('invalid',400);
@@ -65,6 +72,7 @@ export function createWhatsAppReadFixture(ids,{claimReview=false,releaseReview=f
       if (mode === 'forbidden') return fail('forbidden', 403);
       if (mode === 'invalid') return { status: 200, data: { unexpected: true } };
       if (input.action === 'state') return { status: 200, data: { serverReady: true, connected: true, status: 'connected', displayPhone: 'Número sintético', verifiedName: 'Clínica sintética', quality: null, connectedAt: at, canManage: actor === ids.admin, canUseInbox: true, ...(actor === ids.admin ? { lastError: null, webhookUrl: 'https://example.invalid/webhook', phoneNumberId: null, wabaId: null } : {}) } };
+      if (input.action === 'templates') return {status:200,data:{templates:structuredClone(templates)}};
       if (input.action === 'conversations') {
         if (!['open', 'closed', 'mine', 'unassigned'].includes(input.filter) || !listReview&&input.before != null || input.limit !== 50 || typeof input.search !== 'string' || input.search.length > 80) return fail('invalid', 400);
         const filtered=(listReview?[...pagedRows,rows[2]]:rows).filter(row => input.filter === 'closed' ? row.status === 'closed' : row.status === 'open' && (input.filter === 'mine' ? row.assignedTo === actor : input.filter === 'unassigned' ? !row.assignedTo : true)).filter(row => row.profileName.toLowerCase().includes(input.search.toLowerCase()));

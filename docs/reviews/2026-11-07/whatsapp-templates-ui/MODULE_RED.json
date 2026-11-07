@@ -1,0 +1,9 @@
+{
+  "phase": "first component module failed to render in the Windows test run",
+  "failed": 18,
+  "passed": 3,
+  "sample": "Error: Unable to find role=\"button\" and name \"Consultar modelos\"",
+  "observedConsole": "Element type is invalid; check render method of Inbox",
+  "diagnosis": "Case-similar UI and reader module names collided in test resolution; distinct WhatsAppTemplateCatalog.tsx basename fixed the run.",
+  "resolution": "Final23 UI tests pass; initial3 passing cases were access-gate negatives, not a GREEN UI."
+}

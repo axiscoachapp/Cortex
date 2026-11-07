@@ -14,6 +14,7 @@ import {reopenWhatsAppConversation} from './whatsappReopen';
 import {setWhatsAppConversationQueue} from './whatsappQueue';
 import {revokeWhatsAppConsent} from './whatsappRevokeConsent';
 import { WhatsAppMessages } from './WhatsAppMessages';
+import WhatsAppTemplateCatalog from './WhatsAppTemplateCatalog';
 import { clinicDateLabel, clinicTime } from './dates';
 
 export default function WhatsAppInbox() {
@@ -39,7 +40,7 @@ function Inbox({ actor, clinic }: { actor: string; clinic: string }) {
     {channel.isFetching || channel.isPending ? <p role="status" className="p-4 text-sm">Verificando WhatsApp…</p>
       : channel.isError ? <ReadFailure label="conexão" onRetry={() => void channel.refetch()} />
       : fresh && channel.data.serverReady && channel.data.connected && channel.data.canUseInbox
-        ? <ConversationList actor={actor} clinic={clinic} />
+        ? <><WhatsAppTemplateCatalog actor={actor} clinic={clinic} /><ConversationList actor={actor} clinic={clinic} /></>
         : <div role="status" className="rounded-lg border bg-card p-6 space-y-2">
           <h2 className="font-semibold">WhatsApp indisponível</h2>
           <p className="text-sm text-muted-foreground">Peça à administração para verificar a conexão e seu acesso ao WhatsApp da clínica.</p>

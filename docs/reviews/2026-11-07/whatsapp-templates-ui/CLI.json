@@ -1,0 +1,63 @@
+{
+  "syntax": 5,
+  "invalidRejected": 6,
+  "checks": [
+    {
+      "args": [
+        "--check-whatsapp-templates"
+      ],
+      "rejected": true,
+      "reason": "AssertionError [ERR_ASSERTION]: Templates require isolated WhatsApp mode\r"
+    },
+    {
+      "args": [
+        "--only=whatsapp-read",
+        "--check-whatsapp-templates",
+        "--check-whatsapp-claim"
+      ],
+      "rejected": true,
+      "reason": "AssertionError [ERR_ASSERTION]: Templates require isolated WhatsApp mode\r"
+    },
+    {
+      "args": [
+        "--only=whatsapp-read",
+        "--check-whatsapp-templates",
+        "--check-whatsapp-bot-read"
+      ],
+      "rejected": true,
+      "reason": "AssertionError [ERR_ASSERTION]: Templates require isolated WhatsApp mode\r"
+    },
+    {
+      "args": [
+        "--only=whatsapp-read",
+        "--overlay=src/features/reception/WhatsAppTemplateCatalog.tsx"
+      ],
+      "rejected": true,
+      "reason": "AssertionError [ERR_ASSERTION]: WhatsApp read only permits its UI and read-client overlays\r"
+    },
+    {
+      "args": [
+        "--baseline=99be03e3c509bbaec045af17571fd17c7364a643",
+        "--only=whatsapp-read",
+        "--check-whatsapp-templates",
+        "--overlay=src/features/reception/WhatsAppInbox.tsx",
+        "--run=whatsapp-templates-ui-omission-control-1794045073950"
+      ],
+      "rejected": true,
+      "reason": "AssertionError [ERR_ASSERTION]: Template component/reader must be explicitly included in snapshot: src/features/reception/WhatsAppTemplateCatalog.tsx\r"
+    },
+    {
+      "args": [
+        "--baseline=6949ca2fcc31c09c7886d22e1fd67b6c10aeb520",
+        "--only=whatsapp-read",
+        "--check-whatsapp-templates",
+        "--overlay=src/features/reception/WhatsAppInbox.tsx",
+        "--overlay=src/features/reception/WhatsAppTemplateCatalog.tsx",
+        "--run=whatsapp-templates-reader-omission-1794045392320"
+      ],
+      "rejected": true,
+      "reason": "Reader missing from frozen baseline is rejected before browser launch"
+    }
+  ],
+  "excluded": "Initial omission probe used default existing artifact folder; EEXIST did not validate the source guard. Corrected probe uses a distinct run folder."
+}

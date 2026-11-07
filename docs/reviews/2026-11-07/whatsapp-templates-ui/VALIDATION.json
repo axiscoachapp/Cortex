@@ -1,0 +1,127 @@
+{
+  "baseline": "99be03e3c509bbaec045af17571fd17c7364a643",
+  "scope": "K1/5b stored template catalog consultation in reception",
+  "unit": {
+    "passed": 258,
+    "failed": 0,
+    "files": 6,
+    "newUI": 23,
+    "initialDirectedRed": 1,
+    "pausedOfflineRed": 2,
+    "existingInbox": 59,
+    "existingQueueUI": 27,
+    "existingRevokeUI": 36,
+    "existingTemplateReader": 58,
+    "existingRead": 55
+  },
+  "fixture": {
+    "passed": 24,
+    "failed": 0,
+    "files": 5,
+    "newTemplateCases": 5,
+    "newReadBoundaryCases": 2,
+    "initialDirectedRed": 1
+  },
+  "browser": {
+    "raw": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-templates-ui-visual-final/AUDIT.json",
+    "states": 39,
+    "pngs": 39,
+    "widths": [
+      320,
+      375,
+      1280,
+      1920
+    ],
+    "scalePercent": 135,
+    "frozenSources": 347,
+    "runtimeHashes": 33,
+    "overlays": 2,
+    "sourceHashesStable": true,
+    "requests": 76,
+    "fixtureCalls": 64,
+    "templateReads": 21,
+    "expectedHTTP403": 8,
+    "expectedConsoleErrors403": 8,
+    "jsErrors": 0,
+    "failedRequests": 0,
+    "externalRequests": 0,
+    "clinicalReads": 0,
+    "writes": 0,
+    "cleanupVerified": true,
+    "manualImagesInspected": [
+      "templates-literal-body-320",
+      "templates-literal-1920"
+    ]
+  },
+  "typescript": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json --pretty false",
+    "exitCode": 0
+  },
+  "lint": {
+    "files": 8,
+    "exitCode": 0,
+    "note": "Seven initial files plus new browser boundary test; final helper rechecked after capture-only addition."
+  },
+  "syntax": {
+    "scripts": 5,
+    "exitCode": 0
+  },
+  "cli": {
+    "invalidCombinationsRejected": 6,
+    "componentOmissionRejected": true,
+    "readerOmissionRejected": true
+  },
+  "review": {
+    "cycles": 3,
+    "actionable": [
+      "paused offline refetch retained selection: fetchStatus idle gate and two waited RED regressions",
+      "capture default navigation destroyed continuity: all captures navigate:false",
+      "browser request allowlist missed synthetic writer routes: exact four method/path pairs plus two guard tests"
+    ],
+    "final": "No further concrete findings after read-only reconciliation",
+    "crossModel": "Cross-model skipped: non-interactive context."
+  },
+  "excluded": [
+    "Initial parser preparation failure",
+    "First component naming collision run:18 failed/3 gate negatives passed; distinct Catalog basename resolved",
+    "First synchronous paused assertions replaced by waited DOM checks before final2RED",
+    "Initial omission probe reached existing default artifact folder; repeated with unique folder",
+    "whatsapp-templates-ui-final: navigation reset failure after1state",
+    "whatsapp-templates-ui-reviewed-final:37 functional states before two extra mobile body captures"
+  ],
+  "sources": [
+    {
+      "path": "src/features/reception/WhatsAppTemplateCatalog.tsx",
+      "sha256": "2e87c79c35d5e6bac402826bf5cb3460c46355028cb41377b83e588261ac8f69"
+    },
+    {
+      "path": "src/features/reception/WhatsAppInbox.tsx",
+      "sha256": "2a10388a5d355d25a23b786d89c1e2fa98a7e7811ee043b40e5fbeba6c1668c7"
+    },
+    {
+      "path": "src/features/reception/WhatsAppTemplatesUI.test.tsx",
+      "sha256": "a2fb19e782e841fe1f745eaccfcb591ca3f84f4505d4ec00a9ca6d08b2069300"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "cb4b16a94335f943f37e6ef52495361d42d30e9de5433c828811d7ff511e099e"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-templates-api.node-test.mjs",
+      "sha256": "41b08169f7c0c5241b8e757ae7ab2ac4ea7dddb87b0084c8d777f14468ece9e9"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-templates-browser.mjs",
+      "sha256": "239474f2ffc6b65a31922125f79c23470897c21bf89b2d411f33484563eefaec"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-templates-browser.node-test.mjs",
+      "sha256": "8f82076a5ad2611400957bd4d43a5cbeec17b71648075088fa56f34e9a053bd7"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "8932a5c03103a9de59ea77946459df0218113c9bfb846092cd05c6d427238f65"
+    }
+  ],
+  "limits": "Synthetic UI and HTTP only; no real Auth/authorization, DB, completeness, Meta approval, consent or send validated. No producer/C5/schema, hosted DB, external call, carga or push. Directed tests only; known C5 RED cases excluded."
+}
