@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K1/5a: `0e58adf0a0d180e0da8268001fbc1d6f77bb44eb`, main/axiscoachapp (autor e committer), sem push. Só16caminhos próprios, índice livre e dirt6/7 preservado por hash. Leitor armazenado pronto; UI5b e catálogo4j continuam separados.
+
 Atualizado em 2026-11-07 06:38. **K1/5a — modelos armazenados:** [provas](../docs/reviews/2026-11-07/whatsapp-templates/IMPLEMENTATION.md). Leitor templates estrito/tupla/limites/abort/erros locais, sem sync/send; vazio não comprova conexão, status não autoriza envio, sem garantia de total.58RED→176Vitest/quatro arquivos; SDK2.86.0/11grupos/dez POST/dois hashes estáveis/zero rede. Tipos reais da aplicação verdes após15 erros de testes próprios corrigidos; lint5/sintaxe1/revisão sem achados. Próximo5b UI só consulta, fresca por ator/clínica/acesso/conexão. Nenhuma entrada Claude nova; registro0638 informativo,2152 já atendida.4j/0506 e C4/C5 após SHAs separados; dois RED C5 fora da suíte dirigida. Automação ACTIVE; main/axiscoachapp sem push/hosted/Meta/carga, preservar Claude/SaaS/PersonalMed e dirt6/7.
 
 ---
