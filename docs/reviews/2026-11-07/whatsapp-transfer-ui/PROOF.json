@@ -1,0 +1,489 @@
+{
+  "syntheticOnly": true,
+  "localOnly": true,
+  "baseline": "d5d6ae0d38e379c766b689e9252252a56b4f97fa",
+  "incomingCount": 71,
+  "incomingDigest": "c96e7af6821439f9f4ef2aab9fb6cba68f6b8543915ebac1fe7213371c5a8f07",
+  "foreignPreserved": [
+    {
+      "path": "tasks/plan.md",
+      "sha256": "d4091e88d0f622bf15e9ad80f79957ffd801edaea968870274a5b8b8370023b6"
+    },
+    {
+      "path": "tasks/todo.md",
+      "sha256": "a60d951ead6051eae4411e87b5a7c22e94b57bf07fb46b2b143bde2c27762e49"
+    }
+  ],
+  "automation": {
+    "id": "coordenar-cortex-com-claude",
+    "mode": "delete",
+    "deleteStatus": "deleted",
+    "reason": "explicit user request to finish this increment, hand off to Claude and stop"
+  },
+  "checks": {
+    "unitPassed": 433,
+    "unitFiles": 12,
+    "newUi": 34,
+    "initialRed": 26,
+    "initialNegativeControls": 4,
+    "channelPendingRedReproduced": true,
+    "coalescedChannelRetired": true,
+    "browserStates": 52,
+    "pngs": 84,
+    "requests": 180,
+    "catalogueReads": 32,
+    "simulatedActs": 12,
+    "expected403or409": 12,
+    "frozenSources": 422,
+    "runtimeSources": 42,
+    "overlays": 3,
+    "sourceHashesStable": true,
+    "cleanupVerified": true,
+    "tsc": true,
+    "lintFiles": 6,
+    "syntaxScripts": 2
+  },
+  "sources": [
+    {
+      "path": "src/features/reception/WhatsAppTransferAction.tsx",
+      "sha256": "84c06916f2aee33811dd77cd9e1aebacb8356b2bb829d90cf7653d0697a7a504"
+    },
+    {
+      "path": "src/features/reception/WhatsAppTransferUI.test.tsx",
+      "sha256": "a59b37242867a2402bd9aafaf21c515e713a8d774a438c206c4bfca7fe3badb8"
+    },
+    {
+      "path": "src/features/reception/WhatsAppInbox.tsx",
+      "sha256": "f214680f0825d0ba14f71d5fa89ae92ec3fd312e7eb4de5eecf7181b8a4a14b5"
+    },
+    {
+      "path": "src/features/reception/WhatsAppMessages.tsx",
+      "sha256": "d542f824b10d064a5b48c98d6552762ff186a78f20b60a30de6018c992815d12"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "fbf55ed86148c4e4f7672423861ff5521efbe0f7148dee11bfaef41450ffd6fb"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-transfer-browser.mjs",
+      "sha256": "2d9e7b0120dea27a5e9e3139bdb325e1acc8fad560d40bf527beeac31f9b5634"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-transfer-ui/INITIAL_ACTION.tsx.txt",
+      "sha256": "def8eb893f99f3d6476c2aa6a52f6c964206195d1fcde9038ef596732f336623"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-transfer-ui/UNIT_RED.json",
+      "sha256": "f5dc8ae82555f31f5b1bc0289c21ac4fd9cea3e0a1bffa0902f04c3846632b0b"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-transfer-ui/CHANNEL_RED.json",
+      "sha256": "9dfc57a261c2dfc1757f4b585585478cf9cdcde2ecd944e2d6299c3b92f6b9ea"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-transfer-ui/UNIT_FINAL.json",
+      "sha256": "269a37be020a3a84b69767f3f997118b4d42f3eaaf988f84e32c791130b43dcb"
+    },
+    {
+      "path": "docs/reviews/2026-11-07/whatsapp-transfer-ui/REVIEW.md",
+      "sha256": "1abec1770f802e6bfbb77bf7ec92f404c25942461c186d6dfff138f8c01b8098"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/AUDIT.json",
+      "sha256": "2257fb0723474ade14302084d15cac3f08fd94bd91e67d7da4549649b195314b"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-cancelled-1280.png",
+      "sha256": "a7702955286d02b34b89b2208feff3ee6ef905ceecf0cab854bce12f50640586"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-cancelled-1920.png",
+      "sha256": "d4a6d8c53d4f61898af49bd79e435545cd8dd8d95a668b08a08672df00db2bab"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-cancelled-320.png",
+      "sha256": "e2f3c95ed35a52099c1d24628e668c53f72ecb17decd93a3c3b39f456280a16e"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-cancelled-375.png",
+      "sha256": "ca81c12d2d2e61ca462a588e8ba45ec2d0ebd6ff905e41f1274acddb6bf8ceb4"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-choices-1280-actions.png",
+      "sha256": "b7ed06e2d4ce423f909c2daf186f9e4889d56fc44b0c4f5a1466a4a9e631a8a9"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-choices-1280.png",
+      "sha256": "e1649fb76a28589c0055c564c954cc0b7770e5186a5b411025c0407128fe61c7"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-choices-1920-actions.png",
+      "sha256": "9da632cb48fbc0fc9d7d5d4fdf7c3fc6114ce8db67b8ebfa6d86f2bd36b8d1d2"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-choices-1920.png",
+      "sha256": "3ac29f535c01918c9d4e3cc550821188eaae39d156af667eb1b5d8b7be7c0abd"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-choices-320-actions.png",
+      "sha256": "6f7ef700ac7d586961433fbba004ddb34d7eb9dfb063ad0be481faf961c0d4cb"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-choices-320.png",
+      "sha256": "2d2097b57b5326aae7423cf46845faed02a67f5f32577aa01dd18da04bd98bfc"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-choices-375-actions.png",
+      "sha256": "837f2429154b888183df8f83fa8fa1b402b7dbec245a837b112fafa9ca503b42"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-choices-375.png",
+      "sha256": "0fb0bc252e833da013d7d21e93780145096f83e2084223d15f0c4a270042fa28"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-confirmation-1280-actions.png",
+      "sha256": "80a328806cd540cf4e1aabea951072ed30f1d66fcdbb0ec40993fcdd23ecb61a"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-confirmation-1280.png",
+      "sha256": "80a328806cd540cf4e1aabea951072ed30f1d66fcdbb0ec40993fcdd23ecb61a"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-confirmation-1920-actions.png",
+      "sha256": "29fc673479e2bcd767b4250d7d8498b83e556351ff407b998efaed9e3beb8ce2"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-confirmation-1920.png",
+      "sha256": "29fc673479e2bcd767b4250d7d8498b83e556351ff407b998efaed9e3beb8ce2"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-confirmation-320-actions.png",
+      "sha256": "cdd1c27ec29fb8f74c8b7fdf1596ece13eeb51f1b6f0cb9045bddc29fff762c6"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-confirmation-320.png",
+      "sha256": "cdd1c27ec29fb8f74c8b7fdf1596ece13eeb51f1b6f0cb9045bddc29fff762c6"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-confirmation-375-actions.png",
+      "sha256": "99606989008fe34f5e53ee2f59d74e72f0617a0102f89755c20dd911f2843d6e"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-confirmation-375.png",
+      "sha256": "99606989008fe34f5e53ee2f59d74e72f0617a0102f89755c20dd911f2843d6e"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-directory-denied-1280-actions.png",
+      "sha256": "a26491585f32b83657e456d2d2ae5940273b123c7763af403771c746c85a8a2d"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-directory-denied-1280.png",
+      "sha256": "a26491585f32b83657e456d2d2ae5940273b123c7763af403771c746c85a8a2d"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-directory-denied-1920-actions.png",
+      "sha256": "b9f2b99fb7d6a610124c41b7011b0fad7fb6bf8fe448ddd21170d97385044798"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-directory-denied-1920.png",
+      "sha256": "b9f2b99fb7d6a610124c41b7011b0fad7fb6bf8fe448ddd21170d97385044798"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-directory-denied-320-actions.png",
+      "sha256": "7bb6ed7655c9ac4dd05d9c3ce88f672b6c988607a0010fe665f78c2a6ef0a0e7"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-directory-denied-320.png",
+      "sha256": "7bb6ed7655c9ac4dd05d9c3ce88f672b6c988607a0010fe665f78c2a6ef0a0e7"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-directory-denied-375-actions.png",
+      "sha256": "1ee6443b22fc70421d169f748305e3014195b6cd5ef2d11e32ffb0511fc7db6a"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-directory-denied-375.png",
+      "sha256": "1ee6443b22fc70421d169f748305e3014195b6cd5ef2d11e32ffb0511fc7db6a"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-empty-1280-actions.png",
+      "sha256": "6d98c2fe6ec75cb4d7443a13dafc3fd1393364177006df957e22aef31d3e0f56"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-empty-1280.png",
+      "sha256": "6d98c2fe6ec75cb4d7443a13dafc3fd1393364177006df957e22aef31d3e0f56"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-empty-1920-actions.png",
+      "sha256": "dfd47173d8d4c62cd958d6796e809f0c51bef2abea23b61f59ca906a07ce1ae0"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-empty-1920.png",
+      "sha256": "dfd47173d8d4c62cd958d6796e809f0c51bef2abea23b61f59ca906a07ce1ae0"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-empty-320-actions.png",
+      "sha256": "2efb2381d30970583521f6739f4d02c962488149f31897401a9ed301ec80110b"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-empty-320.png",
+      "sha256": "2efb2381d30970583521f6739f4d02c962488149f31897401a9ed301ec80110b"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-empty-375-actions.png",
+      "sha256": "5c52ebd5bb5206a203f6b96b965de1636505ee3d8825c240fac1af7580555fcf"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-empty-375.png",
+      "sha256": "5c52ebd5bb5206a203f6b96b965de1636505ee3d8825c240fac1af7580555fcf"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-long-name-1280-actions.png",
+      "sha256": "b7ed06e2d4ce423f909c2daf186f9e4889d56fc44b0c4f5a1466a4a9e631a8a9"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-long-name-1280.png",
+      "sha256": "b7ed06e2d4ce423f909c2daf186f9e4889d56fc44b0c4f5a1466a4a9e631a8a9"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-long-name-1920-actions.png",
+      "sha256": "9da632cb48fbc0fc9d7d5d4fdf7c3fc6114ce8db67b8ebfa6d86f2bd36b8d1d2"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-long-name-1920.png",
+      "sha256": "9da632cb48fbc0fc9d7d5d4fdf7c3fc6114ce8db67b8ebfa6d86f2bd36b8d1d2"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-long-name-320-actions.png",
+      "sha256": "6f7ef700ac7d586961433fbba004ddb34d7eb9dfb063ad0be481faf961c0d4cb"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-long-name-320.png",
+      "sha256": "4cad28f10508ecc99d0ec03dd56595294a6bb4d863d1be6fcd2a98f3328e94b1"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-long-name-375-actions.png",
+      "sha256": "837f2429154b888183df8f83fa8fa1b402b7dbec245a837b112fafa9ca503b42"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-long-name-375.png",
+      "sha256": "4bf78a99ae71c97d89375fdbbf9909991600b011e8e01f17ab2e7ad5099811f6"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-next-page-1280-actions.png",
+      "sha256": "6071631eb05a6fcd335033cdefec75948bb8cae713eaebacaac039d9d72025a2"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-next-page-1280.png",
+      "sha256": "6071631eb05a6fcd335033cdefec75948bb8cae713eaebacaac039d9d72025a2"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-next-page-1920-actions.png",
+      "sha256": "d32ac082dc66d2dc9484ad2f645f968e2b1c75745ed43559592b28baf85f1a3c"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-next-page-1920.png",
+      "sha256": "d32ac082dc66d2dc9484ad2f645f968e2b1c75745ed43559592b28baf85f1a3c"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-next-page-320-actions.png",
+      "sha256": "30bc55039d757056923ad8f9b90182a1efb1ce2ef7acb40ffb0b3bf29a3f1fda"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-next-page-320.png",
+      "sha256": "f53005afb5667a0e8ef9081ad951418cc830fc9bae46801606cf099cb1a8d080"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-next-page-375-actions.png",
+      "sha256": "6cea6af9bd6c9cd9c3a10bb5c70a989cf6805990095ac03809751d53439ad240"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-next-page-375.png",
+      "sha256": "6cea6af9bd6c9cd9c3a10bb5c70a989cf6805990095ac03809751d53439ad240"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-pending-1280-actions.png",
+      "sha256": "18df57af6fa5213348822605d6b46a1ae92b513b81887d6eff2622193de60bb7"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-pending-1280.png",
+      "sha256": "18df57af6fa5213348822605d6b46a1ae92b513b81887d6eff2622193de60bb7"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-pending-1920-actions.png",
+      "sha256": "9e1f8bbec28f69bea7cb9a22887e16516265bea4c8f7c99652c2fb3eae3bc818"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-pending-1920.png",
+      "sha256": "9e1f8bbec28f69bea7cb9a22887e16516265bea4c8f7c99652c2fb3eae3bc818"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-pending-320-actions.png",
+      "sha256": "fcb5fc037b41843805681de9b5048cdfb6f682c8bc1dc72a31912299165de869"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-pending-320.png",
+      "sha256": "fcb5fc037b41843805681de9b5048cdfb6f682c8bc1dc72a31912299165de869"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-pending-375-actions.png",
+      "sha256": "437b23857cd0cf9e77681f59352c0d9cb4ac0eed82d499fc047b6987ef4c8b47"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-pending-375.png",
+      "sha256": "437b23857cd0cf9e77681f59352c0d9cb4ac0eed82d499fc047b6987ef4c8b47"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-read-retry-1280.png",
+      "sha256": "b2b19b8c5196fe71c68e2d201f0c2b3407e3401452118eabf3390cc127c3e8b4"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-read-retry-1920.png",
+      "sha256": "4fefed84c0c7b16c3ea80393ab7db97e3fcbb7374a7952f7a771ece72f652382"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-read-retry-320.png",
+      "sha256": "6fb2c1d492569dcc584e870dba5c7ebc6e62ce1e8831eadc2be27a98389066ff"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-read-retry-375.png",
+      "sha256": "bbd7c4c23b2fffff1e5386fdb36dd1bf4cfe171e07b012b7c533cf4acb5d6790"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-recovered-1280-actions.png",
+      "sha256": "b7ed06e2d4ce423f909c2daf186f9e4889d56fc44b0c4f5a1466a4a9e631a8a9"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-recovered-1280.png",
+      "sha256": "e1649fb76a28589c0055c564c954cc0b7770e5186a5b411025c0407128fe61c7"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-recovered-1920-actions.png",
+      "sha256": "4b514aad1fea021766c3f5b91044999b3b1f418bd2b37420950cdf56cfa81e1c"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-recovered-1920.png",
+      "sha256": "1e9d8bc5f8c2ec154ce17019caca4ae6e0aa6cf2d9c61a6a3fc30a4a0340d36b"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-recovered-320-actions.png",
+      "sha256": "6751bebe3478c1738bf2446983d990e22732245c2b43e11dacc3f7556a24c8dc"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-recovered-320.png",
+      "sha256": "d56c7ff8c054d05bb6bc70523e2567d6c430112e597fc7e911ff5bf95531d7cf"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-recovered-375-actions.png",
+      "sha256": "d879e6698b01d297f241c58042c5e2615837a27e1ec0dae91bf935cdd0eeb456"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-recovered-375.png",
+      "sha256": "d534c5ed7ef3d8b7473f56be9b2b75b163240ad4407aa2f3db344801efb74f3f"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-stale-readback-1280.png",
+      "sha256": "b2b19b8c5196fe71c68e2d201f0c2b3407e3401452118eabf3390cc127c3e8b4"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-stale-readback-1920.png",
+      "sha256": "4fefed84c0c7b16c3ea80393ab7db97e3fcbb7374a7952f7a771ece72f652382"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-stale-readback-320.png",
+      "sha256": "6fb2c1d492569dcc584e870dba5c7ebc6e62ce1e8831eadc2be27a98389066ff"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-stale-readback-375.png",
+      "sha256": "43238c59b13e64b43b2990c11736300ba286dfcdcd807153b1b11bf3a34e2701"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-success-readback-1280.png",
+      "sha256": "b2b19b8c5196fe71c68e2d201f0c2b3407e3401452118eabf3390cc127c3e8b4"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-success-readback-1920.png",
+      "sha256": "4fefed84c0c7b16c3ea80393ab7db97e3fcbb7374a7952f7a771ece72f652382"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-success-readback-320.png",
+      "sha256": "6fb2c1d492569dcc584e870dba5c7ebc6e62ce1e8831eadc2be27a98389066ff"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-success-readback-375.png",
+      "sha256": "43238c59b13e64b43b2990c11736300ba286dfcdcd807153b1b11bf3a34e2701"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-unresolved-1280.png",
+      "sha256": "5ce0df6cc6d95ef467f637b66a9cf2987a4ea482866f5b12c43925245b1d1a60"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-unresolved-1920.png",
+      "sha256": "667f3907b2cf775db8b377629181685ee29b04fd961a32618e5720e146ea26f7"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-unresolved-320.png",
+      "sha256": "a20784811d2f07e7032a5a01eb95ddc9fe9f0c8e45613a20b010e25e756bb365"
+    },
+    {
+      "path": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-transfer-reviewed/recepcao-a--recepcao-view-conversations-status-open-transfer-unresolved-375.png",
+      "sha256": "87c81e17c64aa9ad221adee65de42967b088271e13a551386fe666b7d9bf4ad5"
+    }
+  ],
+  "reviews": {
+    "ui": "transfer_ui_contract_review",
+    "browser": "transfer_browser_review",
+    "findings": "channel guard fixed; full UUID and receipt-vs-readback proof gaps closed",
+    "crossModel": "skipped non-interactive"
+  },
+  "excludedEvidence": [
+    "whatsapp-transfer-first failed only expected52 versus48",
+    "intermediate immediate coalesced DOM assertion",
+    "constant-version controls timed out; source restored and temporary runner removed",
+    "redundant direct verification interrupted after main433/12passed"
+  ],
+  "limits": [
+    "browser FaaS intercepted in memory; no real Auth/handler/CAS/Meta claim",
+    "no deployment or hosted mutation",
+    "user requested no further work"
+  ],
+  "concurrentCommit": {
+    "sha": "59e396bed4f6c52a95b4075637e3cf2aa7f1f6bf",
+    "paths": [
+      "src/lib/whatsappHandlers.test.ts",
+      "supabase/functions/_shared/whatsappHandlers.ts"
+    ],
+    "scope": "Claude C4 correction1052, received without retest due explicit stop; independent of frozen consumer proof"
+  },
+  "parallelUnreviewedUi": {
+    "paths": [
+      {
+        "path": "src/App.tsx",
+        "sha256AtClosure": "1fe939849581ef3be6050d09edb9d752de87b4bdaedd916da3fe1b22d4fc002b"
+      },
+      {
+        "path": "src/components/MobileSubpageNavigation.tsx",
+        "sha256AtClosure": "f0b127f652c49e5d91c054b838740d8ceae1dc6415aa4e89d141ea07094f74f5"
+      },
+      {
+        "path": "src/components/PatientSidebar.tsx",
+        "sha256AtClosure": "ed800a8348902f960654ed59ccadef581045ace3efccd2779b3f21d68273fe58"
+      },
+      {
+        "path": "src/features/billing/BillingPage.tsx",
+        "sha256AtClosure": "7738d850d1cb2197ac4427b5fd8ef7616ae33d7e9c595196942179ed49d32b68"
+      },
+      {
+        "path": "src/features/intake/IntakePage.tsx",
+        "sha256AtClosure": "c7728505a9ff83dd2bd20210b264756e4e2583f1a47c79985f5c9d15a9f7fa34"
+      },
+      {
+        "path": "src/features/reception/ReceptionLayout.tsx",
+        "sha256AtClosure": "3ea96e0235973eb92c27dd03c25b077bed8d8492576e5a27e3d70739a955a540"
+      }
+    ],
+    "excludedFromCommit": true,
+    "scope": "Concurrent Claude/navigation/P1/P2 work left untouched; frozen UI proof does not approve this delta"
+  }
+}

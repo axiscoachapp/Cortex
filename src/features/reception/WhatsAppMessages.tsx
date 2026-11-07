@@ -1,24 +1,27 @@
-import { useEffect, useRef,useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useLayoutEffect, useRef,useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { whatsappApi, type WhatsAppConversation } from './whatsappApi';
 import { clinicDateLabel, clinicTime } from './dates';
 import { WhatsAppBotSession } from './WhatsAppBotSession';
 import {WhatsAppCloseAction} from './WhatsAppCloseAction';
 import {WhatsAppReopenAction} from './WhatsAppReopenAction';
+import {WhatsAppTransferAction} from './WhatsAppTransferAction';
 import {WhatsAppQueueAction} from './WhatsAppQueueAction';
 import {WhatsAppRevokeConsentAction} from './WhatsAppRevokeConsentAction';
 
 const kindLabels: Record<string, string> = { image: 'Imagem', audio: 'Áudio', video: 'Vídeo', document: 'Documento', sticker: 'Figurinha', location: 'Localização', unsupported: 'Mensagem não disponível' };
 
-export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,onRelease,onCloseConversation,onReopenConversation,onSetQueue,onRevokeConsent,commandKind,commandBusy=false,commandBlocked=false,onNavigate,generation=0 }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void;onClaim?:(conversation:WhatsAppConversation)=>void;onRelease?:(conversation:WhatsAppConversation)=>void;onCloseConversation?:(conversation:WhatsAppConversation)=>void;onReopenConversation?:(conversation:WhatsAppConversation)=>void;onSetQueue?:(conversation:WhatsAppConversation,queue:string)=>void;onRevokeConsent?:(conversation:WhatsAppConversation)=>void;commandKind?:'assign'|'unassign'|'close'|'reopen'|'queue'|'revoke_consent';commandBusy?:boolean;commandBlocked?:boolean;onNavigate?:()=>void;generation?:number }) {
+export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,onRelease,onCloseConversation,onReopenConversation,onSetQueue,onRevokeConsent,onTransfer,commandKind,commandBusy=false,commandBlocked=false,onNavigate,generation=0 }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void;onClaim?:(conversation:WhatsAppConversation)=>void;onRelease?:(conversation:WhatsAppConversation)=>void;onCloseConversation?:(conversation:WhatsAppConversation)=>void;onReopenConversation?:(conversation:WhatsAppConversation)=>void;onSetQueue?:(conversation:WhatsAppConversation,queue:string)=>void;onRevokeConsent?:(conversation:WhatsAppConversation)=>void;onTransfer?:(conversation:WhatsAppConversation,targetUserId:string)=>void;commandKind?:'assign'|'transfer'|'unassign'|'close'|'reopen'|'queue'|'revoke_consent';commandBusy?:boolean;commandBlocked?:boolean;onNavigate?:()=>void;generation?:number }) {
   const region = useRef<HTMLElement>(null);
   const pageHeading=useRef<HTMLHeadingElement>(null);
   const [before,setBefore]=useState<string|null>(null);
   const [botReadGeneration,setBotReadGeneration]=useState(0);
-  const readVersion=useRef(0);
+  const readVersion=useRef(0),mounted=useRef(false),client=useQueryClient();
+  useLayoutEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
+  const messageKey=['reception', actor, clinic, 'whatsapp', 'messages', conversation.id,before,generation];
   const messages = useQuery({
-    queryKey: ['reception', actor, clinic, 'whatsapp', 'messages', conversation.id,before,generation],
+    queryKey: messageKey,
     // Each successful read carries a local identity, even when identical data
     // and fetching/success notifications coalesce. It never goes on the wire.
     queryFn: async ({ signal }) => ({...await whatsappApi.messages({ conversationId: conversation.id,...(before?{before}:{}) }, signal),readVersion:++readVersion.current}),
@@ -66,6 +69,7 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
       {onReopenConversation&&messages.data.conversation.status==='closed'&&(messages.data.conversation.assignedTo===null||messages.data.conversation.assignedTo===actor)&&messages.data.conversation.revision<2147483647&&<WhatsAppReopenAction key={messages.data.conversation.id+':'+messages.data.conversation.revision+':'+messages.data.readVersion+':'+messages.data.conversation.assignedTo} conversation={messages.data.conversation} disabled={commandBlocked} busy={commandBusy&&commandKind==='reopen'} onConfirm={onReopenConversation}/>}
       {onSetQueue&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.revision<2147483647&&<WhatsAppQueueAction key={messages.data.conversation.id+':'+messages.data.conversation.revision+':'+messages.data.readVersion+':'+messages.data.conversation.assignedTo+':'+messages.data.conversation.queue} conversation={messages.data.conversation} disabled={commandBlocked} busy={commandBusy&&commandKind==='queue'} onConfirm={onSetQueue}/>}
       {onRevokeConsent&&hasPhone&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.consented&&messages.data.conversation.revision<2147483647&&<WhatsAppRevokeConsentAction key={messages.data.conversation.id+':'+messages.data.conversation.revision+':'+messages.data.readVersion+':'+messages.data.conversation.assignedTo+':'+messages.data.conversation.waId+':'+messages.data.conversation.consented+':'+messages.data.conversation.optedOut} conversation={messages.data.conversation} disabled={commandBlocked} busy={commandBusy&&commandKind==='revoke_consent'} onConfirm={onRevokeConsent}/>}
+      {onTransfer&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.revision<2147483647&&<WhatsAppTransferAction key={JSON.stringify([messages.data.conversation,messages.data.readVersion])} actor={actor} clinic={clinic} conversation={messages.data.conversation} disabled={commandBlocked} busy={commandBusy&&commandKind==='transfer'} onConfirm={(detail,target)=>{const latest=client.getQueryState(messageKey);if(mounted.current&&fresh&&latest?.status==='success'&&latest.fetchStatus==='idle'&&latest.data===messages.data)onTransfer(detail,target);}}/>}
       <WhatsAppBotSession key={botReadGeneration} generation={botReadGeneration} actor={actor} clinic={clinic} conversationId={messages.data.conversation.id} />
       {messages.data.conversation.optedOut && <p className="rounded-md bg-muted p-3 text-sm">Este telefone está marcado para não receber lembretes.</p>}
     </>}

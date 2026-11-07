@@ -1,0 +1,3 @@
+import type { WhatsAppConversation } from './whatsappApi';
+export type TransferActionProps = { actor: string; clinic: string; conversation: WhatsAppConversation; disabled?: boolean; busy?: boolean; onConfirm: (conversation: WhatsAppConversation, targetUserId: string) => void };
+export function WhatsAppTransferAction(_props: TransferActionProps) { return <p>Transferência em preparação.</p>; }

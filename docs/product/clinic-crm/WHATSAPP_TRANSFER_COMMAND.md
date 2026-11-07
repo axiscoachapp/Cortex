@@ -11,3 +11,5 @@ UI fora deste incremento. K1/4j deverá escolher pessoa por nome num catálogo f
 O catálogo ainda precisa de contrato de leitura: clinic_access.staff só é retornado para admin e não inclui todos os admins elegíveis no SQL WhatsApp; doctors não é a lista de destinatários. Proposta [WHATSAPP_ASSIGNEES_PROPOSAL.md](WHATSAPP_ASSIGNEES_PROPOSAL.md) para alinhamento com o dono C4. Não implementar UI/picker com fonte incompleta por inferência.
 
 Provas sintéticas, SDK instalado/fetch em memória, nenhuma rede/servidor/navegador/banco/Meta/hosted/PersonalMed. Implementação só do adaptador; catálogo/UI seguem recortes próprios.
+
+Atualização07/11 12:08: catálogo b7f424d retestado e consumidor K1/4j2 entregue conforme [WHATSAPP_TRANSFER_UI.md](WHATSAPP_TRANSFER_UI.md). O texto acima delimita o adaptador original; seleção/confirmação/releitura têm provas separadas. Usuário encerrou o ciclo do Codex após esta entrega; sem novo trabalho ou operação real até retomada explícita.

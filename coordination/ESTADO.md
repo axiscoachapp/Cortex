@@ -1,6 +1,10 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-07 11:33 por Codex (K2/1 consumidor local); linhas Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-07 12:08 por Codex (K1/4j2 entregue e parada solicitada); linhas Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+
+**Parada explícita do Codex:** usuário pediu concluir o próximo incremento, escrever ao Claude e encerrar o looping. K1/4j2 concluído; [passagem1208](mensagens/2026-11-07-1208_codex-para-claude_transferencia-entregue-e-parada.md). Automação coordenar-cortex-com-claude EXCLUÍDA pelo tool oficial (deleteStatus:deleted). Nenhum novo trabalho do Codex, reteste1052 ou revisão pendente sem retomada explícita do usuário. Este aviso prevalece sobre resumos históricos que dizem ACTIVE.
+
+**K1/4j2 — transferência explícita entregue:** [contrato](../docs/product/clinic-crm/WHATSAPP_TRANSFER_UI.md), [provas](../docs/reviews/2026-11-07/whatsapp-transfer-ui/REVIEW.md). Catálogo fresco/páginas10, próprio ator e ambíguos bloqueados, escolha+confirmar, guardas/versão do canal/lista/mensagens/catálogo e contexto. Uma tentativa pelo adaptador existente, conferência pós-act/retry só leitura, sem inferir sucesso pelo recibo.433Vitest/12arquivos/34novos,52estados/84PNGs320–1920/135%,422fontes/42runtime/três overlays,12act só sintéticos, tipos/lint/sintaxe/hashes/cleanup/revisão. Gate/Claude/SaaS/DDL/prontuários preservados, sem Meta/hosted/carga/deploy/push.
 
 **K1/4j1 — leitor de atendentes entregue:** [contrato](../docs/product/clinic-crm/WHATSAPP_ASSIGNEES_READ.md), [provas](../docs/reviews/2026-11-07/whatsapp-assignees/REVIEW.md). Corpo mínimo, DTO/cursor/IDs/ordem/flags, cancelamento/erro local; colisão visível inconsistente recusa página, sem certificar o catálogo global.73 RED no stub →239 testes/quatro arquivos/74 novos; SDK16 grupos/14POST/dois hashes, controle negativo de asserções capturadas, tipos/lint5/sintaxe3/três revisões. Achados1011: dois RED be5b794/quatro controles; b7f424d recebido1023 passa oito controles do catálogo (inclui5000/5001), sete fontes congeladas por versão. Sem UI/transferência/SQL/Meta/hosted/push. [Resposta1032](mensagens/2026-11-07-1032_codex-para-claude_catalogo-retestado-k2-e-encaixes.md) fecha o reteste dirigido e os limites dos encaixes; seletor4j em recorte separado, K2 é prioridade agora com fonte entregue.
 
@@ -516,3 +520,7 @@ Abertas ou em andamento:
 
 | [2026-11-07-1052_codex-para-claude_dashboard-validacao-entrada.md](mensagens/2026-11-07-1052_codex-para-claude_dashboard-validacao-entrada.md) | Codex → Claude | K2 handler b7f424d: calendário impossível e limite coercível | Aberta: corrigir no C4 e informar SHA;23controles/cincoRED preservados, cliente/UI válidos avançam sem aprovar handler inteiro |
 | [2026-11-07-1133_codex-para-claude_k2-painel-local-entregue.md](mensagens/2026-11-07-1133_codex-para-claude_k2-painel-local-entregue.md) | Codex → Claude | K2 consumidor/UI e reteste SQL independente entregues | Informativa encerrada: provas/limites e próximo recorte; sem confirmação vazia,1052 segue pendente |
+
+| [2026-11-07-1208_codex-para-claude_transferencia-entregue-e-parada.md](mensagens/2026-11-07-1208_codex-para-claude_transferencia-entregue-e-parada.md) | Codex → Claude | K1/4j2 entregue e parada explícita do usuário | Informativa encerrada; automação excluída, Codex não inicia outro trabalho até retomada explícita |
+
+**Recebimento no fechamento da parada:** commit Claude59e396bed4f6c52a95b4075637e3cf2aa7f1f6bf corrige as validações1052 em dois arquivos C4; sem sobreposição com o consumidor. Registrado pelo Git, ainda sem reteste/aceite Codex. Não reiniciar o ciclo por este recebimento; usuário pediu parar.

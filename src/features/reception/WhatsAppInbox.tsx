@@ -1,5 +1,5 @@
 import { useEffect,useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useClinicAccess } from './accessContext';
 import { whatsappApi, type WhatsAppInboxFilter,type WhatsAppConversation } from './whatsappApi';
 import {claimWhatsAppConversation,WhatsAppClaimError} from './whatsappClaim';
+import {transferWhatsAppConversation} from './whatsappTransfer';
 import {releaseWhatsAppConversation} from './whatsappRelease';
 import {closeWhatsAppConversation} from './whatsappClose';
 import {reopenWhatsAppConversation} from './whatsappReopen';
@@ -26,9 +27,10 @@ export default function WhatsAppInbox() {
 }
 
 function Inbox({ actor, clinic }: { actor: string; clinic: string }) {
+  const channelReadVersion=useRef(0);
   const channel = useQuery({
     queryKey: ['reception', actor, clinic, 'whatsapp', 'state'],
-    queryFn: ({ signal }) => whatsappApi.state(signal),
+    queryFn: async ({ signal }) => ({...await whatsappApi.state(signal),readVersion:++channelReadVersion.current}),
     retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
   const fresh = channel.isSuccess && channel.isFetchedAfterMount && channel.fetchStatus === 'idle';
@@ -41,7 +43,7 @@ function Inbox({ actor, clinic }: { actor: string; clinic: string }) {
       : channel.fetchStatus !== 'idle' || channel.isPending ? <p role="status" className="p-4 text-sm">Verificando WhatsApp…</p>
       : channel.isError ? <ReadFailure label="conexão" onRetry={() => void channel.refetch()} />
       : fresh && channel.data.serverReady && channel.data.connected && channel.data.canUseInbox
-        ? <><WhatsAppTemplateCatalog actor={actor} clinic={clinic} /><ConversationList actor={actor} clinic={clinic} /></>
+        ? <><WhatsAppTemplateCatalog actor={actor} clinic={clinic} /><ConversationList key={channel.data.readVersion} actor={actor} clinic={clinic} channelVersion={channel.data.readVersion} /></>
         : <div role="status" className="rounded-lg border bg-card p-6 space-y-2">
           <h2 className="font-semibold">WhatsApp indisponível</h2>
           <p className="text-sm text-muted-foreground">Peça à administração para verificar a conexão e seu acesso ao WhatsApp da clínica.</p>
@@ -57,7 +59,7 @@ function ReadFailure({ label, onRetry }: { label: string; onRetry: () => void })
   </div>;
 }
 
-function ConversationList({ actor, clinic }: { actor: string; clinic: string }) {
+function ConversationList({ actor, clinic, channelVersion }: { actor: string; clinic: string; channelVersion:number }) {
   const [filter, setFilter] = useState<WhatsAppInboxFilter>('open');
   const [draft, setDraft] = useState(''), [search, setSearch] = useState(''), [selected, setSelected] = useState<string | null>(null);
   const [before, setBefore] = useState<string | null>(null);
@@ -65,14 +67,16 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
   const heading = useRef<HTMLHeadingElement>(null);
   const listReadVersion=useRef(0);
   const feedbackRef=useRef<HTMLDivElement>(null);
-  type Operation={id:string;kind:'assign'|'unassign'|'close'|'reopen'|'queue'|'revoke_consent';controller:AbortController;checking:boolean};
+  type Operation={id:string;kind:'assign'|'transfer'|'unassign'|'close'|'reopen'|'queue'|'revoke_consent';controller:AbortController;checking:boolean};
   const operation=useRef<Operation|null>(null);
   const [feedback,setFeedback]=useState<{phase:'sending'|'checking'|'unresolved'|'done';message:string;error:boolean}|null>(null);
   useEffect(()=>()=>{operation.current?.controller.abort();operation.current=null;},[]);
   useEffect(()=>{if(feedback?.phase==='done'||feedback?.phase==='unresolved')feedbackRef.current?.focus();},[feedback]);
   const resetOperation=()=>{operation.current?.controller.abort();operation.current=null;setFeedback(null);};
+  const client=useQueryClient();
+  const listKey=['reception', actor, clinic, 'whatsapp', 'conversations', filter, search, before];
   const list = useQuery({
-    queryKey: ['reception', actor, clinic, 'whatsapp', 'conversations', filter, search, before],
+    queryKey: listKey,
     queryFn: async ({ signal }) => ({...await whatsappApi.conversations({ filter, search, limit: 50, ...(before ? { before } : {}) }, signal),readVersion:++listReadVersion.current}),
     retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
@@ -99,18 +103,23 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
     setDetailGeneration(generation=>generation+1);
     setFeedback({phase:'done',message:entry.kind==='revoke_consent'?'Dados atualizados. Confira a autorização atual na conversa.':entry.kind==='queue'?'Dados atualizados. Confira a fila atual na conversa.':(entry.kind==='close'||entry.kind==='reopen')?'Dados atualizados. Confira a situação atual na conversa.':'Dados atualizados. Confira o responsável atual na conversa.',error:false});
   };
-  const runCommand=async(detail:WhatsAppConversation,kind:Operation['kind'],queue?:string)=>{
+  const runCommand=async(detail:WhatsAppConversation,kind:Operation['kind'],options:{queue?:string;targetUserId?:string}={})=>{
+    if(kind==='transfer'){
+      const channel=client.getQueryState<{serverReady:boolean;connected:boolean;canUseInbox:boolean;readVersion:number}>(['reception',actor,clinic,'whatsapp','state']);
+      if(channel?.status!=='success'||channel.fetchStatus!=='idle'||!channel.data?.serverReady||!channel.data.connected||!channel.data.canUseInbox||channel.data.readVersion!==channelVersion)return;
+      const latest=client.getQueryState(listKey);if(latest?.status!=='success'||latest.fetchStatus!=='idle'||latest.data!==list.data||!options.targetUserId)return;}
     const own=detail.assignedTo===actor,unassigned=detail.assignedTo===null;
     const phone=detail.waId,revocable=detail.consented&&typeof phone==='string'&&phone.length>=7&&phone.length<=15&&!/[^0-9]/.test(phone);
     const eligible=kind==='reopen'?detail.status==='closed'&&(own||unassigned):detail.status==='open'&&(kind==='assign'?unassigned:own)&&(kind!=='revoke_consent'||revocable);
     if(operation.current||!fresh||!current||selected!==detail.id||current.id!==detail.id||!eligible||detail.revision>=2147483647)return;
     const entry:Operation={id:detail.id,kind,controller:new AbortController(),checking:false};operation.current=entry;
-    setFeedback({phase:'sending',message:kind==='revoke_consent'?'Retirando autorização…':kind==='queue'?'Mudando fila…':kind==='assign'?'Assumindo conversa…':kind==='close'?'Encerrando conversa…':kind==='reopen'?'Reabrindo conversa…':'Devolvendo conversa à fila…',error:false});
+    setFeedback({phase:'sending',message:kind==='transfer'?'Transferindo conversa…':kind==='revoke_consent'?'Retirando autorização…':kind==='queue'?'Mudando fila…':kind==='assign'?'Assumindo conversa…':kind==='close'?'Encerrando conversa…':kind==='reopen'?'Reabrindo conversa…':'Devolvendo conversa à fila…',error:false});
     try{
       if(kind==='assign')await claimWhatsAppConversation({conversationId:detail.id,revision:detail.revision},actor,entry.controller.signal);
+      else if(kind==='transfer')await transferWhatsAppConversation({conversationId:detail.id,revision:detail.revision,status:'open',assignedTo:actor,targetUserId:options.targetUserId??''},actor,entry.controller.signal);
       else if(kind==='close')await closeWhatsAppConversation({conversationId:detail.id,revision:detail.revision,status:'open',assignedTo:actor},actor,entry.controller.signal);
       else if(kind==='reopen')await reopenWhatsAppConversation({conversationId:detail.id,revision:detail.revision,status:'closed',assignedTo:detail.assignedTo},actor,entry.controller.signal);
-      else if(kind==='queue')await setWhatsAppConversationQueue({conversationId:detail.id,revision:detail.revision,status:'open',assignedTo:actor,currentQueue:detail.queue,queue:queue??''},actor,entry.controller.signal);
+      else if(kind==='queue')await setWhatsAppConversationQueue({conversationId:detail.id,revision:detail.revision,status:'open',assignedTo:actor,currentQueue:detail.queue,queue:options.queue??''},actor,entry.controller.signal);
       else if(kind==='revoke_consent')await revokeWhatsAppConsent({conversationId:detail.id,revision:detail.revision,status:'open',assignedTo:actor,consented:true},actor,entry.controller.signal);
       else await releaseWhatsAppConversation({conversationId:detail.id,revision:detail.revision,assignedTo:actor},actor,entry.controller.signal);
     }
@@ -159,7 +168,7 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
           </li>)}</ul>
         </>}
       </section>
-      {current&&feedback?.phase!=='checking'&&feedback?.phase!=='unresolved' ? <WhatsAppMessages key={JSON.stringify([current,detailGeneration,list.data?.readVersion])} generation={detailGeneration} actor={actor} clinic={clinic} conversation={current} commandBusy={commandBusy} commandBlocked={commandBlocked} onClaim={detail=>void runCommand(detail,'assign')} onRelease={detail=>void runCommand(detail,'unassign')} onCloseConversation={detail=>void runCommand(detail,'close')} onReopenConversation={detail=>void runCommand(detail,'reopen')} onSetQueue={(detail,queue)=>void runCommand(detail,'queue',queue)} onRevokeConsent={detail=>void runCommand(detail,'revoke_consent')} commandKind={operation.current?.kind} onNavigate={resetOperation} onClose={() => {resetOperation(); setSelected(null); heading.current?.focus(); }} />
+      {current&&feedback?.phase!=='checking'&&feedback?.phase!=='unresolved' ? <WhatsAppMessages key={JSON.stringify([current,detailGeneration,list.data?.readVersion])} generation={detailGeneration} actor={actor} clinic={clinic} conversation={current} commandBusy={commandBusy} commandBlocked={commandBlocked} onClaim={detail=>void runCommand(detail,'assign')} onRelease={detail=>void runCommand(detail,'unassign')} onCloseConversation={detail=>void runCommand(detail,'close')} onReopenConversation={detail=>void runCommand(detail,'reopen')} onSetQueue={(detail,queue)=>void runCommand(detail,'queue',{queue})} onTransfer={(detail,targetUserId)=>void runCommand(detail,'transfer',{targetUserId})} onRevokeConsent={detail=>void runCommand(detail,'revoke_consent')} commandKind={operation.current?.kind} onNavigate={resetOperation} onClose={() => {resetOperation(); setSelected(null); heading.current?.focus(); }} />
         : selected&&(feedback?.phase==='checking'||feedback?.phase==='unresolved')?<div className="rounded-lg border bg-card p-6 space-y-3 text-sm"><p>{(operation.current?.kind==='close'||operation.current?.kind==='reopen'||operation.current?.kind==='queue'||operation.current?.kind==='revoke_consent')?'O detalhe será exibido após a conferência da conversa.':'O detalhe será exibido após a conferência do responsável.'}</p><Button variant="outline" onClick={()=>{resetOperation();setSelected(null);heading.current?.focus();}}>Voltar à lista</Button></div>
         : <p className="rounded-lg border border-dashed bg-card p-6 text-sm text-muted-foreground">Selecione uma conversa para ler as mensagens.</p>}
     </div>
