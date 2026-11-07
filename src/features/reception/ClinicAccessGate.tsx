@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Link, matchRoutes, Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,9 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
     if (confirmSessionExit()) void signOut();
   };
   const { pathname, key: locationKey } = useLocation();
+  // Follow the router's decoding, case and trailing-slash rules. Comparing the
+  // raw pathname would miss aliases that still mount the Settings route.
+  const settingsPage = matchRoutes([{ path: '/configuracoes' }], pathname) !== null;
   const parentHidden = useContext(SessionVisibilityContext);
   const workspace = useRef<HTMLDivElement>(null);
   const verified = useRef<{ access: ClinicAccess; locationKey: string } | null>(null);
@@ -51,7 +54,7 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
   const retained = workspace.current && verified.current && verified.current.access.actorId === user?.id && verified.current.locationKey === locationKey
     ? verified.current.access : null;
   const continueClinical = !!retained && !!current && current.kind === 'clinical' && !pathname.startsWith('/recepcao')
-    && access.isError && access.error instanceof ClinicAccessTransportError;
+    && !settingsPage && access.isError && access.error instanceof ClinicAccessTransportError;
   const blocked = !fresh && !continueClinical;
   const value = current ?? retained;
   if (access.isPending || !access.isFetchedAfterMount)
@@ -69,7 +72,7 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
       <DialogDescription>Atualize a verificação para continuar com segurança.</DialogDescription>
       <p>Não foi possível verificar seu acesso à clínica.</p>
       <Button onClick={() => void access.refetch()}>Tentar novamente</Button>
-      {retained && <p className="text-sm">O trabalho aberto está preservado. Verifique o acesso para continuar.</p>}
+      {retained && <p className="text-sm">{settingsPage ? 'Verifique seu acesso para reabrir as configurações.' : 'O trabalho aberto está preservado. Verifique o acesso para continuar.'}</p>}
       <Button variant="ghost" onClick={exit}>
         Sair
       </Button>
@@ -77,7 +80,9 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
       </DialogContent>
     </Dialog>
   );
-  if (!value || (blocked && !retained)) return failure;
+  // Settings can contain credentials and administrative portals outside the
+  // page wrapper. Unmount them on failed verification, including their portals.
+  if (!value || (blocked && (!retained || settingsPage))) return failure;
   const accountPage = ['/seguranca', '/privacidade'].includes(pathname);
   if (value.kind === 'reception') {
     if (!accountPage && (!value.active || !value.clinic || !value.doctors.length))
@@ -95,7 +100,7 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
           </Button>
         </div>
       );
-    if (!accountPage && !pathname.startsWith('/recepcao')) return <Navigate to="/recepcao" replace />;
+    if (!accountPage && !settingsPage && !pathname.startsWith('/recepcao')) return <Navigate to="/recepcao" replace />;
   } else if (pathname.startsWith('/recepcao') && (!value.clinic || !value.active || !value.admin)) {
     return (
       <div className="max-w-lg mx-auto p-6 space-y-4">

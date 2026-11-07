@@ -13,9 +13,10 @@ import autoprefixer from 'autoprefixer';
 import { startClinicFixture, patientId, uid } from './fixtures/clinic-review-api.mjs';
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 import { auditWhatsAppRead } from './fixtures/whatsapp-read-browser.mjs';
+import { auditSettingsAccess } from './fixtures/settings-access-browser.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|only=new-consultation|only=settings-embedded|only=whatsapp-read|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus|check-mfa-cancellation)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|only=new-consultation|only=settings-embedded|only=whatsapp-read|only=settings-access|settings-admin-only|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus|check-mfa-cancellation)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
@@ -23,6 +24,9 @@ const timestampOnly = args.includes('--only=short-timestamps');
 const medicalOnly = args.includes('--only=medical-delivery');
 const settingsEmbeddedOnly = args.includes('--only=settings-embedded');
 const whatsappReadOnly = args.includes('--only=whatsapp-read');
+const settingsAccessOnly = args.includes('--only=settings-access'), settingsAdminOnly = args.includes('--settings-admin-only');
+assert.ok(!settingsAccessOnly || !args.some(arg => arg.startsWith('--check-')), 'Settings access runs its own checks');
+assert.ok(!settingsAdminOnly || settingsAccessOnly, 'Settings admin requires settings access');
 assert.ok(!whatsappReadOnly || !args.some(arg => arg.startsWith('--check-')), 'WhatsApp read runs its own checks');
 assert.ok(!settingsEmbeddedOnly || !args.some(arg => arg.startsWith('--check-')), 'Settings embedded runs its own checks');
 const consultationOnly = args.includes('--only=new-consultation');
@@ -75,6 +79,7 @@ assert.ok(!consultationOnly || overlays.length <= 2 && new Set(overlays).size ==
 assert.ok(!settingsEmbeddedOnly || overlays.length <= 2 && new Set(overlays).size === overlays.length && overlays.every(path => ['src/features/reception/TeamSettings.tsx', 'src/features/reception/DelegationPermissions.tsx'].includes(path)), 'Settings embedded permits only its two section overlays');
 const whatsappPaths = ['src/features/reception/ReceptionQueue.tsx', 'src/features/reception/WhatsAppInbox.tsx', 'src/features/reception/WhatsAppMessages.tsx'];
 assert.ok(!whatsappReadOnly || overlays.length <= 4 && new Set(overlays).size === overlays.length && overlays.every(path => [...whatsappPaths, 'src/features/reception/whatsappApi.ts'].includes(path)), 'WhatsApp read only permits its UI and read-client overlays');
+assert.ok(!settingsAccessOnly || overlays.length <= 2 && new Set(overlays).size === overlays.length && overlays.every(path => ['src/features/reception/ClinicAccessGate.tsx', 'src/features/reception/ReceptionLayout.tsx'].includes(path)), 'Settings access only permits gate and reception entry overlays');
 const run = args.find(arg => arg.startsWith('--run='))?.slice(6) || 'baseline';
 const folder = resolve('docs/reviews/2026-11-05/reception-app-audit', run);
 await mkdir(dirname(folder), { recursive: true });
@@ -103,7 +108,7 @@ const tailwindConfiguration = loadConfig(resolve('tailwind.config.ts'));
 const tailwindContent = [...sources].filter(([path]) => /\.(tsx?|jsx?)$/.test(path)).map(([path, raw]) => ({ raw, extension: path.split('.').pop() }));
 const previewEntry = 'scripts/fixtures/settings-embedded-preview.tsx';
 if (settingsEmbeddedOnly) tailwindContent.push({ raw: await readFile(previewEntry, 'utf8'), extension: 'tsx' });
-const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/clinic-review-api.mjs', 'scripts/fixtures/reception-api.mjs', 'scripts/fixtures/whatsapp-read-api.mjs', 'scripts/fixtures/whatsapp-read-browser.mjs', ...(settingsEmbeddedOnly ? [previewEntry] : []), ...configurationPaths];
+const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/clinic-review-api.mjs', 'scripts/fixtures/reception-api.mjs', 'scripts/fixtures/whatsapp-read-api.mjs', 'scripts/fixtures/whatsapp-read-browser.mjs', 'scripts/fixtures/settings-access-api.mjs', 'scripts/fixtures/settings-access-browser.mjs', ...(settingsEmbeddedOnly ? [previewEntry] : []), ...configurationPaths];
 const ownHashes = await Promise.all(ownPaths.map(async path => ({ path, sha256: createHash('sha256').update(await readFile(path)).digest('hex') })));
 const apps = [], apis = [], contexts = [], errors = [], blocked = [], consoleErrors = [], screens = [], failedRequests = [], errorResponses = [];
 const medicalCaseFailures = []; let medicalCasesAttempted = 0;
@@ -116,6 +121,7 @@ const mfaCancellationChecks = [];
 const consultationChecks = [], consultationRequests = [];
 const settingsChecks = [], settingsRequests = [], settingsFixtureMetrics = [];
 const whatsappChecks = [], whatsappRequests = [];
+const settingsAccessChecks = [], settingsAccessRequests = [];
 const cacheOwner = randomUUID();
 let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false, draftPreserved = false, timestampDataPreserved = false, medicalDataPreserved = false, delegationDataPreserved = false;
 async function appFor(api) {
@@ -135,6 +141,7 @@ async function scene(app, email, next) {
     blocked.push({ origin: url.origin, path: url.pathname }); return route.abort();
   });
   const page = await context.newPage();
+  if (settingsAccessOnly) page.on('request', request => { if (new URL(request.url()).origin === app.api.origin && request.method() !== 'OPTIONS') settingsAccessRequests.push({ actor: email, method: request.method(), path: new URL(request.url()).pathname }); });
   if (whatsappReadOnly) page.on('request', request => { if (new URL(request.url()).origin === app.api.origin && request.method() !== 'OPTIONS') whatsappRequests.push({ actor: email, method: request.method(), path: new URL(request.url()).pathname }); });
   if (settingsEmbeddedOnly) page.on('request', request => { if (new URL(request.url()).origin === app.api.origin && request.method() !== 'OPTIONS') settingsRequests.push({ actor: email, method: request.method(), path: new URL(request.url()).pathname }); });
   page.on('pageerror', error => errors.push({ path: new URL(page.url()).pathname, message: error.message }));
@@ -286,7 +293,11 @@ try {
   temporaryCache = await mkdtemp(join(tmpdir(), 'cortex-reception-audit-'));
   await writeFile(join(temporaryCache, 'audit-owner'), cacheOwner);
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
-  if (whatsappReadOnly) {
+  if (settingsAccessOnly) {
+    const api = await startReceptionFixture({ settingsReview: true }); apis.push(api);
+    const app = await appFor(api);
+    await auditSettingsAccess({ api, app, scene, capture, checks: settingsAccessChecks, requests: settingsAccessRequests, screens, errors, consoleErrors, failedRequests, errorResponses, blocked, adminOnly: settingsAdminOnly });
+  } else if (whatsappReadOnly) {
     const api = await startReceptionFixture({ whatsappReadReview: true }); apis.push(api);
     const app = await appFor(api);
     await auditWhatsAppRead({ api, app, scene, capture, checks: whatsappChecks, requests: whatsappRequests, screens, errors, consoleErrors, failedRequests, errorResponses, blocked });
@@ -946,7 +957,7 @@ try {
   }
   for (const source of [...ownHashes, ...overlayHashes]) assert.equal(createHash('sha256').update(await readFile(source.path)).digest('hex'), source.sha256, 'Audit source changed during run');
   const requiredSources = consultationOnly ? ['src/components/NewConsultationModal.tsx', 'src/components/PatientAdministrativeFields.tsx', 'src/pages/PatientManagement.tsx'] : mfaMode ? ['src/pages/AccountSecurity.tsx', 'src/lib/mfa.ts'] : delegationMode ? ['src/features/reception/DelegationPermissions.tsx', 'src/features/reception/delegationApi.ts'] : medicalOnly ? medicalHistoryOnly ? ['src/components/PatientProfileDrawer.tsx'] : medicalPaths : timestampOnly ? ['src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/lib/recordingRescue.ts'] : chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
-  const requiredEntrySources = whatsappReadOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', ...whatsappPaths, 'src/features/reception/whatsappApi.ts'] : settingsEmbeddedOnly ? ['src/contexts/AuthContext.tsx', 'src/features/reception/TeamSettings.tsx', 'src/features/reception/DelegationPermissions.tsx'] : ['src/App.tsx', 'src/pages/Auth.tsx', ...requiredSources];
+  const requiredEntrySources = settingsAccessOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', 'src/features/reception/ClinicAccessGate.tsx', 'src/pages/Settings.tsx', 'src/features/settings/WhatsAppSettings.tsx', 'src/features/settings/AutomationEditor.tsx', ...(!settingsAdminOnly ? ['src/features/reception/ReceptionLayout.tsx'] : [])] : whatsappReadOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', ...whatsappPaths, 'src/features/reception/whatsappApi.ts'] : settingsEmbeddedOnly ? ['src/contexts/AuthContext.tsx', 'src/features/reception/TeamSettings.tsx', 'src/features/reception/DelegationPermissions.tsx'] : ['src/App.tsx', 'src/pages/Auth.tsx', ...requiredSources];
   for (const path of [...requiredEntrySources, ...overlays]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
   if (medicalOnly) assert.deepEqual(medicalCaseFailures, [], 'Medical delivery has unresolved case failures');
   if (checkMobileNavigation || welcomeOnly) assert.equal(navigationKeyboardVerified, true, 'Keyboard navigation did not complete');
@@ -970,6 +981,7 @@ const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, 
   consultationOnly, consultationChecks, consultationRequests, consultationMetrics: consultationOnly ? { ...apis[0]?.metrics } : null,
   settingsEmbeddedOnly, previewEntry: settingsEmbeddedOnly ? previewEntry : null, settingsChecks, settingsRequests, settingsFixtureMetrics,
   whatsappReadOnly, whatsappChecks, whatsappRequests, whatsappFixtureCalls: whatsappReadOnly ? apis[0]?.whatsappRead.calls : null,
+  settingsAccessOnly, settingsAdminOnly, settingsAccessChecks, settingsAccessRequests, settingsAccessCalls: settingsAccessOnly ? apis[0]?.settingsRead.calls : null,
   mfaOnly, mfaCleanupOnly, mfaEnrollmentOnly, checkMfaErrorFocus, checkMfaCancellation, mfaPreparationChecks, mfaCleanupChecks, mfaErrorFocusChecks, mfaEnrollmentChecks, mfaEnrollmentQrChecks, mfaCancellationChecks, mfaMetrics: mfaMode ? { ...apis[0]?.metrics } : null,
   delegationOnly, delegationDecisionOnly, delegationConflictOnly, delegationDeniedOnly, delegationRetryOnly, delegationDecisionChecks, delegationConflictChecks, delegationDeniedChecks, delegationRetryChecks, delegationDataPreserved, delegationMetrics: delegationMode ? { ...apis[0]?.metrics } : null,
   medicalOnly, medicalHistoryOnly, medicalDelivery, medicalBaseSources, medicalCasesAttempted, medicalCaseFailures, medicalDataPreserved, medicalMetrics: medicalOnly ? { ...apis[0]?.metrics } : null,

@@ -2,6 +2,7 @@
 import http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { createWhatsAppReadFixture } from './whatsapp-read-api.mjs';
+import { createSettingsReadFixture } from './settings-access-api.mjs';
 export const ids = {
   admin: '11111111-1111-4111-8111-111111111111',
   doctor: '22222222-2222-4222-8222-222222222222',
@@ -12,8 +13,9 @@ export const ids = {
   contact: '77777777-7777-4777-8777-777777777777',
   case: '88888888-8888-4888-8888-888888888888',
 };
-export async function startReceptionFixture({ whatsappReadReview = false } = {}) {
+export async function startReceptionFixture({ whatsappReadReview = false, settingsReview = false } = {}) {
   const whatsapp = whatsappReadReview ? createWhatsAppReadFixture(ids) : null;
+  const settings = settingsReview ? createSettingsReadFixture(ids) : null;
   let teamDirectoryFailure = false;
   let clinicAccessFailure = null;
   const now = () => new Date().toISOString();
@@ -137,6 +139,9 @@ export async function startReceptionFixture({ whatsappReadReview = false } = {})
       if (whatsapp && url.pathname === '/functions/v1/whatsapp-api') {
         const reply = whatsapp.handle(actor, input); return send(reply.data, reply.status);
       }
+      if (settings && url.pathname === '/functions/v1/whatsapp-api') {
+        const reply = settings.handle(actor, input); return send(reply.data, reply.status);
+      }
       if (url.pathname === '/functions/v1/create-clinic-receptionist' && actor === ids.admin) {
         const id = randomUUID();
         staff.push({ id, name: input.name, active: true, doctorIds: input.doctorIds });
@@ -154,6 +159,8 @@ export async function startReceptionFixture({ whatsappReadReview = false } = {})
       if (rpc === 'reception_team_doctors')
         return actor !== ids.admin || input.p_clinic !== ids.clinic ? error('42501', 'Management scope required')
           : teamDirectoryFailure ? error('XX000', 'Synthetic team directory failure') : send(doctors);
+      if (settings && rpc === 'reception_delegation_requests') return actor === ids.admin
+        ? send({ canManage: true, items: [], nextCursor: null }) : error('42501', 'Synthetic admin required');
       if (rpc === 'clinic_access' && clinicAccessFailure) return send({ code: clinicAccessFailure.code ?? '', message: clinicAccessFailure.message ?? 'Synthetic access failure' }, clinicAccessFailure.status);
       if (rpc === 'clinic_access')
         return send({
@@ -438,6 +445,7 @@ export async function startReceptionFixture({ whatsappReadReview = false } = {})
   return {
     origin: `http://127.0.0.1:${server.address().port}`,
     whatsappRead: whatsapp,
+    settingsRead: settings,
     setTeamDirectoryFailure: (failed) => { teamDirectoryFailure = failed; },
     setClinicAccessFailure: (failure) => { clinicAccessFailure = failure; },
     metrics,

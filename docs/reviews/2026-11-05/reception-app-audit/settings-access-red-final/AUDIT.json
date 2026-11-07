@@ -1,0 +1,286 @@
+{
+  "completed": false,
+  "failure": {
+    "name": "Error",
+    "message": "expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Configurações', exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByRole('heading', { name: 'Configurações', exact: true }) with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Configurações', exact: true })\n"
+  },
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": null,
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "09301d9db50d45ed8a08b1bb34560a472f31e3ce",
+  "overlays": [],
+  "frozenTextSourceCount": 306,
+  "frozenTextSourceDigest": "9dd926fe8748cbf0a36c11849376a50edb6dbf60e88a5bdb328800889ee6baf1",
+  "tailwindRawContentCount": 304,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "2d176e7fa6e22c563c2b07b0a41a70cb8119d35650be47b16f6ecee32a559aff"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "4dd734d772088faa3f5b5a5bbed384ff37ee0fdb88ea60843d9e6c422d119895"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "920d6919ae2e108e623c151a0d8c34044df926002c35d9d21138add44e030b58"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "7bbb023779bb00fd053a067530a025ecf56ef543114a4dd9927872fc039e195c"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-browser.mjs",
+      "sha256": "c144aedb1c26cfea649ebb9635d97a5803bccfe68248603701ceb2f2d47004f7"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-api.mjs",
+      "sha256": "315ac3ff6ba0b3ab5a5ab710c75083eb9443499b4c713a0c9a7ce5b8a042a334"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-browser.mjs",
+      "sha256": "d8a5c98f13043e85a51c7cf385052d75a5219f3b80c97c0b19bdb7cd1472caf7"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": false,
+  "consultationChecks": [],
+  "consultationRequests": [],
+  "consultationMetrics": null,
+  "settingsEmbeddedOnly": false,
+  "previewEntry": null,
+  "settingsChecks": [],
+  "settingsRequests": [],
+  "settingsFixtureMetrics": [],
+  "whatsappReadOnly": false,
+  "whatsappChecks": [],
+  "whatsappRequests": [],
+  "whatsappFixtureCalls": null,
+  "settingsAccessOnly": true,
+  "settingsAdminOnly": false,
+  "settingsAccessChecks": [],
+  "settingsAccessRequests": [
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/auth/v1/token"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/clinic_access"
+    },
+    {
+      "actor": "recepcao-a",
+      "method": "POST",
+      "path": "/rest/v1/rpc/reception_queue"
+    }
+  ],
+  "settingsAccessCalls": [],
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": null,
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/features/reception/BookingDialog.tsx",
+    "src/features/reception/CaseWorkspace.tsx",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/ContactSearch.tsx",
+    "src/features/reception/DoctorSuggestion.tsx",
+    "src/features/reception/LinkRelationshipDialog.tsx",
+    "src/features/reception/NewCaseDialog.tsx",
+    "src/features/reception/ReceptionLayout.tsx",
+    "src/features/reception/ReceptionNotice.tsx",
+    "src/features/reception/ReceptionQueue.tsx",
+    "src/features/reception/WhatsAppInbox.tsx",
+    "src/features/reception/WhatsAppMessages.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/features/reception/dates.ts",
+    "src/features/reception/linkRelationships.ts",
+    "src/features/reception/routing.ts",
+    "src/features/reception/useCaseDraft.ts",
+    "src/features/reception/useRequestId.ts",
+    "src/features/reception/whatsappApi.ts",
+    "src/hooks/use-mobile.tsx",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/functionErrors.ts",
+    "src/lib/interfaceScale.ts",
+    "src/lib/mfa.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx"
+  ],
+  "screens": [
+    {
+      "role": "staff",
+      "path": "/configuracoes?secao=seguranca",
+      "variant": "settings-security",
+      "actualPath": "/recepcao",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [
+        {
+          "label": "Fila",
+          "left": 37,
+          "right": 60.78125,
+          "targetLeft": 5.390625,
+          "targetRight": 92.390625,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Agenda",
+          "left": 114.65625,
+          "right": 167.921875,
+          "targetLeft": 97.78125,
+          "targetRight": 184.796875,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Contatos",
+          "left": 203.53125,
+          "right": 263.84375,
+          "targetLeft": 190.1875,
+          "targetRight": 277.203125,
+          "targetHeight": 86.390625
+        },
+        {
+          "label": "Conta",
+          "left": 306.078125,
+          "right": 346.109375,
+          "targetLeft": 282.59375,
+          "targetRight": 369.609375,
+          "targetHeight": 86.390625
+        }
+      ],
+      "headerTitles": [],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": null,
+      "workspaceGeometry": null,
+      "medicalTextFit": [],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Fila de atendimento"
+      ],
+      "screenshot": "staff--configuracoes-secao-seguranca-settings-security-375.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "errorResponses": [],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

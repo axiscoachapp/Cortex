@@ -29,6 +29,9 @@ function Clinical() {
   return <><p>Prontuário privado</p><textarea aria-label="Rascunho clínico" />
     {!hidden && createPortal(<p aria-label="Captura sintética">Captura sintética</p>, document.body)}</>;
 }
+function SettingsReview() {
+  return <><p>Configurações sintéticas</p>{createPortal(<p aria-label="Editor administrativo sintético">Editor administrativo sintético</p>, document.body)}</>;
+}
 function Navigation() {
   const navigate = useNavigate();
   return <><button onClick={() => navigate('/?patient=other')}>Outro prontuário</button>
@@ -43,6 +46,8 @@ function tree(client: QueryClient, initial = '/') {
           <Route element={<ClinicAccessGate><Outlet /></ClinicAccessGate>}>
             <Route path="/" element={<Clinical />} />
             <Route path="/recepcao" element={<p>Ambiente da recepção</p>} />
+            <Route path="/configuracoes" element={<SettingsReview />} />
+            <Route path="/configuracoes-extra" element={<Clinical />} />
           </Route>
           <Route path="/seguranca" element={<p>Segurança sintética</p>} />
         </Routes>
@@ -180,6 +185,40 @@ describe('reception routing before clinical components mount', () => {
     mount();
     expect(await screen.findByText('Acesso de recepção indisponível')).toBeInTheDocument();
     expect(mocks.clinicalRender).not.toHaveBeenCalled();
+  });
+  it.each(['/configuracoes', '/configuracoes/', '/CONFIGURACOES/', '/configura%63oes', '/%63onfiguracoes', '/configuracoes//'])('allows active reception to open the explicit settings route %s', async path => {
+    mocks.access.mockResolvedValue({ ...base, kind: 'reception', active: true, clinic: { id: base.actorId, name: 'Clínica sintética' }, doctors: [{ id: base.actorId, name: 'Médico sintético', specialty: null }] });
+    mount(path + '?secao=seguranca');
+    expect(await screen.findByText('Configurações sintéticas')).toBeVisible();
+    expect(screen.queryByText('Ambiente da recepção')).not.toBeInTheDocument(); expect(mocks.clinicalRender).not.toHaveBeenCalled();
+  });
+  it.each([
+    { active: false, doctors: [{ id: base.actorId, name: 'Médico sintético', specialty: null }] },
+    { active: true, doctors: [] },
+  ])('keeps unavailable reception out of settings', async state => {
+    mocks.access.mockResolvedValue({ ...base, ...state, kind: 'reception', clinic: { id: base.actorId, name: 'Clínica sintética' } });
+    mount('/configuracoes'); expect(await screen.findByText('Acesso de recepção indisponível')).toBeVisible();
+    expect(screen.queryByText('Configurações sintéticas')).not.toBeInTheDocument();
+  });
+  it('does not expand the settings exception to another path prefix', async () => {
+    mocks.access.mockResolvedValue({ ...base, kind: 'reception', active: true, clinic: { id: base.actorId, name: 'Clínica sintética' }, doctors: [{ id: base.actorId, name: 'Médico sintético', specialty: null }] });
+    mount('/configuracoes-extra'); expect(await screen.findByText('Ambiente da recepção')).toBeVisible(); expect(mocks.clinicalRender).not.toHaveBeenCalled();
+  });
+  it.each(['/configuracoes', '/configuracoes/', '/CONFIGURACOES/', '/configura%63oes', '/%63onfiguracoes', '/configuracoes//'])('blocks admin settings %s instead of continuing them during a transport failure', async path => {
+    mocks.access.mockResolvedValue({ ...base, active: true, admin: true, clinic: { id: base.actorId, name: 'Clínica sintética' } });
+    const view = mount(path); await screen.findByText('Configurações sintéticas');
+    mocks.access.mockRejectedValue(new ClinicAccessTransportError()); await refetch(view.client);
+    expect(await screen.findByRole('alert')).toBeVisible(); expect(screen.queryByText('Configurações sintéticas')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Editor administrativo sintético')).not.toBeInTheDocument();
+    mocks.access.mockResolvedValue({ ...base, active: true, admin: true, clinic: { id: base.actorId, name: 'Clínica sintética' } }); await refetch(view.client);
+    expect(await screen.findByText('Configurações sintéticas')).toBeVisible(); expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+  it.each(['/configuracoes', '/configura%63oes'])('unmounts the settings portal on %s when a definitive access refusal hides the page', async path => {
+    mocks.access.mockResolvedValue({ ...base, active: true, admin: true, clinic: { id: base.actorId, name: 'Clínica sintética' } });
+    const view = mount(path); await screen.findByLabelText('Editor administrativo sintético');
+    mocks.access.mockRejectedValue(new Error('Synthetic refusal')); await refetch(view.client); await screen.findByRole('alert');
+    expect(screen.queryByLabelText('Editor administrativo sintético')).not.toBeInTheDocument();
+    expect(screen.queryByText('Configurações sintéticas')).not.toBeInTheDocument();
   });
   it.each([true, false])('honors an authoritative clinical-to-reception transition (active=%s)', async (active) => {
     mocks.access.mockResolvedValue(base);

@@ -35,6 +35,7 @@ export default function ReceptionLayout() {
             { to: '/recepcao', label: 'Fila de atendimento' },
             { to: '/recepcao/agenda', label: 'Agenda da equipe' },
             { to: '/recepcao/contatos', label: 'Contatos' },
+            { to: '/configuracoes', label: 'Configurações' },
             ...(access?.admin ? [{ to: '/recepcao/equipe', label: 'Equipe e permissões' }] : []),
           ].map((item) => (
             <NavLink

@@ -1,0 +1,91 @@
+{
+  "date": "2026-11-06",
+  "baseline": "09301d9db50d45ed8a08b1bb34560a472f31e3ce",
+  "workingTreeBytes": true,
+  "sources": [
+    {
+      "path": "src/features/reception/ClinicAccessGate.tsx",
+      "sha256": "2a9fe0dd35d8556bbcff027729ac027d1c059e0179e68891f4df09b1438cc81e"
+    },
+    {
+      "path": "src/features/reception/ClinicAccessGate.test.tsx",
+      "sha256": "bfb01fa19c0a84fa6a5be5eac18cdf22352f3d2bf5185447f8fce12e2ee1c982"
+    },
+    {
+      "path": "src/features/reception/ReceptionLayout.tsx",
+      "sha256": "bd7969ac192141e249da92e0a11c64ef1d3ccad1461497003245ccd24f852fab"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "2d176e7fa6e22c563c2b07b0a41a70cb8119d35650be47b16f6ecee32a559aff"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "920d6919ae2e108e623c151a0d8c34044df926002c35d9d21138add44e030b58"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-api.mjs",
+      "sha256": "315ac3ff6ba0b3ab5a5ab710c75083eb9443499b4c713a0c9a7ce5b8a042a334"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-api.node-test.mjs",
+      "sha256": "015b4e773b86b7e22bbe8dd450ca2ded09038165267c535037a08ed9b723de51"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-browser.mjs",
+      "sha256": "d8a5c98f13043e85a51c7cf385052d75a5219f3b80c97c0b19bdb7cd1472caf7"
+    }
+  ],
+  "gateFunctionalChecksPassed": true,
+  "c5FullVisualAccepted": false,
+  "checks": {
+    "vitest": {
+      "gate": 31,
+      "related": 25,
+      "total": 56,
+      "files": 3,
+      "exitCode": 0
+    },
+    "nodeFixtureTests": {
+      "total": 6,
+      "exitCode": 0
+    },
+    "typecheck": {
+      "app": 0,
+      "node": 0
+    },
+    "eslint": {
+      "app": 0,
+      "nodeBrowser": 0,
+      "warnings": 0
+    },
+    "syntaxScripts": 5,
+    "invalidOptionsRejected": 4,
+    "browserScreens": 20,
+    "browserPageErrors": 0,
+    "expectedAccess503": 3,
+    "cleanupVerified": true,
+    "sourceHashesVerified": 44
+  },
+  "visualIssues": [
+    {
+      "variant": "settings-editor",
+      "width": 375,
+      "dialogHorizontalOverflow": 91,
+      "dialogActionReachable": false
+    }
+  ],
+  "artifacts": [
+    "docs/reviews/2026-11-05/reception-app-audit/settings-access-red-final/AUDIT.json",
+    "docs/reviews/2026-11-05/reception-app-audit/settings-admin-red-final/AUDIT.json",
+    "docs/reviews/2026-11-05/reception-app-audit/settings-access-gate-final-copy/AUDIT.json"
+  ],
+  "review": "Fresh-context matcher/guard review;14 equivalent/negative routes compared; no remaining actionable gate finding",
+  "limits": [
+    "All browser reports intentionally fail, first two reproduce old guards and final only C5 layout",
+    "Synthetic HTTP/Auth; no NativeAuth/MFA/RLS/Meta proof",
+    "C5 latest context-key change in accbba6 not included in frozen UI baseline",
+    "No provider calls, writes, hosted database or push"
+  ],
+  "finalRecoveryCopy": "Settings no longer claims discarded drafts are preserved; clinical-workspace wording retained"
+}
