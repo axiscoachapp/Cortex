@@ -1,0 +1,309 @@
+{
+  "time": "2026-11-07 09:47:27",
+  "baseline": "0693cddd5ee9b7675d045fa3e6bf3cf2064f5e9b",
+  "syntheticOnly": true,
+  "sourceHashes": [
+    {
+      "path": "src/features/reception/ContactLinksDialog.tsx",
+      "sha256": "ab09e628bea632f77b5cb0d9c1bc4651a0df30020c08342a35e6f5f8e1d3a3e1"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "29d1c689cff99e2e8c9bbe43938b1ccd9c5eddd88c530c8aab3ed704808f454b"
+    },
+    {
+      "path": "src/features/reception/ContactLinksDialog.test.tsx",
+      "sha256": "eb1e7833f140f9c615361f49244f990131b1fa14fafc0f35fc06fe7f30ab860e"
+    },
+    {
+      "path": "src/features/reception/ContactLinkReads.test.tsx",
+      "sha256": "83d63db893f29b8482d96feb3eab14473d02a6e7ec77fec00df7e4795b4f3965"
+    },
+    {
+      "path": "src/features/reception/contactLinkReadApi.test.ts",
+      "sha256": "2e3b9fb56e84da0c6948cc4d9e58f2fa02a6da965ddfba8ffbc84b85416ab1dd"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "5de6d49849dedc96128d55cea47e0ac11d106095bad4846af39569974df9ede4"
+    },
+    {
+      "path": "scripts/fixtures/contact-link-reads-browser.mjs",
+      "sha256": "ac1bc004f1329d306be760e103c858e9c3f452372ba3a7220c5d18df10b9d2ff"
+    },
+    {
+      "path": "scripts/reviews/contact-links-sdk.mjs",
+      "sha256": "3fb3a2b7a98b385019b3ba9a2fb7aca8ca5d53943e9f6668ed9ab8dbee6a98bc"
+    }
+  ],
+  "red": {
+    "failed": 21,
+    "controls": 4,
+    "newCases": 25,
+    "restored": true,
+    "controlsReport": "RED_CONTROL.json",
+    "oldControls": 12
+  },
+  "green": {
+    "passed": 150,
+    "failed": 0,
+    "files": 10,
+    "newCases": 25
+  },
+  "types": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json --pretty false",
+    "exitCode": 0
+  },
+  "lint": {
+    "files": [
+      "src/features/reception/ContactLinksDialog.tsx",
+      "src/features/reception/api.ts",
+      "src/features/reception/ContactLinksDialog.test.tsx",
+      "src/features/reception/ContactLinkReads.test.tsx",
+      "src/features/reception/contactLinkReadApi.test.ts",
+      "scripts/reception-app-audit-browser.mjs",
+      "scripts/fixtures/contact-link-reads-browser.mjs",
+      "scripts/reviews/contact-links-sdk.mjs"
+    ],
+    "exitCode": 0
+  },
+  "syntax": {
+    "files": [
+      "scripts/reception-app-audit-browser.mjs",
+      "scripts/fixtures/contact-link-reads-browser.mjs",
+      "scripts/reviews/contact-links-sdk.mjs"
+    ],
+    "exitCode": 0
+  },
+  "cli": {
+    "validRejections": 6,
+    "allMatched": true
+  },
+  "sdk": {
+    "report": "SDK.json",
+    "version": "2.86.0",
+    "groups": 13,
+    "postCalls": 12,
+    "hashes": 3,
+    "sourceHashesStillCurrent": true,
+    "nativeNetworkCalls": 0,
+    "limits": "Installed client and PostgREST transport only; no real DB/Auth/permissions, records or booking. Deadline controlled by signal/unit test, not a real20s wait."
+  },
+  "browser": {
+    "report": "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/AUDIT.json",
+    "states": 32,
+    "pngs": 60,
+    "artifacts": 61,
+    "sourceCount": 357,
+    "runtimeHashes": 40,
+    "overlays": [
+      {
+        "path": "src/features/reception/ContactLinksDialog.tsx",
+        "sha256": "ab09e628bea632f77b5cb0d9c1bc4651a0df30020c08342a35e6f5f8e1d3a3e1"
+      },
+      {
+        "path": "src/features/reception/api.ts",
+        "sha256": "29d1c689cff99e2e8c9bbe43938b1ccd9c5eddd88c530c8aab3ed704808f454b"
+      }
+    ],
+    "requests": 34,
+    "linkFixtureReads": 20,
+    "expected403": 4,
+    "expectedConsole403": 4,
+    "pageErrors": 0,
+    "failedRequests": 0,
+    "external": 0,
+    "fontSizes": [
+      "21.6px"
+    ],
+    "metrics": {
+      "clinicalReads": [],
+      "externalCalls": [],
+      "unknown": [],
+      "bookings": 0,
+      "contacts": 0,
+      "caseWrites": 0
+    },
+    "cleanupVerified": true,
+    "manualInspection": [
+      "next-pending-320",
+      "second-page-375-actions"
+    ],
+    "limits": "Admin held initial/next-page/refresh reads,403,retry,two pages,availability,close. No editor or write. Context/cancellation/paused/stale entries unit/SDK only."
+  },
+  "reviews": [
+    {
+      "cycle": 1,
+      "classification": "valid + actionable",
+      "issue": "SDK over-limit fixture also violated ordering",
+      "fix": "51 distinct valid ordered UUIDs isolate size limit"
+    },
+    {
+      "cycle": 2,
+      "actionable": [],
+      "scope": "Reader,API,tests,SDK,browser harness and K2 proposal"
+    }
+  ],
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "excludedPreliminary": [
+    "docs/reviews/2026-11-07/contact-link-reads-preliminary/"
+  ],
+  "preliminaryCorrections": [
+    "Await React error notification before assertions",
+    "New-context mock returns fresh empty page, not previous context rows",
+    "Pending captures skip networkidle only with explicit loading assertions"
+  ],
+  "foreignPreserved": [
+    {
+      "path": "tasks/plan.md",
+      "sha256": "d4091e88d0f622bf15e9ad80f79957ffd801edaea968870274a5b8b8370023b6"
+    },
+    {
+      "path": "tasks/todo.md",
+      "sha256": "a60d951ead6051eae4411e87b5a7c22e94b57bf07fb46b2b143bde2c27762e49"
+    }
+  ],
+  "incoming": {
+    "count": 69,
+    "latest": "2026-11-07-0926_claude-para-codex_correcoes-k6-c5-e-quatro-frentes.md",
+    "digest": "0c96e738b70263e8728819d55bf812dc7f7ad090aa32ace2775a3a117edaeade",
+    "digestAlgorithm": "SHA256(JSON.stringify(sorted files mapped to {name,sha256(raw bytes)}))",
+    "previous68Unchanged": true,
+    "response": "coordination/mensagens/2026-11-07-0940_codex-para-claude_k2-painel-contrato-e-controles-c5.md"
+  },
+  "coordination": {
+    "k2Contract": "docs/product/clinic-crm/RECEPTION_DASHBOARD_READ.md",
+    "k2Status": "proposed; C4 confirmation/source pending before dependent adapter/UI",
+    "c5": "5 existing controls passed, be5b794 source parity; not complete C5 or K6 approval",
+    "pending": [
+      "K6/5b SQL and first-cycle race retest",
+      "assignees catalogue review and4j integration"
+    ],
+    "claudeOwnership": [
+      "P1 intake",
+      "P2 billing",
+      "P4 signature",
+      "PersonalMed"
+    ]
+  },
+  "automation": {
+    "id": "coordenar-cortex-com-claude",
+    "mode": "update",
+    "status": "ACTIVE",
+    "priority": "K2",
+    "sameSchedule": true,
+    "sameThread": true,
+    "notificationPolicyUnchanged": true
+  },
+  "boundaries": [
+    "Read and editor entry only; already-sent writes remain separate",
+    "Wire DTO/body/deadline unchanged; optional signal only",
+    "No SQL/schema/Claude/PersonalMed/SaaS/Meta/hosted/load/paid/deploy/push operation"
+  ],
+  "gitManifest": {
+    "expectedPaths": [
+      "coordination/CODEX_CHECKPOINT.md",
+      "coordination/ESTADO.md",
+      "coordination/mensagens/2026-11-07-0940_codex-para-claude_k2-painel-contrato-e-controles-c5.md",
+      "docs/product/clinic-crm/CONTACT_LINK_READS.md",
+      "docs/product/clinic-crm/RECEPTION_DASHBOARD_READ.md",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/AUDIT.json",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-closed-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-closed-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-closed-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-closed-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-denied-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-denied-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-denied-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-denied-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-denied-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-denied-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-denied-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-denied-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-first-page-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-first-page-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-first-page-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-first-page-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-first-page-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-first-page-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-first-page-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-first-page-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-initial-pending-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-initial-pending-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-initial-pending-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-initial-pending-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-initial-pending-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-initial-pending-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-initial-pending-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-initial-pending-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-next-pending-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-next-pending-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-next-pending-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-next-pending-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-next-pending-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-next-pending-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-next-pending-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-next-pending-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-refresh-pending-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-refresh-pending-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-refresh-pending-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-refresh-pending-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-refresh-pending-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-refresh-pending-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-refresh-pending-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-refresh-pending-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-retried-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-retried-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-retried-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-retried-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-retried-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-retried-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-retried-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-retried-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-second-page-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-second-page-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-second-page-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-second-page-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-second-page-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-second-page-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-second-page-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/contact-link-reads-final/admin--recepcao-contatos-contact-link-reads-second-page-375.png",
+      "docs/reviews/2026-11-07/contact-link-reads/BASELINE_CONTROLS.json",
+      "docs/reviews/2026-11-07/contact-link-reads/CLI.json",
+      "docs/reviews/2026-11-07/contact-link-reads/IMPLEMENTATION.md",
+      "docs/reviews/2026-11-07/contact-link-reads/RED_CONTROL.json",
+      "docs/reviews/2026-11-07/contact-link-reads/SDK.json",
+      "docs/reviews/2026-11-07/contact-link-reads/UNIT_GREEN.json",
+      "docs/reviews/2026-11-07/contact-link-reads/UNIT_RED.json",
+      "docs/reviews/2026-11-07/contact-link-reads/VALIDATION.json",
+      "docs/reviews/2026-11-07/whatsapp-be5b794-client/C5_CONTROLS.json",
+      "docs/reviews/2026-11-07/whatsapp-be5b794-client/REVIEW.md",
+      "docs/reviews/2026-11-07/whatsapp-be5b794-client/VALIDATION.json",
+      "scripts/fixtures/contact-link-reads-browser.mjs",
+      "scripts/reception-app-audit-browser.mjs",
+      "scripts/reviews/contact-links-sdk.mjs",
+      "src/features/reception/ContactLinkReads.test.tsx",
+      "src/features/reception/ContactLinksDialog.test.tsx",
+      "src/features/reception/ContactLinksDialog.tsx",
+      "src/features/reception/api.ts",
+      "src/features/reception/contactLinkReadApi.test.ts",
+      "tasks/clinic-crm/todo.md"
+    ],
+    "branch": "main",
+    "identity": "axiscoachapp",
+    "foreignIndexBefore": [],
+    "onlyCommit": true,
+    "parallelHeadAtValidation": "f713199ee814470d01cb7b2a6f4c28fe70c6c13a",
+    "parallelDirtyAtClose": [
+      "src/features/settings/whatsappApi.ts",
+      "src/lib/whatsappHandlers.test.ts",
+      "supabase/config.toml",
+      "supabase/functions/_shared/whatsappDeps.ts",
+      "supabase/functions/_shared/whatsappHandlers.ts",
+      "tasks/plan.md",
+      "tasks/todo.md"
+    ],
+    "typesRunBeforeParallelDirt": true,
+    "parallelDirtyExcluded": true
+  }
+}

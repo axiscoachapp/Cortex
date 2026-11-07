@@ -1,0 +1,24 @@
+{
+  "producer": "be5b794",
+  "testCommand": "vitest settingsWhatsAppReview.test.tsx --pool=forks --maxWorkers=1",
+  "passed": 5,
+  "failed": 0,
+  "sources": [
+    {
+      "path": "src/features/settings/FlowEditor.tsx",
+      "sha256": "e69b474895d795bce1885a904eda3b50bcc7c4d5fccb1a14f11229eae5aa1740",
+      "matchesBe5b794Normalized": true
+    },
+    {
+      "path": "src/features/settings/WhatsAppSettings.tsx",
+      "sha256": "5ef3c822ac41f270ef74acac70e18f14afebf71d5fced0b4f1b0b6a5d69c33bf",
+      "matchesBe5b794Normalized": true
+    },
+    {
+      "path": "src/features/reception/settingsWhatsAppReview.test.tsx",
+      "sha256": "8f73ab128687f1e18ddcb3e390261c247cfd74b8a6cb535ec01581ef9159ac54",
+      "matchesBe5b794Normalized": true
+    }
+  ],
+  "limits": "Focused client controls only. No new C5 browser, SQL/Auth or bot concurrency retest."
+}

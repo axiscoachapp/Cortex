@@ -106,9 +106,9 @@ export const receptionApi = {
   contactEdit: (id: string, signal?: AbortSignal) => rpc('reception_contact_edit', { p_contact: id }, contactEditSchema, signal),
   linkEdit: (contact: string, patient: string) =>
     rpc('reception_link_edit', { p_contact: contact, p_patient: patient }, linkEditSchema),
-  contactLinks: (clinic: string, contact: string, after: string | null = null, limit = 50) =>
+  contactLinks: (clinic: string, contact: string, after: string | null = null, limit = 50, signal?: AbortSignal) =>
     rpc('reception_contact_links', { p_clinic: clinic, p_contact: contact, p_after: after, p_limit: limit },
-      contactLinksPageSchema.refine(page => page.items.length <= limit && page.items.every(item => item.contactId === contact && (after === null || item.patientId > after)))),
+      contactLinksPageSchema.refine(page => page.items.length <= limit && page.items.every(item => item.contactId === contact && (after === null || item.patientId > after))), signal),
   updateLinkRelationship: (contact: string, patient: string, expected: number, relationship: LinkEdit['relationship']) =>
     rpc('reception_update_link_relationship', { p_contact: contact, p_patient: patient, p_revision: expected, p_relationship: relationship }, revision),
   setLinkActive: (contact: string, patient: string, expected: number, active: boolean) =>

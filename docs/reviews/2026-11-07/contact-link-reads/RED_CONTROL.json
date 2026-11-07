@@ -1,0 +1,20 @@
+{
+  "baseline": "0693cddd5ee9b7675d045fa3e6bf3cf2064f5e9b",
+  "failed": 21,
+  "controls": 4,
+  "total": 25,
+  "restored": true,
+  "sourceHashes": [
+    {
+      "path": "src/features/reception/ContactLinksDialog.tsx",
+      "sha256": "ab09e628bea632f77b5cb0d9c1bc4651a0df30020c08342a35e6f5f8e1d3a3e1"
+    },
+    {
+      "path": "src/features/reception/api.ts",
+      "sha256": "29d1c689cff99e2e8c9bbe43938b1ccd9c5eddd88c530c8aab3ed704808f454b"
+    }
+  ],
+  "noGenericTimeouts": true,
+  "excluded": "../contact-link-reads-preliminary/",
+  "refinement": "Awaited React error notification before generic-error assertions; new-context mock returns an empty fresh page rather than old data."
+}

@@ -1,0 +1,65 @@
+[
+  {
+    "args": [
+      "--check-contact-link-reads"
+    ],
+    "reason": "Contact link reads require isolated contact mode",
+    "exitCode": 1,
+    "matched": true
+  },
+  {
+    "args": [
+      "--baseline=0693cddd5ee9b7675d045fa3e6bf3cf2064f5e9b",
+      "--only=whatsapp-read",
+      "--check-contact-link-reads"
+    ],
+    "reason": "Contact link reads require isolated contact mode",
+    "exitCode": 1,
+    "matched": true
+  },
+  {
+    "args": [
+      "--baseline=0693cddd5ee9b7675d045fa3e6bf3cf2064f5e9b",
+      "--only=contact-search",
+      "--check-contact-link-reads",
+      "--check-contact-correction-context"
+    ],
+    "reason": "Contact link reads require isolated contact mode",
+    "exitCode": 1,
+    "matched": true
+  },
+  {
+    "args": [
+      "--baseline=0693cddd5ee9b7675d045fa3e6bf3cf2064f5e9b",
+      "--only=contact-search",
+      "--check-contact-link-reads",
+      "--check-contact-correction-reads"
+    ],
+    "reason": "Contact link reads require isolated contact mode",
+    "exitCode": 1,
+    "matched": true
+  },
+  {
+    "args": [
+      "--baseline=0693cddd5ee9b7675d045fa3e6bf3cf2064f5e9b",
+      "--only=contact-search",
+      "--check-contact-link-reads",
+      "--overlay=src/features/reception/ContactCorrectionDialog.tsx"
+    ],
+    "reason": "Contact search only permits its scoped picker/form/client overlays",
+    "exitCode": 1,
+    "matched": true
+  },
+  {
+    "args": [
+      "--baseline=0693cddd5ee9b7675d045fa3e6bf3cf2064f5e9b",
+      "--only=contact-search",
+      "--check-contact-link-reads",
+      "--overlay=src/features/reception/api.ts",
+      "--overlay=src/features/reception/api.ts"
+    ],
+    "reason": "Contact search only permits its scoped picker/form/client overlays",
+    "exitCode": 1,
+    "matched": true
+  }
+]

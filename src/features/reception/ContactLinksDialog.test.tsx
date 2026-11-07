@@ -6,6 +6,7 @@ import type { ClinicAccess, LinkEdit } from './contracts';
 import { ContactLinksDialog } from './ContactLinksDialog';
 const mocks = vi.hoisted(() => ({ page: vi.fn(), close: vi.fn(), editor: vi.fn(), state: vi.fn() }));
 vi.mock('./api', () => ({ receptionApi: { contactLinks: mocks.page } }));
+vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: '11111111-1111-4111-8111-111111111111' } }) }));
 vi.mock('./LinkRelationshipDialog', () => ({ LinkRelationshipDialog: (props: { patientId: string; doctorId: string; contactId: string; onClose: () => void; onSaved: () => void }) => {
   mocks.editor(props); return <div role="dialog"><p>Editor sintético</p><button onClick={props.onClose}>Cancelar edição sintética</button><button onClick={props.onSaved}>Salvar edição sintética</button></div>;
 } }));
@@ -27,7 +28,7 @@ describe('administrative contact links dialog',()=>{
     mocks.page.mockImplementation((_clinic,_contact,after)=>Promise.resolve(after?{items:[second],nextCursor:null}:{items:[first],nextCursor:first.patientId}));
     mount();await screen.findByText(first.patientName);expect(screen.getByText(first.doctorName)).toBeVisible();expect(screen.getByText('02/01/2000')).toBeVisible();expect(screen.getByText('Responsável')).toBeVisible();
     expect(mocks.page).toHaveBeenCalledTimes(1);fireEvent.click(screen.getByRole('button',{name:'Carregar mais vínculos'}));await screen.findByText(second.patientName);
-    expect(mocks.page).toHaveBeenLastCalledWith(clinic,contact,first.patientId,50);expect(screen.queryByRole('button',{name:'Carregar mais vínculos'})).not.toBeInTheDocument();expect(screen.getByText('2 vínculos carregados')).toBeVisible();
+    expect(mocks.page).toHaveBeenLastCalledWith(clinic,contact,first.patientId,50,expect.any(AbortSignal));expect(screen.queryByRole('button',{name:'Carregar mais vínculos'})).not.toBeInTheDocument();expect(screen.getByText('2 vínculos carregados')).toBeVisible();
   });
   it('opens the existing editor with exact identities and returns to the list on cancel or save',async()=>{
     mount();await screen.findByText(first.patientName);fireEvent.click(edit());expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();
@@ -54,12 +55,12 @@ describe('administrative contact links dialog',()=>{
   });
   it('withholds a cached list until the fresh mount read succeeds, then hides it on failure',async()=>{
     let fail!:(error:Error)=>void;mocks.page.mockReturnValue(new Promise((_,reject)=>{fail=reject;}));mount({cached:true});expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();
-    await act(async()=>{fail(new Error('Permissão retirada'));});expect(await screen.findByText('Permissão retirada')).toBeVisible();expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();expect(screen.queryByText(/Nenhum vínculo/)).not.toBeInTheDocument();
+    await act(async()=>{fail(new Error('Permissão retirada'));});expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível consultar os vínculos');expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();expect(screen.queryByText(/Nenhum vínculo/)).not.toBeInTheDocument();
     mocks.page.mockResolvedValue({items:[first],nextCursor:null});fireEvent.click(screen.getByRole('button',{name:'Tentar novamente'}));expect(await screen.findByText(first.patientName)).toBeVisible();
   });
   it('hides rows and correction actions when loading the next page is refused',async()=>{
     mocks.page.mockResolvedValueOnce({items:[first],nextCursor:first.patientId}).mockRejectedValueOnce(new Error('Sem permissão para continuar'));mount();await screen.findByText(first.patientName);fireEvent.click(screen.getByRole('button',{name:'Carregar mais vínculos'}));
-    await screen.findByText('Sem permissão para continuar');expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:/Corrigir relação/})).not.toBeInTheDocument();
+    await screen.findByRole('alert');expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:/Corrigir relação/})).not.toBeInTheDocument();
   });
   it('separates empty results from failures',async()=>{
     mocks.page.mockResolvedValue({items:[],nextCursor:null});mount();expect(await screen.findByText('Nenhum vínculo administrativo neste contato.')).toBeVisible();expect(screen.queryByRole('alert')).not.toBeInTheDocument();
