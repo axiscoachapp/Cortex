@@ -1,6 +1,6 @@
 # Checkpoint do Codex
 
-Atualizado em 2026-11-07 08:50 (America/Sao_Paulo). T46 validado; SHA local a registrar após commit, main/axiscoachapp (autor e committer), sem push.
+Atualizado em 2026-11-07 08:50 (America/Sao_Paulo). Entrega T46: 74191df212d8e18004ce3630d4da0a6570647741, main/axiscoachapp (autor e committer), sem push.55caminhos próprios (37artefatos finais do navegador); índice livre e dirt6/7 preservado por hash.
 
 Correção vinculada ao ator/clínica/admin/papel/contato da abertura. Perda de contexto/sessão oculta retira campos e exige fechar/reabrir; resposta com outro id recusada. Trava comum salvar/recuperar, snapshot/revisão/conferência/telefone preservados, respostas tardias sem sucesso/fechamento/cache fora de contexto. Pedido já enviado pode ter sido concluído; sem promessa de aborto/rollback.
 
