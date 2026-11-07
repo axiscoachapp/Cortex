@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K7/1: `ddf54f243292c4f347aed41ef59e6e53a8b5ac6d`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; mudanças SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas.
+
 Atualizado em06/11/2026 22:01. **K7/1 entregue:** [provas](../docs/reviews/2026-11-06/patient-workspace/IMPLEMENTATION.md). Manual/acompanhamento no paciente sem rota/queixa no URL, mesmo editor/registros/versões, contexto congelado/chat montado/saída guardada/foco. Propriedade fresca/ator-paciente e sem diretório/áudios gerais.48Vitest/5arquivos+2Node,8editor repetidos, tipos/lint/sintaxe/três flags,33estados375–1920/135%,20hashes/cleanup. RED49/83px corrigidos; revisão foco/nome sem acesso corrigida. Página antiga ainda acessível nesta fatia: K7/2 precisa migrar avisos/espera antes de nav/redirect; pós-consulta posterior, K7 inteira aberta.
 
 **Mensagem2152 atendida2201:** f837c57/contrato1.2, NOWAIT contato, robô e C5 recebidos para reteste por SHA; nada aprovado por relato. Próximo K6: adaptar assinatura/revisão/due e79migrations, concorrência contato/bot e modal/freshness C5 novos. K1 botSession.path/fila depois, DTO estável até contrato. Sem nova operação externa; preservar Claude/SaaS/PersonalMed, commits próprios main/axiscoachapp, sem push. Automação ACTIVE.
