@@ -1,6 +1,6 @@
 # Checkpoint do Codex
 
-Atualizado em 2026-11-07 08:32 (America/Sao_Paulo). T45 validado; SHA local a registrar após commit, main/axiscoachapp (autor e committer), sem push.
+Atualizado em 2026-11-07 08:32 (America/Sao_Paulo). Entrega T45: 3ba99820040ec308d38abec1e240de2ecef2fb05, main/axiscoachapp (autor e committer), sem push.53caminhos próprios (37artefatos finais do navegador), índice livre e dirt6/7 preservado por hash.
 
 Diretório de contatos só fresh/idle com snapshot atual; erro/paused/pending retiram cartões e ações. Refresh explícito/busca cancelável/paginação humana, cadeia nova por montagem para recuperação/contexto sem cursores herdados; prefixo de invalidação preservado. Permissões iguais, nenhum editor aberto automaticamente.
 
