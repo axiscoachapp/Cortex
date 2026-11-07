@@ -1,0 +1,45 @@
+{
+  "baseline": "884c449ccbe04aa4159955e8c24fcf28b87386fc",
+  "scope": "K1/4m revoke_opt_in adapter only",
+  "unit": {
+    "scaffoldRedTests": 55,
+    "newTests": 55,
+    "existingQueueTests": 65,
+    "existingTransferTests": 52,
+    "existingReopenTests": 51,
+    "existingCloseTests": 47,
+    "existingReleaseTests": 36,
+    "existingClaimTests": 34,
+    "existingReadTests": 55,
+    "passed": 395,
+    "failed": 0,
+    "files": 8
+  },
+  "sdk": {
+    "version": "2.86.0",
+    "checkGroups": 11,
+    "commands": 10,
+    "realNetwork": false,
+    "sourceHashes": 3,
+    "sourceHashesStable": true,
+    "unexpectedResources": 0
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 3,
+    "status": "passed"
+  },
+  "syntax": {
+    "scripts": 1,
+    "status": "passed"
+  },
+  "review": "Fresh read-only adversarial examination of adapter, tests, SDK and contract against producer/helpers/installed SDK: no concrete findings",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "readBack": {
+    "mandatoryAfterValidReceipt": true,
+    "consentFlagsInReceipt": false,
+    "consentFlagsSynthesized": false
+  },
+  "scopeLimits": "Producer revokes by clinic phone/variants, not patient identity. No guarantee for already reserved/sent messages or all human responses.",
+  "limits": "No UI/browser/server authorization/SQL CAS/RLS/concurrency/real revocation proof. No Meta/hosted/carga/push. No global Vitest green claim; C5 RED cases excluded."
+}

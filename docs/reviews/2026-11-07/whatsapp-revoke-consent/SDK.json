@@ -1,0 +1,90 @@
+{
+  "completed": true,
+  "syntheticOnly": true,
+  "realNetwork": false,
+  "sdkVersion": "2.86.0",
+  "sourceMode": "immutable in-memory snapshot; hashes stable before/after",
+  "sources": [
+    {
+      "path": "src/lib/functionErrors.ts",
+      "sha256": "36c8cb268acf947fbe799e9b8080db16dd1f049e7b1f8997c97f300b01c6fd4f"
+    },
+    {
+      "path": "src/features/reception/whatsappClaim.ts",
+      "sha256": "448ad6fe58db5ec7d0246ee1fd96aa11eab89083aad70892cd8b15e6828729f8"
+    },
+    {
+      "path": "src/features/reception/whatsappRevokeConsent.ts",
+      "sha256": "c9435022d853afb875deda360bd5c36f37e5642b9c2cc2c0fa4583c4b21d127f"
+    }
+  ],
+  "commands": 10,
+  "checks": [
+    {
+      "case": "success",
+      "commands": 1,
+      "result": "receipt-valid; consent-unverified",
+      "needsRefresh": true
+    },
+    {
+      "case": "stale",
+      "commands": 1,
+      "result": "stale",
+      "needsRefresh": true
+    },
+    {
+      "case": "forbidden",
+      "commands": 1,
+      "result": "forbidden",
+      "needsRefresh": true
+    },
+    {
+      "case": "wrong-owner",
+      "commands": 1,
+      "result": "INVALID_RESPONSE",
+      "needsRefresh": true
+    },
+    {
+      "case": "wrong-status",
+      "commands": 1,
+      "result": "INVALID_RESPONSE",
+      "needsRefresh": true
+    },
+    {
+      "case": "consent-extra",
+      "commands": 1,
+      "result": "INVALID_RESPONSE",
+      "needsRefresh": true
+    },
+    {
+      "case": "extra",
+      "commands": 1,
+      "result": "INVALID_RESPONSE",
+      "needsRefresh": true
+    },
+    {
+      "case": "truncated",
+      "commands": 1,
+      "result": "unavailable",
+      "needsRefresh": true
+    },
+    {
+      "case": "lost",
+      "commands": 1,
+      "result": "unavailable",
+      "needsRefresh": true
+    },
+    {
+      "case": "pre-cancelled, closed, foreign owner, inactive/missing consent",
+      "commands": 0
+    },
+    {
+      "case": "cancel-after",
+      "commands": 1,
+      "result": "cancelled",
+      "needsRefresh": true
+    }
+  ],
+  "unexpected": [],
+  "limits": "Adapter/SDK only. act receipt omits consent flags: read-back is mandatory even after a valid receipt. No UI/server authorization/SQL CAS/RLS/Meta proof."
+}

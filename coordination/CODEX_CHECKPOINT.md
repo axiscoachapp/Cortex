@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-07 05:48. **K1/4m — retirar autorização:** [provas](../docs/reviews/2026-11-07/whatsapp-revoke-consent/IMPLEMENTATION.md). Adaptador aberta/própria/consented true; corpo act/revoke_opt_in/tuple. Recibo omite flags, sempre needsRefresh:true, sem retirada inferida/retry.55RED→395Vitest/oito arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória onze grupos/dez POST/três hashes estáveis/zero rede. Sem UI/produtor/banco/autorização/CAS/retirada real.
+
+Próximo4n: confirmação humana explicando efeito por telefone/variantes; key id/revisão/readVersion/owner/waId/consented/optedOut/contexto, leitura obrigatória/sem prometer cancelar mensagens já reservadas/enviadas. Nenhum incoming Claude novo:2152 atendida/0548 informativa encerrada;4j pedido0506/C4/C5 após SHAs/dois RED C5 fora da suíte dirigida. Outros comandos/MFA/K7 independentes autorizados. Automação ACTIVE, main/axiscoachapp sem Meta/hosted/carga/push; Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md preservados.
+
+---
+
 Entrega K1/4l: `a77b59408a85e7bf93dbb68e7586833c711ed8bc`, main/axiscoachapp (autor e committer), sem push. Só98caminhos próprios (inclui77artefatos finais do navegador), índice livre; dirt SaaS preservado. Mudança de fila com confirmação/conferência integrada. Catálogo/seletor4j e outros comandos/K1 inteiro continuam abertos.
 
 Atualizado em 2026-11-07 05:39. **K1/4l — mudar fila na UI:** [provas](../docs/reviews/2026-11-07/whatsapp-queue-ui/IMPLEMENTATION.md). Aberta/própria/fresca, destino explícito e confirmação; key id/revisão/readVersion/owner/fila, exclusão/conferência/gerações. Nunca input como fila confirmada: releitura obrigatória inclusive recibo válido, erro bloqueia/retry só leitura. Revisão reproduziu41→40 e removeu maxlength.488Vitest/doze arquivos+26Node/tipos/lint/sintaxe/oitoflags/omissão snapshot/revisão;60estados/76PNGs320–1920/135%,339fontes/31hashes/três overlays/cleanup.232requests/16set_queue só mock (12aplicados/4conflitos), oito403/409-console deliberados, zero outras falhas/JS/clínico/externos; capturas320/1920 inspecionadas e preliminares excluídos.
