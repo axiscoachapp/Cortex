@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K1/4i: `02bd1b6367ab622c07449d8ad300cd3c84b99395`, main/axiscoachapp (autor e committer), sem push. Commit só dos14caminhos próprios, índice livre; dirt SaaS preservado. Adaptador de transferência entregue, catálogo/seletor K1/4j pendentes no pedido0506 ao C4; trabalho independente segue autorizado.
+
 Atualizado em 2026-11-07 05:06. **K1/4i — transferência explícita:** [provas](../docs/reviews/2026-11-07/whatsapp-transfer/IMPLEMENTATION.md). Adaptador exige aberta/própria/outro alvo explícito; corpo act/assign/tuple/targetUserId, recibo open/revisão+1/assignedTo exatamente validado. Sem retry; inconclusivo exige leitura.52RED→275Vitest/seis arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória onze grupos/dez POST/três hashes estáveis/zero rede. Sem UI/produtor/banco/autorização/CAS real.
 
 Próximo4j depende de catálogo fresco/nomes distinguíveis: staff atual é admin-only/incompleto, doctors não é roster. [Proposta](../docs/product/clinic-crm/WHATSAPP_ASSIGNEES_PROPOSAL.md), mensagem2026-11-07-0506_codex-para-claude_k1-transferencia-e-catalogo.md aberta solicita C4 alinhar/implementar ou delegar leitor mínimo; não implementar C4 por inferência. Nenhuma entrada Claude nova:2152 atendida/sem resposta repetida; C4/C5 após novos SHAs/dois RED C5 fora da suíte dirigida. Outros comandos/MFA/K7 independentes continuam autorizados. Automação ACTIVE; main/axiscoachapp sem push/hosted/carga, preservar Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md.
