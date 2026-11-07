@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K1/3b: `ebf20649935d21d1b60f5574c245d5a2dbedeb10`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Paginação de mensagens concluída; próximos lista de conversas ou K7, com retestes C4/C5 quando houver novos SHAs.
+
 Atualizado em 2026-11-07 00:12. **K1/3b — histórico em páginas:** [provas](../docs/reviews/2026-11-07/whatsapp-history/IMPLEMENTATION.md). Página<=50 substitui anterior; cursor preservado, recentes acessíveis durante pending/erro, refresh/retry distintos, cancelamento/late result/foco e geração do bot protegidos.90Vitest/2arquivos+6Node/tipos/lint/sintaxe/quatro flags/revisão;103registros50/50/3,46estados (14histórico320/375/1440), controles>=44/hit-test,19hashes/2overlays/319fontes/cleanup. Só5recusas403 deliberadas, zero writes/clínico/externos. Fonte final `whatsapp-history-final`, preliminar42estados excluída.
 
 Nenhuma entrada Claude nova;2152 já atendida2353, sem nova resposta própria/confirmatória. Próximos independentes: paginação da lista de conversas ou K7 pós-consulta/áudio local. Correções C4/C5 com Claude aguardam SHAs para reteste; comandos K1 em recorte próprio. M2/MFA/compartilhamento/piloto abertos. Automação ACTIVE; main/axiscoachapp sem push/hosted/Meta/carga; preservar Claude/PersonalMed/SaaS.
