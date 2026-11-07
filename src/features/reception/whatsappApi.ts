@@ -83,7 +83,7 @@ export const whatsappApi = {
   },
   async conversations(input: z.input<typeof listInput> = {}, signal?: AbortSignal) {
     const value = listInput.parse(input);
-    return read({ action: 'conversations', ...value, before: value.before ?? null }, conversationPage.refine(page => page.conversations.length <= value.limit), signal);
+    return read({ action: 'conversations', ...value, before: value.before ?? null }, conversationPage.refine(page => page.conversations.length <= value.limit && (value.before == null || page.nextBefore !== value.before)), signal);
   },
   async messages(input: z.input<typeof messagesInput>, signal?: AbortSignal) {
     const value = messagesInput.parse(input);

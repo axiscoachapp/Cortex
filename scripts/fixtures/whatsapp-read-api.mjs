@@ -4,6 +4,8 @@ export const whatsappReadIds = { first: 'a1000000-0000-4000-8000-000000000001', 
 export const whatsappBotSessionFixture={status:'handed_off',path:['Agendamento','Médico sintético'],outcome:'queue:agendamento',startedAt:at,updatedAt:at};
 const historyId=index=>'a2100000-0000-4000-8000-'+String(index).padStart(12,'0');
 export const whatsappHistoryCursors={first:at+'|'+historyId(101),second:at+'|'+historyId(51)};
+const listId=index=>'a3100000-0000-4000-8000-'+String(index).padStart(12,'0');
+export const whatsappListCursors={first:at+'|'+listId(101),second:at+'|'+listId(51)};
 export function createWhatsAppReadFixture(ids) {
   const calls = [], failures = new Map();
   const base = { waId: null, contactId: null, caseId: null, queue: 'geral', status: 'open', assignedTo: null, assignedAt: null, openedAt: at, firstResponseAt: null, closedAt: null, lastInboundAt: at, windowOpenUntil: at, lastMessageAt: at, lastMessagePreview: 'Prévia sintética de atendimento', unreadCount: 2, optedOut: false, consented: true, revision: 1 };
@@ -13,8 +15,10 @@ export function createWhatsAppReadFixture(ids) {
     { ...base, id: whatsappReadIds.closed, profileName: 'Contato sintético encerrado', status: 'closed' },
   ];
   const sessions=new Map([[whatsappReadIds.first,structuredClone(whatsappBotSessionFixture)]]);
-  let historyReview=false;
+  const pagedRows=Array.from({length:103},(_,offset)=>({...base,id:listId(150-offset),profileName:`Contato paginado sintético ${150-offset}`,assignedTo:offset%2===0?ids.a:null}));
+  let historyReview=false,listReview=false;
   return {
+    setListReview:enabled=>{listReview=enabled===true;},
     setHistoryReview:enabled=>{historyReview=enabled===true;},
     setBotSession:(id,value)=>sessions.set(id,structuredClone(value)),
     calls, setFailure: (action, failure) => { if (failure) failures.set(action, failure); else failures.delete(action); },
@@ -29,10 +33,14 @@ export function createWhatsAppReadFixture(ids) {
       if (mode === 'invalid') return { status: 200, data: { unexpected: true } };
       if (input.action === 'state') return { status: 200, data: { serverReady: true, connected: true, status: 'connected', displayPhone: 'Número sintético', verifiedName: 'Clínica sintética', quality: null, connectedAt: at, canManage: actor === ids.admin, canUseInbox: true, ...(actor === ids.admin ? { lastError: null, webhookUrl: 'https://example.invalid/webhook', phoneNumberId: null, wabaId: null } : {}) } };
       if (input.action === 'conversations') {
-        if (!['open', 'closed', 'mine', 'unassigned'].includes(input.filter) || input.before != null || input.limit !== 50 || typeof input.search !== 'string' || input.search.length > 80) return fail('invalid', 400);
-        return { status: 200, data: { conversations: rows.filter(row => input.filter === 'closed' ? row.status === 'closed' : row.status === 'open' && (input.filter === 'mine' ? row.assignedTo === actor : input.filter === 'unassigned' ? !row.assignedTo : true)).filter(row => row.profileName.toLowerCase().includes(input.search.toLowerCase())), nextBefore: null } };
+        if (!['open', 'closed', 'mine', 'unassigned'].includes(input.filter) || !listReview&&input.before != null || input.limit !== 50 || typeof input.search !== 'string' || input.search.length > 80) return fail('invalid', 400);
+        const filtered=(listReview?[...pagedRows,rows[2]]:rows).filter(row => input.filter === 'closed' ? row.status === 'closed' : row.status === 'open' && (input.filter === 'mine' ? row.assignedTo === actor : input.filter === 'unassigned' ? !row.assignedTo : true)).filter(row => row.profileName.toLowerCase().includes(input.search.toLowerCase()));
+        const anchor=input.before==null?-1:filtered.findIndex(row=>row.lastMessageAt+'|'+row.id===input.before);
+        if(input.before!=null&&anchor<0)return fail('invalid',400);
+        const page=filtered.slice(anchor+1,anchor+51),last=page.at(-1);
+        return { status: 200, data: { conversations: page, nextBefore:anchor+51<filtered.length?last.lastMessageAt+'|'+last.id:null } };
       }
-      const conversation = rows.find(row => row.id === input.conversationId);
+      const conversation = (listReview?[...rows,...pagedRows]:rows).find(row => row.id === input.conversationId);
       if (!conversation) return fail('not_found', 404);
       if(input.action==='botSession')return {status:200,data:{session:structuredClone(sessions.get(conversation.id)??null)}};
       const message = { direction: 'in', kind: 'text', body: 'Mensagem sintética recebida', media: null, template: null, status: 'received', error: null, sentBy: null, at };

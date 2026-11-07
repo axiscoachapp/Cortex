@@ -1,8 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createWhatsAppReadFixture, whatsappReadIds,whatsappHistoryCursors } from './whatsapp-read-api.mjs';
+import { createWhatsAppReadFixture, whatsappReadIds,whatsappHistoryCursors,whatsappListCursors } from './whatsapp-read-api.mjs';
 import { ids, startReceptionFixture } from './reception-api.mjs';
 const input = { action: 'conversations', filter: 'open', search: '', limit: 50, before: null };
+test('conversation paging is opt-in, scoped by filter/search and preserves tied cursor tokens',()=>{
+  const fixture=createWhatsAppReadFixture(ids);assert.equal(fixture.handle(ids.a,input).data.conversations.length,2);
+  fixture.setListReview(true);
+  const first=fixture.handle(ids.a,input).data,second=fixture.handle(ids.a,{...input,before:first.nextBefore}).data,last=fixture.handle(ids.a,{...input,before:second.nextBefore}).data;
+  assert.deepEqual([first.conversations.length,second.conversations.length,last.conversations.length],[50,50,3]);assert.equal(last.nextBefore,null);
+  assert.equal(first.nextBefore,whatsappListCursors.first);assert.equal(second.nextBefore,whatsappListCursors.second);
+  assert.equal(new Set([...first.conversations,...second.conversations,...last.conversations].map(c=>c.id)).size,103);
+  assert.ok(first.conversations.at(-1).id>second.conversations[0].id);assert.equal(first.conversations.at(-1).lastMessageAt,second.conversations[0].lastMessageAt);
+  const mine=fixture.handle(ids.a,{...input,filter:'mine'}).data;assert.ok(mine.conversations.every(c=>c.assignedTo===ids.a));
+  assert.equal(fixture.handle(ids.a,{...input,search:'Contato paginado sintético 150'}).data.conversations.length,1);
+  assert.equal(fixture.handle(ids.a,{...input,before:whatsappListCursors.first.replace('123456','123455')}).status,400);
+  assert.equal(fixture.handle(ids.a,{action:'messages',conversationId:second.conversations[0].id,before:null}).data.conversation.id,second.conversations[0].id);
+  fixture.setListReview(false);assert.equal(fixture.handle(ids.a,input).data.conversations.length,2);
+});
 test('fixture returns only the requested filter and conversation', () => {
   const fixture = createWhatsAppReadFixture(ids);
   assert.equal(fixture.handle(ids.a, input).data.conversations.length, 2);

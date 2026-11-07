@@ -52,34 +52,43 @@ function ReadFailure({ label, onRetry }: { label: string; onRetry: () => void })
 function ConversationList({ actor, clinic }: { actor: string; clinic: string }) {
   const [filter, setFilter] = useState<WhatsAppInboxFilter>('open');
   const [draft, setDraft] = useState(''), [search, setSearch] = useState(''), [selected, setSelected] = useState<string | null>(null);
+  const [before, setBefore] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  const goTo = (cursor: string | null) => { setSelected(null); setBefore(cursor); heading.current?.focus(); };
+  const refresh = () => { if (before) goTo(null); else void list.refetch(); };
   const list = useQuery({
-    queryKey: ['reception', actor, clinic, 'whatsapp', 'conversations', filter, search],
-    queryFn: ({ signal }) => whatsappApi.conversations({ filter, search, limit: 50 }, signal),
+    queryKey: ['reception', actor, clinic, 'whatsapp', 'conversations', filter, search, before],
+    queryFn: ({ signal }) => whatsappApi.conversations({ filter, search, limit: 50, ...(before ? { before } : {}) }, signal),
     retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
   const fresh = list.isSuccess && list.isFetchedAfterMount && !list.isFetching;
   const current = fresh ? list.data.conversations.find(item => item.id === selected) : undefined;
+  const nextCursor = fresh ? list.data.nextBefore : null;
   return <div className="space-y-4">
     <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_auto]">
       <div className="space-y-2 min-w-0">
         <Label htmlFor="wa-filter">Filtrar conversas</Label>
-        <select id="wa-filter" className="block h-11 w-full rounded-md border bg-card px-3 text-sm" value={filter} onChange={event => { setSelected(null); setFilter(event.target.value as WhatsAppInboxFilter); }}>
+        <select id="wa-filter" className="block h-11 w-full rounded-md border bg-card px-3 text-sm" value={filter} onChange={event => { setSelected(null); setBefore(null); setFilter(event.target.value as WhatsAppInboxFilter); }}>
           <option value="open">Em aberto</option><option value="unassigned">Sem responsável</option><option value="mine">Minhas conversas</option><option value="closed">Encerradas</option>
         </select>
       </div>
-      <form className="grid min-w-0 grid-cols-1 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]" onSubmit={event => { event.preventDefault(); setSelected(null); setSearch(draft.trim()); }}>
+      <form className="grid min-w-0 grid-cols-1 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]" onSubmit={event => { event.preventDefault(); setSelected(null); setBefore(null); setSearch(draft.trim()); }}>
         <div className="min-w-0 space-y-2"><Label htmlFor="wa-search">Buscar conversa</Label><Input id="wa-search" type="search" maxLength={80} className="h-11" value={draft} onChange={event => setDraft(event.target.value)} placeholder="Nome ou telefone" /></div>
         <Button type="submit" variant="outline" className="h-11">Buscar</Button>
       </form>
-      <Button variant="outline" className="h-11 gap-2 md:col-span-2 xl:col-span-1" disabled={list.isFetching} onClick={() => void list.refetch()}><RefreshCw aria-hidden="true" className="h-4 w-4" />Atualizar conversas</Button>
+      <Button variant="outline" className="h-11 gap-2 md:col-span-2 xl:col-span-1" disabled={list.isFetching} onClick={refresh}><RefreshCw aria-hidden="true" className="h-4 w-4" />Atualizar conversas</Button>
     </div>
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)]">
       <section aria-labelledby="wa-list-heading" className="min-w-0 space-y-3">
         <h2 id="wa-list-heading" ref={heading} tabIndex={-1} className="font-semibold outline-none">Lista de conversas</h2>
-        {list.isPending || list.isFetching ? <p role="status" className="p-4 text-sm">Carregando conversas…</p> : list.isError ? <ReadFailure label="conversas" onRetry={() => void list.refetch()} /> : null}
+        <p className="text-xs text-muted-foreground">Até 50 conversas por página.</p>
+        {(before || nextCursor) && <nav aria-label="Páginas das conversas" className="flex flex-wrap gap-2">
+          {before && <Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" onClick={() => goTo(null)}>Conversas mais recentes</Button>}
+          {nextCursor && <Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" onClick={() => goTo(nextCursor)}>Conversas anteriores</Button>}
+        </nav>}
+        {list.isPending || list.isFetching ? <p role="status" className="p-4 text-sm">Carregando conversas…</p> : list.isError ? <ReadFailure label="conversas" onRetry={() => { heading.current?.focus(); void list.refetch(); }} /> : null}
         {fresh && <>
-          {list.data.conversations.length === 0 && <p className="rounded-lg border p-6 text-sm text-muted-foreground">Nenhuma conversa neste filtro.</p>}
+          {list.data.conversations.length === 0 && <p className="rounded-lg border p-6 text-sm text-muted-foreground">{before ? 'Nenhuma conversa anterior a este ponto neste filtro.' : 'Nenhuma conversa neste filtro.'}</p>}
           <ul className="space-y-2">{list.data.conversations.map(item => <li key={item.id}>
             <button type="button" aria-label={'Abrir conversa com ' + (item.profileName || 'contato sem nome')} aria-pressed={selected === item.id} onClick={() => setSelected(item.id)} className={`w-full rounded-lg border p-4 text-left space-y-2 ${selected === item.id ? 'border-primary bg-primary/5' : 'bg-card hover:bg-muted/60'}`}>
               <span className="flex flex-wrap items-start justify-between gap-2"><span className="min-w-0 font-semibold text-sm [overflow-wrap:anywhere]">{item.profileName || 'Contato sem nome'}</span>{item.unreadCount > 0 && <span className="rounded bg-muted px-2 py-1 text-xs">{item.unreadCount} não lidas</span>}</span>
@@ -88,7 +97,6 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
               <time dateTime={item.lastMessageAt} className="block text-xs text-muted-foreground">{clinicDateLabel(item.lastMessageAt)} · {clinicTime(item.lastMessageAt)}</time>
             </button>
           </li>)}</ul>
-          {list.data.nextBefore && <p className="text-xs text-muted-foreground">Exibindo até 50 conversas. Refine a busca para localizar uma conversa.</p>}
         </>}
       </section>
       {current ? <WhatsAppMessages key={current.id} actor={actor} clinic={clinic} conversation={current} onClose={() => { setSelected(null); heading.current?.focus(); }} />

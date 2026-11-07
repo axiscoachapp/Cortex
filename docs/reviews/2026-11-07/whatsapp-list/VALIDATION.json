@@ -1,0 +1,38 @@
+{
+  "scope": "K1/3c conversation list read-only pagination",
+  "baseline": "589ec42d13e7c518aa04057e48c6afae39ad6f33",
+  "unitPassed": 101,
+  "unitFailed": 0,
+  "nodePassed": 7,
+  "typecheckExit": 0,
+  "lintExit": 0,
+  "lintPaths": 8,
+  "syntaxScripts": 4,
+  "invalidCliRefusals": 4,
+  "browser": {
+    "report": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-list-verified/AUDIT.json",
+    "completed": true,
+    "states": 66,
+    "listStates": 20,
+    "frozenSources": 319,
+    "runtimeHashes": 19,
+    "overlays": [
+      {
+        "path": "src/features/reception/WhatsAppInbox.tsx",
+        "sha256": "095e6d73154a1a772dbb04dd1fbef05e9b680cd28c54f3964035d86694d00caa"
+      },
+      {
+        "path": "src/features/reception/whatsappApi.ts",
+        "sha256": "690224118471606c1ff657a7480d14f1b421697a74af233154fe0e2877d081cf"
+      }
+    ],
+    "expected403": 6,
+    "expectedConsoleErrors": 6,
+    "otherErrors": 0,
+    "failedRequests": 0,
+    "externalRequests": 0,
+    "cleanupVerified": true
+  },
+  "review": "Fresh-context adversarial; no actionable findings",
+  "crossModel": "Cross-model skipped: non-interactive context."
+}

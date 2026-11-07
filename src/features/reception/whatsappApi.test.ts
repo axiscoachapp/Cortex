@@ -13,6 +13,10 @@ const message = { id: other, direction: 'in', kind: 'text', body: 'Mensagem sint
 const session = { status: 'handed_off', path: ['Agendamento', 'Médico sintético'], outcome: 'queue:agendamento', startedAt: at, updatedAt: at };
 describe('WhatsApp read adapter', () => {
   beforeEach(() => vi.resetAllMocks());
+  it('refuses a conversation page that repeats the requested cursor',async()=>{
+    mocks.invoke.mockResolvedValue({data:{conversations:[conversation],nextBefore:cursor},error:null});
+    await expect(whatsappApi.conversations({before:cursor})).rejects.toMatchObject({code:'INVALID_RESPONSE'});
+  });
   it('reads connection state without sending actor or clinic and forwards cancellation', async () => {
     mocks.invoke.mockResolvedValue({ data: state, error: null });
     const signal = new AbortController().signal;
@@ -29,8 +33,8 @@ describe('WhatsApp read adapter', () => {
   });
   it('sends only the explicit read filter and preserves opaque timestamp precision', async () => {
     mocks.invoke.mockResolvedValue({ data: { conversations: [conversation], nextBefore: cursor }, error: null });
-    expect(await whatsappApi.conversations({ filter: 'mine', search: '  exemplo  ', before: cursor, limit: 25 })).toEqual({ conversations: [conversation], nextBefore: cursor });
-    expect(mocks.invoke).toHaveBeenCalledExactlyOnceWith('whatsapp-api', { body: { action: 'conversations', filter: 'mine', search: 'exemplo', before: cursor, limit: 25 }, signal: undefined });
+    expect(await whatsappApi.conversations({ filter: 'mine', search: '  exemplo  ', before: at+'|'+other, limit: 25 })).toEqual({ conversations: [conversation], nextBefore: cursor });
+    expect(mocks.invoke).toHaveBeenCalledExactlyOnceWith('whatsapp-api', { body: { action: 'conversations', filter: 'mine', search: 'exemplo', before: at+'|'+other, limit: 25 }, signal: undefined });
   });
   it('uses bounded default list parameters', async () => {
     mocks.invoke.mockResolvedValue({ data: { conversations: [], nextBefore: null }, error: null });

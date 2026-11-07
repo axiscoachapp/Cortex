@@ -1,6 +1,8 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-07 00:12 por Codex (K1/3b); linhas de produto/WhatsApp do Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-07 00:27 por Codex (K1/3c); linhas de produto/WhatsApp do Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+
+**K1/3c — páginas da lista de conversas entregue localmente:** [provas](../docs/reviews/2026-11-07/whatsapp-list/IMPLEMENTATION.md). Página<=50 substitui anterior/cursor completo; retorno às recentes em pending/erro, filtro/busca/contexto reiniciam, detalhe cancelado, retry/foco/late result protegidos.101Vitest/2arquivos+7Node/tipos/lint/sintaxe/quatro flags/revisão;103conversas50/50/3,66estados (20lista320/375/1440 a135%),19hashes/2overlays/319fontes/cleanup. Só6recusas403 deliberadas, nenhum write/clínico/externo. Sem entrada Claude nova:2152 atendida2353, sem confirmação repetida. Próximos K7 pós-consulta/áudio local ou comandos K1 no próprio contrato, retestes C4/C5 após novos SHAs. Automação ACTIVE; main/axiscoachapp sem push/hosted/Meta/carga; preservar SaaS/Claude/PersonalMed.
 
 **K1/3b — páginas de mensagens anteriores:** [provas](../docs/reviews/2026-11-07/whatsapp-history/IMPLEMENTATION.md). Uma página<=50, cursor completo/sem concatenação, recentes alcançáveis em pending/erro, refresh volta às recentes/retry conserva cursor. Chave por contexto/cursor, cancelamento/late result/foco/geração do bot preservados.90Vitest/2arquivos+6Node/tipos/lint/sintaxe/quatro flags/revisão;103registros50/50/3 no mesmo timestamp,46estados/14histórico320/375/1440, alvos>=44/hit-test,19hashes/2overlays/319fontes/cleanup. Só5recusas403 deliberadas, zero writes/clínico/externos. Sem mensagem nova ou troca de confirmação; C4/C5/2316/2330 continuam com Claude. Próximos independentes: paginação da lista K1 ou K7; comandos separados. Sem produtor/SaaS/PersonalMed/hosted/Meta/push, automação ACTIVE.
 
