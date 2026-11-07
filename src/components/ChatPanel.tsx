@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import type { WorkEntry } from '@/lib/clinicalWorkspace';
 import { createPortal } from 'react-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import {
@@ -112,7 +113,7 @@ interface ChatPanelProps {
   onConsultationSaved?: (patientId: string) => void;
   onWorkStateChange?: (busy: boolean) => void;
   onCaptureStateChange?: (busy: boolean) => void;
-  onOpenPatientWork?: (manual: boolean) => void;
+  onOpenPatientWork?: (manual: boolean, entry?: WorkEntry) => void;
   /** Explicit Home resume; never reloads automatically after a blocked request. */
   recoveryRequest?: number;
 }
@@ -1959,7 +1960,8 @@ export function ChatPanel({
                               <FileSignature className="w-3.5 h-3.5" />
                               Receita / Atestado
                             </Button>
-                            <Button variant="outline" size="sm" className="gap-1.5 text-xs h-auto min-h-11 max-w-full whitespace-normal" disabled={!onOpenPatientWork} onClick={()=>onOpenPatientWork?.(false)}>Orientações e retorno</Button>
+                            <Button variant="outline" size="sm" className="gap-1.5 text-xs h-auto min-h-11 max-w-full whitespace-normal" disabled={!onOpenPatientWork} onClick={()=>onOpenPatientWork?.(false,'instruction')}>Registrar orientações</Button>
+                            <Button variant="outline" size="sm" className="gap-1.5 text-xs h-auto min-h-11 max-w-full whitespace-normal" disabled={!onOpenPatientWork} onClick={()=>onOpenPatientWork?.(false,'followup')}>Planejar retorno</Button>
                             </div>
                           </section>
                         )}

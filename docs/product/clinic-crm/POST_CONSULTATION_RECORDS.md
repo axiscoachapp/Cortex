@@ -1,0 +1,9 @@
+# K7/3b — entradas diretas para orientações e retorno
+
+No pós-consulta da última evolução salva, “Registrar orientações” e “Planejar retorno” substituem a entrada genérica anterior. Abrem o mesmo acompanhamento privado do paciente, somente após a leitura atual de propriedade, com um novo editor no tipo escolhido. A entrada normal de acompanhamento e a consulta manual continuam disponíveis no cabeçalho.
+
+O contrato interno usa `WorkEntry = 'instruction' | 'followup'` como opção inicial, propagada pelo Index/diálogo/workspace. Orientação começa em `instruction`, título “Orientações da consulta”, conteúdo vazio. Retorno começa em `task`, título “Planejamento de retorno”, fluxo `followup`, etapa `requested`, sem prazo preenchido. Não herda queixa, texto clínico ou `appointmentId`. Um editor inicial intocado não pede descarte; alterações posteriores mantêm a guarda existente. Abrir um registro existente ou usar “Novo registro” no acompanhamento não aplica novamente a entrada inicial.
+
+Nenhuma entrada salva ao abrir ou ao digitar, mesmo se o tipo for mudado para consulta manual durante essa entrada. “Salvar” usa o insert existente com paciente/autor atuais: orientação em `draft`, retorno em `open`; data de prazo somente se digitada pelo médico. Aprovação, conclusão, download e agendamento continuam ações separadas. Tipo/título podem ser editados pelas regras existentes, mantendo o salvamento explícito nessa sessão. Registro já salvo prevalece sobre qualquer opção inicial. Consulta manual iniciada pelo caminho normal conserva seu salvamento automático anterior.
+
+Os registros ficam no acompanhamento do paciente e reaparecem ao reabrir/recarregar. Não cria vínculo automático ao ID da consulta, checklist de conclusão ou novo schema/RPC; esses pontos continuam em recorte próprio. Não altera transporte WhatsApp/after_end, documentos ou compartilhamento. Nenhum horário ou confirmação de agenda é inferido.

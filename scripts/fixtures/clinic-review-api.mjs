@@ -6,11 +6,12 @@ import { createPostConsultationFixture } from './post-consultation-api.mjs';
 import { createSchedulingFixture } from './scheduling-migration-api.mjs';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, patientWorkspaceReview = false, recoveryNoticeReview = false, postConsultationReview = false, schedulingReview = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false, mfaCancellationReview = false } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, patientWorkspaceReview = false, recoveryNoticeReview = false, postConsultationReview = false, postEntryReview = false, schedulingReview = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false, mfaCancellationReview = false } = {}) {
   if(patientWorkspaceReview&&!workspaceDates)throw new Error('Patient workspace review requires workspace display data');
   if(recoveryNoticeReview&&(!workspaceDates||patientWorkspaceReview))throw new Error('Recovery notice review requires its isolated workspace fixture');
   if(schedulingReview&&(!workspaceDates||patientWorkspaceReview||recoveryNoticeReview))throw new Error('Scheduling review requires its isolated workspace fixture');
   if(postConsultationReview&&(!recoveryNoticeReview||medicalUI))throw new Error('Post consultation review requires isolated recovery fixture');
+  if(postEntryReview&&!postConsultationReview)throw new Error('Post entries require post consultation fixture');
   let patientWorkspaceDenied=false;
   if(delegationDecisions&&!delegationPermissions)throw new Error('Delegation decisions require the permissions fixture');
   if(delegationReplay&&(!delegationPermissions||!delegationDecisions))throw new Error('Delegation replay requires the permissions and decision fixtures');
@@ -33,7 +34,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   const drafts=workspaceDates?[{id:'99999999-9999-4999-8999-999999999999',user_id:uid,patient_id:patientId,status:'error',chief_complaint:'Consulta sintética recuperável',audio_storage_path:null,content:{audioMimeType:'audio/webm'},updated_at:'2026-11-05T17:03:27Z'}]:[];
   const recoveryNotice=recoveryNoticeReview?createRecoveryNoticeFixture({userId:uid,patients,drafts}):null;
   const scheduling=schedulingReview?createSchedulingFixture({userId:uid,patients,workItems}):null;
-  const postConsultation=postConsultationReview?createPostConsultationFixture({patientId,drafts,visits}):null;
+  const postConsultation=postConsultationReview?createPostConsultationFixture({patientId,userId:uid,drafts,visits,workItems,entries:postEntryReview}):null;
   const displayData={workItems,workRevisions,recordRevisions,drafts};
   if(medicalUI){
     templates.push({id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',user_id:uid,name:'Modelo de revisão sintético',description:'Estrutura sintética particular',content:'Texto sintético do modelo.',created_at:'2026-11-04T12:00:00Z'});

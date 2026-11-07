@@ -47,6 +47,37 @@ beforeEach(() => {
   vi.spyOn(window, 'confirm').mockReturnValue(true);
 });
 describe('manual encounter approval', () => {
+  it('keeps a post-consultation entry explicit after changing its type to a manual draft',async()=>{
+    render(<ClinicalWorkEditor entry="instruction" patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} onClose={vi.fn()}/>);
+    fireEvent.change(screen.getByLabelText('Tipo de registro'),{target:{value:'draft'}});
+    fireEvent.change(screen.getByLabelText('Conteúdo do registro'),{target:{value:'Texto sintético após troca de tipo'}});
+    await new Promise(resolve=>setTimeout(resolve,1400));expect(fixture.saved).toBeNull();
+    fireEvent.click(screen.getByRole('button',{name:'Salvar rascunho'}));await waitFor(()=>expect(fixture.saved).toMatchObject({kind:'draft',content:'Texto sintético após troca de tipo'}));
+  });
+  it('keeps an existing record and revision intact when an initial entry is also supplied',()=>{
+    const item={id:'existing',user_id:'doctor-A',patient_id:'patient-A',kind:'instruction',title:'Título já salvo',content:'Texto já salvo',details:{state:'active',date:'2026-11-06'},status:'approved',revision:9,created_at:'2026-11-06T12:00:00Z',updated_at:'2026-11-06T12:00:00Z',due_date:null} as NonNullable<Parameters<typeof ClinicalWorkEditor>[0]['item']>;
+    render(<ClinicalWorkEditor entry="followup" item={item} patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} onClose={vi.fn()}/>);
+    expect(screen.getByLabelText('Tipo de registro')).toHaveValue('instruction');expect(screen.getByLabelText('Título do registro')).toHaveValue('Título já salvo');expect(screen.getByLabelText('Conteúdo do registro')).toHaveValue('Texto já salvo');expect(fixture.saved).toBeNull();expect(fixture.rpc).not.toHaveBeenCalled();
+  });
+  it('does not treat an untouched direct entry as unsaved work',async()=>{
+    let guard=()=>false;
+    render(<ClinicalWorkEditor entry="instruction" patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} onClose={vi.fn()} onExitGuardChange={next=>{guard=next;}}/>);
+    await waitFor(()=>expect(guard()).toBe(true));expect(window.confirm).not.toHaveBeenCalled();expect(fixture.saved).toBeNull();
+  });
+  it('starts post-consultation instructions without inheriting the encounter title or appointment and saves only explicitly',async()=>{
+    render(<ClinicalWorkEditor entry="instruction" initialTitle="Queixa anterior" appointmentId="appointment-A" patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} onClose={vi.fn()}/>);
+    expect(screen.getByLabelText('Tipo de registro')).toHaveValue('instruction');expect(screen.getByLabelText('Título do registro')).toHaveValue('Orientações da consulta');expect(fixture.saved).toBeNull();
+    fireEvent.change(screen.getByLabelText('Conteúdo do registro'),{target:{value:'Orientação sintética revisada'}});expect(fixture.saved).toBeNull();
+    fireEvent.click(screen.getByRole('button',{name:'Salvar'}));await waitFor(()=>expect(fixture.saved).toMatchObject({kind:'instruction',title:'Orientações da consulta',content:'Orientação sintética revisada',status:'draft',patient_id:'patient-A',user_id:'doctor-A'}));
+    expect(fixture.saved?.details).not.toHaveProperty('appointmentId');expect(fixture.rpc).not.toHaveBeenCalled();
+  });
+  it('starts an open follow-up task with no date or appointment inferred',async()=>{
+    render(<ClinicalWorkEditor entry="followup" appointmentId="appointment-A" patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} onClose={vi.fn()}/>);
+    expect(screen.getByLabelText('Tipo de registro')).toHaveValue('task');expect(screen.getByLabelText('Fluxo de acompanhamento')).toHaveValue('followup');expect(screen.getByLabelText('Prazo da tarefa')).toHaveValue('');expect(fixture.saved).toBeNull();
+    fireEvent.change(screen.getByLabelText('Prazo da tarefa'),{target:{value:'2026-11-20'}});fireEvent.click(screen.getByRole('button',{name:'Salvar'}));
+    await waitFor(()=>expect(fixture.saved).toMatchObject({kind:'task',status:'open',due_date:'2026-11-20',details:expect.objectContaining({workflow:'followup',stage:'requested'})}));
+    expect(fixture.saved?.details).not.toHaveProperty('appointmentId');expect(fixture.rpc).not.toHaveBeenCalled();
+  });
   it('stores a patient waitlist preference without sending or booking', async () => {
     render(<ClinicalWorkEditor patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} onClose={vi.fn()} />);
     fireEvent.change(screen.getByLabelText('Tipo de registro'), { target: { value: 'task' } });

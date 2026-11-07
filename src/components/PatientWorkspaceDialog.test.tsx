@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useEffect } from 'react';
+import type { WorkEntry } from '@/lib/clinicalWorkspace';
 import { PatientWorkspaceDialog } from './PatientWorkspaceDialog';
 
 const fixture = vi.hoisted(() => ({ actor: 'doctor-A', denied: false, allowExit: true, requests: [] as Array<{table: string; filters: Record<string,string>; signal?: AbortSignal}> }));
@@ -22,19 +23,26 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: (table: str
     },
   }; return q;
 } } }));
-vi.mock('@/components/ClinicalWorkEditor', () => ({ ClinicalWorkEditor: ({ patientId, userId, appointmentId, initialTitle, onExitGuardChange }) => {
+vi.mock('@/components/ClinicalWorkEditor', () => ({ ClinicalWorkEditor: ({ patientId, userId, appointmentId, initialTitle, entry, onExitGuardChange }) => {
   useEffect(() => { onExitGuardChange?.(() => fixture.allowExit); }, [onExitGuardChange]);
-  return <div data-testid="work-editor">{userId}/{patientId}/{appointmentId}/{initialTitle}</div>;
+  return <div data-testid="work-editor">{userId}/{patientId}/{appointmentId}/{initialTitle}/{entry}</div>;
 } }));
 
 beforeEach(() => { fixture.actor = 'doctor-A'; fixture.denied = false; fixture.allowExit = true; fixture.requests = []; });
-function setup(patientId = 'A', manual = false) {
+function setup(patientId = 'A', manual = false, entry?: WorkEntry) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onClose = vi.fn();
-  const view = (id: string) => <QueryClientProvider client={client}><MemoryRouter><PatientWorkspaceDialog patientId={id} manual={manual} appointmentId="appointment-A" initialTitle="Synthetic complaint" onClose={onClose} /></MemoryRouter></QueryClientProvider>;
+  const view = (id: string) => <QueryClientProvider client={client}><MemoryRouter><PatientWorkspaceDialog patientId={id} manual={manual} entry={entry} appointmentId="appointment-A" initialTitle="Synthetic complaint" onClose={onClose} /></MemoryRouter></QueryClientProvider>;
   return { ...render(view(patientId)), view, client, onClose };
 }
 describe('patient workspace in the patient page', () => {
+  it.each(['instruction','followup'] as const)('opens %s only after checking the private patient',async entry=>{
+    setup('A',false,entry);expect(await screen.findByTestId('work-editor')).toHaveTextContent('/'+entry);
+    expect(fixture.requests[0].filters).toEqual({id:'A',user_id:'doctor-A'});
+  });
+  it('does not mount a direct-entry editor when current ownership is denied',async()=>{
+    fixture.denied=true;setup('A',false,'instruction');await screen.findByText(/Paciente indisponível ou sem acesso/);expect(screen.queryByTestId('work-editor')).not.toBeInTheDocument();
+  });
   it('reads only the selected private patient and reuses the manual encounter context', async () => {
     setup('A', true);
     expect(await screen.findByTestId('work-editor')).toHaveTextContent('doctor-A/A/appointment-A/Synthetic complaint');

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { clinicDate } from '@/lib/dates';
-import { ENCOUNTER_TEMPLATES, validateWorkItem, WORK_KINDS, WorkKind } from '@/lib/clinicalWorkspace';
+import { ENCOUNTER_TEMPLATES, validateWorkItem, WORK_KINDS, WorkKind, WorkEntry, workEntryDefaults } from '@/lib/clinicalWorkspace';
 import type { Tables, Json } from '@/integrations/supabase/types';
 type Item = Tables<'clinical_work_items'>;
 function detailsOf(item?: Item): Record<string, string> {
@@ -25,25 +25,29 @@ export function ClinicalWorkEditor({
   onExitGuardChange,
   appointmentId,
   initialTitle,
+  entry,
 }: {
   item?: Item;
   /** Agenda appointment this new manual encounter belongs to (completed on approval). */
   appointmentId?: string;
   /** Chief complaint carried over from the consultation screen. */
   initialTitle?: string;
+  entry?: WorkEntry;
   patientId: string;
   userId: string;
   onSaved: () => void;
   onClose: () => void;
   onExitGuardChange?: (guard: () => boolean) => void;
 }) {
-  const [kind, setKind] = useState<WorkKind>((item?.kind as WorkKind) ?? 'draft');
-  const [title, setTitle] = useState(item?.title ?? (initialTitle?.trim() || 'Consulta manual'));
+  const defaults = workEntryDefaults(entry);
+  const [explicitSaveOnly] = useState(!!defaults);
+  const [kind, setKind] = useState<WorkKind>((item?.kind as WorkKind) ?? defaults?.kind ?? 'draft');
+  const [title, setTitle] = useState(item?.title ?? defaults?.title ?? (initialTitle?.trim() || 'Consulta manual'));
   const [content, setContent] = useState(item?.content ?? '');
   const [details, setDetails] = useState<Record<string, string>>(
     item
       ? detailsOf(item)
-      : { date: clinicDate(), state: 'active', ...(appointmentId ? { appointmentId } : {}) },
+      : { date: clinicDate(), state: 'active', ...(appointmentId && !defaults ? { appointmentId } : {}), ...defaults?.details },
   );
   const [due, setDue] = useState(item?.due_date ?? '');
   const [saved, setSaved] = useState<Item | undefined>(item);
@@ -57,7 +61,7 @@ export function ClinicalWorkEditor({
   const [medicationError, setMedicationError] = useState('');
   const saving = useRef(false);
   const snapshot = JSON.stringify({ kind, title, content, details, due });
-  const [lastSaved, setLastSaved] = useState(item ? snapshot : '');
+  const [lastSaved, setLastSaved] = useState(item || defaults ? snapshot : '');
   const locked =
     !!saved && ['approved', 'done'].includes(saved.status) && ['draft', 'instruction', 'medication'].includes(kind);
   const dirty = !locked && snapshot !== lastSaved && (!!content.trim() || title !== 'Consulta manual');
@@ -147,9 +151,10 @@ export function ClinicalWorkEditor({
       setBusy(false);
     }
   };
-  // Only physician-authored manual drafts autosave. Approval is always an explicit action.
+  // Direct post-consultation entries remain explicit even after a type change.
+  // Other physician-authored manual drafts autosave; approval stays explicit.
   useEffect(() => {
-    if (kind !== 'draft' || !dirty || !content.trim() || busy || error) return;
+    if (explicitSaveOnly || kind !== 'draft' || !dirty || !content.trim() || busy || error) return;
     const timer = setTimeout(() => {
       void save();
     }, 1200);

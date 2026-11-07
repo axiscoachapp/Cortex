@@ -121,7 +121,8 @@ describe('patient-scoped asynchronous clinical work', () => {
     const soap={id:'soap',type:'soap' as const,title:'Evolução salva',content:'SOAP sintético',timestamp:new Date(),consultationId:'consultation-A'};
     const tree=(messages:ChatMessage[])=><QueryClientProvider client={client}><ChatPanel patient={patient('A')} userId="doctor" messages={messages} onMessagesChange={vi.fn()} chiefComplaint="" preBriefing={null} briefingLoading={false} onOpenPatientWork={work}/></QueryClientProvider>;
     const v=render(tree([soap]));const panel=await screen.findByRole('region',{name:'Pós-consulta'});
-    fireEvent.click(within(panel).getByRole('button',{name:'Orientações e retorno'}));expect(work).toHaveBeenCalledExactlyOnceWith(false);expect(mocks.invoke).not.toHaveBeenCalled();
+    fireEvent.click(within(panel).getByRole('button',{name:'Registrar orientações'}));expect(work).toHaveBeenCalledExactlyOnceWith(false,'instruction');expect(mocks.invoke).not.toHaveBeenCalled();
+    fireEvent.click(within(panel).getByRole('button',{name:'Planejar retorno'}));expect(work).toHaveBeenLastCalledWith(false,'followup');
     v.rerender(tree([soap,{...soap,id:'draft',consultationId:undefined}]));expect(screen.queryByRole('region',{name:'Pós-consulta'})).not.toBeInTheDocument();
   });
   it('uses the saved SOAP content for an explicit post-consultation summary',async()=>{

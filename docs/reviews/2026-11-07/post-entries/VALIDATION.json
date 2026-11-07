@@ -1,0 +1,63 @@
+{
+  "scope": "K7/3b post-consultation direct record entries",
+  "baseline": "93265fc149b6fb23b5f4dbf5141026c289d070bd",
+  "unitPassed": 67,
+  "unitFailed": 0,
+  "unitFiles": 5,
+  "nodePassed": 17,
+  "nodeFiles": 3,
+  "typecheckExit": 0,
+  "lintExit": 0,
+  "lintPaths": 14,
+  "syntaxScripts": 5,
+  "invalidCliRefusals": 4,
+  "browser": {
+    "report": "docs/reviews/2026-11-05/reception-app-audit/post-entries-final/AUDIT.json",
+    "completed": true,
+    "states": 39,
+    "frozenSources": 321,
+    "runtimeHashes": 21,
+    "overlays": [
+      {
+        "path": "src/components/ChatPanel.tsx",
+        "sha256": "3e5655b01f2536590e018ed7b03a89123ef503563465cd72d3368352eafa7cae"
+      },
+      {
+        "path": "src/pages/Index.tsx",
+        "sha256": "00ef36b49dd5e5a252f44a74fce7a29c18b32e94a258cb4e70152ce9147e6f00"
+      },
+      {
+        "path": "src/pages/ClinicalWorkspace.tsx",
+        "sha256": "1713b7c6c5e3f2bd3c540583482bf6d52308bed09ddd980499fb2c6f57d4e75f"
+      },
+      {
+        "path": "src/components/PatientWorkspaceDialog.tsx",
+        "sha256": "4e40b534579c733d539e9eb00586ab9627d18717b7c57e0ba59a47ddf6a66ea0"
+      },
+      {
+        "path": "src/components/ClinicalWorkEditor.tsx",
+        "sha256": "413d805ba5b0b0c44edd130c5fb7dacfa65993b8ad0256de9c8cd858aa01ca10"
+      },
+      {
+        "path": "src/lib/clinicalWorkspace.ts",
+        "sha256": "b03b84a9b0eafe4250d25726105eec05dca70d79dc0d25581ed40692e259f80c"
+      }
+    ],
+    "requests": 205,
+    "syntheticFinalizations": 4,
+    "explicitSyntheticInserts": 8,
+    "errors": 0,
+    "consoleErrors": 0,
+    "httpErrors": 0,
+    "historicalHead200Aborts": 6,
+    "externalRequests": 0,
+    "cleanupVerified": true
+  },
+  "review": {
+    "cycles": 2,
+    "finding": "Type change to manual reenabled autosave; fixed with editor-origin flag",
+    "remainingProductFindings": 0,
+    "testSelector": "Salvar rascunho corrected before GREEN"
+  },
+  "crossModel": "Cross-model skipped: non-interactive context."
+}

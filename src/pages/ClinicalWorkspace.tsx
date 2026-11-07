@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BrandLockup } from '@/components/BrandLockup';
 import { formatDateOnly } from '@/lib/dates';
-import { WORK_KINDS, WorkKind } from '@/lib/clinicalWorkspace';
+import { WORK_KINDS, WorkKind, WorkEntry } from '@/lib/clinicalWorkspace';
 import { ClinicalWorkEditor } from '@/components/ClinicalWorkEditor';
 import { ClinicalMarkdown } from '@/components/ClinicalMarkdown';
 import type { Tables, Json } from '@/integrations/supabase/types';
@@ -56,6 +56,7 @@ type WorkspaceProps = {
   schedulingQueue?: boolean;
   embedded?: boolean;
   manual?: boolean;
+  entry?: WorkEntry;
   appointmentParam?: string;
   complaintParam?: string;
   onExitGuardChange?: (guard: () => boolean) => void;
@@ -68,11 +69,12 @@ export function PatientWorkspace(props: Omit<WorkspaceProps, 'embedded' | 'sched
 }
 
 function ClinicalWorkspace({ patientId, schedulingQueue = false, embedded = false, manual = false,
-  appointmentParam, complaintParam, onExitGuardChange }: WorkspaceProps) {
+  appointmentParam, complaintParam, entry, onExitGuardChange }: WorkspaceProps) {
   const { user } = useAuth();
   const client = useQueryClient();
   const [editing, setEditing] = useState<Item | undefined>();
   const [editorOpen, setEditorOpen] = useState(false);
+  const [editorEntry, setEditorEntry] = useState<WorkEntry>();
   const [search, setSearch] = useState('');
   const [limit, setLimit] = useState(50);
   const [tab, setTab] = useState('work');
@@ -88,6 +90,7 @@ function ClinicalWorkspace({ patientId, schedulingQueue = false, embedded = fals
     setStatePatientId(patientId);
     setEditing(undefined);
     setEditorOpen(false);
+    setEditorEntry(undefined);
     setCompare(null);
     setWorkCompare(null);
     setTab('work');
@@ -96,6 +99,7 @@ function ClinicalWorkspace({ patientId, schedulingQueue = false, embedded = fals
   const openEditor = (item?: Item) => {
     if (editorOpen && !exitEditor.current()) return;
     setEditing(item);
+    setEditorEntry(undefined);
     setEditorVersion((value) => value + 1);
     setEditorOpen(true);
   };
@@ -240,12 +244,13 @@ function ClinicalWorkspace({ patientId, schedulingQueue = false, embedded = fals
   // Arriving from "Consulta manual" (?new=1) opens the editor directly.
   const autoOpened = useRef<string | null>(null);
   useEffect(() => {
-    if (!manual || !patientReady || !patientId || autoOpened.current === patientId) return;
+    if ((!manual && !entry) || !patientReady || !patientId || autoOpened.current === patientId) return;
     autoOpened.current = patientId;
     setEditing(undefined);
+    setEditorEntry(entry);
     setEditorVersion((value) => value + 1);
     setEditorOpen(true);
-  }, [manual, patientReady, patientId]);
+  }, [manual, entry, patientReady, patientId]);
   useEffect(() => {
     onExitGuardChange?.(() => !editorOpen || exitEditor.current());
   }, [onExitGuardChange, editorOpen]);
@@ -397,6 +402,7 @@ function ClinicalWorkspace({ patientId, schedulingQueue = false, embedded = fals
                 <ClinicalWorkEditor
                   key={patientId + '/' + (editing?.id ?? 'new') + '/' + editorVersion}
                   item={editing}
+                  entry={editing ? undefined : editorEntry}
                   appointmentId={editing ? undefined : appointmentParam}
                   initialTitle={editing ? undefined : complaintParam}
                   patientId={patientId}

@@ -4,6 +4,11 @@ export const WORK_KINDS = {
   pregnancy: 'Episódio gestacional', medication: 'Reconciliação de medicamento', instruction: 'Orientações ao paciente', intake: 'Informações pré-consulta',
 } as const;
 export type WorkKind = keyof typeof WORK_KINDS;
+export type WorkEntry = 'instruction' | 'followup';
+export function workEntryDefaults(entry?: WorkEntry): {kind: WorkKind; title: string; details: Record<string,string>} | undefined {
+  if (entry === 'instruction') return {kind:'instruction',title:'Orientações da consulta',details:{}};
+  if (entry === 'followup') return {kind:'task',title:'Planejamento de retorno',details:{workflow:'followup',stage:'requested'}};
+}
 export const ENCOUNTER_TEMPLATES: Record<string, string> = {
   livre: '',
   ginecologia: 'S — Queixa, história e contexto ginecológico:\n\nO — Exame e resultados efetivamente observados:\n\nA — Avaliação do médico:\n\nP — Plano acordado e acompanhamento:\n',

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
+import type { WorkEntry } from '@/lib/clinicalWorkspace';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { parseConversationPage, conversationMessages, mergeConversationMessages } from '@/lib/patientConversation';
@@ -41,7 +42,7 @@ const Index = () => {
   const [patientLoading,setPatientLoading]=useState(false);
   const [profileRequest,setProfileRequest]=useState(0);
   const [recoveryRequest,setRecoveryRequest]=useState(0);
-  const [patientWork, setPatientWork] = useState<{ actor: string; patientId: string; manual: boolean; appointmentId?: string; initialTitle: string } | null>(null);
+  const [patientWork, setPatientWork] = useState<{ actor: string; patientId: string; manual: boolean; entry?: WorkEntry; appointmentId?: string; initialTitle: string } | null>(null);
   const patientWorkExit = useRef<() => boolean>(() => true);
   const patientWorkTrigger = useRef<HTMLElement | null>(null);
   const hasWork = chatBusy || snapshotBusy || captureBusy;
@@ -422,10 +423,10 @@ const Index = () => {
                 briefingRequested={briefingRequested}
                 briefingError={briefingError}
                 onCaptureStateChange={setCaptureBusy}
-                onOpenPatientWork={manual => {
+                onOpenPatientWork={(manual,entry) => {
                   patientWorkTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-                  if (user && selectedPatient) setPatientWork({ actor: user.id, patientId: selectedPatient.id, manual,
-                    appointmentId: selectedAppointmentId ?? undefined, initialTitle: chiefComplaint });
+                  if (user && selectedPatient) setPatientWork({ actor: user.id, patientId: selectedPatient.id, manual, entry,
+                    appointmentId: entry ? undefined : selectedAppointmentId ?? undefined, initialTitle: entry ? '' : chiefComplaint });
                 }}
                 onRetryBriefing={() => { if (selectedPatient) void loadBriefing(selectedPatient); }}
                 briefingLoading={briefingLoading}
@@ -526,7 +527,7 @@ const Index = () => {
       {patientWork && patientWork.actor === user?.id && patientWork.patientId === selectedPatient?.id && (
         <Suspense fallback={<p role="status">Carregando acompanhamento…</p>}>
           <PatientWorkspaceDialog patientId={selectedPatient.id} returnFocus={patientWorkTrigger.current}
-            manual={patientWork.manual} appointmentId={patientWork.appointmentId} initialTitle={patientWork.initialTitle}
+            manual={patientWork.manual} entry={patientWork.entry} appointmentId={patientWork.appointmentId} initialTitle={patientWork.initialTitle}
             onExitGuardChange={guard => { patientWorkExit.current = guard; }}
             onClose={() => { setPatientWork(null); patientWorkExit.current = () => true; }} />
         </Suspense>

@@ -20,7 +20,7 @@ import { auditRecoveryNotice } from './fixtures/recovery-notice-browser.mjs';
 import { auditSchedulingMigration } from './fixtures/scheduling-migration-browser.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => ['--check-post-consultation','--check-local-recording-recovery','--check-whatsapp-bot-read','--check-whatsapp-history','--check-whatsapp-list'].includes(arg) || /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|only=new-consultation|only=settings-embedded|only=whatsapp-read|only=settings-access|only=patient-workspace|only=recovery-notice|only=scheduling-migration|settings-admin-only|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus|check-mfa-cancellation)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => ['--check-post-consultation-entries','--check-post-consultation','--check-local-recording-recovery','--check-whatsapp-bot-read','--check-whatsapp-history','--check-whatsapp-list'].includes(arg) || /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|only=new-consultation|only=settings-embedded|only=whatsapp-read|only=settings-access|only=patient-workspace|only=recovery-notice|only=scheduling-migration|settings-admin-only|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus|check-mfa-cancellation)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
@@ -32,9 +32,11 @@ assert.ok(!schedulingMigrationOnly||!args.some(arg=>arg.startsWith('--check-')),
 const recoveryNoticeOnly = args.includes('--only=recovery-notice');
 const localRecordingRecovery=args.includes('--check-local-recording-recovery');
 const postConsultation=args.includes('--check-post-consultation');
+const postEntries=args.includes('--check-post-consultation-entries');
+assert.ok(!postEntries||postConsultation,'Direct entry checks require post consultation checks');
 assert.ok(!postConsultation||recoveryNoticeOnly&&!localRecordingRecovery,'Post consultation checks require independent recovery notice mode');
 assert.ok(!localRecordingRecovery||recoveryNoticeOnly,'Local recording checks require recovery notice mode');
-assert.ok(!recoveryNoticeOnly || !args.some(arg=>arg.startsWith('--check-')&&!['--check-local-recording-recovery','--check-post-consultation'].includes(arg)), 'Recovery notice runs its own checks');
+assert.ok(!recoveryNoticeOnly || !args.some(arg=>arg.startsWith('--check-')&&!['--check-local-recording-recovery','--check-post-consultation','--check-post-consultation-entries'].includes(arg)), 'Recovery notice runs its own checks');
 const patientWorkspaceOnly = args.includes('--only=patient-workspace');
 assert.ok(!patientWorkspaceOnly || !args.some(arg => arg.startsWith('--check-')), 'Patient workspace runs its own checks');
 const whatsappReadOnly = args.includes('--only=whatsapp-read');
@@ -87,7 +89,7 @@ const baseline = args.find(arg => arg.startsWith('--baseline='))?.slice(11) || g
 const medicalPaths = ['src/components/PatientProfileDrawer.tsx', 'src/pages/PatientManagement.tsx', 'src/pages/KnowledgeBase.tsx', 'src/pages/Templates.tsx', 'src/pages/Assistant.tsx'];
 const medicalDelivery = medicalOnly ? git(['rev-parse', 'f2eb189']) : null;
 const overlays = args.filter(arg => arg.startsWith('--overlay=')).map(arg => arg.slice(10));
-const allowed = /^(src\/App\.tsx|src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace|Index|LegacyWorkspaceRedirect)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation|WelcomeDashboard|ChatPanel|PatientProfileDrawer|NewConsultationModal|ConsultationReviewModal|PatientAdministrativeFields|PatientWorkspaceDialog|ClinicalWorkEditor|ConsultationRecoveryNotice|LocalRecordingRecoveryNotice|SchedulingFollowups|PatientSidebar)\.tsx|src\/lib\/(calendarLabels|recordingRescue)\.ts)$/;
+const allowed = /^(src\/App\.tsx|src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace|Index|LegacyWorkspaceRedirect)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation|WelcomeDashboard|ChatPanel|PatientProfileDrawer|NewConsultationModal|ConsultationReviewModal|PatientAdministrativeFields|PatientWorkspaceDialog|ClinicalWorkEditor|ConsultationRecoveryNotice|LocalRecordingRecoveryNotice|SchedulingFollowups|PatientSidebar)\.tsx|src\/lib\/(calendarLabels|recordingRescue|clinicalWorkspace)\.ts)$/;
 for (const path of overlays) assert.match(path, allowed, 'Overlay must be in the Codex audit scope');
 assert.ok(!overlays.includes('src/components/PatientProfileDrawer.tsx') || medicalOnly, 'Profile overlay requires medical delivery mode');
 assert.ok(!medicalOnly || overlays.length <= 1 && overlays.every(path => path === 'src/components/PatientProfileDrawer.tsx'), 'Medical delivery only permits the explicit profile overlay');
@@ -105,8 +107,9 @@ assert.ok(!schedulingMigrationOnly||overlays.length<=8&&new Set(overlays).size==
 assert.ok(schedulingMigrationOnly||!overlays.some(path=>['src/App.tsx','src/pages/LegacyWorkspaceRedirect.tsx','src/components/SchedulingFollowups.tsx','src/components/PatientSidebar.tsx'].includes(path)),'Scheduling migration overlay requires focused mode');
 assert.ok(localRecordingRecovery||!overlays.some(path=>['src/components/LocalRecordingRecoveryNotice.tsx','src/lib/recordingRescue.ts'].includes(path)),'Local recording overlays require local recovery checks');
 assert.ok(postConsultation||!overlays.includes('src/components/ConsultationReviewModal.tsx'),'Review modal overlay requires post consultation checks');
-const recoveryNoticePaths=['src/pages/Index.tsx','src/components/WelcomeDashboard.tsx','src/components/ChatPanel.tsx','src/components/ConsultationRecoveryNotice.tsx',...(postConsultation?['src/components/ConsultationReviewModal.tsx','src/components/PatientWorkspaceDialog.tsx']:[]),...(localRecordingRecovery?['src/components/LocalRecordingRecoveryNotice.tsx','src/lib/recordingRescue.ts']:[])];
-assert.ok(!recoveryNoticeOnly || overlays.length<=(localRecordingRecovery?6:postConsultation?3:4) && new Set(overlays).size===overlays.length && overlays.every(path=>recoveryNoticePaths.includes(path)), 'Recovery notice only permits its scoped UI and local-reader overlays');
+assert.ok(postEntries||!overlays.includes('src/lib/clinicalWorkspace.ts'),'Work entry overlay requires direct entry checks');
+const recoveryNoticePaths=['src/pages/Index.tsx','src/components/WelcomeDashboard.tsx','src/components/ChatPanel.tsx','src/components/ConsultationRecoveryNotice.tsx',...(postEntries?['src/components/ClinicalWorkEditor.tsx','src/pages/ClinicalWorkspace.tsx','src/lib/clinicalWorkspace.ts']:[]),...(postConsultation?['src/components/ConsultationReviewModal.tsx','src/components/PatientWorkspaceDialog.tsx']:[]),...(localRecordingRecovery?['src/components/LocalRecordingRecoveryNotice.tsx','src/lib/recordingRescue.ts']:[])];
+assert.ok(!recoveryNoticeOnly || overlays.length<=(localRecordingRecovery?6:postEntries?6:postConsultation?3:4) && new Set(overlays).size===overlays.length && overlays.every(path=>recoveryNoticePaths.includes(path)), 'Recovery notice only permits its scoped UI and local-reader overlays');
 assert.ok(recoveryNoticeOnly || !overlays.includes('src/components/ConsultationRecoveryNotice.tsx'), 'Recovery notice overlay requires focused mode');
 const whatsappPaths = ['src/features/reception/ReceptionQueue.tsx', 'src/features/reception/WhatsAppInbox.tsx', 'src/features/reception/WhatsAppMessages.tsx','src/features/reception/WhatsAppBotSession.tsx'];
 assert.ok(!whatsappReadOnly || overlays.length <= 5 && new Set(overlays).size === overlays.length && overlays.every(path => [...whatsappPaths, 'src/features/reception/whatsappApi.ts'].includes(path)), 'WhatsApp read only permits its UI and read-client overlays');
@@ -335,9 +338,9 @@ try {
     const receptionApi=await startReceptionFixture();apis.push(receptionApi);const receptionApp=await appFor(receptionApi);
     await auditSchedulingMigration({api,app,receptionApi,receptionApp,scene,capture,checks:schedulingMigrationChecks,screens,errors,blocked});
   } else if (recoveryNoticeOnly) {
-    const api=await startClinicFixture({workspaceDates:true,recoveryNoticeReview:true,postConsultationReview:postConsultation});apis.push(api);
+    const api=await startClinicFixture({workspaceDates:true,recoveryNoticeReview:true,postConsultationReview:postConsultation,postEntryReview:postEntries});apis.push(api);
     const app=await appFor(api);
-    if(postConsultation)await auditPostConsultation({api,app,scene,capture,checks:recoveryNoticeChecks,screens,errors,blocked,requests:localRecoveryRequests,consoleErrors,errorResponses,failedRequests});
+    if(postConsultation)await auditPostConsultation({entryReview:postEntries,api,app,scene,capture,checks:recoveryNoticeChecks,screens,errors,blocked,requests:localRecoveryRequests,consoleErrors,errorResponses,failedRequests});
     else await auditRecoveryNotice({api,app,scene,capture,checks:recoveryNoticeChecks,screens,errors,blocked,localReview:localRecordingRecovery,requests:localRecoveryRequests,consoleErrors,errorResponses,failedRequests});
   } else if (patientWorkspaceOnly) {
     const api = await startClinicFixture({ workspaceDates: true, patientWorkspaceReview: true }); apis.push(api);
@@ -1032,7 +1035,7 @@ const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, 
   settingsEmbeddedOnly, previewEntry: settingsEmbeddedOnly ? previewEntry : null, settingsChecks, settingsRequests, settingsFixtureMetrics,
   whatsappReadOnly, whatsappBotRead,whatsappHistory,whatsappList, whatsappChecks, whatsappRequests, whatsappFixtureCalls: whatsappReadOnly ? apis[0]?.whatsappRead.calls : null,
   schedulingMigrationOnly, schedulingMigrationChecks, schedulingMigrationCalls: schedulingMigrationOnly ? apis[0]?.scheduling.calls : null, schedulingMigrationReads: schedulingMigrationOnly ? apis[0]?.scheduling.allReads : null, schedulingMigrationMetrics: schedulingMigrationOnly ? apis[0]?.metrics : null, schedulingReceptionMetrics: schedulingMigrationOnly ? apis[1]?.metrics : null,
-  recoveryNoticeOnly, localRecordingRecovery, postConsultation, localRecoveryRequests, postConsultationCalls:postConsultation?apis[0]?.postConsultation.calls:null, recoveryNoticeChecks, recoveryNoticeCalls: recoveryNoticeOnly ? apis[0]?.recoveryNotice.calls : null, recoveryNoticeMetrics: recoveryNoticeOnly ? apis[0]?.metrics : null,
+  recoveryNoticeOnly, localRecordingRecovery, postConsultation, postEntries, localRecoveryRequests, postEntryWrites:postEntries?apis[0]?.postConsultation.writes:null, postConsultationCalls:postConsultation?apis[0]?.postConsultation.calls:null, recoveryNoticeChecks, recoveryNoticeCalls: recoveryNoticeOnly ? apis[0]?.recoveryNotice.calls : null, recoveryNoticeMetrics: recoveryNoticeOnly ? apis[0]?.metrics : null,
   patientWorkspaceOnly, patientWorkspaceChecks, patientWorkspaceMetrics: patientWorkspaceOnly ? apis[0]?.metrics : null,
   settingsAccessOnly, settingsAdminOnly, settingsAccessChecks, settingsAccessRequests, settingsAccessCalls: settingsAccessOnly ? apis[0]?.settingsRead.calls : null,
   mfaOnly, mfaCleanupOnly, mfaEnrollmentOnly, checkMfaErrorFocus, checkMfaCancellation, mfaPreparationChecks, mfaCleanupChecks, mfaErrorFocusChecks, mfaEnrollmentChecks, mfaEnrollmentQrChecks, mfaCancellationChecks, mfaMetrics: mfaMode ? { ...apis[0]?.metrics } : null,

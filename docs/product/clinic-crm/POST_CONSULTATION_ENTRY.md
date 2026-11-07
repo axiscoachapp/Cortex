@@ -6,4 +6,6 @@ Resumo para paciente e encaminhamento mantêm seus comandos explícitos existent
 
 Não há envio WhatsApp, marcação automática de retorno, assinatura ou geração ao montar. Retorno continua sendo registro clínico sob decisão do médico; agendamento requer confirmação humana no fluxo existente. A automação `after_end` e os módulos de prescrição/assinatura não mudam.
 
-Este é o primeiro recorte de pós-consulta: organiza ações existentes e a entrada no acompanhamento. Não cria checklist persistente de conclusão por consulta ou vinculação automática dos novos registros à consulta; essa extensão fica para K7/3b com contrato próprio. Registros/tarefas já salvos permanecem no paciente. A etapa é contextual à evolução presente na conversa atual, sem promessa de restaurar essa conversa após reload.
+Este é o primeiro recorte de pós-consulta: organiza ações existentes e a entrada no acompanhamento. Não cria checklist persistente de conclusão por consulta ou vinculação automática dos novos registros à consulta; essa extensão fica para recorte próprio. Registros/tarefas já salvos permanecem no paciente. A etapa é contextual à evolução presente na conversa atual, sem promessa de restaurar essa conversa após reload.
+
+Atualização K7/3b: [entradas diretas para registrar orientações e planejar retorno](POST_CONSULTATION_RECORDS.md) substituem a ação genérica do pós-consulta. Checklist/vínculo por consulta continuam pendentes de recorte próprio; os registros salvos seguem no acompanhamento do paciente.
