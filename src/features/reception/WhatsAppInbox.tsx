@@ -31,13 +31,14 @@ function Inbox({ actor, clinic }: { actor: string; clinic: string }) {
     queryFn: ({ signal }) => whatsappApi.state(signal),
     retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
-  const fresh = channel.isSuccess && channel.isFetchedAfterMount && !channel.isFetching;
+  const fresh = channel.isSuccess && channel.isFetchedAfterMount && channel.fetchStatus === 'idle';
   return <div className="space-y-4">
     <header className="space-y-2">
       <h1 className="text-xl font-semibold">Conversas</h1>
       <p className="text-sm text-muted-foreground">Consulte as conversas recebidas pelo número da clínica.</p>
     </header>
-    {channel.isFetching || channel.isPending ? <p role="status" className="p-4 text-sm">Verificando WhatsApp…</p>
+    {channel.fetchStatus === 'paused' ? <p role="status" className="p-4 text-sm">Aguardando conexão de rede para verificar o WhatsApp…</p>
+      : channel.fetchStatus !== 'idle' || channel.isPending ? <p role="status" className="p-4 text-sm">Verificando WhatsApp…</p>
       : channel.isError ? <ReadFailure label="conexão" onRetry={() => void channel.refetch()} />
       : fresh && channel.data.serverReady && channel.data.connected && channel.data.canUseInbox
         ? <><WhatsAppTemplateCatalog actor={actor} clinic={clinic} /><ConversationList actor={actor} clinic={clinic} /></>
@@ -75,7 +76,7 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
     queryFn: async ({ signal }) => ({...await whatsappApi.conversations({ filter, search, limit: 50, ...(before ? { before } : {}) }, signal),readVersion:++listReadVersion.current}),
     retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
-  const fresh = list.isSuccess && list.isFetchedAfterMount && !list.isFetching;
+  const fresh = list.isSuccess && list.isFetchedAfterMount && list.fetchStatus === 'idle';
   const current = fresh ? list.data.conversations.find(item => item.id === selected) : undefined;
   const nextCursor = fresh ? list.data.nextBefore : null;
   const commandBusy=feedback?.phase==='sending'||feedback?.phase==='checking';
@@ -135,7 +136,7 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
         <div className="min-w-0 space-y-2"><Label htmlFor="wa-search">Buscar conversa</Label><Input id="wa-search" type="search" maxLength={80} className="h-11" value={draft} onChange={event => setDraft(event.target.value)} placeholder="Nome ou telefone" /></div>
         <Button type="submit" variant="outline" className="h-11">Buscar</Button>
       </form>
-      <Button variant="outline" className="h-11 gap-2 md:col-span-2 xl:col-span-1" disabled={list.isFetching||commandBusy} onClick={refresh}><RefreshCw aria-hidden="true" className="h-4 w-4" />Atualizar conversas</Button>
+      <Button variant="outline" className="h-11 gap-2 md:col-span-2 xl:col-span-1" disabled={list.fetchStatus!=='idle'||commandBusy} onClick={refresh}><RefreshCw aria-hidden="true" className="h-4 w-4" />Atualizar conversas</Button>
     </div>
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)]">
       <section aria-labelledby="wa-list-heading" className="min-w-0 space-y-3">
@@ -145,7 +146,7 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
           {before && <Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" onClick={() => goTo(null)}>Conversas mais recentes</Button>}
           {nextCursor && <Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" onClick={() => goTo(nextCursor)}>Conversas anteriores</Button>}
         </nav>}
-        {list.isPending || list.isFetching ? <p role="status" className="p-4 text-sm">Carregando conversas…</p> : list.isError ? <ReadFailure label="conversas" onRetry={() => { heading.current?.focus(); void list.refetch(); }} /> : null}
+        {list.fetchStatus === 'paused' ? <p role="status" className="p-4 text-sm">Aguardando conexão de rede para carregar as conversas…</p> : list.isPending || list.fetchStatus !== 'idle' ? <p role="status" className="p-4 text-sm">Carregando conversas…</p> : list.isError ? <ReadFailure label="conversas" onRetry={() => { heading.current?.focus(); void list.refetch(); }} /> : null}
         {fresh && <>
           {list.data.conversations.length === 0 && <p className="rounded-lg border p-6 text-sm text-muted-foreground">{before ? 'Nenhuma conversa anterior a este ponto neste filtro.' : 'Nenhuma conversa neste filtro.'}</p>}
           <ul className="space-y-2">{list.data.conversations.map(item => <li key={item.id}>

@@ -1,0 +1,148 @@
+{
+  "baseline": "7bfaaa1073af8ab96f629caf005b335b73f22563",
+  "scope": "K1/6 paused read freshness in channel, list, messages and bot path; no transport changes",
+  "unit": {
+    "redFailed": 10,
+    "redPassed": 1,
+    "redTotal": 11,
+    "greenPassed": 331,
+    "greenFailed": 0,
+    "files": 10,
+    "newTests": 11,
+    "filesAndCounts": [
+      {
+        "name": "whatsappApi.test.ts",
+        "tests": 55
+      },
+      {
+        "name": "WhatsAppCloseUI.test.tsx",
+        "tests": 22
+      },
+      {
+        "name": "WhatsAppInbox.test.tsx",
+        "tests": 59
+      },
+      {
+        "name": "WhatsAppPausedReads.test.tsx",
+        "tests": 11
+      },
+      {
+        "name": "WhatsAppQueueUI.test.tsx",
+        "tests": 27
+      },
+      {
+        "name": "WhatsAppReleaseUI.test.tsx",
+        "tests": 17
+      },
+      {
+        "name": "WhatsAppReopenUI.test.tsx",
+        "tests": 23
+      },
+      {
+        "name": "WhatsAppRevokeConsentUI.test.tsx",
+        "tests": 36
+      },
+      {
+        "name": "whatsappTemplates.test.ts",
+        "tests": 58
+      },
+      {
+        "name": "WhatsAppTemplatesUI.test.tsx",
+        "tests": 23
+      }
+    ],
+    "proofSplit": "Unit tests cover channel/path paused, three confirmation removals, initial pause and inactive scope. Browser covers list/messages pause and read recovery only."
+  },
+  "control": {
+    "validRedWithoutTestTimeouts": true,
+    "restoredByteForByte": true,
+    "sources": 3,
+    "record": "RED_CONTROL.json"
+  },
+  "browser": {
+    "raw": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-paused-reads-final/AUDIT.json",
+    "states": 27,
+    "pngs": 27,
+    "widths": [
+      320,
+      375,
+      1280,
+      1920
+    ],
+    "scalePercent": 135,
+    "frozenSources": 348,
+    "runtimeHashes": 34,
+    "overlays": 3,
+    "sourceHashesStable": true,
+    "requests": 56,
+    "fixtureCalls": 39,
+    "expectedHTTP403": 1,
+    "expectedConsoleErrors403": 1,
+    "jsErrors": 0,
+    "failedRequests": 0,
+    "externalRequests": 0,
+    "clinicalReads": 0,
+    "writes": 0,
+    "rowsUnchanged": true,
+    "cleanupVerified": true,
+    "manualImagesInspected": [
+      "paused-messages-320",
+      "paused-list-waiting-1920"
+    ],
+    "limits": "Short offline pauses exercised for message and list reads. Browser never opens a confirmation before pause and does not test channel/path pause or prolonged clinic access failure."
+  },
+  "typescript": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json --pretty false",
+    "exitCode": 0
+  },
+  "lint": {
+    "files": 6,
+    "exitCode": 0,
+    "finalHelperRechecked": true
+  },
+  "syntax": {
+    "scripts": 2,
+    "exitCode": 0
+  },
+  "cli": {
+    "invalidCombinationsRejected": 4
+  },
+  "review": {
+    "freshContextReadOnly": true,
+    "findings": 0,
+    "limits": "Static review only; reviewer did not execute tests, browser or network.",
+    "proofClarification": "Confirmation removal and channel/path pause belong to unit evidence; browser metadata renamed noUnexpectedConfirmation.",
+    "crossModel": "Cross-model skipped: non-interactive context."
+  },
+  "excluded": [
+    "Initial RED included one generic timeout; controlled baseline rerun has ten waited behavioral failures and no timeouts",
+    "Initial GREEN expected selected conversation to survive connection unmount; tests now explicitly reselect after channel verification."
+  ],
+  "sources": [
+    {
+      "path": "src/features/reception/WhatsAppInbox.tsx",
+      "sha256": "bcd4da3576ad1475e128b8d1384655b51dc242597eeed2ea5bdd10802403d853"
+    },
+    {
+      "path": "src/features/reception/WhatsAppMessages.tsx",
+      "sha256": "0d1fdc50e7ec27ed45093269971c5db30109f4b37cba26a75b3c309ee4a4ef53"
+    },
+    {
+      "path": "src/features/reception/WhatsAppBotSession.tsx",
+      "sha256": "c5049f36cac8180addc9912dd2b0ea8650313ffdbbf909356b7ba536f6faff7c"
+    },
+    {
+      "path": "src/features/reception/WhatsAppPausedReads.test.tsx",
+      "sha256": "b620d93440206ccdf922cf03a907c63b95379b9d2470dcc15bd18c0d3b8a1694"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-paused-browser.mjs",
+      "sha256": "5dc4c63c335c4ca36ba29dc3cfba6d1d918ecad39187fe48840f09af50a763f5"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "9b24c8daf8e86bc257e2cc7cf74cfbbb7c152c74a8aefb5e06ae78a61662837d"
+    }
+  ],
+  "limits": "No real Auth/authorization, DB, RLS/CAS/concurrency, Meta, hosted, carga or push validation. No producer/C5/schema/import changes. Directed suite only; known C5 RED cases excluded."
+}

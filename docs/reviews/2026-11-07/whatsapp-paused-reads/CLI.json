@@ -1,0 +1,35 @@
+{
+  "syntax": 2,
+  "invalidCombinationsRejected": 4,
+  "checks": [
+    {
+      "args": [
+        "--check-whatsapp-paused"
+      ],
+      "rejected": true
+    },
+    {
+      "args": [
+        "--only=whatsapp-read",
+        "--check-whatsapp-paused",
+        "--check-whatsapp-templates"
+      ],
+      "rejected": true
+    },
+    {
+      "args": [
+        "--only=whatsapp-read",
+        "--check-whatsapp-paused",
+        "--check-whatsapp-release"
+      ],
+      "rejected": true
+    },
+    {
+      "args": [
+        "--only=settings-access",
+        "--check-whatsapp-paused"
+      ],
+      "rejected": true
+    }
+  ]
+}

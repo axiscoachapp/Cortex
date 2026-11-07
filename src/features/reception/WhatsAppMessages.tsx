@@ -24,7 +24,7 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
     queryFn: async ({ signal }) => ({...await whatsappApi.messages({ conversationId: conversation.id,...(before?{before}:{}) }, signal),readVersion:++readVersion.current}),
     retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
-  const fresh = messages.isSuccess && messages.isFetchedAfterMount && !messages.isFetching;
+  const fresh = messages.isSuccess && messages.isFetchedAfterMount && messages.fetchStatus === 'idle';
   const phone=fresh?messages.data.conversation.waId:null;
   const hasPhone=typeof phone==='string'&&phone.length>=7&&phone.length<=15&&!/[^0-9]/.test(phone);
   const nextCursor=fresh?messages.data.nextBefore:null;
@@ -54,7 +54,7 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
       <h2 className="min-w-0 font-semibold [overflow-wrap:anywhere]">{conversation.profileName || 'Contato sem nome'}</h2>
       <Button variant="outline" onClick={onClose}>Voltar à lista</Button>
     </div>
-    <Button variant="outline" disabled={messages.isFetching||commandBusy} onClick={refresh}>Atualizar mensagens</Button>
+    <Button variant="outline" disabled={messages.fetchStatus!=='idle'||commandBusy} onClick={refresh}>Atualizar mensagens</Button>
     {fresh && <>
       <p className="text-sm [overflow-wrap:anywhere]">Fila atual: <strong>{messages.data.conversation.queue}</strong></p>
       <p className="text-sm">Situação atual: <strong>{messages.data.conversation.status==='closed'?'Encerrada':'Em aberto'}</strong></p>
@@ -71,7 +71,7 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
     </>}
     <h3 ref={pageHeading} tabIndex={-1} className="font-semibold outline-none">Mensagens da conversa</h3>
     {before!==null&&<p className="text-sm text-muted-foreground">Página de mensagens anteriores.</p>}
-    {messages.isPending || messages.isFetching ? <p role="status" className="text-sm">Carregando mensagens…</p> : messages.isError ? <div role="alert" className="space-y-3 text-sm">
+    {messages.fetchStatus === 'paused' ? <p role="status" className="text-sm">Aguardando conexão de rede para carregar as mensagens…</p> : messages.isPending || messages.fetchStatus !== 'idle' ? <p role="status" className="text-sm">Carregando mensagens…</p> : messages.isError ? <div role="alert" className="space-y-3 text-sm">
       <p>Não foi possível carregar as mensagens. Verifique seu acesso e tente novamente.</p>
       <Button variant="outline" onClick={retry}>Tentar carregar mensagens</Button>
     </div> : null}

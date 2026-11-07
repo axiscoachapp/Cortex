@@ -1,0 +1,25 @@
+{
+  "baseline": "7bfaaa1073af8ab96f629caf005b335b73f22563",
+  "failed": 10,
+  "passed": 1,
+  "validFailuresWithoutTestTimeout": true,
+  "controls": [
+    {
+      "path": "src/features/reception/WhatsAppInbox.tsx",
+      "fixedSha256": "bcd4da3576ad1475e128b8d1384655b51dc242597eeed2ea5bdd10802403d853",
+      "restoredSha256": "bcd4da3576ad1475e128b8d1384655b51dc242597eeed2ea5bdd10802403d853"
+    },
+    {
+      "path": "src/features/reception/WhatsAppMessages.tsx",
+      "fixedSha256": "0d1fdc50e7ec27ed45093269971c5db30109f4b37cba26a75b3c309ee4a4ef53",
+      "restoredSha256": "0d1fdc50e7ec27ed45093269971c5db30109f4b37cba26a75b3c309ee4a4ef53"
+    },
+    {
+      "path": "src/features/reception/WhatsAppBotSession.tsx",
+      "fixedSha256": "c5049f36cac8180addc9912dd2b0ea8650313ffdbbf909356b7ba536f6faff7c",
+      "restoredSha256": "c5049f36cac8180addc9912dd2b0ea8650313ffdbbf909356b7ba536f6faff7c"
+    }
+  ],
+  "restored": true,
+  "excluded": "FirstRED had one generic test timeout; first GREEN incorrectly expected selected conversation to survive connection-gate unmount. Corrected tests require explicit reselection; controlled original sources reproduce ten behavioral failures."
+}

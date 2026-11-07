@@ -13,11 +13,12 @@ export function WhatsAppBotSession({actor,clinic,conversationId,generation}:{act
     queryFn:({signal})=>whatsappApi.botSession({conversationId},signal),
     retry:false,gcTime:0,staleTime:0,refetchOnMount:'always',refetchOnWindowFocus:false,refetchOnReconnect:false,
   });
-  const fresh=query.isSuccess&&query.isFetchedAfterMount&&!query.isFetching;
+  const fresh=query.isSuccess&&query.isFetchedAfterMount&&query.fetchStatus==='idle';
   const session=fresh?query.data.session:null;
   return <section aria-label="Caminho no robô" className="min-w-0 rounded-md border bg-muted/30 p-3 space-y-2">
     <h3 className="text-sm font-semibold">Caminho no robô</h3>
-    {query.isPending||query.isFetching?<p role="status" className="text-sm">Carregando caminho…</p>
+    {query.fetchStatus==='paused'?<p role="status" className="text-sm">Aguardando conexão de rede para carregar o caminho…</p>
+      :query.isPending||query.fetchStatus!=='idle'?<p role="status" className="text-sm">Carregando caminho…</p>
       :query.isError?<div role="alert" className="space-y-2 text-sm">
         <p>Não foi possível carregar o caminho no robô. Verifique seu acesso e tente novamente.</p>
         <Button variant="outline" onClick={()=>void query.refetch()}>Tentar carregar caminho</Button>
