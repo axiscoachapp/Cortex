@@ -1,0 +1,12 @@
+{
+  "baseline": "32bcaac8c71da6ea71ceecf5982d4da268501575",
+  "failed": 20,
+  "passed": 3,
+  "total": 23,
+  "source": "src/features/reception/NewCaseDialog.tsx",
+  "fixedSha256": "da42883a4c7951cb0eedd190e4ac3aef0ea07c61ed5972fbe92a8c2d289927eb",
+  "restoredSha256": "da42883a4c7951cb0eedd190e4ac3aef0ea07c61ed5972fbe92a8c2d289927eb",
+  "restored": true,
+  "noGenericTimeouts": true,
+  "refinements": "Double-submit events share one act batch; invalidation checks other actor/clinic/medical cache state. Added real unsaved-exit guard integration; final controlled RED includes all23cases."
+}

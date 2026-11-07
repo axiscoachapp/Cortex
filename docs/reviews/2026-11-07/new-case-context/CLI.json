@@ -1,0 +1,50 @@
+[
+  {
+    "args": [
+      "--check-new-case-context"
+    ],
+    "exitCode": 1,
+    "expected": "New case context requires isolated contact mode",
+    "observed": "AssertionError [ERR_ASSERTION]: New case context requires isolated contact mode\r",
+    "matched": true,
+    "noExistingDirectoryFailure": true
+  },
+  {
+    "args": [
+      "--baseline=32bcaac8c71da6ea71ceecf5982d4da268501575",
+      "--only=whatsapp-read",
+      "--check-new-case-context"
+    ],
+    "exitCode": 1,
+    "expected": "New case context requires isolated contact mode",
+    "observed": "AssertionError [ERR_ASSERTION]: New case context requires isolated contact mode\r",
+    "matched": true,
+    "noExistingDirectoryFailure": true
+  },
+  {
+    "args": [
+      "--baseline=32bcaac8c71da6ea71ceecf5982d4da268501575",
+      "--only=contact-search",
+      "--check-new-case-context",
+      "--check-whatsapp-paused"
+    ],
+    "exitCode": 1,
+    "expected": "New case context requires isolated contact mode",
+    "observed": "AssertionError [ERR_ASSERTION]: New case context requires isolated contact mode\r",
+    "matched": true,
+    "noExistingDirectoryFailure": true
+  },
+  {
+    "args": [
+      "--baseline=32bcaac8c71da6ea71ceecf5982d4da268501575",
+      "--only=contact-search",
+      "--check-new-case-context",
+      "--overlay=src/features/reception/ReceptionQueue.tsx"
+    ],
+    "exitCode": 1,
+    "expected": "Contact search only permits its scoped picker/form/client overlays",
+    "observed": "AssertionError [ERR_ASSERTION]: Contact search only permits its scoped picker/form/client overlays\r",
+    "matched": true,
+    "noExistingDirectoryFailure": true
+  }
+]

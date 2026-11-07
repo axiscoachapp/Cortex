@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,8 @@ import { kinds } from './contracts';
 import { useRequestId } from './useRequestId';
 import { ReceptionNotice } from './ReceptionNotice';
 import { ContactSearch } from './ContactSearch';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSessionHidden } from '@/contexts/SessionVisibility';
 
 export interface ContactOption {
   id: string;
@@ -27,6 +29,8 @@ export function NewCaseDialog({
   onCreated: (id: string) => void;
 }) {
   const access = useClinicAccess();
+  const { user } = useAuth();
+  const hidden = useSessionHidden();
   const client = useQueryClient();
   const field = useId();
   const [mode, setMode] = useState<'existing' | 'new'>('existing');
@@ -38,44 +42,86 @@ export function NewCaseDialog({
   const [kind, setKind] = useState<keyof typeof kinds>('scheduling');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const scope = user && access?.clinic && user.id === access.actorId
+    ? user.id + ':' + access.clinic.id + ':' + (access.admin ? 'admin' : access.kind) : null;
+  const initialScope = useRef(scope), invalidated = useRef(false);
+  const mounted = useRef(false), current = useRef(false), pending = useRef(false), started = useRef(false);
+  const validContext = !!scope && scope === initialScope.current && !!access?.active && !hidden
+    && (access.admin || access.kind === 'reception') && (!doctor || access.doctors.some(item => item.id === doctor));
+  const blocked = invalidated.current || !validContext;
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  useLayoutEffect(() => {
+    if (!validContext) invalidated.current = true;
+    current.current = !blocked;
+  }, [validContext, blocked]);
+  const mayContinue = () => mounted.current && current.current && !invalidated.current;
   const contactRequest = useRequestId();
   const caseRequest = useRequestId();
   const guard = useUnsavedChanges(
-    !!(name || phone || subject),
-    'Há um atendimento não salvo. Deseja sair e descartar o preenchimento?',
+    !blocked && !!(name || phone || subject || (selected && !contact) || doctor || kind !== 'scheduling'),
+    busy ? 'Há um atendimento em envio. Aguarde o resultado antes de sair.' : 'Há um atendimento não salvo. Deseja sair e descartar o preenchimento?',
+    { blocking: busy && !blocked },
   );
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (busy || !access?.clinic) return;
+    if (pending.current || busy || !access?.clinic || !mayContinue()) return;
+    pending.current = true;
+    const origin = { actor: access.actorId, clinic: access.clinic.id };
+    const snapshot = { selected, mode, name: name.trim(), phone: phone.trim(), subject: subject.trim(), doctor: doctor || null, kind };
     setBusy(true);
     setError(null);
     try {
-      let target = selected;
+      let target = snapshot.selected;
       if (!target) {
-        if (mode !== 'new') throw new Error('Selecione um contato antes de continuar.');
-        const payload = { name: name.trim(), phone: phone.trim() };
+        if (snapshot.mode !== 'new') throw new Error('Selecione um contato antes de continuar.');
+        const payload = { name: snapshot.name, phone: snapshot.phone };
+        if (!mayContinue()) return;
+        started.current = true;
         const id = await receptionApi.createContact(
-          access.clinic.id,
+          origin.clinic,
           payload.name,
           payload.phone,
           contactRequest(payload),
         );
+        if (!mayContinue()) return;
         target = { id, ...payload };
         setSelected(target);
       }
-      const payload = { contact: target.id, doctor: doctor || null, subject: subject.trim(), kind };
-      const id = await receptionApi.createCase(target.id, payload.doctor, payload.subject, kind, caseRequest(payload));
-      await client.invalidateQueries({ queryKey: ['reception'] });
+      if (!mayContinue()) return;
+      const payload = { contact: target.id, doctor: snapshot.doctor, subject: snapshot.subject, kind: snapshot.kind };
+      started.current = true;
+      const id = await receptionApi.createCase(target.id, payload.doctor, payload.subject, payload.kind, caseRequest(payload));
+      if (!mayContinue()) return;
+      await client.invalidateQueries({
+        queryKey: ['reception', origin.actor],
+        predicate: query => (query.queryKey[2] === 'queue' || query.queryKey[2] === 'contacts') && query.queryKey[3] === origin.clinic,
+      });
+      if (!mayContinue()) return;
       onCreated(id);
     } catch (err) {
-      setError(err);
+      if (mayContinue()) setError(err);
     } finally {
-      setBusy(false);
+      pending.current = false;
+      if (mayContinue()) setBusy(false);
     }
   }
+  if (blocked) return <Dialog open={!hidden} onOpenChange={open => { if (!open) onClose(); }}>
+    <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
+      <DialogHeader><DialogTitle>Novo atendimento</DialogTitle></DialogHeader>
+      <div role="alert" className="space-y-3 text-sm">
+        <p>A verificação deste atendimento foi interrompida. Feche esta janela e confira os contatos e a fila antes de abrir outro atendimento.</p>
+        {started.current && <p>Uma solicitação enviada antes da mudança pode ter sido concluída.</p>}
+        <p>Fechar esta janela descarta o preenchimento.</p>
+      </div>
+      <Button type="button" variant="outline" className="h-auto min-h-11 whitespace-normal" onClick={onClose}>Fechar atendimento</Button>
+    </DialogContent>
+  </Dialog>;
   return (
     <Dialog
-      open
+      open={!hidden}
       onOpenChange={(open) => {
         if (!open && !busy && guard(false)) onClose();
       }}

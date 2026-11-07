@@ -1,0 +1,9 @@
+# T44 — contexto do novo atendimento
+
+A janela pertence ao ator, clínica e papel administrativo da abertura. Perda de acesso, sessão oculta/bloqueada, mudança desse contexto ou retirada do médico escolhido invalidam a janela até fechar e abrir outra. Dados antigos deixam o DOM; recuperação do contexto não restaura autorização do rascunho. O preenchimento fica apenas na instância privada até o fechamento explícito, sem transferência automática para outro ator/clínica.
+
+Cada envio usa um snapshot de contato/nomes/telefone/assunto/médico/tipo da mesma intenção. Uma trava síncrona evita dois inícios antes de busy renderizar. Antes de cada chamada e após cada await, conferir instância montada e contexto ainda válido. Uma resposta de criação de contato fora de contexto não inicia criar atendimento. Resposta de atendimento ou invalidação tardia não dispara onCreated, nova seleção ou erro com dados antigos. Cache de fila/contatos invalidado apenas no ator/clínica de origem, pela posição da clínica na chave de cada família; texto de busca ou id de caso coincidentes não conferem esse escopo.
+
+Solicitação já iniciada pode ter sido concluída no servidor; não há promessa de aborto/rollback nem retry automático. Mensagem bloqueada pede fechar e conferir contatos/fila antes de outro atendimento. IDs de operação permanecem estáveis ao repetir a mesma intenção após erro no mesmo contexto; contato já retornado é reutilizado sem cadastrar outra vez. Agendamento e confirmação de paciente não fazem parte desta janela.
+
+Durante envio, os bloqueios de Escape/fechamento e navegação permanecem coerentes. Na janela invalidada, fechar descarta o preenchimento sem exigir revisão de dados que já não podem ser exibidos. Campos não são sobrescritos por inferência de nome/telefone. Só testes sintéticos, banco/servidor real não exercitados; sem produtor/C5/schema/PersonalMed/Meta/hosted/carga/push. Guardas de interface não substituem autorização/transação do servidor.

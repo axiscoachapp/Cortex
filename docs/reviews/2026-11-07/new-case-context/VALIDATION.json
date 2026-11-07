@@ -1,0 +1,201 @@
+{
+  "time": "2026-11-07 08:12:26",
+  "baseline": "32bcaac8c71da6ea71ceecf5982d4da268501575",
+  "syntheticOnly": true,
+  "sourceHashes": [
+    {
+      "path": "src/features/reception/NewCaseDialog.tsx",
+      "sha256": "ab36f01d11eb5c4df4d89d4574972df114500cbe6424480cd180f2b7c21c3b91"
+    },
+    {
+      "path": "src/features/reception/NewCaseContext.test.tsx",
+      "sha256": "9125a4551e01a8dbfe3921165dd030a68db1317d6d8a9976c8c2b334cddd7858"
+    },
+    {
+      "path": "scripts/fixtures/new-case-context-browser.mjs",
+      "sha256": "37f6d23eeaec2c771f9a52e5ba9c74e9a885e130a3d963192c7029d5123b0d24"
+    },
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "95f6675f694e7e134d90b227fd42aa1f9d162aa2f988f7ded2cf516cd34c28ce"
+    }
+  ],
+  "initialRed": {
+    "failed": 20,
+    "passed": 3,
+    "total": 23,
+    "restored": true,
+    "restoredSha256": "da42883a4c7951cb0eedd190e4ac3aef0ea07c61ed5972fbe92a8c2d289927eb",
+    "note": "Restored version precedes later cache fix; final sourceHash is separate."
+  },
+  "cacheRegression": {
+    "failed": 1,
+    "skipped": 23,
+    "noGenericTimeouts": true
+  },
+  "green": {
+    "passed": 56,
+    "failed": 0,
+    "files": 4,
+    "newCases": 24
+  },
+  "types": {
+    "command": "npx tsc --noEmit -p tsconfig.app.json --pretty false",
+    "exitCode": 0
+  },
+  "lint": {
+    "files": [
+      "src/features/reception/NewCaseDialog.tsx",
+      "src/features/reception/NewCaseContext.test.tsx",
+      "scripts/fixtures/new-case-context-browser.mjs",
+      "scripts/reception-app-audit-browser.mjs"
+    ],
+    "exitCode": 0
+  },
+  "syntax": {
+    "files": [
+      "scripts/fixtures/new-case-context-browser.mjs",
+      "scripts/reception-app-audit-browser.mjs"
+    ],
+    "exitCode": 0
+  },
+  "cli": {
+    "validRejections": 4,
+    "allMatched": true
+  },
+  "browser": {
+    "report": "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/AUDIT.json",
+    "states": 20,
+    "pngs": 36,
+    "artifacts": 37,
+    "sourceCount": 351,
+    "runtimeHashes": 36,
+    "overlays": [
+      {
+        "path": "src/features/reception/NewCaseDialog.tsx",
+        "sha256": "ab36f01d11eb5c4df4d89d4574972df114500cbe6424480cd180f2b7c21c3b91"
+      }
+    ],
+    "requests": 40,
+    "expected503": 4,
+    "expectedConsole503": 4,
+    "pageErrors": 0,
+    "failedRequests": 0,
+    "blockedExternalRequests": 0,
+    "metrics": {
+      "clinicalReads": [],
+      "externalCalls": [],
+      "unknown": [],
+      "bookings": 0,
+      "contacts": 0,
+      "caseWrites": 0
+    },
+    "cleanupVerified": true,
+    "manualInspection": [
+      "access-blocked-320",
+      "recovered-invalid-320",
+      "fresh-window-1920"
+    ],
+    "limits": "No submissions. Actor/clinic/role, late writes, cache, duplicate submit, exit guards and retry only unit-tested."
+  },
+  "reviews": [
+    {
+      "cycle": 1,
+      "actionable": "P2 cross-clinic cache search/id collision",
+      "classification": "valid + actionable",
+      "regression": "CACHE_RED.json",
+      "fix": "Exact queue/contacts family and clinic slot3"
+    },
+    {
+      "cycle": 2,
+      "actionable": [],
+      "routerSuspicion": "Discarded after real-hook real-router in-memory control; destination reached with zero alerts/confirms"
+    }
+  ],
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "excludedPreliminaryBrowserRuns": [
+    "new-case-context-final",
+    "new-case-context-reviewed-final"
+  ],
+  "foreignPreserved": [
+    {
+      "path": "tasks/plan.md",
+      "sha256": "d4091e88d0f622bf15e9ad80f79957ffd801edaea968870274a5b8b8370023b6"
+    },
+    {
+      "path": "tasks/todo.md",
+      "sha256": "a60d951ead6051eae4411e87b5a7c22e94b57bf07fb46b2b143bde2c27762e49"
+    }
+  ],
+  "noNewClaudeIncoming": true,
+  "latestIncoming": "2026-11-06-2152_claude-para-codex_robo-de-fluxo-entregue.md",
+  "pendingUnchanged": [
+    "K1/4j catalog0506",
+    "C4/C5 corrections2316/2330",
+    "MFA/K7 remaining slices"
+  ],
+  "boundaries": [
+    "No server rollback or authorization proof",
+    "No schema/import/hosted/Meta/push/deploy/paid/external operation"
+  ],
+  "gitManifest": {
+    "expectedPaths": [
+      "coordination/CODEX_CHECKPOINT.md",
+      "coordination/ESTADO.md",
+      "docs/product/clinic-crm/NEW_CASE_CONTEXT.md",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/AUDIT.json",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-access-blocked-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-access-blocked-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-access-blocked-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-access-blocked-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-access-blocked-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-access-blocked-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-access-blocked-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-access-blocked-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-closed-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-closed-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-closed-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-closed-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-draft-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-draft-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-draft-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-draft-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-draft-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-draft-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-draft-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-draft-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-fresh-window-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-fresh-window-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-fresh-window-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-fresh-window-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-fresh-window-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-fresh-window-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-fresh-window-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-fresh-window-375.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-recovered-invalid-1280-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-recovered-invalid-1280.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-recovered-invalid-1920-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-recovered-invalid-1920.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-recovered-invalid-320-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-recovered-invalid-320.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-recovered-invalid-375-actions.png",
+      "docs/reviews/2026-11-05/reception-app-audit/new-case-context-cache-final/recepcao-a--recepcao-status-open-new-case-context-recovered-invalid-375.png",
+      "docs/reviews/2026-11-07/new-case-context/CACHE_RED.json",
+      "docs/reviews/2026-11-07/new-case-context/CLI.json",
+      "docs/reviews/2026-11-07/new-case-context/IMPLEMENTATION.md",
+      "docs/reviews/2026-11-07/new-case-context/RED_CONTROL.json",
+      "docs/reviews/2026-11-07/new-case-context/UNIT_GREEN.json",
+      "docs/reviews/2026-11-07/new-case-context/UNIT_RED.json",
+      "docs/reviews/2026-11-07/new-case-context/VALIDATION.json",
+      "scripts/fixtures/new-case-context-browser.mjs",
+      "scripts/reception-app-audit-browser.mjs",
+      "src/features/reception/NewCaseContext.test.tsx",
+      "src/features/reception/NewCaseDialog.tsx",
+      "tasks/clinic-crm/todo.md"
+    ],
+    "branch": "main",
+    "identity": "axiscoachapp",
+    "foreignIndexBefore": [],
+    "onlyCommit": true
+  }
+}
