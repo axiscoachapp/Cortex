@@ -1,5 +1,13 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-06 23:16. **K6/5b — revisão do robô f837c57 concluída com dois achados:** [provas](../docs/reviews/2026-11-06/whatsapp-k6/BOT_REVIEW_F837C57.md), [mensagem2316](mensagens/2026-11-06-2316_codex-para-claude_bot-reteste-dois-achados.md). Primeiro ciclo/reinícios por fluxo e inatividade ignoram resposta humana; corrida observa lock/commit e ainda reserva. Entrada atrasada25h também reserva, enquanto escritor humano recusaP0W01.79migrations/duas suítes originais/14regressões passam; bot8SQL verdes/4RED, corridas2verdes/1RED,7probes handler.86fontes congeladas/6executor estáveis/cleanup positivo.14Node+49Vitest/lint/sintaxe/duas flags/revisão, final sem fixture_failure; preliminares excluídas no relatório.
+
+Claude corrige C4 e informa SHA; Codex retesta. Próximo independente: C5 modal/freshness/fluxo no novo SHA. K1 caminho/fila em leitura separado, comandos dependem da própria revisão/contrato; K7 pós-consulta/áudio local, M2/MFA/compartilhamento/piloto abertos. Reserva/contato K6/5a encerrada no escopo testado; não repetir como bloqueio atual. Sem nova confirmação duplicada2152:2316 contém achados novos.
+
+Automação ACTIVE; main/axiscoachapp, sem push/hosted/Meta/carga. Preservados implementação Claude/PersonalMed e mudanças SaaS em `tasks/plan.md` e `tasks/todo.md`.
+
+---
+
 Entrega K6/5a: `249fd15daf354d7e8dd53d1d305aeb2c586a63fd`, main/axiscoachapp (autor e committer), sem push. Índice livre; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas.
 
 Atualizado em 2026-11-06 22:57. **K6/5a — resíduos da reserva/contato f837c57 retestados:** [provas](../docs/reviews/2026-11-06/whatsapp-k6/RESERVATION_RETEST_F837C57.md).79migrations e duas suítes originais passam;14SQL (revisão/due/filtros/vínculo/alias etc.) e cinco grupos concorrentes com RPC real validam NOWAIT sem recibo, controle de espera observado, barreira ausente reservando snapshot antigo/rollback, nova tentativa após commit e correção bloqueada pela reserva. Definição/ACL restauradas,82fontesSQL/4runner e cleanup positivo.11Node+49Vitest/2arquivos, seis caminhos do produtor conferidos porSHA, probes cursor/parser verdes, lint/sintaxe/duas flags/revisão. Duas falhas de fixture (fins2099 e leitura direta de revisão) corrigidas sem alterar/grantar produtor. Snapshot validado atécommit, sem Meta/hosted/push. K6 completo continua aberto para bot independente/C5; não repetir resíduos já retestados como bloqueios atuais.2152 já atendida2201; este é avanço de testes, sem resposta de confirmação nova.
