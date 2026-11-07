@@ -51,6 +51,14 @@ function harness(opts: { role?: BillingRole | null; caller?: string; payer?: Par
     insertCharge: async (row: Record<string, unknown>) => { inserted.push(row); return charge({ ...(row as Partial<ChargeRow>), id: 'e9400000-0000-4000-8000-000000000009', status: 'open', batch_id: null, guide_number: null, revision: 1 }); },
     saveCoverage: async (_c: string, row: unknown) => { coverages.push(row); },
     charges: async () => [],
+    payments: async () => [
+      { id: 'p1', charge_id: 'e9400000-0000-4000-8000-000000000001', batch_id: null, method: 'pix', amount: 100, received_on: '2026-11-06', notes: '', cancelled_at: null, created_at: 'x' },
+      { id: 'p2', charge_id: 'e9400000-0000-4000-8000-000000000002', batch_id: null, method: 'pix', amount: 50, received_on: '2026-11-06', notes: '', cancelled_at: null, created_at: 'x' },
+      { id: 'p3', charge_id: null, batch_id: BATCH, method: 'convenio', amount: 300, received_on: '2026-11-06', notes: '', cancelled_at: null, created_at: 'x' },
+      { id: 'p4', charge_id: 'e9400000-0000-4000-8000-000000000001', batch_id: null, method: 'pix', amount: 10, received_on: '2026-11-06', notes: '', cancelled_at: 'y', created_at: 'x' }],
+    chargesByIds: async (_c: string, ids: string[]) => [charge({ payer_id: null, guide_type: 'particular', patient_name: 'Paciente Um' }),
+      charge({ id: 'e9400000-0000-4000-8000-000000000002', doctor_id: ADMIN, payer_id: null, guide_type: 'particular', patient_name: 'Paciente Dois' })].filter((c) => ids.includes(c.id)),
+    expenses: async () => [],
   } as unknown as BillingStore;
   const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
     calls.push([name, args]);
@@ -127,6 +135,21 @@ describe('billing-api', () => {
     const r = await (await h.api({ action: 'batchXml', batchId: BATCH })).json();
     expect(new TextDecoder('latin1').decode(decode(r.base64))).toBe(sentXml);
     expect(h.calls.some(([n]) => n === 'billing_batch_update')).toBe(false);
+  });
+});
+
+describe('billing-api scope of lists', () => {
+  it('lists only in-scope doctors to the reception', async () => {
+    const r = await (await harness({ role: 'reception', caller: RECEPTION }).api({ action: 'state' })).json();
+    expect(r.doctors.map((d: { id: string }) => d.id)).toEqual([DOCTOR]);
+  });
+
+  it('shows the reception only its private payments, with the patient, and never batch or cancelled ones', async () => {
+    const rec = await (await harness({ role: 'reception', caller: RECEPTION }).api({ action: 'cash', from: '2026-11-01', to: '2026-11-30' })).json();
+    expect(rec.payments.map((p: { id: string; patientName: string }) => [p.id, p.patientName])).toEqual([['p1', 'Paciente Um']]);
+    expect(rec.expenses).toEqual([]);
+    const admin = await (await harness().api({ action: 'cash', from: '2026-11-01', to: '2026-11-30' })).json();
+    expect(admin.payments.map((p: { id: string }) => p.id)).toEqual(['p1', 'p2', 'p3']);
   });
 });
 

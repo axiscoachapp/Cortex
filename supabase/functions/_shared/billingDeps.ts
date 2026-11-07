@@ -189,6 +189,16 @@ export function billingDeps(): BillingDeps {
         if (error) fail('cobrança', error);
         return (data as unknown as ChargeRow | null) ?? null;
       },
+      async chargesByIds(clinic, ids) {
+        if (!ids.length) return [];
+        const out: ChargeRow[] = [];
+        for (let i = 0; i < ids.length; i += 200) {
+          const { data, error } = await service.from('billing_charges').select(CHARGE_COLUMNS).eq('clinic_id', clinic).in('id', ids.slice(i, i + 200));
+          if (error) fail('cobranças', error);
+          out.push(...((data ?? []) as unknown as ChargeRow[]));
+        }
+        return out;
+      },
       async openCharges(clinic, payerId, guideType) {
         const { data, error } = await service.from('billing_charges').select(CHARGE_COLUMNS).eq('clinic_id', clinic).eq('payer_id', payerId).eq('guide_type', guideType)
           .eq('status', 'open').order('service_date').limit(500);

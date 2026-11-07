@@ -70,6 +70,7 @@ export interface BillingStore {
   appointment(clinic: string, id: string): Promise<AppointmentToBill | null>;
   charges(clinic: string, doctors: string[], filter: { from: string; to: string; status?: string; payerId?: string }): Promise<ChargeRow[]>;
   charge(clinic: string, id: string): Promise<ChargeRow | null>;
+  chargesByIds(clinic: string, ids: string[]): Promise<ChargeRow[]>;
   openCharges(clinic: string, payerId: string, guideType: GuideType): Promise<ChargeRow[]>;
   insertCharge(row: Omit<ChargeRow, 'id' | 'status' | 'guide_number' | 'batch_id' | 'paid_amount' | 'denied_amount' | 'denial_code' | 'denial_note' | 'revision' | 'created_at'> & { created_by: string }): Promise<ChargeRow>;
   updateCharge(clinic: string, id: string, revision: number, patch: Partial<ChargeRow>): Promise<ChargeRow | null>;
@@ -229,12 +230,14 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
 
   switch (body.action) {
     case 'state': {
-      const [settings, payers, professionals, doctors] = await Promise.all([s.settings(clinic), s.payers(clinic), s.professionals(clinic), s.doctors(clinic)]);
+      const [settings, payers, professionals, doctors, visibleIds] = await Promise.all([s.settings(clinic), s.payers(clinic), s.professionals(clinic), s.doctors(clinic), visible()]);
+      const inScope = new Set(visibleIds);
       return {
         role, userId: caller.userId,
         settings: settings ? { legalName: settings.legal_name, cnpj: settings.cnpj, cnes: settings.cnes, nextGuideNumber: settings.next_guide_number, revision: settings.revision } : null,
         payers: payers.map(payerDto),
-        doctors: role === 'admin' ? doctors : doctors.filter((d) => d.id === caller.userId || role === 'reception'),
+        // Reception sees only the doctors in its scope; a doctor sees only themself.
+        doctors: role === 'admin' ? doctors : doctors.filter((d) => inScope.has(d.id)),
         professionals: professionals.map(professionalDto),
       };
     }
@@ -463,17 +466,15 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
     case 'cash': {
       staff();
       const { from, to } = period();
-      const payments = await s.payments(clinic, from, to);
-      let visibleCharges: Set<string> | null = null;
-      if (role === 'reception') {
-        const doctors = await visible();
-        const charges = await s.charges(clinic, doctors, { from: '1900-01-01', to: '2999-12-31' });
-        visibleCharges = new Set(charges.map((c) => c.id));
-      }
-      const list = payments.filter((p) => !p.cancelled_at && (role === 'admin' || (p.charge_id && visibleCharges!.has(p.charge_id))));
+      const payments = (await s.payments(clinic, from, to)).filter((p) => !p.cancelled_at);
+      const charges = new Map((await s.chargesByIds(clinic, [...new Set(payments.map((p) => p.charge_id).filter((x): x is string => !!x))])).map((c) => [c.id, c]));
+      // Reception: only private payments of charges of doctors in its scope; batch payments stay with the admin.
+      const scope = role === 'admin' ? null : new Set(await visible());
+      const list = payments.filter((p) => !scope || (p.charge_id && scope.has(charges.get(p.charge_id)?.doctor_id ?? '')));
       const expenses = role === 'admin' ? await s.expenses(clinic, from, to) : [];
       return {
-        payments: list.map((p) => ({ id: p.id, chargeId: p.charge_id, batchId: p.batch_id, method: p.method, amount: Number(p.amount), receivedOn: p.received_on, notes: p.notes })),
+        payments: list.map((p) => ({ id: p.id, chargeId: p.charge_id, batchId: p.batch_id, method: p.method, amount: Number(p.amount), receivedOn: p.received_on, notes: p.notes,
+          patientName: p.charge_id ? charges.get(p.charge_id)?.patient_name ?? null : null, description: p.charge_id ? charges.get(p.charge_id)?.description ?? null : null })),
         expenses: expenses.map((e) => ({ id: e.id, description: e.description, category: e.category, amount: Number(e.amount), dueOn: e.due_on, paidOn: e.paid_on,
           method: e.method, notes: e.notes, revision: e.revision })),
       };

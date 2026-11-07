@@ -5,7 +5,7 @@
 - **Migration:** `20261107120000_billing.sql`.
 - **Função:** `billing-api`.
 - **Módulos puros:** `_shared/tiss.ts` (XML, hash, ZIP) e `_shared/billingHandlers.ts`.
-- **Tela:** `/financeiro`.
+- **Tela:** `/financeiro`, com as abas A faturar, Cobranças, Lotes, Caixa, Relatórios e Cadastros, conforme o papel.
 - **Pesquisa e fontes:** [pesquisa/TISS_PESQUISA.md](pesquisa/TISS_PESQUISA.md), de 07/11/2026.
 
 ## O que cobre
@@ -58,7 +58,7 @@ O financeiro mostra o nome do paciente e o procedimento, que é dado de saúde i
 
 | Ação | Papel | Faz |
 |---|---|---|
-| `state` | todos | Papel, dados da clínica, convênios, médicos (o médico vê só o próprio) e profissionais |
+| `state` | todos | Papel, dados da clínica, convênios, médicos e profissionais. A recepção recebe só os médicos do seu escopo, e o médico só a si mesmo |
 | `saveSettings`, `savePayer`, `savePrice`, `deletePrice`, `saveProfessional` | admin | Cadastros. CAS por `revision` (409 se mudou) |
 | `prices` | todos | Tabela de preços |
 | `toBill` `{from,to}` | admin, recepção | Consultas atendidas sem cobrança, com carteirinhas salvas e o convênio da pré-consulta |
@@ -74,7 +74,7 @@ O financeiro mostra o nome do paciente e o procedimento, que é dado de saúde i
 | `markSent` `{batchId,revision,sentAt,protocol}` | admin | Só depois do XML gerado |
 | `updateBatch` `{batchId,revision,nfseNumber,notes}` | admin | Número da NFS-e e observações |
 | `settle` `{batchId,revision,paymentDate,items:[{chargeId,paid,denialCode?,denialNote?}]}` | admin | Retorno do convênio: uma linha por guia; código obrigatório quando há glosa |
-| `cash` `{from,to}` | admin, recepção | Recebimentos do período (a recepção vê só os do seu escopo) e despesas (só a administração) |
+| `cash` `{from,to}` | admin, recepção | Recebimentos do período, com `patientName` e `description` da cobrança particular, e despesas (só a administração). A recepção vê só os recebimentos particulares do seu escopo; o lote do convênio fica com a administração |
 | `saveExpense`, `deleteExpense` | admin | Despesas |
 | `report` `{from,to}` | admin, médico | Produção, repasse e glosas |
 

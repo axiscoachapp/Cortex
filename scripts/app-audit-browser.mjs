@@ -113,6 +113,7 @@ async function supabase(route) {
   if (path === '/functions/v1/whatsapp-api') return respond(route, whatsappAnswer(request.postDataJSON?.() ?? {}));
   if (path === '/functions/v1/intake-api') return respond(route, intakeAnswer(request.postDataJSON?.() ?? {}));
   if (path === '/functions/v1/intake-public') return respond(route, intakePublicAnswer(request.postDataJSON?.() ?? {}));
+  if (path === '/functions/v1/billing-api') return respond(route, billingAnswer(request.postDataJSON?.() ?? {}));
   if (path.startsWith('/functions/')) return respond(route, { error: 'Operação externa bloqueada no ensaio' }, 503);
   if (path.startsWith('/storage/')) return respond(route, []);
   const single = (request.headers()['accept'] ?? '').includes('vnd.pgrst.object');
@@ -209,6 +210,55 @@ function intakePublicAnswer(body) {
   return { error: 'Operação externa bloqueada no ensaio', code: 'server' };
 }
 
+// Finance (synthetic): one plan, prices, charges in every state, a sent batch, cash and a report.
+const BILL_PAYER = 'd5170000-0000-4000-8000-000000000001';
+const billDate = (offset) => day(offset).slice(0, 10);
+function billCharge(n, over) {
+  return { id: `d5180000-0000-4000-8000-00000000000${n}`, appointmentId: null, doctorId, contactId: null, patientName: `Paciente Sintético ${n}`, payerId: BILL_PAYER,
+    cardNumber: '0000 1111 2222', newborn: false, guideType: 'consulta', tableCode: '22', procedureCode: '10101012', description: 'Consulta em consultório',
+    quantity: 1, unitAmount: 150, amount: 150, serviceDate: billDate(-n), consultationType: '1', authorization: { number: null, password: null, date: null, validUntil: null },
+    status: 'open', guideNumber: null, batchId: null, paidAmount: 0, deniedAmount: 0, denialCode: null, denialNote: null, notes: '', revision: 1, ...over };
+}
+function billingAnswer(body) {
+  const sentBatch = { id: 'd5190000-0000-4000-8000-000000000001', payerId: BILL_PAYER, number: 3, guideType: 'consulta', status: 'sent', totalAmount: 300, paidAmount: 0,
+    deniedAmount: 0, xmlHash: 'a'.repeat(32), generatedAt: day(-1), sentAt: billDate(-1), protocol: 'PROTOCOLO-0001', paymentDate: null, nfseNumber: null, notes: '', revision: 3, createdAt: day(-2) };
+  switch (body.action) {
+    case 'state': return { role: 'admin', userId: doctorId, settings: { legalName: 'CLINICA SINTETICA LTDA', cnpj: null, cnes: '9999999', nextGuideNumber: 7, revision: 1 },
+      payers: [{ id: BILL_PAYER, name: 'Operadora Sintética de Saúde', ansRegistry: '999999', providerCode: '123456', tissVersion: '4.03.00', hashEncoding: 'latin1',
+        zipRequired: false, submissionDays: 30, paymentDays: 60, active: true, notes: '', revision: 1 }],
+      doctors: [{ id: doctorId, name: 'Dra. Ana Exemplo', crm: '00000', crmUf: 'PR' }],
+      professionals: [{ userId: doctorId, tissName: 'ANA EXEMPLO', council: '06', councilNumber: '00000', councilUf: '41', cbo: '225250', sharePercent: 60, revision: 1 }] };
+    case 'prices': return { prices: [
+      { id: 'd51a0000-0000-4000-8000-000000000001', payerId: BILL_PAYER, tableCode: '22', procedureCode: '10101012', description: 'Consulta em consultório', guideType: 'consulta', amount: 150, active: true, revision: 1 },
+      { id: 'd51a0000-0000-4000-8000-000000000002', payerId: BILL_PAYER, tableCode: '22', procedureCode: '41301102', description: 'Colposcopia (cérvice uterina e vagina)', guideType: 'sadt', amount: 80, active: true, revision: 1 },
+      { id: 'd51a0000-0000-4000-8000-000000000003', payerId: null, tableCode: '00', procedureCode: '10101012', description: 'Consulta particular', guideType: 'consulta', amount: 350, active: true, revision: 1 }] };
+    case 'toBill': return { items: [
+      { appointmentId: 'd5150000-0000-4000-8000-000000000011', doctorId, start: day(-1, 9), type: 'novo', contactId: 'd51b0000-0000-4000-8000-000000000001',
+        patientName: 'Paciente Sintético 1', consultationType: '1', coverages: [{ payerId: BILL_PAYER, cardNumber: '0000 1111 2222', cardValidUntil: null, plan: '' }], intake: null },
+      { appointmentId: 'd5150000-0000-4000-8000-000000000012', doctorId, start: day(-1, 10), type: 'retorno', contactId: null,
+        patientName: 'Paciente com nome bem comprido para conferir o corte em telas estreitas', consultationType: '2', coverages: [], intake: null }] };
+    case 'charges': return { charges: [
+      billCharge(1, {}), billCharge(2, { status: 'sent', guideNumber: 5, batchId: sentBatch.id }),
+      billCharge(3, { status: 'partial', guideNumber: 4, paidAmount: 100, deniedAmount: 50, denialCode: '1705', denialNote: 'Valor acima da tabela' }),
+      billCharge(4, { payerId: null, cardNumber: null, guideType: 'particular', tableCode: '00', unitAmount: 350, amount: 350, description: 'Consulta particular', status: 'partial', paidAmount: 100 })] };
+    case 'openForBatch': return { charges: [billCharge(1, {}), billCharge(5, {})] };
+    case 'batches': return { batches: [sentBatch, { ...sentBatch, id: 'd5190000-0000-4000-8000-000000000002', number: 4, status: 'draft', xmlHash: null, sentAt: null, protocol: null, totalAmount: 150 },
+      { ...sentBatch, id: 'd5190000-0000-4000-8000-000000000003', number: 2, status: 'closed', paidAmount: 250, deniedAmount: 50, paymentDate: billDate(-3) }] };
+    case 'batchCharges': return { charges: [billCharge(2, { status: 'sent', guideNumber: 5 }), billCharge(6, { status: 'sent', guideNumber: 6 })] };
+    case 'cash': return {
+      payments: [{ id: 'd51c0000-0000-4000-8000-000000000001', chargeId: 'd5180000-0000-4000-8000-000000000004', batchId: null, method: 'pix', amount: 100, receivedOn: billDate(0), notes: 'sinal', patientName: 'Paciente Sintético com nome comprido para conferir o corte', description: 'Consulta particular' },
+        { id: 'd51c0000-0000-4000-8000-000000000002', chargeId: null, batchId: sentBatch.id, method: 'convenio', amount: 250, receivedOn: billDate(-1), notes: '', patientName: null, description: null }],
+      expenses: [{ id: 'd51d0000-0000-4000-8000-000000000001', description: 'Aluguel da sala (sintético)', category: 'aluguel', amount: 3200, dueOn: billDate(0), paidOn: billDate(0), method: 'boleto', notes: '', revision: 1 },
+        { id: 'd51d0000-0000-4000-8000-000000000002', description: 'Material de consultório', category: 'material', amount: 480.5, dueOn: billDate(2), paidOn: null, method: null, notes: '', revision: 1 }] };
+    case 'report': return { totals: { count: 4, charged: 800, paid: 450, denied: 50, open: 300 },
+      doctors: [{ doctorId, count: 4, charged: 800, paid: 450, denied: 50, open: 300, sharePercent: 60, payout: 270 }],
+      payers: [{ payerId: BILL_PAYER, name: 'Operadora Sintética de Saúde', count: 3, charged: 450, paid: 350, denied: 50, open: 50 },
+        { payerId: null, name: 'Particular', count: 1, charged: 350, paid: 100, denied: 0, open: 250 }],
+      denials: [{ code: '1705', count: 1, amount: 50 }] };
+    default: return { error: 'Operação externa bloqueada no ensaio', code: 'server' };
+  }
+}
+
 /** Automatic findings on the current page. */
 async function inspect(page, width) {
   return page.evaluate((w) => {
@@ -227,7 +277,8 @@ async function inspect(page, width) {
       if (visible(el) && !name(el) && !el.querySelector('img[alt]:not([alt=""])')) out.unnamedControls.push(short(el));
     }
     for (const el of document.querySelectorAll('input:not([type="hidden"]), select, textarea')) {
-      if (!visible(el)) continue;
+      // Native controls hidden from assistive technology (the select Radix mirrors inside a form) are not fields.
+      if (!visible(el) || el.closest('[aria-hidden="true"]')) continue;
       const labelled = el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') || el.closest('label') || (el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`)) || el.getAttribute('title');
       if (!labelled) out.unlabelledFields.push(`${short(el)}${el.getAttribute('placeholder') ? ` (placeholder "${el.getAttribute('placeholder')}")` : ''}`);
     }
@@ -272,6 +323,7 @@ const ROUTES = [
   ['config-pre-consulta', '/configuracoes?secao=pre-consulta'],
   ['pre-consultas', '/pre-consultas'],
   ['pre-consulta-paciente', `/pre-consulta/${'A'.repeat(43)}`],
+  ['financeiro', '/financeiro'],
   ['config-conexoes', '/configuracoes?secao=conexoes'],
   ['config-permissoes', '/configuracoes?secao=permissoes'],
   ['config-equipe', '/configuracoes?secao=equipe'],
@@ -336,6 +388,60 @@ try {
       await page.waitForTimeout(1500);
       await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: true });
       report.routes[`${label} ${path}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+      // Finance: every tab, and the dialogs that carry forms.
+      if (path === '/financeiro') {
+        const snap = async (name) => {
+          await page.waitForTimeout(700);
+          await page.screenshot({ path: resolve(artifacts, `${label}-financeiro-${name}.png`), fullPage: true });
+          const dialog = page.getByRole('dialog');
+          const box = (await dialog.count()) ? await dialog.first().boundingBox() : null;
+          report.routes[`${label} financeiro ${name}`] = { ...(await inspect(page, viewport.width)),
+            ...(box ? { dialog: { left: Math.round(box.x), right: Math.round(box.x + box.width), viewport: viewport.width } } : {}),
+            pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        };
+        // Escape closes a dialog; wait until it is gone, or the page behind stays hidden from the queries.
+        const close = async () => {
+          await page.keyboard.press('Escape');
+          await page.getByRole('dialog').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+          await page.waitForTimeout(300);
+        };
+        const tab = async (name) => {
+          const t = page.getByRole('tab', { name, exact: true });
+          if (!(await t.count())) { report.routes[`${label} financeiro ${name}`] = { missing: 'tab not found' }; return false; }
+          await t.click();
+          return true;
+        };
+        const cobrar = page.getByRole('button', { name: /^Cobrar o atendimento/ }).first();
+        if (await cobrar.count()) {
+          await cobrar.click();
+          await page.getByRole('dialog').waitFor({ timeout: 5000 }).catch(() => {});
+          await snap('cobranca-dialogo');
+          await close();
+        } else report.routes[`${label} financeiro cobranca-dialogo`] = { missing: 'charge button not found' };
+        if (await tab('Cobranças')) {
+          await snap('cobrancas');
+          const receive = page.getByRole('button', { name: /^Receber de/ }).first();
+          if (await receive.count()) { await receive.click(); await snap('receber-dialogo'); await close(); }
+        }
+        if (await tab('Lotes')) {
+          await snap('lotes');
+          const settle = page.getByRole('button', { name: /^Lançar o retorno/ }).first();
+          if (await settle.count()) { await settle.click(); await snap('retorno-dialogo'); await close(); }
+        }
+        if (await tab('Caixa')) {
+          await snap('caixa');
+          const add = page.getByRole('button', { name: 'Nova despesa' });
+          if (await add.count()) { await add.click(); await snap('despesa-dialogo'); await close(); }
+        }
+        if (await tab('Relatórios')) await snap('relatorios');
+        if (await tab('Cadastros')) {
+          await snap('cadastros');
+          const pro = page.getByRole('button', { name: /^Editar os dados de faturamento/ }).first();
+          if (await pro.count()) { await pro.click(); await snap('medico-dialogo'); await close(); }
+          const payer = page.getByRole('button', { name: /^Editar Operadora/ }).first();
+          if (await payer.count()) { await payer.click(); await snap('convenio-dialogo'); await close(); }
+        }
+      }
       // Pre-consultation answers dialog (reception list).
       if (path === '/pre-consultas') {
         const view = page.getByRole('button', { name: 'Ver respostas' }).first();
