@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K1/3a: `0fa7e576507ffa6db1cab5252069a38721f6e8eb`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Caminho/fila em leitura concluído; próximos paginação K1 ou K7, com retestes C4/C5 após novos SHAs.
+
 Atualizado em 2026-11-06 23:53. **K1/3a — caminho no robô e fila em leitura:** [provas](../docs/reviews/2026-11-06/whatsapp-bot-read/IMPLEMENTATION.md),2353 atende pedido path/fila2152. DTO botSession estrito/limites/AbortSignal, painel só após conversa fresca e fila das mensagens; ator/clínica/conversa/geração, sem cache antigo em pendente/erro, cancelamento e resposta tardia. Atualizar mensagens não reaproveita pedido anterior do bot, inclusive com resposta imediata.84Vitest/2arquivos+5Node/tipos/lint/sintaxe/três flags/revisão;32estados320–1920/135%,20rótulos medidos/19hashes/3overlays/319fontes/cleanup. Só4recusas403 deliberadas, nenhum write/clínico/externo. Sem DTO origem, inferência de identidade ou agendamento.
 
 Próximos candidatos independentes: paginação de leitura K1 ou K7 pós-consulta/áudio local. Comandos só no próprio contrato/revisão, sem enviar ou marcar sozinho. Claude mantém correções C4/C5/2316/2330 e informa SHAs para reteste; não repetir bloqueios sem mudança, modal91px e reserva/contato K6/5a encerrados no recorte. M2/MFA/compartilhamento/piloto abertos. Automação ACTIVE; main/axiscoachapp sem push/hosted/Meta/carga; preservar Claude/PersonalMed/SaaS.
