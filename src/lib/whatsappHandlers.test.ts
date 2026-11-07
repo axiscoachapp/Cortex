@@ -508,3 +508,36 @@ describe('K6 corrections', () => {
     expect(seen).toEqual([{ at: '2026-11-06T12:00:00.000Z', id: '55555555-5555-4555-8555-555555555555' }, null]);
   });
 });
+
+describe('K6 residuals (2058)', () => {
+  it('keeps cursor timestamps byte for byte, microseconds included', async () => {
+    const h = harness();
+    const seen: unknown[] = [];
+    h.deps.store.conversations = async (q) => { seen.push(q.before); return []; };
+    await h.api({ action: 'conversations', before: '2026-11-06T12:00:00.123456+00:00|55555555-5555-4555-8555-555555555555' });
+    await h.api({ action: 'conversations', before: '2026-11-06|55555555-5555-4555-8555-555555555555' });
+    expect(seen).toEqual([{ at: '2026-11-06T12:00:00.123456+00:00', id: '55555555-5555-4555-8555-555555555555' }, null]);
+  });
+
+  it('keeps valid messages when a sibling is malformed', () => {
+    const payload = structuredClone(textDelivery) as unknown as { entry: Array<{ changes: Array<{ value: { messages: unknown[] } }> }> };
+    payload.entry[0].changes[0].value.messages.unshift({
+      from: '5541999990000', id: 'wamid.BADLOC1', timestamp: '1793980800', type: 'location', location: { latitude: { toString: 0 }, longitude: 1 },
+    });
+    const { messages } = parseWebhook(payload);
+    expect(messages.map((m) => m.wamid)).toEqual(['wamid.BADLOC1', 'wamid.SYNTHETIC1']);
+    expect(messages[0].body).toBe(',1');
+  });
+
+  it('sends the rule revision so an edited rule is never claimed with the old settings', async () => {
+    const h = await connectedHarness();
+    h.deps.now = () => new Date('2026-12-08T15:00:00Z');
+    h.rpcResults.whatsapp_automation_candidates = [{
+      automation_id: RULE, clinic_id: CLINIC, appointment_id: APPT, appointment_start: '2026-12-10T18:00:00Z', appointment_end: '2026-12-10T18:30:00Z',
+      doctor_id: ADMIN, patient_name: 'Maria', phone: '5541999990000', doctor_name: '', clinic_name: '', opted_out: false, consented: true,
+    }];
+    h.rpcResults.whatsapp_automation_begin = null;
+    await automationsHandler(new Request('https://x', { method: 'POST', headers: { 'x-cortex-cron': CRON } }), h.deps);
+    expect(h.calls.find(([n]) => n === 'whatsapp_automation_begin')?.[1]).toMatchObject({ p_automation: RULE, p_rule_revision: 1 });
+  });
+});

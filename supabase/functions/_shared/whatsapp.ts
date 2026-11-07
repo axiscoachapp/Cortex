@@ -99,7 +99,8 @@ function inboundOf(m: Obj): Pick<InboundMessage, 'kind' | 'body' | 'media'> {
     case 'location': {
       const l = obj(m.location);
       const label = [str(l.name, 200), str(l.address, 300)].filter(Boolean).join(' — ');
-      return { kind: 'location', body: label || `${String(l.latitude ?? '')},${String(l.longitude ?? '')}`.slice(0, 80), media: null };
+      const coord = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? String(v) : typeof v === 'string' ? v.slice(0, 20) : '');
+      return { kind: 'location', body: label || `${coord(l.latitude)},${coord(l.longitude)}`, media: null };
     }
     case 'contacts': {
       const names = arr(m.contacts).map((c) => str(obj(obj(c).name).formatted_name, 120)).filter(Boolean);
@@ -143,6 +144,7 @@ export function parseWebhook(payload: unknown): { messages: InboundMessage[]; st
         if (user) names.set(user, name);
       }
       for (const rawMessage of arr(v.messages)) {
+        try {
         const m = obj(rawMessage);
         const wamid = str(m.id, 256);
         if (wamid.length < 8) continue;
@@ -163,15 +165,19 @@ export function parseWebhook(payload: unknown): { messages: InboundMessage[]; st
           phoneNumberId, waId, userId, profileName: names.get(userId ?? '') ?? names.get(waId ?? '') ?? '', wamid,
           contextWamid: contextWamid.length >= 8 ? contextWamid : null, providerAt: isoFromUnix(m.timestamp), ...inboundOf(m),
         });
+        } catch { /* malformed item skipped; valid siblings are kept */ }
       }
       for (const rawStatus of arr(v.statuses)) {
+        try {
         const s = obj(rawStatus);
         const wamid = str(s.id, 256);
         const status = s.status;
         if (wamid.length < 8 || (status !== 'sent' && status !== 'delivered' && status !== 'read' && status !== 'failed')) continue;
         const first = obj(arr(s.errors)[0]);
-        const err = Object.keys(first).length ? `${String(first.code ?? '')} ${str(first.title, 200)}`.trim() : null;
+        const code = typeof first.code === 'number' || typeof first.code === 'string' ? String(first.code).slice(0, 12) : '';
+        const err = Object.keys(first).length ? `${code} ${str(first.title, 200)}`.trim() : null;
         statuses.push({ phoneNumberId, wamid, status, at: isoFromUnix(s.timestamp), error: err });
+        } catch { /* malformed receipt skipped */ }
       }
     }
   }

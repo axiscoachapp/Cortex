@@ -39,7 +39,7 @@ do $$ declare t text; f text; begin
   end loop;
   foreach f in array array['public.whatsapp_record_event(text,jsonb)','public.whatsapp_ingest_inbound(text,text,text,text,text,text,text,jsonb,text,timestamptz)',
     'public.whatsapp_begin_outbound(uuid,uuid,uuid,uuid,text,text,jsonb)','public.whatsapp_conversation_action(uuid,uuid,uuid,integer,text,uuid,text)',
-    'public.whatsapp_automation_candidates(timestamptz,integer)','public.whatsapp_automation_begin(uuid,uuid,timestamptz,text,text,text,jsonb)',
+    'public.whatsapp_automation_candidates(timestamptz,integer)','public.whatsapp_automation_begin(uuid,integer,uuid,timestamptz,text,text,text,jsonb)',
     'public.whatsapp_automation_save(uuid,uuid,uuid,integer,jsonb)'] loop
     assert not has_function_privilege('authenticated',f,'execute') and not has_function_privilege('anon',f,'execute'), f||' callable';
     assert has_function_privilege('service_role',f,'execute'), f||' not callable by service_role';
@@ -177,7 +177,8 @@ do $$ declare c public.whatsapp_conversations; other uuid; r jsonb; m uuid; begi
   assert exists (select 1 from public.whatsapp_messages where wamid='wamid.IN000022'), 'delivery lost on key collision';
 end $$;
 
--- Agenda automations: only clinic appointments, consent required, everything rechecked when claiming.
+-- Agenda automations: only clinic appointments with an active contact link, consent required,
+-- everything rechecked when claiming. Times are relative to now() (constant inside the transaction).
 insert into public.clinic_contacts(id,clinic_id,name,phone,phone_normalized,created_by,request_id) values
  ('e6300000-0000-4000-8000-000000000002','e6200000-0000-4000-8000-000000000001','Paciente Exemplo','(41) 99999-0001','5541999990001',
   'e6100000-0000-4000-8000-000000000001',gen_random_uuid());
@@ -186,68 +187,89 @@ select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','e6100000-0000-4000-8000-000000000002',true);
 -- A private appointment of the doctor (no clinic): never read by automations.
 insert into public.appointments(id,user_id,patient_id,title,start_time,end_time,status,type) values
- ('e6700000-0000-4000-8000-000000000009',auth.uid(),'e6500000-0000-4000-8000-000000000001','Consulta particular','2099-12-10T14:00Z','2099-12-10T14:30Z','agendado','retorno');
+ ('e6700000-0000-4000-8000-000000000009',auth.uid(),'e6500000-0000-4000-8000-000000000001','Consulta particular',
+  date_trunc('minute',now())+interval '38 hours',date_trunc('minute',now())+interval '38 hours 30 minutes','agendado','retorno');
 reset role;
 -- Clinic appointments (as the reception would book them), linked to the reception contact through a confirmed link.
 insert into public.patient_contact_links(clinic_id,contact_id,patient_id,doctor_user_id,relationship,confirmed_by) values
  ('e6200000-0000-4000-8000-000000000001','e6300000-0000-4000-8000-000000000002','e6500000-0000-4000-8000-000000000001','e6100000-0000-4000-8000-000000000002','self','e6100000-0000-4000-8000-000000000001');
 insert into public.appointments(id,user_id,patient_id,clinic_id,contact_id,title,start_time,end_time,status,type) values
- ('e6700000-0000-4000-8000-000000000001','e6100000-0000-4000-8000-000000000002','e6500000-0000-4000-8000-000000000001','e6200000-0000-4000-8000-000000000001','e6300000-0000-4000-8000-000000000002','Consulta','2099-12-10T15:00Z','2099-12-10T15:30Z','agendado','retorno'),
- ('e6700000-0000-4000-8000-000000000002','e6100000-0000-4000-8000-000000000002','e6500000-0000-4000-8000-000000000001','e6200000-0000-4000-8000-000000000001','e6300000-0000-4000-8000-000000000002','Consulta','2099-12-10T17:00Z','2099-12-10T17:30Z','cancelado','retorno');
+ ('e6700000-0000-4000-8000-000000000001','e6100000-0000-4000-8000-000000000002','e6500000-0000-4000-8000-000000000001','e6200000-0000-4000-8000-000000000001','e6300000-0000-4000-8000-000000000002','Consulta',
+  date_trunc('minute',now())+interval '40 hours',date_trunc('minute',now())+interval '40 hours 30 minutes','agendado','retorno'),
+ ('e6700000-0000-4000-8000-000000000002','e6100000-0000-4000-8000-000000000002','e6500000-0000-4000-8000-000000000001','e6200000-0000-4000-8000-000000000001','e6300000-0000-4000-8000-000000000002','Consulta',
+  date_trunc('minute',now())+interval '44 hours',date_trunc('minute',now())+interval '44 hours 30 minutes','cancelado','retorno');
 set local role service_role;
 select set_config('request.jwt.claim.role','service_role',true);
 create temp table rule(id uuid) on commit drop;
 insert into rule select (public.whatsapp_automation_save('e6200000-0000-4000-8000-000000000001','e6100000-0000-4000-8000-000000000001',null,null,
   '{"name":"Lembrete 48 h","enabled":true,"trigger":"before_start","offsetMinutes":2880,"templateName":"lembrete_consulta","templateLanguage":"pt_BR",
     "params":[{"source":"paciente_primeiro_nome"},{"source":"data"}],"doctorIds":["e6100000-0000-4000-8000-000000000002"]}')->>'id')::uuid;
+create function pg_temp.rev() returns integer language sql as $$ select revision from public.whatsapp_automations where id=(select id from rule) $$;
+create function pg_temp.start1() returns timestamptz language sql as $$ select start_time from public.appointments where id='e6700000-0000-4000-8000-000000000001' $$;
 do $$ declare n int; r jsonb; begin
   assert pg_temp.sqlstate_of($q$select public.whatsapp_automation_save('e6200000-0000-4000-8000-000000000001','e6100000-0000-4000-8000-000000000001',null,null,
     '{"name":"Outra","trigger":"before_start","offsetMinutes":60,"templateName":"x","templateLanguage":"pt_BR","doctorIds":["e6100000-0000-4000-8000-000000000004"]}')$q$)='22023',
     'rule for a doctor outside the clinic';
-  assert not exists (select 1 from public.whatsapp_automation_candidates('2099-12-08T12:00Z',100)), 'sent before its time';
-  assert not exists (select 1 from public.whatsapp_automation_candidates('2099-12-08T15:10Z',100) where appointment_id='e6700000-0000-4000-8000-000000000009'),
+  assert not exists (select 1 from public.whatsapp_automation_candidates(now()-interval '20 hours',100)), 'sent before its time';
+  assert not exists (select 1 from public.whatsapp_automation_candidates(now(),100) where appointment_id='e6700000-0000-4000-8000-000000000009'),
     'private appointment of the doctor listed';
-  select count(*) into n from public.whatsapp_automation_candidates('2099-12-08T15:10Z',100) c where c.appointment_id='e6700000-0000-4000-8000-000000000001'
+  select count(*) into n from public.whatsapp_automation_candidates(now(),100) c where c.appointment_id='e6700000-0000-4000-8000-000000000001'
     and c.phone='5541999990001' and c.patient_name='Paciente Exemplo' and not c.consented;
   assert n=1, 'clinic appointment not listed (contact phone, consent flag)';
-  assert not exists (select 1 from public.whatsapp_automation_candidates('2099-12-08T17:10Z',100) where appointment_id='e6700000-0000-4000-8000-000000000002'), 'cancelled appointment listed';
-  assert not exists (select 1 from public.whatsapp_automation_candidates('2099-12-09T06:00Z',100)), 'stale reminder (over 14 h late) listed';
+  assert not exists (select 1 from public.whatsapp_automation_candidates(now(),100) where appointment_id='e6700000-0000-4000-8000-000000000002'), 'cancelled appointment listed';
+  assert not exists (select 1 from public.whatsapp_automation_candidates(now()+interval '30 hours',100)), 'stale reminder (over 14 h late) listed';
+  -- Not due yet when claimed: nothing is recorded.
+  update public.whatsapp_automations set offset_minutes=60, revision=revision+1 where id=(select id from rule);
+  assert public.whatsapp_automation_begin((select id from rule),pg_temp.rev(),'e6700000-0000-4000-8000-000000000001',pg_temp.start1(),'5541999990001',null,'x','{}') is null,
+    'claimed before its time';
+  update public.whatsapp_automations set offset_minutes=2880, revision=revision+1 where id=(select id from rule);
   -- Without consent the claim is recorded as skipped, even if the caller passed no reason.
-  r := public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000001','2099-12-10T15:00Z','5541999990001',null,'x','{}');
-  assert (r->>'skipped')::boolean and r->>'reason' like 'Sem consentimento%', 'sent without consent';
-  assert public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000001','2099-12-10T15:00Z','5541999990001',null,'x','{}') is null, 'claimed twice';
+  r := public.whatsapp_automation_begin((select id from rule),pg_temp.rev(),'e6700000-0000-4000-8000-000000000001',pg_temp.start1(),'5541999990001',null,'x','{}');
+  assert (r->>'skipped')::boolean and r->>'reason' like 'Sem consentimento%', 'sent without consent: ' || coalesce(r::text,'null');
+  assert public.whatsapp_automation_begin((select id from rule),pg_temp.rev(),'e6700000-0000-4000-8000-000000000001',pg_temp.start1(),'5541999990001',null,'x','{}') is null, 'claimed twice';
   -- A private appointment cannot be claimed either.
-  r := public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000009','2099-12-10T14:00Z','5541999990001',null,'x','{}');
+  r := public.whatsapp_automation_begin((select id from rule),pg_temp.rev(),'e6700000-0000-4000-8000-000000000009',
+    (select start_time from public.appointments where id='e6700000-0000-4000-8000-000000000009'),'5541999990001',null,'x','{}');
   assert (r->>'skipped')::boolean and r->>'reason' like '%agenda da clínica%', 'private appointment claimed';
+  delete from public.whatsapp_automation_runs where appointment_id='e6700000-0000-4000-8000-000000000001';
 end $$;
--- Consent is recorded by the reception; a rescheduled appointment is a new reminder; changes between
--- selection and claim are caught under lock.
-do $$ declare r jsonb; m uuid; c uuid; begin
+-- Consent, rescheduling, rule edits, suspended links and changes between selection and claim.
+do $$ declare r jsonb; m uuid; c uuid; old_rev int; begin
   perform public.whatsapp_ingest_inbound('200000000001','5541999990001','BR.1111','','wamid.IN000010','text','VOLTAR',null,null,now());
   assert exists (select 1 from public.whatsapp_opt_ins where wa_id='5541999990001' and source='paciente' and revoked_at is null), 'VOLTAR did not renew consent';
-  perform pg_temp.as_doctor($q$update public.appointments set start_time='2099-12-11T15:00Z', end_time='2099-12-11T15:30Z' where id='e6700000-0000-4000-8000-000000000001'$q$);
-  assert exists (select 1 from public.whatsapp_automation_candidates('2099-12-09T15:10Z',100) where consented and not opted_out), 'rescheduled appointment not due';
+  perform pg_temp.as_doctor($q$update public.appointments set start_time=date_trunc('minute',now())+interval '42 hours', end_time=date_trunc('minute',now())+interval '42 hours 30 minutes' where id='e6700000-0000-4000-8000-000000000001'$q$);
+  assert exists (select 1 from public.whatsapp_automation_candidates(now(),100) where appointment_id='e6700000-0000-4000-8000-000000000001' and consented and not opted_out),
+    'rescheduled appointment not due';
+  -- Rule edited after the selection (old revision) or now excluding this doctor: not claimed.
+  old_rev := pg_temp.rev();
+  update public.whatsapp_automations set doctor_ids=array['e6100000-0000-4000-8000-000000000001'::uuid], revision=revision+1 where id=(select id from rule);
+  assert not exists (select 1 from public.whatsapp_automation_candidates(now(),100) where appointment_id='e6700000-0000-4000-8000-000000000001'), 'filter change ignored';
+  assert public.whatsapp_automation_begin((select id from rule),old_rev,'e6700000-0000-4000-8000-000000000001',pg_temp.start1(),'5541999990001',null,'x','{}') is null,
+    'claimed with the old rule';
+  assert public.whatsapp_automation_begin((select id from rule),pg_temp.rev(),'e6700000-0000-4000-8000-000000000001',pg_temp.start1(),'5541999990001',null,'x','{}') is null,
+    'claimed outside the rule filter';
+  update public.whatsapp_automations set doctor_ids=null, revision=revision+1 where id=(select id from rule);
   -- Changed between selection and claim: the old start time is refused.
-  r := public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000001','2099-12-12T15:00Z','5541999990001',null,'x','{}');
+  r := public.whatsapp_automation_begin((select id from rule),pg_temp.rev(),'e6700000-0000-4000-8000-000000000001',pg_temp.start1()+interval '1 day','5541999990001',null,'x','{}');
   assert (r->>'skipped')::boolean and r->>'reason' like '%horário%', 'stale start time claimed';
   -- Cancelled between selection and claim.
   perform pg_temp.as_doctor($q$update public.appointments set status='cancelado' where id='e6700000-0000-4000-8000-000000000001'$q$);
-  r := public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000001','2099-12-11T15:00Z','5541999990001',null,'x','{}');
+  r := public.whatsapp_automation_begin((select id from rule),pg_temp.rev(),'e6700000-0000-4000-8000-000000000001',pg_temp.start1(),'5541999990001',null,'x','{}');
   assert (r->>'skipped')::boolean and r->>'reason' like '%não está mais agendada%', 'cancelled appointment claimed';
-  delete from public.whatsapp_automation_runs where appointment_id='e6700000-0000-4000-8000-000000000001' and appointment_start='2099-12-11T15:00Z';
+  delete from public.whatsapp_automation_runs where appointment_id='e6700000-0000-4000-8000-000000000001';
   perform pg_temp.as_doctor($q$update public.appointments set status='agendado' where id='e6700000-0000-4000-8000-000000000001'$q$);
   -- Opted out between selection and claim.
   perform public.whatsapp_ingest_inbound('200000000001','5541999990001','BR.1111','','wamid.IN000012','text','SAIR',null,null,now());
-  r := public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000001','2099-12-11T15:00Z','5541999990001',null,'x','{}');
+  r := public.whatsapp_automation_begin((select id from rule),pg_temp.rev(),'e6700000-0000-4000-8000-000000000001',pg_temp.start1(),'5541999990001',null,'x','{}');
   assert (r->>'skipped')::boolean, 'opted-out person claimed';
   assert exists (select 1 from public.whatsapp_opt_ins where wa_id='5541999990001' and revoked_at is not null), 'SAIR did not revoke consent';
-  delete from public.whatsapp_automation_runs where appointment_id='e6700000-0000-4000-8000-000000000001' and appointment_start='2099-12-11T15:00Z';
+  delete from public.whatsapp_automation_runs where appointment_id='e6700000-0000-4000-8000-000000000001';
   -- The reception records consent again; now it is sent.
   select id into c from public.whatsapp_conversations where user_id='BR.1111';
   perform public.whatsapp_conversation_action('e6200000-0000-4000-8000-000000000001',c,'e6100000-0000-4000-8000-000000000003',
     (select revision from public.whatsapp_conversations where id=c),'record_opt_in',null,null);
-  r := public.whatsapp_automation_begin((select id from rule),'e6700000-0000-4000-8000-000000000001','2099-12-11T15:00Z','5541999990001',null,
-    'Olá Paciente, sua consulta é 11/12.','{"name":"lembrete_consulta","language":"pt_BR","params":["Paciente","11/12"]}');
+  r := public.whatsapp_automation_begin((select id from rule),pg_temp.rev(),'e6700000-0000-4000-8000-000000000001',pg_temp.start1(),'5541999990001',null,
+    'Olá Paciente, sua consulta é amanhã.','{"name":"lembrete_consulta","language":"pt_BR","params":["Paciente","amanhã"]}');
   assert not (r->>'skipped')::boolean, 'consented reminder skipped: ' || coalesce(r->>'reason','');
   m := (r->>'messageId')::uuid;
   assert r->>'to'='5541999990001' and (r->>'conversationId')::uuid=c, 'reminder went to another conversation';
@@ -259,6 +281,32 @@ do $$ declare r jsonb; m uuid; c uuid; begin
   perform public.whatsapp_ingest_inbound('200000000001','5541999950006',null,'','wamid.IN000013','button','Confirmar',null,'wamid.OUT000002',now());
   assert (select reply is null from public.whatsapp_automation_runs where message_id=m), 'reply from another conversation linked';
   perform public.whatsapp_ingest_inbound('200000000001','5541999990001','BR.1111','','wamid.IN000011','button','Confirmar',null,'wamid.OUT000002',now());
-  assert (select reply='Confirmar' and replied_at is not null from public.whatsapp_automation_runs where message_id=m), 'reply not captured';
+  assert (select reply='Confirmar' and replied_at is not null from public.whatsapp_automation_runs where message_id=m), 'reply captured';
+end $$;
+-- Suspended contact link (real administrative command): not listed, and refused when claimed.
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','e6100000-0000-4000-8000-000000000001',true);
+select public.reception_set_link_active('e6300000-0000-4000-8000-000000000002','e6500000-0000-4000-8000-000000000001',1,false);
+set local role service_role;
+select set_config('request.jwt.claim.role','service_role',true);
+do $$ declare r jsonb; begin
+  assert (select not active from public.patient_contact_links where contact_id='e6300000-0000-4000-8000-000000000002'), 'fixture: link still active';
+  delete from public.whatsapp_automation_runs where appointment_id='e6700000-0000-4000-8000-000000000001';
+  assert not exists (select 1 from public.whatsapp_automation_candidates(now(),100) where appointment_id='e6700000-0000-4000-8000-000000000001'), 'suspended link listed';
+  r := public.whatsapp_automation_begin((select id from rule),pg_temp.rev(),'e6700000-0000-4000-8000-000000000001',pg_temp.start1(),'5541999990001',null,'x','{}');
+  assert (r->>'skipped')::boolean and r->>'reason' like '%suspenso%', 'suspended link claimed';
+end $$;
+-- K6 2058: phone A and BSUID B in separate conversations, then SAIR only through B: A stops too.
+do $$ begin
+  perform public.whatsapp_ingest_inbound('200000000001','5541999940007',null,'Pessoa A','wamid.IN000030','text','oi',null,null,now());
+  perform public.whatsapp_ingest_inbound('200000000001',null,'BR.7777','Pessoa B','wamid.IN000031','text','oi',null,null,now());
+  insert into public.whatsapp_opt_ins(clinic_id,wa_id,source) values ('e6200000-0000-4000-8000-000000000001','5541999940007','recepcao');
+  perform public.whatsapp_ingest_inbound('200000000001','5541999940007','BR.7777','Pessoa','wamid.IN000032','text','oi',null,null,now());
+  assert (select linked_wa_id='5541999940007' and wa_id is null from public.whatsapp_conversations where user_id='BR.7777'), 'alias not recorded';
+  perform public.whatsapp_ingest_inbound('200000000001',null,'BR.7777','','wamid.IN000033','text','SAIR',null,null,now());
+  assert exists (select 1 from public.whatsapp_opt_ins where wa_id='5541999940007' and revoked_at is not null), 'consent of the split phone kept';
+  assert (select opted_out_at is not null from public.whatsapp_conversations where wa_id='5541999940007'), 'split phone conversation not opted out';
+  assert (select count(*) from public.whatsapp_conversations where wa_id='5541999940007' or user_id='BR.7777')=2, 'identities merged';
 end $$;
 rollback;

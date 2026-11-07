@@ -35,6 +35,9 @@ create table public.whatsapp_conversations (
   wa_id text check (wa_id is null or wa_id ~ '^[0-9]{8,15}$'),
   user_id text check (user_id is null or user_id ~ '^[A-Z]{2}\.[A-Za-z0-9.]{1,160}$'),
   profile_name text not null default '' check (length(profile_name) <= 200),
+  -- Phone delivered together with this conversation's BSUID while another conversation holds it:
+  -- not merged, but consent and opt-out follow the person through it.
+  linked_wa_id text check (linked_wa_id is null or linked_wa_id ~ '^[0-9]{8,15}$'),
   contact_id uuid,
   case_id uuid,
   queue text not null default 'geral' check (queue ~ '^[a-z0-9][a-z0-9_-]{0,39}$'),
@@ -223,6 +226,8 @@ begin
       where o.channel_id = conv.channel_id and o.wa_id = p_wa_id and o.id <> conv.id) then p_wa_id else wa_id end,
     user_id = case when user_id is null and p_user_id is not null and not exists (select 1 from public.whatsapp_conversations o
       where o.channel_id = conv.channel_id and o.user_id = p_user_id and o.id <> conv.id) then p_user_id else user_id end,
+    linked_wa_id = case when p_wa_id is not null and coalesce(wa_id, '') <> p_wa_id and exists (select 1 from public.whatsapp_conversations o
+      where o.channel_id = conv.channel_id and o.wa_id = p_wa_id and o.id <> conv.id) then p_wa_id else linked_wa_id end,
     profile_name = case when coalesce(p_profile_name, '') <> '' then left(p_profile_name, 200) else profile_name end,
     contact_id = coalesce(contact_id, matched),
     last_inbound_at = greatest(coalesce(last_inbound_at, '-infinity'), coalesce(p_provider_at, now())),
@@ -238,8 +243,13 @@ begin
     revision = revision + 1
   where id = conv.id;
   if opt = 'out' then
+    -- Revoke for every phone known for this person, including a phone held by a split conversation.
     update public.whatsapp_opt_ins set revoked_at = now() where clinic_id = conv.clinic_id and revoked_at is null
-      and wa_id = any (public.whatsapp_phone_variants(coalesce(p_wa_id, conv.wa_id, '')));
+      and (wa_id = any (public.whatsapp_phone_variants(coalesce(p_wa_id, conv.wa_id, '')))
+        or wa_id = any (public.whatsapp_phone_variants(coalesce((select linked_wa_id from public.whatsapp_conversations where id = conv.id), p_wa_id, ''))));
+    update public.whatsapp_conversations o set opted_out_at = coalesce(o.opted_out_at, now()), revision = o.revision + 1
+    where o.channel_id = conv.channel_id and o.id <> conv.id
+      and o.wa_id = any (public.whatsapp_phone_variants(coalesce((select linked_wa_id from public.whatsapp_conversations where id = conv.id), p_wa_id, '')));
   elsif opt = 'in' and coalesce(p_wa_id, conv.wa_id) is not null then
     insert into public.whatsapp_opt_ins (clinic_id, wa_id, source) values (conv.clinic_id, coalesce(p_wa_id, conv.wa_id), 'paciente')
     on conflict (clinic_id, wa_id) do update set revoked_at = null, source = 'paciente', recorded_at = now(), recorded_by = null;
@@ -532,6 +542,8 @@ language sql stable security definer set search_path = '' as $$
   where a.enabled
     and (a.doctor_ids is null or ap.user_id = any (a.doctor_ids))
     and (a.appointment_types is null or ap.type = any (a.appointment_types))
+    and exists (select 1 from public.patient_contact_links l where l.clinic_id = ap.clinic_id and l.contact_id = ap.contact_id
+      and l.patient_id = ap.patient_id and l.doctor_user_id = ap.user_id and l.active)
     and (
       (a.trigger = 'before_start' and ap.status in ('agendado', 'confirmado') and ap.start_time > p_now + interval '1 hour'
         and ap.start_time - make_interval(mins => a.offset_minutes) between p_now - interval '14 hours' and p_now)
@@ -549,22 +561,40 @@ $$;
 -- something changed the run is recorded as skipped with the reason. For a sendable run it also
 -- prepares the conversation (created closed, so it only enters the reception queue when the person
 -- replies) and the pending outbound message.
-create function public.whatsapp_automation_begin(p_automation uuid, p_appointment uuid, p_start timestamptz, p_wa_id text,
-  p_skip_reason text, p_body text, p_template jsonb) returns jsonb
+create function public.whatsapp_automation_begin(p_automation uuid, p_rule_revision integer, p_appointment uuid, p_start timestamptz,
+  p_wa_id text, p_skip_reason text, p_body text, p_template jsonb) returns jsonb
 language plpgsql security definer set search_path = '' as $$
 declare a public.whatsapp_automations; ch public.whatsapp_channels; conv public.whatsapp_conversations; ap public.appointments;
   phone text; reason text := p_skip_reason; run_id uuid; msg_id uuid;
 begin
   if auth.role() is distinct from 'service_role' then raise exception 'Not authorized' using errcode = '42501'; end if;
   select * into a from public.whatsapp_automations where id = p_automation and enabled for share;
-  if not found then return null; end if;
+  -- A rule edited after the selection: nothing is claimed; the next run uses the current rule.
+  if not found or a.revision is distinct from p_rule_revision then return null; end if;
+  select * into ap from public.appointments where id = p_appointment for share;
+  -- No longer matching the rule's filters or not due yet: not claimed (it may become eligible again).
+  if found and ap.clinic_id = a.clinic_id and (
+      (a.doctor_ids is not null and not (ap.user_id = any (a.doctor_ids)))
+      or (a.appointment_types is not null and not (coalesce(ap.type, '') = any (a.appointment_types)))
+      or (a.trigger = 'before_start' and ap.start_time - make_interval(mins => a.offset_minutes) > now())
+      or (a.trigger = 'after_end' and ap.end_time + make_interval(mins => a.offset_minutes) > now())) then
+    return null;
+  end if;
   if reason is null then
-    select * into ap from public.appointments where id = p_appointment for share;
     if not found or ap.clinic_id is distinct from a.clinic_id then reason := 'A consulta não está mais na agenda da clínica.';
     elsif ap.start_time <> p_start then reason := 'A consulta mudou de horário.';
     elsif a.trigger = 'before_start' and ap.status not in ('agendado', 'confirmado') then reason := 'A consulta não está mais agendada.';
     elsif a.trigger = 'after_end' and ap.status <> 'realizado' then reason := 'A consulta não foi marcada como realizada.';
     else
+      begin
+        if not cortex_private.reception_link_is_active(ap.clinic_id, ap.contact_id, ap.patient_id, ap.user_id) then
+          reason := 'O vínculo do contato com o paciente está suspenso.';
+        end if;
+      exception when sqlstate '40001' then
+        return null; -- link being edited right now: try again on the next run
+      end;
+    end if;
+    if reason is null then
       select c.phone_normalized into phone from public.clinic_contacts c where c.clinic_id = a.clinic_id and c.id = ap.contact_id;
       if phone is null or p_wa_id is null or not (p_wa_id = any (public.whatsapp_phone_variants(phone))) then
         reason := 'O telefone do contato mudou ou não é válido.';
@@ -644,11 +674,11 @@ end $$;
 
 revoke all on function public.whatsapp_safe_phone(text) from public, anon, authenticated;
 revoke all on function public.whatsapp_automation_candidates(timestamptz, integer) from public, anon, authenticated;
-revoke all on function public.whatsapp_automation_begin(uuid, uuid, timestamptz, text, text, text, jsonb) from public, anon, authenticated;
+revoke all on function public.whatsapp_automation_begin(uuid, integer, uuid, timestamptz, text, text, text, jsonb) from public, anon, authenticated;
 revoke all on function public.whatsapp_automation_fail(uuid, uuid, timestamptz, text) from public, anon, authenticated;
 revoke all on function public.whatsapp_automation_save(uuid, uuid, uuid, integer, jsonb) from public, anon, authenticated;
 grant execute on function public.whatsapp_safe_phone(text) to service_role;
 grant execute on function public.whatsapp_automation_candidates(timestamptz, integer) to service_role;
-grant execute on function public.whatsapp_automation_begin(uuid, uuid, timestamptz, text, text, text, jsonb) to service_role;
+grant execute on function public.whatsapp_automation_begin(uuid, integer, uuid, timestamptz, text, text, text, jsonb) to service_role;
 grant execute on function public.whatsapp_automation_fail(uuid, uuid, timestamptz, text) to service_role;
 grant execute on function public.whatsapp_automation_save(uuid, uuid, uuid, integer, jsonb) to service_role;

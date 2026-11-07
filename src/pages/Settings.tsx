@@ -104,7 +104,7 @@ export default function SettingsPage() {
             <div className="rounded-xl border bg-white p-5 max-w-2xl"><ProfessionalSettingsForm /></div>
           )}
 
-          {current.id === 'whatsapp' && <WhatsAppSettings />}
+          {current.id === 'whatsapp' && <WhatsAppSettings key={`${access?.actorId ?? 'none'}:${access?.clinic?.id ?? 'none'}:${admin}`} />}
 
           {current.id === 'conexoes' && <ConnectionsSettings clinical={clinical} />}
 

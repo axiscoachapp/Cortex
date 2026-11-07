@@ -36,11 +36,13 @@ export type InboxFilter = 'unassigned' | 'mine' | 'open' | 'closed';
 /** Keyset cursor: timestamp plus id, so rows sharing a timestamp are never skipped. */
 export interface Cursor { at: string; id: string }
 const encodeCursor = (at: string, id: string) => `${at}|${id}`;
+const TIMESTAMP = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}(:?\d{2})?)$/;
 function decodeCursor(v: unknown): Cursor | null {
-  if (typeof v !== 'string') return null;
-  const [at, id] = v.split('|');
-  if (!at || !id || Number.isNaN(Date.parse(at)) || !UUID.test(id)) return null;
-  return { at: new Date(at).toISOString(), id: id.toLowerCase() };
+  if (typeof v !== 'string' || v.length > 80) return null;
+  const [at, id, extra] = v.split('|');
+  // The timestamp text is kept as the database wrote it: converting through Date would drop microseconds.
+  if (extra !== undefined || !at || !id || !TIMESTAMP.test(at) || Number.isNaN(Date.parse(at)) || !UUID.test(id)) return null;
+  return { at, id: id.toLowerCase() };
 }
 export type ParamSource = 'paciente_primeiro_nome' | 'data' | 'hora' | 'dia_semana' | 'medico' | 'clinica' | 'link' | 'texto';
 export interface AutomationRow {
@@ -660,7 +662,8 @@ export async function automationsHandler(req: Request, deps: WhatsAppDeps): Prom
     let begun: { runId: string; messageId?: string; to?: string; skipped: boolean } | null;
     try {
       begun = (await deps.rpc('whatsapp_automation_begin', {
-        p_automation: rule.id, p_appointment: c.appointment_id, p_start: c.appointment_start, p_wa_id: skip ? null : c.phone, p_skip_reason: skip,
+        p_automation: rule.id, p_rule_revision: rule.revision, p_appointment: c.appointment_id, p_start: c.appointment_start,
+        p_wa_id: skip ? null : c.phone, p_skip_reason: skip,
         p_body: skip ? '' : renderBody(template!.body, params), p_template: skip ? null : { name: rule.template_name, language: rule.template_language, params },
       })) as typeof begun;
     } catch (e) {
