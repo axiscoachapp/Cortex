@@ -105,7 +105,8 @@ export function IntakeAnswersDialog({ appointmentId, open, onOpenChange }: { app
   );
 }
 
-export default function IntakePage() {
+/** `embedded`: inside the reception layout (/recepcao/...), without its own page frame and back button. */
+export default function IntakePage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const access = useClinicAccess();
   const { toast } = useToast();
@@ -147,10 +148,10 @@ export default function IntakePage() {
   const label = `${range.from.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} a ${new Date(range.to.getTime() - DAY).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
 
   return (
-    <div className="min-h-screen bg-[#F6F8F7]">
-      <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:py-8">
+    <div className={embedded ? '' : 'min-h-screen bg-[#F6F8F7]'}>
+      <div className={embedded ? 'w-full max-w-5xl' : 'mx-auto w-full max-w-5xl px-4 py-5 sm:py-8'}>
         <div className="mb-5 flex flex-wrap items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} aria-label="Voltar"><ArrowLeft className="h-4 w-4" /></Button>
+          {!embedded && <Button variant="ghost" size="sm" onClick={() => navigate(-1)} aria-label="Voltar"><ArrowLeft className="h-4 w-4" /></Button>}
           <div className="min-w-0 flex-1">
             <h1 className="flex items-center gap-2 text-xl font-semibold"><ClipboardList className="h-5 w-5 text-primary" aria-hidden /> Pré-consultas</h1>
             <p className="text-sm text-muted-foreground">Formulário que o paciente responde antes da consulta, por um link único.</p>

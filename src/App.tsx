@@ -102,6 +102,8 @@ const router = createBrowserRouter([
       { path: 'agenda', element: <ReceptionCalendar /> },
       { path: 'contatos', element: <ReceptionContacts /> },
       { path: 'equipe', element: <ReceptionTeam /> },
+      { path: 'pre-consultas', element: <IntakePage embedded /> },
+      { path: 'financeiro', element: <BillingPage embedded /> },
     ] },
     { path: '/gerenciar-pacientes', element: <PatientManagement /> },
     { path: '/agenda', element: <CalendarPage /> },

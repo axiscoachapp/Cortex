@@ -36,6 +36,8 @@ export default function ReceptionLayout() {
             { to: '/recepcao/painel', label: 'Painel' },
             { to: '/recepcao/agenda', label: 'Agenda da equipe' },
             { to: '/recepcao/contatos', label: 'Contatos' },
+            { to: '/recepcao/pre-consultas', label: 'Pré-consultas' },
+            { to: '/recepcao/financeiro', label: 'Financeiro' },
             { to: '/configuracoes', label: 'Configurações' },
             ...(access?.admin ? [{ to: '/recepcao/equipe', label: 'Equipe e permissões' }] : []),
           ].map((item) => (

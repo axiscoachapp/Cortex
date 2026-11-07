@@ -1,8 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useClinicAccess } from '@/features/reception/accessContext';
+import { useState } from 'react';
+import { IntakeAnswersDialog } from '@/features/intake/IntakePage';
+import { intakeCall, type IntakeListItem } from '@/features/intake/intakeApi';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Plus, CalendarDays, Sparkles, FileStack, BookOpen, Users, ChevronRight, CalendarX, Settings2,
+  Plus, CalendarDays, Sparkles, FileStack, BookOpen, Users, ChevronRight, CalendarX, Settings2, ClipboardCheck, Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Patient } from '@/types/patient';
@@ -60,6 +63,16 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
 
   const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(); dayEnd.setHours(23, 59, 59, 999);
+
+  // Pre-consultations answered for today's clinic appointments (only for clinic members).
+  const [intakeFor, setIntakeFor] = useState<string | null>(null);
+  const { data: intakeToday } = useQuery({
+    queryKey: ['intake-list-today', clinicAccess?.clinic?.id ?? 'none', clinicAccess?.actorId ?? 'none', dayStart.toDateString()],
+    queryFn: () => intakeCall<{ items: IntakeListItem[] }>('list', { from: dayStart.toISOString(), to: new Date(dayStart.getTime() + 86_400_000).toISOString() }),
+    enabled: !!clinicAccess?.clinic && clinicAccess.kind === 'clinical',
+    staleTime: 60_000, retry: false,
+  });
+  const answered = new Set((intakeToday?.items ?? []).filter((i) => i.state === 'answered').map((i) => i.appointmentId));
 
   const { data: todayApts = [], isLoading, isError, refetch } = useQuery<Appointment[]>({
     queryKey: ['appointments-today', userId, dayStart.toDateString()],
@@ -133,13 +146,13 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
               const label = patient?.name ?? apt.title;
               const initials = label.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
               return (
+                <div key={apt.id} className="flex items-center gap-0.5">
                 <button
-                  key={apt.id}
                   onClick={() => patient && onSelectPatient(patient,apt.id)}
                   disabled={!patient}
                   title={!patient ? 'Consulta sem paciente vinculado' : undefined}
                   className={cn(
-                    'w-full px-2.5 py-2 rounded-xl text-left transition-all duration-150',
+                    'w-full min-w-0 flex-1 px-2.5 py-2 rounded-xl text-left transition-all duration-150',
                     'hover:bg-white/80 hover:shadow-sm',
                     isSelected ? 'bg-white shadow-sm border border-medical-blue/20 ring-1 ring-medical-blue/10' : 'bg-transparent',
                     !patient && 'opacity-60 cursor-default hover:bg-transparent hover:shadow-none',
@@ -163,6 +176,13 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
                     {patient && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                   </div>
                 </button>
+                {answered.has(apt.id) && (
+                  <button type="button" onClick={() => setIntakeFor(apt.id)} aria-label={`Ver a pré-consulta de ${label}`} title="Pré-consulta respondida"
+                    className="shrink-0 rounded-lg p-1.5 text-medical-blue hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <ClipboardCheck className="w-4 h-4" />
+                  </button>
+                )}
+                </div>
               );
             })}
           </div>
@@ -171,7 +191,8 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
 
       {/* Navigation rail */}
       <nav className="px-2 py-2 border-t border-border/50 bg-white/60 space-y-0.5">
-        {[...(clinicAccess?.admin?[{to:'/recepcao',icon:Users,label:'Recepção'}]:[]),...NAV_ITEMS].map(({ to, icon: Icon, label }) => (
+        {[...(clinicAccess?.admin?[{to:'/recepcao',icon:Users,label:'Recepção'}]:[]),
+          ...(clinicAccess?.clinic?[{to:'/pre-consultas',icon:ClipboardCheck,label:'Pré-consultas'},{to:'/financeiro',icon:Wallet,label:'Financeiro'}]:[]),...NAV_ITEMS].map(({ to, icon: Icon, label }) => (
           <button
             key={to}
             onClick={() => go(to)}
@@ -185,6 +206,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
           </button>
         ))}
       </nav>
+      <IntakeAnswersDialog appointmentId={intakeFor} open={!!intakeFor} onOpenChange={(o) => !o && setIntakeFor(null)} />
     </aside>
   );
 }

@@ -322,6 +322,8 @@ const ROUTES = [
   ['config-whatsapp', '/configuracoes?secao=whatsapp'],
   ['config-pre-consulta', '/configuracoes?secao=pre-consulta'],
   ['pre-consultas', '/pre-consultas'],
+  ['recepcao-pre-consultas', '/recepcao/pre-consultas'],
+  ['recepcao-financeiro', '/recepcao/financeiro'],
   ['pre-consulta-paciente', `/pre-consulta/${'A'.repeat(43)}`],
   ['financeiro', '/financeiro'],
   ['config-conexoes', '/configuracoes?secao=conexoes'],

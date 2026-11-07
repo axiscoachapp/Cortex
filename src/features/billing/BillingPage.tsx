@@ -25,7 +25,8 @@ const TABS: Array<{ id: TabId; label: string; roles: BillingRole[]; monthly: boo
   { id: 'cadastros', label: 'Cadastros', roles: ['admin'], monthly: false },
 ];
 
-export default function BillingPage() {
+/** `embedded`: inside the reception layout (/recepcao/...), without its own page frame and back button. */
+export default function BillingPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const access = useClinicAccess();
   const scope = [access?.clinic?.id ?? 'none', access?.actorId ?? 'none'];
@@ -43,10 +44,10 @@ export default function BillingPage() {
   const fresh = state.data && state.isFetchedAfterMount;
 
   return (
-    <div className="min-h-screen bg-[#F6F8F7]">
-      <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:py-8">
+    <div className={embedded ? '' : 'min-h-screen bg-[#F6F8F7]'}>
+      <div className={embedded ? 'w-full max-w-5xl' : 'mx-auto w-full max-w-5xl px-4 py-5 sm:py-8'}>
         <div className="mb-5 flex flex-wrap items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} aria-label="Voltar"><ArrowLeft className="h-4 w-4" /></Button>
+          {!embedded && <Button variant="ghost" size="sm" onClick={() => navigate(-1)} aria-label="Voltar"><ArrowLeft className="h-4 w-4" /></Button>}
           <div className="min-w-0 flex-1">
             <h1 className="flex items-center gap-2 text-xl font-semibold"><Wallet className="h-5 w-5 text-primary" aria-hidden /> Financeiro</h1>
             <p className="text-sm text-muted-foreground">Faturamento de convênios (TISS), particulares, caixa e relatórios.</p>
