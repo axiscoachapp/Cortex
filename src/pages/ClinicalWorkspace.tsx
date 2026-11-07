@@ -52,13 +52,31 @@ function workSnapshotText(snapshot: Json): string {
 }
 
 export default function ClinicalWorkspacePage() {
-  const { user } = useAuth();
   const [params] = useSearchParams();
-  const patientId = params.get('patient');
-  const schedulingQueue = params.get('queue') === 'scheduling';
-  // From the consultation screen: the agenda appointment and chief complaint.
-  const appointmentParam = params.get('appointment') ?? undefined;
-  const complaintParam = params.get('complaint') ?? undefined;
+  return <ClinicalWorkspace patientId={params.get('patient')} schedulingQueue={params.get('queue') === 'scheduling'}
+    appointmentParam={params.get('appointment') ?? undefined} complaintParam={params.get('complaint') ?? undefined}
+    manual={params.get('new') === '1'} />;
+}
+
+type WorkspaceProps = {
+  patientId: string | null;
+  schedulingQueue?: boolean;
+  embedded?: boolean;
+  manual?: boolean;
+  appointmentParam?: string;
+  complaintParam?: string;
+  onExitGuardChange?: (guard: () => boolean) => void;
+};
+
+/** Same records and editor, scoped to the patient already open in the chart. */
+export function PatientWorkspace(props: Omit<WorkspaceProps, 'embedded' | 'schedulingQueue'>) {
+  const { user } = useAuth();
+  return <ClinicalWorkspace key={`${user?.id}/${props.patientId}`} {...props} embedded />;
+}
+
+function ClinicalWorkspace({ patientId, schedulingQueue = false, embedded = false, manual = false,
+  appointmentParam, complaintParam, onExitGuardChange }: WorkspaceProps) {
+  const { user } = useAuth();
   const client = useQueryClient();
   const [editing, setEditing] = useState<Item | undefined>();
   const [editorOpen, setEditorOpen] = useState(false);
@@ -90,7 +108,7 @@ export default function ClinicalWorkspacePage() {
   };
   const patients = useQuery({
     queryKey: ['workspace-directory', user?.id, search],
-    enabled: !!user,
+    enabled: !!user && !embedded,
     queryFn: async () => {
       let q = supabase.from('patients').select('id,name').eq('user_id', user!.id).is('archived_at', null).order('name').order('id').limit(50);
       if (search.trim()) q = q.ilike('name', `%${search.trim().replace(/[%_,()]/g, '')}%`);
@@ -102,25 +120,32 @@ export default function ClinicalWorkspacePage() {
   const patient = useQuery({
     queryKey: ['workspace-patient', user?.id, patientId],
     enabled: !!user && !!patientId,
-    queryFn: async () => {
+    gcTime: embedded ? 0 : 5 * 60_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: !embedded,
+    refetchOnReconnect: !embedded,
+    queryFn: async ({ signal }) => {
       const { data, error } = await supabase
         .from('patients')
         .select('id,name')
         .eq('id', patientId!)
         .eq('user_id', user!.id)
+        .abortSignal(signal)
         .single();
       if (error) throw error;
       return data;
     },
   });
+  const patientReady = !!user && !!patient.data && !patient.isError && !patient.isFetching;
   const work = useQuery({
     queryKey: ['clinical-work', user?.id, patientId, limit, schedulingQueue],
-    enabled: !!user,
-    queryFn: async () => {
+    enabled: !!user && (!embedded || patientReady),
+    queryFn: async ({ signal }) => {
       let q = supabase
         .from('clinical_work_items')
         .select('*')
         .eq('user_id', user!.id)
+        .abortSignal(signal)
         .order('updated_at', { ascending: false })
         .order('id')
         .limit(limit);
@@ -134,7 +159,7 @@ export default function ClinicalWorkspacePage() {
   });
   const audio = useQuery({
     queryKey: ['pending-audio', user?.id],
-    enabled: !!user,
+    enabled: !!user && !embedded,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('consultation_drafts')
@@ -147,13 +172,15 @@ export default function ClinicalWorkspacePage() {
     },
   });
   const history = useQuery({
-    queryKey: ['workspace-history', patientId, limit],
-    enabled: !!patient.data && tab === 'history',
-    queryFn: async () => {
+    queryKey: ['workspace-history', user?.id, patientId, limit],
+    enabled: patientReady && tab === 'history',
+    queryFn: async ({ signal }) => {
       const { data, error } = await supabase
         .from('consultations')
         .select('id,created_at,chief_complaint,soap_note,revision')
         .eq('patient_id', patientId!)
+        .eq('user_id', user!.id)
+        .abortSignal(signal)
         .order('created_at', { ascending: false })
         .order('id')
         .limit(limit);
@@ -162,13 +189,15 @@ export default function ClinicalWorkspacePage() {
     },
   });
   const revisions = useQuery({
-    queryKey: ['workspace-revisions', patientId, compare],
-    enabled: !!compare,
-    queryFn: async () => {
+    queryKey: ['workspace-revisions', user?.id, patientId, compare],
+    enabled: patientReady && !!compare,
+    queryFn: async ({ signal }) => {
       const { data, error } = await supabase
         .from('clinical_record_revisions')
         .select('*')
         .eq('patient_id', patientId!)
+        .eq('user_id', user!.id)
+        .abortSignal(signal)
         .eq('record_id', compare!)
         .order('revision', { ascending: false })
         .limit(30);
@@ -178,12 +207,13 @@ export default function ClinicalWorkspacePage() {
   });
   const priorWork = useQuery({
     queryKey: ['workspace-work-revisions', user?.id, workCompare],
-    enabled: !!user && !!workCompare,
-    queryFn: async () => {
+    enabled: !!user && !!workCompare && (!embedded || patientReady),
+    queryFn: async ({ signal }) => {
       const { data, error } = await supabase
         .from('clinical_work_revisions')
         .select('id,revision,snapshot,created_at')
         .eq('user_id', user!.id)
+        .abortSignal(signal)
         .eq('item_id', workCompare!)
         .order('revision', { ascending: false })
         .limit(30);
@@ -199,7 +229,7 @@ export default function ClinicalWorkspacePage() {
   ].sort();
   const names = useQuery({
     queryKey: ['workspace-patient-names', user?.id, ids.join('|')],
-    enabled: !!user && ids.length > 0,
+    enabled: !!user && !embedded && ids.length > 0,
     queryFn: async () => {
       const results: Record<string, string> = {};
       for (let index = 0; index < ids.length; index += 100) {
@@ -217,12 +247,15 @@ export default function ClinicalWorkspacePage() {
   // Arriving from "Consulta manual" (?new=1) opens the editor directly.
   const autoOpened = useRef<string | null>(null);
   useEffect(() => {
-    if (params.get('new') !== '1' || !patient.data || !patientId || autoOpened.current === patientId) return;
+    if (!manual || !patientReady || !patientId || autoOpened.current === patientId) return;
     autoOpened.current = patientId;
     setEditing(undefined);
     setEditorVersion((value) => value + 1);
     setEditorOpen(true);
-  }, [params, patient.data, patientId]);
+  }, [manual, patientReady, patientId]);
+  useEffect(() => {
+    onExitGuardChange?.(() => !editorOpen || exitEditor.current());
+  }, [onExitGuardChange, editorOpen]);
   const refresh = () => {
     void client.invalidateQueries({ queryKey: ['clinical-work'] });
     void client.invalidateQueries({ queryKey: ['workspace-history'] });
@@ -239,9 +272,13 @@ export default function ClinicalWorkspacePage() {
     if (error || !data) window.alert('Não foi possível atualizar. Recarregue para conferir a versão.');
     refresh();
   };
+  if (embedded && !patientReady) return patient.isError || !user ? (
+    <p role="alert">Paciente indisponível ou sem acesso. <button className="underline" onClick={() => patient.refetch()}>Tentar novamente</button></p>
+  ) : <p role="status">Carregando paciente…</p>;
+  const Content = embedded ? 'section' : 'main';
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
+    <div className={embedded ? 'min-w-0 break-words' : 'min-h-screen bg-background'}>
+      {!embedded && <header className="border-b bg-card">
         <div className="max-w-6xl mx-auto p-4 flex items-center gap-4">
           <Link to="/" aria-label="Voltar ao início" className="p-2">
             <ArrowLeft className="w-5 h-5" />
@@ -249,13 +286,14 @@ export default function ClinicalWorkspacePage() {
           <BrandLockup compact />
           <span className="ml-auto text-xs text-muted-foreground hidden sm:block">Autoria e revisão do médico</span>
         </div>
-      </header>
-      <main className="max-w-6xl mx-auto p-4 sm:p-7 space-y-6">
+      </header>}
+      <Content aria-label={embedded ? 'Acompanhamento do paciente' : undefined} className={embedded ? 'min-w-0 space-y-5' : 'max-w-6xl mx-auto p-4 sm:p-7 space-y-6'}>
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
+          {embedded && <h3 className="font-semibold break-words">{patient.data?.name}</h3>}
+          {!embedded && <div>
             <p className="text-xs text-primary uppercase tracking-widest">Continuidade do cuidado</p>
             <h1 className="font-serif text-3xl mt-2">{patient.data?.name ?? (schedulingQueue ? 'Lista de espera e confirmações' : 'Trabalho pendente')}</h1>
-          </div>
+          </div>}
           {patient.data && (
             <Button onClick={() => openEditor()}>
               <Plus className="w-4 h-4 mr-2" />
@@ -358,9 +396,9 @@ export default function ClinicalWorkspacePage() {
                 >
                   Linha do tempo
                 </Button>
-                <Link className="text-sm underline self-center" to={'/?patient=' + patientId}>
+                {!embedded && <Link className="text-sm underline self-center" to={'/?patient=' + patientId}>
                   Consulta e documentos
-                </Link>
+                </Link>}
               </div>
               {editorOpen && user && (!editing || editing.patient_id === patientId) && (
                 <ClinicalWorkEditor
@@ -581,7 +619,7 @@ export default function ClinicalWorkspacePage() {
           Listas e registros pertencem à sua conta. Compartilhamento entre médicos é gerenciado separadamente. Nenhuma
           pendência é concluída por interpretação automática.
         </p>
-      </main>
+      </Content>
     </div>
   );
 }

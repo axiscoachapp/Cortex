@@ -3,7 +3,9 @@ import http from 'node:http';
 import { z } from 'zod';
 export const uid='11111111-1111-4111-8111-111111111111';
 export const patientId='22222222-2222-4222-8222-222222222222';
-export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false, mfaCancellationReview = false } = {}) {
+export async function startClinicFixture({ appointments = [], lastVisit = null, workspaceDates = false, patientWorkspaceReview = false, medicalUI = false, delegationPermissions = false, delegationDecisions = false, delegationReplay = false, mfaReview = false, mfaCleanupReview = false, mfaEnrollmentReview = false, mfaCancellationReview = false } = {}) {
+  if(patientWorkspaceReview&&!workspaceDates)throw new Error('Patient workspace review requires workspace display data');
+  let patientWorkspaceDenied=false;
   if(delegationDecisions&&!delegationPermissions)throw new Error('Delegation decisions require the permissions fixture');
   if(delegationReplay&&(!delegationPermissions||!delegationDecisions))throw new Error('Delegation replay requires the permissions and decision fixtures');
   if(mfaReview&&(workspaceDates||medicalUI||delegationPermissions||delegationDecisions||delegationReplay))throw new Error('MFA review is an isolated fixture');
@@ -31,6 +33,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   }
   const turns=[];const knowledge=medicalUI?[{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',user_id:uid,title:'Fonte sintética revisada',source_text:'Texto original sintético para revisão visual.',source_reference:'Referência sintética',source_version:'2026',char_count:44,source_type:'text',status:'ready',review_status:'approved',created_at:'2026-11-04T18:20:31Z',reviewed_at:'2026-11-04T19:21:45Z',reviewer_name:'Profissional de Demonstração',indexed_at:'2026-11-04T19:22:48Z',supersedes_document_id:null}]:[];
   const metrics={briefings:0,checklists:0,chat:0,newSources:0,patientWrites:0,appointmentWrites:0,...(workspaceDates?{workspaceWrites:0}:{}),...(medicalUI?{medicalWrites:0}:{}),...(delegationPermissions?{delegationCalls:[],delegationRequests:[],delegationUnexpected:[]}:{}) ,...(delegationDecisions?{delegationWrites:[],delegationAttempts:[]}:{}) ,...(delegationReplay?{delegationReplies:[]}:{})};
+  if(patientWorkspaceReview)metrics.patientWorkspaceReads=[];
   const medicalData={patients,templates,visits,knowledge,settings};
   if(mfaReview)Object.assign(metrics,{mfaRequests:[],mfaUnexpected:[]});
   const mfaAllowed=new Set(['POST /auth/v1/token','GET /auth/v1/user']);
@@ -135,6 +138,10 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
     if(url.pathname.startsWith('/functions/'))return send({error:'Integração externa desativada no teste.'},503);
     if(medicalUI && url.pathname.startsWith('/rest/') && !['GET','HEAD'].includes(req.method)){metrics.medicalWrites++;return send({error:'Read-only medical UI fixture'},405);}
     const table=url.pathname.split('/').pop();
+    if(patientWorkspaceReview && ['patients','clinical_work_items','clinical_work_revisions','clinical_record_revisions','consultations'].includes(table)) {
+      metrics.patientWorkspaceReads.push({table,method:req.method,query:Object.fromEntries(url.searchParams)});
+      if(patientWorkspaceDenied && table==='patients' && url.searchParams.get('select')==='id,name' && url.searchParams.has('id'))return send({error:'Synthetic ownership check unavailable'},503);
+    }
     const workspaceRows={clinical_work_items:workItems,clinical_work_revisions:workRevisions,clinical_record_revisions:recordRevisions,consultation_drafts:drafts};
     if(workspaceDates && Object.hasOwn(workspaceRows,table) && !['GET','HEAD'].includes(req.method)){metrics.workspaceWrites++;return send({error:'Read-only display fixture'},405);}
     let rows=workspaceRows[table]??(table==='patients'?patients:table==='appointments'?appointments:table==='consultations'?visits:table==='user_settings'?[settings]:table==='document_templates'?templates:table==='knowledge_documents'?knowledge:table==='usage_daily'?[{credits_used:0,calls:0}]:[]);
@@ -147,6 +154,7 @@ export async function startClinicFixture({ appointments = [], lastVisit = null, 
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   return {origin:`http://127.0.0.1:${server.address().port}`,metrics,displayData:workspaceDates?displayData:null,medicalData:medicalUI?medicalData:null,mfaFactors:mfaReview?user.factors:null,delegationRows,
+    setPatientWorkspaceDenied(denied){if(!patientWorkspaceReview||typeof denied!=='boolean')throw new Error('Patient workspace mode is not enabled');patientWorkspaceDenied=denied;},
     resetMfaEnrollment(){if(!mfaEnrollmentReview)throw new Error('MFA enrollment fixture is not enabled');user.factors.splice(0,user.factors.length,...structuredClone(initialMfaFactors));},
     setDelegationReadMode(mode){if(!delegationPermissions||!['valid','invalid','denied'].includes(mode))throw new Error('Unsupported delegation fixture mode');delegationReadMode=mode;},
     resetDelegationDecisions(){if(!delegationDecisions)throw new Error('Delegation decision fixture is not enabled');delegationRows.splice(0,delegationRows.length,...structuredClone(initialDelegations));delegationReceipts.clear();lostDelegationReplies.clear();},

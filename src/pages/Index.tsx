@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { parseConversationPage, conversationMessages, mergeConversationMessages } from '@/lib/patientConversation';
@@ -22,6 +22,7 @@ import { DESKTOP_BREAKPOINT } from '@/lib/interfaceScale';
 import { useUnsavedChanges, afterConfirmedSaveOrDiscard } from '@/hooks/useUnsavedChanges';
 
 const DESKTOP_LAYOUT_QUERY = `(min-width: ${DESKTOP_BREAKPOINT}px)`;
+const PatientWorkspaceDialog = lazy(() => import('@/components/PatientWorkspaceDialog').then(module => ({ default: module.PatientWorkspaceDialog })));
 
 const Index = () => {
   const navigate = useNavigate();
@@ -39,6 +40,9 @@ const Index = () => {
   const [captureBusy, setCaptureBusy] = useState(false);
   const [patientLoading,setPatientLoading]=useState(false);
   const [profileRequest,setProfileRequest]=useState(0);
+  const [patientWork, setPatientWork] = useState<{ actor: string; patientId: string; manual: boolean; appointmentId?: string; initialTitle: string } | null>(null);
+  const patientWorkExit = useRef<() => boolean>(() => true);
+  const patientWorkTrigger = useRef<HTMLElement | null>(null);
   const hasWork = chatBusy || snapshotBusy || captureBusy;
   const selectedId = selectedPatient?.id ?? '';
   const conversation = useInfiniteQuery({
@@ -81,9 +85,10 @@ const Index = () => {
   });
   const confirmPatientChange = useCallback((nextId: string | null) => {
     if(nextId===selectedPatientIdRef.current)return true;
+    if (patientWork && !patientWorkExit.current()) return false;
     if(captureBusy){toast({title:'Gravação ainda não salva',description:'Pare a gravação e aguarde o salvamento antes de mudar de paciente.',variant:'destructive'});return false;}
     return !hasWork || window.confirm('Há trabalho não concluído. Mudar de paciente? Os rascunhos permanecem vinculados ao paciente original.');
-  }, [hasWork,captureBusy,toast]);
+  }, [hasWork,captureBusy,toast,patientWork]);
 
   useEffect(() => {
     const mq = window.matchMedia(DESKTOP_LAYOUT_QUERY);
@@ -119,6 +124,7 @@ const Index = () => {
   }, [user, loading, navigate]);
 
   const handleSignOut = async () => {
+    if (patientWork && !patientWorkExit.current()) return;
     if (captureBusy) { toast({title:'Gravação ainda não salva',description:'Pare a gravação e aguarde o salvamento antes de sair da conta.',variant:'destructive'}); return; }
     if (hasWork && !window.confirm('Sair da conta com trabalho não concluído? Textos ainda não enviados serão descartados.')) return;
     try { await signOut(); navigate('/auth'); }
@@ -136,6 +142,7 @@ const Index = () => {
     }
     selectedPatientIdRef.current = requestedId;
     if(!alreadyActive){
+      setPatientWork(null); patientWorkExit.current = () => true;
       setSelectedPatient(null);setPatientLoading(true);
       briefingRequestRef.current++;
       setPreBriefing(null);setBriefingLoading(false);setBriefingError(false);setBriefingRequested(false);
@@ -413,6 +420,11 @@ const Index = () => {
                 briefingRequested={briefingRequested}
                 briefingError={briefingError}
                 onCaptureStateChange={setCaptureBusy}
+                onOpenPatientWork={manual => {
+                  patientWorkTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                  if (user && selectedPatient) setPatientWork({ actor: user.id, patientId: selectedPatient.id, manual,
+                    appointmentId: selectedAppointmentId ?? undefined, initialTitle: chiefComplaint });
+                }}
                 onRetryBriefing={() => { if (selectedPatient) void loadBriefing(selectedPatient); }}
                 briefingLoading={briefingLoading}
                 userId={user?.id ?? ''}
@@ -499,6 +511,14 @@ const Index = () => {
         </div>
       </nav>
 
+      {patientWork && patientWork.actor === user?.id && patientWork.patientId === selectedPatient?.id && (
+        <Suspense fallback={<p role="status">Carregando acompanhamento…</p>}>
+          <PatientWorkspaceDialog patientId={selectedPatient.id} returnFocus={patientWorkTrigger.current}
+            manual={patientWork.manual} appointmentId={patientWork.appointmentId} initialTitle={patientWork.initialTitle}
+            onExitGuardChange={guard => { patientWorkExit.current = guard; }}
+            onClose={() => { setPatientWork(null); patientWorkExit.current = () => true; }} />
+        </Suspense>
+      )}
       <NewConsultationModal
         open={showNewConsultationModal}
         onOpenChange={setShowNewConsultationModal}

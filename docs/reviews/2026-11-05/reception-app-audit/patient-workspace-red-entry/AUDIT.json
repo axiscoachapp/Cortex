@@ -1,0 +1,400 @@
+{
+  "completed": false,
+  "failure": {
+    "name": "Error",
+    "message": "expect(locator).toBeVisible() failed\n\nLocator: getByRole('button', { name: 'Acompanhamento', exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByRole('button', { name: 'Acompanhamento', exact: true }) with timeout 5000ms\n  - waiting for getByRole('button', { name: 'Acompanhamento', exact: true })\n"
+  },
+  "timeOnly": false,
+  "weekOnly": false,
+  "welcomeOnly": false,
+  "chatOnly": false,
+  "timestampOnly": false,
+  "checkWorkspaceLayout": false,
+  "timestampDataPreserved": false,
+  "timestampMetrics": null,
+  "draftPreserved": false,
+  "welcomeMetrics": null,
+  "fixedClock": null,
+  "checkTimeLayout": false,
+  "checkMobileNavigation": false,
+  "checkCalendarHeader": false,
+  "navigationKeyboardVerified": false,
+  "syntheticOnly": true,
+  "baseline": "106a8f80ccacd33aff05e8b44056e6ee54daff7d",
+  "overlays": [],
+  "frozenTextSourceCount": 308,
+  "frozenTextSourceDigest": "d6b8ab3934bd8b8d20ba439ce39250bf6d34b5ac30b53c2a940fbccad8e1f3f7",
+  "tailwindRawContentCount": 306,
+  "runtimeSources": [
+    {
+      "path": "scripts/reception-app-audit-browser.mjs",
+      "sha256": "f222185d327ceae895c413415fc3055378afe79d6678e49e9c89384ad27c70c0"
+    },
+    {
+      "path": "scripts/fixtures/patient-workspace-browser.mjs",
+      "sha256": "a56643cb22dbfe4e6320083986c6cae8a22642bc4e5f10472a4bece01cf8a040"
+    },
+    {
+      "path": "scripts/fixtures/clinic-review-api.mjs",
+      "sha256": "14be176d277a36ccea090c438844a3cc5de24ed88278a319b03e205b4ebabc56"
+    },
+    {
+      "path": "scripts/fixtures/reception-api.mjs",
+      "sha256": "920d6919ae2e108e623c151a0d8c34044df926002c35d9d21138add44e030b58"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-api.mjs",
+      "sha256": "7bbb023779bb00fd053a067530a025ecf56ef543114a4dd9927872fc039e195c"
+    },
+    {
+      "path": "scripts/fixtures/whatsapp-read-browser.mjs",
+      "sha256": "c144aedb1c26cfea649ebb9635d97a5803bccfe68248603701ceb2f2d47004f7"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-api.mjs",
+      "sha256": "315ac3ff6ba0b3ab5a5ab710c75083eb9443499b4c713a0c9a7ce5b8a042a334"
+    },
+    {
+      "path": "scripts/fixtures/settings-access-browser.mjs",
+      "sha256": "d8a5c98f13043e85a51c7cf385052d75a5219f3b80c97c0b19bdb7cd1472caf7"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "fa184f5f6f90694d295a4b915da6b1f4e15b7abf51332a442b4b8a8990815314"
+    },
+    {
+      "path": "index.html",
+      "sha256": "97b6125cfb17537de466803b63578c86758c1c0f2940b9f5f49189cad16d6be6"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "sha256": "ce9f20fe2b5d54c1f6fcfe01c96c19a37d0ba5e7e33973795024862665c0c009"
+    },
+    {
+      "path": "postcss.config.js",
+      "sha256": "98e8d8a143f16216f4b50a2520024f6254987049b2e199026742a96e16ba411e"
+    },
+    {
+      "path": "src/lib/interfaceScale.ts",
+      "sha256": "7d0508f1ac63e55fff11bcf30eda0bc5d8a2767cf4ae333f21a1b9ce51388499"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2a56d2cab6ca501addf2a22691749fc16f76fdd8decf2a9a84c989098591a06d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c7cd7cc231cfae31752d919ed94f70f64a192b8d5a0aacf8aab46019bb11ea3"
+    }
+  ],
+  "consultationOnly": false,
+  "consultationChecks": [],
+  "consultationRequests": [],
+  "consultationMetrics": null,
+  "settingsEmbeddedOnly": false,
+  "previewEntry": null,
+  "settingsChecks": [],
+  "settingsRequests": [],
+  "settingsFixtureMetrics": [],
+  "whatsappReadOnly": false,
+  "whatsappChecks": [],
+  "whatsappRequests": [],
+  "whatsappFixtureCalls": null,
+  "patientWorkspaceOnly": true,
+  "patientWorkspaceChecks": [],
+  "patientWorkspaceMetrics": {
+    "briefings": 0,
+    "checklists": 0,
+    "chat": 0,
+    "newSources": 0,
+    "patientWrites": 0,
+    "appointmentWrites": 0,
+    "workspaceWrites": 0,
+    "patientWorkspaceReads": [
+      {
+        "table": "patients",
+        "method": "GET",
+        "query": {
+          "select": "*",
+          "id": "eq.22222222-2222-4222-8222-222222222222"
+        }
+      },
+      {
+        "table": "patients",
+        "method": "HEAD",
+        "query": {
+          "select": "*",
+          "user_id": "eq.11111111-1111-4111-8111-111111111111"
+        }
+      },
+      {
+        "table": "patients",
+        "method": "GET",
+        "query": {
+          "select": "id,name",
+          "user_id": "eq.11111111-1111-4111-8111-111111111111"
+        }
+      },
+      {
+        "table": "consultations",
+        "method": "GET",
+        "query": {
+          "select": "id,created_at,chief_complaint,soap_note,transcription,history_proposals,revision",
+          "patient_id": "eq.22222222-2222-4222-8222-222222222222",
+          "user_id": "eq.11111111-1111-4111-8111-111111111111",
+          "history_proposals": "neq.{}",
+          "order": "created_at.desc,id.asc",
+          "offset": "0",
+          "limit": "500"
+        }
+      },
+      {
+        "table": "patients",
+        "method": "GET",
+        "query": {
+          "select": "revision,medical_history,social_anamnesis",
+          "id": "eq.22222222-2222-4222-8222-222222222222",
+          "user_id": "eq.11111111-1111-4111-8111-111111111111"
+        }
+      },
+      {
+        "table": "patients",
+        "method": "GET",
+        "query": {
+          "select": "clinical_notes",
+          "id": "eq.22222222-2222-4222-8222-222222222222"
+        }
+      },
+      {
+        "table": "consultations",
+        "method": "GET",
+        "query": {
+          "select": "id,created_at,chief_complaint,soap_note,transcription,history_proposals,revision",
+          "patient_id": "eq.22222222-2222-4222-8222-222222222222",
+          "user_id": "eq.11111111-1111-4111-8111-111111111111",
+          "history_proposals": "neq.{}",
+          "order": "created_at.desc,id.asc",
+          "offset": "1",
+          "limit": "500"
+        }
+      }
+    ]
+  },
+  "settingsAccessOnly": false,
+  "settingsAdminOnly": false,
+  "settingsAccessChecks": [],
+  "settingsAccessRequests": [],
+  "settingsAccessCalls": null,
+  "mfaOnly": false,
+  "mfaCleanupOnly": false,
+  "mfaEnrollmentOnly": false,
+  "checkMfaErrorFocus": false,
+  "checkMfaCancellation": false,
+  "mfaPreparationChecks": [],
+  "mfaCleanupChecks": [],
+  "mfaErrorFocusChecks": [],
+  "mfaEnrollmentChecks": [],
+  "mfaEnrollmentQrChecks": [],
+  "mfaCancellationChecks": [],
+  "mfaMetrics": null,
+  "delegationOnly": false,
+  "delegationDecisionOnly": false,
+  "delegationConflictOnly": false,
+  "delegationDeniedOnly": false,
+  "delegationRetryOnly": false,
+  "delegationDecisionChecks": [],
+  "delegationConflictChecks": [],
+  "delegationDeniedChecks": [],
+  "delegationRetryChecks": [],
+  "delegationDataPreserved": false,
+  "delegationMetrics": null,
+  "medicalOnly": false,
+  "medicalHistoryOnly": false,
+  "medicalDelivery": null,
+  "medicalBaseSources": [],
+  "medicalCasesAttempted": 0,
+  "medicalCaseFailures": [],
+  "medicalDataPreserved": false,
+  "medicalMetrics": null,
+  "medicalSources": [],
+  "frozenLoads": [
+    "src/App.tsx",
+    "src/components/AppErrorBoundary.tsx",
+    "src/components/BrandLockup.tsx",
+    "src/components/ChatPanel.tsx",
+    "src/components/ClinicalAnswer.tsx",
+    "src/components/ClinicalMarkdown.tsx",
+    "src/components/ClinicalProposals.tsx",
+    "src/components/CommentProposalCard.tsx",
+    "src/components/ConsultationReviewModal.tsx",
+    "src/components/DocumentComposerModal.tsx",
+    "src/components/DocumentPreviewModal.tsx",
+    "src/components/LiveCopilotCard.tsx",
+    "src/components/MobileSubpageNavigation.tsx",
+    "src/components/NewConsultationModal.tsx",
+    "src/components/OnboardingCard.tsx",
+    "src/components/PasswordChangeGate.tsx",
+    "src/components/PatientAdministrativeFields.tsx",
+    "src/components/PatientFiles.tsx",
+    "src/components/PatientProfileDrawer.tsx",
+    "src/components/PatientSidebar.tsx",
+    "src/components/PatientSnapshot.tsx",
+    "src/components/PrescriptionList.tsx",
+    "src/components/PrescriptionTemplatePicker.tsx",
+    "src/components/ProfileUpdateCard.tsx",
+    "src/components/QuestionChecklistCard.tsx",
+    "src/components/RecordingModeDialog.tsx",
+    "src/components/ReferenceSearch.tsx",
+    "src/components/SessionAssurance.tsx",
+    "src/components/SignatureControls.tsx",
+    "src/components/SoapNoteView.tsx",
+    "src/components/SpecialtySettingsSheet.tsx",
+    "src/components/UsageMeter.tsx",
+    "src/components/WelcomeDashboard.tsx",
+    "src/components/ui/badge.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/input.tsx",
+    "src/components/ui/label.tsx",
+    "src/components/ui/select.tsx",
+    "src/components/ui/sheet.tsx",
+    "src/components/ui/switch.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/textarea.tsx",
+    "src/components/ui/toast.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/ui/tooltip.tsx",
+    "src/contexts/AuthContext.tsx",
+    "src/contexts/SessionVisibility.ts",
+    "src/data/seedData.ts",
+    "src/features/reception/ClinicAccessGate.tsx",
+    "src/features/reception/accessContext.ts",
+    "src/features/reception/accessErrors.ts",
+    "src/features/reception/api.ts",
+    "src/features/reception/contracts.ts",
+    "src/features/settings/ProfessionalSettingsForm.tsx",
+    "src/hooks/use-toast.ts",
+    "src/hooks/useDocumentSnippets.ts",
+    "src/hooks/useRecording.ts",
+    "src/hooks/useSeedPatients.ts",
+    "src/hooks/useSignatureSession.ts",
+    "src/hooks/useUnsavedChanges.ts",
+    "src/hooks/useUsage.ts",
+    "src/hooks/useUserSettings.ts",
+    "src/index.css",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/environment.ts",
+    "src/lib/authRedirect.ts",
+    "src/lib/cmedPresentation.ts",
+    "src/lib/consultationDrafts.ts",
+    "src/lib/dates.ts",
+    "src/lib/documentSnippets.ts",
+    "src/lib/functionErrors.ts",
+    "src/lib/interfaceScale.ts",
+    "src/lib/medicationMerge.ts",
+    "src/lib/mfa.ts",
+    "src/lib/pagination.ts",
+    "src/lib/patientConversation.ts",
+    "src/lib/patientImport.ts",
+    "src/lib/patientMapper.ts",
+    "src/lib/patientRegistration.ts",
+    "src/lib/prescriberContact.ts",
+    "src/lib/printDoc.ts",
+    "src/lib/recordingRescue.ts",
+    "src/lib/sharing.ts",
+    "src/lib/signatureClient.ts",
+    "src/lib/utils.ts",
+    "src/main.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/Index.tsx"
+  ],
+  "screens": [
+    {
+      "role": "review",
+      "path": "/?patient=22222222-2222-4222-8222-222222222222",
+      "variant": "patient-before-panel",
+      "actualPath": "/",
+      "width": 375,
+      "dialogActions": [],
+      "recoveryScreen": false,
+      "fontSize": "21.6px",
+      "overflow": 0,
+      "dialogOutsideViewport": false,
+      "dialogHorizontalOverflow": 0,
+      "missingButtons": [],
+      "missingLabels": [],
+      "navigationLabels": [],
+      "headerTitles": [
+        {
+          "text": "Paciente Exemplo A",
+          "clipped": false,
+          "controls": [
+            {
+              "name": "Consulta manual",
+              "width": 160.5,
+              "height": 61.375,
+              "overlapsTitle": false
+            },
+            {
+              "name": "Receita / atestado",
+              "width": 160.515625,
+              "height": 61.375,
+              "overlapsTitle": false
+            }
+          ]
+        }
+      ],
+      "calendarPeriodClipped": false,
+      "shortcuts": [],
+      "clinicalPrompt": {
+        "label": "Pergunta ao assistente clínico",
+        "placeholder": "Faça uma pergunta",
+        "hint": "Pergunte ao assistente — o que conversamos na última consulta?",
+        "textWidth": 186.75523376464844,
+        "availableWidth": 264.79999999999995,
+        "empty": true
+      },
+      "workspaceGeometry": null,
+      "medicalTextFit": [
+        {
+          "text": "Paciente Exemplo A",
+          "tab": false,
+          "clipped": false,
+          "textRects": [
+            {
+              "left": 91.78125,
+              "right": 287.09375,
+              "top": 18.1875,
+              "bottom": 41.1875
+            }
+          ]
+        }
+      ],
+      "overlappingMedicalTabs": [],
+      "medicalPlaceholders": [],
+      "timestampLabels": [],
+      "welcomeDate": null,
+      "visibleAlerts": [],
+      "timeControls": [],
+      "brokenText": [],
+      "headings": [
+        "Paciente Exemplo A"
+      ],
+      "screenshot": "review---patient-22222222-2222-4222-8222-222222222222-patient-before-panel-375.png"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "failedRequests": [
+    {
+      "method": "HEAD",
+      "path": "/rest/v1/patients",
+      "status": 200,
+      "reason": "net::ERR_ABORTED"
+    }
+  ],
+  "errorResponses": [],
+  "blockedExternalRequests": [],
+  "cleanupVerified": true
+}

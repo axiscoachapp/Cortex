@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   X,
@@ -113,6 +112,7 @@ interface ChatPanelProps {
   onConsultationSaved?: (patientId: string) => void;
   onWorkStateChange?: (busy: boolean) => void;
   onCaptureStateChange?: (busy: boolean) => void;
+  onOpenPatientWork?: (manual: boolean) => void;
 }
 
 export function ChatPanel({
@@ -135,6 +135,7 @@ export function ChatPanel({
   onConsultationSaved,
   onWorkStateChange,
   onCaptureStateChange,
+  onOpenPatientWork,
 }: ChatPanelProps) {
   const sessionHidden = useSessionHidden();
   const [showBriefing, setShowBriefing] = useState(true);
@@ -1522,18 +1523,11 @@ export function ChatPanel({
             </Badge>
           </div>
           <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto sm:ml-auto">
-          <Button variant="outline" size="sm" className="text-xs whitespace-normal h-auto min-h-8 py-1.5 px-2" asChild>
-            <Link
-              to={
-                '/trabalho?patient=' +
-                patient.id +
-                '&new=1' +
-                (appointmentId ? '&appointment=' + appointmentId : '') +
-                (chiefComplaint ? '&complaint=' + encodeURIComponent(chiefComplaint) : '')
-              }
-            >
+          <Button variant="outline" size="sm" className="text-xs whitespace-normal h-auto min-h-8 py-1.5 px-2" onClick={() => onOpenPatientWork?.(true)} disabled={!onOpenPatientWork}>
               Consulta manual
-            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="text-xs whitespace-normal h-auto min-h-8 py-1.5 px-2" onClick={() => onOpenPatientWork?.(false)} disabled={!onOpenPatientWork}>
+            Acompanhamento
           </Button>
           <Button variant="outline" size="sm" onClick={() => handleOpenComposer()} className="text-xs whitespace-normal h-auto min-h-8 py-1.5 px-2 gap-1.5">
             <FileSignature className="hidden sm:block w-4 h-4 shrink-0" />Receita / atestado

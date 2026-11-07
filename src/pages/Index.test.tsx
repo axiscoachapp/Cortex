@@ -57,6 +57,7 @@ const fixture = vi.hoisted(() => ({
   signOut: vi.fn(),
   chatMount: vi.fn(),
   update: vi.fn(),
+  workspaceExit: true,
 }));
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'doctor' }, loading: false, signOut: fixture.signOut }),
@@ -100,13 +101,14 @@ vi.mock('@/components/PatientSidebar', () => ({
       ))}
       <button onClick={onHome}>Home</button>
       <button onClick={() => onNavigate('/agenda')}>Agenda</button>
+      <button onClick={() => onSelectPatient(patients[0], 'appointment-A')}>Appointment A</button>
     </aside>
   ),
 }));
 vi.mock('@/components/WelcomeDashboard', () => ({ WelcomeDashboard: () => <h1>Dashboard</h1> }));
 vi.mock('@/components/PatientSnapshot', () => ({ PatientSnapshot: () => null }));
 vi.mock('@/components/ChatPanel', () => ({
-  ChatPanel: ({ patient, preBriefing, briefingError, onCaptureStateChange, onRetryBriefing }) => {
+  ChatPanel: ({ patient, preBriefing, briefingError, onCaptureStateChange, onRetryBriefing, onOpenPatientWork }) => {
     useEffect(() => {
       fixture.chatMount();
     }, []);
@@ -117,8 +119,16 @@ vi.mock('@/components/ChatPanel', () => ({
         <button onClick={onRetryBriefing}>Gerar resumo com IA</button>
         {briefingError && <p role="alert">Resumo indisponível</p>}
         <button onClick={() => onCaptureStateChange(true)}>Capture fixture</button>
+        <button onClick={() => onOpenPatientWork(true)}>Manual fixture</button>
+        <button onClick={() => onOpenPatientWork(false)}>Work fixture</button>
       </div>
     );
+  },
+}));
+vi.mock('@/components/PatientWorkspaceDialog', () => ({
+  PatientWorkspaceDialog: ({ patientId, manual, appointmentId, initialTitle, onClose, onExitGuardChange }) => {
+    useEffect(() => { onExitGuardChange(() => fixture.workspaceExit); }, [onExitGuardChange]);
+    return <div role="dialog"><p>{JSON.stringify({ patientId, manual, appointmentId, initialTitle })}</p><button onClick={onClose}>Close work fixture</button></div>;
   },
 }));
 vi.mock('@/components/NewConsultationModal', () => ({
@@ -128,6 +138,7 @@ vi.mock('@/components/NewConsultationModal', () => ({
 }));
 
 beforeEach(() => {
+  fixture.workspaceExit = true;
   fixture.invoke.mockReset();
   fixture.chatMount.mockClear();
   fixture.update.mockClear();
@@ -174,6 +185,42 @@ function setup(entry = '/') {
 }
 
 describe('patient activation', () => {
+  it('opens work in the same chart and carries the exact appointment without remounting capture', async () => {
+    const { router } = setup('/?patient=A');
+    await screen.findByRole('heading', { name: 'Patient A' });
+    await userEvent.click(screen.getByRole('button', { name: 'Appointment A' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Manual fixture' }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent(JSON.stringify({ patientId: 'A', manual: true, appointmentId: 'appointment-A', initialTitle: '' }));
+    expect(router.state.location.pathname).toBe('/');
+    expect(router.state.location.search).toBe('?patient=A');
+    expect(fixture.chatMount).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole('button', { name: 'Close work fixture' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Work fixture' }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('"manual":false');
+  });
+  it('blocks patient switch and logout while the patient editor refuses exit', async () => {
+    const { router } = setup('/?patient=A');
+    await screen.findByRole('heading', { name: 'Patient A' });
+    await userEvent.click(screen.getByRole('button', { name: 'Manual fixture' }));
+    await screen.findByRole('dialog'); fixture.workspaceExit = false;
+    await userEvent.click(screen.getByRole('button', { name: 'Select B' }));
+    expect(router.state.location.search).toBe('?patient=A');
+    await userEvent.click(screen.getAllByRole('button', { name: 'Sair' })[0]);
+    expect(fixture.signOut).not.toHaveBeenCalled();
+    fixture.workspaceExit = true;
+    await userEvent.click(screen.getByRole('button', { name: 'Select B' }));
+    await screen.findByRole('heading', { name: 'Patient B' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+  it('carries the complaint without placing it in the URL', async () => {
+    const { router } = setup('/?patient=A');
+    await screen.findByRole('heading', { name: 'Patient A' });
+    await userEvent.click(screen.getByRole('button', { name: 'Start B' }));
+    await screen.findByRole('heading', { name: 'Patient B' });
+    await userEvent.click(screen.getByRole('button', { name: 'Manual fixture' }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('"initialTitle":"B complaint"');
+    expect(router.state.location.search).toBe('?patient=B');
+  });
   it('opens a chart without changing status or generating a paid briefing', async () => {
     setup('/?patient=A');
     await screen.findByRole('heading', { name: 'Patient A' });

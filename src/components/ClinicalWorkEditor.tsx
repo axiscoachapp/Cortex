@@ -211,9 +211,9 @@ export function ClinicalWorkEditor({
     }
   };
   return (
-    <section className="rounded-xl border bg-card p-4 sm:p-6 space-y-4" aria-label="Editor clínico">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-serif text-2xl">{locked ? 'Versão registrada' : 'Documentar e acompanhar'}</h2>
+    <section className="min-w-0 rounded-xl border bg-card p-4 sm:p-6 space-y-4" aria-label="Editor clínico">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="min-w-0 break-words font-serif text-xl sm:text-2xl">{locked ? 'Versão registrada' : 'Documentar e acompanhar'}</h2>
         <Button
           variant="ghost"
           disabled={busy}
@@ -345,7 +345,8 @@ export function ClinicalWorkEditor({
           ) : (
             <p className="text-xs">Carregando lista ativa…</p>
           )}
-          <Button size="sm" variant="outline" disabled={busy} onClick={loadMedicationContext}>
+          <Button size="sm" variant="outline" disabled={busy} onClick={loadMedicationContext}
+            className="max-w-full whitespace-normal h-auto min-h-10 py-2">
             Atualizar lista mantendo rascunho
           </Button>
           <p className="text-xs text-muted-foreground">
@@ -532,7 +533,7 @@ export function ClinicalWorkEditor({
           )}
         </div>
       )}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 [&>button]:max-w-full [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-10 [&>button]:py-2">
         {!locked && (
           <Button disabled={busy} onClick={() => save(false)} className="gap-2">
             <Save className="h-4 w-4" />

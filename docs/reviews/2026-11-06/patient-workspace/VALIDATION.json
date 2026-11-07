@@ -1,0 +1,51 @@
+{
+  "completed": true,
+  "scope": "K7/1 patient-local replacement; legacy removal and post-consultation remain",
+  "syntheticOnly": true,
+  "baseline": "106a8f80ccacd33aff05e8b44056e6ee54daff7d",
+  "vitest": {
+    "files": 5,
+    "editorLayoutRecheck": 8,
+    "passed": 48
+  },
+  "node": {
+    "passed": 2
+  },
+  "typecheck": "app + node passed",
+  "lint": "11 changed code/test/script paths passed; final editor recheck passed",
+  "cliRejectedCases": 3,
+  "browser": {
+    "interfaceScale": 1.35,
+    "rawHeadAborts": 4,
+    "aiCalls": 0,
+    "clinicalWrites": 0,
+    "blockedExternalRequests": 0,
+    "expectedResourceConsoleErrors": 2,
+    "pageErrors": 0,
+    "cleanupVerified": true,
+    "states": 33,
+    "widths": [
+      375,
+      933,
+      1280,
+      1920
+    ],
+    "reportSha256": "07eac02ae5f75ba8f6d002c51ae3a5a375c0c38b14b524277530b12e33101714",
+    "expectedUnavailableResponses": 2,
+    "report": "docs/reviews/2026-11-05/reception-app-audit/patient-workspace-green/AUDIT.json",
+    "sourceHashesVerified": 20
+  },
+  "redProofs": [
+    "patient-workspace-red-entry",
+    "patient-workspace-final",
+    "patient-workspace-complete"
+  ],
+  "independentReview": "Two actionable findings fixed; final review no further issue; cross-model skipped in scheduled context",
+  "remaining": [
+    "Recovery notices on Home/patient",
+    "Waitlist and confirmations in Calendar/Reception",
+    "Remove generic navigation and redirect legacy /trabalho",
+    "Post-consultation stage",
+    "K6 f837c57 contact NOWAIT, bot and C5 retest"
+  ]
+}

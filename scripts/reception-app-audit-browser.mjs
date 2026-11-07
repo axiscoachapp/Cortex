@@ -14,15 +14,18 @@ import { startClinicFixture, patientId, uid } from './fixtures/clinic-review-api
 import { startReceptionFixture, ids } from './fixtures/reception-api.mjs';
 import { auditWhatsAppRead } from './fixtures/whatsapp-read-browser.mjs';
 import { auditSettingsAccess } from './fixtures/settings-access-browser.mjs';
+import { auditPatientWorkspace } from './fixtures/patient-workspace-browser.mjs';
 
 const args = process.argv.slice(2);
-assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|only=new-consultation|only=settings-embedded|only=whatsapp-read|only=settings-access|settings-admin-only|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus|check-mfa-cancellation)$/.test(arg)), 'Unsupported audit option');
+assert.ok(args.every(arg => /^--(baseline=[0-9a-f]{40}|overlay=src\/[\w/.-]+|run=[a-z0-9-]+|only=time-dialogs|only=week-caption|only=welcome-dashboard|only=chat-prompts|only=short-timestamps|only=medical-delivery|only=delegation-read|only=delegation-decision|only=delegation-conflict|only=delegation-denied|only=delegation-retry|only=mfa-preparation|only=mfa-cleanup|only=mfa-enrollment|only=new-consultation|only=settings-embedded|only=whatsapp-read|only=settings-access|only=patient-workspace|settings-admin-only|medical-history-only|check-time-layout|check-mobile-navigation|check-calendar-header|check-workspace-layout|check-mfa-error-focus|check-mfa-cancellation)$/.test(arg)), 'Unsupported audit option');
 const timeOnly = args.includes('--only=time-dialogs'), checkTimeLayout = args.includes('--check-time-layout');
 const weekOnly = args.includes('--only=week-caption');
 const chatOnly = args.includes('--only=chat-prompts');
 const timestampOnly = args.includes('--only=short-timestamps');
 const medicalOnly = args.includes('--only=medical-delivery');
 const settingsEmbeddedOnly = args.includes('--only=settings-embedded');
+const patientWorkspaceOnly = args.includes('--only=patient-workspace');
+assert.ok(!patientWorkspaceOnly || !args.some(arg => arg.startsWith('--check-')), 'Patient workspace runs its own checks');
 const whatsappReadOnly = args.includes('--only=whatsapp-read');
 const settingsAccessOnly = args.includes('--only=settings-access'), settingsAdminOnly = args.includes('--settings-admin-only');
 assert.ok(!settingsAccessOnly || !args.some(arg => arg.startsWith('--check-')), 'Settings access runs its own checks');
@@ -67,7 +70,7 @@ const baseline = args.find(arg => arg.startsWith('--baseline='))?.slice(11) || g
 const medicalPaths = ['src/components/PatientProfileDrawer.tsx', 'src/pages/PatientManagement.tsx', 'src/pages/KnowledgeBase.tsx', 'src/pages/Templates.tsx', 'src/pages/Assistant.tsx'];
 const medicalDelivery = medicalOnly ? git(['rev-parse', 'f2eb189']) : null;
 const overlays = args.filter(arg => arg.startsWith('--overlay=')).map(arg => arg.slice(10));
-const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation|WelcomeDashboard|ChatPanel|PatientProfileDrawer|NewConsultationModal|PatientAdministrativeFields)\.tsx|src\/lib\/calendarLabels\.ts)$/;
+const allowed = /^(src\/pages\/(Calendar|Sharing|AccountSecurity|Auth|DataPrivacy|ClinicalWorkspace|Index)\.tsx|src\/features\/reception\/[\w/.-]+\.(ts|tsx)|src\/components\/(BottomNavigation|MobileSubpageNavigation|WelcomeDashboard|ChatPanel|PatientProfileDrawer|NewConsultationModal|PatientAdministrativeFields|PatientWorkspaceDialog|ClinicalWorkEditor)\.tsx|src\/lib\/calendarLabels\.ts)$/;
 for (const path of overlays) assert.match(path, allowed, 'Overlay must be in the Codex audit scope');
 assert.ok(!overlays.includes('src/components/PatientProfileDrawer.tsx') || medicalOnly, 'Profile overlay requires medical delivery mode');
 assert.ok(!medicalOnly || overlays.length <= 1 && overlays.every(path => path === 'src/components/PatientProfileDrawer.tsx'), 'Medical delivery only permits the explicit profile overlay');
@@ -77,6 +80,9 @@ assert.ok(!mfaCleanupOnly || overlays.length <= 1 && overlays.every(path => path
 assert.ok(!mfaEnrollmentOnly || overlays.length <= 1 && overlays.every(path => path === 'src/pages/AccountSecurity.tsx'), 'MFA enrollment permits only the AccountSecurity overlay');
 assert.ok(!consultationOnly || overlays.length <= 2 && new Set(overlays).size === overlays.length && overlays.every(path => ['src/components/NewConsultationModal.tsx', 'src/components/PatientAdministrativeFields.tsx'].includes(path)), 'New consultation permits only its modal and administrative fields overlays');
 assert.ok(!settingsEmbeddedOnly || overlays.length <= 2 && new Set(overlays).size === overlays.length && overlays.every(path => ['src/features/reception/TeamSettings.tsx', 'src/features/reception/DelegationPermissions.tsx'].includes(path)), 'Settings embedded permits only its two section overlays');
+const patientWorkspacePaths = ['src/pages/Index.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/components/PatientWorkspaceDialog.tsx', 'src/components/ClinicalWorkEditor.tsx'];
+assert.ok(!patientWorkspaceOnly || overlays.length <= 5 && new Set(overlays).size === overlays.length && overlays.every(path => patientWorkspacePaths.includes(path)), 'Patient workspace only permits its five UI overlays');
+assert.ok(patientWorkspaceOnly || !overlays.some(path => ['src/pages/Index.tsx', 'src/components/PatientWorkspaceDialog.tsx'].includes(path)), 'Patient workspace overlay requires focused mode');
 const whatsappPaths = ['src/features/reception/ReceptionQueue.tsx', 'src/features/reception/WhatsAppInbox.tsx', 'src/features/reception/WhatsAppMessages.tsx'];
 assert.ok(!whatsappReadOnly || overlays.length <= 4 && new Set(overlays).size === overlays.length && overlays.every(path => [...whatsappPaths, 'src/features/reception/whatsappApi.ts'].includes(path)), 'WhatsApp read only permits its UI and read-client overlays');
 assert.ok(!settingsAccessOnly || overlays.length <= 2 && new Set(overlays).size === overlays.length && overlays.every(path => ['src/features/reception/ClinicAccessGate.tsx', 'src/features/reception/ReceptionLayout.tsx'].includes(path)), 'Settings access only permits gate and reception entry overlays');
@@ -96,7 +102,7 @@ for (const path of paths) {
 }
 if (medicalOnly) for (const path of medicalPaths) assert.equal(sources.get(path).replaceAll('\r\n', '\n').trim(), git(['show', medicalDelivery + ':' + path]), 'Medical delivery source differs: ' + path);
 const medicalBaseSources = medicalOnly ? medicalPaths.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') })) : [];
-for (const path of overlays) { assert.ok(sources.has(path) || path === 'src/lib/calendarLabels.ts' || whatsappReadOnly && whatsappPaths.includes(path), 'New source is not allowlisted'); sources.set(path, await readFile(path, 'utf8')); }
+for (const path of overlays) { assert.ok(sources.has(path) || patientWorkspaceOnly && path === 'src/components/PatientWorkspaceDialog.tsx' || path === 'src/lib/calendarLabels.ts' || whatsappReadOnly && whatsappPaths.includes(path), 'New source is not allowlisted'); sources.set(path, await readFile(path, 'utf8')); }
 const overlayHashes = overlays.map(path => ({ path, sha256: createHash('sha256').update(sources.get(path)).digest('hex') }));
 const frozen = new Map([...sources].map(([path, source]) => [resolve(path).toLowerCase(), { path, source }]));
 const frozenLoads = new Set();
@@ -108,7 +114,7 @@ const tailwindConfiguration = loadConfig(resolve('tailwind.config.ts'));
 const tailwindContent = [...sources].filter(([path]) => /\.(tsx?|jsx?)$/.test(path)).map(([path, raw]) => ({ raw, extension: path.split('.').pop() }));
 const previewEntry = 'scripts/fixtures/settings-embedded-preview.tsx';
 if (settingsEmbeddedOnly) tailwindContent.push({ raw: await readFile(previewEntry, 'utf8'), extension: 'tsx' });
-const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/clinic-review-api.mjs', 'scripts/fixtures/reception-api.mjs', 'scripts/fixtures/whatsapp-read-api.mjs', 'scripts/fixtures/whatsapp-read-browser.mjs', 'scripts/fixtures/settings-access-api.mjs', 'scripts/fixtures/settings-access-browser.mjs', ...(settingsEmbeddedOnly ? [previewEntry] : []), ...configurationPaths];
+const ownPaths = ['scripts/reception-app-audit-browser.mjs', 'scripts/fixtures/patient-workspace-browser.mjs', 'scripts/fixtures/clinic-review-api.mjs', 'scripts/fixtures/reception-api.mjs', 'scripts/fixtures/whatsapp-read-api.mjs', 'scripts/fixtures/whatsapp-read-browser.mjs', 'scripts/fixtures/settings-access-api.mjs', 'scripts/fixtures/settings-access-browser.mjs', ...(settingsEmbeddedOnly ? [previewEntry] : []), ...configurationPaths];
 const ownHashes = await Promise.all(ownPaths.map(async path => ({ path, sha256: createHash('sha256').update(await readFile(path)).digest('hex') })));
 const apps = [], apis = [], contexts = [], errors = [], blocked = [], consoleErrors = [], screens = [], failedRequests = [], errorResponses = [];
 const medicalCaseFailures = []; let medicalCasesAttempted = 0;
@@ -122,6 +128,7 @@ const consultationChecks = [], consultationRequests = [];
 const settingsChecks = [], settingsRequests = [], settingsFixtureMetrics = [];
 const whatsappChecks = [], whatsappRequests = [];
 const settingsAccessChecks = [], settingsAccessRequests = [];
+const patientWorkspaceChecks = [];
 const cacheOwner = randomUUID();
 let browser, temporaryCache, failure, cleanupVerified = false, navigationKeyboardVerified = false, draftPreserved = false, timestampDataPreserved = false, medicalDataPreserved = false, delegationDataPreserved = false;
 async function appFor(api) {
@@ -293,7 +300,11 @@ try {
   temporaryCache = await mkdtemp(join(tmpdir(), 'cortex-reception-audit-'));
   await writeFile(join(temporaryCache, 'audit-owner'), cacheOwner);
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
-  if (settingsAccessOnly) {
+  if (patientWorkspaceOnly) {
+    const api = await startClinicFixture({ workspaceDates: true, patientWorkspaceReview: true }); apis.push(api);
+    const app = await appFor(api);
+    await auditPatientWorkspace({ api, app, scene, capture, checks: patientWorkspaceChecks, screens, errors, blocked });
+  } else if (settingsAccessOnly) {
     const api = await startReceptionFixture({ settingsReview: true }); apis.push(api);
     const app = await appFor(api);
     await auditSettingsAccess({ api, app, scene, capture, checks: settingsAccessChecks, requests: settingsAccessRequests, screens, errors, consoleErrors, failedRequests, errorResponses, blocked, adminOnly: settingsAdminOnly });
@@ -957,7 +968,7 @@ try {
   }
   for (const source of [...ownHashes, ...overlayHashes]) assert.equal(createHash('sha256').update(await readFile(source.path)).digest('hex'), source.sha256, 'Audit source changed during run');
   const requiredSources = consultationOnly ? ['src/components/NewConsultationModal.tsx', 'src/components/PatientAdministrativeFields.tsx', 'src/pages/PatientManagement.tsx'] : mfaMode ? ['src/pages/AccountSecurity.tsx', 'src/lib/mfa.ts'] : delegationMode ? ['src/features/reception/DelegationPermissions.tsx', 'src/features/reception/delegationApi.ts'] : medicalOnly ? medicalHistoryOnly ? ['src/components/PatientProfileDrawer.tsx'] : medicalPaths : timestampOnly ? ['src/pages/ClinicalWorkspace.tsx', 'src/components/ChatPanel.tsx', 'src/lib/recordingRescue.ts'] : chatOnly ? ['src/pages/Index.tsx', 'src/components/ChatPanel.tsx'] : welcomeOnly ? ['src/pages/Index.tsx', 'src/components/WelcomeDashboard.tsx'] : weekOnly ? ['src/pages/Calendar.tsx', 'src/components/CalendarWeekDetails.tsx'] : ['src/features/reception/ReceptionCalendar.tsx', ...(!timeOnly ? ['src/pages/Calendar.tsx', 'src/pages/Sharing.tsx', 'src/pages/AccountSecurity.tsx', 'src/pages/ClinicalWorkspace.tsx', 'src/pages/DataPrivacy.tsx'] : [])];
-  const requiredEntrySources = settingsAccessOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', 'src/features/reception/ClinicAccessGate.tsx', 'src/pages/Settings.tsx', 'src/features/settings/WhatsAppSettings.tsx', 'src/features/settings/AutomationEditor.tsx', ...(!settingsAdminOnly ? ['src/features/reception/ReceptionLayout.tsx'] : [])] : whatsappReadOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', ...whatsappPaths, 'src/features/reception/whatsappApi.ts'] : settingsEmbeddedOnly ? ['src/contexts/AuthContext.tsx', 'src/features/reception/TeamSettings.tsx', 'src/features/reception/DelegationPermissions.tsx'] : ['src/App.tsx', 'src/pages/Auth.tsx', ...requiredSources];
+  const requiredEntrySources = patientWorkspaceOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', ...patientWorkspacePaths, 'src/components/ClinicalWorkEditor.tsx'] : settingsAccessOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', 'src/features/reception/ClinicAccessGate.tsx', 'src/pages/Settings.tsx', 'src/features/settings/WhatsAppSettings.tsx', 'src/features/settings/AutomationEditor.tsx', ...(!settingsAdminOnly ? ['src/features/reception/ReceptionLayout.tsx'] : [])] : whatsappReadOnly ? ['src/App.tsx', 'src/pages/Auth.tsx', ...whatsappPaths, 'src/features/reception/whatsappApi.ts'] : settingsEmbeddedOnly ? ['src/contexts/AuthContext.tsx', 'src/features/reception/TeamSettings.tsx', 'src/features/reception/DelegationPermissions.tsx'] : ['src/App.tsx', 'src/pages/Auth.tsx', ...requiredSources];
   for (const path of [...requiredEntrySources, ...overlays]) assert.ok(frozenLoads.has(path), 'Snapshot not served: ' + path);
   if (medicalOnly) assert.deepEqual(medicalCaseFailures, [], 'Medical delivery has unresolved case failures');
   if (checkMobileNavigation || welcomeOnly) assert.equal(navigationKeyboardVerified, true, 'Keyboard navigation did not complete');
@@ -981,6 +992,7 @@ const report = { completed: !failure, failure, timeOnly, weekOnly, welcomeOnly, 
   consultationOnly, consultationChecks, consultationRequests, consultationMetrics: consultationOnly ? { ...apis[0]?.metrics } : null,
   settingsEmbeddedOnly, previewEntry: settingsEmbeddedOnly ? previewEntry : null, settingsChecks, settingsRequests, settingsFixtureMetrics,
   whatsappReadOnly, whatsappChecks, whatsappRequests, whatsappFixtureCalls: whatsappReadOnly ? apis[0]?.whatsappRead.calls : null,
+  patientWorkspaceOnly, patientWorkspaceChecks, patientWorkspaceMetrics: patientWorkspaceOnly ? apis[0]?.metrics : null,
   settingsAccessOnly, settingsAdminOnly, settingsAccessChecks, settingsAccessRequests, settingsAccessCalls: settingsAccessOnly ? apis[0]?.settingsRead.calls : null,
   mfaOnly, mfaCleanupOnly, mfaEnrollmentOnly, checkMfaErrorFocus, checkMfaCancellation, mfaPreparationChecks, mfaCleanupChecks, mfaErrorFocusChecks, mfaEnrollmentChecks, mfaEnrollmentQrChecks, mfaCancellationChecks, mfaMetrics: mfaMode ? { ...apis[0]?.metrics } : null,
   delegationOnly, delegationDecisionOnly, delegationConflictOnly, delegationDeniedOnly, delegationRetryOnly, delegationDecisionChecks, delegationConflictChecks, delegationDeniedChecks, delegationRetryChecks, delegationDataPreserved, delegationMetrics: delegationMode ? { ...apis[0]?.metrics } : null,
