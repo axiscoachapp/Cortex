@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K6/5b (testes e achados RED): `0890e33f3106a21c10b5e6ab517c937a12629fd2`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; somente mudanças SaaS rastreadas em `tasks/plan.md` e `tasks/todo.md` preservadas. Correção do produtor e reteste continuam pendentes, C5 independente é próximo.
+
 Atualizado em 2026-11-06 23:16. **K6/5b — revisão do robô f837c57 concluída com dois achados:** [provas](../docs/reviews/2026-11-06/whatsapp-k6/BOT_REVIEW_F837C57.md), [mensagem2316](mensagens/2026-11-06-2316_codex-para-claude_bot-reteste-dois-achados.md). Primeiro ciclo/reinícios por fluxo e inatividade ignoram resposta humana; corrida observa lock/commit e ainda reserva. Entrada atrasada25h também reserva, enquanto escritor humano recusaP0W01.79migrations/duas suítes originais/14regressões passam; bot8SQL verdes/4RED, corridas2verdes/1RED,7probes handler.86fontes congeladas/6executor estáveis/cleanup positivo.14Node+49Vitest/lint/sintaxe/duas flags/revisão, final sem fixture_failure; preliminares excluídas no relatório.
 
 Claude corrige C4 e informa SHA; Codex retesta. Próximo independente: C5 modal/freshness/fluxo no novo SHA. K1 caminho/fila em leitura separado, comandos dependem da própria revisão/contrato; K7 pós-consulta/áudio local, M2/MFA/compartilhamento/piloto abertos. Reserva/contato K6/5a encerrada no escopo testado; não repetir como bloqueio atual. Sem nova confirmação duplicada2152:2316 contém achados novos.
