@@ -1,0 +1,90 @@
+{
+  "completed": true,
+  "syntheticOnly": true,
+  "realNetwork": false,
+  "sdkVersion": "2.86.0",
+  "sourceMode": "immutable in-memory snapshot; hashes stable before/after",
+  "sources": [
+    {
+      "path": "src/lib/functionErrors.ts",
+      "sha256": "36c8cb268acf947fbe799e9b8080db16dd1f049e7b1f8997c97f300b01c6fd4f"
+    },
+    {
+      "path": "src/features/reception/whatsappClaim.ts",
+      "sha256": "448ad6fe58db5ec7d0246ee1fd96aa11eab89083aad70892cd8b15e6828729f8"
+    },
+    {
+      "path": "src/features/reception/whatsappTransfer.ts",
+      "sha256": "106ab978b25678571a7f46f10cd5d5ffdb5e922065903bde403a0d7772733a2c"
+    }
+  ],
+  "commands": 10,
+  "checks": [
+    {
+      "case": "success",
+      "commands": 1,
+      "result": "receipt-accepted",
+      "needsRefresh": false
+    },
+    {
+      "case": "stale",
+      "commands": 1,
+      "result": "stale",
+      "needsRefresh": true
+    },
+    {
+      "case": "forbidden",
+      "commands": 1,
+      "result": "forbidden",
+      "needsRefresh": true
+    },
+    {
+      "case": "wrong-owner",
+      "commands": 1,
+      "result": "INVALID_RESPONSE",
+      "needsRefresh": true
+    },
+    {
+      "case": "wrong-target",
+      "commands": 1,
+      "result": "INVALID_RESPONSE",
+      "needsRefresh": true
+    },
+    {
+      "case": "wrong-status",
+      "commands": 1,
+      "result": "INVALID_RESPONSE",
+      "needsRefresh": true
+    },
+    {
+      "case": "extra",
+      "commands": 1,
+      "result": "INVALID_RESPONSE",
+      "needsRefresh": true
+    },
+    {
+      "case": "truncated",
+      "commands": 1,
+      "result": "unavailable",
+      "needsRefresh": true
+    },
+    {
+      "case": "lost",
+      "commands": 1,
+      "result": "unavailable",
+      "needsRefresh": true
+    },
+    {
+      "case": "pre-cancelled, closed snapshot, foreign owner, self or missing target",
+      "commands": 0
+    },
+    {
+      "case": "cancel-after",
+      "commands": 1,
+      "result": "cancelled",
+      "needsRefresh": true
+    }
+  ],
+  "unexpected": [],
+  "limits": "Adapter/SDK transport only. No UI/server authorization/SQL CAS/idempotency/RLS/Meta proof."
+}

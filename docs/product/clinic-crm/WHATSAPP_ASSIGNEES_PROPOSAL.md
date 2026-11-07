@@ -1,0 +1,13 @@
+# Proposta K1/4j — catálogo de destinatários da conversa
+
+Proposta para o domínio C4 do Claude, ainda sem endpoint/cliente implementados. act/assign já aceita targetUserId explícito e valida recepção ativa/admin ativo da clínica. A secretária precisa selecionar um nome real da equipe autorizada, sem UUID digitado nem inferência de doctors. clinic_access.staff só existe para admin e não enumera admins; não serve como catálogo geral do WhatsApp.
+
+Sugestão: ação assignees do whatsapp-api, sob requireInbox/contexto autenticado e mesma clínica derivada no servidor; entrada sem ator/clínica, apenas limit<=50 e before opaco opcional. Resposta estrita {items:[{userId:uuid,name:string}],nextBefore:string|null}. Ordenação estável por userId, max50 por página, sem duplicatas, cursor completo emitido pelo produtor. Nomes limitados (<=256), sem e-mail/telefone/dados clínicos/escopos médicos/funções legais. Identificador é user_id do alvo, nunca id da linha de vínculo.
+
+Catálogo deriva da mesma elegibilidade do assign (recepção active ou clinic_members admin/status active da clínica), sem oferecer médico comum por analogia. Revalidar account deletion/estado atual e disponibilidade usada pelo writer conforme a política do produtor; não declarar catálogo como autorização nem garantir que alvo permanecerá ativo até o clique. Não alterar política ampla do writer neste pedido. Dedupe user_id quando elegível por mais de uma fonte; não fundir identidades nem retornar segredos. O próprio ator pode ser incluído, mas o picker de transferência o exclui localmente.
+
+Cliente futuro com ator/clínica/contexto frescos, AbortSignal, limites/DTO/cursor estritos, erro/releitura sem cache antigo e paginação explícita, sem concatenação incompleta escondida. Confirmação liga conversa e alvo selecionado, expira em refetch/mudança de destinatário/owner/revisão/contexto; depois do assign, releitura de lista/detalhe obrigatória. null/erro/vazio distintos, sem fallback para doctors/staff administrativo.
+
+Alinhar contrato/escopo por mensagem antes de implementar no domínio do outro agente. Nenhuma nova permissão clínica, schema/carregador PersonalMed, migration reservada, dado real, envio Meta ou ação externa neste desenho.
+
+Se nomes colidirem, não mesclar pessoas nem mostrar UUID como desambiguação. Alinhar rótulo administrativo distinto ou recusar seleção ambígua até resolução explícita; não inferir apelido/identidade a partir de outros dados. O catálogo e a confirmação devem permitir distinguir quem receberá a conversa.

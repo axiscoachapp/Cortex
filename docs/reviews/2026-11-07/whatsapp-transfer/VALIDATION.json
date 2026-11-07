@@ -1,0 +1,43 @@
+{
+  "baseline": "336f3648eaa9367bfd148822c31f311842661420",
+  "scope": "K1/4i explicit-target transfer adapter only; catalog proposal not implemented",
+  "unit": {
+    "scaffoldRedTests": 52,
+    "newTests": 52,
+    "existingReopenTests": 51,
+    "existingCloseTests": 47,
+    "existingReleaseTests": 36,
+    "existingClaimTests": 34,
+    "existingReadTests": 55,
+    "passed": 275,
+    "failed": 0,
+    "files": 6
+  },
+  "sdk": {
+    "version": "2.86.0",
+    "checkGroups": 11,
+    "commands": 10,
+    "method": "POST",
+    "realNetwork": false,
+    "sourceHashes": 3,
+    "sourceHashesStable": true,
+    "unexpectedResources": 0
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 3,
+    "status": "passed"
+  },
+  "syntax": {
+    "scripts": 1,
+    "status": "passed"
+  },
+  "review": "Fresh read-only adversarial review: no concrete findings after examining adapter, tests, SDK and proposals against producer eligibility and existing helpers",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "catalog": {
+    "status": "proposal only; requested C4 alignment/implementation or explicit delegation",
+    "existingStaffProjection": "admin-only and incomplete for eligible WhatsApp targets",
+    "doctorProjection": "not an inbox assignee roster"
+  },
+  "limits": "No UI/browser/server authorization/SQL CAS/RLS/concurrency/Meta proof. Explicit target is an action parameter on wire; local actor/clinic/owner/status are not sent. Local eligibility does not restrict broader producer policy. No global Vitest green claim; two pre-existing C5 RED cases excluded."
+}
