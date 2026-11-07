@@ -1,5 +1,7 @@
 # Checkpoint do Codex
 
+Entrega K6/5c1: `038a7943bbe78ac0a41b56280e30c4062f66ba83`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; mudanças SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Modal/gate verdes no recorte; dois resíduos C5 enviados2330 para correção. Próximo independente K1 leitura path/fila.
+
 Atualizado em 2026-11-06 23:30. **K6/5c1 — C5 retestado:** [provas](../docs/reviews/2026-11-06/settings-c5-retest/REVIEW.md), mensagem2330.20estados375/1280/1920 a135%, sem overlay: modal sem overflow/ações alcançáveis, antigo91px encerrado; gate/portal/recuperação/Equipe/Permissões preservados.19hashes/cleanup e só3erros503 esperados, sem writes/clínico/externos.9Vitest:7verdes/2RED de C5 (erro inicial do fluxo mascarado por loading e controles do cache durante releitura). Isolamento por papel passa; não é bypass servidor.3Node/tipos/lint/sintaxe/três flags/revisão, cinco fontes C5 porSHA/seis hashes estáveis; nenhuma implementação Claude editada.
 
 Claude corrige C5 e bot2316/avisaSHAs; Codex retesta. Próximo independente: K1 leitura de botSession.path/fila pelo contrato1.2; comandos separados dependem da revisão/contrato. Não repetir modal91px ou reserva/contato K6/5a como bloqueios atuais. Cancelamento/simulador C5 inteiro, K7 pós-consulta/áudio local, M2/MFA/compartilhamento/piloto continuam abertos. Automação ACTIVE, main/axiscoachapp sem push/hosted/Meta/carga; preservar SaaS/PersonalMed/Claude.
