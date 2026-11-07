@@ -1,0 +1,28 @@
+{
+  "passed": 5,
+  "invalidCombinations": [
+    [
+      "--check-whatsapp-release"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-release",
+      "--check-whatsapp-claim"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-release",
+      "--check-whatsapp-history"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-release",
+      "--check-whatsapp-list"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-release",
+      "--check-whatsapp-bot-read"
+    ]
+  ]
+}

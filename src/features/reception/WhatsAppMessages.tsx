@@ -7,7 +7,7 @@ import { WhatsAppBotSession } from './WhatsAppBotSession';
 
 const kindLabels: Record<string, string> = { image: 'Imagem', audio: 'Áudio', video: 'Vídeo', document: 'Documento', sticker: 'Figurinha', location: 'Localização', unsupported: 'Mensagem não disponível' };
 
-export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,claimBusy=false,claimBlocked=false,onNavigate,generation=0 }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void;onClaim?:(conversation:WhatsAppConversation)=>void;claimBusy?:boolean;claimBlocked?:boolean;onNavigate?:()=>void;generation?:number }) {
+export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,onRelease,commandBusy=false,commandBlocked=false,onNavigate,generation=0 }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void;onClaim?:(conversation:WhatsAppConversation)=>void;onRelease?:(conversation:WhatsAppConversation)=>void;commandBusy?:boolean;commandBlocked?:boolean;onNavigate?:()=>void;generation?:number }) {
   const region = useRef<HTMLElement>(null);
   const pageHeading=useRef<HTMLHeadingElement>(null);
   const [before,setBefore]=useState<string|null>(null);
@@ -45,11 +45,12 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
       <h2 className="min-w-0 font-semibold [overflow-wrap:anywhere]">{conversation.profileName || 'Contato sem nome'}</h2>
       <Button variant="outline" onClick={onClose}>Voltar à lista</Button>
     </div>
-    <Button variant="outline" disabled={messages.isFetching||claimBusy} onClick={refresh}>Atualizar mensagens</Button>
+    <Button variant="outline" disabled={messages.isFetching||commandBusy} onClick={refresh}>Atualizar mensagens</Button>
     {fresh && <>
       <p className="text-sm [overflow-wrap:anywhere]">Fila atual: <strong>{messages.data.conversation.queue}</strong></p>
       <p className="text-sm">Responsável atual: <strong>{messages.data.conversation.assignedTo===null?'Sem responsável':messages.data.conversation.assignedTo===actor?'Você':'Outra pessoa'}</strong></p>
-      {onClaim&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===null&&messages.data.conversation.revision<2147483647&&<Button className="h-auto min-h-11 max-w-full whitespace-normal" disabled={claimBlocked} onClick={()=>onClaim(messages.data.conversation)}>{claimBusy?'Assumindo…':'Assumir conversa'}</Button>}
+      {onClaim&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===null&&messages.data.conversation.revision<2147483647&&<Button className="h-auto min-h-11 max-w-full whitespace-normal" disabled={commandBlocked} onClick={()=>onClaim(messages.data.conversation)}>{commandBusy?'Assumindo…':'Assumir conversa'}</Button>}
+      {onRelease&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.revision<2147483647&&<Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" disabled={commandBlocked} onClick={()=>onRelease(messages.data.conversation)}>{commandBusy?'Devolvendo…':'Devolver à fila'}</Button>}
       <WhatsAppBotSession key={botReadGeneration} generation={botReadGeneration} actor={actor} clinic={clinic} conversationId={messages.data.conversation.id} />
       {messages.data.conversation.optedOut && <p className="rounded-md bg-muted p-3 text-sm">Este contato pediu para não receber lembretes.</p>}
     </>}

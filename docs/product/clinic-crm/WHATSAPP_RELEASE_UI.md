@@ -1,0 +1,9 @@
+# K1/4d — devolver à fila na caixa da recepção
+
+Oferecer “Devolver à fila” apenas no detalhe fresco de conversa aberta, assignedTo igual ao ator atual e revisão incrementável. Guardas de acesso/conexão/lista/detalhe e isolamento por ator/clínica permanecem. Clique explícito chama o adaptador K1/4c uma vez; abrir, ler, filtrar e atualizar não liberam conversa. Não envia ator/alvo/clínica, não altera fila/estado/vínculos/consentimento/agenda nem chama mark_read ou envio externo.
+
+Reutilizar a exclusão mútua e conferência de K1/4b para assumir/devolver: bloquear ambos os comandos enquanto envia/confere ou resultado pendente de conferência. Recibo não atualiza estado otimista nem anuncia liberação. Após sucesso/erro iniciado, reler detalhe e lista, criar geração nova para o detalhe visível e mostrar feedback neutro; só a resposta fresca dessa geração define responsável e próximo botão. Falha de leitura oferece exclusivamente conferência por leitura. Nova tentativa de comando exige novo clique sobre estado fresco.
+
+Voltar, trocar seleção/filtro/página, perder acesso ou trocar ator/clínica cancela observação e impede efeitos tardios, sem prometer rollback. Reabrir busca detalhe novo. Atualização global usa a geração existente; proprietário diferente/ausente, conversa encerrada, metadado pendente/cache ou revisão esgotada não oferecem devolução. Política mais restrita da UI e conferência local não são autorização de servidor; produtor amplo de recepção/admin permanece intacto.
+
+Provar promessas retidas, erro iniciado/leitura recusada/retry só leitura, perda de escopo, fechamento, resposta antiga, dado fresco e chamadas exatas. Navegador/App/SDK reais em perfil isolado, dados e transporte sintéticos,320–1920/135%, sem rede externa ou banco. Fixture opt-in de release não habilita o comando no modo somente leitura nem no modo claim; conflito modelado não prova CAS/RLS/concorrência/autorização reais.

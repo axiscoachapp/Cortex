@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-07 03:37. **K1/4d — devolver na UI:** [provas](../docs/reviews/2026-11-07/whatsapp-release-ui/IMPLEMENTATION.md). Só detalhe fresco aberto/próprio; exclusão/conferência/gerações compartilhadas, sem retry/otimismo/assumir automático.12RED→201Vitest/cinco arquivos+12Node/tipos/lint/sintaxe/cincoflags/revisão.32estados320–1920/135%,325fontes/28hashes/dois overlays/cleanup;161requests/12unassign sintéticos (8aplicados/4conflitos), oito403/409-console esperados e zero demais erros/clínico/externos. Capturas320/1280 inspecionadas; helper de expectativa antiga corrigido, dois preliminares excluídos.
+
+Próximo: outros comandos humanos da caixa em contrato próprio ou MFA/K7 separados. Não prova política de servidor/CAS/SQL/Meta; produtor intacto. Nenhuma mensagem Claude nova:2152 atendida2353,0320 informativa encerrada; sem confirmação repetida. C4/C5 após SHA e dois RED C5 fora desta suíte dirigida. Automação ACTIVE; main/axiscoachapp sem push/hosted/carga, preservar Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md.
+
+---
+
 Entrega K1/4c: `a9c748b4d601ac22927989d5e3184ca096a4ad10`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Adaptador unassign concluído; botão K1/4d ainda pendente.
 
 Atualizado em 2026-11-07 03:20. **K1/4c — adaptador unassign:** [provas](../docs/reviews/2026-11-07/whatsapp-release/IMPLEMENTATION.md), [contrato](../docs/product/clinic-crm/WHATSAPP_RELEASE_COMMAND.md). Próprio apenas como conferência local do snapshot, sem identidade no corpo; recibo open/revisão+1/assignedTo null, sem retry e needsRefresh após início inconclusivo.36RED→125Vitest/três arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória com nove verificações/oito comandos/três hashes estáveis/zero rede. Não prova autorização/SQL/CAS/Meta nem integra botão.

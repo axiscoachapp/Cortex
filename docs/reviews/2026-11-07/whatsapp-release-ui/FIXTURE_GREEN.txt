@@ -1,0 +1,20 @@
+✔ claim fixture is opt-in and refuses target/actor injection (5.1618ms)
+✔ claim fixture models CAS, unconfirmed reply and competitor changes without external operations (0.7796ms)
+✔ conversation paging is opt-in, scoped by filter/search and preserves tied cursor tokens (4.582ms)
+✔ fixture returns only the requested filter and conversation (0.6976ms)
+✔ fixture refuses writes, foreign actors and authority injection (0.4716ms)
+✔ bot session is a scoped read and distinguishes missing path from a refused read (0.6707ms)
+✔ controlled refusals and malformed DTOs restore without modifying rows (0.6229ms)
+✔ new HTTP fixture remains opt-in and only enables synthetic reads (102.7797ms)
+✔ history is opt-in, bounded and advances by the full timestamp/id token (1.0119ms)
+✔ release fixture requires isolated opt-in and refuses claim/injected authority (5.1505ms)
+✔ release fixture only clears owner and increments revision; reset preserves ledger (0.7853ms)
+✔ release fixture models conflict, forbidden and applied-but-unconfirmed reply (0.9165ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 365.0989

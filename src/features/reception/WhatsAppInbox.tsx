@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useClinicAccess } from './accessContext';
 import { whatsappApi, type WhatsAppInboxFilter,type WhatsAppConversation } from './whatsappApi';
 import {claimWhatsAppConversation,WhatsAppClaimError} from './whatsappClaim';
+import {releaseWhatsAppConversation} from './whatsappRelease';
 import { WhatsAppMessages } from './WhatsAppMessages';
 import { clinicDateLabel, clinicTime } from './dates';
 
@@ -62,7 +63,7 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
   const [feedback,setFeedback]=useState<{phase:'sending'|'checking'|'unresolved'|'done';message:string;error:boolean}|null>(null);
   useEffect(()=>()=>{operation.current?.controller.abort();operation.current=null;},[]);
   useEffect(()=>{if(feedback?.phase==='done'||feedback?.phase==='unresolved')feedbackRef.current?.focus();},[feedback]);
-  const resetClaim=()=>{operation.current?.controller.abort();operation.current=null;setFeedback(null);};
+  const resetOperation=()=>{operation.current?.controller.abort();operation.current=null;setFeedback(null);};
   const list = useQuery({
     queryKey: ['reception', actor, clinic, 'whatsapp', 'conversations', filter, search, before],
     queryFn: ({ signal }) => whatsappApi.conversations({ filter, search, limit: 50, ...(before ? { before } : {}) }, signal),
@@ -71,10 +72,10 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
   const fresh = list.isSuccess && list.isFetchedAfterMount && !list.isFetching;
   const current = fresh ? list.data.conversations.find(item => item.id === selected) : undefined;
   const nextCursor = fresh ? list.data.nextBefore : null;
-  const claimBusy=feedback?.phase==='sending'||feedback?.phase==='checking';
-  const claimBlocked=claimBusy||feedback?.phase==='unresolved';
-  const goTo=(cursor:string|null)=>{resetClaim();setSelected(null);setBefore(cursor);heading.current?.focus();};
-  const refresh=()=>{resetClaim();setDetailGeneration(generation=>generation+1);if(before)goTo(null);else void list.refetch();};
+  const commandBusy=feedback?.phase==='sending'||feedback?.phase==='checking';
+  const commandBlocked=commandBusy||feedback?.phase==='unresolved';
+  const goTo=(cursor:string|null)=>{resetOperation();setSelected(null);setBefore(cursor);heading.current?.focus();};
+  const refresh=()=>{resetOperation();setDetailGeneration(generation=>generation+1);if(before)goTo(null);else void list.refetch();};
   const isCurrent=(entry:Operation)=>operation.current===entry&&!entry.controller.signal.aborted;
   const reconcile=async(entry:Operation)=>{
     if(!isCurrent(entry)||entry.checking)return;
@@ -91,11 +92,14 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
     setDetailGeneration(generation=>generation+1);
     setFeedback({phase:'done',message:'Dados atualizados. Confira o responsável atual na conversa.',error:false});
   };
-  const claim=async(detail:WhatsAppConversation)=>{
-    if(operation.current||!fresh||!current||selected!==detail.id||current.id!==detail.id||detail.status!=='open'||detail.assignedTo!==null||detail.revision>=2147483647)return;
+  const changeOwner=async(detail:WhatsAppConversation,kind:'assign'|'unassign')=>{
+    if(operation.current||!fresh||!current||selected!==detail.id||current.id!==detail.id||detail.status!=='open'||(kind==='assign'?detail.assignedTo!==null:detail.assignedTo!==actor)||detail.revision>=2147483647)return;
     const entry:Operation={id:detail.id,controller:new AbortController(),checking:false};operation.current=entry;
-    setFeedback({phase:'sending',message:'Assumindo conversa…',error:false});
-    try{await claimWhatsAppConversation({conversationId:detail.id,revision:detail.revision},actor,entry.controller.signal);}
+    setFeedback({phase:'sending',message:kind==='assign'?'Assumindo conversa…':'Devolvendo conversa à fila…',error:false});
+    try{
+      if(kind==='assign')await claimWhatsAppConversation({conversationId:detail.id,revision:detail.revision},actor,entry.controller.signal);
+      else await releaseWhatsAppConversation({conversationId:detail.id,revision:detail.revision,assignedTo:actor},actor,entry.controller.signal);
+    }
     catch(error){
       if(!isCurrent(entry))return;
       if(error instanceof WhatsAppClaimError&&!error.needsRefresh){operation.current=null;setFeedback({phase:'done',message:error.message,error:true});return;}
@@ -110,15 +114,15 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
     <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_auto]">
       <div className="space-y-2 min-w-0">
         <Label htmlFor="wa-filter">Filtrar conversas</Label>
-        <select id="wa-filter" className="block h-11 w-full rounded-md border bg-card px-3 text-sm" value={filter} onChange={event => { resetClaim();setSelected(null); setBefore(null); setFilter(event.target.value as WhatsAppInboxFilter); }}>
+        <select id="wa-filter" className="block h-11 w-full rounded-md border bg-card px-3 text-sm" value={filter} onChange={event => { resetOperation();setSelected(null); setBefore(null); setFilter(event.target.value as WhatsAppInboxFilter); }}>
           <option value="open">Em aberto</option><option value="unassigned">Sem responsável</option><option value="mine">Minhas conversas</option><option value="closed">Encerradas</option>
         </select>
       </div>
-      <form className="grid min-w-0 grid-cols-1 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]" onSubmit={event => { event.preventDefault();resetClaim(); setSelected(null); setBefore(null); setSearch(draft.trim()); }}>
+      <form className="grid min-w-0 grid-cols-1 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]" onSubmit={event => { event.preventDefault();resetOperation(); setSelected(null); setBefore(null); setSearch(draft.trim()); }}>
         <div className="min-w-0 space-y-2"><Label htmlFor="wa-search">Buscar conversa</Label><Input id="wa-search" type="search" maxLength={80} className="h-11" value={draft} onChange={event => setDraft(event.target.value)} placeholder="Nome ou telefone" /></div>
         <Button type="submit" variant="outline" className="h-11">Buscar</Button>
       </form>
-      <Button variant="outline" className="h-11 gap-2 md:col-span-2 xl:col-span-1" disabled={list.isFetching||claimBusy} onClick={refresh}><RefreshCw aria-hidden="true" className="h-4 w-4" />Atualizar conversas</Button>
+      <Button variant="outline" className="h-11 gap-2 md:col-span-2 xl:col-span-1" disabled={list.isFetching||commandBusy} onClick={refresh}><RefreshCw aria-hidden="true" className="h-4 w-4" />Atualizar conversas</Button>
     </div>
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)]">
       <section aria-labelledby="wa-list-heading" className="min-w-0 space-y-3">
@@ -132,7 +136,7 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
         {fresh && <>
           {list.data.conversations.length === 0 && <p className="rounded-lg border p-6 text-sm text-muted-foreground">{before ? 'Nenhuma conversa anterior a este ponto neste filtro.' : 'Nenhuma conversa neste filtro.'}</p>}
           <ul className="space-y-2">{list.data.conversations.map(item => <li key={item.id}>
-            <button type="button" aria-label={'Abrir conversa com ' + (item.profileName || 'contato sem nome')} aria-pressed={selected === item.id} onClick={() => {if(selected!==item.id){resetClaim();setSelected(item.id);}}} className={`w-full rounded-lg border p-4 text-left space-y-2 ${selected === item.id ? 'border-primary bg-primary/5' : 'bg-card hover:bg-muted/60'}`}>
+            <button type="button" aria-label={'Abrir conversa com ' + (item.profileName || 'contato sem nome')} aria-pressed={selected === item.id} onClick={() => {if(selected!==item.id){resetOperation();setSelected(item.id);}}} className={`w-full rounded-lg border p-4 text-left space-y-2 ${selected === item.id ? 'border-primary bg-primary/5' : 'bg-card hover:bg-muted/60'}`}>
               <span className="flex flex-wrap items-start justify-between gap-2"><span className="min-w-0 font-semibold text-sm [overflow-wrap:anywhere]">{item.profileName || 'Contato sem nome'}</span>{item.unreadCount > 0 && <span className="rounded bg-muted px-2 py-1 text-xs">{item.unreadCount} não lidas</span>}</span>
               <span className="block line-clamp-2 text-sm [overflow-wrap:anywhere]">{item.lastMessagePreview || 'Sem prévia de mensagem'}</span>
               <span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">{item.status === 'closed' ? 'Encerrada' : 'Em aberto'} · Fila {item.queue}</span>
@@ -141,8 +145,8 @@ function ConversationList({ actor, clinic }: { actor: string; clinic: string }) 
           </li>)}</ul>
         </>}
       </section>
-      {current&&feedback?.phase!=='checking'&&feedback?.phase!=='unresolved' ? <WhatsAppMessages key={current.id+':'+detailGeneration} generation={detailGeneration} actor={actor} clinic={clinic} conversation={current} claimBusy={claimBusy} claimBlocked={claimBlocked} onClaim={detail=>void claim(detail)} onNavigate={resetClaim} onClose={() => {resetClaim(); setSelected(null); heading.current?.focus(); }} />
-        : selected&&(feedback?.phase==='checking'||feedback?.phase==='unresolved')?<div className="rounded-lg border bg-card p-6 space-y-3 text-sm"><p>O detalhe será exibido após a conferência do responsável.</p><Button variant="outline" onClick={()=>{resetClaim();setSelected(null);heading.current?.focus();}}>Voltar à lista</Button></div>
+      {current&&feedback?.phase!=='checking'&&feedback?.phase!=='unresolved' ? <WhatsAppMessages key={current.id+':'+detailGeneration} generation={detailGeneration} actor={actor} clinic={clinic} conversation={current} commandBusy={commandBusy} commandBlocked={commandBlocked} onClaim={detail=>void changeOwner(detail,'assign')} onRelease={detail=>void changeOwner(detail,'unassign')} onNavigate={resetOperation} onClose={() => {resetOperation(); setSelected(null); heading.current?.focus(); }} />
+        : selected&&(feedback?.phase==='checking'||feedback?.phase==='unresolved')?<div className="rounded-lg border bg-card p-6 space-y-3 text-sm"><p>O detalhe será exibido após a conferência do responsável.</p><Button variant="outline" onClick={()=>{resetOperation();setSelected(null);heading.current?.focus();}}>Voltar à lista</Button></div>
         : <p className="rounded-lg border border-dashed bg-card p-6 text-sm text-muted-foreground">Selecione uma conversa para ler as mensagens.</p>}
     </div>
   </div>;

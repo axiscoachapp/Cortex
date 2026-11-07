@@ -13,9 +13,10 @@ export const ids = {
   contact: '77777777-7777-4777-8777-777777777777',
   case: '88888888-8888-4888-8888-888888888888',
 };
-export async function startReceptionFixture({ whatsappReadReview = false, settingsReview = false,whatsappClaimReview=false } = {}) {
+export async function startReceptionFixture({ whatsappReadReview = false, settingsReview = false,whatsappClaimReview=false,whatsappReleaseReview=false } = {}) {
+  if(whatsappReleaseReview&&(!whatsappReadReview||settingsReview||whatsappClaimReview))throw new Error('WhatsApp release requires isolated WhatsApp reads');
   if(whatsappClaimReview&&(!whatsappReadReview||settingsReview))throw new Error('WhatsApp claim requires isolated WhatsApp reads');
-  const whatsapp = whatsappReadReview ? createWhatsAppReadFixture(ids,{claimReview:whatsappClaimReview}) : null;
+  const whatsapp = whatsappReadReview ? createWhatsAppReadFixture(ids,{claimReview:whatsappClaimReview,releaseReview:whatsappReleaseReview}) : null;
   const settings = settingsReview ? createSettingsReadFixture(ids) : null;
   let teamDirectoryFailure = false;
   let clinicAccessFailure = null;

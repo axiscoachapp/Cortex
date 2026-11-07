@@ -1,0 +1,61 @@
+{
+  "baseline": "2007bec835671865bc33c78fbb3c7625b9a5b527",
+  "scope": "K1/4d release UI",
+  "unit": {
+    "passed": 201,
+    "failed": 0,
+    "files": 5,
+    "newUI": 17,
+    "firstRed": {
+      "total": 16,
+      "failed": 12,
+      "passed": 4
+    }
+  },
+  "fixture": {
+    "tests": 12,
+    "failed": 0,
+    "files": 3,
+    "syntheticOnly": true
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 8,
+    "status": "passed"
+  },
+  "syntax": {
+    "scripts": 5,
+    "status": "passed"
+  },
+  "invalidCliCombinations": 5,
+  "review": "Fresh read-only adversarial review: stale owner assertion corrected; final read including extra detail capture found no remaining concrete issue",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "browser": {
+    "report": "../../2026-11-05/reception-app-audit/whatsapp-release-ui-detail-final/AUDIT.json",
+    "states": 32,
+    "widths": [
+      320,
+      375,
+      1280,
+      1920
+    ],
+    "scalePercent": 135,
+    "sdkVersion": "2.86.0",
+    "frozenSources": 325,
+    "runtimeHashes": 28,
+    "overlays": 2,
+    "cleanupVerified": true,
+    "monitoredRequests": 161,
+    "fixtureCalls": 128,
+    "commands": 12,
+    "applied": 8,
+    "conflicts": 4,
+    "expectedHttpErrors": 8,
+    "expectedConsoleErrors": 8,
+    "jsErrors": 0,
+    "failedRequests": 0,
+    "blockedExternalRequests": 0,
+    "sourceHashesStable": true
+  },
+  "limits": "Only synthetic local transport/UI proof. No actual Meta/network/hosted DB/SQL CAS/RLS/server authorization or concurrency proof; local owner eligibility does not restrict existing broader server policy."
+}
