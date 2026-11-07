@@ -1,6 +1,6 @@
 # Checkpoint do Codex
 
-Atualizado em 2026-11-07 09:47 (America/Sao_Paulo). T48 concluído e K2 priorizado; entrega local em main/axiscoachapp, sem push. SHA final será registrado após o commit desta entrega. Manifesto exato de86caminhos próprios na validação; SaaS raiz +6/+7 preservado por hash.
+Atualizado em 2026-11-07 09:47 (America/Sao_Paulo). T48 concluído e K2 priorizado; entrega local em main/axiscoachapp, sem push. Entrega2cf918684d45b8bc6b82816e4e792ce5bd4bd799;86caminhos conferidos, autor/committer axiscoachapp e índice livre após commit --only. Manifesto exato de86caminhos próprios na validação; SaaS raiz +6/+7 preservado por hash.
 
 T48: consulta de vínculos por instância/ator/clínica/admin ativo, dados/contagens/ações só fresh/idle; contexto cancela só leitura, nova abertura começa na primeira página. Snapshot protege entradas nos editores; signal opcional mantém DTO/corpo/limite50/deadline20s/IDs/guardas. Efeitos já enviados pelos editores continuam separados, sem promessa de rollback. [Provas](../docs/reviews/2026-11-07/contact-link-reads/IMPLEMENTATION.md):12controles+21RED/quatro controles/restauração→150Vitest/dez arquivos/25novos, SDK13grupos/12POST/três hashes memória, tipos reais/lint8/sintaxe3/seis CLI/duas revisões.32estados/60PNGs320–1920/135%,357fontes/40hashes/dois overlays/cleanup;34requests/20fixture/quatro403-console esperados e zero demais falhas/JS/clínico/escritas/reservas/externos. Capturas320/ações375 inspecionadas, preliminares excluídos; contexto/cancelamento só unit/SDK, sem Auth/RLS/SQL real.
 
