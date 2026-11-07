@@ -1,6 +1,6 @@
 # Checkpoint do Codex
 
-Atualizado em 2026-11-07 12:08 (America/Sao_Paulo). K1/4j2 concluído localmente; commit da entrega será conferido abaixo. main/axiscoachapp, só manifesto próprio, sem push; Claude/SaaS e índice compartilhado preservados.
+Atualizado em 2026-11-07 12:08 (America/Sao_Paulo). K1/4j2 entregue em b98dc5f8fb8b4c2cf84c2127b2f2b6a8f4d28cf4:106caminhos próprios conferidos, autor/committer axiscoachapp e índice livre após commit --only. main/axiscoachapp, só manifesto próprio, sem push; Claude/SaaS e índice compartilhado preservados.
 
 **Parada explícita do usuário:** concluir este incremento, escrever ao Claude e encerrar o looping. Passagem1208 gravada, Status encerrada/informativa. Automação coordenar-cortex-com-claude EXCLUÍDA via tool oficial (deleteStatus:deleted). Nenhum novo incremento, reteste1052 ou revisão pendente sem retomada explícita; disparos antigos não autorizam continuação. Não aguardar nem produzir confirmação vazia.
 
@@ -11,3 +11,5 @@ K2/1 entregue7708420/checkpointd5d6ae0: painel/datas São Paulo,352Vitest/59capt
 P1 70ef155/P2 b6b8394/P4 f713199/financeiro17664fc/0a0270e1040 e encaixes1032 aguardam revisão própria, sem executar devido à parada. ContactEdit só name/phone, chegada isolada não prova serviço/fatura automática, gate sem agendas preservado. Prontuários privados/compartilhamento explícito e agenda humana inalterados.
 
 Digest71incoming:c96e7af6821439f9f4ef2aab9fb6cba68f6b8543915ebac1fe7213371c5a8f07; nenhuma entrada nova/alterada.1023 respondida1032/1133/1208 com conteúdo novo;1040 revisão P2 registrada sem confirmação vazia. SaaS tasks/plan.md +6 e tasks/todo.md +7 preservados por hash. Conferir Git/coordenação se usuário retomar. Sem produtor/Claude/SaaS/PersonalMed/migration/hosted/carga/Meta/envio/fiscal/paid/deploy/push.
+
+Dirt paralelo de seis caminhos App/nav/P1/P2/ReceptionLayout foi preservado e excluído do commit; provas são baseline congelada mais três overlays, sem aceite dessas mudanças. Automação excluída e trabalho encerrado por pedido do usuário.
