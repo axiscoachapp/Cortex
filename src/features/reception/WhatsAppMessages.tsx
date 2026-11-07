@@ -5,10 +5,11 @@ import { whatsappApi, type WhatsAppConversation } from './whatsappApi';
 import { clinicDateLabel, clinicTime } from './dates';
 import { WhatsAppBotSession } from './WhatsAppBotSession';
 import {WhatsAppCloseAction} from './WhatsAppCloseAction';
+import {WhatsAppReopenAction} from './WhatsAppReopenAction';
 
 const kindLabels: Record<string, string> = { image: 'Imagem', audio: 'Áudio', video: 'Vídeo', document: 'Documento', sticker: 'Figurinha', location: 'Localização', unsupported: 'Mensagem não disponível' };
 
-export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,onRelease,onCloseConversation,commandKind,commandBusy=false,commandBlocked=false,onNavigate,generation=0 }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void;onClaim?:(conversation:WhatsAppConversation)=>void;onRelease?:(conversation:WhatsAppConversation)=>void;onCloseConversation?:(conversation:WhatsAppConversation)=>void;commandKind?:'assign'|'unassign'|'close';commandBusy?:boolean;commandBlocked?:boolean;onNavigate?:()=>void;generation?:number }) {
+export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,onRelease,onCloseConversation,onReopenConversation,commandKind,commandBusy=false,commandBlocked=false,onNavigate,generation=0 }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void;onClaim?:(conversation:WhatsAppConversation)=>void;onRelease?:(conversation:WhatsAppConversation)=>void;onCloseConversation?:(conversation:WhatsAppConversation)=>void;onReopenConversation?:(conversation:WhatsAppConversation)=>void;commandKind?:'assign'|'unassign'|'close'|'reopen';commandBusy?:boolean;commandBlocked?:boolean;onNavigate?:()=>void;generation?:number }) {
   const region = useRef<HTMLElement>(null);
   const pageHeading=useRef<HTMLHeadingElement>(null);
   const [before,setBefore]=useState<string|null>(null);
@@ -57,6 +58,7 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
       {onClaim&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===null&&messages.data.conversation.revision<2147483647&&<Button className="h-auto min-h-11 max-w-full whitespace-normal" disabled={commandBlocked} onClick={()=>onClaim(messages.data.conversation)}>{commandBusy&&commandKind==='assign'?'Assumindo…':'Assumir conversa'}</Button>}
       {onRelease&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.revision<2147483647&&<Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" disabled={commandBlocked} onClick={()=>onRelease(messages.data.conversation)}>{commandBusy&&commandKind==='unassign'?'Devolvendo…':'Devolver à fila'}</Button>}
       {onCloseConversation&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.revision<2147483647&&<WhatsAppCloseAction key={messages.data.conversation.id+':'+messages.data.conversation.revision+':'+messages.data.readVersion} conversation={messages.data.conversation} disabled={commandBlocked} busy={commandBusy&&commandKind==='close'} onConfirm={onCloseConversation}/>}
+      {onReopenConversation&&messages.data.conversation.status==='closed'&&(messages.data.conversation.assignedTo===null||messages.data.conversation.assignedTo===actor)&&messages.data.conversation.revision<2147483647&&<WhatsAppReopenAction key={messages.data.conversation.id+':'+messages.data.conversation.revision+':'+messages.data.readVersion+':'+messages.data.conversation.assignedTo} conversation={messages.data.conversation} disabled={commandBlocked} busy={commandBusy&&commandKind==='reopen'} onConfirm={onReopenConversation}/>}
       <WhatsAppBotSession key={botReadGeneration} generation={botReadGeneration} actor={actor} clinic={clinic} conversationId={messages.data.conversation.id} />
       {messages.data.conversation.optedOut && <p className="rounded-md bg-muted p-3 text-sm">Este contato pediu para não receber lembretes.</p>}
     </>}

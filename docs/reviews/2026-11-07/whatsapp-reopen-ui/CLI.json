@@ -1,0 +1,38 @@
+{
+  "passed": 7,
+  "invalidCombinations": [
+    [
+      "--check-whatsapp-reopen"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-reopen",
+      "--check-whatsapp-claim"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-reopen",
+      "--check-whatsapp-release"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-reopen",
+      "--check-whatsapp-close"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-reopen",
+      "--check-whatsapp-history"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-reopen",
+      "--check-whatsapp-list"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-reopen",
+      "--check-whatsapp-bot-read"
+    ]
+  ]
+}

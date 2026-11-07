@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "baseline": "1c52f18d0f39b4a4669d8408aad6ffb6958a1110",
+  "omittedComponent": "src/features/reception/WhatsAppReopenAction.tsx",
+  "rejectedBeforeBrowser": true
+}

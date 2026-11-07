@@ -1,0 +1,120 @@
+✖ reopen fixture requires isolated opt-in and refuses claim/injected authority (46.8952ms)
+✖ reopen fixture preserves owner, links and unread count while reopening; reset preserves ledger (4.2047ms)
+✖ reopen fixture models conflict, forbidden and applied-but-unconfirmed reply (0.561ms)
+✖ reopen fixture models the broader producer policy separately from local UI eligibility (0.7224ms)
+✖ reopen fixture preserves an explicitly unassigned conversation (0.6176ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 221.9408
+
+✖ failing tests:
+
+test at scripts\fixtures\whatsapp-reopen-api.node-test.mjs:7:1
+✖ reopen fixture requires isolated opt-in and refuses claim/injected authority (46.8952ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async refused (file:///E:/Work/Cortex/cortex/scripts/fixtures/whatsapp-reopen-api.node-test.mjs:5:45)
+      at async TestContext.<anonymous> (file:///E:/Work/Cortex/cortex/scripts/fixtures/whatsapp-reopen-api.node-test.mjs:8:2)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /reopen requires/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts\fixtures\whatsapp-reopen-api.node-test.mjs:17:1
+✖ reopen fixture preserves owner, links and unread count while reopening; reset preserves ledger (4.2047ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+    {
+      data: {
+  +     code: 'invalid',
+  +     error: 'Synthetic read failure'
+  -     assignedTo: '33333333-3333-4333-8333-333333333333',
+  -     revision: 2,
+  -     status: 'open'
+      },
+  +   status: 400
+  -   status: 200
+    }
+
+      at TestContext.<anonymous> (file:///E:/Work/Cortex/cortex/scripts/fixtures/whatsapp-reopen-api.node-test.mjs:19:9)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { status: 400, data: { code: 'invalid', error: 'Synthetic read failure' } },
+    expected: { status: 200, data: { revision: 2, status: 'open', assignedTo: '33333333-3333-4333-8333-333333333333' } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\fixtures\whatsapp-reopen-api.node-test.mjs:23:1
+✖ reopen fixture models conflict, forbidden and applied-but-unconfirmed reply (0.561ms)
+  TypeError: fixture.setReopenMode is not a function
+      at TestContext.<anonymous> (file:///E:/Work/Cortex/cortex/scripts/fixtures/whatsapp-reopen-api.node-test.mjs:24:75)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+
+test at scripts\fixtures\whatsapp-reopen-api.node-test.mjs:29:1
+✖ reopen fixture models the broader producer policy separately from local UI eligibility (0.7224ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  400 !== 200
+
+      at TestContext.<anonymous> (file:///E:/Work/Cortex/cortex/scripts/fixtures/whatsapp-reopen-api.node-test.mjs:29:214)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 400,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\fixtures\whatsapp-reopen-api.node-test.mjs:31:1
+✖ reopen fixture preserves an explicitly unassigned conversation (0.6176ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  'open' !== 'closed'
+
+      at TestContext.<anonymous> (file:///E:/Work/Cortex/cortex/scripts/fixtures/whatsapp-reopen-api.node-test.mjs:31:224)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'open',
+    expected: 'closed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

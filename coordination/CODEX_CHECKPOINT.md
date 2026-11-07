@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-07 04:47. **K1/4h — confirmar reabertura:** [provas](../docs/reviews/2026-11-07/whatsapp-reopen-ui/IMPLEMENTATION.md). Encerrada fresca própria/nula; confirmação mantém dono/ausência, cancelar/Escape sem envio/assumir automático. Key id/revisão/readVersion/owner e exclusão/conferência/gerações.344Vitest/nove arquivos+22Node/tipos/lint/sintaxe/seteflags/omissão snapshot/revisão;60estados/68PNGs320–1920/135%,333fontes/30hashes/três overlays/cleanup.239requests/16reopen só mock (12aplicados/4conflitos), oito403/409-console esperados; seis leituras conversations ERR_ABORTED null/200 preservadas/classificadas, causa indeterminada, zero demais falhas/JS/clínico/externos. Capturas320 inspecionadas; preliminares excluídas, não declarar zero failedRequests.
+
+Próximos: transferência/outros comandos em contrato próprio ou MFA/K7. Não prova política servidor/SQL/CAS/Meta; produtor intacto. Nenhuma mensagem Claude nova:2152 atendida,0419 informativa encerrada; C4/C5 após SHA e dois RED C5 fora da suíte dirigida. Automação ACTIVE; main/axiscoachapp sem push/hosted/carga, preservar Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md.
+
+---
+
 Entrega K1/4g: `ffc1f43cad2fe35a28b4049dd92432b467cfac80`, main/axiscoachapp (autor e committer), sem push. Índice livre após commit; alterações SaaS em `tasks/plan.md` e `tasks/todo.md` preservadas. Adaptador de reabertura concluído; botão/confirmação K1/4h pendentes.
 
 Atualizado em 2026-11-07 04:19. **K1/4g — adaptador reopen:** [provas](../docs/reviews/2026-11-07/whatsapp-reopen/IMPLEMENTATION.md). Encerrada própria/sem responsável explícito; corpo act/reopen/conversationId/revision, recibo open/revisão+1/dono ou null preservados. Sem assumir/transferir/retry; needsRefresh após início inconclusivo, snapshot validado imune a mutação do input.51RED→223Vitest/cinco arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória doze verificações/onze POST/três hashes estáveis/zero rede. Sem UI/banco/autorização/CAS real; quatro tempos fora do recibo não conferidos.

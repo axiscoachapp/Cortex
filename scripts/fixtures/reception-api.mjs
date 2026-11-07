@@ -13,11 +13,12 @@ export const ids = {
   contact: '77777777-7777-4777-8777-777777777777',
   case: '88888888-8888-4888-8888-888888888888',
 };
-export async function startReceptionFixture({ whatsappReadReview = false, settingsReview = false,whatsappClaimReview=false,whatsappReleaseReview=false,whatsappCloseReview=false } = {}) {
+export async function startReceptionFixture({ whatsappReadReview = false, settingsReview = false,whatsappClaimReview=false,whatsappReleaseReview=false,whatsappCloseReview=false,whatsappReopenReview=false } = {}) {
+  if(whatsappReopenReview&&(!whatsappReadReview||settingsReview||whatsappClaimReview||whatsappReleaseReview||whatsappCloseReview))throw new Error('WhatsApp reopen requires isolated WhatsApp reads');
   if(whatsappCloseReview&&(!whatsappReadReview||settingsReview||whatsappClaimReview||whatsappReleaseReview))throw new Error('WhatsApp close requires isolated WhatsApp reads');
   if(whatsappReleaseReview&&(!whatsappReadReview||settingsReview||whatsappClaimReview))throw new Error('WhatsApp release requires isolated WhatsApp reads');
   if(whatsappClaimReview&&(!whatsappReadReview||settingsReview))throw new Error('WhatsApp claim requires isolated WhatsApp reads');
-  const whatsapp = whatsappReadReview ? createWhatsAppReadFixture(ids,{claimReview:whatsappClaimReview,releaseReview:whatsappReleaseReview,closeReview:whatsappCloseReview}) : null;
+  const whatsapp = whatsappReadReview ? createWhatsAppReadFixture(ids,{claimReview:whatsappClaimReview,releaseReview:whatsappReleaseReview,closeReview:whatsappCloseReview,reopenReview:whatsappReopenReview}) : null;
   const settings = settingsReview ? createSettingsReadFixture(ids) : null;
   let teamDirectoryFailure = false;
   let clinicAccessFailure = null;

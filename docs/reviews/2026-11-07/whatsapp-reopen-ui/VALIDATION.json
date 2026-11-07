@@ -1,0 +1,106 @@
+{
+  "baseline": "1c52f18d0f39b4a4669d8408aad6ffb6958a1110",
+  "scope": "K1/4h human reopen confirmation UI",
+  "unit": {
+    "passed": 344,
+    "failed": 0,
+    "files": 9,
+    "newUI": 23,
+    "ownershipRed": {
+      "failed": 1,
+      "result": "test reached default timeout waiting for old confirmation to disappear"
+    },
+    "preliminaryInvalidFixtureExcluded": true
+  },
+  "fixture": {
+    "passed": 22,
+    "failed": 0,
+    "files": 5
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 9,
+    "status": "passed"
+  },
+  "syntax": {
+    "scripts": 5,
+    "status": "passed"
+  },
+  "invalidCliCombinations": 7,
+  "omittedDialogSnapshotRejected": true,
+  "review": "Fresh read-only adversarial review: snapshot dependency omission fixed; bounded read-abort classification reviewed; no remaining concrete issue",
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "browser": {
+    "report": "../../2026-11-05/reception-app-audit/whatsapp-reopen-ui-classified-final/AUDIT.json",
+    "states": 60,
+    "pngs": 68,
+    "widths": [
+      320,
+      375,
+      1280,
+      1920
+    ],
+    "scalePercent": 135,
+    "frozenSources": 333,
+    "runtimeHashes": 30,
+    "overlays": 3,
+    "cleanupVerified": true,
+    "requests": 239,
+    "fixtureCalls": 180,
+    "commands": 16,
+    "applied": 12,
+    "conflicts": 4,
+    "expectedHttpErrors": 8,
+    "expectedConsoleErrors": 8,
+    "jsErrors": 0,
+    "rawFailedRequests": 6,
+    "observedReadCancellations": [
+      {
+        "method": "POST",
+        "path": "/functions/v1/whatsapp-api",
+        "status": null,
+        "reason": "net::ERR_ABORTED",
+        "action": "conversations"
+      },
+      {
+        "method": "POST",
+        "path": "/functions/v1/whatsapp-api",
+        "status": 200,
+        "reason": "net::ERR_ABORTED",
+        "action": "conversations"
+      },
+      {
+        "method": "POST",
+        "path": "/functions/v1/whatsapp-api",
+        "status": null,
+        "reason": "net::ERR_ABORTED",
+        "action": "conversations"
+      },
+      {
+        "method": "POST",
+        "path": "/functions/v1/whatsapp-api",
+        "status": 200,
+        "reason": "net::ERR_ABORTED",
+        "action": "conversations"
+      },
+      {
+        "method": "POST",
+        "path": "/functions/v1/whatsapp-api",
+        "status": 200,
+        "reason": "net::ERR_ABORTED",
+        "action": "conversations"
+      },
+      {
+        "method": "POST",
+        "path": "/functions/v1/whatsapp-api",
+        "status": 200,
+        "reason": "net::ERR_ABORTED",
+        "action": "conversations"
+      }
+    ],
+    "unexpectedRequestFailures": 0,
+    "externalRequests": 0,
+    "sourceHashesStable": true
+  },
+  "limits": "Synthetic UI/App/SDK proof only; no actual SQL CAS/RLS/server authorization/concurrency/Meta proof. Six conversations reads aborted with exact ERR_ABORTED and status null/200 are preserved in raw report and classified separately; cause undetermined. No write cancellation is accepted."
+}
