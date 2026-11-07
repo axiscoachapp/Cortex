@@ -1,0 +1,40 @@
+✔ claim fixture is opt-in and refuses target/actor injection (8.1522ms)
+✔ claim fixture models CAS, unconfirmed reply and competitor changes without external operations (0.9613ms)
+✔ close fixture requires isolated opt-in and refuses claim/injected authority (9.6666ms)
+✔ close fixture preserves owner and links, closes and clears unread count; reset preserves ledger (1.4092ms)
+✔ close fixture models conflict, forbidden and applied-but-unconfirmed reply (2.2162ms)
+✔ close fixture models the broader producer policy separately from local UI eligibility (0.8545ms)
+✔ queue fixture changes only queue and revision and never invents queue in act receipt (6.1318ms)
+✔ queue fixture requires exclusive opt-in and rejects injected authority (4.2161ms)
+✔ queue fixture models forbidden, conflict, unconfirmed and a subsequent different queue (1.4491ms)
+✔ queue fixture keeps broader producer policy separate from local UI eligibility (0.9283ms)
+✔ conversation paging is opt-in, scoped by filter/search and preserves tied cursor tokens (5.2854ms)
+✔ fixture returns only the requested filter and conversation (0.7067ms)
+✔ fixture refuses writes, foreign actors and authority injection (0.7854ms)
+✔ bot session is a scoped read and distinguishes missing path from a refused read (0.9287ms)
+✔ controlled refusals and malformed DTOs restore without modifying rows (1.0022ms)
+✔ new HTTP fixture remains opt-in and only enables synthetic reads (129.3101ms)
+✔ history is opt-in, bounded and advances by the full timestamp/id token (1.3288ms)
+✔ release fixture requires isolated opt-in and refuses claim/injected authority (7.0906ms)
+✔ release fixture only clears owner and increments revision; reset preserves ledger (0.8878ms)
+✔ release fixture models conflict, forbidden and applied-but-unconfirmed reply (0.9187ms)
+✔ reopen fixture requires isolated opt-in and refuses claim/injected authority (11.5967ms)
+✔ reopen fixture preserves owner, links and unread count while reopening; reset preserves ledger (1.0387ms)
+✔ reopen fixture models conflict, forbidden and applied-but-unconfirmed reply (1.7168ms)
+✔ reopen fixture models the broader producer policy separately from local UI eligibility (0.9121ms)
+✔ reopen fixture preserves an explicitly unassigned conversation (0.698ms)
+✔ reopen of an already open fixture row preserves revision instead of inventing success (1.9842ms)
+✔ withdrawal fixture revokes only matching phone variants without changing identity or inventing receipt flags (5.8752ms)
+✔ withdrawal fixture requires exclusive opt-in and rejects authority or extra target flags (4.2854ms)
+✔ withdrawal fixture models forbidden, conflict, unconfirmed and a later independent consent change (1.5677ms)
+✔ withdrawal fixture keeps broader producer policy separate from local ownership eligibility (0.6606ms)
+✔ withdrawal fixture changes a different phone without revoking the original phone variants (0.5292ms)
+✔ subsequent consent change stays scoped to its target phone after another phone was withdrawn (0.5535ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 478.6628

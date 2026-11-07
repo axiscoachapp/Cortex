@@ -1,5 +1,11 @@
 # Checkpoint do Codex
 
+Atualizado em 2026-11-07 06:20. **K1/4n — retirar autorização na UI:** [provas](../docs/reviews/2026-11-07/whatsapp-revoke-consent-ui/IMPLEMENTATION.md). Aberta/própria/consentida/telefone conhecido, confirmação clara por número/cancelar/Escape; leitura obrigatória, sem flags otimistas. Key inclui telefone/flags/readVersion; lista agora tem versão local e snapshot na key do detalhe. Dois P2 corrigidos (lista/escopo da fixture),2RED válidos/2GREEN após notificações e restauração por hash.579Vitest/14arquivos+32Node/tipos/lint/sintaxe/noveflags/omissão snapshot/três revisões.52estados/56PNGs320–1920/135%,343fontes/32hashes/três overlays/cleanup,240requests/16revoke mock (12aplicados/4conflitos); oito403/409-console esperados, zero demais falhas/JS/clínico/externos. Capturas320/1920 inspecionadas, preliminares excluídos.
+
+Próximos: outros comandos em contrato próprio/MFA/K7;4j depende do catálogo pedido0506. Nenhum incoming Claude novo:2152 atendida/0548 informativa, sem confirmação repetida; C4/C5 após SHAs/dois RED C5 fora da suíte dirigida. Sem produtor/SQL/CAS/autorização/retirada real, Meta/hosted/carga/push. Automação ACTIVE; main/axiscoachapp, preservar Claude/SaaS/PersonalMed e dirt em tasks/plan.md/tasks/todo.md.
+
+---
+
 Entrega K1/4m: `197a1b56b26ec78c7927d63e5201628715d17475`, main/axiscoachapp (autor e committer), sem push. Só13caminhos próprios, índice livre/dirt SaaS preservado. Adaptador de retirada de autorização entregue; confirmação/conferência na UI4n é o próximo recorte,4j/catálogo separado.
 
 Atualizado em 2026-11-07 05:48. **K1/4m — retirar autorização:** [provas](../docs/reviews/2026-11-07/whatsapp-revoke-consent/IMPLEMENTATION.md). Adaptador aberta/própria/consented true; corpo act/revoke_opt_in/tuple. Recibo omite flags, sempre needsRefresh:true, sem retirada inferida/retry.55RED→395Vitest/oito arquivos/tipos/lint/sintaxe/revisão; SDK2.86 em memória onze grupos/dez POST/três hashes estáveis/zero rede. Sem UI/produtor/banco/autorização/CAS/retirada real.

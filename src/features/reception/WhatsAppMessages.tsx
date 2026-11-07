@@ -7,10 +7,11 @@ import { WhatsAppBotSession } from './WhatsAppBotSession';
 import {WhatsAppCloseAction} from './WhatsAppCloseAction';
 import {WhatsAppReopenAction} from './WhatsAppReopenAction';
 import {WhatsAppQueueAction} from './WhatsAppQueueAction';
+import {WhatsAppRevokeConsentAction} from './WhatsAppRevokeConsentAction';
 
 const kindLabels: Record<string, string> = { image: 'Imagem', audio: 'Áudio', video: 'Vídeo', document: 'Documento', sticker: 'Figurinha', location: 'Localização', unsupported: 'Mensagem não disponível' };
 
-export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,onRelease,onCloseConversation,onReopenConversation,onSetQueue,commandKind,commandBusy=false,commandBlocked=false,onNavigate,generation=0 }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void;onClaim?:(conversation:WhatsAppConversation)=>void;onRelease?:(conversation:WhatsAppConversation)=>void;onCloseConversation?:(conversation:WhatsAppConversation)=>void;onReopenConversation?:(conversation:WhatsAppConversation)=>void;onSetQueue?:(conversation:WhatsAppConversation,queue:string)=>void;commandKind?:'assign'|'unassign'|'close'|'reopen'|'queue';commandBusy?:boolean;commandBlocked?:boolean;onNavigate?:()=>void;generation?:number }) {
+export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,onRelease,onCloseConversation,onReopenConversation,onSetQueue,onRevokeConsent,commandKind,commandBusy=false,commandBlocked=false,onNavigate,generation=0 }: { actor: string; clinic: string; conversation: WhatsAppConversation; onClose: () => void;onClaim?:(conversation:WhatsAppConversation)=>void;onRelease?:(conversation:WhatsAppConversation)=>void;onCloseConversation?:(conversation:WhatsAppConversation)=>void;onReopenConversation?:(conversation:WhatsAppConversation)=>void;onSetQueue?:(conversation:WhatsAppConversation,queue:string)=>void;onRevokeConsent?:(conversation:WhatsAppConversation)=>void;commandKind?:'assign'|'unassign'|'close'|'reopen'|'queue'|'revoke_consent';commandBusy?:boolean;commandBlocked?:boolean;onNavigate?:()=>void;generation?:number }) {
   const region = useRef<HTMLElement>(null);
   const pageHeading=useRef<HTMLHeadingElement>(null);
   const [before,setBefore]=useState<string|null>(null);
@@ -24,6 +25,8 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
     retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
   const fresh = messages.isSuccess && messages.isFetchedAfterMount && !messages.isFetching;
+  const phone=fresh?messages.data.conversation.waId:null;
+  const hasPhone=typeof phone==='string'&&phone.length>=7&&phone.length<=15&&!/[^0-9]/.test(phone);
   const nextCursor=fresh?messages.data.nextBefore:null;
   const retry=()=>{
     // A new generation cannot join a bot read started before this message refresh,
@@ -56,13 +59,15 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
       <p className="text-sm [overflow-wrap:anywhere]">Fila atual: <strong>{messages.data.conversation.queue}</strong></p>
       <p className="text-sm">Situação atual: <strong>{messages.data.conversation.status==='closed'?'Encerrada':'Em aberto'}</strong></p>
       <p className="text-sm">Responsável atual: <strong>{messages.data.conversation.assignedTo===null?'Sem responsável':messages.data.conversation.assignedTo===actor?'Você':'Outra pessoa'}</strong></p>
+      <p className="text-sm">Autorização de lembretes: <strong>{messages.data.conversation.consented?'Vigente':'Não vigente'}</strong></p>
       {onClaim&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===null&&messages.data.conversation.revision<2147483647&&<Button className="h-auto min-h-11 max-w-full whitespace-normal" disabled={commandBlocked} onClick={()=>onClaim(messages.data.conversation)}>{commandBusy&&commandKind==='assign'?'Assumindo…':'Assumir conversa'}</Button>}
       {onRelease&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.revision<2147483647&&<Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" disabled={commandBlocked} onClick={()=>onRelease(messages.data.conversation)}>{commandBusy&&commandKind==='unassign'?'Devolvendo…':'Devolver à fila'}</Button>}
       {onCloseConversation&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.revision<2147483647&&<WhatsAppCloseAction key={messages.data.conversation.id+':'+messages.data.conversation.revision+':'+messages.data.readVersion} conversation={messages.data.conversation} disabled={commandBlocked} busy={commandBusy&&commandKind==='close'} onConfirm={onCloseConversation}/>}
       {onReopenConversation&&messages.data.conversation.status==='closed'&&(messages.data.conversation.assignedTo===null||messages.data.conversation.assignedTo===actor)&&messages.data.conversation.revision<2147483647&&<WhatsAppReopenAction key={messages.data.conversation.id+':'+messages.data.conversation.revision+':'+messages.data.readVersion+':'+messages.data.conversation.assignedTo} conversation={messages.data.conversation} disabled={commandBlocked} busy={commandBusy&&commandKind==='reopen'} onConfirm={onReopenConversation}/>}
       {onSetQueue&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.revision<2147483647&&<WhatsAppQueueAction key={messages.data.conversation.id+':'+messages.data.conversation.revision+':'+messages.data.readVersion+':'+messages.data.conversation.assignedTo+':'+messages.data.conversation.queue} conversation={messages.data.conversation} disabled={commandBlocked} busy={commandBusy&&commandKind==='queue'} onConfirm={onSetQueue}/>}
+      {onRevokeConsent&&hasPhone&&messages.data.conversation.status==='open'&&messages.data.conversation.assignedTo===actor&&messages.data.conversation.consented&&messages.data.conversation.revision<2147483647&&<WhatsAppRevokeConsentAction key={messages.data.conversation.id+':'+messages.data.conversation.revision+':'+messages.data.readVersion+':'+messages.data.conversation.assignedTo+':'+messages.data.conversation.waId+':'+messages.data.conversation.consented+':'+messages.data.conversation.optedOut} conversation={messages.data.conversation} disabled={commandBlocked} busy={commandBusy&&commandKind==='revoke_consent'} onConfirm={onRevokeConsent}/>}
       <WhatsAppBotSession key={botReadGeneration} generation={botReadGeneration} actor={actor} clinic={clinic} conversationId={messages.data.conversation.id} />
-      {messages.data.conversation.optedOut && <p className="rounded-md bg-muted p-3 text-sm">Este contato pediu para não receber lembretes.</p>}
+      {messages.data.conversation.optedOut && <p className="rounded-md bg-muted p-3 text-sm">Este telefone está marcado para não receber lembretes.</p>}
     </>}
     <h3 ref={pageHeading} tabIndex={-1} className="font-semibold outline-none">Mensagens da conversa</h3>
     {before!==null&&<p className="text-sm text-muted-foreground">Página de mensagens anteriores.</p>}

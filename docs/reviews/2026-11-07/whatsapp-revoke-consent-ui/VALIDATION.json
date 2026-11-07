@@ -1,0 +1,80 @@
+{
+  "baseline": "eacf79d49e430f69c35bcfa8eab7b438fab285ac",
+  "scope": "K1/4n withdrawal confirmation UI with mandatory fresh read-back",
+  "unit": {
+    "passed": 579,
+    "failed": 0,
+    "newUiTests": 36,
+    "files": 14,
+    "directedInitialRed": 1,
+    "validListControlRed": 2
+  },
+  "fixture": {
+    "passed": 32,
+    "failed": 0,
+    "files": 7,
+    "directedInitialRed": 1,
+    "wrongPhoneScopeRed": 1,
+    "textTrailingWhitespaceNormalized": true
+  },
+  "browser": {
+    "raw": "docs/reviews/2026-11-05/reception-app-audit/whatsapp-revoke-consent-ui-reviewed-final/AUDIT.json",
+    "states": 52,
+    "pngs": 56,
+    "widths": [
+      320,
+      375,
+      1280,
+      1920
+    ],
+    "scalePercent": 135,
+    "frozenSources": 343,
+    "runtimeHashes": 32,
+    "overlays": 3,
+    "requests": 240,
+    "fixtureCalls": 180,
+    "commands": 16,
+    "applied": 12,
+    "conflicts": 4,
+    "expectedHttp403": 4,
+    "expectedHttp409": 4,
+    "expectedConsoleErrors": 8,
+    "jsErrors": 0,
+    "failedRequests": 0,
+    "externalRequests": 0,
+    "cleanupVerified": true,
+    "manualImagesInspected": [
+      "confirmation-320-actions",
+      "confirmation-1920"
+    ]
+  },
+  "typescript": "passed",
+  "lint": {
+    "files": 9,
+    "status": "passed; revised asynchronous test rechecked"
+  },
+  "syntax": {
+    "scripts": 5,
+    "status": "passed"
+  },
+  "cli": {
+    "invalidCombinationsRejected": 9,
+    "snapshotComponentOmissionRejected": true
+  },
+  "review": {
+    "cycles": 3,
+    "actionable": [
+      "list-only change/coalesced refresh retained confirmation; version local list + snapshot detail key added",
+      "fixture regranted used unrelated phone variants; derive variants from row target"
+    ],
+    "testCorrection": "original immediate list assertions excluded; waited assertions validated by 2RED on controlled old source and2GREEN on fixed source; restored byte-for-byte",
+    "final": "No additional findings after read-only reconciliation"
+  },
+  "crossModel": "Cross-model skipped: non-interactive context.",
+  "excluded": [
+    "initial52-state browser before list/scope review corrections",
+    "initial577-test run; later full run with two immediate asynchronous assertions failed and is not final GREEN",
+    "original synchronous LIST_RED assertions: inconclusive"
+  ],
+  "limits": "Synthetic UI/HTTP only. No producer authorization/SQL CAS/RLS/concurrency/real withdrawal proof. Broader writer policy unchanged. No Meta/hosted/carga/push. C5 RED cases excluded, no global Vitest green claim."
+}

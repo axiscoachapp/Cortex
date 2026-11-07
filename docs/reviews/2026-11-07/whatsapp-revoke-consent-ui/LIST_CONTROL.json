@@ -1,0 +1,18 @@
+{
+  "syntheticOnly": true,
+  "source": "src/features/reception/WhatsAppInbox.tsx",
+  "control": "remove only list read version and selected-snapshot detail key",
+  "properAsyncAssertions": "waitFor timeout2000; two original immediate assertions excluded as inconclusive",
+  "fixedSourceSha256": "c011c51f8abecd34e95b5d8d576cf03b7b60eb4e935868697260b4eed1882df3",
+  "controlSourceSha256": "a952e689e511ae825ebb206d04578ed2415f0ef437005b7e7af0e99fab6c7f95",
+  "restoredSourceSha256": "c011c51f8abecd34e95b5d8d576cf03b7b60eb4e935868697260b4eed1882df3",
+  "controlledOldBehavior": {
+    "failed": 2,
+    "passed": 0
+  },
+  "fixedBehavior": {
+    "passed": 2,
+    "failed": 0
+  },
+  "restoredBeforeOtherChecks": true
+}

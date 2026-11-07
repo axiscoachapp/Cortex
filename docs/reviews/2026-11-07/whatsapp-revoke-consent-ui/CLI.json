@@ -1,0 +1,49 @@
+{
+  "passed": 9,
+  "invalidCombinations": [
+    [
+      "--check-whatsapp-revoke-consent"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-revoke-consent",
+      "--check-whatsapp-claim"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-revoke-consent",
+      "--check-whatsapp-release"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-revoke-consent",
+      "--check-whatsapp-close"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-revoke-consent",
+      "--check-whatsapp-reopen"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-revoke-consent",
+      "--check-whatsapp-queue"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-revoke-consent",
+      "--check-whatsapp-history"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-revoke-consent",
+      "--check-whatsapp-list"
+    ],
+    [
+      "--only=whatsapp-read",
+      "--check-whatsapp-revoke-consent",
+      "--check-whatsapp-bot-read"
+    ]
+  ],
+  "snapshotOmissionRejectedBeforeBrowser": true
+}

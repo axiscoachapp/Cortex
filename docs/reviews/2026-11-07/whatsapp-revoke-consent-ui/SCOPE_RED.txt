@@ -1,0 +1,42 @@
+✖ subsequent consent change stays scoped to its target phone after another phone was withdrawn (7.3694ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 198.0492
+
+✖ failing tests:
+
+test at scripts\fixtures\whatsapp-revoke-consent-api.node-test.mjs:12:1
+✖ subsequent consent change stays scoped to its target phone after another phone was withdrawn (7.3694ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+    {
+      assignedAt: null,
+      assignedTo: '33333333-3333-4333-8333-333333333333',
+      caseId: null,
+      closedAt: null,
+  +   consented: true,
+  -   consented: false,
+      contactId: null,
+      firstResponseAt: null,
+      id: 'a1000000-0000-4000-8000-000000000001',
+      lastInboundAt: '2026-11-06T18:30:00.123456+00:00',
+      lastMessageAt: '2026-11-06T18:30:00.123456+00:00',
+
+      at TestContext.<anonymous> (file:///E:/Work/Cortex/cortex/scripts/fixtures/whatsapp-revoke-consent-api.node-test.mjs:12:459)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.start (node:internal/test_runner/test:1003:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { waId: '5511900000000', contactId: null, caseId: null, queue: 'agendamento', status: 'open', assignedTo: '33333333-3333-4333-8333-333333333333', assignedAt: null, openedAt: '2026-11-06T18:30:00.123456+00:00', firstResponseAt: null, closedAt: null, lastInboundAt: '2026-11-06T18:30:00.123456+00:00', windowOpenUntil: '2026-11-06T18:30:00.123456+00:00', lastMessageAt: '2026-11-06T18:30:00.123456+00:00', lastMessagePreview: 'Prévia sintética de atendimento', unreadCount: 2, optedOut: true, consented: true, revision: 2, id: 'a1000000-0000-4000-8000-000000000001', profileName: 'Contato sintético A · PerfilSintéticoLongoPerfilSintéticoLongoPerfilSintéticoLongoPerfilSintéticoLongoPerfilSintéticoLongoPerfilSintéticoLongoPerfilSintéticoLongo' },
+    expected: { waId: '5511900000000', contactId: null, caseId: null, queue: 'agendamento', status: 'open', assignedTo: '33333333-3333-4333-8333-333333333333', assignedAt: null, openedAt: '2026-11-06T18:30:00.123456+00:00', firstResponseAt: null, closedAt: null, lastInboundAt: '2026-11-06T18:30:00.123456+00:00', windowOpenUntil: '2026-11-06T18:30:00.123456+00:00', lastMessageAt: '2026-11-06T18:30:00.123456+00:00', lastMessagePreview: 'Prévia sintética de atendimento', unreadCount: 2, optedOut: true, consented: false, revision: 2, id: 'a1000000-0000-4000-8000-000000000001', profileName: 'Contato sintético A · PerfilSintéticoLongoPerfilSintéticoLongoPerfilSintéticoLongoPerfilSintéticoLongoPerfilSintéticoLongoPerfilSintéticoLongoPerfilSintéticoLongo' },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
