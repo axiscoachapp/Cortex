@@ -48,7 +48,7 @@ function answer(role: 'admin' | 'reception' | 'doctor', extra: Record<string, un
     const data: Record<string, unknown> = {
       state: state(role), prices: { prices: [price] },
       toBill: { items: [{ appointmentId: APPT, doctorId: DOCTOR, start: '2026-11-06T13:00:00Z', type: 'novo', contactId: 'e9700000-0000-4000-8000-000000000001',
-        patientName: 'Paciente Exemplo', consultationType: '1', coverages: [{ payerId: PAYER, cardNumber: '0001 2345', cardValidUntil: null, plan: '' }], intake: null }] },
+        patientName: 'Paciente Exemplo', consultationType: '1', attendance: 'done', coverages: [{ payerId: PAYER, cardNumber: '0001 2345', cardValidUntil: null, plan: '' }], intake: null }] },
       charges: { charges: [] }, cash: { payments: [], expenses: [] }, batches: { batches: [] }, openForBatch: { charges: [] },
       report: { totals: { count: 0, charged: 0, paid: 0, denied: 0, open: 0 }, doctors: [], payers: [], denials: [] },
       createCharge: charge({ status: 'open' }), ...extra,

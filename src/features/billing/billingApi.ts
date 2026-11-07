@@ -62,6 +62,8 @@ export interface Batch {
 export interface ToBillItem {
   appointmentId: string; doctorId: string; start: string; type: string | null; contactId: string | null; patientName: string;
   consultationType: '1' | '2';
+  /** done: the visit was finished; checked_in: only the arrival was recorded. */
+  attendance: 'done' | 'checked_in';
   coverages: Array<{ payerId: string; cardNumber: string; cardValidUntil: string | null; plan: string }>;
   intake: { payer?: string; card?: string; validUntil?: string; type?: string } | null;
 }

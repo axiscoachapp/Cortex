@@ -234,9 +234,9 @@ function billingAnswer(body) {
       { id: 'd51a0000-0000-4000-8000-000000000003', payerId: null, tableCode: '00', procedureCode: '10101012', description: 'Consulta particular', guideType: 'consulta', amount: 350, active: true, revision: 1 }] };
     case 'toBill': return { items: [
       { appointmentId: 'd5150000-0000-4000-8000-000000000011', doctorId, start: day(-1, 9), type: 'novo', contactId: 'd51b0000-0000-4000-8000-000000000001',
-        patientName: 'Paciente Sintético 1', consultationType: '1', coverages: [{ payerId: BILL_PAYER, cardNumber: '0000 1111 2222', cardValidUntil: null, plan: '' }], intake: null },
+        patientName: 'Paciente Sintético 1', consultationType: '1', attendance: 'checked_in', coverages: [{ payerId: BILL_PAYER, cardNumber: '0000 1111 2222', cardValidUntil: null, plan: '' }], intake: null },
       { appointmentId: 'd5150000-0000-4000-8000-000000000012', doctorId, start: day(-1, 10), type: 'retorno', contactId: null,
-        patientName: 'Paciente com nome bem comprido para conferir o corte em telas estreitas', consultationType: '2', coverages: [], intake: null }] };
+        patientName: 'Paciente com nome bem comprido para conferir o corte em telas estreitas', consultationType: '2', attendance: 'done', coverages: [], intake: null }] };
     case 'charges': return { charges: [
       billCharge(1, {}), billCharge(2, { status: 'sent', guideNumber: 5, batchId: sentBatch.id }),
       billCharge(3, { status: 'partial', guideNumber: 4, paidAmount: 100, deniedAmount: 50, denialCode: '1705', denialNote: 'Valor acima da tabela' }),

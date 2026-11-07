@@ -321,6 +321,8 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
         items: pending.map((a) => ({
           appointmentId: a.id, doctorId: a.doctor_id, start: a.start_time, type: a.type, contactId: a.contact_id, patientName: a.contact_name ?? '',
           consultationType: consultationTypeOf(a.type),
+          // 'checked_in': only the arrival was recorded; charging stays a human decision (Codex 1032).
+          attendance: a.status === 'realizado' ? 'done' : 'checked_in',
           coverages: coverages.filter((c) => c.contact_id === a.contact_id).map((c) => ({ payerId: c.payer_id, cardNumber: c.card_number, cardValidUntil: c.card_valid_until, plan: c.plan })),
           intake: intake[a.id] ?? null,
         })),

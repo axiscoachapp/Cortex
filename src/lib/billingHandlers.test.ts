@@ -93,7 +93,7 @@ describe('billing-api', () => {
     const h = harness({ role: 'reception', caller: RECEPTION });
     const r = await (await h.api({ action: 'toBill', from: '2026-11-01', to: '2026-11-07' })).json();
     expect(r.items).toHaveLength(1);
-    expect(r.items[0]).toMatchObject({ appointmentId: APPT, patientName: 'Paciente Exemplo', consultationType: '1',
+    expect(r.items[0]).toMatchObject({ appointmentId: APPT, patientName: 'Paciente Exemplo', consultationType: '1', attendance: 'done',
       coverages: [{ payerId: PAYER, cardNumber: '0001' }], intake: { type: 'Convênio', card: '0001' } });
   });
 

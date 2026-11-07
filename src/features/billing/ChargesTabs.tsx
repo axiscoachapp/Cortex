@@ -51,6 +51,9 @@ export function ToBillTab({ scope, state, range, prices }: TabProps) {
               <li key={i.appointmentId} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{i.patientName || 'Sem contato vinculado'}</p>
+                  {i.attendance === 'checked_in' && (
+                    <p className="text-xs font-medium text-[#8a5a00]">Só a chegada foi registrada; confira se a consulta aconteceu antes de cobrar.</p>
+                  )}
                   <p className="text-sm text-muted-foreground">
                     {dateTimeBr(i.start)} · {doctorName(state, i.doctorId)} · {CONSULTATION_TYPES.find((t) => t.value === i.consultationType)?.label}
                   </p>
