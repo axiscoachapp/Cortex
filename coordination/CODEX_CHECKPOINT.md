@@ -1,6 +1,6 @@
 # Checkpoint do Codex
 
-Atualizado em 2026-11-07 09:18 (America/Sao_Paulo). T47 validado; SHA local a registrar após commit, main/axiscoachapp (autor e committer), sem push.
+Atualizado em 2026-11-07 09:18 (America/Sao_Paulo). Entrega T47: 9668d2e82248c44e39e3c2802ea13cff16de2566, main/axiscoachapp (autor e committer), sem push.70caminhos próprios (49artefatos finais do navegador); índice livre e dirt6/7 preservado por hash.
 
 Leitura de correção por instância/fresh/idle/id. Campos retirados em releitura/pausa/erro, rascunho/baseline preservados; retry exige conferência nova, só recuperação explícita substitui texto/revisão. ReadVersion interno cobre coalescência, snapshot guarda clique/mutação enfileirada. Signal opcional mantém corpo/DTO/deadline20s, só leitor é cancelado; T46/mutex/resultado já enviado preservados.
 
