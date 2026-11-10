@@ -1,5 +1,5 @@
 // New charge, from an attended appointment or on its own (private or by health plan).
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import {
   CONSULTATION_TYPES, billingCall, brl, moneyInput, parseMoney, today, type BillingState, type Charge, type GuideType, type Price,
 } from './billingApi';
@@ -47,8 +48,15 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
   open: boolean; onOpenChange: (o: boolean) => void; state: BillingState; prices: Price[]; seed: ChargeSeed | null; onSaved: (c: Charge) => void;
 }) {
   const [form, setForm] = useState<Form>(() => blank(seed, state.doctors));
+  const [initial, setInitial] = useState(form);
+  const [wasOpen, setWasOpen] = useState(false);
   const [error, setError] = useState('');
-  useEffect(() => { if (open) { setForm(blank(seed, state.doctors)); setError(''); } }, [open, seed, state.doctors]);
+  // Refreshing billing metadata must not replace a draft in the same opening.
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) { const next = blank(seed, state.doctors); setForm(next); setInitial(next); setError(''); }
+  }
+  const submitting = useRef(false);
   const set = (patch: Partial<Form>) => { setForm((f) => ({ ...f, ...patch })); setError(''); };
   const payer = form.payerId === PARTICULAR ? null : state.payers.find((p) => p.id === form.payerId) ?? null;
   const priceList = useMemo(() => prices.filter((p) => p.active && (p.payerId ?? PARTICULAR) === form.payerId), [prices, form.payerId]);
@@ -88,10 +96,15 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
     }),
     onSuccess: (c) => { onSaved(c); onOpenChange(false); },
     onError: (e: Error) => setError(e.message),
+    onSettled: () => { submitting.current = false; },
   });
+  const guard = useUnsavedChanges(open && (JSON.stringify(form) !== JSON.stringify(initial) || save.isPending),
+    save.isPending ? 'Aguarde a confirmação da cobrança antes de sair.' : 'Há uma cobrança não salva. Sair e descartar o preenchimento?', { blocking: save.isPending });
+  const changeOpen = (next: boolean) => { if (guard(next)) onOpenChange(next); };
 
   const submit = (ev: React.FormEvent) => {
     ev.preventDefault();
+    if (submitting.current) return;
     const problem = !form.patientName.trim() ? 'Informe o paciente.'
       : !seed?.appointmentId && !form.doctorId ? 'Escolha o médico.'
       : !form.serviceDate ? 'Informe a data do atendimento.'
@@ -103,17 +116,19 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
       : guideType === 'sadt' && (form.authorizationNumber || form.authorizationPassword) && !form.authorizationDate ? 'Informe a data da autorização junto com a senha.'
       : '';
     if (problem) { setError(problem); return; }
+    submitting.current = true;
     save.mutate();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
         <DialogHeader>
           <DialogTitle>Nova cobrança</DialogTitle>
           <DialogDescription>{seed?.appointmentId ? 'Do atendimento da agenda. O convênio e a carteirinha ficam guardados para a próxima vez.' : 'Cobrança avulsa, sem agendamento.'}</DialogDescription>
         </DialogHeader>
         <form noValidate onSubmit={submit} className="space-y-4">
+          <fieldset disabled={save.isPending} className="min-w-0 space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="charge-patient" label="Paciente">
               <Input id="charge-patient" value={form.patientName} maxLength={200} onChange={(e) => set({ patientName: e.target.value })} />
@@ -153,7 +168,7 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
             </div>
           )}
 
-          <Field id="charge-price" label="Procedimento" hint={priceList.length === 0 ? 'Sem preços cadastrados para este convênio. Cadastre em Cadastros ou preencha abaixo.' : undefined}>
+          <Field id="charge-price" label="Procedimento" hint={priceList.length === 0 ? 'Sem preços cadastrados para esta opção. Solicite a tabela à equipe Cortex ou preencha o procedimento abaixo.' : undefined}>
             <Select value={form.priceId} onValueChange={pickPrice}>
               <SelectTrigger id="charge-price" aria-label="Procedimento da tabela de preços"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -229,9 +244,10 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
           </Field>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={() => changeOpen(false)}>Cancelar</Button>
             <Button type="submit" disabled={save.isPending}>{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar cobrança</Button>
           </DialogFooter>
+          </fieldset>
         </form>
       </DialogContent>
     </Dialog>

@@ -1,5 +1,5 @@
 // "Caixa": money received in the month by method; for the admin, expenses and the balance.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pencil, Plus, Trash2, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import {
   EXPENSE_CATEGORIES, METHOD_LABELS, PAYMENT_METHODS, billingCall, billingKey, brl, dateBr, moneyInput, parseMoney, today,
   type BillingState, type Expense, type Payment, type PaymentMethod,
@@ -25,10 +26,12 @@ function ExpenseDialog({ open, expense, onOpenChange, onSaved }: { open: boolean
     dueOn: expense?.dueOn ?? today(), paidOn: expense?.paidOn ?? '', method: (expense?.method ?? NOT_PAID) as PaymentMethod | typeof NOT_PAID, notes: expense?.notes ?? '',
   });
   const [form, setForm] = useState(init);
+  const [initial, setInitial] = useState(form);
+  const submitting = useRef(false);
   const [key, setKey] = useState<string | null>(null);
   const [error, setError] = useState('');
   const k = open ? expense?.id ?? 'new' : null;
-  if (k !== key) { setKey(k); setForm(init()); setError(''); }
+  if (k !== key) { const next = init(); setKey(k); setForm(next); setInitial(next); setError(''); }
   const set = (patch: Partial<ReturnType<typeof init>>) => { setForm((f) => ({ ...f, ...patch })); setError(''); };
   const save = useMutation({
     mutationFn: () => billingCall('saveExpense', {
@@ -38,22 +41,29 @@ function ExpenseDialog({ open, expense, onOpenChange, onSaved }: { open: boolean
     }),
     onSuccess: () => { onSaved(); onOpenChange(false); },
     onError: (e: Error) => setError(e.message),
+    onSettled: () => { submitting.current = false; },
   });
+  const guard = useUnsavedChanges(open && (JSON.stringify(form) !== JSON.stringify(initial) || save.isPending),
+    save.isPending ? 'Aguarde a confirmação da despesa antes de sair.' : 'Há uma despesa não salva. Sair e descartar o preenchimento?', { blocking: save.isPending });
+  const changeOpen = (next: boolean) => { if (guard(next)) onOpenChange(next); };
   const submit = (ev: React.FormEvent) => {
     ev.preventDefault();
+    if (submitting.current) return;
     const n = parseMoney(form.amount);
     const problem = form.description.trim().length < 2 ? 'Descreva a despesa.' : !Number.isFinite(n) || n <= 0 ? 'Informe o valor.' : !form.dueOn ? 'Informe o vencimento.' : '';
     if (problem) { setError(problem); return; }
+    submitting.current = true;
     save.mutate();
   };
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
         <DialogHeader>
           <DialogTitle>{expense ? 'Editar despesa' : 'Nova despesa'}</DialogTitle>
           <DialogDescription>Contas a pagar da clínica. Marque a forma de pagamento quando pagar.</DialogDescription>
         </DialogHeader>
         <form noValidate onSubmit={submit} className="space-y-3">
+          <fieldset disabled={save.isPending} className="min-w-0 space-y-3">
           <Field id="exp-description" label="Descrição"><Input id="exp-description" maxLength={150} value={form.description} onChange={(e) => set({ description: e.target.value })} /></Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="exp-category" label="Categoria">
@@ -80,9 +90,10 @@ function ExpenseDialog({ open, expense, onOpenChange, onSaved }: { open: boolean
           <Field id="exp-notes" label="Observações"><Input id="exp-notes" maxLength={300} value={form.notes} onChange={(e) => set({ notes: e.target.value })} /></Field>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={() => changeOpen(false)}>Cancelar</Button>
             <Button type="submit" disabled={save.isPending}>{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
           </DialogFooter>
+          </fieldset>
         </form>
       </DialogContent>
     </Dialog>
@@ -169,7 +180,7 @@ export function CashTab({ scope, state, range }: { scope: string[]; state: Billi
               <h2 className="font-semibold">Despesas</h2>
               <Button size="sm" variant="outline" onClick={() => setEditing({ open: true, expense: null })}><Plus className="mr-1.5 h-4 w-4" /> Nova despesa</Button>
             </div>
-            {expenses.length === 0 ? <p className="rounded-xl border bg-white p-6 text-center text-sm text-muted-foreground">Nenhuma despesa com vencimento neste mês.</p> : (
+            {expenses.length === 0 ? <p className="rounded-xl border bg-white p-6 text-center text-sm text-muted-foreground">Nenhuma despesa com vencimento ou pagamento neste mês.</p> : (
               <ul className="divide-y rounded-xl border bg-white">
                 {expenses.map((e) => (
                   <li key={e.id} className="flex flex-wrap items-center gap-2 p-3 text-sm">

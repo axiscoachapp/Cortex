@@ -1,5 +1,5 @@
 // "A faturar" (attended appointments without a charge) and "Cobranças" (charges of the month).
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import {
   CONSULTATION_TYPES, METHOD_LABELS, PAYMENT_METHODS, STATUS_LABELS, billingCall, billingKey, brl, dateBr, dateTimeBr, localDate, moneyInput, parseMoney, today,
   type BillingState, type Charge, type ChargeStatus, type PaymentMethod, type Price, type ToBillItem,
@@ -81,31 +82,43 @@ function PaymentDialog({ charge, onOpenChange, onPaid }: { charge: Charge | null
   const [date, setDate] = useState(today());
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+  const [initial, setInitial] = useState({ amount: '', method: 'pix', date, notes: '' });
+  const submitting = useRef(false);
   const [shownFor, setShownFor] = useState<string | null>(null);
   if (charge && shownFor !== charge.id) {
     setShownFor(charge.id);
     setAmount(moneyInput(remaining)); setMethod('pix'); setDate(today()); setNotes(''); setError('');
+    setInitial({ amount: moneyInput(remaining), method: 'pix', date: today(), notes: '' });
   }
+  if (!charge && shownFor !== null) setShownFor(null);
   const pay = useMutation({
     mutationFn: () => billingCall('pay', { chargeId: charge!.id, revision: charge!.revision, amount: parseMoney(amount), method, receivedOn: date, notes: notes.trim() }),
     onSuccess: () => { onPaid(); onOpenChange(false); },
     onError: (e: Error) => setError(e.message),
+    onSettled: () => { submitting.current = false; },
   });
+  const dirty = amount !== initial.amount || method !== initial.method || date !== initial.date || notes !== initial.notes;
+  const guard = useUnsavedChanges(!!charge && (dirty || pay.isPending),
+    pay.isPending ? 'Aguarde a confirmação do pagamento antes de sair.' : 'Há um pagamento não registrado. Sair e descartar o preenchimento?', { blocking: pay.isPending });
+  const changeOpen = (next: boolean) => { if (guard(next)) onOpenChange(next); };
   const submit = (ev: React.FormEvent) => {
     ev.preventDefault();
+    if (submitting.current || !charge) return;
     const n = parseMoney(amount);
     if (!Number.isFinite(n) || n <= 0 || n > remaining) { setError(`Informe um valor de até ${brl(remaining)}.`); return; }
     if (!date) { setError('Informe a data.'); return; }
+    submitting.current = true;
     pay.mutate();
   };
   return (
-    <Dialog open={!!charge} onOpenChange={(o) => { if (!o) setShownFor(null); onOpenChange(o); }}>
+    <Dialog open={!!charge} onOpenChange={changeOpen}>
       <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
         <DialogHeader>
           <DialogTitle>Receber pagamento</DialogTitle>
           <DialogDescription>{charge ? `${charge.patientName} · ${charge.description} · falta ${brl(remaining)}` : ''}</DialogDescription>
         </DialogHeader>
         <form noValidate onSubmit={submit} className="space-y-3">
+          <fieldset disabled={pay.isPending} className="min-w-0 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="pay-amount" label="Valor (R$)"><Input id="pay-amount" inputMode="decimal" value={amount} onChange={(e) => { setAmount(e.target.value); setError(''); }} /></Field>
             <Field id="pay-method" label="Forma de pagamento">
@@ -119,9 +132,10 @@ function PaymentDialog({ charge, onOpenChange, onPaid }: { charge: Charge | null
           </div>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={() => changeOpen(false)}>Cancelar</Button>
             <Button type="submit" disabled={pay.isPending}>{pay.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Registrar pagamento</Button>
           </DialogFooter>
+          </fieldset>
         </form>
       </DialogContent>
     </Dialog>

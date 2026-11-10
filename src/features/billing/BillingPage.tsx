@@ -8,6 +8,7 @@ import { WorkspaceMenu } from '@/components/WorkspaceMenu';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClinicAccess } from '@/features/reception/accessContext';
+import { confirmSessionExit } from '@/hooks/useUnsavedChanges';
 import { billingCall, billingKey, monthRange, type BillingRole, type BillingState, type Price } from './billingApi';
 import { BatchesTab } from './BatchesTab';
 import { CashTab } from './CashTab';
@@ -23,7 +24,7 @@ const TABS: Array<{ id: TabId; label: string; title: string; description: string
   { id: 'lotes', label: 'Lotes', title: 'Lotes de convênios', description: 'Organize as guias, confira os envios e acompanhe os retornos dos convênios.', icon: FileStack, roles: ['admin'], monthly: false },
   { id: 'caixa', label: 'Caixa', title: 'Movimento de caixa', description: 'Confira os recebimentos e as despesas pelo período de pagamento.', icon: Wallet, roles: ['admin', 'reception'], monthly: true },
   { id: 'relatorios', label: 'Relatórios', title: 'Resultados do período', description: 'Consulte a produção e os valores por atendimento, profissional e convênio.', icon: BarChart3, roles: ['admin', 'doctor'], monthly: true },
-  { id: 'cadastros', label: 'Cadastros', title: 'Cadastros financeiros', description: 'Mantenha dados de faturamento, convênios e tabelas de preços organizados.', icon: Settings2, roles: ['admin'], monthly: false },
+  { id: 'cadastros', label: 'Cadastros', title: 'Cadastros financeiros', description: 'Consulte os dados de faturamento, os convênios e as tabelas preparados pela equipe Cortex.', icon: Settings2, roles: ['admin'], monthly: false },
 ];
 export default function BillingPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate(), access = useClinicAccess();
@@ -58,7 +59,7 @@ export default function BillingPage({ embedded = false }: { embedded?: boolean }
         </div>}
       </header>
       <QueryState query={state}>
-        {fresh && state.data && current && <Tabs value={current.id} onValueChange={value => setTab(value as TabId)} className="space-y-6">
+        {fresh && state.data && current && <Tabs value={current.id} onValueChange={value => { if (value !== current.id && confirmSessionExit()) setTab(value as TabId); }} className="space-y-6">
           <TabsList aria-label="Seções do financeiro" className={`grid h-auto w-full gap-1.5 rounded-xl bg-muted/50 p-1.5 ${tabs.length === 2 ? 'max-w-xl grid-cols-2' : tabs.length === 3 ? 'max-w-3xl grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-6'}`}>
             {tabs.map(({ id, label, icon: Icon }) => <TabsTrigger key={id} value={id} className="min-h-12 gap-2 whitespace-normal rounded-lg px-2 py-3 text-xs data-[state=active]:bg-card data-[state=active]:text-primary"><Icon className="hidden h-4 w-4 shrink-0 sm:block" aria-hidden="true" />{label}</TabsTrigger>)}
           </TabsList>
@@ -69,7 +70,7 @@ export default function BillingPage({ embedded = false }: { embedded?: boolean }
             <TabsContent value="lotes" className="mt-0"><BatchesTab scope={scope} state={state.data} /></TabsContent>
             <TabsContent value="caixa" className="mt-0"><CashTab scope={scope} state={state.data} range={range} /></TabsContent>
             <TabsContent value="relatorios" className="mt-0"><ReportsTab scope={scope} state={state.data} range={range} /></TabsContent>
-            <TabsContent value="cadastros" className="mt-0"><SetupTab scope={scope} state={state.data} prices={prices.data?.prices ?? []} /></TabsContent>
+            <TabsContent value="cadastros" className="mt-0"><QueryState query={prices}><SetupTab scope={scope} state={state.data} prices={prices.data?.prices ?? []} /></QueryState></TabsContent>
           </div>
         </Tabs>}
         {state.data && state.isFetchedAfterMount && !current && <p className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Sem acesso ao financeiro.</p>}
