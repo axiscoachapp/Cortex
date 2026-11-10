@@ -15,6 +15,9 @@ import http from 'node:http';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
+const WORKSPACE_ROLE = process.env.AUDIT_WORKSPACE_ROLE;
+if (WORKSPACE_ROLE && !['admin', 'doctor', 'reception'].includes(WORKSPACE_ROLE)) throw new Error('Invalid synthetic workspace role');
+
 const SUPABASE = 'http://supabase.synthetic.invalid';
 const doctorId = 'd5110000-0000-4000-8000-000000000001';
 const pid = (n) => `d5110000-0000-4000-8000-0000000000a${n}`;
@@ -128,13 +131,22 @@ async function supabase(route) {
   if (table === 'user_settings') return rows([state.settings]);
   if (table in state) return rows(state[table]);
   if (table === 'rpc/update_user_settings') return respond(route, null);
+  if (table === 'patient_files' || table === 'usage_daily') return rows([]);
+  if (table === 'rpc/reception_team_doctors') return respond(route, [{ id: doctorId, name: 'Dra. Ana Exemplo', specialty: 'ginecologia' }]);
+  if (table === 'rpc/reception_delegation_requests') return respond(route, { canManage: CLINIC_ADMIN || WORKSPACE_ROLE === 'admin', items: [], nextCursor: null });
+  if (table === 'rpc/reception_queue') return respond(route, { items: [
+    { id: 'd5180000-0000-4000-8000-000000000001', subject: 'Organizar primeira consulta', kind: 'first_consult', status: 'new', revision: 1,
+      contactId: 'd5190000-0000-4000-8000-000000000001', contactName: 'Contato Sintético 1', phone: '+5541999990001', doctorId, assignedTo: null, assigneeName: null, createdAt: day(0) },
+    { id: 'd5180000-0000-4000-8000-000000000002', subject: 'Confirmar disponibilidade para retorno', kind: 'return', status: 'waiting_patient', revision: 1,
+      contactId: 'd5190000-0000-4000-8000-000000000002', contactName: 'Contato Sintético 2', phone: '+5541999990002', doctorId, assignedTo: doctorId, assigneeName: 'Atendente Sintética', createdAt: day(0) }
+  ], nextCursor: null });
   if (table === 'rpc/clinic_access')
-    return respond(route, CLINIC_ADMIN
-      ? { kind: 'clinical', active: true, admin: true, actorId: doctorId, clinic: { id: 'd5120000-0000-4000-8000-000000000001', name: 'Clínica Sintética' },
+    return respond(route, CLINIC_ADMIN || WORKSPACE_ROLE
+      ? { kind: WORKSPACE_ROLE === 'reception' ? 'reception' : 'clinical', active: true, admin: WORKSPACE_ROLE ? WORKSPACE_ROLE === 'admin' : true, actorId: doctorId, clinic: { id: 'd5120000-0000-4000-8000-000000000001', name: 'Clínica Sintética' },
           doctors: [{ id: doctorId, name: 'Dra. Ana Exemplo', specialty: 'ginecologia' }], staff: [] }
       : { kind: 'clinical', active: true, admin: false, actorId: doctorId, clinic: null, doctors: [], staff: [] });
   if (table === 'rpc/workspace_directory') return respond(route, { patients: state.patients, counts: { total: state.patients.length, new: 1, returns: 2 } });
-  if (table === 'rpc/list_patient_chat_turns') return respond(route, []);
+  if (table === 'rpc/list_patient_chat_turns' || table === 'consultation_drafts') return respond(route, []);
   // Empty but valid answers for overviews the screens read (no grants in the synthetic world).
   if (table === 'rpc/protocol_sharing_overview' || table === 'rpc/sharing_overview') return respond(route, { grants: [], received: [], sources: [], doctors: [] });
   if (table === 'rpc/get_integration_status') return respond(route, { google: { connected: false } });
@@ -223,7 +235,7 @@ function billingAnswer(body) {
   const sentBatch = { id: 'd5190000-0000-4000-8000-000000000001', payerId: BILL_PAYER, number: 3, guideType: 'consulta', status: 'sent', totalAmount: 300, paidAmount: 0,
     deniedAmount: 0, xmlHash: 'a'.repeat(32), generatedAt: day(-1), sentAt: billDate(-1), protocol: 'PROTOCOLO-0001', paymentDate: null, nfseNumber: null, notes: '', revision: 3, createdAt: day(-2) };
   switch (body.action) {
-    case 'state': return { role: 'admin', userId: doctorId, settings: { legalName: 'CLINICA SINTETICA LTDA', cnpj: null, cnes: '9999999', nextGuideNumber: 7, revision: 1 },
+    case 'state': return { role: WORKSPACE_ROLE === 'doctor' || WORKSPACE_ROLE === 'reception' ? WORKSPACE_ROLE : 'admin', userId: doctorId, settings: { legalName: 'CLINICA SINTETICA LTDA', cnpj: null, cnes: '9999999', nextGuideNumber: 7, revision: 1 },
       payers: [{ id: BILL_PAYER, name: 'Operadora Sintética de Saúde', ansRegistry: '999999', providerCode: '123456', tissVersion: '4.03.00', hashEncoding: 'latin1',
         zipRequired: false, submissionDays: 30, paymentDays: 60, active: true, notes: '', revision: 1 }],
       doctors: [{ id: doctorId, name: 'Dra. Ana Exemplo', crm: '00000', crmUf: 'PR' }],
@@ -304,6 +316,7 @@ async function inspect(page, width) {
 
 const ROUTES = [
   ['inicio', '/'],
+  ['recepcao', '/recepcao'],
   ['prontuario', `/?patient=${pid(1)}`],
   ['prontuario-novo', `/?patient=${pid(2)}`],
   ['pacientes', '/gerenciar-pacientes'],
@@ -349,7 +362,7 @@ let logs = '';
 app.stdout.on('data', (d) => (logs = (logs + d).slice(-6000)));
 app.stderr.on('data', (d) => (logs = (logs + d).slice(-6000)));
 let browser;
-const report = { synthetic: true, routes: {}, unansweredCalls: {} };
+const report = { synthetic: true, role: WORKSPACE_ROLE || (CLINIC_ADMIN ? 'admin' : 'standalone'), routes: {}, unansweredCalls: {}, receptionPrivateReads: [] };
 try {
   let ready = false;
   for (let i = 0; i < 80 && !ready; i++) {
@@ -358,13 +371,21 @@ try {
   }
   if (!ready) throw new Error(logs);
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
-  const VIEWPORTS = [['largo', { width: 1920, height: 1080 }], ['desktop', { width: 1280, height: 900 }], ['celular', { width: 375, height: 812 }]]
+  const VIEWPORTS = [['largo', { width: 1920, height: 1080 }], ['desktop', { width: 1280, height: 900 }], ['celular', { width: 375, height: 812 }], ...(process.env.AUDIT_COMPACT === '1' ? [['compacto', { width: 320, height: 812 }]] : [])]
     .filter(([label]) => !process.env.AUDIT_VIEWPORTS || process.env.AUDIT_VIEWPORTS.split(',').includes(label));
   for (const [label, viewport] of VIEWPORTS) {
+    if (process.env.AUDIT_SHORT === '1') viewport.height = label === 'largo' ? 768 : 667;
     const context = await browser.newContext({ viewport, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
     await context.route('**/*', (route) => {
       const host = new URL(route.request().url()).hostname;
-      if (host === 'supabase.synthetic.invalid') return supabase(route);
+      if (host === 'supabase.synthetic.invalid') {
+        const pathname = new URL(route.request().url()).pathname;
+        if (WORKSPACE_ROLE === 'reception' && /^\/rest\/v1\/(patients|consultations|consultation_drafts|patient_chat_turns|rpc\/workspace_directory|rpc\/list_patient_chat_turns)(?:\?|$)/.test(pathname)) {
+          report.receptionPrivateReads.push(pathname);
+          throw new Error('Reception mounted a private clinical reader');
+        }
+        return supabase(route);
+      }
       return ['127.0.0.1', 'localhost'].includes(host) ? route.continue() : route.abort();
     });
     const page = await context.newPage();
@@ -381,7 +402,7 @@ try {
     await page.getByLabel(/e-?mail/i).fill(user.email);
     await page.getByLabel(/^senha$/i).fill('synthetic-password');
     await page.getByRole('button', { name: 'Entrar', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Configurações' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('button', { name: WORKSPACE_ROLE === 'reception' ? 'Novo atendimento' : 'Configurações' }).first()).toBeVisible({ timeout: 15000 });
     for (const [name, path] of ROUTES) {
       if (only && !only.includes(path)) continue;
       await page.goto(origin + path);
@@ -390,6 +411,51 @@ try {
       await page.waitForTimeout(1500);
       await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: true });
       report.routes[`${label} ${path}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+      if (WORKSPACE_ROLE && ['/financeiro', '/recepcao/financeiro'].includes(path)) {
+        const tabs = await page.getByRole('tab').allTextContents();
+        const expected = WORKSPACE_ROLE === 'doctor' ? ['Cobranças', 'Relatórios'] : WORKSPACE_ROLE === 'reception' ? ['A faturar', 'Cobranças', 'Caixa'] : ['A faturar', 'Cobranças', 'Lotes', 'Caixa', 'Relatórios', 'Cadastros'];
+        if (JSON.stringify(tabs) !== JSON.stringify(expected)) throw new Error('Financial tabs differ from synthetic server role');
+      }
+      if (process.env.AUDIT_WORKSPACE_INTERACTIONS === '1' && ['/', '/recepcao', '/recepcao/financeiro'].includes(path)) {
+        const snapshot = async name => {
+          await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: true });
+          report.routes[`${label} ${name}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        };
+        const area = page.getByRole('button', { name: 'Alternar área de trabalho' }).first();
+        if (await area.isVisible()) {
+          await area.click();
+          const choices = await page.getByRole('menuitem').allTextContents();
+          const expected = WORKSPACE_ROLE === 'reception' ? ['Recepção', 'Financeiro'] : WORKSPACE_ROLE === 'doctor' ? ['Consultório', 'Financeiro'] : ['Consultório', 'Recepção', 'Financeiro'];
+          if (choices.length !== expected.length || expected.some((name, index) => !choices[index].startsWith(name))) throw new Error(`Workspace choices differ for ${WORKSPACE_ROLE || 'admin'}`);
+          await snapshot(`${name}-areas`);
+          await page.keyboard.press('Escape');
+        }
+        if (path === '/' && viewport.width < 1728 && WORKSPACE_ROLE !== 'reception') {
+          await page.getByRole('button', { name: 'Menu', exact: true }).click();
+          const settings = page.getByRole('button', { name: 'Configurações', exact: true }).first();
+          await settings.scrollIntoViewIfNeeded();
+          await expect(settings).toBeInViewport();
+          await snapshot('inicio-menu-curto');
+          await page.getByRole('button', { name: 'Início', exact: true }).last().click();
+        }
+        if (path === '/' && WORKSPACE_ROLE !== 'reception') {
+          await page.getByRole('button', { name: 'Nova Consulta', exact: true }).first().click();
+          await expect(page.getByRole('dialog')).toBeVisible();
+          await snapshot('inicio-consulta-existente');
+          await page.getByRole('button', { name: 'Novo Paciente', exact: true }).click();
+          await snapshot('inicio-consulta-novo');
+          await page.keyboard.press('Escape');
+          await expect(page.getByRole('dialog')).toHaveCount(0);
+        }
+        if (path === '/recepcao') {
+          await expect(page.getByRole('button', { name: 'Sair', exact: true }).first()).toBeVisible();
+          if (viewport.width < 1728) {
+            await page.getByRole('button', { name: 'Mais páginas' }).click();
+            await snapshot('recepcao-mais');
+            await page.keyboard.press('Escape');
+          }
+        }
+      }
       // Finance: every tab, and the dialogs that carry forms.
       if (path === '/financeiro') {
         const snap = async (name) => {

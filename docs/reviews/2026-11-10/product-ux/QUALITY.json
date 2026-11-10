@@ -1,0 +1,67 @@
+{
+  "unit": {
+    "success": true,
+    "passed": 111,
+    "files": 9
+  },
+  "browser": {
+    "states": 206,
+    "runs": [
+      {
+        "name": "main-final",
+        "states": 90,
+        "findings": [],
+        "unknown": {},
+        "privateReads": []
+      },
+      {
+        "name": "doctor-final",
+        "states": 11,
+        "findings": [],
+        "unknown": {},
+        "privateReads": []
+      },
+      {
+        "name": "reception-final",
+        "states": 15,
+        "findings": [],
+        "unknown": {},
+        "privateReads": []
+      },
+      {
+        "name": "whole-app-final",
+        "states": 90,
+        "findings": [],
+        "unknown": {},
+        "privateReads": []
+      }
+    ],
+    "stable": true,
+    "sources": 402,
+    "supplement": {
+      "states": 15,
+      "purpose": "Reception private table and clinical RPC read guard",
+      "privateReads": [],
+      "unknown": {}
+    },
+    "finalHarnessSha256": "85efe09210a64abbe3eb0035fdaaf31e92f2e9a07f0f6f96ee44c88586414cf8"
+  },
+  "typecheck": {
+    "app": 0,
+    "node": 0
+  },
+  "lint": {
+    "files": 23,
+    "exit": 0
+  },
+  "build": {
+    "status": 0,
+    "syntheticEnvironment": true
+  },
+  "limitations": [
+    "No hosted account role changes; admin choices follow clinic_access.",
+    "UI review does not approve billing producers, fiscal issuance or external integrations.",
+    "Existing billing forms do not register the application-wide unsaved-draft guard.",
+    "Reception contacts/calendar/team/dashboard source-reviewed; runtime whole-app report covers exactly its recorded routes."
+  ]
+}

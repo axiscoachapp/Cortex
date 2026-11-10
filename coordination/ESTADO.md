@@ -1,6 +1,10 @@
 # Estado da coordenação
 
-Atualizado em 2026-11-07 12:08 por Codex (K1/4j2 entregue e parada solicitada); linhas Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+**Retomada manual autorizada em10/11 — UX por perfil:** usuário pediu revisar todo o app e melhorar início/recepção/financeiro com referências do mercado. Cada login terá sua entrada de trabalho; administrador pode alternar os ambientes. Codex assume este recorte de UI, inclusive BillingPage/formulários, por pedido direto; API/SQL/fiscal/P1/P4/PersonalMed continuam no domínio Claude. Automação permanece EXCLUÍDA; pedido substitui a parada anterior somente para esta tarefa manual. [Registro](mensagens/2026-11-10-1656_codex-para-claude_retomada-ux-por-perfil.md).
+
+Atualizado em 2026-11-10 17:36 por Codex (UX manual concluída); linhas Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+
+**UX por perfil entregue localmente:** c1e92df + bb16c50. Seletor por capacidade, início com agenda/largura útil, recepção com rotina/gestão e financeiro com período/etapas/formulários; sem grant por email ou mudança de API/SQL.111 testes/9 arquivos,206 estados principais +15 dirigidos, tipos/lint/build e revisores; [evidências](../docs/reviews/2026-11-10/product-ux/REVIEW.md). Conta hospedada não alterada. [Passagem1736](mensagens/2026-11-10-1736_codex-para-claude_ux-por-perfil-concluida.md). Tarefa manual concluída, sem próximo incremento ou looping; automação segue EXCLUÍDA.
 
 **Parada explícita do Codex:** usuário pediu concluir o próximo incremento, escrever ao Claude e encerrar o looping. K1/4j2 concluído; [passagem1208](mensagens/2026-11-07-1208_codex-para-claude_transferencia-entregue-e-parada.md). Automação coordenar-cortex-com-claude EXCLUÍDA pelo tool oficial (deleteStatus:deleted). Nenhum novo trabalho do Codex, reteste1052 ou revisão pendente sem retomada explícita do usuário. Este aviso prevalece sobre resumos históricos que dizem ACTIVE.
 
@@ -526,3 +530,6 @@ Abertas ou em andamento:
 | [2026-11-07-1208_codex-para-claude_transferencia-entregue-e-parada.md](mensagens/2026-11-07-1208_codex-para-claude_transferencia-entregue-e-parada.md) | Codex → Claude | K1/4j2 entregue e parada explícita do usuário | Informativa encerrada; automação excluída, Codex não inicia outro trabalho até retomada explícita |
 
 **Recebimento no fechamento da parada:** commit Claude59e396bed4f6c52a95b4075637e3cf2aa7f1f6bf corrige as validações1052 em dois arquivos C4; sem sobreposição com o consumidor. Registrado pelo Git, ainda sem reteste/aceite Codex. Não reiniciar o ciclo por este recebimento; usuário pediu parar.
+
+| [1736 UX por perfil concluída](mensagens/2026-11-10-1736_codex-para-claude_ux-por-perfil-concluida.md) | Codex → Claude | UX por perfil entregue; c1e92df + bb16c50 | Encerrada informativa; sem confirmação ou looping |
+| [2026-11-10-1656_codex-para-claude_retomada-ux-por-perfil.md](mensagens/2026-11-10-1656_codex-para-claude_retomada-ux-por-perfil.md) | Codex → Claude | Retomada manual UX/role-home;1300/1640 lidas | Encerrada informativa: UI autorizada, APIs/produção sem alteração; sem reativar automação |

@@ -407,3 +407,15 @@ Origem: [revisão do Claude](../../docs/reviews/2026-11-04/claude-reception-revi
 Usuário pediu concluir este incremento, escrever ao Claude e encerrar o looping. K1/4j2 entregue e passagem1208 gravada; automação coordenar-cortex-com-claude excluída pelo tool oficial. Demais caixas abertas, inclusive K2/2 e revisão P1/P2/P4/financeiro1040, permanecem documentadas sem execução até retomada explícita. Nenhum novo trabalho autorizado por disparo antigo da automação.
 
 Recebido no fechamento pelo Git59e396b (validações1052 C4); K2/2 aguarda reteste se usuário retomar, sem aceite por relato ou reinício do loop.
+
+## UX por perfil — pedido manual de10/11/2026
+
+- [x] UX1 — seletor de ambientes por capacidade e navegação clínica/mobile coerentes.
+- [x] UX2 — início clínico com agenda/continuidade e largura útil, sem desmontar trabalho ativo.
+- [x] UX3 — recepção com navegação operacional agrupada e filtros legíveis.
+- [x] UX4 — financeiro com contexto, período, seções e formulários consistentes, sem alterar operações.
+- [x] UX5 — auditoria das demais rotas, regressão, navegador sintético, revisão e evidências.
+
+[Objetivo, fontes e aceite](../../docs/product/clinic-crm/WORKSPACE_UX.md). Sem reativar looping, tocar SaaS ou operar produção.
+
+Entrega: c1e92df (ambientes/início/recepção) + bb16c50 (financeiro);111 testes/9 arquivos e206 estados principais +15 de sentinela privada, tipos/lint/build. [Evidências](../../docs/reviews/2026-11-10/product-ux/REVIEW.md). Tarefa manual concluída; sem reiniciar looping.

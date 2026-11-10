@@ -102,3 +102,9 @@ Painel da recepção implementado em /recepcao/painel com fonte C4 b7f424d, sem 
 ## K1/4j2 concluído e ciclo encerrado em07/11 12:08
 
 [Provas](../../docs/reviews/2026-11-07/whatsapp-transfer-ui/REVIEW.md) da transferência explícita com catálogo fresco, bloqueio de nomes ambíguos/próprio ator, escolha e confirmação, guardas de snapshots e releitura após uma tentativa.433Vitest/12arquivos/34novos e52estados/84PNGs320–1920/135%, somente transporte sintético. Usuário pediu terminar este incremento, passar ao Claude e parar; passagem1208 registrada, automação excluída. Nenhum próximo incremento/reteste/revisão sem retomada explícita. Pendências K2/1052 e P1/P2/P4 preservadas; não houve produtor/DDL/Meta/hosted/carga/envio/fiscal/deploy/push.
+
+## Retomada manual de UX por perfil em10/11/2026
+
+Pedido de revisão do app inteiro, com prioridade início/recepção/financeiro. [Especificação](../../docs/product/clinic-crm/WORKSPACE_UX.md): pesquisa primária, diagnóstico visual42estados, seletor de ambientes por capacidades, início clínico orientado ao dia, operação da recepção e apresentação financeira coerente. Conta administradora alterna todas as áreas, sem exceção por email nem grants clínicos. Implementar e verificar nesta tarefa manual; automação permanece excluída. APIs/DDL/fiscal/provedores fora do recorte.
+
+UX manual10/11 concluída: c1e92df + bb16c50; revisão e provas em docs/reviews/2026-11-10/product-ux/REVIEW.md. Sem ação em produção nem reativação da automação.
