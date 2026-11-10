@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PageHeading } from '@/components/PageHeading';
 import { Label } from '@/components/ui/label';
 import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
@@ -69,15 +70,8 @@ function CaseQueue() {
   }
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="mb-2 text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-primary">Rotina da recepção</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Fila de atendimento</h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            Assuma uma demanda, confirme o contato e acompanhe o próximo passo.
-          </p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeading title="Fila de atendimento" description="Assuma uma demanda, confirme o contato e acompanhe o próximo passo." actions={
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="icon" className="h-11 w-11" aria-label="Atualizar fila" onClick={() => void queue.refetch()}>
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -86,7 +80,7 @@ function CaseQueue() {
             Novo atendimento
           </Button>
         </div>
-      </div>
+      } />
       <div className="grid items-end gap-4 rounded-xl border bg-card p-4 sm:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-2">
           <Label htmlFor="queue-status">Situação</Label>

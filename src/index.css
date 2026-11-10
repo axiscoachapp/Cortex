@@ -121,6 +121,14 @@
 }
 
 @layer components {
+  .workspace-nav-item {
+    @apply flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .workspace-nav-item-active {
+    @apply bg-primary/10 font-semibold text-primary;
+  }
+
   .glass-card {
     @apply bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm;
   }

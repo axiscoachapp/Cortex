@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ClinicAccessContext } from '@/features/reception/accessContext';
 import type { ClinicAccess } from '@/features/reception/contracts';
 import SettingsPage from '@/pages/Settings';
+vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ signOut: vi.fn() }) }));
 vi.mock('./ProfessionalSettingsForm', () => ({ ProfessionalSettingsForm: () => <p>Preferência pessoal sintética</p> }));
 vi.mock('./ClinicSetupSummary', () => ({ ClinicSetupSummary: () => <p>Consulta de implantação sintética</p> }));
 vi.mock('./WhatsAppSettings', () => ({ WhatsAppSettings: () => <p>Canal sintético</p> }));
@@ -18,8 +19,10 @@ function mount(value = access, path = '/configuracoes') { render(<MemoryRouter i
 describe('settings grouped by responsibility and account', () => {
   it('starts at an overview instead of asking a doctor to configure specialty', () => {
     mount();
-    expect(screen.getByRole('main', { name: 'Visão geral' })).toBeVisible();
-    expect(screen.getByText('Implantação assistida pela equipe Cortex')).toBeVisible();
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+    expect(screen.getByRole('region', { name: 'Visão geral' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: 'Configurações' })).toBeVisible();
+    expect(screen.getByText(/Especialidade, dados do prescritor e conexões técnicas são preparados/)).toBeVisible();
     expect(screen.queryByLabelText('Especialidade')).toBeNull();
   });
   it('preserves unrelated query parameters when changing sections', async () => {
@@ -32,7 +35,7 @@ describe('settings grouped by responsibility and account', () => {
   });
   it.each(['equipe', 'pre-consulta'])('does not mount admin section %s for a doctor via a direct URL', section => {
     mount({ ...access, admin: false }, '/configuracoes?secao=' + section);
-    expect(screen.getByRole('main', { name: 'Visão geral' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Visão geral' })).toBeVisible();
     expect(screen.queryByText('Equipe sintética')).toBeNull(); expect(screen.queryByText('Formulário sintético')).toBeNull();
   });
   it.each([false, true])('does not offer clinical readers to reception with admin=%s', admin => {

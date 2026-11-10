@@ -14,6 +14,7 @@ Element.prototype.releasePointerCapture ??= () => {};
 Element.prototype.scrollIntoView ??= () => {};
 
 const invoke = vi.fn();
+vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'e9100000-0000-4000-8000-000000000002' }, signOut: vi.fn() }) }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { functions: { invoke: (...a: unknown[]) => invoke(...a) } } }));
 
 import BillingPage from './BillingPage';

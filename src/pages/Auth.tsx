@@ -143,11 +143,11 @@ const Auth = () => {
         <BrandLockup />
         <div className="max-w-lg py-16">
           <p className="text-xs uppercase tracking-[.22em] text-primary mb-5">Ginecologia · Obstetrícia · Urologia</p>
-          <h1 className="font-serif text-5xl leading-[1.12] text-foreground">
+          <p className="font-serif text-5xl leading-[1.12] text-foreground">
             Mais atenção à consulta.
             <br />
             <span className="text-primary">Continuidade no cuidado.</span>
-          </h1>
+          </p>
           <p className="mt-6 text-base leading-relaxed text-muted-foreground max-w-md">
             Um espaço para organizar o prontuário, revisar a documentação e acompanhar cada paciente.
           </p>
@@ -173,7 +173,7 @@ const Auth = () => {
           <BrandLockup className="lg:hidden mb-10" />
           <div>
             <p className="text-xs uppercase tracking-[.2em] text-primary mb-3">Ambiente clínico</p>
-            <h2 className="font-serif text-3xl">{recovering ? 'Redefinir senha' : 'Bem-vindo ao Cortex'}</h2>
+            <h1 className="font-serif text-3xl">{recovering ? 'Redefinir senha' : 'Bem-vindo ao Cortex'}</h1>
             <p className="text-sm text-muted-foreground mt-3">Entre com sua conta individual para continuar.</p>
           </div>
           {errorMessage && (

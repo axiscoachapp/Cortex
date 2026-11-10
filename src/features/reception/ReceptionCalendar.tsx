@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PageHeading } from '@/components/PageHeading';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -70,48 +71,44 @@ export default function ReceptionCalendar() {
   const renderAppointment = (appointment: ReceptionAppointment) => <ReceptionAppointmentCard key={appointment.id} appointment={appointment} pending={change.isPending} onAction={action => change.mutate({ appointment, action })} onEdit={() => setEditing(appointment)} />;
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Agenda da equipe</h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            Confirmação humana · horários de São Paulo · somente agendas permitidas.
-          </p>
-        </div>
+      <PageHeading title="Agenda da equipe" description="Confirmação humana · horários de São Paulo · somente agendas permitidas." actions={
         <div className="flex flex-wrap gap-2">
           {access?.admin && (
-            <Button variant="outline" onClick={() => setBlocking(true)}>
+            <Button variant="outline" className="min-h-11" onClick={() => setBlocking(true)}>
               Bloquear horário
             </Button>
           )}
-          <Button className="gap-2" onClick={() => setBooking(true)}>
+          <Button className="min-h-11 gap-2" onClick={() => setBooking(true)}>
             <Plus className="w-4 h-4" />
             Novo agendamento
           </Button>
         </div>
-      </div>
-      <div className="flex flex-wrap gap-3 items-end">
-        <div>
+      } />
+      <div className="grid items-end gap-4 rounded-xl border bg-card p-4 md:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="reception-calendar-date">Data da agenda</Label>
-          <div className="flex gap-1">
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+            <Input
+              id="reception-calendar-date"
+              type="date"
+              value={day}
+              onChange={(e) => chooseDay(e.target.value)}
+              className="col-span-2 h-11 min-w-0 sm:col-span-1"
+            />
             <Button
               size="icon"
               variant="outline"
+              className="h-11 w-full sm:w-11"
               aria-label="Período anterior"
               disabled={!day}
               onClick={() => chooseDay(nextClinicDay(day, view === 'day' ? -1 : -7))}
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <Input
-              id="reception-calendar-date"
-              type="date"
-              value={day}
-              onChange={(e) => chooseDay(e.target.value)}
-              className="w-auto min-w-0"
-            />
             <Button
               size="icon"
               variant="outline"
+              className="h-11 w-full sm:w-11"
               aria-label="Próximo período"
               disabled={!day}
               onClick={() => chooseDay(nextClinicDay(day, view === 'day' ? 1 : 7))}
@@ -120,11 +117,11 @@ export default function ReceptionCalendar() {
             </Button>
           </div>
         </div>
-        <div>
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="reception-calendar-doctor">Agenda do médico</Label>
           <select
             id="reception-calendar-doctor"
-            className="block border rounded-md bg-card p-2 text-sm max-w-full"
+            className="block min-h-11 w-full min-w-0 rounded-md border bg-background px-3 py-2 text-sm"
             value={doctor}
             onChange={(e) => setDoctor(e.target.value)}
           >
@@ -136,9 +133,10 @@ export default function ReceptionCalendar() {
             ))}
           </select>
         </div>
-        <div role="group" aria-label="Período da agenda" className="flex gap-1">
+        <div role="group" aria-label="Período da agenda" className="flex gap-1 md:col-span-2 2xl:col-span-1">
           <Button
             size="sm"
+            className="min-h-11 flex-1"
             variant={view === 'day' ? 'default' : 'outline'}
             aria-pressed={view === 'day'}
             onClick={() => setView('day')}
@@ -147,6 +145,7 @@ export default function ReceptionCalendar() {
           </Button>
           <Button
             size="sm"
+            className="min-h-11 flex-1"
             variant={view === 'week' ? 'default' : 'outline'}
             aria-pressed={view === 'week'}
             onClick={() => setView('week')}

@@ -2,9 +2,11 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { PageHeading } from '@/components/PageHeading';
+import { WorkspaceShell } from '@/components/WorkspaceShell';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { delegationApi, type DelegationAction, type DelegationCursor, type DelegationRequest } from './delegationApi';
@@ -20,12 +22,13 @@ export default function DelegationPermissions({ embedded = false }: { embedded?:
   const clinicId = params.get('clinica');
   if (clinicId !== null && !z.string().uuid().safeParse(clinicId).success) return <p role="alert" className="p-6">Clínica inválida. Confira o endereço da página.</p>;
   if (!user) return null;
-  return <Permissions key={`${user.id}:${clinicId ?? 'mine'}`} actorId={user.id} clinicId={clinicId} embedded={embedded} />;
+  const content = <Permissions key={`${user.id}:${clinicId ?? 'mine'}`} actorId={user.id} clinicId={clinicId} embedded={embedded} />;
+  return embedded ? content : <WorkspaceShell section="Permissões da recepção">{content}</WorkspaceShell>;
 }
 
 function Permissions({ actorId, clinicId, embedded }: { actorId: string; clinicId: string | null; embedded: boolean }) {
   const titleId = useId();
-  const Container = embedded ? 'section' : 'main', Heading = embedded ? 'h2' : 'h1', SectionHeading = embedded ? 'h3' : 'h2', RowHeading = embedded ? 'h4' : 'h3';
+  const Container = embedded ? 'section' : 'div', SectionHeading = embedded ? 'h3' : 'h2', RowHeading = embedded ? 'h4' : 'h3';
   const access = useClinicAccess();
   const client = useQueryClient();
   const operation = useRequestId();
@@ -87,13 +90,12 @@ function Permissions({ actorId, clinicId, embedded }: { actorId: string; clinicI
     }
   }
 
-  return <Container aria-labelledby={embedded ? titleId : undefined} className={embedded ? 'space-y-6' : 'mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6'}>
-    {!embedded && <Link to={clinicId ? '/recepcao/equipe' : '/'} className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />{clinicId ? 'Voltar à equipe' : 'Voltar ao início'}</Link>}
-    <header className="space-y-3">
-      <div className="flex items-start gap-3"><ShieldCheck className="mt-1 h-6 w-6 shrink-0 text-primary" /><div><Heading id={titleId} className="text-2xl font-semibold tracking-tight">Permissões da recepção</Heading><p className="mt-1 text-sm text-muted-foreground">{clinicId ? 'Pedidos da clínica para contas já cadastradas.' : 'Você decide quem pode operar sua agenda na clínica.'}</p></div></div>
-      <p className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed">A aprovação permite atender contatos, operar a fila e gerenciar agendamentos da clínica. Os prontuários, evoluções e documentos clínicos continuam privados. Você pode revogar o acesso a qualquer momento.</p>
-      <Button variant="outline" disabled={busy || requests.isFetching} onClick={() => void requests.refetch()}>Atualizar lista</Button>
-    </header>
+  return <Container aria-labelledby={embedded ? titleId : undefined} className="space-y-6 min-w-0">
+    {!embedded && clinicId && <Link to="/recepcao/equipe" className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Voltar à equipe</Link>}
+    <PageHeading id={titleId} headingLevel={embedded ? 2 : 1} title="Permissões da recepção" description={clinicId ? 'Pedidos da clínica para contas já cadastradas.' : 'Você decide quem pode operar sua agenda na clínica.'} actions={
+      <Button className="min-h-11" variant="outline" disabled={busy || requests.isFetching} onClick={() => void requests.refetch()}>Atualizar lista</Button>
+    } />
+    <p className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed">A aprovação permite atender contatos, operar a fila e gerenciar agendamentos da clínica. Os prontuários, evoluções e documentos clínicos continuam privados. Você pode revogar o acesso a qualquer momento.</p>
     <ReceptionNotice loading={requests.isPending} error={requests.error} onRetry={() => void requests.refetch()} />
     <ReceptionNotice error={error} />
     {notice && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">{notice}</p>}

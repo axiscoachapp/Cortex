@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BookOpen, Plus, Loader2, FileText, Search, RotateCw, Archive } from 'lucide-react';
+import { BookOpen, Plus, Loader2, FileText, Search, RotateCw, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +15,8 @@ import { functionErrorBody, functionErrorMessage } from '@/lib/functionErrors';
 import { createKnowledgeSource, reviewKnowledgeSource } from '@/lib/knowledge';
 import { ProtocolShareControls, SharedProtocolsPanel } from '@/components/ProtocolSharing';
 import { extractKnowledgeFile } from '@/lib/knowledgeFile';
+import { WorkspaceShell } from '@/components/WorkspaceShell';
+import { PageHeading } from '@/components/PageHeading';
 
 interface KBDoc {
   id: string;
@@ -50,7 +51,6 @@ function statusLabel(doc: KBDoc) {
 }
 
 export default function KnowledgeBasePage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -266,35 +266,21 @@ export default function KnowledgeBasePage() {
     }
   };
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-card border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <BookOpen className="w-5 h-5 text-primary shrink-0" />
-            <div>
-              <h1 className="text-lg font-semibold">Biblioteca de protocolos</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                Fontes originais, versões e revisão médica
-              </p>
-            </div>
-          </div>
+    <WorkspaceShell section="Conhecimento" contentClassName="space-y-6">
+      <PageHeading title="Biblioteca de protocolos" description="Mantenha fontes originais e versões revisadas para apoiar as respostas do assistente." actions={
           <Button
-            size="sm"
+            className="min-h-11 gap-2"
             onClick={() => {
               setSupersedes(null);
               setAddOpen(true);
             }}
             aria-label="Adicionar conhecimento"
           >
-            <Plus className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Adicionar fonte</span>
+            <Plus className="w-4 h-4" />
+            Adicionar fonte
           </Button>
-        </div>
-      </header>
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      } />
+      <div className="space-y-4">
         <p className="text-sm text-muted-foreground rounded-xl border bg-card p-4">
           Somente versões revisadas e com indexação concluída entram nas respostas do assistente. Use protocolos gerais
           e referências; anexos e informações identificáveis de pacientes não devem ser reutilizados nesta biblioteca.
@@ -336,7 +322,7 @@ export default function KnowledgeBasePage() {
           <p>Nenhuma fonte corresponde à busca.</p>
         ) : (
           filtered.slice(0, visibleCount).map((doc) => (
-            <article key={doc.id} className="border rounded-xl bg-card p-4 flex gap-3 items-start">
+            <article key={doc.id} className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-3 rounded-xl border bg-card p-4 sm:flex sm:items-start">
               <FileText className="w-5 h-5 mt-1 text-primary shrink-0" />
               <div className="min-w-0 flex-1 space-y-1">
                 <h2 className="font-semibold break-words">{doc.title}</h2>
@@ -355,6 +341,7 @@ export default function KnowledgeBasePage() {
               <Button
                 size="sm"
                 variant="outline"
+                className="col-start-2 min-h-11 justify-self-start sm:shrink-0"
                 onClick={() => {
                   setOperationError('');
                   setSelectedId(doc.id);
@@ -371,7 +358,7 @@ export default function KnowledgeBasePage() {
           </Button>
         )}
         <SharedProtocolsPanel />
-      </main>
+      </div>
       <Dialog open={addOpen} onOpenChange={closeAdd}>
         <DialogContent className="max-w-2xl max-h-[92dvh] flex flex-col">
           <DialogHeader>
@@ -557,6 +544,6 @@ export default function KnowledgeBasePage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </WorkspaceShell>
   );
 }

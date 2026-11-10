@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { isBelowMobileBreakpoint, useIsMobile } from '@/hooks/use-mobile';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar as BigCalendar, dateFnsLocalizer, View, SlotInfo } from 'react-big-calendar';
@@ -17,7 +17,7 @@ import {
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { ArrowLeft, Plus, CalendarDays, CheckCircle2, Loader2 } from 'lucide-react';
+import { Plus, CalendarDays, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,6 +31,8 @@ import { formatCalendarDay, formatCalendarWeekRange } from '@/lib/calendarLabels
 import { useToast } from '@/hooks/use-toast';
 import { fetchAllRows } from '@/lib/pagination';
 import type { Tables } from '@/integrations/supabase/types';
+import { WorkspaceShell } from '@/components/WorkspaceShell';
+import { PageHeading } from '@/components/PageHeading';
 
 // ── Localizer ───────────────────────────────────────────────────────────────
 const localizer = dateFnsLocalizer({
@@ -103,7 +105,6 @@ const messages = {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function CalendarPage() {
-  const navigate = useNavigate();
   const [params,setParams]=useSearchParams();
   const schedulingOpen=params.get('queue')==='scheduling';
   const { user } = useAuth();
@@ -307,35 +308,11 @@ export default function CalendarPage() {
   const todayLabel = format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-10">
-        <div className="container mx-auto px-3 md:px-4 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <Button variant="ghost" size="icon" className="shrink-0" aria-label="Voltar" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <CalendarDays className="hidden min-[375px]:block h-5 w-5 md:h-6 md:w-6 text-medical-blue shrink-0" />
-            <div className="min-w-0">
-              <h1 className="text-base md:text-lg font-semibold text-foreground leading-tight">Agenda</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">{todayLabel}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 md:gap-2">
-            {/* Status legend — desktop only */}
-            <div className="hidden xl:flex items-center gap-2 mr-2">
-              {Object.entries(STATUS_LABELS).map(([status, label]) => (
-                <div key={status} className="flex items-center gap-1">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: STATUS_COLORS[status] }} />
-                  <span className="text-xs text-muted-foreground">{label}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Google Calendar — icon-only on mobile */}
+    <WorkspaceShell section="Agenda" contentClassName="space-y-6">
+      <PageHeading title="Agenda" description={`${todayLabel}. Seus horários, consultas e acompanhamentos em um só lugar.`} actions={
+          <>
             {checkingGoogle ? (
-              <Button variant="outline" size="sm" disabled aria-label="Verificando Google Calendar">
+              <Button variant="outline" className="min-h-11" disabled aria-label="Verificando Google Calendar">
                 <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
                 Google
               </Button>
@@ -346,37 +323,34 @@ export default function CalendarPage() {
                 className="flex gap-1.5 py-1.5 px-3 text-success border-success/30"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Google Calendar</span>
+                <span>Google Calendar</span>
               </Badge>
             ) : (
               <Button
                 variant="outline"
-                size="sm"
                 aria-label="Conectar Google Calendar"
                 disabled={connectingGoogle}
                 onClick={handleGoogleConnect}
-                className="gap-1.5"
+                className="min-h-11 gap-1.5"
               >
                 <CalendarDays className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Conectar Google</span>
+                <span>Conectar Google</span>
               </Button>
             )}
 
             {/* New appointment */}
             <Button
               variant="medical"
-              size="sm"
               aria-label="Novo Agendamento"
               onClick={handleNewAppointment}
-              className="gap-1.5"
+              className="min-h-11 gap-1.5"
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Novo Agendamento</span>
+              <span>Novo Agendamento</span>
             </Button>
-          </div>
-        </div>
-      </header>
-      <div className="container mx-auto px-4 pt-3 flex flex-wrap items-center gap-3 text-xs">
+          </>
+      } />
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4 text-xs">
         <Button variant="outline" className="h-auto min-h-10 whitespace-normal" aria-expanded={schedulingOpen} aria-controls="calendar-followups"
           onClick={()=>{const next=new URLSearchParams(params);if(schedulingOpen)next.delete('queue');else next.set('queue','scheduling');setParams(next);}}>
           Lista de espera e confirmações
@@ -389,9 +363,12 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {schedulingOpen&&<div id="calendar-followups" className="container mx-auto px-4 pt-4"><SchedulingFollowups/></div>}
+      <div aria-label="Legenda dos agendamentos" className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {Object.entries(STATUS_LABELS).map(([status, label]) => <div key={status} className="flex items-center gap-2 text-xs text-muted-foreground"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: STATUS_COLORS[status] }} />{label}</div>)}
+      </div>
+      {schedulingOpen&&<div id="calendar-followups"><SchedulingFollowups/></div>}
       {patientsError && (
-        <div role="alert" className="container mx-auto px-4 py-3 text-sm flex items-center gap-3">
+        <div role="alert" className="rounded-xl border bg-card p-4 text-sm flex flex-wrap items-center gap-3">
           <p>Não foi possível carregar os pacientes. Atualize antes de criar ou alterar um vínculo.</p>
           <Button variant="outline" size="sm" onClick={() => retryPatients()}>
             Recarregar pacientes
@@ -400,7 +377,7 @@ export default function CalendarPage() {
       )}
       {googleConnected &&
         appointments.some((item) => item.googleSyncStatus === 'pending' || item.googleSyncStatus === 'failed') && (
-          <section aria-label="Sincronizações pendentes" className="container mx-auto px-4 py-3 space-y-2">
+          <section aria-label="Sincronizações pendentes" className="rounded-xl border bg-card p-4 space-y-2">
             <h2 className="text-sm font-semibold">Google Calendar · sincronizações pendentes</h2>
             {appointments
               .filter((item) => item.googleSyncStatus === 'pending' || item.googleSyncStatus === 'failed')
@@ -425,11 +402,11 @@ export default function CalendarPage() {
           </section>
         )}
       {/* Calendar */}
-      <main className="flex-1 container mx-auto px-2 md:px-4 py-3 md:py-6">
+      <div className="min-w-0">
         {isMobile && view === 'week' && !isLoading && !isError && <a href="#calendar-week-details" className="mb-3 inline-block text-sm text-primary underline underline-offset-4">Ver horários e títulos completos</a>}
         <div
-          className="bg-background rounded-xl border border-border shadow-sm overflow-hidden"
-          style={{ height: isMobile ? 'calc(100dvh - 110px)' : 'calc(100vh - 140px)' }}
+          className="min-h-[30rem] bg-card rounded-xl border border-border overflow-hidden"
+          style={{ height: 'min(48rem, 72dvh)' }}
         >
           {isLoading ? (
             <div className="h-full flex items-center justify-center">
@@ -466,7 +443,7 @@ export default function CalendarPage() {
           )}
         </div>
         {isMobile && view === 'week' && !isLoading && !isError && <CalendarWeekDetails date={date} appointments={appointments} onSelect={handleSelectAppointment} />}
-      </main>
+      </div>
 
       <AppointmentModal
         open={modalOpen}
@@ -484,6 +461,6 @@ export default function CalendarPage() {
           queryClient.invalidateQueries({ queryKey: ['appointments-today'] });
         }}
       />
-    </div>
+    </WorkspaceShell>
   );
 }

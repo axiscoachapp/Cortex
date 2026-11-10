@@ -16,6 +16,7 @@ Element.prototype.releasePointerCapture ??= () => {};
 Element.prototype.scrollIntoView ??= () => {};
 
 const invoke = vi.hoisted(() => vi.fn());
+vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'e9100000-0000-4000-8000-000000000001' }, signOut: vi.fn() }) }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { functions: { invoke } } }));
 
 const clinic = 'e9200000-0000-4000-8000-000000000001';

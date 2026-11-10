@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import DataPrivacy from './DataPrivacy';
 
 const mocks = vi.hoisted(() => ({ signOut: vi.fn(), invoke: vi.fn(), signIn: vi.fn(async () => ({ error: null })) }));
+vi.mock('@/components/WorkspaceShell', () => ({ WorkspaceShell: ({ children }: { children: import('react').ReactNode }) => <main>{children}</main> }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'doctor', email: 'review@example.invalid' }, signOut: mocks.signOut }) }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('@/integrations/supabase/client', () => ({

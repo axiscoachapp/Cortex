@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PageHeading } from '@/components/PageHeading';
 import { useClinicAccess } from './accessContext';
 import { NewCaseDialog, type ContactOption } from './NewCaseDialog';
 import { ContactDirectory } from './ContactDirectory';
@@ -18,15 +19,9 @@ export default function ContactsPage() {
   useEffect(() => { setViewingLinks(null); }, [access?.actorId, access?.clinic?.id, access?.admin, access?.active, access?.kind]);
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap gap-3 justify-between items-start">
-        <div>
-          <h1 className="text-xl font-semibold">Contatos da recepção</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Cadastro administrativo. Os prontuários permanecem separados por médico.
-          </p>
-        </div>
+      <PageHeading title="Contatos da recepção" description="Cadastro administrativo. Os prontuários permanecem separados por médico." actions={
         <Button
-          className="gap-2"
+          className="min-h-11 gap-2"
           onClick={() => {
             setSelected(undefined);
             setCreating(true);
@@ -35,7 +30,7 @@ export default function ContactsPage() {
           <Plus className="w-4 h-4" />
           Novo atendimento
         </Button>
-      </div>
+      } />
       <ContactDirectory onOpen={contact => { setSelected(contact); setCreating(true); }} onEdit={setEditing} onLinks={setViewingLinks} />
       {creating && (
         <NewCaseDialog

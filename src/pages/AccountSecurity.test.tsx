@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+vi.mock('@/components/WorkspaceShell', () => ({ WorkspaceShell: ({ children }: { children: import('react').ReactNode }) => <main>{children}</main> }));
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AccountSecurity from './AccountSecurity';
 

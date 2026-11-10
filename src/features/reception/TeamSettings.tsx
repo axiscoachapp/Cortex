@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { PageHeading } from '@/components/PageHeading';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -22,7 +23,7 @@ export default function TeamSettings({ embedded = false }: { embedded?: boolean 
 
 function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boolean }) {
   const titleId = useId();
-  const Container = embedded ? 'section' : 'div', Heading = embedded ? 'h2' : 'h1', SectionHeading = embedded ? 'h3' : 'h2';
+  const Container = embedded ? 'section' : 'div', SectionHeading = embedded ? 'h3' : 'h2';
   const client = useQueryClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -85,19 +86,17 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
     }
   }
   return (
-    <Container aria-labelledby={embedded ? titleId : undefined} className={embedded ? 'space-y-6' : 'space-y-6 max-w-4xl'}>
-      <div>
-        <Heading id={titleId} className="text-xl font-semibold">Equipe e permissões</Heading>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Configure as agendas das secretárias. Seu acesso às agendas e aos prontuários é independente da gestão da equipe.
-        </p>
-        {access.clinic && <Button asChild variant="outline" className="mt-3 h-auto min-h-11 max-w-full whitespace-normal"><Link to={`/permissoes-recepcao?clinica=${access.clinic.id}`}>Pedidos de acesso e aprovações médicas</Link></Button>}
+    <Container aria-labelledby={embedded ? titleId : undefined} className="space-y-6 min-w-0">
+      <PageHeading id={titleId} headingLevel={embedded ? 2 : 1} title="Equipe e permissões" description="Configure as agendas das secretárias. Seu acesso às agendas e aos prontuários é independente da gestão da equipe." actions={
+        <div className="flex flex-wrap gap-2">
+        {access.clinic && <Button asChild variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal"><Link to={`/permissoes-recepcao?clinica=${access.clinic.id}`}>Pedidos de acesso e aprovações médicas</Link></Button>}
         {!directory.isError && (
-          <Button className="mt-3" size="sm" variant="outline" disabled={busy || directory.isFetching} onClick={() => void directory.refetch()}>
+          <Button className="min-h-11" size="sm" variant="outline" disabled={busy || directory.isFetching} onClick={() => void directory.refetch()}>
             Atualizar profissionais
           </Button>
         )}
-      </div>
+        </div>
+      } />
       <ReceptionNotice error={error} />
       {notice && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">{notice}</p>}
       <ReceptionNotice error={directory.error} loading={directory.isPending} onRetry={() => void directory.refetch()} />
@@ -105,7 +104,7 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
         <SectionHeading className="font-semibold text-base">Criar conta de recepção</SectionHeading>
         <form onSubmit={create} className="space-y-4">
           <fieldset disabled={busy} className="grid md:grid-cols-2 gap-4">
-            <div>
+            <div className="min-w-0 space-y-2">
               <Label htmlFor="staff-name">Nome da secretária</Label>
               <Input
                 id="staff-name"
@@ -117,7 +116,7 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
                 required
               />
             </div>
-            <div>
+            <div className="min-w-0 space-y-2">
               <Label htmlFor="staff-email">E-mail exclusivo da conta</Label>
               <Input
                 id="staff-email"

@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   review: vi.fn(),
   docs: [] as Record<string, unknown>[],
 }));
-vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }));
+vi.mock('@/components/WorkspaceShell', () => ({ WorkspaceShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }));
 vi.mock('@/hooks/useUnsavedChanges', () => ({ useUnsavedChanges: () => () => true }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'owner' } }) }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));

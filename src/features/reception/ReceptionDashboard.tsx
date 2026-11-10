@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSessionHidden } from '@/contexts/SessionVisibility';
 import { Button } from '@/components/ui/button';
+import { PageHeading } from '@/components/PageHeading';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useClinicAccess } from './accessContext';
@@ -43,10 +44,7 @@ function DashboardPeriod({ actor, clinic }: { actor: string; clinic: string }) {
   useLayoutEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   const edit = () => { setEditing(true); setError(null); };
   return <div className="space-y-6 min-w-0 [overflow-wrap:anywhere]">
-    <header className="space-y-2">
-      <h1 className="text-2xl font-semibold tracking-tight">Painel da recepção</h1>
-      <p className="text-sm text-muted-foreground">Entradas pelo WhatsApp e distribuição das conversas em aberto.</p>
-    </header>
+    <PageHeading title="Painel da recepção" description="Entradas pelo WhatsApp e distribuição das conversas em aberto." />
     <form noValidate className="rounded-xl border bg-card p-4 md:p-5 space-y-3" onSubmit={event => {
       event.preventDefault();
       try { setPeriod(parsePeriod(`${from.day}T${from.time}`, `${to.day}T${to.time}`)); setError(null); setEditing(false); } catch { setError({}); }

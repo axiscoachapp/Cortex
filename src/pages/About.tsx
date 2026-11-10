@@ -48,7 +48,8 @@ export default function About() {
           <span className="text-primary">Acompanhar com atenção.</span>
         </h1>
         <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl mt-6">
-          O Cortex reúne documentação, agenda e acompanhamento para o trabalho individual dos médicos do consultório.
+          O Cortex reúne consultório, recepção e financeiro da clínica. Cada pessoa acessa seu ambiente de trabalho,
+          com permissões próprias e prontuários privados por médico.
         </p>
         <div className="grid sm:grid-cols-2 gap-5 mt-14">
           {features.map(({ icon: Icon, title, text }) => (

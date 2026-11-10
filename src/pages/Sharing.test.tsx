@@ -5,6 +5,7 @@ import type { SharedChart, SharingOverview } from '@/lib/sharing';
 import { SharingError } from '@/lib/sharing';
 
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), navigate: vi.fn(), invoke: vi.fn() }));
+vi.mock('@/components/WorkspaceShell', () => ({ WorkspaceShell: ({ children }: { children: import('react').ReactNode }) => <main>{children}</main> }));
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mocks.navigate,
   useSearchParams: () => [new URLSearchParams()],

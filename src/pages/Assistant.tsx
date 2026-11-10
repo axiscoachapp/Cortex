@@ -1,8 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Send, Loader2, Brain, Stethoscope, Pill, FileText, Users, Sparkles,
+  Send, Loader2, Brain, Stethoscope, Pill, FileText, Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +11,8 @@ import { cn } from '@/lib/utils';
 import { functionErrorBody } from '@/lib/functionErrors';
 import { ClinicalAnswer } from '@/components/ClinicalAnswer';
 import type { ChatMessage } from '@/types/patient';
+import { WorkspaceShell } from '@/components/WorkspaceShell';
+import { PageHeading } from '@/components/PageHeading';
 
 interface Msg { id: string; role: 'user' | 'assistant'; content: string; sources?:ChatMessage['sources'];coverage?:ChatMessage['coverage'];safety?:ChatMessage['safety'] }
 
@@ -23,7 +24,6 @@ const CHIPS = [
 ];
 
 export default function AssistantPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -78,25 +78,16 @@ export default function AssistantPage() {
   const empty = messages.length === 0;
 
   return (
-    <div className="h-[100dvh] bg-slate-50 flex flex-col">
-      <header className="bg-background border-b sticky top-0 z-10">
-        <div className="container mx-auto px-3 md:px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Sparkles className="h-5 w-5 text-medical-blue shrink-0" />
-          <h1 className="text-base md:text-lg font-semibold text-foreground">Assistente Cortex</h1>
-        </div>
-      </header>
-
-      <main className="flex-1 min-h-0 flex flex-col">
+    <WorkspaceShell section="Assistente" contentClassName="space-y-6">
+      <PageHeading title="Assistente Cortex" description="Apoio para dúvidas clínicas e para o uso do sistema. Revise as respostas antes de aplicá-las ao atendimento." />
+      <section aria-label="Perguntas ao assistente" className={cn('flex flex-col rounded-xl border bg-card', empty ? 'min-h-[28rem]' : 'h-[min(44rem,calc(100dvh-15rem))] min-h-[24rem] overflow-hidden')}>
         {requestError && <div role="alert" className="mx-auto w-full max-w-2xl p-3 text-sm text-destructive flex items-center gap-3">
           <p>{requestError}</p>
           {failedQuestion && <Button variant="outline" size="sm" disabled={loading} onClick={() => send(failedQuestion, true)}>Tentar novamente</Button>}
         </div>}
         {empty ? (
-          <div className="flex-1 flex flex-col items-center justify-center px-4 max-w-2xl mx-auto w-full">
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-8">
+          <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 max-w-2xl mx-auto w-full">
+            <h2 className="text-xl md:text-2xl font-semibold text-foreground text-center mb-6">
               Como o <span className="text-medical-blue">Cortex</span> pode te ajudar?
             </h2>
             <div className="w-full relative">
@@ -126,7 +117,7 @@ export default function AssistantPage() {
                   key={label}
                   type="button"
                   onClick={() => { setInput(prompt); inputRef.current?.focus(); }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-border bg-white text-xs font-medium text-foreground/80 hover:border-medical-blue/40 hover:bg-medical-blue-light/30 transition-all"
+                  className="inline-flex min-h-11 items-center gap-1.5 px-3.5 py-2 rounded-lg border border-border bg-card text-xs font-medium text-foreground/80 hover:border-medical-blue/40 hover:bg-medical-blue-light/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <Icon className="w-3.5 h-3.5 text-medical-blue" />
                   {label}
@@ -180,7 +171,7 @@ export default function AssistantPage() {
                   onKeyDown={e => { if (e.key === 'Enter') send(input); }}
                   placeholder="Escreva sua pergunta"
                   aria-label="Escreva sua pergunta"
-                  className="flex-1 h-11 px-4 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30"
+                  className="min-w-0 flex-1 h-11 px-4 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/30"
                 />
                 <Button size="icon" aria-label="Enviar pergunta" className="rounded-xl h-11 w-11" onClick={() => send(input)} disabled={!input.trim() || loading}>
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -189,7 +180,7 @@ export default function AssistantPage() {
             </div>
           </>
         )}
-      </main>
-    </div>
+      </section>
+    </WorkspaceShell>
   );
 }

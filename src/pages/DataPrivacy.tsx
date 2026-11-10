@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Trash2, Shield, AlertTriangle, Loader2 } from 'lucide-react';
+import { Download, Trash2, Shield, AlertTriangle, Loader2 } from 'lucide-react';
+import { WorkspaceShell } from '@/components/WorkspaceShell';
+import { PageHeading } from '@/components/PageHeading';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -143,19 +145,10 @@ export default function DataPrivacy() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-background border-b sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Shield className="h-5 w-5 text-medical-blue" />
-          <h1 className="text-base font-semibold text-foreground">Privacidade & Dados</h1>
-        </div>
-      </header>
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl space-y-8">
-        <section className="rounded-xl border border-border bg-white p-6 space-y-4">
+    <WorkspaceShell section="Privacidade e dados">
+      <PageHeading title="Privacidade e dados" description="Consulte seus direitos, exporte seus registros e gerencie solicitações de exclusão." />
+      <div className="max-w-5xl space-y-6">
+        <section className="rounded-xl border bg-card p-4 space-y-4 md:p-6">
           <h2 className="font-semibold text-foreground flex items-center gap-2">
             <Shield className="w-4 h-4 text-medical-blue" />
             Seus direitos — LGPD
@@ -180,7 +173,7 @@ export default function DataPrivacy() {
         </section>
 
         {/* Export */}
-        <section className="rounded-xl border border-border bg-white p-6 space-y-3">
+        <section className="rounded-xl border bg-card p-4 space-y-3 md:p-6">
           <h2 className="font-semibold text-foreground flex items-center gap-2">
             <Download className="w-4 h-4 text-medical-blue" />
             Exportar meus dados
@@ -205,7 +198,7 @@ export default function DataPrivacy() {
               {exportError}
             </p>
           )}
-          <Button variant="outline" onClick={handleExport} disabled={exporting || deleting} className="gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={exporting || deleting} className="h-auto min-h-11 gap-2 whitespace-normal text-left">
             {exporting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -221,7 +214,7 @@ export default function DataPrivacy() {
         </section>
 
         {/* Delete account */}
-        <section className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 space-y-3">
+        <section className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-3 md:p-6">
           <h2 className="font-semibold text-destructive flex items-center gap-2">
             <Trash2 className="w-4 h-4" />
             Excluir conta e dados
@@ -346,7 +339,7 @@ export default function DataPrivacy() {
             </AlertDialogContent>
           </AlertDialog>
         </section>
-      </main>
-    </div>
+      </div>
+    </WorkspaceShell>
   );
 }

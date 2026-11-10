@@ -99,8 +99,9 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
 
         <WorkspaceMenu className="w-full" onNavigate={go} />
         <nav aria-label="Consultório" className="space-y-1">
-          <button type="button" onClick={onHome ?? (() => go('/'))} aria-current={homeActive ? 'page' : undefined} className={cn('w-full min-h-11 flex items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-left', homeActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-card')}><Home className="h-4 w-4" />Início</button>
-          {[{ to: '/agenda', label: 'Agenda', icon: CalendarDays }, { to: '/gerenciar-pacientes', label: 'Pacientes', icon: Users }].map(({ to, label, icon: Icon }) => <button type="button" key={to} onClick={() => go(to)} className="w-full min-h-11 flex items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-card hover:text-foreground"><Icon className="h-4 w-4" />{label}</button>)}
+          <p className="px-3 pb-2 text-[0.625rem] font-medium uppercase tracking-widest text-muted-foreground">Consultório</p>
+          <button type="button" onClick={onHome ?? (() => go('/'))} aria-current={homeActive ? 'page' : undefined} className={cn('workspace-nav-item w-full text-left', homeActive && 'workspace-nav-item-active')}><Home className="h-4 w-4" />Início</button>
+          {[{ to: '/agenda', label: 'Agenda', icon: CalendarDays }, { to: '/gerenciar-pacientes', label: 'Pacientes', icon: Users }].map(({ to, label, icon: Icon }) => <button type="button" key={to} onClick={() => go(to)} className="workspace-nav-item w-full text-left"><Icon className="h-4 w-4" />{label}</button>)}
         </nav>
         {!homeActive && <Button
           variant="default"
@@ -195,15 +196,12 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
 
       {/* Navigation rail */}
       <nav aria-label="Ferramentas do consultório" className="px-3 py-3 border-t border-border/50 space-y-1">
-        <p className="px-3 py-1 text-[0.625rem] font-medium uppercase tracking-widest text-muted-foreground">Recursos clínicos</p>
+        <p className="px-3 py-1 text-[0.625rem] font-medium uppercase tracking-widest text-muted-foreground">Ferramentas</p>
         {[...NAV_ITEMS, ...(clinicAccess?.active && clinicAccess.kind === 'clinical' && clinicAccess.clinic ? [{ to: '/pre-consultas', icon: ClipboardCheck, label: 'Pré-consultas' }] : []), { to: '/configuracoes', icon: Settings2, label: 'Configurações' }].map(({ to, icon: Icon, label }) => (
           <button
             key={to}
             onClick={() => go(to)}
-            className={cn(
-              'w-full flex items-center gap-2.5 min-h-11 px-3 rounded-lg text-xs font-medium',
-              'text-muted-foreground hover:text-foreground hover:bg-white transition-all',
-            )}
+            className="workspace-nav-item w-full text-left"
           >
             <Icon className="w-4 h-4 shrink-0" />
             {label}

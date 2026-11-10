@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { BrandLockup } from '@/components/BrandLockup';
+import { WorkspaceShell } from '@/components/WorkspaceShell';
+import { PageHeading } from '@/components/PageHeading';
 import { mfaErrorMessage, newFactorName } from '@/lib/mfa';
 export default function AccountSecurity() {
   const { user } = useAuth();
@@ -15,7 +15,9 @@ export default function AccountSecurity() {
   const [factor, setFactor] = useState('');
   const [error, setError] = useState<{ message: string } | null>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
-  useEffect(() => { errorRef.current?.focus(); }, [error]);
+  useEffect(() => {
+    errorRef.current?.focus();
+  }, [error]);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const factors = useQuery({
@@ -80,7 +82,7 @@ export default function AccountSecurity() {
       if (error) throw error;
       const queryKey = ['mfa-factors', user?.id];
       await client.cancelQueries({ queryKey });
-      client.setQueryData<typeof factors.data>(queryKey, current => current?.filter(f => f.id !== id));
+      client.setQueryData<typeof factors.data>(queryKey, (current) => current?.filter((f) => f.id !== id));
       setSetup(null);
       setFactor('');
       setCode('');
@@ -88,136 +90,156 @@ export default function AccountSecurity() {
       setNotice('Autenticador removido.');
     });
   return (
-    <main className="min-h-screen max-w-2xl mx-auto p-6 space-y-6">
-      <Link to="/" className="text-sm underline">
-        Voltar ao início
-      </Link>
-      <BrandLockup />
-      <h1 className="font-serif text-3xl">Segurança da conta</h1>
-      <p className="text-sm text-muted-foreground">
-        Use um aplicativo autenticador para verificar o acesso com um código temporário. Cada médico deve manter sua
-        própria conta.
-      </p>
-      {error && (
-        <p ref={errorRef} tabIndex={-1} role="alert" className="text-destructive text-sm">
-          {error.message}
-        </p>
-      )}
-      {notice && (
-        <p role="status" className="text-sm">
-          {notice}
-        </p>
-      )}
-      {factors.isError ? (
-        <p role="alert">
-          Não foi possível carregar autenticadores.{' '}
-          <button onClick={() => factors.refetch()} className="underline">
-            Tentar novamente
-          </button>
-        </p>
-      ) : factors.isLoading ? (
-        <p role="status">Carregando…</p>
-      ) : (
-        <ul className="space-y-3">
-          {factors.data?.map((f) => (
-            <li key={f.id} className="p-4 border rounded-lg flex justify-between items-center gap-3">
-              <span className="text-sm">
-                {f.friendly_name || 'Aplicativo autenticador'} ·{' '}
-                {f.status === 'verified' ? 'Ativo' : 'Configuração pendente'}
-              </span>
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => remove(f.id)}>
-                Remover
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {!setup && (
-        <Button disabled={busy || factors.isLoading || factors.isError} onClick={enroll}>
-          Adicionar autenticador
-        </Button>
-      )}
-      {setup && (
-        <section className="rounded-xl border bg-card p-5 space-y-4">
-          <h2 className="font-semibold">Configurar aplicativo</h2>
-          <p className="text-sm">
-            Leia o QR code no seu aplicativo. Guarde sua configuração em um local seguro e confirme o código abaixo.
+    <WorkspaceShell section="Segurança da conta">
+      <PageHeading
+        title="Segurança da conta"
+        description="Proteja seu acesso com um aplicativo autenticador. Cada pessoa deve manter sua própria conta."
+      />
+      <div className="max-w-4xl space-y-6">
+        {error && (
+          <p ref={errorRef} tabIndex={-1} role="alert" className="text-destructive text-sm">
+            {error.message}
           </p>
-          <img
-            src={
-              setup.qr.startsWith('data:')
-                ? setup.qr
-                : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(setup.qr)
-            }
-            alt="QR code para configurar seu autenticador"
-            className="w-52 max-w-full h-auto"
-          />
-          <details>
-            <summary className="cursor-pointer text-sm">Inserir chave manualmente</summary>
-            <code className="block break-all py-3 select-all">{setup.secret}</code>
-          </details>
-          <Button variant="outline" disabled={busy} onClick={() => remove(setup.id)}>
-            Cancelar configuração
-          </Button>
-        </section>
-      )}
-      {(setup || factors.data?.some((f) => f.status === 'verified')) && (
-        <form
-          className="space-y-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void verify();
-          }}
-        >
-          {!setup && (
-            <label className="block text-sm">
-              Autenticador
-              <select
-                aria-label="Autenticador"
-                className="block w-full border rounded p-2 mt-2"
-                value={factor || factors.data?.find((f) => f.status === 'verified')?.id || ''}
-                disabled={busy}
-                onChange={(e) => { setFactor(e.target.value); setCode(''); setError(null); setNotice(''); }}
-                required
-              >
-                <option value="">Selecione</option>
-                {factors.data
-                  ?.filter((f) => f.status === 'verified')
-                  .map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.friendly_name || 'Aplicativo autenticador'}
-                    </option>
-                  ))}
-              </select>
-            </label>
+        )}
+        {notice && (
+          <p role="status" className="text-sm">
+            {notice}
+          </p>
+        )}
+        <section className="rounded-xl border bg-card p-4 space-y-4 md:p-6" aria-labelledby="authenticators-heading">
+          <div className="space-y-1">
+            <h2 id="authenticators-heading" className="text-base font-semibold">
+              Seus autenticadores
+            </h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Gerencie os dispositivos usados para confirmar sua identidade.
+            </p>
+          </div>
+          {factors.isError ? (
+            <div role="alert" className="space-y-3 text-sm">
+              <p>Não foi possível carregar autenticadores.</p>
+              <Button variant="outline" onClick={() => factors.refetch()}>
+                Tentar novamente
+              </Button>
+            </div>
+          ) : factors.isLoading ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              Carregando…
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {factors.data?.map((f) => (
+                <li key={f.id} className="rounded-lg border p-4 flex flex-wrap justify-between items-center gap-3">
+                  <span className="min-w-0 text-sm [overflow-wrap:anywhere]">
+                    {f.friendly_name || 'Aplicativo autenticador'} ·{' '}
+                    {f.status === 'verified' ? 'Ativo' : 'Configuração pendente'}
+                  </span>
+                  <Button variant="outline" size="sm" disabled={busy} onClick={() => remove(f.id)}>
+                    Remover
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
-          <label className="block text-sm space-y-2">
-            <span>Código do aplicativo</span>
-            <Input
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              pattern="[0-9]{6}"
-              maxLength={6}
-              disabled={busy}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-              required
+          {!factors.isLoading && !factors.isError && factors.data?.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Nenhum autenticador cadastrado. Adicione um dispositivo para proteger sua conta.
+            </p>
+          )}
+          {!setup && (
+            <Button className="h-auto min-h-11 max-w-full whitespace-normal" disabled={busy || factors.isLoading || factors.isError} onClick={enroll}>
+              Adicionar autenticador
+            </Button>
+          )}
+        </section>
+        {setup && (
+          <section className="rounded-xl border bg-card p-5 space-y-4">
+            <h2 className="font-semibold">Configurar aplicativo</h2>
+            <p className="text-sm">
+              Leia o QR code no seu aplicativo. Guarde sua configuração em um local seguro e confirme o código abaixo.
+            </p>
+            <img
+              src={
+                setup.qr.startsWith('data:')
+                  ? setup.qr
+                  : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(setup.qr)
+              }
+              alt="QR code para configurar seu autenticador"
+              className="w-52 max-w-full h-auto"
             />
-          </label>
-          <Button
-            type="submit"
-            disabled={
-              busy || code.length !== 6 || (!setup && !(factor || factors.data?.some((f) => f.status === 'verified')))
-            }
+            <details>
+              <summary className="cursor-pointer text-sm">Inserir chave manualmente</summary>
+              <code className="block break-all py-3 select-all">{setup.secret}</code>
+            </details>
+            <Button className="h-auto min-h-11 max-w-full whitespace-normal" variant="outline" disabled={busy} onClick={() => remove(setup.id)}>
+              Cancelar configuração
+            </Button>
+          </section>
+        )}
+        {(setup || factors.data?.some((f) => f.status === 'verified')) && (
+          <form
+            className="space-y-4 rounded-xl border bg-card p-4 md:p-6"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void verify();
+            }}
           >
-            Verificar código
-          </Button>
-        </form>
-      )}
-      <p className="text-xs text-muted-foreground border-t pt-4">
-        Se perder acesso ao autenticador, solicite recuperação ao responsável pelo ambiente. Desabilitar um fator exige
-        uma sessão verificada.
-      </p>
-    </main>
+            <h2 className="text-base font-semibold">Confirmar acesso</h2>
+            {!setup && (
+              <label className="block text-sm">
+                Autenticador
+                <select
+                  aria-label="Autenticador"
+                  className="mt-2 block min-h-11 w-full min-w-0 rounded-lg border bg-background px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={factor || factors.data?.find((f) => f.status === 'verified')?.id || ''}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setFactor(e.target.value);
+                    setCode('');
+                    setError(null);
+                    setNotice('');
+                  }}
+                  required
+                >
+                  <option value="">Selecione</option>
+                  {factors.data
+                    ?.filter((f) => f.status === 'verified')
+                    .map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.friendly_name || 'Aplicativo autenticador'}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
+            <label className="block text-sm space-y-2">
+              <span>Código do aplicativo</span>
+              <Input
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                disabled={busy}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                required
+              />
+            </label>
+            <Button
+              type="submit"
+              disabled={
+                busy || code.length !== 6 || (!setup && !(factor || factors.data?.some((f) => f.status === 'verified')))
+              }
+            >
+              Verificar código
+            </Button>
+          </form>
+        )}
+        <p className="text-xs text-muted-foreground border-t pt-4">
+          Se perder acesso ao autenticador, solicite recuperação ao responsável pelo ambiente. Desabilitar um fator
+          exige uma sessão verificada.
+        </p>
+      </div>
+    </WorkspaceShell>
   );
 }

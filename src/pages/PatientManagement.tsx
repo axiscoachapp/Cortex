@@ -1,6 +1,6 @@
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +8,7 @@ import { mapPatientRow } from '@/lib/patientMapper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Dialog,
@@ -19,7 +19,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Brain, Plus, Pencil, Trash2, ArrowLeft, LifeBuoy, Archive, RotateCcw } from 'lucide-react';
+import { Plus, Pencil, Trash2, LifeBuoy, Archive, RotateCcw } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,9 +38,10 @@ import { clinicDate, formatDateOnly } from '@/lib/dates';
 import { fetchAllRows } from '@/lib/pagination';
 import { PatientAdministrativeFields } from '@/components/PatientAdministrativeFields';
 import { validatePatientRegistration, validatePatientChanges, normalizeCpf, administrativeValues } from '@/lib/patientRegistration';
+import { WorkspaceShell } from '@/components/WorkspaceShell';
+import { PageHeading } from '@/components/PageHeading';
 
 const PatientManagement = () => {
-  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -262,36 +263,22 @@ const PatientManagement = () => {
   if (!user) return <Navigate to="/auth" replace />;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-background border-b">
-        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <Brain className="h-6 w-6 md:h-8 md:w-8 text-primary shrink-0" />
-            <h1 className="text-lg md:text-2xl font-semibold truncate">
-              <span className="sm:hidden">Pacientes</span>
-              <span className="hidden sm:inline">Gerenciar pacientes</span>
-            </h1>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-4 md:py-8">
+    <WorkspaceShell section="Pacientes" contentClassName="space-y-6">
+      <PageHeading title="Pacientes" description="Consulte e mantenha seus cadastros. O acesso ao prontuário de outro médico depende de compartilhamento explícito." />
+      <div>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between p-4 pb-3 md:p-6 md:pb-3">
-            <CardTitle className="text-base md:text-xl">Pacientes</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" aria-label="Migração de pacientes" onClick={() => setMigrationInfoOpen(true)}>
-                <LifeBuoy className="h-4 w-4 md:mr-2" />
-                <span className="hidden sm:inline">Migração</span>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0 p-4 pb-3 md:p-6 md:pb-3">
+            <h2 className="text-base font-semibold md:text-lg">Seus cadastros</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button className="min-h-11 gap-2" variant="outline" aria-label="Migração de pacientes" onClick={() => setMigrationInfoOpen(true)}>
+                <LifeBuoy className="h-4 w-4" />
+                Migração
               </Button>
               <Dialog open={dialogOpen} onOpenChange={setDialog}>
                 <DialogTrigger asChild>
-                  <Button size="sm" aria-label="Novo Paciente">
-                    <Plus className="h-4 w-4 md:mr-2" />
-                    <span className="hidden sm:inline">Novo Paciente</span>
+                  <Button className="min-h-11 gap-2" aria-label="Novo Paciente">
+                    <Plus className="h-4 w-4" />
+                    Novo paciente
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-h-[90dvh] overflow-y-auto max-w-[calc(100vw-16px)] sm:max-w-lg">
@@ -614,7 +601,7 @@ const PatientManagement = () => {
             )}
           </CardContent>
         </Card>
-      </main>
+      </div>
 
       <Dialog open={migrationInfoOpen} onOpenChange={setMigrationInfoOpen}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto max-w-[calc(100vw-16px)] sm:max-w-lg">
@@ -670,7 +657,7 @@ const PatientManagement = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </WorkspaceShell>
   );
 };
 

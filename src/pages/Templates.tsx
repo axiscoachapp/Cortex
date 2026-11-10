@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, FileStack, Plus, Search, Pencil, Copy, Trash2, Loader2, Sparkles, FileText } from 'lucide-react';
+import { Plus, Search, Pencil, Copy, Trash2, Loader2, Sparkles, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +13,8 @@ import { fetchAllRows } from '@/lib/pagination';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { functionErrorBody } from '@/lib/functionErrors';
 import { ClinicalMarkdown } from '@/components/ClinicalMarkdown';
+import { WorkspaceShell } from '@/components/WorkspaceShell';
+import { PageHeading } from '@/components/PageHeading';
 
 export interface DocumentTemplate {
   id: string;
@@ -27,7 +28,6 @@ export interface DocumentTemplate {
 type CreateMode = 'ai' | 'existing';
 
 export default function TemplatesPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -232,41 +232,22 @@ export default function TemplatesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-background border-b sticky top-0 z-10">
-        <div className="container mx-auto px-3 md:px-4 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <FileStack className="h-5 w-5 text-medical-blue shrink-0" />
-            <div className="min-w-0">
-              <h1 className="text-base md:text-lg font-semibold text-foreground leading-tight truncate">
-                <span className="sm:hidden">Modelos</span>
-                <span className="hidden sm:inline">Modelos de documento</span>
-              </h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                Estruturas personalizadas para as evoluções geradas pela IA
-              </p>
-            </div>
-          </div>
+    <WorkspaceShell section="Modelos" contentClassName="space-y-6">
+      <PageHeading title="Modelos de documento" description="Escolha e personalize as estruturas usadas nas suas evoluções. Todo texto gerado precisa da sua revisão." actions={
           <Button
             variant="medical"
-            size="sm"
             aria-label="Criar meu modelo"
-            className="gap-1.5"
+            className="min-h-11 gap-2"
             onClick={() => {
               setCreateMode('ai');
               setCreateOpen(true);
             }}
           >
             <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">Criar meu modelo</span>
+            Criar meu modelo
           </Button>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-3 md:px-4 py-6 max-w-3xl space-y-4">
+      } />
+      <div className="space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -372,7 +353,7 @@ export default function TemplatesPage() {
           descrição e comandos condicionais entre parênteses — ex.: "(incluir apenas se mencionado explicitamente na
           transcrição. Caso contrário, omitir completamente)".
         </p>
-      </main>
+      </div>
 
       <Dialog open={!!preview} onOpenChange={open => { if (!open) setPreview(null); }}>
         <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
@@ -548,6 +529,6 @@ export default function TemplatesPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </WorkspaceShell>
   );
 }

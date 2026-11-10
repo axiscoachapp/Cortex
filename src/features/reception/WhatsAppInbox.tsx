@@ -2,6 +2,7 @@ import { useEffect,useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PageHeading } from '@/components/PageHeading';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,10 +36,7 @@ function Inbox({ actor, clinic }: { actor: string; clinic: string }) {
   });
   const fresh = channel.isSuccess && channel.isFetchedAfterMount && channel.fetchStatus === 'idle';
   return <div className="space-y-4">
-    <header className="space-y-2">
-      <h1 className="text-xl font-semibold">Conversas</h1>
-      <p className="text-sm text-muted-foreground">Consulte as conversas recebidas pelo número da clínica.</p>
-    </header>
+    <PageHeading title="Conversas" description="Consulte as conversas recebidas pelo número da clínica." />
     {channel.fetchStatus === 'paused' ? <p role="status" className="p-4 text-sm">Aguardando conexão de rede para verificar o WhatsApp…</p>
       : channel.fetchStatus !== 'idle' || channel.isPending ? <p role="status" className="p-4 text-sm">Verificando WhatsApp…</p>
       : channel.isError ? <ReadFailure label="conexão" onRetry={() => void channel.refetch()} />

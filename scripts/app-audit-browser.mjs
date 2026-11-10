@@ -167,6 +167,7 @@ const CLINIC_ADMIN = process.env.AUDIT_CLINIC_ADMIN === '1';
 function whatsappAnswer(body) {
   const template = { name: 'lembrete_consulta', language: 'pt_BR', category: 'UTILITY', status: 'APPROVED', body: 'Olá {{1}}, sua consulta é {{2}} às {{3}}. Responda Confirmar ou Remarcar.', paramCount: 3 };
   switch (body.action) {
+    case 'conversations': return { conversations: [], nextBefore: null };
     case 'dashboard': return { schemaVersion: 1, asOf: now(), window: { from: body.from, to: body.to, timeZone: 'America/Sao_Paulo' }, coverage: 'latest_cycle_only',
       cohort: { incomingCycles: 0, withHumanSend: 0, withoutHumanSend: 0, medianFirstHumanSendSeconds: null, closedWithoutHumanSend: 0 },
       openNow: { total: 0, unassigned: 0, assignedToIneligible: 0, owners: { items: [], nextBefore: null } }, unavailable: { abandonment: 'no_explicit_event', appointments: 'scoped_source_required' } };
@@ -328,6 +329,7 @@ async function inspect(page, width) {
 const ROUTES = [
   ['inicio', '/'],
   ['recepcao', '/recepcao'],
+  ['recepcao-conversas', '/recepcao?view=conversations'],
   ['recepcao-agenda', '/recepcao/agenda'],
   ['recepcao-contatos', '/recepcao/contatos'],
   ['recepcao-painel', '/recepcao/painel'],
@@ -433,6 +435,34 @@ try {
       await page.waitForTimeout(1500);
       await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: true });
       report.routes[`${label} ${path}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+      if (process.env.AUDIT_UI_CONSISTENCY === '1' && /^\/(configuracoes|agenda|gerenciar-pacientes|modelos|conhecimento|assistente|compartilhamento|seguranca|privacidade|permissoes-recepcao|pre-consultas|financeiro|recepcao)(?:[/?]|$)/.test(path)) {
+        await expect(page.getByRole('main')).toHaveCount(1);
+        await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+        if (viewport.width >= 1728) {
+          const sidebar = page.getByRole('complementary', { name: 'Navegação do ambiente' });
+          await expect(sidebar).toBeVisible();
+          await expect(sidebar.getByRole('link', { name: 'Configurações', exact: true })).toBeInViewport();
+          await expect(sidebar.getByRole('button', { name: 'Sair', exact: true })).toBeInViewport();
+        } else await expect(page.getByRole('navigation', { name: 'Navegação principal', exact: true })).toBeVisible();
+        if (viewport.width < 360) {
+          const area = page.getByRole('button', { name: 'Alternar área de trabalho', exact: true });
+          if (await area.count()) {
+            const a = await area.boundingBox(), b = await page.getByRole('button', { name: 'Sair', exact: true }).boundingBox();
+            if (!a || !b || Math.abs(a.y + a.height / 2 - b.y - b.height / 2) > 1) throw new Error('Compact workspace header wrapped to two rows');
+          }
+        }
+        if (path === '/seguranca') {
+          const add = page.getByRole('button', { name: 'Adicionar autenticador', exact: true });
+          await add.scrollIntoViewIfNeeded();
+          await expect(add).toBeInViewport();
+          const contained = await add.evaluate(button => {
+            const bounds = button.getBoundingClientRect(), card = button.closest('section').getBoundingClientRect();
+            return bounds.left >= card.left && bounds.right <= card.right;
+          });
+          if (!contained) throw new Error('Authenticator action exceeds its card');
+          await page.screenshot({ path: resolve(artifacts, `${label}-seguranca-acao.png`), fullPage: true });
+        }
+      }
       if (process.env.AUDIT_MANAGED_SETTINGS === '1' && path.startsWith('/configuracoes')) {
         await expect(page.getByLabel('Especialidade', { exact: true })).toHaveCount(0);
         await expect(page.getByLabel('Nome completo do médico', { exact: true })).toHaveCount(0);
@@ -447,9 +477,8 @@ try {
         }
         if (path === '/configuracoes') {
           await page.goto(origin + '/configuracoes?origin=audit');
-          if (viewport.width < 1728) await page.getByLabel('Acessar seção').selectOption('implantacao');
-          else await page.getByRole('button', { name: 'Dados da implantação', exact: true }).first().click();
-          await expect(page.getByRole('main', { name: 'Dados da implantação' })).toBeVisible();
+          await page.getByLabel('Acessar seção').selectOption('implantacao');
+          await expect(page.getByRole('region', { name: 'Dados da implantação' })).toBeVisible();
           if (new URL(page.url()).searchParams.get('origin') !== 'audit') throw new Error('Settings navigation lost context parameters');
           await page.screenshot({ path: resolve(artifacts, `${label}-config-navegacao.png`), fullPage: true });
           report.routes[`${label} configurações navegação`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
@@ -501,7 +530,15 @@ try {
         }
       }
       // Finance: every tab, and the dialogs that carry forms.
-      if (path === '/financeiro') {
+      if (['/financeiro', '/recepcao/financeiro'].includes(path) && WORKSPACE_ROLE === 'doctor') {
+        for (const [tab, name] of [['Cobranças', 'cobrancas'], ['Relatórios', 'relatorios']]) {
+          await page.getByRole('tab', { name: tab, exact: true }).click();
+          await expect(page.getByRole('button', { name: /^(Receber de|Nova cobrança avulsa)/ })).toHaveCount(0);
+          await page.screenshot({ path: resolve(artifacts, `${label}-financeiro-${name}.png`), fullPage: true });
+          report.routes[`${label} financeiro ${name}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        }
+      }
+      if (['/financeiro', '/recepcao/financeiro'].includes(path) && WORKSPACE_ROLE !== 'doctor') {
         const snap = async (name) => {
           await page.waitForTimeout(700);
           await page.screenshot({ path: resolve(artifacts, `${label}-financeiro-${name}.png`), fullPage: true });
@@ -535,7 +572,7 @@ try {
           const receive = page.getByRole('button', { name: /^Receber de/ }).first();
           if (await receive.count()) { await receive.click(); await snap('receber-dialogo'); await close(); }
         }
-        if (await tab('Lotes')) {
+        if (WORKSPACE_ROLE !== 'reception' && await tab('Lotes')) {
           await snap('lotes');
           const settle = page.getByRole('button', { name: /^Lançar o retorno/ }).first();
           if (await settle.count()) { await settle.click(); await snap('retorno-dialogo'); await close(); }
@@ -545,8 +582,8 @@ try {
           const add = page.getByRole('button', { name: 'Nova despesa' });
           if (await add.count()) { await add.click(); await snap('despesa-dialogo'); await close(); }
         }
-        if (await tab('Relatórios')) await snap('relatorios');
-        if (await tab('Cadastros')) {
+        if (WORKSPACE_ROLE !== 'reception' && await tab('Relatórios')) await snap('relatorios');
+        if (WORKSPACE_ROLE !== 'reception' && await tab('Cadastros')) {
           await snap('cadastros');
           const pro = page.getByRole('button', { name: /^Editar os dados de faturamento/ }).first();
           if (await pro.count()) { await pro.click(); await snap('medico-dialogo'); await close(); }

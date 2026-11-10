@@ -1,9 +1,9 @@
 // "Pré-consultas": the week's clinic appointments with the state of their pre-consultation.
 // The reception copies links and reviews the registration part; the doctor reads the health part.
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Copy, Loader2, RefreshCw } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Copy, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { WorkspaceShell } from '@/components/WorkspaceShell';
+import { PageHeading } from '@/components/PageHeading';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { answerText } from '../../../supabase/functions/_shared/intakeForm';
 import { dateTime, intakeCall, type IntakeListItem, type IntakeResponse } from './intakeApi';
@@ -110,7 +112,6 @@ export function IntakeAnswersDialog({ appointmentId, open, onOpenChange }: { app
 
 /** `embedded`: inside the reception layout (/recepcao/...), without its own page frame and back button. */
 export default function IntakePage({ embedded = false }: { embedded?: boolean }) {
-  const navigate = useNavigate();
   const access = useClinicAccess();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -150,16 +151,10 @@ export default function IntakePage({ embedded = false }: { embedded?: boolean })
   const items = list.data?.items ?? [];
   const label = `${range.from.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} a ${new Date(range.to.getTime() - DAY).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
 
-  return (
-    <div className={embedded ? '' : 'min-h-screen bg-[#F6F8F7]'}>
-      <div className={embedded ? 'w-full max-w-5xl' : 'mx-auto w-full max-w-5xl px-4 py-5 sm:py-8'}>
-        <div className="mb-5 flex flex-wrap items-center gap-3">
-          {!embedded && <Button variant="ghost" size="sm" onClick={() => navigate(-1)} aria-label="Voltar"><ArrowLeft className="h-4 w-4" /></Button>}
-          <div className="min-w-0 flex-1">
-            <h1 className="flex items-center gap-2 text-xl font-semibold"><ClipboardList className="h-5 w-5 text-primary" aria-hidden /> Pré-consultas</h1>
-            <p className="text-sm text-muted-foreground">Formulário que o paciente responde antes da consulta, por um link único.</p>
-          </div>
-        </div>
+  const content = (
+    <div className="min-w-0">
+      <div className="w-full space-y-5">
+        <PageHeading title="Pré-consultas" description="Acompanhe os formulários respondidos antes do atendimento, por um link único para cada consulta." />
 
         {state.data && (!state.data.enabled || !state.data.ready) && (
           <div className="mb-4 rounded-lg border border-[#F2B23E]/60 bg-[#F2B23E]/10 p-3 text-sm">
@@ -168,8 +163,8 @@ export default function IntakePage({ embedded = false }: { embedded?: boolean })
           </div>
         )}
 
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-1">
             <Button variant="outline" size="icon" aria-label="Semana anterior" onClick={() => setOffset((o) => o - 1)}><ChevronLeft className="h-4 w-4" /></Button>
             <Button variant="outline" size="icon" aria-label="Próxima semana" onClick={() => setOffset((o) => o + 1)}><ChevronRight className="h-4 w-4" /></Button>
             <span className="ml-2 text-sm font-medium" aria-live="polite">{label}</span>
@@ -181,9 +176,9 @@ export default function IntakePage({ embedded = false }: { embedded?: boolean })
           : list.isError ? (
             <p role="alert" className="text-sm text-destructive">{(list.error as Error).message} <button type="button" className="underline" onClick={() => list.refetch()}>Tentar novamente</button></p>
           ) : items.length === 0 ? (
-            <p className="rounded-xl border bg-white p-6 text-center text-sm text-muted-foreground">Nenhuma consulta da agenda da clínica neste período.</p>
+            <p className="rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground">Nenhuma consulta da agenda da clínica neste período.</p>
           ) : (
-            <ul className="divide-y rounded-xl border bg-white">
+            <ul className="divide-y rounded-xl border bg-card">
               {items.map((i) => {
                 const cancelled = i.appointmentStatus === 'cancelado' || i.appointmentStatus === 'faltou';
                 const usable = !cancelled && state.data?.enabled && state.data?.ready;
@@ -233,4 +228,5 @@ export default function IntakePage({ embedded = false }: { embedded?: boolean })
       </AlertDialog>
     </div>
   );
+  return embedded ? content : <WorkspaceShell section="Pré-consultas">{content}</WorkspaceShell>;
 }

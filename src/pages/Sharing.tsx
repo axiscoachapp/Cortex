@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Download, Loader2, LockKeyhole, Share2, Users, X } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Download, Loader2, LockKeyhole, Users, X } from 'lucide-react';
+import { WorkspaceShell } from '@/components/WorkspaceShell';
+import { PageHeading } from '@/components/PageHeading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -76,7 +78,6 @@ function StructuredSharedHistory({ items, count }: { items: SharedChart['structu
 }
 
 export default function SharingPage() {
-  const navigate = useNavigate();
   const [params] = useSearchParams();
   const { user } = useAuth();
   const [overview, setOverview] = useState<SharingOverview>(empty);
@@ -316,20 +317,9 @@ export default function SharingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 py-4">
-          <Button variant="ghost" size="icon" aria-label="Voltar ao consultório" onClick={() => navigate('/')}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <Share2 className="w-5 h-5 text-primary" />
-          <div>
-            <h1 className="font-semibold text-lg">Compartilhamento entre médicos</h1>
-            <p className="text-xs text-muted-foreground">Listas privadas. Acesso concedido paciente por paciente.</p>
-          </div>
-        </div>
-      </header>
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <WorkspaceShell section="Compartilhamento">
+      <PageHeading title="Compartilhamento entre médicos" description="Listas privadas. Acesso concedido paciente por paciente." />
+      <div className="space-y-6">
         <div className="rounded-xl border bg-card p-4 flex gap-3 text-sm">
           <LockKeyhole className="w-5 h-5 shrink-0 text-primary" />
           <p>
@@ -939,7 +929,7 @@ export default function SharingPage() {
             )}
           </section>
         )}
-      </main>
-    </div>
+      </div>
+    </WorkspaceShell>
   );
 }
