@@ -117,7 +117,7 @@ function SentDialog({ batch, onOpenChange, onDone }: { batch: Batch | null; onOp
   });
   return (
     <Dialog open={!!batch} onOpenChange={onOpenChange}>
-      <DialogContent className={`${DIALOG_CLASS} max-w-md`}>
+      <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
         <DialogHeader>
           <DialogTitle>Marcar o lote {batch?.number} como enviado</DialogTitle>
           <DialogDescription>Depois de subir o XML no portal do convênio. As guias passam a "Enviada".</DialogDescription>
@@ -290,7 +290,7 @@ export function BatchesTab({ scope, state }: { scope: string[]; state: BillingSt
         </AlertDialogContent>
       </AlertDialog>
       <Dialog open={!!nfse} onOpenChange={(o) => !o && setNfse(null)}>
-        <DialogContent className={`${DIALOG_CLASS} max-w-md`}>
+        <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
           <DialogHeader>
             <DialogTitle>Nota fiscal do lote {nfse?.batch.number}</DialogTitle>
             <DialogDescription>Número da NFS-e emitida para este lote no Emissor Nacional. Deixe vazio para apagar.</DialogDescription>

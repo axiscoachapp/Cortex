@@ -100,7 +100,7 @@ function PaymentDialog({ charge, onOpenChange, onPaid }: { charge: Charge | null
   };
   return (
     <Dialog open={!!charge} onOpenChange={(o) => { if (!o) setShownFor(null); onOpenChange(o); }}>
-      <DialogContent className={`${DIALOG_CLASS} max-w-md`}>
+      <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
         <DialogHeader>
           <DialogTitle>Receber pagamento</DialogTitle>
           <DialogDescription>{charge ? `${charge.patientName} · ${charge.description} · falta ${brl(remaining)}` : ''}</DialogDescription>

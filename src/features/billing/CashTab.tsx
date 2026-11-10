@@ -48,7 +48,7 @@ function ExpenseDialog({ open, expense, onOpenChange, onSaved }: { open: boolean
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${DIALOG_CLASS} max-w-lg`}>
+      <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
         <DialogHeader>
           <DialogTitle>{expense ? 'Editar despesa' : 'Nova despesa'}</DialogTitle>
           <DialogDescription>Contas a pagar da clínica. Marque a forma de pagamento quando pagar.</DialogDescription>

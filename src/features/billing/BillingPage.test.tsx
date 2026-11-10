@@ -73,6 +73,27 @@ function renderPage(role: 'admin' | 'reception' | 'doctor') {
 describe('finance page', () => {
   beforeEach(() => invoke.mockReset());
 
+  it('explains a doctor’s read-only charges without promising payment actions', async () => {
+    invoke.mockImplementation(answer('doctor'));
+    renderPage('doctor');
+    await screen.findByRole('tab', { name: 'Cobranças' });
+    expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Cobranças', 'Relatórios']);
+    expect(screen.getByText('Consulte suas cobranças, os pagamentos registrados e os saldos em aberto.')).toBeVisible();
+    expect(screen.queryByText(/registre o pagamento recebido/)).toBeNull();
+  });
+
+  it('describes cash according to role and the existing date scopes', async () => {
+    invoke.mockImplementation(answer('reception'));
+    const view = renderPage('reception');
+    await userEvent.click(await screen.findByRole('tab', { name: 'Caixa' }));
+    expect(screen.getByText('Confira os recebimentos do período pela data de pagamento.')).toBeVisible();
+    view.unmount();
+    invoke.mockImplementation(answer('admin'));
+    renderPage('admin');
+    await userEvent.click(await screen.findByRole('tab', { name: 'Caixa' }));
+    expect(screen.getByText('Recebimentos pela data de pagamento; despesas em aberto pelo vencimento e despesas pagas pela data do pagamento.')).toBeVisible();
+  });
+
   it('shows the tabs of each role', async () => {
     invoke.mockImplementation(answer('admin'));
     const { unmount } = renderPage('admin');

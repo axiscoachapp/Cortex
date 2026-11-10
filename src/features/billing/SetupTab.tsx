@@ -203,7 +203,7 @@ function ProfessionalDialog({ scope, doctor, current, onOpenChange }: { scope: s
   const [otherCbo, setOtherCbo] = useState(false);
   return (
     <Dialog open={!!doctor} onOpenChange={onOpenChange}>
-      <DialogContent className={`${DIALOG_CLASS} max-w-lg`}>
+      <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
         <DialogHeader>
           <DialogTitle>Dados de faturamento de {doctor?.name}</DialogTitle>
           <DialogDescription>Vão em cada guia: nome, conselho, número, UF e CBO.</DialogDescription>
