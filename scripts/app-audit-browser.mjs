@@ -45,7 +45,7 @@ const patient = (n, over) => ({
 });
 const state = {
   settings: {
-    user_id: doctorId, specialty: 'ginecologia', daily_credit_limit: 1500, live_copilot_enabled: false,
+    user_id: doctorId, specialty: 'ginecologia', daily_credit_limit: 1500, live_copilot_enabled: process.env.AUDIT_SETTINGS_LEGACY_COPILOT === '1',
     doctor_name: 'Dra. Médica Sintética', crm_number: '00000', crm_uf: 'PR', professional_address: 'Rua Sintética, 100 — Curitiba',
     professional_phone: '(41) 3000-0000', rqe: null, active_template_id: null, prescriber_cpf: null,
   },
@@ -134,6 +134,14 @@ async function supabase(route) {
   if (table === 'patient_files' || table === 'usage_daily') return rows([]);
   if (table === 'rpc/reception_team_doctors') return respond(route, [{ id: doctorId, name: 'Dra. Ana Exemplo', specialty: 'ginecologia' }]);
   if (table === 'rpc/reception_delegation_requests') return respond(route, { canManage: CLINIC_ADMIN || WORKSPACE_ROLE === 'admin', items: [], nextCursor: null });
+  if (table === 'rpc/reception_contacts') return respond(route, { items: [
+    { id: 'd5190000-0000-4000-8000-000000000001', name: 'Contato Sintético 1', phone: '+5541999990001', createdAt: day(-1) },
+    { id: 'd5190000-0000-4000-8000-000000000002', name: 'Contato Sintético 2', phone: '+5541999990002', createdAt: day(-2) },
+  ], nextCursor: null });
+  if (table === 'rpc/reception_appointments') return respond(route, { items: [
+    { id: 'd5180000-0000-4000-8000-000000000003', doctorId, patientId: pid(1), contactId: 'd5190000-0000-4000-8000-000000000001', caseId: null,
+      patientName: 'Paciente Sintética 1', startTime: day(0, 9), endTime: day(0, 9, 30), type: 'retorno', status: 'agendado', revision: 1, checkedInAt: null, googleSyncStatus: 'failed' },
+  ], blocks: [{ id: 'd5180000-0000-4000-8000-000000000004', doctorId, startTime: day(0, 12), endTime: day(0, 13), reason: 'Intervalo sintético', revision: 1 }] });
   if (table === 'rpc/reception_queue') return respond(route, { items: [
     { id: 'd5180000-0000-4000-8000-000000000001', subject: 'Organizar primeira consulta', kind: 'first_consult', status: 'new', revision: 1,
       contactId: 'd5190000-0000-4000-8000-000000000001', contactName: 'Contato Sintético 1', phone: '+5541999990001', doctorId, assignedTo: null, assigneeName: null, createdAt: day(0) },
@@ -159,8 +167,11 @@ const CLINIC_ADMIN = process.env.AUDIT_CLINIC_ADMIN === '1';
 function whatsappAnswer(body) {
   const template = { name: 'lembrete_consulta', language: 'pt_BR', category: 'UTILITY', status: 'APPROVED', body: 'Olá {{1}}, sua consulta é {{2}} às {{3}}. Responda Confirmar ou Remarcar.', paramCount: 3 };
   switch (body.action) {
+    case 'dashboard': return { schemaVersion: 1, asOf: now(), window: { from: body.from, to: body.to, timeZone: 'America/Sao_Paulo' }, coverage: 'latest_cycle_only',
+      cohort: { incomingCycles: 0, withHumanSend: 0, withoutHumanSend: 0, medianFirstHumanSendSeconds: null, closedWithoutHumanSend: 0 },
+      openNow: { total: 0, unassigned: 0, assignedToIneligible: 0, owners: { items: [], nextBefore: null } }, unavailable: { abandonment: 'no_explicit_event', appointments: 'scoped_source_required' } };
     case 'state': return { serverReady: true, connected: true, status: 'connected', displayPhone: '+55 41 3000-0000', verifiedName: 'Clínica Sintética', quality: 'GREEN',
-      connectedAt: day(-3), canManage: true, canUseInbox: true, lastError: null, webhookUrl: `${SUPABASE}/functions/v1/whatsapp-webhook`, phoneNumberId: '200000000001', wabaId: '1000000001' };
+      connectedAt: day(-3), canManage: WORKSPACE_ROLE ? WORKSPACE_ROLE === 'admin' : CLINIC_ADMIN, canUseInbox: true, lastError: null, webhookUrl: `${SUPABASE}/functions/v1/whatsapp-webhook`, phoneNumberId: '200000000001', wabaId: '1000000001' };
     case 'templates': return { templates: [template, { ...template, name: 'pre_consulta_link', status: 'PENDING', body: 'Olá {{1}}, antes da consulta acesse {{2}}.', paramCount: 2 }] };
     case 'automations': return {
       automations: [{ id: 'd5130000-0000-4000-8000-000000000001', name: 'Lembrete 48 h antes', enabled: true, trigger: 'before_start', offsetMinutes: 2880, templateName: 'lembrete_consulta',
@@ -317,6 +328,10 @@ async function inspect(page, width) {
 const ROUTES = [
   ['inicio', '/'],
   ['recepcao', '/recepcao'],
+  ['recepcao-agenda', '/recepcao/agenda'],
+  ['recepcao-contatos', '/recepcao/contatos'],
+  ['recepcao-painel', '/recepcao/painel'],
+  ['recepcao-equipe', '/recepcao/equipe'],
   ['prontuario', `/?patient=${pid(1)}`],
   ['prontuario-novo', `/?patient=${pid(2)}`],
   ['pacientes', '/gerenciar-pacientes'],
@@ -332,6 +347,10 @@ const ROUTES = [
   ['aviso', '/aviso-de-privacidade'],
   ['inexistente', '/rota-inexistente'],
   ['configuracoes', '/configuracoes'],
+  ['config-preferencias', '/configuracoes?secao=perfil'],
+  ['config-implantacao', '/configuracoes?secao=implantacao'],
+  ['config-compartilhamento', '/configuracoes?secao=usuarios'],
+  ['config-sobre', '/configuracoes?secao=sobre'],
   ['config-whatsapp', '/configuracoes?secao=whatsapp'],
   ['config-pre-consulta', '/configuracoes?secao=pre-consulta'],
   ['pre-consultas', '/pre-consultas'],
@@ -343,6 +362,9 @@ const ROUTES = [
   ['config-permissoes', '/configuracoes?secao=permissoes'],
   ['config-equipe', '/configuracoes?secao=equipe'],
   ['config-seguranca', '/configuracoes?secao=seguranca'],
+  ['delegacoes', '/permissoes-recepcao'],
+  ['google-retorno-sem-codigo', '/google-oauth-callback'],
+  ['assinatura-retorno-sem-codigo', '/assinatura/retorno'],
 ];
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null;
 
@@ -411,6 +433,28 @@ try {
       await page.waitForTimeout(1500);
       await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: true });
       report.routes[`${label} ${path}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+      if (process.env.AUDIT_MANAGED_SETTINGS === '1' && path.startsWith('/configuracoes')) {
+        await expect(page.getByLabel('Especialidade', { exact: true })).toHaveCount(0);
+        await expect(page.getByLabel('Nome completo do médico', { exact: true })).toHaveCount(0);
+        await expect(page.getByRole('switch', { name: 'Copiloto ao vivo', exact: true })).toHaveCount(0);
+        await expect(page.getByLabel('Token de acesso (usuário do sistema)', { exact: true })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Conectar número', exact: true })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Desconectar', exact: true })).toHaveCount(0);
+        if (path === '/configuracoes?secao=implantacao') {
+          await expect(page.getByText('Desativado', { exact: true })).toBeVisible();
+          if (WORKSPACE_ROLE === 'reception') await expect(page.getByRole('heading', { name: 'Seu cadastro profissional' })).toHaveCount(0);
+          else await expect(page.getByRole('heading', { name: 'Seu cadastro profissional' })).toBeVisible();
+        }
+        if (path === '/configuracoes') {
+          await page.goto(origin + '/configuracoes?origin=audit');
+          if (viewport.width < 1728) await page.getByLabel('Acessar seção').selectOption('implantacao');
+          else await page.getByRole('button', { name: 'Dados da implantação', exact: true }).first().click();
+          await expect(page.getByRole('main', { name: 'Dados da implantação' })).toBeVisible();
+          if (new URL(page.url()).searchParams.get('origin') !== 'audit') throw new Error('Settings navigation lost context parameters');
+          await page.screenshot({ path: resolve(artifacts, `${label}-config-navegacao.png`), fullPage: true });
+          report.routes[`${label} configurações navegação`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        }
+      }
       if (WORKSPACE_ROLE && ['/financeiro', '/recepcao/financeiro'].includes(path)) {
         const tabs = await page.getByRole('tab').allTextContents();
         const expected = WORKSPACE_ROLE === 'doctor' ? ['Cobranças', 'Relatórios'] : WORKSPACE_ROLE === 'reception' ? ['A faturar', 'Cobranças', 'Caixa'] : ['A faturar', 'Cobranças', 'Lotes', 'Caixa', 'Relatórios', 'Cadastros'];

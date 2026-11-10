@@ -419,3 +419,17 @@ Recebido no fechamento pelo Git59e396b (validações1052 C4); K2/2 aguarda retes
 [Objetivo, fontes e aceite](../../docs/product/clinic-crm/WORKSPACE_UX.md). Sem reativar looping, tocar SaaS ou operar produção.
 
 Entrega: c1e92df (ambientes/início/recepção) + bb16c50 (financeiro);111 testes/9 arquivos e206 estados principais +15 de sentinela privada, tipos/lint/build. [Evidências](../../docs/reviews/2026-11-10/product-ux/REVIEW.md). Tarefa manual concluída; sem reiniciar looping.
+
+## Configurações com implantação assistida em10/11
+
+[Contrato](../../docs/product/clinic-crm/SETTINGS_OWNERSHIP.md). Separar preferências/rotina/implantação/conta, retirar edição técnica do usuário, copiloto efetivamente desligado, revisar avisos e escrever Plano de implementação. Testes e navegador sintéticos; sem produtor/DDL/hosted ou reiniciar loop.
+
+- [x] Config1 — propriedade das configurações e UI por perfil.
+- [x] Config2 — preferências/consulta do cadastro e copiloto desativado.
+- [x] Config3 — atalhos, onboarding, WhatsApp e avisos coerentes.
+- [x] Config4 — Plano de implementação do zero com donos e aceite.
+- [x] Config5 — testes, navegador, revisão e passagem local.
+
+Ampliação manual18:35: revisão integral paralela de pacientes/perfil/documentos, recepção/agenda e financeiro, mantendo backend/produtores e SaaS intactos. Root integra/revisa/testa os paths autorizados e registra limites. Sem automação ou ações externas.
+
+Revisão integral concluída localmente: configurações bf47950, clínico d4bb937, recepção26c7a1a, financeiro3aefdf2. Suíte completa2397/168, focal final241/30, navegador198+86 estados, tipos/lint42/build. [Provas](../../docs/reviews/2026-11-10/settings-setup/REVIEW.md). Sem operação real ou reinício do loop.

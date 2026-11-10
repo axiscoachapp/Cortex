@@ -108,3 +108,11 @@ Painel da recepção implementado em /recepcao/painel com fonte C4 b7f424d, sem 
 Pedido de revisão do app inteiro, com prioridade início/recepção/financeiro. [Especificação](../../docs/product/clinic-crm/WORKSPACE_UX.md): pesquisa primária, diagnóstico visual42estados, seletor de ambientes por capacidades, início clínico orientado ao dia, operação da recepção e apresentação financeira coerente. Conta administradora alterna todas as áreas, sem exceção por email nem grants clínicos. Implementar e verificar nesta tarefa manual; automação permanece excluída. APIs/DDL/fiscal/provedores fora do recorte.
 
 UX manual10/11 concluída: c1e92df + bb16c50; revisão e provas em docs/reviews/2026-11-10/product-ux/REVIEW.md. Sem ação em produção nem reativação da automação.
+
+## Configurações com implantação assistida em10/11
+
+[Contrato](../../docs/product/clinic-crm/SETTINGS_OWNERSHIP.md). Separar preferências/rotina/implantação/conta, retirar edição técnica do usuário, copiloto efetivamente desligado, revisar avisos e escrever Plano de implementação. Testes e navegador sintéticos; sem produtor/DDL/hosted ou reiniciar loop.
+
+Ampliação manual18:35: revisão integral paralela de pacientes/perfil/documentos, recepção/agenda e financeiro, mantendo backend/produtores e SaaS intactos. Root integra/revisa/testa os paths autorizados e registra limites. Sem automação ou ações externas.
+
+Entrega integral concluída: commits bf47950/d4bb937/26c7a1a/3aefdf2 e Plano de implementação.md; ver docs/reviews/2026-11-10/settings-setup/REVIEW.md para provas e limites. Operador interno/ACL e operações reais dependem de contrato e autorização próprios; automação permanece excluída.

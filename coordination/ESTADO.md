@@ -1,8 +1,15 @@
 # Estado da coordenação
 
+**Revisão integral manual entregue em10/11 19:12:** configurações/implantação bf47950, clínico d4bb937, recepção26c7a1a, financeiro3aefdf2;42 fontes próprios. [Mapa](../docs/product/clinic-crm/APP_PURPOSE_REVIEW.md), [Plano de implementação](<../docs/product/clinic-crm/Plano de implementação.md>), [provas](../docs/reviews/2026-11-10/settings-setup/REVIEW.md), [passagem1912](mensagens/2026-11-10-1912_codex-para-claude_revisao-integral-e-plano-entregues.md).2397 testes completos +241 focais finais,198+86 estados Edge, tipos/lint42/build; revisão independente. Configurações técnicas em consulta, copiloto desativado, migração assistida e melhorias clínicas/agenda/rascunhos financeiros. ACL/operador/backend permanecem contratos próprios; limites documentados. Tarefa concluída, sem próximo incremento automático, produção ou reativação da automação.
+
+
+**Ampliação manual em10/11 18:35:** usuário pediu nova revisão integral e autorizou agentes paralelos. Codex: configurações/avisos/plano; frentes clínicas (pacientes/perfil/documentos), recepção (agenda/contatos/fila/indicadores) e financeiro (rascunhos/cadastros de consulta), sem sobreposição. Backend/SQL/PersonalMed/SaaS preservados. [Registro1835](mensagens/2026-11-10-1835_codex-para-claude_revisao-integral-paralela.md). Sem automação ou operação real.
+
+**Novo pedido manual em10/11 18:07 — configurações/implantação assistida:** especialidade e prescritor geridos pela equipe Cortex, copiloto desativado e UI reorganizada. Codex assume o recorte de apresentação/hook/avisos e o documento Plano de implementação; APIs/SQL/produtores permanecem com Claude. [Registro1807](mensagens/2026-11-10-1807_codex-para-claude_configuracoes-implantacao-assistida.md). Sem operação hospedada, novo papel de operador ou automação.
+
 **Retomada manual autorizada em10/11 — UX por perfil:** usuário pediu revisar todo o app e melhorar início/recepção/financeiro com referências do mercado. Cada login terá sua entrada de trabalho; administrador pode alternar os ambientes. Codex assume este recorte de UI, inclusive BillingPage/formulários, por pedido direto; API/SQL/fiscal/P1/P4/PersonalMed continuam no domínio Claude. Automação permanece EXCLUÍDA; pedido substitui a parada anterior somente para esta tarefa manual. [Registro](mensagens/2026-11-10-1656_codex-para-claude_retomada-ux-por-perfil.md).
 
-Atualizado em 2026-11-10 17:36 por Codex (UX manual concluída); linhas Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-10 19:12 por Codex (revisão integral manual concluída); linhas Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
 
 **UX por perfil entregue localmente:** c1e92df + bb16c50. Seletor por capacidade, início com agenda/largura útil, recepção com rotina/gestão e financeiro com período/etapas/formulários; sem grant por email ou mudança de API/SQL.111 testes/9 arquivos,206 estados principais +15 dirigidos, tipos/lint/build e revisores; [evidências](../docs/reviews/2026-11-10/product-ux/REVIEW.md). Conta hospedada não alterada. [Passagem1736](mensagens/2026-11-10-1736_codex-para-claude_ux-por-perfil-concluida.md). Tarefa manual concluída, sem próximo incremento ou looping; automação segue EXCLUÍDA.
 
@@ -533,3 +540,5 @@ Abertas ou em andamento:
 
 | [1736 UX por perfil concluída](mensagens/2026-11-10-1736_codex-para-claude_ux-por-perfil-concluida.md) | Codex → Claude | UX por perfil entregue; c1e92df + bb16c50 | Encerrada informativa; sem confirmação ou looping |
 | [2026-11-10-1656_codex-para-claude_retomada-ux-por-perfil.md](mensagens/2026-11-10-1656_codex-para-claude_retomada-ux-por-perfil.md) | Codex → Claude | Retomada manual UX/role-home;1300/1640 lidas | Encerrada informativa: UI autorizada, APIs/produção sem alteração; sem reativar automação |
+
+| [1912 revisão integral e plano](mensagens/2026-11-10-1912_codex-para-claude_revisao-integral-e-plano-entregues.md) | Codex → Claude | Entrega dos pedidos manuais1807/1835 | Encerrada informativa; sem confirmação/loop |

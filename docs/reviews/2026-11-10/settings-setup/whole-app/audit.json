@@ -1,0 +1,1158 @@
+{
+  "synthetic": true,
+  "role": "admin",
+  "routes": {
+    "desktop /auth": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /recepcao": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /recepcao/agenda": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /recepcao/contatos": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /recepcao/painel": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /recepcao/equipe": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /?patient=d5110000-0000-4000-8000-0000000000a1": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /?patient=d5110000-0000-4000-8000-0000000000a2": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /gerenciar-pacientes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /agenda": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /modelos": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /conhecimento": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /assistente": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /compartilhamento": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /trabalho": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /seguranca": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /privacidade": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /sobre": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /aviso-de-privacidade": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /rota-inexistente": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /configuracoes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop configurações navegação": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /configuracoes?secao=perfil": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /configuracoes?secao=implantacao": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /configuracoes?secao=usuarios": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /configuracoes?secao=sobre": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /configuracoes?secao=whatsapp": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop robo simulador": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /configuracoes?secao=pre-consulta": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /pre-consultas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop pre-consulta respostas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "dialog": {
+        "left": 186,
+        "right": 1094,
+        "viewport": 1280
+      },
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /recepcao/pre-consultas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /recepcao/financeiro": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /pre-consulta/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /financeiro": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop financeiro cobranca-dialogo": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "dialog": {
+        "left": 186,
+        "right": 1094,
+        "viewport": 1280
+      },
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop financeiro cobrancas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop financeiro receber-dialogo": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "dialog": {
+        "left": 186,
+        "right": 1094,
+        "viewport": 1280
+      },
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop financeiro lotes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop financeiro retorno-dialogo": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "dialog": {
+        "left": 122,
+        "right": 1158,
+        "viewport": 1280
+      },
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop financeiro caixa": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop financeiro despesa-dialogo": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "dialog": {
+        "left": 186,
+        "right": 1094,
+        "viewport": 1280
+      },
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop financeiro relatorios": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop financeiro cadastros": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /configuracoes?secao=conexoes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /configuracoes?secao=permissoes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /configuracoes?secao=equipe": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /configuracoes?secao=seguranca": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /permissoes-recepcao": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /google-oauth-callback": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop /assinatura/retorno": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop perfil do paciente": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop perfil-historico": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "desktop perfil-documentos": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /auth": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /recepcao": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /recepcao/agenda": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /recepcao/contatos": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /recepcao/painel": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /recepcao/equipe": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /?patient=d5110000-0000-4000-8000-0000000000a1": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /?patient=d5110000-0000-4000-8000-0000000000a2": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /gerenciar-pacientes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /agenda": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /modelos": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /conhecimento": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /assistente": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /compartilhamento": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /trabalho": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /seguranca": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /privacidade": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /sobre": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /aviso-de-privacidade": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /rota-inexistente": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular configurações navegação": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=perfil": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=implantacao": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=usuarios": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=sobre": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=whatsapp": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular robo simulador": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=pre-consulta": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /pre-consultas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular pre-consulta respostas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "dialog": {
+        "left": 16,
+        "right": 359,
+        "viewport": 375
+      },
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /recepcao/pre-consultas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /recepcao/financeiro": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /pre-consulta/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /financeiro": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular financeiro cobranca-dialogo": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "dialog": {
+        "left": 22,
+        "right": 353,
+        "viewport": 375
+      },
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular financeiro cobrancas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular financeiro receber-dialogo": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "dialog": {
+        "left": 22,
+        "right": 353,
+        "viewport": 375
+      },
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular financeiro lotes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular financeiro retorno-dialogo": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "dialog": {
+        "left": 22,
+        "right": 353,
+        "viewport": 375
+      },
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular financeiro caixa": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular financeiro despesa-dialogo": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "dialog": {
+        "left": 22,
+        "right": 353,
+        "viewport": 375
+      },
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular financeiro relatorios": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular financeiro cadastros": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=conexoes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=permissoes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=equipe": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=seguranca": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /permissoes-recepcao": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /google-oauth-callback": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /assinatura/retorno": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular perfil do paciente": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular perfil-historico": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular perfil-documentos": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    }
+  },
+  "unansweredCalls": {},
+  "receptionPrivateReads": []
+}

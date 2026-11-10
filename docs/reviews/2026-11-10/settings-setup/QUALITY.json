@@ -1,0 +1,76 @@
+{
+  "fullSrc": {
+    "passed": 2397,
+    "files": 168,
+    "stage": "integrated before final paused-read/layout refinement"
+  },
+  "finalRegression": {
+    "passed": 241,
+    "files": 30
+  },
+  "browserBroad": [
+    {
+      "name": "settings-admin",
+      "states": 56,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    },
+    {
+      "name": "settings-doctor",
+      "states": 14,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    },
+    {
+      "name": "settings-reception",
+      "states": 18,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    },
+    {
+      "name": "whole-app",
+      "states": 110,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    }
+  ],
+  "browserFinal": [
+    {
+      "name": "final-core",
+      "states": 76,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    },
+    {
+      "name": "final-reception",
+      "states": 10,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    }
+  ],
+  "stable": true,
+  "sourceCount": 415,
+  "typecheck": {
+    "app": 0,
+    "node": 0
+  },
+  "lint": {
+    "files": 42,
+    "status": 0
+  },
+  "build": {
+    "status": 0,
+    "syntheticEnvironment": true
+  },
+  "limits": [
+    "Readonly UI does not change server ACL or create an operator role.",
+    "Financial drafts are local and are not retained when state read unmounts the area.",
+    "No hosted/real migration/signature/messages/fiscal/paid action."
+  ]
+}

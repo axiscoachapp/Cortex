@@ -1,0 +1,108 @@
+{
+  "synthetic": true,
+  "role": "reception",
+  "routes": {
+    "largo /auth": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo /configuracoes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo configurações navegação": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo /configuracoes?secao=perfil": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo /configuracoes?secao=implantacao": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /auth": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular configurações navegação": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=perfil": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "celular /configuracoes?secao=implantacao": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    }
+  },
+  "unansweredCalls": {},
+  "receptionPrivateReads": []
+}

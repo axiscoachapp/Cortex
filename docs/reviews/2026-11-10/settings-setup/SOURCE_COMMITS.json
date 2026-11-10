@@ -1,0 +1,72 @@
+[
+  {
+    "group": "settings",
+    "sha": "bf47950d6b5082936f0225ec31357c23de8dfd99",
+    "identity": "axiscoachapp <262702133+axiscoachapp@users.noreply.github.com> | axiscoachapp <262702133+axiscoachapp@users.noreply.github.com>",
+    "paths": [
+      "src/components/ChatPanel.tsx",
+      "src/components/DocumentComposerModal.test.tsx",
+      "src/components/DocumentComposerModal.tsx",
+      "src/components/OnboardingCard.tsx",
+      "src/components/SpecialtySettingsSheet.test.tsx",
+      "src/components/SpecialtySettingsSheet.tsx",
+      "src/components/WelcomeDashboard.tsx",
+      "src/features/settings/ProfessionalSettingsForm.tsx",
+      "src/features/settings/WhatsAppSettings.tsx",
+      "src/hooks/useUserSettings.ts",
+      "src/lib/signatureClient.test.ts",
+      "src/lib/signatureClient.ts",
+      "src/pages/Settings.tsx",
+      "src/components/OnboardingCard.test.tsx",
+      "src/features/settings/ClinicSetupSummary.test.tsx",
+      "src/features/settings/ClinicSetupSummary.tsx",
+      "src/features/settings/ProfessionalPreferences.test.tsx",
+      "src/features/settings/SettingsPage.test.tsx",
+      "src/features/settings/WhatsAppOwnership.test.tsx",
+      "src/features/settings/sections.ts",
+      "src/hooks/useUserSettings.test.tsx",
+      "src/lib/managedSetupMessages.test.ts",
+      "src/lib/managedSetupMessages.ts"
+    ]
+  },
+  {
+    "group": "clinical",
+    "sha": "d4bb937c48d32f493d8d5528ad1251a41a630bd7",
+    "identity": "axiscoachapp <262702133+axiscoachapp@users.noreply.github.com> | axiscoachapp <262702133+axiscoachapp@users.noreply.github.com>",
+    "paths": [
+      "src/pages/PatientManagement.tsx",
+      "src/pages/PatientManagement.test.tsx",
+      "src/components/PatientProfileDrawer.tsx",
+      "src/components/PatientProfileDrawer.test.tsx",
+      "src/components/PatientSnapshot.tsx",
+      "src/components/PatientSnapshot.test.tsx",
+      "src/components/PrescriptionList.tsx",
+      "src/components/PrescriptionList.test.tsx",
+      "src/components/PrescriptionList.readStates.test.tsx"
+    ]
+  },
+  {
+    "group": "reception",
+    "sha": "26c7a1ac4c9dcbdd4c6e7ba6376de0b27a0c9452",
+    "identity": "axiscoachapp <262702133+axiscoachapp@users.noreply.github.com> | axiscoachapp <262702133+axiscoachapp@users.noreply.github.com>",
+    "paths": [
+      "src/features/reception/ReceptionCalendar.tsx",
+      "src/features/reception/ReceptionAppointmentCard.tsx",
+      "src/features/reception/ReceptionCalendarOperations.test.tsx"
+    ]
+  },
+  {
+    "group": "finance",
+    "sha": "3aefdf277ce87cd7c7a511d9d93f4c4c4994167e",
+    "identity": "axiscoachapp <262702133+axiscoachapp@users.noreply.github.com> | axiscoachapp <262702133+axiscoachapp@users.noreply.github.com>",
+    "paths": [
+      "src/features/billing/BillingPage.tsx",
+      "src/features/billing/ChargeDialog.tsx",
+      "src/features/billing/ChargesTabs.tsx",
+      "src/features/billing/CashTab.tsx",
+      "src/features/billing/BatchesTab.tsx",
+      "src/features/billing/SetupTab.tsx",
+      "src/features/billing/BillingDrafts.test.tsx"
+    ]
+  }
+]
