@@ -22,6 +22,12 @@ async function answer(result: InvokeResult): Promise<{ status: number; body: Rec
 }
 const text = (value: unknown, fallback: string) => (typeof value === 'string' && value.trim() ? value.trim() : fallback);
 const OFFLINE = 'Sem conexão com o servidor. Verifique a internet e tente novamente.';
+function sessionMessage(body: Record<string, unknown>, fallback: string): string {
+  if (body.code === 'cpf_missing') return 'Solicite à equipe de implantação a inclusão do CPF no seu cadastro profissional para usar a assinatura.';
+  if (body.code === 'cpf_mismatch') return 'O certificado autorizado não corresponde ao CPF cadastrado. Confira o certificado usado e, se o cadastro estiver incorreto, solicite a correção à implantação.';
+  return text(body.error, fallback);
+}
+
 
 // ---------------------------------------------------------------------------
 // Signature session
@@ -63,7 +69,7 @@ export async function startSession(invoke: Invoke): Promise<SessionStep> {
     } catch { /* falls through */ }
     return { ok: false, message: 'Endereço de autorização inválido.' };
   }
-  return { ok: false, message: text(result.body.error, 'Não foi possível abrir a sessão de assinatura.') };
+  return { ok: false, message: sessionMessage(result.body, 'Não foi possível abrir a sessão de assinatura.') };
 }
 
 /** Finishes the session with the code the PSC returned. */
@@ -74,7 +80,7 @@ export async function completeSession(invoke: Invoke, code: string, state: strin
   if (result.status === 200 && result.body.active === true) {
     return { ok: true, expiresAt: typeof result.body.expiresAt === 'string' ? result.body.expiresAt : null };
   }
-  return { ok: false, message: text(result.body.error, 'Não foi possível concluir a sessão de assinatura.') };
+  return { ok: false, message: sessionMessage(result.body, 'Não foi possível concluir a sessão de assinatura.') };
 }
 
 /** Ends the doctor's signature session (local revocation first). */

@@ -38,7 +38,7 @@ interface UserSettings {
 const DEFAULTS: UserSettings = {
   specialty: 'geral',
   daily_credit_limit: 1500,
-  live_copilot_enabled: true,
+  live_copilot_enabled: false,
   doctor_name: '',
   crm_number: '',
   crm_uf: '',
@@ -55,7 +55,7 @@ export function useUserSettings() {
   const { toast } = useToast();
   const key = ['user-settings', user?.id];
 
-  const { data, isLoading } = useQuery<UserSettings>({
+  const { data, isLoading, isError, refetch } = useQuery<UserSettings>({
     queryKey: key,
     queryFn: async () => {
       if (!user?.id) return DEFAULTS;
@@ -84,7 +84,7 @@ export function useUserSettings() {
   });
 
   const mutation = useMutation({
-    mutationFn: async (patch: Partial<Omit<UserSettings, 'daily_credit_limit'>>) => {
+    mutationFn: async (patch: { active_template_id: string | null }) => {
       if (!user?.id) throw new Error('Entre novamente para salvar.');
       const { error } = await supabase.rpc('update_user_settings', { p_patch: patch });
       if (error) throw error;
@@ -107,9 +107,9 @@ export function useUserSettings() {
 
   return {
     specialty:            data?.specialty            ?? DEFAULTS.specialty,
-    // Fail closed: while settings are loading or failed to load, never stream
-    // audio to the copilot (the doctor may have opted out).
-    liveCopilotEnabled:   data ? data.live_copilot_enabled : false,
+    // Paused for assisted clinic setup, including legacy preferences set to
+    // true. Recording and final note generation do not depend on live chunks.
+    liveCopilotEnabled:   false,
     activeTemplateId:     data?.active_template_id   ?? null,
     setActiveTemplateId:  (active_template_id: string | null) => mutation.mutate({ active_template_id }),
     prescriber: {
@@ -126,10 +126,8 @@ export function useUserSettings() {
      *  RQE stay optional; the antimicrobial prescription also needs the phone. */
     prescriberComplete: !!(data?.doctor_name?.trim() && data?.crm_number?.trim() && data?.crm_uf?.trim() && data?.professional_address?.trim()),
     isLoading,
-    setSpecialty:         (specialty: Specialty) => mutation.mutate({ specialty }),
-    setLiveCopilotEnabled: (live_copilot_enabled: boolean) => mutation.mutate({ live_copilot_enabled }),
-    updateSettings:       (patch: Partial<Omit<UserSettings, 'daily_credit_limit'>>) => mutation.mutate(patch),
-    updateSettingsAsync: mutation.mutateAsync,
+    isError,
+    retrySettings: refetch,
     isSaving:             mutation.isPending,
   };
 }

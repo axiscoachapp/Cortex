@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Sparkles, Check, ChevronRight, X, BadgeCheck, Users, FileStack, FileText,
+  Sparkles, Check, ChevronRight, X, Users, FileStack, FileText,
 } from 'lucide-react';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { cn } from '@/lib/utils';
@@ -17,20 +17,18 @@ interface OnboardingCardProps {
  *  not a wall; disappears automatically once every step is complete. */
 export function OnboardingCard({ patientCount, hasConsultation, userId, onNewConsultation }: OnboardingCardProps) {
   const navigate = useNavigate();
-  const { prescriberComplete } = useUserSettings();
+  const { prescriberComplete, isLoading, isError } = useUserSettings();
   const dismissKey = `cortex_onboarding_dismissed_${userId}`;
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(dismissKey) === '1');
 
   const steps = useMemo(() => [
-    { key: 'prescriber', done: prescriberComplete, label: 'Preencher seus dados de prescritor', icon: BadgeCheck,
-      hint: 'Nome, CRM e endereço — obrigatórios nas receitas', action: () => window.dispatchEvent(new Event('open-cortex-settings')) },
-    { key: 'patients', done: patientCount > 0, label: 'Adicionar ou importar pacientes', icon: Users,
-      hint: 'Importe de outro prontuário via CSV', action: () => navigate('/gerenciar-pacientes') },
+    { key: 'patients', done: patientCount > 0, label: 'Conhecer sua lista de pacientes', icon: Users,
+      hint: 'Abra os cadastros disponíveis para o seu atendimento', action: () => navigate('/gerenciar-pacientes') },
     { key: 'template', done: false, label: 'Explorar modelos de documento', icon: FileStack,
       hint: 'Personalize a estrutura das evoluções', action: () => navigate('/modelos'), optional: true },
     { key: 'consult', done: hasConsultation, label: 'Registrar sua primeira consulta', icon: FileText,
       hint: 'Registro manual ou gravação, conforme sua escolha', action: onNewConsultation },
-  ], [prescriberComplete, patientCount, hasConsultation, navigate, onNewConsultation]);
+  ], [patientCount, hasConsultation, navigate, onNewConsultation]);
 
   const required = steps.filter(s => !s.optional);
   const doneCount = required.filter(s => s.done).length;
@@ -48,8 +46,8 @@ export function OnboardingCard({ patientCount, hasConsultation, userId, onNewCon
             <Sparkles className="w-4 h-4 text-medical-blue" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-foreground">Bem-vindo ao Cortex</h3>
-            <p className="text-[0.6875rem] text-muted-foreground">{doneCount} de {required.length} passos obrigatórios concluídos · 1 opcional</p>
+            <h3 className="text-sm font-bold text-foreground">Primeiros passos no Cortex</h3>
+            <p className="text-[0.6875rem] text-muted-foreground">{doneCount} de {required.length} passos concluídos · 1 opcional</p>
           </div>
         </div>
         <button onClick={dismiss} className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/60" title="Dispensar">
@@ -57,6 +55,10 @@ export function OnboardingCard({ patientCount, hasConsultation, userId, onNewCon
         </button>
       </div>
 
+      <div className="mb-4 rounded-xl border bg-white/60 p-3 text-xs leading-relaxed text-muted-foreground">
+        {isLoading ? 'Consultando o cadastro preparado pela implantação…' : isError ? 'Não foi possível consultar seu cadastro profissional.' : prescriberComplete ? 'Os campos essenciais do seu cadastro profissional estão preenchidos.' : 'O cadastro profissional precisa ser concluído pela equipe de implantação.'}
+        <button type="button" onClick={() => navigate('/configuracoes?secao=implantacao')} className="mt-2 block min-h-11 text-left font-medium text-primary">Consultar dados da implantação</button>
+      </div>
       <div className="space-y-1.5">
         {steps.map(({ key, done, label, hint, icon: Icon, action, optional }) => (
           <button

@@ -72,17 +72,17 @@ describe('signature session', () => {
     expect(await sessionState(offline)).toEqual({ available: false });
   });
 
-  it('start follows only an https authorization page; refusals keep the server message', async () => {
+  it('start follows only an https authorization page and routes missing profile data to implementation', async () => {
     expect(await startSession(ok({ authorizeUrl: 'https://psc.synthetic.invalid/oauth/authorize?state=x' })))
       .toEqual({ ok: true, authorizeUrl: 'https://psc.synthetic.invalid/oauth/authorize?state=x' });
     expect(await startSession(ok({ authorizeUrl: 'javascript:alert(1)' }))).toMatchObject({ ok: false });
     expect(await startSession(ok({ authorizeUrl: 'http://psc.synthetic.invalid/' }))).toMatchObject({ ok: false });
     expect(await startSession(http(409, { error: 'Informe o seu CPF em Configurações para assinar.', code: 'cpf_missing' })))
-      .toEqual({ ok: false, message: 'Informe o seu CPF em Configurações para assinar.' });
+      .toEqual({ ok: false, message: 'Solicite à equipe de implantação a inclusão do CPF no seu cadastro profissional para usar a assinatura.' });
     expect(await startSession(offline)).toMatchObject({ ok: false, message: expect.stringContaining('Sem conexão') });
   });
 
-  it('complete sends the code and state; certificate and CPF refusals keep their message', async () => {
+  it('complete sends code and state and preserves certificate refusal meaning', async () => {
     const invoke = ok({ active: true, expiresAt: '2026-11-05T21:00:00Z' });
     expect(await completeSession(invoke, 'synthetic-code', 'synthetic-state')).toEqual({ ok: true, expiresAt: '2026-11-05T21:00:00Z' });
     expect(invoke).toHaveBeenCalledWith('signature-session/complete', { method: 'POST', body: { code: 'synthetic-code', state: 'synthetic-state' } });

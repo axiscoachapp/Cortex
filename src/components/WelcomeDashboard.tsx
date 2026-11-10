@@ -223,7 +223,7 @@ export function WelcomeDashboard({
               })}</div>
             </section>}
             <details className="rounded-xl border bg-card px-4 py-3" open={totalPatients === 0 ? true : undefined}>
-              <summary className="cursor-pointer py-1 text-sm font-medium">Configuração do consultório</summary>
+              <summary className="cursor-pointer py-1 text-sm font-medium">Primeiros passos no consultório</summary>
               <div className="pt-4"><OnboardingCard onNewConsultation={onNewConsultation} patientCount={totalPatients} hasConsultation={patients.some(patient => patient.status !== 'novo')} userId={userId} /></div>
             </details>
           </div>

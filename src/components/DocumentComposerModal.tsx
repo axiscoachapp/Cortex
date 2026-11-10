@@ -15,6 +15,7 @@ import { validateCertificateDays } from '../../supabase/functions/_shared/docume
 import { currentPatientAge } from '../../supabase/functions/_shared/patientAge';
 import { Patient, Medication } from '@/types/patient';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { managedDocumentMessage } from '@/lib/managedSetupMessages';
 import {
   antimicrobialsIn, controlledFindings, controlledSubstancesIn, FORMULA_FORMS, formulaError, formulaSubstances, normalizeFormulaText, planControlledPrescription,
   type CompoundedFormula,
@@ -339,9 +340,9 @@ export function DocumentComposerModal({
     controlledContent(),
     { patientCpf: hasPatientCpf ? patientCpf : null, prescriberCpf: (prescriber.prescriberCpf ?? '').trim() || null, prescriberPhone: (prescriber.professionalPhone ?? '').trim() },
   );
-  const controlledError = controlledCheck && 'error' in controlledCheck ? controlledCheck.error : null;
+  const controlledError = controlledCheck && 'error' in controlledCheck ? managedDocumentMessage(controlledCheck.error) : null;
   const antimicrobialGaps = docType !== 'receita_antimicrobiano' ? [] : [
-    ...(!settingsLoading && !prescriber.professionalPhone.trim() ? ['seu telefone profissional (Configurações)'] : []),
+    ...(!settingsLoading && !prescriber.professionalPhone.trim() ? ['o telefone profissional no cadastro do prescritor (solicite à equipe de implantação)'] : []),
     ...(currentPatientAge(patient) === null ? ['a idade ou data de nascimento do paciente'] : []),
     ...(PRINTABLE_SEX.has(patient.sex ?? '') ? [] : ['o sexo do paciente']),
   ];

@@ -35,6 +35,7 @@ import { SESSION_KEY, signatureInvoke, useSignatureSession } from '@/hooks/useSi
 import { SIGNABLE_TYPES, signKeepingOperation, signatureNotice } from '@/lib/signatureClient';
 import { Medication } from '@/types/patient';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { managedDocumentMessage } from '@/lib/managedSetupMessages';
 import { SoapNoteView } from '@/components/SoapNoteView';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -541,7 +542,7 @@ export function ChatPanel({
       if (isCurrentPatient(patient.id)) setInputValue((current) => current || text);
       toast({
         title: 'Erro ao processar comentário',
-        description: await functionErrorMessage(err, 'Tente novamente.'),
+        description: managedDocumentMessage(await functionErrorMessage(err, 'Tente novamente.')),
         variant: 'destructive',
       });
     } finally {
@@ -795,7 +796,7 @@ export function ChatPanel({
     } catch (err: unknown) {
       toast({
         title: 'Erro ao anexar documento',
-        description: await functionErrorMessage(err, 'Tente novamente.'),
+        description: managedDocumentMessage(await functionErrorMessage(err, 'Tente novamente.')),
         variant: 'destructive',
       });
     } finally {
@@ -833,9 +834,9 @@ export function ChatPanel({
         const body = await functionErrorBody(error);
         if (body?.missingPrescriber) {
           toast({
-            title: 'Complete os dados do prescritor',
+            title: 'Cadastro do prescritor pendente',
             description:
-              'Preencha nome, CRM e endereço em Configurações (ícone de engrenagem) — são obrigatórios no documento.',
+              'Solicite à equipe de implantação a conferência de nome, CRM e endereço antes de emitir o documento.',
             variant: 'destructive',
           });
           return;
@@ -891,7 +892,7 @@ export function ChatPanel({
     } catch (err: unknown) {
       toast({
         title: 'Erro ao gerar documento',
-        description: await functionErrorMessage(err, 'Tente novamente.'),
+        description: managedDocumentMessage(await functionErrorMessage(err, 'Tente novamente.')),
         variant: 'destructive',
       });
     } finally {
@@ -1484,7 +1485,7 @@ export function ChatPanel({
       if (isCurrentPatient(patient.id)) setDocumentModal(null);
       toast({
         title: 'Erro ao gerar documento',
-        description: await functionErrorMessage(err, 'Tente novamente.'),
+        description: managedDocumentMessage(await functionErrorMessage(err, 'Tente novamente.')),
         variant: 'destructive',
       });
     }

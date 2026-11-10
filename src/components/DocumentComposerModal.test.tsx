@@ -66,7 +66,7 @@ describe('Antimicrobial prescription requirements (RDC 471/2021)', { timeout: 20
     settings.value = { prescriber: { professionalPhone: '' }, isLoading: false };
     await openAntimicrobial(person({ dateOfBirth: undefined, sex: 'nao_informado' }));
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'A receita de antimicrobiano exige seu telefone profissional (Configurações), a idade ou data de nascimento do paciente e o sexo do paciente. Complete antes de gerar (RDC 471/2021).',
+      'A receita de antimicrobiano exige o telefone profissional no cadastro do prescritor (solicite à equipe de implantação), a idade ou data de nascimento do paciente e o sexo do paciente. Complete antes de gerar (RDC 471/2021).',
     );
   });
 
@@ -208,6 +208,38 @@ describe('Regulated drug warnings before generating', { timeout: 20000 }, () => 
 
 // D8: Receita de Controle Especial in the composer (synthetic data only).
 describe('Receita de Controle Especial (D8)', { timeout: 20000 }, () => {
+  it('still generates a valid C5 request after the managed profile is complete', async () => {
+    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000', prescriberCpf: '11144477735' }, isLoading: false };
+    const onGenerate = vi.fn();
+    render(<DocumentComposerModal open onOpenChange={() => {}} patient={person({ cpf: '11144477735', sex: 'masculino', medications: [{ name: 'Testosterona', dosage: 'Uso sintético', instructions: 'Orientação sintética' }] })} onGenerate={onGenerate} isGenerating={false} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Usar controle especial' }));
+    await user.type(screen.getByLabelText('Concentração de Testosterona'), '1%');
+    await user.type(screen.getByLabelText('Quantidade de Testosterona'), '1');
+    await user.type(screen.getByLabelText('Unidade de Testosterona'), 'frasco');
+    await user.type(screen.getByLabelText(/Endereço do paciente/), 'Endereço sintético 100');
+    await user.type(screen.getByLabelText(/CID ou diagnóstico/), 'Z00');
+    await user.click(screen.getByRole('button', { name: /Gerar/ }));
+    expect(onGenerate).toHaveBeenCalledOnce();
+    expect(onGenerate.mock.calls[0][0]).toMatchObject({ docType: 'receita_controle_especial', content: { cid: 'Z00', patientAddress: 'Endereço sintético 100' } });
+  });
+  it.each([
+    [{ professionalPhone: '(41) 3000-0000', prescriberCpf: '' }, 'CPF'],
+    [{ professionalPhone: '', prescriberCpf: '11144477735' }, 'telefone'],
+  ])('explains a missing C5 field as implementation work without generating automatically: %s', async (prescriber, field) => {
+    settings.value = { prescriber, isLoading: false };
+    const onGenerate = vi.fn();
+    render(<DocumentComposerModal open onOpenChange={() => {}} patient={person({ cpf: '11144477735', sex: 'masculino', medications: [{ name: 'Testosterona', dosage: 'Uso sintético', instructions: 'Orientação sintética' }] })} onGenerate={onGenerate} isGenerating={false} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Usar controle especial' }));
+    await user.type(screen.getByLabelText('Concentração de Testosterona'), '1%');
+    await user.type(screen.getByLabelText('Quantidade de Testosterona'), '1');
+    await user.type(screen.getByLabelText('Unidade de Testosterona'), 'frasco');
+    await user.type(screen.getByLabelText(/Endereço do paciente/), 'Endereço sintético 100');
+    const message = screen.getByText(/Antes de gerar:/);
+    expect(message).toHaveTextContent('equipe de implantação'); expect(message).toHaveTextContent(field);
+    expect(onGenerate).not.toHaveBeenCalled();
+  });
   const SERTRALINE = { name: 'Sertralina', dosage: '1 comprimido', instructions: 'pela manhã' };
   function setup(patient: Partial<Patient> = {}) {
     settings.value = { prescriber: { professionalPhone: '(41) 3000-0000', prescriberCpf: '' }, isLoading: false };

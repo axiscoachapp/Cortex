@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Copy, Loader2, MessageCircle, Pencil, Plus, RefreshCw, Trash2, Unplug } from 'lucide-react';
+import { CheckCircle2, Loader2, MessageCircle, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useClinicAccess } from '@/features/reception/accessContext';
+import { managedWhatsAppReason } from '@/lib/managedSetupMessages';
 import { AutomationEditor } from './AutomationEditor';
 import { FlowEditor } from './FlowEditor';
 import {
@@ -40,28 +39,11 @@ export function WhatsAppSettings() {
   });
   const refresh = () => queryClient.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).startsWith('whatsapp-') });
 
-  const [form, setForm] = useState({ phoneNumberId: '', wabaId: '', accessToken: '', pin: '' });
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
-  const connect = useMutation({
-    mutationFn: () => whatsappCall<{ displayPhone: string; templates: number }>('connect', {
-      phoneNumberId: form.phoneNumberId.trim(), wabaId: form.wabaId.trim(), accessToken: form.accessToken.trim(), ...(form.pin.trim() ? { pin: form.pin.trim() } : {}),
-    }),
-    onSuccess: (r) => {
-      setForm({ phoneNumberId: '', wabaId: '', accessToken: '', pin: '' });
-      setMessage({ kind: 'ok', text: `Número ${r.displayPhone} conectado. ${r.templates} modelo(s) sincronizado(s).` });
-      refresh();
-    },
-    onError: (e: Error) => setMessage({ kind: 'error', text: e.message }),
-  });
-  const disconnect = useMutation({
-    mutationFn: () => whatsappCall('disconnect'),
-    onSuccess: () => { setMessage({ kind: 'ok', text: 'WhatsApp desconectado. O token foi apagado.' }); refresh(); },
-    onError: (e: Error) => setMessage({ kind: 'error', text: e.message }),
-  });
   const sync = useMutation({
     mutationFn: () => whatsappCall<{ templates: number }>('syncTemplates'),
     onSuccess: (r) => { setMessage({ kind: 'ok', text: `${r.templates} modelo(s) sincronizado(s).` }); refresh(); },
-    onError: (e: Error) => setMessage({ kind: 'error', text: e.message }),
+    onError: () => setMessage({ kind: 'error', text: 'Não foi possível sincronizar os modelos. Peça à equipe de implantação para revisar a conexão do WhatsApp.' }),
   });
 
   const [editor, setEditor] = useState<{ open: boolean; initial: Automation | null; preset: Partial<AutomationRule> | null }>({ open: false, initial: null, preset: null });
@@ -132,70 +114,23 @@ export function WhatsAppSettings() {
 
         {!s.serverReady && (
           <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-            O servidor desta clínica ainda não recebeu as chaves do WhatsApp. A equipe de implantação configura isso uma vez; depois, o
-            administrador conecta o número aqui.
+            O WhatsApp ainda depende da configuração técnica pela equipe de implantação. Os recursos ficam disponíveis após essa etapa.
           </p>
         )}
-        {s.canManage && s.lastError && <p className="text-sm text-destructive">Último erro: {s.lastError}</p>}
+        {s.canManage && s.lastError && <p className="text-sm text-destructive">A conexão precisa de revisão pela equipe de implantação. Informe a essa equipe que o WhatsApp apresentou uma falha.</p>}
 
         {s.connected && s.canManage && (
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => sync.mutate()} disabled={sync.isPending}>
               <RefreshCw className="h-4 w-4 mr-1.5" /> {sync.isPending ? 'Sincronizando…' : 'Sincronizar modelos'}
             </Button>
-            <Button size="sm" variant="outline" className="text-destructive" disabled={disconnect.isPending}
-              onClick={() => window.confirm('Desconectar o WhatsApp? As automações param até reconectar.') && disconnect.mutate()}>
-              <Unplug className="h-4 w-4 mr-1.5" /> Desconectar
-            </Button>
+
           </div>
         )}
 
-        {!s.connected && s.canManage && s.serverReady && (
-          <form className="space-y-3 border-t pt-4" onSubmit={(e) => { e.preventDefault(); setMessage(null); connect.mutate(); }}>
-            <details className="rounded-lg bg-muted/60 px-3 py-2 text-sm">
-              <summary className="cursor-pointer font-medium">Como obter esses dados na Meta</summary>
-              <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">
-                <li>No Meta Business da clínica, verifique a empresa (CNPJ) e crie um app do tipo “Empresa” com o produto WhatsApp.</li>
-                <li>Adicione o número dedicado da recepção. Ao registrá-lo, escolha armazenamento local no Brasil.</li>
-                <li>Em “Usuários do sistema”, gere um token permanente com as permissões whatsapp_business_messaging e whatsapp_business_management.</li>
-                <li>Copie o “ID do número de telefone” e o “ID da conta do WhatsApp Business” na tela de configuração da API.</li>
-                {s.webhookUrl && <li>Em Webhooks, use o endereço abaixo e assine o campo “messages”.</li>}
-              </ol>
-              {s.webhookUrl && (
-                <div className="mt-2 flex items-center gap-2">
-                  <code className="min-w-0 flex-1 truncate rounded bg-white px-2 py-1 text-xs">{s.webhookUrl}</code>
-                  <Button type="button" size="icon" variant="ghost" aria-label="Copiar endereço do webhook" onClick={() => navigator.clipboard?.writeText(s.webhookUrl!)}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </details>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="wa-phone-id">ID do número de telefone</Label>
-                <Input id="wa-phone-id" inputMode="numeric" autoComplete="off" value={form.phoneNumberId} onChange={(e) => setForm({ ...form, phoneNumberId: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="wa-waba-id">ID da conta do WhatsApp Business</Label>
-                <Input id="wa-waba-id" inputMode="numeric" autoComplete="off" value={form.wabaId} onChange={(e) => setForm({ ...form, wabaId: e.target.value })} />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="wa-token">Token de acesso (usuário do sistema)</Label>
-              <Input id="wa-token" type="password" autoComplete="off" spellCheck={false} value={form.accessToken} onChange={(e) => setForm({ ...form, accessToken: e.target.value })} />
-              <p className="text-xs text-muted-foreground">Fica guardado cifrado no servidor e não aparece de novo em lugar nenhum.</p>
-            </div>
-            <div className="space-y-1.5 sm:max-w-[14rem]">
-              <Label htmlFor="wa-pin">PIN de duas etapas (opcional)</Label>
-              <Input id="wa-pin" inputMode="numeric" maxLength={6} autoComplete="off" value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value })} />
-              <p className="text-xs text-muted-foreground">Só para registrar um número novo.</p>
-            </div>
-            <Button type="submit" disabled={connect.isPending || !form.phoneNumberId || !form.wabaId || !form.accessToken}>
-              {connect.isPending ? 'Conectando…' : 'Conectar número'}
-            </Button>
-          </form>
-        )}
-        {!s.connected && !s.canManage && <p className="text-sm text-muted-foreground">O administrador da clínica conecta o número.</p>}
+        <p className="rounded-xl border border-dashed bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
+          {s.connected ? 'Conexão técnica mantida pela equipe de implantação. Para trocar o número ou revisar a conexão, fale com essa equipe.' : 'A equipe de implantação conecta e valida o número da clínica. Você não precisa informar IDs, tokens ou senhas nesta tela.'}
+        </p>
       </div>
 
       {/* Templates */}
@@ -206,7 +141,7 @@ export function WhatsAppSettings() {
             <p className="text-sm text-muted-foreground">Fora da janela de 24 h depois da última mensagem do paciente, só modelos aprovados pela Meta podem ser enviados.</p>
           </div>
           {templates.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : templateList.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum modelo sincronizado. Crie os modelos no WhatsApp Manager e clique em “Sincronizar modelos”.</p>
+            <p className="text-sm text-muted-foreground">Nenhum modelo sincronizado. A equipe de implantação prepara os modelos e acompanha a aprovação pelo WhatsApp. Quando forem aprovados, a lista poderá ser atualizada pela administração.</p>
           ) : (
             <ul className="divide-y">
               {templateList.map((t) => (
@@ -285,7 +220,7 @@ export function WhatsAppSettings() {
                     <span className="text-muted-foreground">· consulta {dateTime(run.appointmentStart)}</span>
                     <Badge variant={run.status === 'failed' ? 'destructive' : 'outline'} className="text-xs">{RUN_STATUS[run.status]}</Badge>
                     {run.reply && <span className="flex items-center gap-1 text-success"><CheckCircle2 className="h-3.5 w-3.5" /> Respondeu “{run.reply}”</span>}
-                    {run.reason && <span className="w-full text-xs text-muted-foreground">{run.reason}</span>}
+                    {run.reason && <span className="w-full text-xs text-muted-foreground">{managedWhatsAppReason(run.reason)}</span>}
                   </li>
                 ))}
               </ul>

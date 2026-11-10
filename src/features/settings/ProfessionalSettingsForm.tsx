@@ -1,305 +1,36 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Sparkles, BadgeCheck, FileStack, ChevronRight } from 'lucide-react';
-import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
+import { ChevronRight, FileStack } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { useUserSettings, SPECIALTY_LABELS, Specialty } from '@/hooks/useUserSettings';
+import { Button } from '@/components/ui/button';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from '@/lib/pagination';
-import { prescriberCpfError, professionalPhoneError, rqeError } from '@/lib/prescriberContact';
 
-/**
- * Specialty, note template, prescriber identity and live copilot. Used by the settings sheet on the
- * home screen and by the Settings page; `onDirtyChange` lets the container confirm before closing.
- */
-export function ProfessionalSettingsForm({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
+/** Personal preference only. Managed professional data lives in ClinicSetupSummary. */
+export function ProfessionalSettingsForm() {
   const { user } = useAuth();
-  const {
-    specialty,
-    setSpecialty,
-    liveCopilotEnabled,
-    setLiveCopilotEnabled,
-    prescriber,
-    updateSettingsAsync,
-    activeTemplateId,
-    setActiveTemplateId,
-    isSaving,
-    isLoading,
-  } = useUserSettings();
-
-  const {
-    data: templates = [],
-    isError: templateError,
-    refetch: retryTemplates,
-  } = useQuery<Array<{ id: string; name: string }>>({
+  const settings = useUserSettings();
+  const templates = useQuery({
     queryKey: ['document-templates-min', user?.id],
-    queryFn: async () => {
-      return fetchAllRows<{ id: string; name: string }>((from, to) =>
-        supabase.from('document_templates').select('id, name').order('name').order('id').range(from, to),
-      );
-    },
+    queryFn: () => fetchAllRows<{ id: string; name: string }>((from, to) =>
+      supabase.from('document_templates').select('id, name').order('name').order('id').range(from, to)),
     enabled: !!user?.id,
     staleTime: 60_000,
+    retry: false,
   });
-
-  // Keep an explicit draft so background refreshes cannot overwrite typing.
-  const [draft, setDraft] = useState(prescriber);
-  const [identityDirty, setIdentityDirty] = useState(false);
-  useUnsavedChanges(identityDirty);
-  const [saveStatus, setSaveStatus] = useState('');
-  const [identityError, setIdentityError] = useState('');
-  useEffect(() => {
-    onDirtyChange?.(identityDirty);
-  }, [identityDirty, onDirtyChange]);
-  useEffect(() => {
-    if (!identityDirty) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [identityDirty]);
-  useEffect(() => {
-    if (!identityDirty)
-      setDraft({
-        doctorName: prescriber.doctorName,
-        crmNumber: prescriber.crmNumber,
-        crmUf: prescriber.crmUf,
-        professionalAddress: prescriber.professionalAddress,
-        professionalPhone: prescriber.professionalPhone,
-        rqe: prescriber.rqe,
-        prescriberCpf: prescriber.prescriberCpf,
-      });
-  }, [
-    prescriber.doctorName,
-    prescriber.crmNumber,
-    prescriber.crmUf,
-    prescriber.professionalAddress,
-    prescriber.professionalPhone,
-    prescriber.rqe,
-    prescriber.prescriberCpf,
-    identityDirty,
-  ]);
-  const editDraft = (patch: Partial<typeof draft>) => {
-    setIdentityDirty(true);
-    setSaveStatus('');
-    setIdentityError('');
-    setDraft((value) => ({ ...value, ...patch }));
-  };
-
-  const saveDraft = async () => {
-    if (isSaving || !identityDirty) return;
-    setIdentityError('');
-    setSaveStatus('');
-    const contactError = professionalPhoneError(draft.professionalPhone) ?? rqeError(draft.rqe) ?? prescriberCpfError(draft.prescriberCpf);
-    if (contactError) {
-      setIdentityError(contactError);
-      return;
-    }
-    try {
-      await updateSettingsAsync({
-        doctor_name: draft.doctorName.trim(),
-        crm_number: draft.crmNumber.trim(),
-        crm_uf: draft.crmUf.trim().toUpperCase().slice(0, 2),
-        professional_address: draft.professionalAddress.trim(),
-        professional_phone: draft.professionalPhone.trim(),
-        rqe: draft.rqe.trim(),
-        prescriber_cpf: draft.prescriberCpf.replace(/\D/g, ''),
-      });
-      setIdentityDirty(false);
-      setSaveStatus('Dados do prescritor salvos.');
-    } catch {
-      setIdentityError('Não foi possível salvar. Seus dados foram mantidos; tente novamente.');
-    }
-  };
-
-  return (
-    <div className="space-y-5">
-      <div className="space-y-2">
-        <label htmlFor="settings-specialty" className="text-sm font-medium text-foreground">
-          Especialidade
-        </label>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Define a estrutura das evoluções SOAP geradas pela IA. Escolha a especialidade que você pratica e todos os
-          prontuários serão adaptados automaticamente.
-        </p>
-        <Select value={specialty} onValueChange={(v) => setSpecialty(v as Specialty)} disabled={isSaving}>
-          <SelectTrigger id="settings-specialty" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.entries(SPECIALTY_LABELS) as [Specialty, string][]).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {isSaving && <p className="text-xs text-muted-foreground">Salvando...</p>}
-      </div>
-
-      {/* Document template — replaces the default SOAP structure */}
-      <div className="space-y-2 pt-5 border-t border-border/50">
-        <label htmlFor="settings-template" className="text-sm font-medium text-foreground flex items-center gap-1.5">
-          <FileStack className="w-3.5 h-3.5 text-medical-blue" />
-          Modelo da evolução
-        </label>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Escolha um modelo para estruturar as evoluções geradas pela IA, ou mantenha o SOAP padrão.
-        </p>
-        <Select
-          value={activeTemplateId ?? 'default'}
-          onValueChange={(v) => setActiveTemplateId(v === 'default' ? null : v)}
-          disabled={isSaving}
-        >
-          <SelectTrigger id="settings-template" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="default">SOAP padrão (por especialidade)</SelectItem>
-            {templates.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                {t.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {templateError && (
-          <div role="alert" className="text-xs text-destructive">
-            Não foi possível carregar os modelos.{' '}
-            <button type="button" className="underline" onClick={() => retryTemplates()}>
-              Tentar novamente
-            </button>
-          </div>
-        )}
-        <Link
-          to="/modelos"
-          onClick={(event) => {
-            if (identityDirty && !window.confirm('Descartar os dados do prescritor não salvos?')) event.preventDefault();
-          }}
-          className="inline-flex items-center gap-1 text-xs text-medical-blue hover:text-medical-blue-dark font-medium mt-1"
-        >
-          Gerenciar modelos <ChevronRight className="w-3 h-3" />
-        </Link>
-      </div>
-
-      {/* Prescriber identity — mandatory content on digital prescriptions */}
-      <div className="space-y-3 pt-5 border-t border-border/50">
-        <div className="space-y-0.5">
-          <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-            <BadgeCheck className="w-3.5 h-3.5 text-medical-blue" />
-            Dados do prescritor
-          </label>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Obrigatórios em todo documento: nome, CRM e endereço profissional. O telefone é obrigatório na receita de
-            antimicrobiano (RDC 471/2021). O RQE aparece ao lado do CRM, se você tiver. O CPF só é impresso na receita de
-            anabolizante (lista C5, Lei 9.965/2000).
-          </p>
-        </div>
-        <Input
-          aria-label="Nome completo do médico"
-          disabled={isSaving || isLoading}
-          value={draft.doctorName}
-          onChange={(e) => editDraft({ doctorName: e.target.value })}
-          placeholder="Nome completo do médico"
-        />
-        <div className="grid grid-cols-[1fr_80px] gap-2">
-          <Input
-            aria-label="Número do CRM"
-            disabled={isSaving || isLoading}
-            value={draft.crmNumber}
-            onChange={(e) => editDraft({ crmNumber: e.target.value })}
-            placeholder="CRM (número)"
-          />
-          <Input
-            aria-label="UF do CRM"
-            disabled={isSaving || isLoading}
-            value={draft.crmUf}
-            onChange={(e) => editDraft({ crmUf: e.target.value.toUpperCase().slice(0, 2) })}
-            placeholder="UF"
-            maxLength={2}
-          />
-        </div>
-        <Input
-          aria-label="Endereço profissional"
-          disabled={isSaving || isLoading}
-          value={draft.professionalAddress}
-          onChange={(e) => editDraft({ professionalAddress: e.target.value })}
-          placeholder="Endereço profissional"
-        />
-        <div className="grid grid-cols-[1fr_110px] gap-2">
-          <Input
-            aria-label="Telefone profissional"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            disabled={isSaving || isLoading}
-            value={draft.professionalPhone}
-            onChange={(e) => editDraft({ professionalPhone: e.target.value })}
-            placeholder="Telefone com DDD"
-          />
-          <Input
-            aria-label="RQE (opcional)"
-            disabled={isSaving || isLoading}
-            value={draft.rqe}
-            onChange={(e) => editDraft({ rqe: e.target.value })}
-            placeholder="RQE"
-            maxLength={60}
-          />
-        </div>
-        <Input
-          aria-label="CPF do médico (só para anabolizantes)"
-          inputMode="numeric"
-          disabled={isSaving || isLoading}
-          value={draft.prescriberCpf}
-          onChange={(e) => editDraft({ prescriberCpf: e.target.value })}
-          placeholder="CPF (só para anabolizantes, lista C5)"
-          maxLength={14}
-        />
-        <Button size="sm" onClick={saveDraft} disabled={isSaving || isLoading || !identityDirty}>
-          {isSaving ? 'Salvando…' : 'Salvar dados do prescritor'}
-        </Button>
-        {saveStatus && (
-          <p role="status" className="text-xs text-success">
-            {saveStatus}
-          </p>
-        )}
-        {identityError && (
-          <p role="alert" className="text-xs text-destructive">
-            {identityError}
-          </p>
-        )}
-      </div>
-
-      {/* Live copilot toggle */}
-      <div className="space-y-2 pt-5 border-t border-border/50">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-0.5">
-            <label htmlFor="live-copilot-toggle" className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-violet-600" />
-              Copiloto ao vivo
-            </label>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Durante a gravação, mostra um resumo da consulta e sugestões de perguntas, atualizados a cada ~30&nbsp;segundos.
-              Consome créditos adicionais por consulta.
-            </p>
-          </div>
-          <Switch
-            id="live-copilot-toggle"
-            aria-label="Copiloto ao vivo"
-            checked={liveCopilotEnabled}
-            onCheckedChange={setLiveCopilotEnabled}
-            disabled={isSaving}
-            className="mt-0.5 shrink-0"
-          />
-        </div>
-      </div>
-    </div>
-  );
+  if (settings.isLoading) return <p role="status" className="text-sm text-muted-foreground">Carregando suas preferências…</p>;
+  if (settings.isError) return <div role="alert" className="space-y-3"><p>Não foi possível consultar suas preferências.</p><Button variant="outline" onClick={() => void settings.retrySettings()}>Tentar novamente</Button></div>;
+  return <section className="space-y-5 rounded-2xl border bg-card p-5 md:p-6" aria-label="Modelo da evolução">
+    <div className="space-y-2"><label htmlFor="settings-template" className="flex items-center gap-2 text-sm font-semibold"><FileStack className="h-4 w-4 text-primary" />Modelo da evolução</label><p className="text-sm leading-relaxed text-muted-foreground">A implantação prepara a estrutura inicial. Você pode escolher um dos seus modelos para organizar as próximas evoluções.</p></div>
+    <Select value={settings.activeTemplateId ?? 'default'} onValueChange={value => settings.setActiveTemplateId(value === 'default' ? null : value)} disabled={!user || settings.isSaving || templates.isPending || templates.isError}>
+      <SelectTrigger id="settings-template" className="h-auto min-h-12 w-full whitespace-normal text-left"><SelectValue placeholder="Escolha um modelo" /></SelectTrigger>
+      <SelectContent><SelectItem value="default">Modelo padrão da implantação</SelectItem>{templates.data?.map(template => <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>)}</SelectContent>
+    </Select>
+    {settings.isSaving && <p role="status" className="text-xs text-muted-foreground">Salvando preferência…</p>}
+    {templates.isError && <div role="alert" className="text-sm text-destructive">Não foi possível carregar os modelos. <button type="button" className="underline" onClick={() => void templates.refetch()}>Tentar novamente</button></div>}
+    <Link to="/modelos" className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary">Gerenciar meus modelos<ChevronRight className="h-4 w-4" /></Link>
+    <p className="border-t pt-4 text-xs leading-relaxed text-muted-foreground">Especialidade e dados do prescritor são mantidos pela implantação. <Link to="/configuracoes?secao=implantacao" className="text-primary underline">Consultar meus dados</Link></p>
+  </section>;
 }

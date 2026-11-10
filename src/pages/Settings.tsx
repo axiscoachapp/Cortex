@@ -1,157 +1,57 @@
-import { useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  ArrowLeft, BadgeCheck, ChevronRight, ClipboardList, Info, KeyRound, MessageCircle, Plug, Settings2, Share2, Shield, ShieldCheck, Users, UserCog,
-} from 'lucide-react';
+import { ArrowLeft, ChevronRight, Settings2, Share2, Shield, ShieldCheck, UserCog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { WorkspaceMenu } from '@/components/WorkspaceMenu';
 import { cn } from '@/lib/utils';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { ProfessionalSettingsForm } from '@/features/settings/ProfessionalSettingsForm';
+import { ClinicSetupSummary } from '@/features/settings/ClinicSetupSummary';
 import { WhatsAppSettings } from '@/features/settings/WhatsAppSettings';
 import { ConnectionsSettings } from '@/features/settings/ConnectionsSettings';
+import { settingsSections, type SettingsSection, type SectionId } from '@/features/settings/sections';
 import { IntakeFormEditor } from '@/features/intake/IntakeFormEditor';
 import TeamSettings from '@/features/reception/TeamSettings';
 import DelegationPermissions from '@/features/reception/DelegationPermissions';
 
-type SectionId = 'perfil' | 'whatsapp' | 'pre-consulta' | 'conexoes' | 'equipe' | 'permissoes' | 'usuarios' | 'seguranca' | 'sobre';
-/** `ownHeading`: the embedded component (Codex K4) brings its own h2. */
-interface Section { id: SectionId; label: string; icon: typeof Settings2; description: string; ownHeading?: boolean }
-
 function LinkCard({ to, icon: Icon, title, description }: { to: string; icon: typeof Settings2; title: string; description: string }) {
-  return (
-    <Link to={to} className="group flex items-start gap-3 rounded-xl border bg-white p-4 hover:border-primary/40 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground"><Icon className="h-5 w-5" /></span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-medium text-foreground">{title}</span>
-        <span className="block text-sm text-muted-foreground">{description}</span>
-      </span>
-      <ChevronRight className="mt-2.5 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
-    </Link>
-  );
+  return <Link to={to} className="group flex min-w-0 items-start gap-3 rounded-xl border bg-card p-5 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Icon className="mt-1 h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1 space-y-2"><span className="block font-medium">{title}</span><span className="block text-sm leading-relaxed text-muted-foreground">{description}</span></span><ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" /></Link>;
 }
-
+function Overview({ sections, onSelect }: { sections: SettingsSection[]; onSelect: (id: SectionId) => void }) {
+  const groups = [...new Set(sections.filter(item => item.id !== 'inicio').map(item => item.group))];
+  return <div className="space-y-7">
+    <div className="hidden rounded-2xl border bg-primary/5 p-5 md:block md:p-6"><p className="font-semibold">Implantação assistida pela equipe Cortex</p><p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">Especialidade, dados do prescritor e conexões técnicas são preparados na implantação. Aqui você encontra as preferências do atendimento, a rotina da equipe e a segurança da sua conta.</p></div>
+    <p className="rounded-xl border bg-primary/5 p-4 text-xs leading-relaxed text-muted-foreground md:hidden">A configuração técnica da clínica é cuidada pela equipe de implantação.</p>
+    {groups.map(group => <section key={group} className="space-y-3"><h3 className="text-sm font-semibold">{group}</h3><div className="grid gap-3 md:grid-cols-2">{sections.filter(item => item.group === group).map(({ id, label, description, icon: Icon }) => <button key={id} type="button" onClick={() => onSelect(id)} className="group flex min-w-0 items-start gap-3 rounded-xl border bg-card p-5 text-left transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Icon className="mt-1 h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1 space-y-2"><span className="block text-sm font-semibold">{label}</span><span className="block text-sm leading-relaxed text-muted-foreground">{description}</span></span><ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" /></button>)}</div></section>)}
+  </div>;
+}
 export default function SettingsPage() {
-  const navigate = useNavigate();
-  const [params, setParams] = useSearchParams();
-  const access = useClinicAccess();
-  const clinical = access?.kind !== 'reception';
-  const admin = !!access?.admin;
-  const reception = access?.kind === 'reception';
-
-  const sections = useMemo<Section[]>(() => [
-    ...(clinical ? [{ id: 'perfil' as const, label: 'Perfil profissional', icon: BadgeCheck, description: 'Especialidade, modelo da evolução, dados do prescritor e copiloto.' }] : []),
-    ...(admin || reception || clinical ? [{ id: 'whatsapp' as const, label: 'WhatsApp e automações', icon: MessageCircle, description: 'Número da recepção, modelos aprovados e mensagens automáticas da agenda.' }] : []),
-    ...(admin ? [{ id: 'pre-consulta' as const, label: 'Pré-consulta', icon: ClipboardList, description: 'Formulário que o paciente responde antes da consulta, por um link único.' }] : []),
-    ...(clinical ? [{ id: 'conexoes' as const, label: 'Conexões', icon: Plug, description: 'Google Agenda e assinatura digital.' }] : []),
-    ...(admin ? [{ id: 'equipe' as const, label: 'Equipe da recepção', icon: Users, description: 'Contas da recepção e agendas de cada pessoa.', ownHeading: true }] : []),
-    ...(clinical ? [{ id: 'permissoes' as const, label: 'Permissões da recepção', icon: KeyRound, description: 'O que a recepção pode fazer na sua agenda.', ownHeading: true }] : []),
-    ...(clinical ? [{ id: 'usuarios' as const, label: admin ? 'Médicos e compartilhamento' : 'Compartilhamento', icon: UserCog, description: admin ? 'Contas de médicos e compartilhamento de prontuários.' : 'Compartilhamento de prontuários entre médicos.' }] : []),
-    { id: 'seguranca', label: 'Segurança e privacidade', icon: Shield, description: 'Senha, segundo fator, exportação e exclusão de dados.' },
-    { id: 'sobre', label: 'Sobre', icon: Info, description: 'Versão e avisos.' },
-  ], [admin, clinical, reception]);
-
-  const requested = params.get('secao') as SectionId | null;
-  const current = sections.find((s) => s.id === requested) ?? sections[0];
-  // Keep other parameters (Permissions reads ?clinica=) when switching sections.
-  const select = (id: SectionId) =>
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set('secao', id);
-      return next;
-    }, { replace: true });
-
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-background border-b sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate(reception ? '/recepcao' : '/')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Settings2 className="h-5 w-5 text-medical-blue" aria-hidden />
-          <h1 className="text-base font-semibold text-foreground">Configurações</h1>
-          {access?.clinic?.name && <span className="hidden sm:inline truncate text-sm text-muted-foreground">· {access.clinic.name}</span>}
-        </div>
-      </header>
-
-      <div className="flex-1 container mx-auto px-4 py-6 max-w-5xl lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8">
-        <nav aria-label="Seções das configurações" className="-mx-4 mb-5 overflow-x-auto px-4 lg:mx-0 lg:mb-0 lg:overflow-visible lg:px-0">
-          <ul className="flex gap-2 lg:flex-col lg:gap-1 lg:sticky lg:top-20">
-            {sections.map(({ id, label, icon: Icon }) => (
-              <li key={id} className="shrink-0">
-                <button
-                  type="button"
-                  onClick={() => select(id)}
-                  aria-current={current.id === id ? 'page' : undefined}
-                  className={cn(
-                    'flex w-full items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2 text-sm lg:rounded-lg lg:border-transparent lg:px-3',
-                    current.id === id ? 'border-primary/30 bg-primary/10 font-medium text-primary' : 'bg-white text-muted-foreground hover:text-foreground lg:bg-transparent lg:hover:bg-muted/60',
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden /> {label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <main className="min-w-0 space-y-5" aria-label={current.label}>
-          {!current.ownHeading && (
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">{current.label}</h2>
-              <p className="text-sm text-muted-foreground">{current.description}</p>
-            </div>
-          )}
-
-          {current.id === 'perfil' && (
-            <div className="rounded-xl border bg-white p-5 max-w-2xl"><ProfessionalSettingsForm /></div>
-          )}
-
-          {current.id === 'whatsapp' && <WhatsAppSettings key={`${access?.actorId ?? 'none'}:${access?.clinic?.id ?? 'none'}:${admin}`} />}
-
-          {current.id === 'pre-consulta' && admin && (
-            <div className="max-w-3xl"><IntakeFormEditor key={`${access?.actorId ?? 'none'}:${access?.clinic?.id ?? 'none'}`} /></div>
-          )}
-
-          {current.id === 'conexoes' && <ConnectionsSettings clinical={clinical} />}
-
-          {current.id === 'equipe' && admin && <TeamSettings embedded />}
-
-          {current.id === 'permissoes' && <DelegationPermissions embedded />}
-
-          {current.id === 'usuarios' && (
-            <div className="grid gap-3 md:grid-cols-2">
-              {admin && <LinkCard to="/compartilhamento" icon={UserCog} title="Contas de médicos" description="Criar a conta de um médico com senha temporária e ver quem faz parte da clínica." />}
-              <LinkCard to="/compartilhamento" icon={Share2} title="Compartilhamento entre médicos" description="Compartilhar prontuários com outro médico, de forma explícita e revogável." />
-            </div>
-          )}
-
-          {current.id === 'seguranca' && (
-            <div className="grid gap-3 md:grid-cols-2">
-              <LinkCard to="/seguranca" icon={ShieldCheck} title="Segurança da conta" description="Trocar a senha e configurar o segundo fator (aplicativo autenticador)." />
-              {clinical && <LinkCard to="/privacidade" icon={Shield} title="Privacidade e dados" description="Exportar seus dados e pedir a exclusão da conta, com recibo (LGPD)." />}
-            </div>
-          )}
-
-          {current.id === 'sobre' && (
-            <div className="rounded-xl border bg-white p-5 space-y-3 max-w-2xl">
-              <div className="flex items-center gap-3">
-                <img src="/brand/cortex-symbol.svg" alt="" width={40} height={40} className="h-10 w-10" />
-                <div>
-                  <p className="font-semibold text-foreground">Cortex</p>
-                  <p className="text-sm text-muted-foreground">Prontuário, consulta, documentos, agenda e recepção para clínicas.</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {access?.clinic?.name ? `Ambiente de ${access.clinic.name}. ` : ''}Os rascunhos gerados por IA sempre passam pela revisão do médico.
-              </p>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                <Link to="/sobre" className="text-primary underline-offset-4 hover:underline">Sobre o ambiente</Link>
-                <Link to="/aviso-de-privacidade" className="text-primary underline-offset-4 hover:underline">Aviso de privacidade</Link>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
+  const navigate = useNavigate(), [params, setParams] = useSearchParams(), access = useClinicAccess();
+  const clinical = access?.kind === 'clinical', reception = access?.kind === 'reception', admin = !!access?.active && !!access.clinic && access.admin;
+  const sections = settingsSections(access);
+  const groups = [...new Set(sections.map(section => section.group))];
+  const current = sections.find(section => section.id === params.get('secao')) ?? sections[0];
+  const select = (id: SectionId) => setParams(previous => { const next = new URLSearchParams(previous); next.set('secao', id); return next; }, { replace: true });
+  return <div className="min-h-screen bg-background">
+    <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur-sm"><div className="mx-auto flex max-w-[100rem] items-center justify-between gap-4 px-4 py-4 md:px-8"><div className="flex min-w-0 items-center gap-3"><Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" aria-label="Voltar" onClick={() => navigate(reception ? '/recepcao' : '/')}><ArrowLeft className="h-5 w-5" /></Button><div className="min-w-0"><h1 className="text-xl font-semibold tracking-tight">Configurações</h1><p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{access?.clinic?.name ?? 'Seu ambiente Cortex'}</p></div></div><div className="hidden md:block"><WorkspaceMenu /></div></div></header>
+    <div className="mx-auto max-w-[100rem] gap-8 px-4 py-6 md:px-8 xl:grid xl:grid-cols-[16rem_minmax(0,1fr)] xl:py-8">
+      <nav aria-label="Seções das configurações" className="mb-6 xl:mb-0">
+        <div className="space-y-2 xl:hidden"><label htmlFor="settings-section" className="text-xs font-medium text-muted-foreground">Acessar seção</label><select id="settings-section" value={current.id} onChange={event => select(event.target.value as SectionId)} className="min-h-12 w-full min-w-0 rounded-xl border bg-card px-3 py-3 text-sm">{groups.map(group => <optgroup key={group} label={group}>{sections.filter(item => item.group === group).map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</optgroup>)}</select></div>
+        <div className="hidden max-h-[calc(100dvh-8rem)] space-y-6 overflow-y-auto pr-2 xl:sticky xl:top-28 xl:block">{groups.map(group => <div key={group} className="space-y-1"><p className="px-3 pb-2 text-[0.625rem] font-medium uppercase tracking-widest text-muted-foreground">{group}</p>{sections.filter(item => item.group === group).map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => select(id)} aria-current={current.id === id ? 'page' : undefined} className={cn('flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-xs', current.id === id ? 'bg-primary/10 font-semibold text-primary' : 'text-muted-foreground hover:bg-card')}><Icon className="h-4 w-4 shrink-0" />{label}</button>)}</div>)}</div>
+      </nav>
+      <main className="min-w-0 space-y-6" aria-label={current.label}>
+        {!current.ownHeading && <div className={cn("space-y-2 border-b pb-5", current.id === "inicio" && "sr-only md:not-sr-only md:space-y-2 md:border-b md:pb-5")}><h2 className="text-2xl font-semibold tracking-tight">{current.label}</h2><p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{current.description}</p></div>}
+        {current.id === 'inicio' && <Overview sections={sections} onSelect={select} />}
+        {current.id === 'perfil' && clinical && <ProfessionalSettingsForm />}
+        {current.id === 'implantacao' && <ClinicSetupSummary />}
+        {current.id === 'whatsapp' && <WhatsAppSettings key={`${access?.actorId}:${access?.clinic?.id}:${admin}`} />}
+        {current.id === 'pre-consulta' && admin && <IntakeFormEditor key={`${access?.actorId}:${access?.clinic?.id}`} />}
+        {current.id === 'conexoes' && clinical && <ConnectionsSettings clinical />}
+        {current.id === 'equipe' && admin && <TeamSettings embedded />}
+        {current.id === 'permissoes' && clinical && <DelegationPermissions embedded />}
+        {current.id === 'usuarios' && clinical && <div className="grid gap-3 md:grid-cols-2">{admin && <LinkCard to="/compartilhamento" icon={UserCog} title="Contas de médicos" description="Acompanhe os médicos da clínica e os acessos autorizados pela administração." />}<LinkCard to="/compartilhamento" icon={Share2} title="Compartilhamento entre médicos" description="Compartilhe prontuários de forma explícita e revogável. Fazer parte da clínica não libera acesso automático." /></div>}
+        {current.id === 'seguranca' && <div className="grid gap-3 md:grid-cols-2"><LinkCard to="/seguranca" icon={ShieldCheck} title="Segurança da conta" description="Sua senha e seu segundo fator são pessoais. A implantação não precisa conhecer essas credenciais." />{clinical && <LinkCard to="/privacidade" icon={Shield} title="Privacidade e dados" description="Consulte as opções de exportação e de solicitação de exclusão dos seus dados." />}</div>}
+        {current.id === 'sobre' && <section className="space-y-4 rounded-2xl border bg-card p-5 md:p-6"><p className="text-lg font-semibold">Cortex</p><p className="text-sm leading-relaxed text-muted-foreground">Prontuário, consulta, documentos, agenda e recepção para clínicas. Todo rascunho gerado por IA precisa da revisão do médico.</p><div className="flex flex-wrap gap-4 text-sm"><Link to="/sobre" className="inline-flex min-h-11 items-center text-primary underline">Sobre o ambiente</Link><Link to="/aviso-de-privacidade" className="inline-flex min-h-11 items-center text-primary underline">Aviso de privacidade</Link></div></section>}
+      </main>
     </div>
-  );
+  </div>;
 }
