@@ -17,7 +17,8 @@ export function ReceptionAppointmentCard({ appointment: a, pending, onAction, on
       {access?.doctors.find(d => d.id === a.doctorId)?.name ?? 'Médico'} · {a.type === 'novo' ? 'Primeira consulta' : a.type === 'retorno' ? 'Retorno' : a.type === 'seguimento' ? 'Seguimento' : 'Encaixe'}
     </p></div>
     {!timing.valid && <div className="rounded-lg border border-amber-300/60 bg-amber-50/50 p-3 text-xs space-y-1"><p className="font-semibold">Horário cadastrado inválido</p><p>{a.status === 'cancelado' ? 'Reserva cancelada. O intervalo original e o histórico foram preservados.' : a.status === 'realizado' ? 'Atendimento realizado. O intervalo original foi preservado; confira o cadastro com a administração.' : 'O intervalo original foi preservado. Para corrigir, cancele esta reserva e crie outra após conferir a data e o horário.'}</p></div>}
-    {['pending', 'failed'].includes(a.googleSyncStatus) && <p className="text-xs text-muted-foreground">Sincronização externa pendente. A reserva está registrada no Cortex.</p>}
+    {a.googleSyncStatus === 'pending' && <p className="text-xs text-muted-foreground">Sincronização externa pendente. A reserva está registrada no Cortex.</p>}
+    {a.googleSyncStatus === 'failed' && <p className="text-xs text-muted-foreground">Não foi possível sincronizar com a agenda externa. A reserva está registrada no Cortex; confira a integração com a equipe responsável.</p>}
     {a.status !== 'cancelado' && a.status !== 'realizado' && <div className="flex flex-wrap gap-2">
       <Button size="sm" variant="outline" disabled={pending || !timing.valid} onClick={() => onAction('confirm')}>Confirmar presença</Button>
       <Button size="sm" variant="outline" disabled={pending || !timing.valid} onClick={() => onAction(a.checkedInAt ? 'undo_check_in' : 'check_in')}>{a.checkedInAt ? 'Desfazer chegada' : 'Registrar chegada'}</Button>

@@ -4,7 +4,7 @@ import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
 import { clinicDay, clinicDateLabel, clinicTime, clinicTimestamp, nextClinicDay } from './dates';
@@ -14,6 +14,15 @@ import { BookingDialog } from './BookingDialog';
 import { useRequestId } from './useRequestId';
 import { appointmentTiming } from './appointmentTiming';
 import { ReceptionAppointmentCard } from './ReceptionAppointmentCard';
+
+function intervalError(day: string, start: string, end: string): string | null {
+  try {
+    const startTime = clinicTimestamp(day, start), endTime = clinicTimestamp(day, end);
+    return Date.parse(endTime) > Date.parse(startTime) ? null : 'O término deve ser depois do início, no mesmo dia.';
+  } catch {
+    return 'Informe data e horários válidos no fuso de São Paulo.';
+  }
+}
 
 export default function ReceptionCalendar() {
   const access = useClinicAccess();
@@ -161,8 +170,11 @@ export default function ReceptionCalendar() {
       {appointments.data &&
         days.map((date) => {
           const items = timed.filter(item => item.day === date).map(item => item.appointment);
+          const dayStart = clinicTimestamp(date, '00:00'), dayEnd = clinicTimestamp(nextClinicDay(date), '00:00');
           const blocks = appointments.data.blocks.filter(
-            (b) => clinicDay(b.startTime) <= date && clinicDay(b.endTime) >= date,
+            // Positive overlap with this day: the block's end is exclusive.
+            (b) => appointmentTiming({ startTime: b.startTime, endTime: dayEnd }).valid &&
+              appointmentTiming({ startTime: dayStart, endTime: b.endTime }).valid,
           );
           return (
             <section key={date} className="space-y-3">
@@ -213,6 +225,7 @@ function RescheduleDialog({ appointment, onClose }: { appointment: ReceptionAppo
   const [start, setStart] = useState(clinicTime(appointment.startTime));
   const [end, setEnd] = useState(clinicTime(appointment.endTime));
   const [confirmed, setConfirmed] = useState(false);
+  const validationError = intervalError(day, start, end);
   const mutation = useMutation({
     mutationFn: () =>
       receptionApi.changeAppointment(
@@ -239,17 +252,17 @@ function RescheduleDialog({ appointment, onClose }: { appointment: ReceptionAppo
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Remarcar consulta</DialogTitle>
+          <DialogDescription>
+            {appointment.patientName} · horário atual: {clinicDateLabel(appointment.startTime)} às{' '}
+            {clinicTime(appointment.startTime)}. Novos horários em São Paulo.
+          </DialogDescription>
         </DialogHeader>
-        <p className="text-sm">
-          {appointment.patientName} · horário atual: {clinicDateLabel(appointment.startTime)} às{' '}
-          {clinicTime(appointment.startTime)}
-        </p>
         <ReceptionNotice error={mutation.error} />
         <form
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (confirmed) mutation.mutate();
+            if (confirmed && !validationError && !mutation.isPending) mutation.mutate();
           }}
         >
           <fieldset disabled={mutation.isPending} className="space-y-3">
@@ -287,6 +300,8 @@ function RescheduleDialog({ appointment, onClose }: { appointment: ReceptionAppo
                   type="time"
                   required
                   value={end}
+                  aria-invalid={!!validationError}
+                  aria-describedby={validationError ? 'reschedule-interval-error' : undefined}
                   onChange={(e) => {
                     setEnd(e.target.value);
                     setConfirmed(false);
@@ -294,12 +309,13 @@ function RescheduleDialog({ appointment, onClose }: { appointment: ReceptionAppo
                 />
               </div>
             </div>
+            {validationError && <p id="reschedule-interval-error" role="alert" className="text-sm text-destructive">{validationError}</p>}
             <label className="flex gap-2 text-xs">
               <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
               Conferi o novo horário e confirmo a remarcação.
             </label>
           </fieldset>
-          <Button disabled={!confirmed || mutation.isPending} type="submit">
+          <Button disabled={!confirmed || !!validationError || mutation.isPending} type="submit">
             Confirmar remarcação
           </Button>
         </form>
@@ -317,6 +333,7 @@ function BlockDialog({ day: initialDay, onClose }: { day: string; onClose: () =>
   const [start, setStart] = useState('12:00');
   const [end, setEnd] = useState('13:00');
   const [reason, setReason] = useState('Indisponível');
+  const validationError = intervalError(day, start, end);
   const mutation = useMutation({
     mutationFn: () => {
       const details = { doctor, day, start, end, reason };
@@ -344,12 +361,13 @@ function BlockDialog({ day: initialDay, onClose }: { day: string; onClose: () =>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Bloquear horário</DialogTitle>
+          <DialogDescription>Defina o intervalo em São Paulo que ficará indisponível na agenda escolhida.</DialogDescription>
         </DialogHeader>
         <ReceptionNotice error={mutation.error} />
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            mutation.mutate();
+            if (!validationError && !mutation.isPending) mutation.mutate();
           }}
           className="space-y-3"
         >
@@ -382,9 +400,10 @@ function BlockDialog({ day: initialDay, onClose }: { day: string; onClose: () =>
               </div>
               <div>
                 <Label htmlFor="block-end">Término do bloqueio</Label>
-                <Input id="block-end" type="time" required value={end} onChange={(e) => setEnd(e.target.value)} />
+                <Input id="block-end" type="time" required value={end} aria-invalid={!!validationError} aria-describedby={validationError ? 'block-interval-error' : undefined} onChange={(e) => setEnd(e.target.value)} />
               </div>
             </div>
+            {validationError && <p id="block-interval-error" role="alert" className="text-sm text-destructive">{validationError}</p>}
             <div>
               <Label htmlFor="block-reason">Motivo administrativo</Label>
               <Input
@@ -397,7 +416,7 @@ function BlockDialog({ day: initialDay, onClose }: { day: string; onClose: () =>
               />
             </div>
           </fieldset>
-          <Button disabled={mutation.isPending} type="submit">
+          <Button disabled={!!validationError || mutation.isPending} type="submit">
             Confirmar bloqueio
           </Button>
         </form>
