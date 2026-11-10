@@ -1,14 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PatientSnapshot } from './PatientSnapshot';
 import type { Patient } from '@/types/patient';
 
-const api = vi.hoisted(() => ({ invoke: vi.fn() }));
+const api = vi.hoisted(() => ({ invoke: vi.fn(), readNotes: vi.fn() }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {
   functions: { invoke: api.invoke },
-  from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { clinical_notes: '' }, error: null }) }) }) }),
+  from: () => ({ select: () => ({ eq: () => ({ single: api.readNotes }) }) }),
 } }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'doctor' } }) }));
 vi.mock('./PatientProfileDrawer', () => ({ PatientProfileDrawer: () => null }));
@@ -19,10 +19,30 @@ const patient = (id: string): Patient => ({ id, name: id, age: 30, profession: '
 function setup() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = (id: string) => <QueryClientProvider client={queryClient}><PatientSnapshot patient={patient(id)} /></QueryClientProvider>;
-  return { ...render(view('A')), view };
+  return { ...render(view('A')), view, queryClient };
 }
 
+beforeEach(() => {
+  api.readNotes.mockReset().mockResolvedValue({ data: { clinical_notes: '' }, error: null });
+});
+
 describe('patient note ownership', () => {
+  it('hides saved annotations after a read failure while retaining the extraction draft', async () => {
+    api.readNotes.mockResolvedValue({ data: { clinical_notes: 'Anotação sintética salva' }, error: null });
+    const { queryClient } = setup();
+    await screen.findByText('Anotação sintética salva');
+    await userEvent.type(screen.getByRole('textbox'), 'Rascunho sintético para extrair');
+    api.readNotes.mockResolvedValue({ data: null, error: new Error('offline') });
+    await act(async () => { await queryClient.invalidateQueries({ queryKey: ['patient-clinical-notes', 'A'] }); });
+    await screen.findByRole('alert');
+    expect(screen.queryByText('Anotação sintética salva')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toHaveValue('Rascunho sintético para extrair');
+    api.readNotes.mockResolvedValue({ data: { clinical_notes: 'Anotação sintética atualizada' }, error: null });
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(await screen.findByText('Anotação sintética atualizada')).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toHaveValue('Rascunho sintético para extrair');
+  });
+
   it('keeps each draft attached to its originating patient', async () => {
     const user = userEvent.setup();
     const { rerender, view } = setup();

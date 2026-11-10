@@ -19,7 +19,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Brain, Plus, Pencil, Trash2, ArrowLeft, Upload, Archive, RotateCcw } from 'lucide-react';
+import { Brain, Plus, Pencil, Trash2, ArrowLeft, LifeBuoy, Archive, RotateCcw } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +31,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { functionErrorMessage } from '@/lib/functionErrors';
-import { ImportPatientsModal } from '@/components/ImportPatientsModal';
 import { useToast } from '@/hooks/use-toast';
 import { Patient } from '@/types/patient';
 import { ageFromBirthdate } from '@/lib/patientImport';
@@ -46,7 +45,7 @@ const PatientManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
+  const [migrationInfoOpen, setMigrationInfoOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
@@ -284,9 +283,9 @@ const PatientManagement = () => {
           <CardHeader className="flex flex-row items-center justify-between p-4 pb-3 md:p-6 md:pb-3">
             <CardTitle className="text-base md:text-xl">Pacientes</CardTitle>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" aria-label="Importar pacientes" onClick={() => setImportOpen(true)}>
-                <Upload className="h-4 w-4 md:mr-2" />
-                <span className="hidden sm:inline">Importar</span>
+              <Button size="sm" variant="outline" aria-label="Migração de pacientes" onClick={() => setMigrationInfoOpen(true)}>
+                <LifeBuoy className="h-4 w-4 md:mr-2" />
+                <span className="hidden sm:inline">Migração</span>
               </Button>
               <Dialog open={dialogOpen} onOpenChange={setDialog}>
                 <DialogTrigger asChild>
@@ -617,7 +616,20 @@ const PatientManagement = () => {
         </Card>
       </main>
 
-      {user && <ImportPatientsModal open={importOpen} onOpenChange={setImportOpen} userId={user.id} />}
+      <Dialog open={migrationInfoOpen} onOpenChange={setMigrationInfoOpen}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto max-w-[calc(100vw-16px)] sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Migração acompanhada pela equipe Cortex</DialogTitle>
+            <DialogDescription>
+              A equipe Cortex prepara e confere a migração com o responsável da clínica, preservando os prontuários de cada médico.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Para trazer pacientes de outro sistema, combine com a equipe de implantação a origem, o escopo e a conferência dos dados. A transferência de arquivos é orientada por um canal seguro.
+          </p>
+          <Button className="sm:ml-auto" onClick={() => setMigrationInfoOpen(false)}>Entendi</Button>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!pendingAction} onOpenChange={(open) => !open && !actionBusy && setPendingAction(null)}>
         <AlertDialogContent className="max-w-[calc(100vw-16px)] sm:max-w-md">

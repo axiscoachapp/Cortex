@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrescriptionList } from './PrescriptionList';
-vi.mock('@/contexts/AuthContext',()=>({useAuth:()=>({user:{id:'owner'}})}));
+const auth = vi.hoisted(() => ({ userId: 'owner' as string | null }));
+vi.mock('@/contexts/AuthContext',()=>({useAuth:()=>({user:auth.userId ? {id:auth.userId} : null})}));
 vi.mock('@/hooks/use-toast',()=>({useToast:()=>({toast:vi.fn()})}));
 vi.mock('@/integrations/supabase/client',()=>({supabase:{from:()=>{
   const query={select:()=>query,eq:()=>query,order:()=>query,range:async(from:number)=>({error:null,data:from?[]:[
@@ -12,7 +13,22 @@ vi.mock('@/integrations/supabase/client',()=>({supabase:{from:()=>{
     {id:'old-note',doc_type:'atestado',status:'generated',secret_code:'OLDNOTE',created_at:'2019-10-01',expires_at:'2019-12-30',issuance_verified_at:'2019-10-01'},
   ]})};return query;
 }}}));
+beforeEach(() => { auth.userId = 'owner'; });
 describe('prescription trust display',()=>{
+  it('does not report an empty list before a doctor is available', () => {
+    auth.userId = null;
+    render(<QueryClientProvider client={new QueryClient()}><PrescriptionList patientId="patient" /></QueryClientProvider>);
+    expect(screen.queryByText('Nenhum documento emitido por você para este paciente.')).not.toBeInTheDocument();
+  });
+
+  it('identifies an empty document list as the current doctor’s documents for this patient', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(['patient-prescriptions', 'patient', 'owner'], []);
+    render(<QueryClientProvider client={client}><PrescriptionList patientId="patient" /></QueryClientProvider>);
+    expect(screen.getByRole('heading', { name: /^Documentos emitidos/ })).toBeInTheDocument();
+    expect(screen.getByText('Nenhum documento emitido por você para este paciente.')).toBeInTheDocument();
+  });
+
   it('requires reissue for legacy rows and never labels an unattested signature as signed',async()=>{
     render(<QueryClientProvider client={new QueryClient()}><PrescriptionList patientId="patient" /></QueryClientProvider>);
     expect(await screen.findByText('Reemitir documento')).toBeInTheDocument();

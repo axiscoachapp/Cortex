@@ -67,7 +67,13 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
   const hasWork = Object.values(drafts).some(value => value.trim()) || Object.values(processing).some(Boolean);
   useEffect(() => { onWorkStateChange?.(hasWork); }, [hasWork, onWorkStateChange]);
 
-  const { data: clinicalNotes = '', isError: notesError, refetch: retryNotes } = useQuery<string>({
+  const {
+    data: storedClinicalNotes = '',
+    isPending: notesPending,
+    fetchStatus: notesFetchStatus,
+    isError: notesError,
+    refetch: retryNotes,
+  } = useQuery<string>({
     queryKey: ['patient-clinical-notes', patient?.id, userId],
     queryFn: async () => {
       if (!patient?.id) return '';
@@ -79,9 +85,11 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
       if (error) throw error;
       return data?.clinical_notes ?? '';
     },
-    enabled: !!patient?.id,
+    enabled: !!patient?.id && !!userId,
     staleTime: 30_000,
   });
+  const notesReady = !!patient?.id && !!userId && !notesPending && !notesError && notesFetchStatus === 'idle';
+  const clinicalNotes = notesReady ? storedClinicalNotes : '';
 
   // Parse "[stamp] body" entries; show newest first.
   const noteEntries: Array<{ stamp: string; body: string }> = (clinicalNotes ?? '')
@@ -259,36 +267,46 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
         </section>
 
         {/* Saved annotations (written from chat in Comentário mode) */}
-        {noteEntries.length > 0 && (
+        {(noteEntries.length > 0 || !notesReady) && (
           <section className="p-4">
             <SectionHeader
               icon={StickyNote}
               label="Anotações do Médico"
               action={
-                <span className="text-[0.625rem] text-muted-foreground">{noteEntries.length}</span>
+                notesReady ? <span className="text-[0.625rem] text-muted-foreground">{noteEntries.length}</span> : undefined
               }
             />
-            <div className="space-y-1.5 max-h-[220px] overflow-y-auto scrollbar-thin pr-1">
-              {noteEntries.map((n, i) => (
-                <div key={i} className="px-3 py-2 rounded-lg bg-white/80 border border-border/40">
-                  {n.stamp && (
-                    <p className="text-[0.625rem] text-muted-foreground font-mono mb-0.5">
-                      {n.stamp}
+            {notesError && notesFetchStatus === 'idle' ? (
+              <div role="alert" className="text-xs text-destructive space-y-2">
+                <p>Não foi possível carregar as anotações salvas.</p>
+                <Button type="button" size="sm" variant="outline" onClick={() => retryNotes()}>Tentar novamente</Button>
+              </div>
+            ) : !notesReady ? (
+              <p role="status" className="text-xs text-muted-foreground">
+                {notesFetchStatus === 'paused' ? 'Aguardando conexão para carregar as anotações.' : 'Carregando anotações salvas…'}
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-[220px] overflow-y-auto scrollbar-thin pr-1">
+                {noteEntries.map((n, i) => (
+                  <div key={i} className="px-3 py-2 rounded-lg bg-white/80 border border-border/40">
+                    {n.stamp && (
+                      <p className="text-[0.625rem] text-muted-foreground font-mono mb-0.5">
+                        {n.stamp}
+                      </p>
+                    )}
+                    <p className="text-xs text-foreground/85 leading-snug whitespace-pre-wrap">
+                      {n.body}
                     </p>
-                  )}
-                  <p className="text-xs text-foreground/85 leading-snug whitespace-pre-wrap">
-                    {n.body}
-                  </p>
-                </div>
-              ))}
-            </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
         {/* Clinical Notes — AI extraction */}
         <section className="p-4">
           <SectionHeader icon={FileText} label="Extrair com IA" />
-          {notesError && <div role="alert" className="text-xs text-destructive mb-2">Anotações indisponíveis. <button type="button" className="underline" onClick={() => retryNotes()}>Tentar novamente</button></div>}
           <Textarea
             aria-label={`Anotações para ${patient.name}`}
             placeholder="Cole observações longas — a IA estrutura em sintomas, fatores de risco, histórico familiar…"

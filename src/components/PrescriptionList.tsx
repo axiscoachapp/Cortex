@@ -59,7 +59,7 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
   const [visibleCount, setVisibleCount] = useState(20);
   const { user } = useAuth();
 
-  const { data: rows = [], isLoading, isError, refetch } = useQuery<PrescriptionRow[]>({
+  const { data: rows = [], isPending, fetchStatus, isError, refetch } = useQuery<PrescriptionRow[]>({
     queryKey: ['patient-prescriptions', patientId, user?.id],
     queryFn: async () => {
       const data = await fetchAllRows((from, to) => supabase
@@ -75,6 +75,7 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
     enabled: !!patientId && !!user,
     staleTime: 30_000,
   });
+  const documentsReady = !isPending && !isError && fetchStatus === 'idle';
   const anySignable = rows.some((rx) => signableHash(rx, isExpired(rx)) !== null);
   const { data: signature } = useSignatureSession(anySignable);
   const signing = signature?.available && signature.configured ? signature : null;
@@ -102,19 +103,39 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
     } catch { toast({ title:'Não foi possível copiar o código', variant:'destructive' }); }
   };
 
-  if (isLoading) return <p role="status" className="text-xs text-muted-foreground">Carregando receitas…</p>;
-  if (isError) return <p role="alert" className="text-xs text-destructive">Não foi possível carregar as receitas. <button className="underline" onClick={() => refetch()}>Tentar novamente</button></p>;
-  if (rows.length === 0) return null;
+  if (!user || !patientId) return null;
+  if (isPending) return (
+    <p role="status" className="text-xs text-muted-foreground">
+      {fetchStatus === 'paused' ? 'Aguardando conexão para carregar os documentos emitidos.' : 'Carregando documentos emitidos…'}
+    </p>
+  );
 
   return (
     <section className="space-y-2">
       <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
         <FileSignature className="w-4 h-4 text-medical-blue" />
-        Receitas & Atestados
-        <span className="text-[0.625rem] text-muted-foreground font-normal">{rows.length}</span>
+        Documentos emitidos
+        <span className="text-[0.625rem] text-muted-foreground font-normal">{documentsReady ? rows.length : 'Última leitura'}</span>
         {signing && anySignable && <span className="ml-auto"><SignatureSessionBar state={signing} /></span>}
       </h3>
-      <div className="space-y-1.5">
+      {fetchStatus !== 'idle' && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {fetchStatus === 'paused' ? 'Aguardando conexão para atualizar os documentos.' : 'Atualizando documentos.'}{' '}
+          {!isError && 'Exibindo a última leitura. '}
+          Ações nos documentos indisponíveis.
+        </p>
+      )}
+      {isError && (
+        <p role="alert" className="text-xs text-destructive">
+          Não foi possível carregar os documentos emitidos.{' '}
+          <button className="underline" disabled={fetchStatus !== 'idle'} onClick={() => refetch()}>Tentar novamente</button>
+        </p>
+      )}
+      {documentsReady && rows.length === 0 && (
+        <p className="text-xs text-muted-foreground">Nenhum documento emitido por você para este paciente.</p>
+      )}
+      {/* Keep command controllers mounted while read failures hide the snapshot. */}
+      <fieldset disabled={!documentsReady} hidden={isError} aria-label="Documentos deste paciente" className="min-w-0 space-y-1.5 border-0 p-0">
         {rows.slice(0, visibleCount).map(rx => {
           const trusted = !!rx.issuance_verified_at;
           const meta = rx.status === 'revoked' ? STATUS_META.revoked : !trusted
@@ -173,7 +194,7 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
           );
         })}
         {visibleCount < rows.length && <Button variant="outline" onClick={() => setVisibleCount(value=>value+20)}>Mostrar mais receitas ({rows.length-visibleCount})</Button>}
-      </div>
+      </fieldset>
     </section>
   );
 }

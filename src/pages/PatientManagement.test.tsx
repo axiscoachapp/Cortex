@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'doctor' }, loading: false }) }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
-vi.mock('@/components/ImportPatientsModal', () => ({ ImportPatientsModal: () => null }));
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: () => {
@@ -61,6 +60,18 @@ describe('Patient directory', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/não foi possível carregar/i);
     expect(screen.getByRole('button', { name: /tentar novamente/i })).toBeInTheDocument();
     expect(screen.queryByText('Nenhum paciente cadastrado')).not.toBeInTheDocument();
+  });
+
+  it('explains that migration is prepared by Cortex without opening a file uploader', async () => {
+    renderDirectory();
+    await userEvent.click(screen.getByRole('button', { name: 'Migração de pacientes' }));
+    const dialog = screen.getByRole('dialog', { name: 'Migração acompanhada pela equipe Cortex' });
+    expect(dialog).toHaveTextContent(/equipe Cortex prepara e confere a migração/i);
+    expect(dialog).toHaveTextContent(/prontuários de cada médico/i);
+    expect(dialog.querySelector('input[type="file"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Importar pacientes' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Entendi' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('searches all loaded patients and opens their chart without starting a consultation', async () => {
