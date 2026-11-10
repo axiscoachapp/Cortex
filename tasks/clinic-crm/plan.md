@@ -71,6 +71,8 @@ Estimativa própria de engenharia para uma pessoa desenvolvedora experiente, com
 
 Primeira recepção/agenda manual: aproximadamente 15–24 dias de trabalho. Financeiro + fiscal: 16–28 dias. Integração fiscal direta é alternativa de maior esforço, descrita no estudo fiscal; não somar ao integrador. Reestimar após T00 e as provas de WhatsApp/fiscal. Mudança importante de schema, múltiplos CNPJs ou agenda legada pouco confiável altera estas faixas.
 
+Revisão manual de consistência em10/11: [moldura e cabeçalhos comuns](../../docs/product/clinic-crm/APP_UI_CONSISTENCY.md), incluindo Configurações e as demais áreas. Entrega local9083e08; [provas](../../docs/reviews/2026-11-10/ui-consistency/REVIEW.md). Não altera o escopo de backend/implantação nem autoriza operações reais ou retomada da automação.
+
 ## O que pode avançar sem os fornecedores
 
 Tela e contratos da recepção, capacidades, fila manual, cadastro administrativo, simulações de concorrência, agenda humana delegada, serviços/cobranças e adaptadores falsos de teste. Nenhum botão deve sugerir que o WhatsApp ou a nota foi enviado quando está em simulação.

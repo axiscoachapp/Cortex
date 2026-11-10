@@ -1,0 +1,248 @@
+{
+  "synthetic": true,
+  "role": "admin",
+  "routes": {
+    "largo /auth": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo /": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo inicio-areas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo inicio-consulta-existente": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo inicio-consulta-novo": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo /recepcao": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo recepcao-areas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo /recepcao?view=conversations": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo /seguranca": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo /configuracoes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "largo configurações navegação": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto /auth": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto /": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto inicio-areas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto inicio-menu-curto": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto inicio-consulta-existente": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto inicio-consulta-novo": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto /recepcao": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto recepcao-areas": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto recepcao-mais": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto /recepcao?view=conversations": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto /seguranca": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto /configuracoes": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    },
+    "compacto configurações navegação": {
+      "overflowX": 0,
+      "brokenText": [],
+      "unnamedControls": [],
+      "unlabelledFields": [],
+      "imagesWithoutAlt": [],
+      "pastViewport": [],
+      "pageErrors": [],
+      "consoleErrors": []
+    }
+  },
+  "unansweredCalls": {},
+  "receptionPrivateReads": []
+}

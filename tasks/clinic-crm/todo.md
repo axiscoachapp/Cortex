@@ -433,3 +433,16 @@ Entrega: c1e92df (ambientes/início/recepção) + bb16c50 (financeiro);111 teste
 Ampliação manual18:35: revisão integral paralela de pacientes/perfil/documentos, recepção/agenda e financeiro, mantendo backend/produtores e SaaS intactos. Root integra/revisa/testa os paths autorizados e registra limites. Sem automação ou ações externas.
 
 Revisão integral concluída localmente: configurações bf47950, clínico d4bb937, recepção26c7a1a, financeiro3aefdf2. Suíte completa2397/168, focal final241/30, navegador198+86 estados, tipos/lint42/build. [Provas](../../docs/reviews/2026-11-10/settings-setup/REVIEW.md). Sem operação real ou reinício do loop.
+
+## Nova revisão manual de consistência —10/11
+
+[Aceite](../../docs/product/clinic-crm/APP_UI_CONSISTENCY.md). Repetir a revisão completa com foco nas diferenças entre as telas; Configurações deve fazer parte do mesmo ambiente visual.
+
+- [x] UI1 — moldura e cabeçalho de conteúdo compartilhados, sem leitores clínicos.
+- [x] UI2 — configurações por grupos dentro da navegação principal.
+- [x] UI3 — adoção em clínico, recepção, financeiro, pré-consulta e conta.
+- [x] UI4 — revisão independente e correções de layout identificadas.
+- [x] UI5 — regressão, navegador sintético em quatro larguras/três perfis e evidências.
+- [x] UI6 — commits locais dos próprios caminhos e passagem ao Claude, sem looping.
+
+Entrega `9083e08` e [provas](../../docs/reviews/2026-11-10/ui-consistency/REVIEW.md):2420 testes reconciliados (ampla+58 retestes finais), um ignorado;298 estados Edge, tipos/lint/build. Sem falha pendente, produção ou automação.

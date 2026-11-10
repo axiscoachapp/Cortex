@@ -1,0 +1,47 @@
+{
+  "total": 298,
+  "runs": [
+    {
+      "name": "whole-app",
+      "states": 110,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    },
+    {
+      "name": "compact-core",
+      "states": 62,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    },
+    {
+      "name": "doctor",
+      "states": 24,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    },
+    {
+      "name": "reception",
+      "states": 34,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    },
+    {
+      "name": "final-interactions",
+      "states": 24,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    },
+    {
+      "name": "final-finance",
+      "states": 44,
+      "findings": [],
+      "unknown": {},
+      "privateReads": []
+    }
+  ]
+}

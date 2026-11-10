@@ -1,5 +1,9 @@
 # Estado da coordenação
 
+**Nova revisão de UI concluída em10/11 19:46:** `9083e08` (39 caminhos próprios), moldura/cabeçalho compartilhados e Configurações integrada à mesma navegação. Clínico, recepção/conversas, pré-consultas, financeiro e conta revistos; [escopo](../docs/product/clinic-crm/APP_UI_CONSISTENCY.md), [provas](../docs/reviews/2026-11-10/ui-consistency/REVIEW.md), [passagem1946](mensagens/2026-11-10-1946_codex-para-claude_consistencia-ui-entregue.md). Suíte ampla2415 verdes/cinco falhas de fixture financeira corrigidas e reteste58/5 verde;2420 verificações reconciliadas/um ignorado.298 estados Edge320–1920/135%/três papéis, tipos/lint37/build; revisão independente e ajustes finais de botões/header/período. Sem falha pendente ou alteração de operação/ACL/query/API/SQL; captura/rascunhos mantidos. Tarefa manual encerrada, sem automação ou ação externa.
+
+**Nova sessão manual em10/11 19:18:** usuário pediu revisar tudo novamente, especialmente a diferença visual de Configurações. Codex padroniza moldura, navegação e cabeçalhos de subpáginas e revê apresentação de clínico/recepção/financeiro/conta; [aceite](../docs/product/clinic-crm/APP_UI_CONSISTENCY.md), [registro1918](mensagens/2026-11-10-1918_codex-para-claude_nova-sessao-consistencia-ui.md). Backend/produtores/SaaS preservados; captura/rascunhos/permissões mantidos. Sem reativar automação ou operação externa.
+
 **Revisão integral manual entregue em10/11 19:12:** configurações/implantação bf47950, clínico d4bb937, recepção26c7a1a, financeiro3aefdf2;42 fontes próprios. [Mapa](../docs/product/clinic-crm/APP_PURPOSE_REVIEW.md), [Plano de implementação](<../docs/product/clinic-crm/Plano de implementação.md>), [provas](../docs/reviews/2026-11-10/settings-setup/REVIEW.md), [passagem1912](mensagens/2026-11-10-1912_codex-para-claude_revisao-integral-e-plano-entregues.md).2397 testes completos +241 focais finais,198+86 estados Edge, tipos/lint42/build; revisão independente. Configurações técnicas em consulta, copiloto desativado, migração assistida e melhorias clínicas/agenda/rascunhos financeiros. ACL/operador/backend permanecem contratos próprios; limites documentados. Tarefa concluída, sem próximo incremento automático, produção ou reativação da automação.
 
 
@@ -9,7 +13,7 @@
 
 **Retomada manual autorizada em10/11 — UX por perfil:** usuário pediu revisar todo o app e melhorar início/recepção/financeiro com referências do mercado. Cada login terá sua entrada de trabalho; administrador pode alternar os ambientes. Codex assume este recorte de UI, inclusive BillingPage/formulários, por pedido direto; API/SQL/fiscal/P1/P4/PersonalMed continuam no domínio Claude. Automação permanece EXCLUÍDA; pedido substitui a parada anterior somente para esta tarefa manual. [Registro](mensagens/2026-11-10-1656_codex-para-claude_retomada-ux-por-perfil.md).
 
-Atualizado em 2026-11-10 19:12 por Codex (revisão integral manual concluída); linhas Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
+Atualizado em 2026-11-10 19:46 por Codex (nova revisão de consistência UI concluída); linhas Claude preservadas. Cada agente atualiza as linhas que lhe dizem respeito.
 
 **UX por perfil entregue localmente:** c1e92df + bb16c50. Seletor por capacidade, início com agenda/largura útil, recepção com rotina/gestão e financeiro com período/etapas/formulários; sem grant por email ou mudança de API/SQL.111 testes/9 arquivos,206 estados principais +15 dirigidos, tipos/lint/build e revisores; [evidências](../docs/reviews/2026-11-10/product-ux/REVIEW.md). Conta hospedada não alterada. [Passagem1736](mensagens/2026-11-10-1736_codex-para-claude_ux-por-perfil-concluida.md). Tarefa manual concluída, sem próximo incremento ou looping; automação segue EXCLUÍDA.
 

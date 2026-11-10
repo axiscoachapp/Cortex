@@ -1,0 +1,34 @@
+{
+  "full": {
+    "passed": 2415,
+    "failed": 5,
+    "pending": 1,
+    "files": 170
+  },
+  "final": {
+    "passed": 58,
+    "failed": 0,
+    "files": 5,
+    "success": true
+  },
+  "corrections": [
+    {
+      "file": "E:/Work/Cortex/cortex/src/features/billing/BillingPage.test.tsx",
+      "initialFailures": [
+        "finance page explains a doctor’s read-only charges without promising payment actions",
+        "finance page describes cash according to role and the existing date scopes",
+        "finance page shows the tabs of each role",
+        "finance page bills an attended appointment prefilled with the saved card and the price table",
+        "finance page requires a denial code when the plan paid less than the guide"
+      ],
+      "retestAssertions": 5,
+      "retestStatus": "passed"
+    }
+  ],
+  "verifiedAcrossRuns": {
+    "passed": 2420,
+    "pending": 1,
+    "unresolvedFailures": 0
+  },
+  "note": "The full run initially lacked AuthContext in BillingPage.test. Only that fixture was corrected; all five failed scenarios passed in the final directed run. This is not a second full-suite run."
+}
