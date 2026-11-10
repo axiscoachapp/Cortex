@@ -17,12 +17,12 @@ export default function ReceptionQueue() {
   const [params, setParams] = useSearchParams();
   const conversations = params.get('view') === 'conversations';
   return <div className="space-y-4">
-    <nav aria-label="Área de atendimento" className="flex flex-wrap gap-2">
+    <nav aria-label="Área de atendimento" className="inline-flex max-w-full flex-wrap gap-1 rounded-xl bg-muted/60 p-1">
       {[{ label: 'Atendimentos', value: false }, { label: 'Conversas', value: true }].map(item => <Button key={item.label} variant={conversations === item.value ? 'default' : 'outline'} aria-pressed={conversations === item.value} onClick={() => setParams(old => {
         const next = new URLSearchParams(old);
         if (item.value) next.set('view', 'conversations'); else next.delete('view');
         return next;
-      })}>{item.label}</Button>)}
+      })} className="min-h-11 rounded-lg">{item.label}</Button>)}
     </nav>
     {conversations ? <WhatsAppInbox /> : <CaseQueue />}
   </div>;
@@ -71,29 +71,30 @@ function CaseQueue() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Fila de atendimento</h1>
+          <p className="mb-2 text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-primary">Rotina da recepção</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Fila de atendimento</h1>
           <p className="text-sm text-muted-foreground mt-2">
             Assuma uma demanda, confirme o contato e acompanhe o próximo passo.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="icon" aria-label="Atualizar fila" onClick={() => void queue.refetch()}>
+          <Button variant="outline" size="icon" className="h-11 w-11" aria-label="Atualizar fila" onClick={() => void queue.refetch()}>
             <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button className="gap-2" onClick={() => setCreating(true)}>
+          <Button className="min-h-11 gap-2" onClick={() => setCreating(true)}>
             <Plus className="w-4 h-4" />
             Novo atendimento
           </Button>
         </div>
       </div>
-      <div className="flex flex-wrap gap-3 items-end">
-        <div>
+      <div className="grid items-end gap-4 rounded-xl border bg-card p-4 sm:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="queue-status">Situação</Label>
           <select
             id="queue-status"
             value={status}
             onChange={(e) => change('status', e.target.value)}
-            className="block rounded-md border bg-card p-2 text-xs"
+            className="block min-h-11 w-full min-w-0 rounded-lg border bg-background px-3 py-2 text-sm"
           >
             <option value="open">Em aberto</option>
             <option value="all">Todos</option>
@@ -104,13 +105,13 @@ function CaseQueue() {
             ))}
           </select>
         </div>
-        <div>
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="queue-doctor">Médico</Label>
           <select
             id="queue-doctor"
             value={doctor ?? ''}
             onChange={(e) => change('doctor', e.target.value)}
-            className="block rounded-md border bg-card p-2 text-xs max-w-full"
+            className="block min-h-11 w-full min-w-0 rounded-lg border bg-background px-3 py-2 text-sm"
           >
             <option value="">Todas as agendas permitidas</option>
             {access?.doctors.map((d) => (
@@ -120,9 +121,9 @@ function CaseQueue() {
             ))}
           </select>
         </div>
-        <label className="flex items-center gap-2 text-xs py-2">
+        <label className="flex min-h-11 items-center gap-3 text-sm">
           <input
-            className="accent-primary"
+            className="h-4 w-4 shrink-0 accent-primary"
             type="checkbox"
             checked={mine}
             onChange={(e) => change('mine', e.target.checked ? '1' : '')}

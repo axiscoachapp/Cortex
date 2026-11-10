@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
+import { WorkspaceMenu } from './WorkspaceMenu';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { useState } from 'react';
 import { IntakeAnswersDialog } from '@/features/intake/IntakePage';
 import { intakeCall, type IntakeListItem } from '@/features/intake/intakeApi';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Plus, CalendarDays, Sparkles, FileStack, BookOpen, Users, ChevronRight, CalendarX, Settings2, ClipboardCheck, Wallet,
+  Plus, Home, CalendarDays, Sparkles, FileStack, BookOpen, Users, ChevronRight, CalendarX, Settings2, ClipboardCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Patient } from '@/types/patient';
@@ -33,6 +34,7 @@ interface PatientSidebarProps {
   userId: string;
   onHome?: () => void;
   onNavigate?: (path: string) => void;
+  homeActive?: boolean;
 }
 
 const typeLabels: Record<string, string> = {
@@ -51,12 +53,9 @@ const NAV_ITEMS = [
   { to: '/assistente',           icon: Sparkles,    label: 'Assistente' },
   { to: '/modelos',              icon: FileStack,   label: 'Modelos' },
   { to: '/conhecimento',         icon: BookOpen,    label: 'Conhecimento' },
-  { to: '/gerenciar-pacientes',  icon: Users,       label: 'Pacientes' },
-  { to: '/agenda',               icon: CalendarDays,label: 'Agenda' },
-  { to: '/configuracoes',        icon: Settings2,   label: 'Configurações' },
 ];
 
-export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId, onHome, onNavigate }: PatientSidebarProps) {
+export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId, onHome, onNavigate, homeActive = false }: PatientSidebarProps) {
   const clinicAccess=useClinicAccess();
   const navigate = useNavigate();
   const go = onNavigate ?? navigate;
@@ -90,22 +89,27 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
   });
 
   return (
-    <aside className="w-full h-full flex flex-col bg-sidebar border-r border-border/60">
+    <aside className="w-full h-full flex flex-col overflow-y-auto scrollbar-thin bg-sidebar border-r border-border/60 [&>div]:shrink-0 [&>nav]:shrink-0">
 
       {/* Logo + Nova Consulta */}
-      <div className="px-4 pt-5 pb-4">
+      <div className="px-4 pt-5 pb-4 space-y-4">
         <button onClick={onHome ?? (() => go('/'))} aria-label="Haddad Nicola — Início" className="flex items-center gap-2.5 mb-5 w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-medical-blue">
           <BrandLockup compact />
         </button>
 
-        <Button
+        <WorkspaceMenu className="w-full" onNavigate={go} />
+        <nav aria-label="Consultório" className="space-y-1">
+          <button type="button" onClick={onHome ?? (() => go('/'))} aria-current={homeActive ? 'page' : undefined} className={cn('w-full min-h-11 flex items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-left', homeActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-card')}><Home className="h-4 w-4" />Início</button>
+          {[{ to: '/agenda', label: 'Agenda', icon: CalendarDays }, { to: '/gerenciar-pacientes', label: 'Pacientes', icon: Users }].map(({ to, label, icon: Icon }) => <button type="button" key={to} onClick={() => go(to)} className="w-full min-h-11 flex items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-card hover:text-foreground"><Icon className="h-4 w-4" />{label}</button>)}
+        </nav>
+        {!homeActive && <Button
           variant="default"
-          className="w-full h-9 gap-2 text-sm font-medium shadow-sm"
+          className="w-full min-h-11 h-auto py-2 gap-2 text-sm font-medium"
           onClick={onNewConsultation}
         >
           <Plus className="w-4 h-4" />
           Nova Consulta
-        </Button>
+        </Button>}
       </div>
 
       {/* Today's agenda */}
@@ -120,7 +124,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-2 pb-2">
+      <div className="flex-1 px-2 pb-2">
         {isLoading ? (
           <div className="space-y-1.5 px-1 pt-1">
             {[0, 1, 2].map(i => <div key={i} className="h-12 rounded-xl bg-white/60 animate-pulse" />)}
@@ -190,14 +194,14 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
       </div>
 
       {/* Navigation rail */}
-      <nav className="px-2 py-2 border-t border-border/50 bg-white/60 space-y-0.5">
-        {[...(clinicAccess?.admin?[{to:'/recepcao',icon:Users,label:'Recepção'}]:[]),
-          ...(clinicAccess?.clinic?[{to:'/pre-consultas',icon:ClipboardCheck,label:'Pré-consultas'},{to:'/financeiro',icon:Wallet,label:'Financeiro'}]:[]),...NAV_ITEMS].map(({ to, icon: Icon, label }) => (
+      <nav aria-label="Ferramentas do consultório" className="px-3 py-3 border-t border-border/50 space-y-1">
+        <p className="px-3 py-1 text-[0.625rem] font-medium uppercase tracking-widest text-muted-foreground">Recursos clínicos</p>
+        {[...NAV_ITEMS, ...(clinicAccess?.active && clinicAccess.kind === 'clinical' && clinicAccess.clinic ? [{ to: '/pre-consultas', icon: ClipboardCheck, label: 'Pré-consultas' }] : []), { to: '/configuracoes', icon: Settings2, label: 'Configurações' }].map(({ to, icon: Icon, label }) => (
           <button
             key={to}
             onClick={() => go(to)}
             className={cn(
-              'w-full flex items-center gap-2.5 h-9 px-3 rounded-lg text-xs font-medium',
+              'w-full flex items-center gap-2.5 min-h-11 px-3 rounded-lg text-xs font-medium',
               'text-muted-foreground hover:text-foreground hover:bg-white transition-all',
             )}
           >

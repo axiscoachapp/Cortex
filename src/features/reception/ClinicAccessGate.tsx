@@ -20,6 +20,7 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
   const { pathname, search, key: locationKey } = useLocation();
   // Follow the router's decoding, case and trailing-slash rules. Comparing the
   // raw pathname would miss aliases that still mount the Settings route.
+  const receptionPage = matchRoutes([{ path: '/recepcao/*' }], pathname) !== null;
   const settingsPage = matchRoutes([{ path: '/configuracoes' }], pathname) !== null;
   const parentHidden = useContext(SessionVisibilityContext);
   const workspace = useRef<HTMLDivElement>(null);
@@ -53,7 +54,7 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
   }, [fresh, current, locationKey]);
   const retained = workspace.current && verified.current && verified.current.access.actorId === user?.id && verified.current.locationKey === locationKey
     ? verified.current.access : null;
-  const continueClinical = !!retained && !!current && current.kind === 'clinical' && !pathname.startsWith('/recepcao')
+  const continueClinical = !!retained && !!current && current.kind === 'clinical' && !receptionPage
     && !settingsPage && access.isError && access.error instanceof ClinicAccessTransportError;
   const blocked = !fresh && !continueClinical;
   const value = current ?? retained;
@@ -100,12 +101,12 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
           </Button>
         </div>
       );
-    if (!accountPage && !settingsPage && !pathname.startsWith('/recepcao')) {
+    if (!accountPage && !settingsPage && !receptionPage) {
       const params=new URLSearchParams(search);
       const scheduling=matchRoutes([{path:'/trabalho'}],pathname)!==null&&!params.get('patient')&&params.get('queue')==='scheduling';
       return <Navigate to={scheduling?'/recepcao/agenda':'/recepcao'} replace />;
     }
-  } else if (pathname.startsWith('/recepcao') && (!value.clinic || !value.active || !value.admin)) {
+  } else if (receptionPage && (!value.clinic || !value.active || !value.admin)) {
     return (
       <div className="max-w-lg mx-auto p-6 space-y-4">
         <h1 className="text-lg font-semibold">Área da recepção</h1>

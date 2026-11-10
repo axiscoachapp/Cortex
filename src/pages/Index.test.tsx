@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider, Outlet } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -106,7 +106,7 @@ vi.mock('@/components/PatientSidebar', () => ({
     </aside>
   ),
 }));
-vi.mock('@/components/WelcomeDashboard', () => ({ WelcomeDashboard: ({onResumeConsultation}) => <div><h1>Dashboard</h1><button onClick={()=>onResumeConsultation('A')}>Resume A</button><button onClick={()=>onResumeConsultation('outside')}>Resume outside</button></div> }));
+vi.mock('@/components/WelcomeDashboard', () => ({ WelcomeDashboard: ({onResumeConsultation,onSignOut}) => <div><h1>Dashboard</h1><button onClick={onSignOut}>Sair da conta</button><button onClick={()=>onResumeConsultation('A')}>Resume A</button><button onClick={()=>onResumeConsultation('outside')}>Resume outside</button></div> }));
 vi.mock('@/components/PatientSnapshot', () => ({ PatientSnapshot: () => null }));
 vi.mock('@/components/ChatPanel', () => ({
   ChatPanel: ({ patient, preBriefing, briefingError, onCaptureStateChange, onRetryBriefing, onOpenPatientWork }) => {
@@ -295,6 +295,18 @@ describe('patient activation', () => {
     await user.click(screen.getAllByRole('button', { name: 'Sair' })[0]);
     expect(fixture.signOut).not.toHaveBeenCalled();
   });
+  it('keeps capture mounted and guarded when using the homepage agenda shortcut', async () => {
+    const { router } = setup();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Select A' }));
+    await user.click(screen.getByRole('button', { name: 'Capture fixture' }));
+    await user.click(screen.getByRole('button', { name: 'Home' }));
+    await user.click(within(screen.getByRole('navigation', { name: 'Navegação do consultório' })).getByRole('button', { name: 'Agenda' }));
+    expect(router.state.location.pathname).toBe('/');
+    expect(fixture.chatMount).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Sair da conta' }));
+    expect(fixture.signOut).not.toHaveBeenCalled();
+  });
   it('invalidates an outdated briefing without automatically spending again', async () => {
     const { client } = setup();
     const user = userEvent.setup();
@@ -312,7 +324,7 @@ describe('patient activation', () => {
     fixture.signOut.mockRejectedValueOnce(new Error('offline'));
     setup();
     await screen.findByRole('heading', { name: 'Dashboard' });
-    await userEvent.click(screen.getAllByRole('button', { name: 'Sair' })[0]);
+    await userEvent.click(screen.getByRole('button', { name: 'Sair da conta' }));
     await waitFor(() =>
       expect(fixture.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Não foi possível sair da conta' })),
     );

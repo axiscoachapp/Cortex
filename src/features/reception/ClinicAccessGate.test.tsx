@@ -66,6 +66,14 @@ function mount(initial = '/') {
 async function refetch(client: QueryClient) { await act(async () => { await client.invalidateQueries({ queryKey: ['clinic-access'] }); }); }
 describe('reception routing before clinical components mount', () => {
   beforeEach(() => { vi.resetAllMocks(); mocks.userId = base.actorId; });
+  it.each(['/recepcao', '/RECEPCAO', '/%72ecepcao', '/RECEPCAO/agenda'])('blocks reception route aliases %s for a doctor without admin access', async path => {
+    mocks.access.mockResolvedValue({ ...base, active: true, clinic: { id: base.actorId, name: 'Clínica sintética' } });
+    mount(path);
+    expect(await screen.findByRole('heading', { name: 'Área da recepção' })).toBeVisible();
+    expect(screen.queryByText('Ambiente da recepção')).toBeNull();
+    expect(screen.queryByText('Agenda administrativa')).toBeNull();
+    expect(mocks.clinicalRender).not.toHaveBeenCalled();
+  });
   it.each(['/trabalho?queue=scheduling','/TRABALHO/?queue=scheduling','/%74rabalho?queue=scheduling'])('routes legacy scheduling %s to reception Calendar without private readers',async path=>{
     mocks.access.mockResolvedValue({...base,kind:'reception',active:true,clinic:{id:base.actorId,name:'Clínica'},doctors:[{id:base.actorId,name:'Médico',specialty:'geral'}]});
     mount(path);expect(await screen.findByText('Agenda administrativa')).toBeVisible();expect(mocks.clinicalRender).not.toHaveBeenCalled();

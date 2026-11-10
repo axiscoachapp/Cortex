@@ -1,40 +1,23 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  CalendarDays,
-  Plus,
-  ChevronRight,
-  Clock,
-  Users,
-  UserPlus,
-  RefreshCw,
-  Stethoscope,
-  CalendarX,
-  Shield,
-  Bell,
-  MessageCircle,
-  Mail,
-  Loader2,
-  Sparkles,
-  FileStack,
-  BookOpen,
-} from 'lucide-react';
+import { Plus, ChevronRight, Clock, Users, Shield, Bell, MessageCircle, Mail, Loader2, LogOut } from 'lucide-react';
 import { SpecialtySettingsSheet } from '@/components/SpecialtySettingsSheet';
 import { OnboardingCard } from '@/components/OnboardingCard';
 import { ConsultationRecoveryNotice } from '@/components/ConsultationRecoveryNotice';
 import { LocalRecordingRecoveryNotice } from '@/components/LocalRecordingRecoveryNotice';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Patient } from '@/types/patient';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { daysSinceDateOnly } from '@/lib/dates';
 import { fetchAllRows } from '@/lib/pagination';
 import { BrandLockup } from '@/components/BrandLockup';
 import { mapPatientRow } from '@/lib/patientMapper';
 import { canRemindAppointment } from '../../supabase/functions/_shared/reminders';
+import { WorkspaceMenu } from './WorkspaceMenu';
+import { DailyAgenda } from './DailyAgenda';
+import { PatientShortcut } from './PatientShortcut';
 
 interface Appointment {
   patient?: Parameters<typeof mapPatientRow>[0] | null;
@@ -56,6 +39,7 @@ interface WelcomeDashboardProps {
   onNewConsultation: () => void;
   userId: string;
   onResumeConsultation?: (patientId: string) => void;
+  onSignOut?: () => void | Promise<void>;
 }
 
 const typeLabels: Record<string, string> = {
@@ -63,12 +47,6 @@ const typeLabels: Record<string, string> = {
   retorno: 'Retorno',
   seguimento: 'Seguimento',
   urgencia: 'Urgência',
-};
-const statusColor: Record<string, string> = {
-  agendado: 'bg-blue-500',
-  confirmado: 'bg-green-500',
-  cancelado: 'bg-slate-400',
-  realizado: 'bg-slate-500',
 };
 
 function relativeDate(dateString: string | null): string {
@@ -108,6 +86,7 @@ export function WelcomeDashboard({
   onNewConsultation,
   userId,
   onResumeConsultation,
+  onSignOut,
 }: WelcomeDashboardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -212,358 +191,55 @@ export function WelcomeDashboard({
   };
 
   return (
-    <div className="h-full w-full bg-card overflow-y-auto scrollbar-thin">
-      <div className="max-w-2xl mx-auto px-4 md:px-8 py-6 md:py-10 space-y-6 md:space-y-8">
-        <BrandLockup compact className="xl:hidden" />
-        {/* Greeting */}
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{greeting()}</h1>
-            <p className="text-muted-foreground mt-0.5">{todayLabel()}</p>
-          </div>
-          <SpecialtySettingsSheet />
+    <div className="h-full w-full overflow-y-auto bg-background scrollbar-thin">
+      <div className="mx-auto max-w-[90rem] space-y-6 px-4 py-5 md:px-8 md:py-8 xl:px-10">
+        <div className="flex flex-wrap items-center justify-between gap-3 xl:hidden">
+          <BrandLockup compact className="hidden min-[360px]:block [&_img]:w-16 sm:[&_img]:w-24 [&_p]:hidden" />
+          <WorkspaceMenu />
         </div>
-
-        {/* Primary action — the app's core verb, kept at the top */}
-        <Button
-          onClick={onNewConsultation}
-          className="w-full h-12 gap-2 text-sm font-semibold shadow-sm"
-          style={{ background: 'hsl(var(--primary))' }}
-        >
-          <Plus className="w-4 h-4" />
-          Nova Consulta
-        </Button>
-
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
+          <div className="space-y-2"><p className="text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-primary">Seu consultório</p><h1 className="text-2xl font-semibold tracking-tight">{greeting()}</h1><p className="text-sm text-muted-foreground">{todayLabel()}</p></div>
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <Button onClick={onNewConsultation} className="min-h-12 h-auto min-w-0 gap-2 px-3 py-3 text-xs font-semibold sm:px-5 sm:text-sm"><Plus className="h-4 w-4 shrink-0" />Nova Consulta</Button>
+            <SpecialtySettingsSheet />
+            {onSignOut && <Button type="button" variant="ghost" size="icon" className="h-11 w-11" aria-label="Sair da conta" onClick={() => void onSignOut()}><LogOut className="h-4 w-4" /></Button>}
+          </div>
+        </header>
         {onResumeConsultation && <ConsultationRecoveryNotice userId={userId} onResume={onResumeConsultation} />}
         {onResumeConsultation && <LocalRecordingRecoveryNotice userId={userId} onResume={onResumeConsultation} />}
-
-        {/* First-run onboarding checklist */}
-        <OnboardingCard
-          onNewConsultation={onNewConsultation}
-          patientCount={totalPatients}
-          hasConsultation={patients.some((p) => p.status !== 'novo')}
-          userId={userId}
-        />
-
-        {/* Shortcuts — mobile only; on desktop the sidebar nav covers these */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 xl:hidden">
-          {[
-            { label: 'Assistente', icon: Sparkles, to: '/assistente' },
-            { label: 'Modelos', icon: FileStack, to: '/modelos' },
-            { label: 'Conhecimento', icon: BookOpen, to: '/conhecimento' },
-            { label: 'Pacientes', icon: Users, to: '/gerenciar-pacientes' },
-          ].map(({ label, icon: Icon, to }) => (
-            <button
-              key={to}
-              onClick={() => navigate(to)}
-              className="flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border border-border/50 bg-white hover:border-medical-blue/30 hover:bg-medical-blue-light/20 transition-all"
-            >
-              <Icon className="w-4 h-4 text-medical-blue shrink-0" />
-              <span className="text-xs font-medium text-foreground whitespace-normal leading-tight text-center">{label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            {
-              icon: Users,
-              value: totalPatients,
-              label: 'Pacientes',
-              color: 'text-medical-blue',
-              bg: 'bg-medical-blue-light',
-            },
-            { icon: UserPlus, value: newPatients, label: 'Novos', color: 'text-green-600', bg: 'bg-green-50' },
-            { icon: RefreshCw, value: pendingReturns, label: 'Retornos', color: 'text-amber-600', bg: 'bg-amber-50' },
-          ].map(({ icon: Icon, value, label, color, bg }) => (
-            <div
-              key={label}
-              className="rounded-xl border border-border/50 bg-white p-3 md:p-4 shadow-[0_1px_4px_hsl(0_0%_0%/0.06)]"
-            >
-              <div className={cn('w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center mb-2 md:mb-3', bg)}>
-                <Icon className={cn('w-3.5 h-3.5 md:w-4 md:h-4', color)} />
-              </div>
-              <p className="text-xl md:text-2xl font-bold text-foreground leading-none">{value}</p>
-              <p className="text-[0.6875rem] md:text-xs text-muted-foreground mt-1">{label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Pending reminders */}
-        {pendingReminderApts.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
-              <Bell className="w-4 h-4 text-medical-blue" />
-              Lembretes Pendentes
-              <span className="ml-1 text-[0.625rem] font-medium bg-blue-100 text-blue-700 rounded-full px-2 py-0.5">
-                {pendingReminderApts.length}
-              </span>
-            </h2>
-            <div className="space-y-2">
-              {pendingReminderApts.map((apt) => {
-                const patient = apt.patient
-                  ? mapPatientRow(apt.patient)
-                  : patients.find((p) => p.id === apt.patient_id);
-                const hasPhone = !!patient?.phone;
-                const isSending = sendingReminder === apt.id;
-                return (
-                  <div
-                    key={apt.id}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border/50 bg-white shadow-[0_1px_4px_hsl(0_0%_0%/0.05)]"
-                  >
-                    <div className="text-center shrink-0 w-10">
-                      <p className="text-xs font-bold text-medical-blue">{formatTime(apt.start_time)}</p>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{patient?.name ?? apt.title}</p>
-                      <p className="text-xs text-muted-foreground">{typeLabels[apt.type] ?? apt.type}</p>
-                      {reminderLinks[apt.id] && (
-                        <a
-                          href={reminderLinks[apt.id]}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label={`Abrir WhatsApp para ${patient?.name ?? apt.title}`}
-                          className="block text-xs text-medical-blue underline mt-1"
-                        >
-                          Abrir WhatsApp para revisar e enviar
-                        </a>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5 shrink-0 text-xs"
-                      disabled={isSending}
-                      onClick={() => handleSendReminder(apt)}
-                    >
-                      {isSending ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : hasPhone ? (
-                        <MessageCircle className="w-3.5 h-3.5 text-whatsapp-green" />
-                      ) : (
-                        <Mail className="w-3.5 h-3.5" />
-                      )}
-                      Lembrar
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Today's agenda — mobile only; the desktop sidebar shows it */}
-        <section className="xl:hidden">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-medical-blue" />
-              Agenda de Hoje
-            </h2>
-            <button
-              onClick={() => navigate('/agenda')}
-              className="text-xs text-medical-blue hover:text-medical-blue-dark font-medium flex items-center gap-1"
-            >
-              Ver tudo <ChevronRight className="w-3 h-3" />
-            </button>
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(16rem,1fr)]">
+          <div className="min-w-0 space-y-6">
+            <DailyAgenda appointments={todayApts} patients={patients} loading={aptsLoading} error={aptsError} onRetry={() => void refetchApts()} onOpenAgenda={() => navigate('/agenda')} onSelectPatient={onSelectPatient} />
+            {pendingReminderApts.length > 0 && <section aria-labelledby="home-reminders" className="rounded-2xl border bg-card p-4 md:p-5 space-y-4">
+              <div className="space-y-1"><h2 id="home-reminders" className="flex items-center gap-2 text-sm font-semibold"><Bell className="h-4 w-4 text-primary" />Lembretes pendentes<span className="text-xs font-normal text-muted-foreground">({pendingReminderApts.length})</span></h2><p className="text-xs leading-relaxed text-muted-foreground">Prepare o contato de quem ainda precisa de um lembrete.</p></div>
+              <div className="divide-y">{pendingReminderApts.map(apt => {
+                const patient = apt.patient ? mapPatientRow(apt.patient) : patients.find(row => row.id === apt.patient_id);
+                const hasPhone = !!patient?.phone, isSending = sendingReminder === apt.id;
+                return <div key={apt.id} className="flex flex-wrap items-center gap-3 py-3">
+                  <span className="text-xs font-semibold tabular-nums">{formatTime(apt.start_time)}</span>
+                  <div className="min-w-0 flex-1 basis-40"><p className="text-sm font-medium [overflow-wrap:anywhere]">{patient?.name ?? apt.title}</p><p className="text-xs text-muted-foreground">{typeLabels[apt.type] ?? apt.type}</p>{reminderLinks[apt.id] && <a href={reminderLinks[apt.id]} target="_blank" rel="noopener noreferrer" aria-label={`Abrir WhatsApp para ${patient?.name ?? apt.title}`} className="mt-2 block text-xs text-primary underline">Abrir WhatsApp para revisar e enviar</a>}</div>
+                  <Button variant="outline" className="h-auto min-h-11 gap-2 text-xs" disabled={isSending} onClick={() => handleSendReminder(apt)}>{isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : hasPhone ? <MessageCircle className="h-4 w-4" /> : <Mail className="h-4 w-4" />}Lembrar</Button>
+                </div>;
+              })}</div>
+            </section>}
+            <details className="rounded-xl border bg-card px-4 py-3" open={totalPatients === 0 ? true : undefined}>
+              <summary className="cursor-pointer py-1 text-sm font-medium">Configuração do consultório</summary>
+              <div className="pt-4"><OnboardingCard onNewConsultation={onNewConsultation} patientCount={totalPatients} hasConsultation={patients.some(patient => patient.status !== 'novo')} userId={userId} /></div>
+            </details>
           </div>
-
-          {aptsLoading ? (
-            <div className="space-y-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-16 rounded-xl bg-muted/40 animate-pulse" />
-              ))}
-            </div>
-          ) : aptsError ? (
-            <div className="rounded-xl border border-dashed border-red-200 bg-red-50/40 p-6 text-center">
-              <p className="text-sm text-red-700">Não foi possível carregar a agenda</p>
-              <button
-                onClick={() => refetchApts()}
-                className="mt-3 text-xs font-medium text-medical-blue hover:underline"
-              >
-                Tentar novamente
-              </button>
-            </div>
-          ) : todayApts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-6 text-center">
-              <CalendarX className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Nenhuma consulta agendada para hoje</p>
-              <button
-                onClick={() => navigate('/agenda')}
-                className="mt-3 text-xs font-medium text-medical-blue hover:underline"
-              >
-                Agendar consulta →
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {todayApts.map((apt) => {
-                const patient = apt.patient
-                  ? mapPatientRow(apt.patient)
-                  : patients.find((p) => p.id === apt.patient_id);
-                return (
-                  <button
-                    key={apt.id}
-                    onClick={() => patient && onSelectPatient(patient, apt.id)}
-                    disabled={!patient}
-                    className={cn(
-                      'w-full flex items-center gap-4 px-4 py-3 rounded-xl border border-border/50 bg-white',
-                      'shadow-[0_1px_4px_hsl(0_0%_0%/0.05)] text-left',
-                      'hover:border-medical-blue/30 hover:shadow-md transition-all',
-                      !patient && 'opacity-60 cursor-default',
-                    )}
-                  >
-                    <div className="text-center shrink-0 w-12">
-                      <p className="text-xs font-bold text-medical-blue">{formatTime(apt.start_time)}</p>
-                      <p className="text-[0.625rem] text-muted-foreground">{formatTime(apt.end_time)}</p>
-                    </div>
-                    <div className={cn('w-1 h-8 rounded-full shrink-0', statusColor[apt.status] ?? 'bg-slate-300')} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{patient?.name ?? apt.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {typeLabels[apt.type] ?? apt.type}
-                        {apt.notes ? ` · ${apt.notes}` : ''}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span
-                        className={cn(
-                          'text-[0.625rem] font-medium px-2 py-0.5 rounded-full',
-                          apt.status === 'confirmado'
-                            ? 'bg-green-100 text-green-700'
-                            : apt.status === 'cancelado'
-                              ? 'bg-slate-100 text-slate-500'
-                              : 'bg-blue-50 text-blue-600',
-                        )}
-                      >
-                        {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
-                      </span>
-                      {patient && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* Recent patients */}
-        {recentPatients.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
-              <Clock className="w-4 h-4 text-medical-blue" />
-              Pacientes Recentes
-            </h2>
-            <div className="space-y-1.5">
-              {recentPatients.map((patient) => {
-                const initials = patient.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .slice(0, 2)
-                  .toUpperCase();
-                return (
-                  <button
-                    key={patient.id}
-                    onClick={() => onSelectPatient(patient)}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border/50 bg-white',
-                      'shadow-[0_1px_4px_hsl(0_0%_0%/0.04)] text-left',
-                      'hover:border-medical-blue/30 hover:shadow-md hover:bg-medical-blue-light/30 transition-all group',
-                    )}
-                  >
-                    {patient.photoUrl ? (
-                      <img
-                        src={patient.photoUrl}
-                        alt={patient.name}
-                        className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-border/40"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-medical-blue bg-medical-blue-light">
-                        {initials}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{patient.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {patient.age === null ? 'Idade não informada' : String(patient.age) + ' anos'}
-                        {patient.profession ? ` · ${patient.profession}` : ''}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[0.625rem] text-muted-foreground">{relativeDate(patient.lastVisit)}</span>
-                      <Badge variant={patient.status} className="text-[0.5625rem] h-4 px-1.5">
-                        {patient.status === 'retorno'
-                          ? 'Retorno'
-                          : patient.status === 'novo'
-                            ? 'Novo'
-                            : patient.status === 'seguimento'
-                              ? 'Seguimento'
-                              : 'Atend.'}
-                      </Badge>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-medical-blue transition-colors" />
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Upcoming returns */}
-        {returnPatients.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
-              <Stethoscope className="w-4 h-4 text-amber-500" />
-              Retornos Pendentes
-              <span className="ml-1 text-[0.625rem] font-medium bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">
-                {pendingReturns}
-              </span>
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {returnPatients.map((patient) => {
-                const initials = patient.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .slice(0, 2)
-                  .toUpperCase();
-                const daysSince = daysSinceDateOnly(patient.lastVisit);
-                return (
-                  <button
-                    key={patient.id}
-                    onClick={() => onSelectPatient(patient)}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-xl border bg-white text-left',
-                      'shadow-[0_1px_4px_hsl(0_0%_0%/0.04)]',
-                      'hover:border-amber-300/60 hover:shadow-md hover:bg-amber-50/40 transition-all group',
-                      daysSince > 60 ? 'border-amber-200/70' : 'border-border/50',
-                    )}
-                  >
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[0.6875rem] font-bold text-amber-700 bg-amber-100">
-                      {initials}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-foreground truncate leading-tight">{patient.name}</p>
-                      <p className="text-[0.625rem] text-muted-foreground">{relativeDate(patient.lastVisit)}</p>
-                    </div>
-                    <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-amber-500 transition-colors shrink-0" />
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        <div className="pb-4 pt-2">
-          <Link
-            to="/privacidade"
-            className="inline-flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground hover:text-muted-foreground transition-colors"
-          >
-            <Shield className="w-3 h-3" />
-            Privacidade & Dados (LGPD)
-          </Link>
+          <aside className="min-w-0 space-y-5" aria-label="Continuidade dos pacientes">
+            <section className="rounded-2xl border bg-card p-3 md:p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-3 pt-1"><h2 className="flex items-center gap-2 text-sm font-semibold"><Clock className="h-4 w-4 text-primary" />Pacientes recentes</h2><Button variant="ghost" className="h-auto min-h-11 gap-1 px-1 text-xs" onClick={() => navigate('/gerenciar-pacientes')}>Ver todos<ChevronRight className="h-3 w-3" /></Button></div>
+              {recentPatients.length ? <div className="space-y-1">{recentPatients.map(patient => <PatientShortcut key={patient.id} patient={patient} dateLabel={relativeDate(patient.lastVisit)} onSelect={onSelectPatient} />)}</div> : <p className="px-2 py-5 text-sm text-muted-foreground">Os pacientes atendidos aparecerão aqui para facilitar o retorno ao prontuário.</p>}
+            </section>
+            <section className="rounded-xl border bg-card p-5 space-y-4" aria-label="Seu cadastro de pacientes">
+              <h2 className="flex items-center gap-2 text-sm font-medium"><Users className="h-4 w-4 text-primary" />Seu cadastro de pacientes</h2>
+              <dl className="grid grid-cols-3 gap-3">{[['Pacientes', totalPatients], ['Novos', newPatients], ['Em retorno', pendingReturns]].map(([label, value]) => <div key={label} className="min-w-0"><dd className="text-xl font-semibold tabular-nums [overflow-wrap:anywhere]">{value}</dd><dt className="mt-1 text-[0.625rem] text-muted-foreground">{label}</dt></div>)}</dl>
+            </section>
+            {returnPatients.length > 0 && <details className="rounded-xl border bg-card px-4 py-3"><summary className="cursor-pointer py-1 text-sm font-medium">Pacientes em retorno<span className="ml-2 text-xs font-normal text-muted-foreground">{pendingReturns}</span></summary><p className="py-2 text-xs text-muted-foreground">Cadastros marcados como retorno; não representam consultas já agendadas.</p>{returnPatients.map(patient => <PatientShortcut key={patient.id} patient={patient} dateLabel={relativeDate(patient.lastVisit)} onSelect={onSelectPatient} />)}</details>}
+          </aside>
         </div>
+        <footer className="border-t pb-4 pt-4"><Link to="/privacidade" className="inline-flex min-h-11 items-center gap-2 text-xs text-muted-foreground hover:text-foreground"><Shield className="h-3.5 w-3.5" />Privacidade e dados</Link></footer>
       </div>
     </div>
   );

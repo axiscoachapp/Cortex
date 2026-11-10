@@ -11,7 +11,7 @@ import { PatientSnapshot } from '@/components/PatientSnapshot';
 import { NewConsultationModal } from '@/components/NewConsultationModal';
 import { WelcomeDashboard } from '@/components/WelcomeDashboard';
 import { Button } from '@/components/ui/button';
-import { LogOut, Home, PanelLeft, Mic, User } from 'lucide-react';
+import { LogOut, Home, PanelLeft, Mic, User, CalendarDays, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Patient, ChatMessage } from '@/types/patient';
 import { useToast } from '@/hooks/use-toast';
@@ -391,6 +391,7 @@ const Index = () => {
             onHome={() => setMobileView('home')}
             onNavigate={path => navigate(path)}
             userId={user?.id ?? ''}
+            homeActive={mobileView === 'home' || !selectedPatient}
           />
         </div>
 
@@ -443,6 +444,7 @@ const Index = () => {
               counts={directory?.counts}
               onSelectPatient={handleSelectPatient}
               onNewConsultation={() => setShowNewConsultationModal(true)}
+              onSignOut={handleSignOut}
               onResumeConsultation={patientId => {
                 if (!confirmPatientChange(patientId)) return;
                 if (patientId === selectedPatientIdRef.current && selectedPatient?.id === patientId) {
@@ -461,8 +463,8 @@ const Index = () => {
         {/* Patient snapshot */}
         <div className={cn(
           'h-full flex flex-col relative',
-          'xl:w-[25%] xl:min-w-[270px] xl:max-w-[360px] xl:flex',
-          mobileView === 'info' ? 'flex-1' : 'hidden xl:flex',
+          'xl:w-[25%] xl:min-w-[270px] xl:max-w-[360px]',
+          mobileView === 'info' ? 'flex-1' : selectedPatient && mobileView !== 'home' ? 'hidden xl:flex' : 'hidden',
         )}>
           <PatientSnapshot
             patient={selectedPatient}
@@ -492,9 +494,15 @@ const Index = () => {
       </div>
 
       {/* Mobile bottom navigation */}
-      <nav className="xl:hidden shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-sm">
+      <nav aria-label="Navegação do consultório" className="xl:hidden shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-sm">
         <div className="flex items-stretch h-16 px-1">
-          {navItems.map(({ id, icon: Icon, label, disabled }) => (
+          {(mobileView === 'home' ? [
+            { label: 'Início', icon: Home, action: () => setMobileView('home'), active: true },
+            { label: 'Agenda', icon: CalendarDays, action: () => navigate('/agenda'), active: false },
+            { label: 'Pacientes', icon: Users, action: () => navigate('/gerenciar-pacientes'), active: false },
+            { label: 'Menu', icon: PanelLeft, action: () => setMobileView('list'), active: false },
+          ] : []).map(({ label, icon: Icon, action, active }) => <button key={label} onClick={action} aria-current={active ? 'page' : undefined} className={cn('flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl text-xs', active ? 'bg-primary/10 text-primary' : 'text-muted-foreground')}><Icon className="h-5 w-5" />{label}</button>)}
+          {mobileView !== 'home' && navItems.map(({ id, icon: Icon, label, disabled }) => (
             <button
               key={id}
               onClick={() => { if(!disabled){setMobileView(id);if(id==='info')setProfileRequest(value=>value+1);} }}
@@ -513,14 +521,14 @@ const Index = () => {
               <span className="text-xs font-medium">{label}</span>
             </button>
           ))}
-          <button
+          {mobileView !== 'home' && <button
             onClick={handleSignOut}
             className="flex-1 flex flex-col items-center justify-center gap-1 rounded-xl mx-0.5 transition-all min-h-[44px] text-muted-foreground hover:text-muted-foreground hover:bg-muted/30"
             title="Sair"
           >
             <LogOut className="w-5 h-5" />
             <span className="text-xs font-medium">Sair</span>
-          </button>
+          </button>}
         </div>
       </nav>
 
