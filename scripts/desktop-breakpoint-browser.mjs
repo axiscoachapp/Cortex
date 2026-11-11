@@ -9,13 +9,15 @@ import { createHash } from 'node:crypto';
 import http from 'node:http';
 import { resolve } from 'node:path';
 import { startClinicFixture, patientId } from './fixtures/clinic-review-api.mjs';
-import { DESKTOP_BREAKPOINT, INTERFACE_SCALE } from '../src/lib/interfaceScale.ts';
+// The desktop frame is SHELL_BREAKPOINT real pixels (not scaled with the type);
+// before 10/11/2026 it was Tailwind xl = 1728px.
+import { SHELL_BREAKPOINT, INTERFACE_SCALE } from '../src/lib/interfaceScale.ts';
 
 const probeSideEffects = process.argv.includes('--probe-side-effects');
 assert.ok(process.argv.slice(2).every(arg => arg === '--probe-side-effects') && process.argv.length <= 3, 'No external target accepted');
-const artifacts = resolve('docs/reviews/2026-11-04/desktop-breakpoint');
+const artifacts = resolve(process.env.CORTEX_BROWSER_ARTIFACTS || 'docs/reviews/2026-11-04/desktop-breakpoint');
 mkdirSync(artifacts, { recursive: true });
-const report = { syntheticOnly: true, breakpoint: DESKTOP_BREAKPOINT, checks: [], failures: [], pageErrors: [],
+const report = { syntheticOnly: true, breakpoint: SHELL_BREAKPOINT, checks: [], failures: [], pageErrors: [],
   probeSideEffects, forbiddenRequests: [], requestsDuringResize: 0,
   notCovered: ['real browser zoom at a fractional layout width; covered by component simulation', 'timers beyond the observed resizes and 600ms settle window'],
   sources: ['src/pages/Index.tsx', 'src/pages/Index.test.tsx', 'src/index.css', 'scripts/desktop-breakpoint-browser.mjs',
@@ -38,7 +40,7 @@ try {
   }
   assert.ok(ready, 'Synthetic app did not start');
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
-  const context = await browser.newContext({ viewport: { width: DESKTOP_BREAKPOINT - 1, height: 900 } });
+  const context = await browser.newContext({ viewport: { width: SHELL_BREAKPOINT - 1, height: 900 } });
   const readRpcs = new Set(['workspace_directory', 'list_patient_chat_turns', 'clinic_access', 'get_integration_status']);
   await context.route('**/*', route => {
     const request = route.request(), url = new URL(request.url()), method = request.method();
@@ -71,11 +73,11 @@ try {
   await page.keyboard.press('Escape');
   await page.waitForLoadState('networkidle');
   observeResize = true;
-  for (const width of [1727, 1728, 1920, 1727, 1280, 1728, 1727]) {
+  for (const width of [1199, 1200, 1920, 1199, 1366, 1200, 1199]) {
     stage = 'index resize ' + width;
     await page.setViewportSize({ width, height: 900 });
     const dashboard = page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite)/, includeHidden: true });
-    await expect.poll(() => dashboard.count()).toBe(width < DESKTOP_BREAKPOINT ? 1 : 0);
+    await expect.poll(() => dashboard.count()).toBe(width < SHELL_BREAKPOINT ? 1 : 0);
     assert.ok(await originalChat.evaluate(node => node.isConnected), 'Consultation unmounted');
     assert.equal(await question.inputValue(), 'Rascunho sintético preservado');
     await expect(page.getByRole('button', { name: 'Perfil', exact: true, includeHidden: true })).toHaveAttribute('aria-current', 'page');
@@ -92,10 +94,10 @@ try {
   await page.getByRole('button', { name: 'Consulta', exact: true }).click(); await question.fill('');
   await page.goto(origin + '/agenda'); await page.waitForSelector('.rbc-calendar');
   await page.waitForLoadState('networkidle'); observeResize = true;
-  for (const width of [1727, 1728, 1920, 1280]) {
+  for (const width of [1199, 1200, 1920, 1366]) {
     stage = 'agenda resize ' + width;
     await page.setViewportSize({ width, height: 900 });
-    if (probeSideEffects && width === 1280) {
+    if (probeSideEffects && width === 1366) {
       // A delayed attempt from the last resize must be observed even though
       // this unknown-to-the-counters endpoint returns 503 in the local fixture.
       await page.evaluate(apiOrigin => {
@@ -108,10 +110,10 @@ try {
       return { height: shell.getBoundingClientRect().height, navHeight: nav.getBoundingClientRect().height,
         navVisible: getComputedStyle(nav).display !== 'none', viewport: window.innerHeight };
     });
-    if (width < DESKTOP_BREAKPOINT) assert.ok(layout.navVisible && Math.abs(layout.height + layout.navHeight - layout.viewport) < 2, 'Calendar must reserve bottom navigation');
+    if (width < SHELL_BREAKPOINT) assert.ok(layout.navVisible && Math.abs(layout.height + layout.navHeight - layout.viewport) < 2, 'Calendar must reserve bottom navigation');
     else assert.ok(!layout.navVisible);
     report.checks.push(`calendar shell and navigation at ${width}px`);
-    if (!probeSideEffects && width === 1727) await page.screenshot({ path: resolve(artifacts, 'agenda-compact.png') });
+    if (!probeSideEffects && width === 1199) await page.screenshot({ path: resolve(artifacts, 'agenda-compact.png') });
   }
   await page.waitForTimeout(600); await page.waitForLoadState('networkidle'); observeResize = false;
   if (probeSideEffects) assert.ok(report.forbiddenRequests.some(request => request.path === '/functions/v1/live-copilot'), 'Delayed probe escaped request observer');

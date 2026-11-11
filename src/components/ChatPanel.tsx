@@ -1569,7 +1569,7 @@ export function ChatPanel({
               </span>
             </div>
           )}
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 basis-48">
             <h1 className="text-sm sm:text-base font-semibold text-foreground break-words">{patient.name}</h1>
             <Badge variant={patient.status} className="mt-1">
               {({retorno:'Retorno',seguimento:'Seguimento',novo:'Novo',atendimento:'Em atendimento'})[patient.status]}

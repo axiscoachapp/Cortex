@@ -125,6 +125,24 @@
     @apply flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
 
+  /* Desktop frame: 2.25rem (48.6px) items so three groups and the pinned
+     footer fit a 768px-high laptop screen. Still above the 44px touch target. */
+  @media (min-width: 1200px) {
+    .workspace-nav-item { min-height: 2.25rem; padding-top: 0.25rem; padding-bottom: 0.25rem; }
+  }
+
+  /* Scroll cue for a navigation list that scrolls under a pinned footer:
+     shadows appear at the edge that has more items (background-attachment
+     local covers them when the list is at that end). */
+  .workspace-nav-scroll {
+    background:
+      linear-gradient(hsl(var(--sidebar-background)) 30%, hsl(var(--sidebar-background) / 0)) top / 100% 2rem no-repeat local,
+      linear-gradient(hsl(var(--sidebar-background) / 0), hsl(var(--sidebar-background)) 70%) bottom / 100% 2rem no-repeat local,
+      radial-gradient(farthest-side at 50% 0, hsl(var(--foreground) / 0.18), transparent) top / 100% 0.75rem no-repeat scroll,
+      radial-gradient(farthest-side at 50% 100%, hsl(var(--foreground) / 0.18), transparent) bottom / 100% 0.75rem no-repeat scroll;
+    background-color: hsl(var(--sidebar-background));
+  }
+
   .workspace-nav-item-active {
     @apply bg-primary/10 font-semibold text-primary;
   }
@@ -321,13 +339,38 @@ body:has(.clinic-access-continued) > [data-clinical-capture] { order: 0; positio
 body:has(.clinic-access-continued):has(> [data-clinical-capture]) .clinic-access-continued,
 [data-session-content]:has(.clinic-access-continued) { height: 100%; }
 body:has(.clinic-access-continued):has(> [data-clinical-capture]) [data-clinic-page-shell] > .pt-14 { padding-top: 0; }
-/* Compact layout is the complement of Tailwind xl, including fractional widths. */
-@media not all and (min-width: 1728px) {
+/* Phone/tablet frame (bottom tab bar) is the complement of the desktop frame:
+   Tailwind `shell` = SHELL_BREAKPOINT (1200 real px, NOT scaled; see
+   src/lib/interfaceScale.ts). Written as a complement so a fractional (zoomed)
+   width never falls between two rules. */
+@media not all and (min-width: 1200px) {
   .clinic-access-continued [data-clinic-page-shell].clinic-subpage-shell { height: calc(100% - 4rem - env(safe-area-inset-bottom)); }
 }
 
-@media not all and (min-width: 1728px) {
+@media not all and (min-width: 1200px) {
   .clinic-subpage-shell { height: calc(100dvh - 4rem - env(safe-area-inset-bottom)); overflow-y: auto; }
   .clinic-subpage-shell > .min-h-screen { min-height: 100%; }
   .clinic-subpage-shell > .h-\[100dvh\] { height: 100%; }
+}
+
+/* Reception area (/recepcao): on the desktop frame the Atendimentos/Conversas
+   switch sits on the page heading row instead of a row of its own, so the
+   queue starts higher on a 768px-high laptop. The area is a grid; the active
+   view (its last child) and that view's PageHeading lend their children to it:
+   row 1 = title | heading actions | switch, then every other block of the view
+   spans the full width. On short screens the heading description (an
+   instruction repeated by the empty case panel) is left out. */
+@media (min-width: 1200px) {
+  .reception-area { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; column-gap: 1rem; row-gap: 1rem; }
+  .reception-area > * { margin-top: 0 !important; }
+  .reception-area > nav { grid-column: 3; grid-row: 1; }
+  .reception-area > nav > button { padding-inline: 0.75rem; }
+  .reception-area > div:last-child { display: contents; }
+  .reception-area > div:last-child > * { grid-column: 1 / -1; margin-top: 0 !important; }
+  .reception-area > div:last-child > header:first-child { display: contents; }
+  .reception-area > div:last-child > header:first-child > :first-child { grid-column: 1; grid-row: 1; }
+  .reception-area > div:last-child > header:first-child > :nth-child(2) { grid-column: 2; grid-row: 1; }
+}
+@media (min-width: 1200px) and (max-height: 900px) {
+  .reception-area > div:last-child > header:first-child > :first-child > :not(h1) { display: none; }
 }

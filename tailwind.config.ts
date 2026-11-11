@@ -1,13 +1,16 @@
 import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
-import { INTERFACE_SCALE } from './src/lib/interfaceScale';
+import { INTERFACE_SCALE, SHELL_BREAKPOINT } from './src/lib/interfaceScale';
 
 export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
-    screens: Object.fromEntries(Object.entries({sm:640,md:768,lg:1024,xl:1280,'2xl':1536}).map(([key,value])=>[key,`${value*INTERFACE_SCALE}px`])),
+    // Content screens scale with the type (see src/lib/interfaceScale.ts);
+    // `shell` (desktop frame) is in real pixels; listed in ascending order
+    // (md 1036.8 < shell 1200 < lg 1382.4) so the generated CSS cascades.
+    screens: Object.fromEntries([...Object.entries({sm:640,md:768}).map(([key,value])=>[key,`${value*INTERFACE_SCALE}px`]), ['shell', `${SHELL_BREAKPOINT}px`], ...Object.entries({lg:1024,xl:1280,'2xl':1536}).map(([key,value])=>[key,`${value*INTERFACE_SCALE}px`])]),
     container: {
       center: true,
       padding: "2rem",

@@ -19,10 +19,11 @@ import { useSeedPatients } from '@/hooks/useSeedPatients';
 import { mapPatientRow } from '@/lib/patientMapper';
 import { clinicDate } from '@/lib/dates';
 import { functionErrorBody } from '@/lib/functionErrors';
-import { DESKTOP_BREAKPOINT } from '@/lib/interfaceScale';
+import { SHELL_BREAKPOINT } from '@/lib/interfaceScale';
 import { useUnsavedChanges, afterConfirmedSaveOrDiscard } from '@/hooks/useUnsavedChanges';
 
-const DESKTOP_LAYOUT_QUERY = `(min-width: ${DESKTOP_BREAKPOINT}px)`;
+// Three-column consultation = Tailwind `shell` (real pixels, not scaled).
+const DESKTOP_LAYOUT_QUERY = `(min-width: ${SHELL_BREAKPOINT}px)`;
 const PatientWorkspaceDialog = lazy(() => import('@/components/PatientWorkspaceDialog').then(module => ({ default: module.PatientWorkspaceDialog })));
 
 const Index = () => {
@@ -380,8 +381,8 @@ const Index = () => {
         {/* Sidebar */}
         <div className={cn(
           'h-full flex flex-col',
-          'xl:w-[20%] xl:min-w-[260px] xl:max-w-[300px] xl:flex',
-          mobileView === 'list' ? 'flex-1' : 'hidden xl:flex',
+          'shell:flex shell:w-[13rem] shell:shrink-0 xl:w-[20%] xl:min-w-[260px] xl:max-w-[300px]',
+          mobileView === 'list' ? 'flex-1' : 'hidden shell:flex',
         )}>
           <PatientSidebar
             patients={patients}
@@ -398,8 +399,8 @@ const Index = () => {
         {/* Center panel — dashboard or active consultation */}
         <div className={cn(
           'h-full min-w-0 flex flex-col',
-          'xl:flex-1 xl:border-x xl:border-border/50',
-          (mobileView === 'home' || mobileView === 'chat') ? 'flex-1' : 'hidden xl:flex',
+          'shell:flex-1 shell:border-x shell:border-border/50',
+          (mobileView === 'home' || mobileView === 'chat') ? 'flex-1' : 'hidden shell:flex',
         )}>
           {/* ChatPanel stays MOUNTED on mobile tab switches (CSS-hidden) so an
               active recording keeps running instead of being silently killed. */}
@@ -463,8 +464,8 @@ const Index = () => {
         {/* Patient snapshot */}
         <div className={cn(
           'h-full flex flex-col relative',
-          'xl:w-[25%] xl:min-w-[270px] xl:max-w-[360px]',
-          mobileView === 'info' ? 'flex-1' : selectedPatient && mobileView !== 'home' ? 'hidden xl:flex' : 'hidden',
+          'shell:w-[17rem] shell:shrink-0 xl:w-[25%] xl:min-w-[270px] xl:max-w-[360px]',
+          mobileView === 'info' ? 'flex-1' : selectedPatient && mobileView !== 'home' ? 'hidden shell:flex' : 'hidden',
         )}>
           <PatientSnapshot
             patient={selectedPatient}
@@ -494,7 +495,7 @@ const Index = () => {
       </div>
 
       {/* Mobile bottom navigation */}
-      <nav aria-label="Navegação do consultório" className="xl:hidden shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-sm">
+      <nav aria-label="Navegação do consultório" className="shell:hidden shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-sm">
         <div className="flex items-stretch h-16 px-1">
           {(mobileView === 'home' ? [
             { label: 'Início', icon: Home, action: () => setMobileView('home'), active: true },

@@ -17,7 +17,7 @@ import WhatsAppInbox from './WhatsAppInbox';
 export default function ReceptionQueue() {
   const [params, setParams] = useSearchParams();
   const conversations = params.get('view') === 'conversations';
-  return <div className="space-y-4">
+  return <div className="reception-area space-y-4">
     <nav aria-label="Área de atendimento" className="inline-flex max-w-full flex-wrap gap-1 rounded-xl bg-muted/60 p-1">
       {[{ label: 'Atendimentos', value: false }, { label: 'Conversas', value: true }].map(item => <Button key={item.label} variant={conversations === item.value ? 'default' : 'outline'} aria-pressed={conversations === item.value} onClick={() => setParams(old => {
         const next = new URLSearchParams(old);
@@ -81,8 +81,8 @@ function CaseQueue() {
           </Button>
         </div>
       } />
-      <div className="grid items-end gap-4 rounded-xl border bg-card p-4 sm:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)]">
-        <div className="min-w-0 space-y-2">
+      <div className="grid items-end gap-4 rounded-xl border bg-card p-4 sm:grid-cols-2 shell:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_auto] shell:items-center shell:py-3">
+        <div className="min-w-0 space-y-2 shell:flex shell:items-center shell:gap-3 shell:space-y-0">
           <Label htmlFor="queue-status">Situação</Label>
           <select
             id="queue-status"
@@ -99,7 +99,7 @@ function CaseQueue() {
             ))}
           </select>
         </div>
-        <div className="min-w-0 space-y-2">
+        <div className="min-w-0 space-y-2 shell:flex shell:items-center shell:gap-3 shell:space-y-0">
           <Label htmlFor="queue-doctor">Médico</Label>
           <select
             id="queue-doctor"

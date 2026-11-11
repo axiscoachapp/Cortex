@@ -80,7 +80,7 @@ try {
   assert.notEqual(period, initialPeriod, 'Noncurrent week control missing');
   const eventTime = await page.locator('.rbc-event-label').first().textContent();
   assert.ok(eventTime.includes('09:00') && eventTime.includes('09:30'), 'Synthetic time control missing');
-  for (const width of [390, 768, 1035, 1036, 1280, 1727, 1728, 1920]) {
+  for (const width of [390, 768, 1035, 1036, 1199, 1200, 1280, 1366, 1727, 1728, 1920]) {
     await page.setViewportSize({ width, height: 1000 });
     const headers = await measure('.rbc-time-header-content .rbc-header');
     report.layouts.push({ width, view: 'week', headers });

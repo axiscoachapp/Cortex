@@ -5,15 +5,28 @@
 //
 //   node scripts/app-audit-browser.mjs [--only /route,/route]
 //
-// For each route, at 1280x900 and 375x812: a screenshot and automatic
-// findings (page/console errors, sideways scroll, broken text, unnamed
-// controls, unlabelled fields, images without alt, elements past the
+// For each route, at 1920x1080, 1280x900 and 375x812: a screenshot and
+// automatic findings (page/console errors, sideways scroll, broken text,
+// unnamed controls, unlabelled fields, images without alt, elements past the
 // viewport). Output: CORTEX_BROWSER_ARTIFACTS or docs/reviews/<today>/app-audit/.
+//
+// Options (environment):
+//   AUDIT_WORKSPACE_ROLE=doctor|admin|reception, AUDIT_CLINIC_ADMIN=1
+//   AUDIT_VIEWPORTS=largo,desktop,...      keep only these labels
+//   AUDIT_LAPTOPS=1                         add laptop sizes: laptop 1366x768,
+//                                           hd 1536x864, notebook 1280x800
+//   AUDIT_EXTRA_VIEWPORTS=1440x900,...      add sizes (label = w1440x900)
+//   AUDIT_FULL_PAGE=0                       capture only the first screen (fold).
+//     Below the desktop frame (SHELL_BREAKPOINT) subpages scroll inside
+//     .clinic-subpage-shell, so a "full page" capture is only the first
+//     screen there anyway; this script then also saves a `-full` capture
+//     with the inner scroller expanded.
 import { chromium, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { SHELL_BREAKPOINT } from '../src/lib/interfaceScale.ts';
 
 const WORKSPACE_ROLE = process.env.AUDIT_WORKSPACE_ROLE;
 if (WORKSPACE_ROLE && !['admin', 'doctor', 'reception'].includes(WORKSPACE_ROLE)) throw new Error('Invalid synthetic workspace role');
@@ -148,8 +161,16 @@ async function supabase(route) {
     { id: 'd5180000-0000-4000-8000-000000000001', subject: 'Organizar primeira consulta', kind: 'first_consult', status: 'new', revision: 1,
       contactId: 'd5190000-0000-4000-8000-000000000001', contactName: 'Contato Sintético 1', phone: '+5541999990001', doctorId, assignedTo: null, assigneeName: null, createdAt: day(0) },
     { id: 'd5180000-0000-4000-8000-000000000002', subject: 'Confirmar disponibilidade para retorno', kind: 'return', status: 'waiting_patient', revision: 1,
-      contactId: 'd5190000-0000-4000-8000-000000000002', contactName: 'Contato Sintético 2', phone: '+5541999990002', doctorId, assignedTo: doctorId, assigneeName: 'Atendente Sintética', createdAt: day(0) }
+      contactId: 'd5190000-0000-4000-8000-000000000002', contactName: 'Contato Sintético 2', phone: '+5541999990002', doctorId, assignedTo: doctorId, assigneeName: 'Atendente Sintética', createdAt: day(0) },
+    ...[3, 4, 5].map(n => ({ id: `d5180000-0000-4000-8000-00000000001${n}`, subject: `Demanda sintética ${n}`, kind: 'return', status: 'new', revision: 1,
+      contactId: 'd5190000-0000-4000-8000-000000000001', contactName: `Contato Sintético ${n}`, phone: '+5541999990001', doctorId, assignedTo: null, assigneeName: null, createdAt: day(0) })),
   ], nextCursor: null });
+  if (table === 'rpc/reception_case') return respond(route, {
+    id: 'd5180000-0000-4000-8000-000000000001', clinicId: 'd5120000-0000-4000-8000-000000000001', contactId: 'd5190000-0000-4000-8000-000000000001',
+    contactName: 'Contato Sintético 1', phone: '+5541999990001', doctorId, subject: 'Organizar primeira consulta', kind: 'first_consult', status: 'new',
+    assignedTo: null, revision: 1, createdAt: day(0), beneficiaries: [], eligibleAssignees: [{ id: doctorId, name: 'Atendente Sintética' }],
+    notes: [{ id: 'd5180000-0000-4000-8000-000000000021', body: 'Nota sintética de acompanhamento.', actorId: doctorId, actorName: 'Atendente Sintética', createdAt: day(0) }],
+    noteCount: 1, draft: { body: '', revision: 0 } });
   if (table === 'rpc/clinic_access')
     return respond(route, CLINIC_ADMIN || WORKSPACE_ROLE
       ? { kind: WORKSPACE_ROLE === 'reception' ? 'reception' : 'clinical', active: true, admin: WORKSPACE_ROLE ? WORKSPACE_ROLE === 'admin' : true, actorId: doctorId, clinic: { id: 'd5120000-0000-4000-8000-000000000001', name: 'Clínica Sintética' },
@@ -331,6 +352,7 @@ async function inspect(page, width) {
 const ROUTES = [
   ['inicio', '/'],
   ['recepcao', '/recepcao'],
+  ['recepcao-caso', '/recepcao?case=d5180000-0000-4000-8000-000000000001'],
   ['recepcao-conversas', '/recepcao?view=conversations'],
   ['recepcao-agenda', '/recepcao/agenda'],
   ['recepcao-contatos', '/recepcao/contatos'],
@@ -370,6 +392,24 @@ const ROUTES = [
   ['google-retorno-sem-codigo', '/google-oauth-callback'],
   ['assinatura-retorno-sem-codigo', '/assinatura/retorno'],
 ];
+const FULL_PAGE = process.env.AUDIT_FULL_PAGE !== '0';
+// Below the desktop frame a subpage scrolls inside .clinic-subpage-shell (the
+// bottom tab bar is fixed); expand it for one capture, then restore it.
+async function fullCapture(page, path) {
+  const expanded = await page.evaluate(() => {
+    const shell = document.querySelector('.clinic-subpage-shell');
+    if (!shell || shell.scrollHeight <= shell.clientHeight + 1) return false;
+    shell.dataset.auditStyle = shell.getAttribute('style') ?? '';
+    shell.style.height = 'auto'; shell.style.overflow = 'visible';
+    return true;
+  });
+  if (!expanded) return;
+  await page.screenshot({ path, fullPage: true });
+  await page.evaluate(() => {
+    const shell = document.querySelector('.clinic-subpage-shell');
+    if (shell) { shell.setAttribute('style', shell.dataset.auditStyle ?? ''); delete shell.dataset.auditStyle; }
+  });
+}
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null;
 
 const probe = http.createServer();
@@ -397,7 +437,9 @@ try {
   }
   if (!ready) throw new Error(logs);
   browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'msedge' } : {}) });
-  const VIEWPORTS = [['largo', { width: 1920, height: 1080 }], ['desktop', { width: 1280, height: 900 }], ['celular', { width: 375, height: 812 }], ...(process.env.AUDIT_COMPACT === '1' ? [['compacto', { width: 320, height: 812 }]] : [])]
+  const VIEWPORTS = [['largo', { width: 1920, height: 1080 }], ['desktop', { width: 1280, height: 900 }], ['celular', { width: 375, height: 812 }], ...(process.env.AUDIT_COMPACT === '1' ? [['compacto', { width: 320, height: 812 }]] : []),
+    ...(process.env.AUDIT_LAPTOPS === '1' ? [['laptop', { width: 1366, height: 768 }], ['hd', { width: 1536, height: 864 }], ['notebook', { width: 1280, height: 800 }]] : []),
+    ...(process.env.AUDIT_EXTRA_VIEWPORTS ? process.env.AUDIT_EXTRA_VIEWPORTS.split(',').map(size => { const [width, height] = size.split('x').map(Number); return [`w${width}x${height}`, { width, height }]; }) : [])]
     .filter(([label]) => !process.env.AUDIT_VIEWPORTS || process.env.AUDIT_VIEWPORTS.split(',').includes(label));
   for (const [label, viewport] of VIEWPORTS) {
     if (process.env.AUDIT_SHORT === '1') viewport.height = label === 'largo' ? 768 : 667;
@@ -423,7 +465,7 @@ try {
     // Logged out first: the sign-in page itself.
     await page.goto(origin + '/auth');
     await page.waitForTimeout(800);
-    await page.screenshot({ path: resolve(artifacts, `${label}-auth.png`), fullPage: true });
+    await page.screenshot({ path: resolve(artifacts, `${label}-auth.png`), fullPage: FULL_PAGE });
     report.routes[`${label} /auth`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
     await page.getByLabel(/e-?mail/i).fill(user.email);
     await page.getByLabel(/^senha$/i).fill('synthetic-password');
@@ -435,20 +477,21 @@ try {
       // A cold dev server compiles lazy routes on first visit; wait for the loading screen to go.
       await page.getByText('Carregando...', { exact: true }).waitFor({ state: 'detached', timeout: 20000 }).catch(() => {});
       await page.waitForTimeout(1500);
-      await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: true });
+      await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: FULL_PAGE });
+      if (FULL_PAGE && viewport.width < SHELL_BREAKPOINT) await fullCapture(page, resolve(artifacts, `${label}-${name}-full.png`));
       report.routes[`${label} ${path}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
       if (process.env.AUDIT_OPENAI_MIGRATION === '1' && path === '/assistente') {
         await page.getByRole('textbox', { name: 'Escreva sua pergunta' }).fill('Pergunta sintética sobre o contexto disponível');
         await page.getByRole('button', { name: 'Enviar pergunta', exact: true }).click();
         await expect(page.getByText('Resposta sintética para revisão médica.', { exact: true })).toBeVisible();
         await expect(page.getByText(/Nenhum protocolo da Base de Conhecimento foi consultado/)).toBeVisible();
-        await page.screenshot({ path: resolve(artifacts, `${label}-openai-coverage.png`), fullPage: true });
+        await page.screenshot({ path: resolve(artifacts, `${label}-openai-coverage.png`), fullPage: FULL_PAGE });
         report.routes[`${label} OpenAI coverage`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
       }
       if (process.env.AUDIT_UI_CONSISTENCY === '1' && /^\/(configuracoes|agenda|gerenciar-pacientes|modelos|conhecimento|assistente|compartilhamento|seguranca|privacidade|permissoes-recepcao|pre-consultas|financeiro|recepcao)(?:[/?]|$)/.test(path)) {
         await expect(page.getByRole('main')).toHaveCount(1);
         await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-        if (viewport.width >= 1728) {
+        if (viewport.width >= SHELL_BREAKPOINT) {
           const sidebar = page.getByRole('complementary', { name: 'Navegação do ambiente' });
           await expect(sidebar).toBeVisible();
           await expect(sidebar.getByRole('link', { name: 'Configurações', exact: true })).toBeInViewport();
@@ -470,7 +513,7 @@ try {
             return bounds.left >= card.left && bounds.right <= card.right;
           });
           if (!contained) throw new Error('Authenticator action exceeds its card');
-          await page.screenshot({ path: resolve(artifacts, `${label}-seguranca-acao.png`), fullPage: true });
+          await page.screenshot({ path: resolve(artifacts, `${label}-seguranca-acao.png`), fullPage: FULL_PAGE });
         }
       }
       if (process.env.AUDIT_MANAGED_SETTINGS === '1' && path.startsWith('/configuracoes')) {
@@ -490,7 +533,7 @@ try {
           await page.getByLabel('Acessar seção').selectOption('implantacao');
           await expect(page.getByRole('region', { name: 'Dados da implantação' })).toBeVisible();
           if (new URL(page.url()).searchParams.get('origin') !== 'audit') throw new Error('Settings navigation lost context parameters');
-          await page.screenshot({ path: resolve(artifacts, `${label}-config-navegacao.png`), fullPage: true });
+          await page.screenshot({ path: resolve(artifacts, `${label}-config-navegacao.png`), fullPage: FULL_PAGE });
           report.routes[`${label} configurações navegação`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
         }
       }
@@ -501,7 +544,7 @@ try {
       }
       if (process.env.AUDIT_WORKSPACE_INTERACTIONS === '1' && ['/', '/recepcao', '/recepcao/financeiro'].includes(path)) {
         const snapshot = async name => {
-          await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: true });
+          await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: FULL_PAGE });
           report.routes[`${label} ${name}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
         };
         const area = page.getByRole('button', { name: 'Alternar área de trabalho' }).first();
@@ -513,7 +556,7 @@ try {
           await snapshot(`${name}-areas`);
           await page.keyboard.press('Escape');
         }
-        if (path === '/' && viewport.width < 1728 && WORKSPACE_ROLE !== 'reception') {
+        if (path === '/' && viewport.width < SHELL_BREAKPOINT && WORKSPACE_ROLE !== 'reception') {
           await page.getByRole('button', { name: 'Menu', exact: true }).click();
           const settings = page.getByRole('button', { name: 'Configurações', exact: true }).first();
           await settings.scrollIntoViewIfNeeded();
@@ -532,7 +575,7 @@ try {
         }
         if (path === '/recepcao') {
           await expect(page.getByRole('button', { name: 'Sair', exact: true }).first()).toBeVisible();
-          if (viewport.width < 1728) {
+          if (viewport.width < SHELL_BREAKPOINT) {
             await page.getByRole('button', { name: 'Mais páginas' }).click();
             await snapshot('recepcao-mais');
             await page.keyboard.press('Escape');
@@ -544,14 +587,14 @@ try {
         for (const [tab, name] of [['Cobranças', 'cobrancas'], ['Relatórios', 'relatorios']]) {
           await page.getByRole('tab', { name: tab, exact: true }).click();
           await expect(page.getByRole('button', { name: /^(Receber de|Nova cobrança avulsa)/ })).toHaveCount(0);
-          await page.screenshot({ path: resolve(artifacts, `${label}-financeiro-${name}.png`), fullPage: true });
+          await page.screenshot({ path: resolve(artifacts, `${label}-financeiro-${name}.png`), fullPage: FULL_PAGE });
           report.routes[`${label} financeiro ${name}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
         }
       }
       if (['/financeiro', '/recepcao/financeiro'].includes(path) && WORKSPACE_ROLE !== 'doctor') {
         const snap = async (name) => {
           await page.waitForTimeout(700);
-          await page.screenshot({ path: resolve(artifacts, `${label}-financeiro-${name}.png`), fullPage: true });
+          await page.screenshot({ path: resolve(artifacts, `${label}-financeiro-${name}.png`), fullPage: FULL_PAGE });
           const dialog = page.getByRole('dialog');
           const box = (await dialog.count()) ? await dialog.first().boundingBox() : null;
           report.routes[`${label} financeiro ${name}`] = { ...(await inspect(page, viewport.width)),
@@ -608,7 +651,7 @@ try {
           await view.click();
           await page.getByRole('dialog').waitFor({ timeout: 5000 }).catch(() => {});
           await page.waitForTimeout(600);
-          await page.screenshot({ path: resolve(artifacts, `${label}-pre-consulta-respostas.png`), fullPage: true });
+          await page.screenshot({ path: resolve(artifacts, `${label}-pre-consulta-respostas.png`), fullPage: FULL_PAGE });
           const box = await page.getByRole('dialog').boundingBox();
           report.routes[`${label} pre-consulta respostas`] = { ...(await inspect(page, viewport.width)), dialog: box && { left: Math.round(box.x), right: Math.round(box.x + box.width), viewport: viewport.width },
             pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
@@ -636,20 +679,20 @@ try {
     if (!only) {
       await page.goto(origin + `/?patient=${pid(1)}`);
       await page.waitForTimeout(1200);
-      const open = viewport.width >= 1728
+      const open = viewport.width >= SHELL_BREAKPOINT
         ? page.getByRole('button', { name: /Perfil Completo/i }).first()
         : page.getByRole('button', { name: /^Perfil$/ }).first();
       if (await open.count()) {
         await open.click();
         await page.waitForTimeout(1200);
-        await page.screenshot({ path: resolve(artifacts, `${label}-perfil.png`), fullPage: true });
+        await page.screenshot({ path: resolve(artifacts, `${label}-perfil.png`), fullPage: FULL_PAGE });
         report.routes[`${label} perfil do paciente`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
         for (const [tab, file] of [[/^Histórico/, 'perfil-historico'], [/^Documentos/, 'perfil-documentos']]) {
           const button = page.getByRole('tab', { name: tab }).first();
           if (!(await button.count())) { report.routes[`${label} ${file}`] = { missing: 'tab not found' }; continue; }
           await button.click();
           await page.waitForTimeout(900);
-          await page.screenshot({ path: resolve(artifacts, `${label}-${file}.png`), fullPage: true });
+          await page.screenshot({ path: resolve(artifacts, `${label}-${file}.png`), fullPage: FULL_PAGE });
           report.routes[`${label} ${file}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
         }
       } else {

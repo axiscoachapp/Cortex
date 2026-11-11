@@ -6,6 +6,7 @@ import { readFile, mkdir, writeFile, mkdtemp, rm, lstat } from 'node:fs/promises
 import { resolve, join, dirname, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { chromium, expect } from '@playwright/test';
+import { SHELL_BREAKPOINT } from '../src/lib/interfaceScale.ts';
 import { createServer } from 'vite';
 import tailwindcss from 'tailwindcss';
 import loadConfig from 'tailwindcss/loadConfig.js';
@@ -925,7 +926,7 @@ try {
       const originalData = JSON.stringify(api.medicalData);
       const openProfile = async (page, width) => {
         await expect(page.getByRole('heading', { name: 'Paciente Exemplo A', exact: true }).first()).toBeVisible();
-        await page.getByRole('button', { name: width < 1728 ? 'Perfil' : 'Perfil Completo & Arquivos', exact: true }).click();
+        await page.getByRole('button', { name: width < SHELL_BREAKPOINT ? 'Perfil' : 'Perfil Completo & Arquivos', exact: true }).click();
         const dialog = page.getByRole('dialog'); await expect(dialog).toBeVisible(); return dialog;
       };
       const cases = [

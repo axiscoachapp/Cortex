@@ -51,7 +51,7 @@ export default function BillingPage({ embedded = false }: { embedded?: boolean }
       } />
       <QueryState query={state}>
         {fresh && state.data && current && <Tabs value={current.id} onValueChange={value => { if (value !== current.id && confirmSessionExit()) setTab(value as TabId); }} className="space-y-6">
-          <TabsList aria-label="Seções do financeiro" className={`grid h-auto w-full gap-1.5 rounded-xl bg-muted/50 p-1.5 ${tabs.length === 2 ? 'max-w-xl grid-cols-2' : tabs.length === 3 ? 'max-w-3xl grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-6'}`}>
+          <TabsList aria-label="Seções do financeiro" className={`grid h-auto w-full gap-1.5 rounded-xl bg-muted/50 p-1.5 ${tabs.length === 2 ? 'max-w-xl grid-cols-2' : tabs.length === 3 ? 'max-w-3xl grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 shell:grid-cols-6'}`}>
             {tabs.map(({ id, label, icon: Icon }) => <TabsTrigger key={id} value={id} className="min-h-12 gap-2 whitespace-normal rounded-lg px-2 py-3 text-xs data-[state=active]:bg-card data-[state=active]:text-primary"><Icon className="hidden h-4 w-4 shrink-0 sm:block" aria-hidden="true" />{label}</TabsTrigger>)}
           </TabsList>
           <div className="space-y-1"><h2 className="text-lg font-semibold">{current.title}</h2><p className="text-sm leading-relaxed text-muted-foreground">{description}</p></div>

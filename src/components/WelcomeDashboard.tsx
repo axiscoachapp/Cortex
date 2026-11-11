@@ -193,7 +193,7 @@ export function WelcomeDashboard({
   return (
     <div className="h-full w-full overflow-y-auto bg-background scrollbar-thin">
       <div className="mx-auto max-w-[90rem] space-y-6 px-4 py-5 md:px-8 md:py-8 xl:px-10">
-        <div className="flex flex-wrap items-center justify-between gap-3 xl:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 shell:hidden">
           <BrandLockup compact className="hidden min-[360px]:block [&_img]:w-16 sm:[&_img]:w-24 [&_p]:hidden" />
           <WorkspaceMenu />
         </div>

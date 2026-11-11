@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Index from './Index';
 import { UnsavedChangesRouteGuard } from '@/hooks/useUnsavedChanges';
 import { useEffect } from 'react';
-import { DESKTOP_BREAKPOINT } from '@/lib/interfaceScale';
+import { SHELL_BREAKPOINT } from '@/lib/interfaceScale';
 
 const originalInnerWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth');
 afterEach(() => { if (originalInnerWidth) Object.defineProperty(window, 'innerWidth', originalInnerWidth); });
@@ -360,14 +360,16 @@ describe('patient activation', () => {
   });
 });
 
-describe('desktop layout at fractional widths', () => {
+// The three-column consultation follows the desktop frame (Tailwind `shell`,
+// SHELL_BREAKPOINT real pixels), not the 1.35-scaled xl screen.
+describe('desktop layout at the desktop-frame breakpoint, including fractional widths', () => {
   it('widens from the fractional gap without keeping the compact dashboard or remounting capture', async () => {
-    const resize = desktopViewport(DESKTOP_BREAKPOINT - 0.5);
+    const resize = desktopViewport(SHELL_BREAKPOINT - 0.5);
     const { router } = setup('/?patient=A');
     await screen.findByRole('heading', { name: 'Patient A' });
     await userEvent.click(screen.getByRole('button', { name: 'Perfil' }));
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
-    resize(DESKTOP_BREAKPOINT + 192);
+    resize(SHELL_BREAKPOINT + 192);
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Perfil' })).toHaveAttribute('aria-current', 'page');
     expect(new URLSearchParams(router.state.location.search).get('patient')).toBe('A');
@@ -377,16 +379,16 @@ describe('desktop layout at fractional widths', () => {
   });
 
   it('narrows into the fractional gap and crosses the exact breakpoint in both directions', async () => {
-    const resize = desktopViewport(DESKTOP_BREAKPOINT + 192);
+    const resize = desktopViewport(SHELL_BREAKPOINT + 192);
     setup('/?patient=A');
     await screen.findByRole('heading', { name: 'Patient A' });
     await userEvent.click(screen.getByRole('button', { name: 'Perfil' }));
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
-    resize(DESKTOP_BREAKPOINT - 0.5);
+    resize(SHELL_BREAKPOINT - 0.5);
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
-    resize(DESKTOP_BREAKPOINT);
+    resize(SHELL_BREAKPOINT);
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
-    resize(DESKTOP_BREAKPOINT - 1);
+    resize(SHELL_BREAKPOINT - 1);
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
     expect(fixture.chatMount).toHaveBeenCalledTimes(1);
   });
