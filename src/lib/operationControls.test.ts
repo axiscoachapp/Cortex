@@ -46,8 +46,17 @@ describe('AI kill switch at the final provider boundary', () => {
     ).toBe(204);
     expect(request).toHaveBeenCalledTimes(1);
   });
+  it('blocks legacy Gemini work unless AI_PROVIDER is explicitly gemini', async () => {
+    const request = vi.fn();
+    vi.stubGlobal('fetch', request);
+    for (const provider of [undefined, '', 'disabled', 'openai']) {
+      vi.stubGlobal('Deno', { env: { get: (key: string) => (key === 'AI_PROVIDER' ? provider : 'true') } });
+      await expect(embedText('key', 'Synthetic private text')).rejects.toThrow(/legada/);
+    }
+    expect(request).not.toHaveBeenCalled();
+  });
   it('records only PHI-free operation metadata for provider failures', async () => {
-    vi.stubGlobal('Deno', { env: { get: () => 'true' } });
+    vi.stubGlobal('Deno', { env: { get: (key: string) => (key === 'AI_PROVIDER' ? 'gemini' : 'true') } });
     const log = vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('private upstream body', { status: 503 })));
     await expect(callGemini('secret-key', [{ text: 'Synthetic patient-name clinical content' }])).rejects.toThrow();
@@ -66,7 +75,7 @@ describe('AI kill switch at the final provider boundary', () => {
     );
   });
   it('records incomplete model output against its operation without logging the output', async () => {
-    vi.stubGlobal('Deno', { env: { get: () => 'true' } });
+    vi.stubGlobal('Deno', { env: { get: (key: string) => (key === 'AI_PROVIDER' ? 'gemini' : 'true') } });
     const log = vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.stubGlobal(
       'fetch',

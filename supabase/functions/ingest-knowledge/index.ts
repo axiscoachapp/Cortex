@@ -36,7 +36,8 @@ serve(async (req) => {
         400,
       );
     }
-    if (Deno.env.get('AI_PROVIDER') === 'openai')
+    // Legacy Gemini indexing only with an explicit AI_PROVIDER=gemini (never by an unset flag).
+    if (Deno.env.get('AI_PROVIDER') !== 'gemini')
       throw new RequestError('Indexação indisponível durante a migração do índice. O texto original permanece salvo.', 503);
     const apiKey = Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) throw new RequestError('Indexação indisponível. O texto original permanece salvo.', 503);

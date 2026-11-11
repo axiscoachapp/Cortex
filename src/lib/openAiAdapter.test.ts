@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { callClinicalText, transcribeClinicalAudio } from '../../supabase/functions/_shared/clinicalAi';
+import { AiProviderError, callClinicalText, transcribeClinicalAudio } from '../../supabase/functions/_shared/clinicalAi';
 import { creditsFromUsage } from '../../supabase/functions/_shared/quota';
 import { fetchWithDeadline } from '../../supabase/functions/_shared/http';
 
@@ -119,6 +119,94 @@ describe('OpenAI boundary', () => {
       await expect(transcribeClinicalAudio('key', blob, mime)).rejects.toThrow();
     }
     expect(request).not.toHaveBeenCalled();
+  });
+  it.each([
+    // [kind, status, provider error body, expected status, retryable, message]
+    ['audio', 400, { code: 'audio_too_long', type: 'invalid_request_error' }, 413, false, /longa demais.*registre a consulta manualmente/],
+    ['audio', 413, {}, 413, false, /longa demais/],
+    ['audio', 400, { code: 'invalid_file_format', type: 'invalid_request_error' }, 422, false, /não aceitou este áudio/],
+    ['audio', 415, {}, 422, false, /não aceitou este áudio/],
+    ['text', 400, { code: 'context_length_exceeded', type: 'invalid_request_error' }, 413, false, /grande demais/],
+    ['text', 413, {}, 413, false, /grande demais/],
+    ['text', 400, { code: 'invalid_json_schema', type: 'invalid_request_error' }, 503, false, /^IA indisponível no momento; registre manualmente\./],
+    ['document', 400, { code: 'invalid_image', type: 'invalid_request_error' }, 422, false, /não conseguiu ler este documento/],
+    ['text', 401, { code: 'invalid_api_key', type: 'invalid_request_error' }, 503, false, /^IA indisponível no momento; registre manualmente\./],
+    ['text', 403, {}, 503, false, /^IA indisponível no momento/],
+    ['text', 404, { code: 'model_not_found' }, 503, false, /^IA indisponível no momento/],
+    ['text', 429, { code: 'insufficient_quota', type: 'insufficient_quota' }, 503, false, /^IA indisponível no momento/],
+    ['text', 429, { code: 'rate_limit_exceeded', type: 'requests' }, 429, true, /Aguarde um minuto/],
+    ['audio', 500, {}, 503, true, /Tente novamente em instantes/],
+    ['text', 503, { type: 'server_error' }, 503, true, /Tente novamente em instantes/],
+  ] as const)('maps a %s provider %i (%j) to %i, retryable=%s, with a message that says what to do', async (kind, status, error, expectedStatus, retryable, message) => {
+    request.mockResolvedValueOnce(new Response(JSON.stringify({ error: { ...error, message: 'Private provider message about Paciente Sintética' } }), { status }));
+    const call = kind === 'audio'
+      ? transcribeClinicalAudio('key', new Blob(['voice']), 'audio/webm')
+      : callClinicalText('key', kind === 'document' ? [{ document: { data: new Uint8Array([1]), mimeType: 'image/png' } }] : [{ text: 'Private input' }]);
+    const failure = await call.catch((e) => e);
+    expect(failure).toBeInstanceOf(AiProviderError);
+    expect(failure).toMatchObject({ status: expectedStatus, retryable, billing: 'none' });
+    expect(failure.message).toMatch(message);
+    expect(failure.message).toMatch(/Referência: /);
+    const records = vi.mocked(console.info).mock.calls.map((args) => JSON.parse(String(args[0])));
+    expect(records).toContainEqual(expect.objectContaining({
+      event: 'model_request_failed', http_status: status,
+      error_code: 'code' in error ? error.code : null, error_type: 'type' in error ? error.type : null,
+    }));
+    expect(JSON.stringify(records)).not.toMatch(/Private|Paciente/);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+  it('never logs an arbitrary provider code or type that is not an identifier', async () => {
+    request.mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 'Paciente Sintética tem câncer', type: { nested: true } } }), { status: 400 }));
+    await expect(callClinicalText('key', [{ text: 'x' }])).rejects.toThrow(/IA indisponível/);
+    const records = vi.mocked(console.info).mock.calls.map((args) => JSON.parse(String(args[0])));
+    expect(records).toContainEqual(expect.objectContaining({ event: 'model_request_failed', error_code: null, error_type: null }));
+    expect(JSON.stringify(records)).not.toMatch(/Paciente|câncer/);
+  });
+  it('reports which failures were never billed and which keep the reservation charged', async () => {
+    expect(await callClinicalText('', [{ text: 'x' }]).catch((e) => e)).toMatchObject({ billing: 'none', status: 503, message: 'IA indisponível no momento; registre manualmente.' });
+    expect(await callClinicalText('key', [{ text: 'x'.repeat(128 * 1024 + 1) }]).catch((e) => e)).toMatchObject({ billing: 'none', status: 413 });
+    expect(await transcribeClinicalAudio('key', new Blob(['x']), 'text/plain').catch((e) => e)).toMatchObject({ billing: 'none', status: 415 });
+    expect(request).not.toHaveBeenCalled();
+    // A 2xx answer with unusable output: the provider did the work and usage is unknown.
+    request.mockResolvedValueOnce(new Response(JSON.stringify(complete('x', { status: 'incomplete' }))));
+    expect(await callClinicalText('key', [{ text: 'x' }]).catch((e) => e)).toMatchObject({ billing: 'reserved', status: 502 });
+    // A transport failure is not an adapter verdict: its cost is unknown.
+    request.mockRejectedValueOnce(new Error('Synthetic transport failure'));
+    const transport = await callClinicalText('key', [{ text: 'x' }]).catch((e) => e);
+    expect(transport).not.toBeInstanceOf(AiProviderError);
+  });
+  it.each(['gpt-6.1-terra-20261110', 'gpt-6.1-terra-latest', 'gpt-6.1-terra-2026-11-10-preview', 'gpt-6.1-terra-2026-11-10'])('keeps a completed answer reported as snapshot %s and records that model', async (model) => {
+    request.mockResolvedValueOnce(new Response(JSON.stringify(complete('Nota válida', { model, usage: { input_tokens: 10, output_tokens: 5 } }))));
+    const result = await callClinicalText('key', [{ text: 'x' }]);
+    expect(result.text).toBe('Nota válida');
+    expect(result.metadata.effectiveModel).toBe(model);
+  });
+  it('keeps a snapshot answer with an unusual suffix but records no arbitrary string as the model', async () => {
+    request.mockResolvedValueOnce(new Response(JSON.stringify(complete('Nota válida', { model: 'gpt-6.1-terra-Private synthetic suffix' }))));
+    const result = await callClinicalText('key', [{ text: 'x' }]);
+    expect(result.text).toBe('Nota válida');
+    expect(result.metadata.effectiveModel).toBeNull();
+    expect(JSON.stringify(vi.mocked(console.info).mock.calls)).not.toContain('Private synthetic');
+  });
+  it.each(['gpt-6.1-terrace', 'gpt-6.1', 'gpt-5-terra'])('still rejects a different model (%s)', async (model) => {
+    request.mockResolvedValueOnce(new Response(JSON.stringify(complete('Synthetic', { model }))));
+    await expect(callClinicalText('key', [{ text: 'x' }])).rejects.toThrow(/inválid/);
+  });
+  it('uses the deadline the caller gives for a long transcription', async () => {
+    vi.useFakeTimers();
+    request.mockImplementationOnce((_url: string, init: RequestInit) => new Promise((_resolve, reject) => {
+      init.signal!.addEventListener('abort', () => reject(init.signal!.reason));
+    }));
+    let settled = false;
+    const pending = transcribeClinicalAudio('key', new Blob(['voice']), 'audio/webm', { timeoutMs: 120_000 }).catch((e) => { settled = true; return e; });
+    await vi.advanceTimersByTimeAsync(90_001);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(settled).toBe(true);
+    // A timeout is not an adapter verdict: its cost is unknown, so it is no AiProviderError.
+    const failure = await pending;
+    expect(failure).not.toBeInstanceOf(AiProviderError);
+    expect(String(failure)).toMatch(/Referência/);
   });
   it('prices OpenAI usage separately, never counts reasoning twice and retains reservation for partial metering', async () => {
     expect(creditsFromUsage({ provider: 'openai', model: 'gpt-6.1-terra', inputTokens: 300_000, outputTokens: 1000 })).toBeCloseTo(607.5);

@@ -32,7 +32,8 @@ function database() {
   };
 }
 beforeEach(() => {
-  vi.stubGlobal('Deno', { env: { get: () => 'true' } });
+  // Legacy Gemini work requires an explicit AI_PROVIDER=gemini.
+  vi.stubGlobal('Deno', { env: { get: (key: string) => (key === 'AI_PROVIDER' ? 'gemini' : 'true') } });
   vi.spyOn(console, 'info').mockImplementation(() => {});
 });
 afterEach(() => {

@@ -48,7 +48,9 @@ function ingestion(options: { unreviewed?: boolean; malformedEmbedding?: boolean
     if (id in modules) return modules[id];
     throw new Error(`Unexpected dependency ${id}`);
   };
-  new Function('require', 'exports', 'Deno', compiled)(require, {}, { env: { get: (key: string) => key === 'AI_PROVIDER' ? options.provider : 'synthetic' } });
+  // Legacy indexing runs only with an explicit AI_PROVIDER=gemini.
+  const provider = 'provider' in options ? options.provider : 'gemini';
+  new Function('require', 'exports', 'Deno', compiled)(require, {}, { env: { get: (key: string) => key === 'AI_PROVIDER' ? provider : 'synthetic' } });
   return {
     rpc,
     reserve,
@@ -59,8 +61,8 @@ function ingestion(options: { unreviewed?: boolean; malformedEmbedding?: boolean
   };
 }
 describe('reviewed knowledge ingestion', () => {
-  it('does not claim, reserve, embed or modify an index during the OpenAI-only test', async () => {
-    const handler = ingestion({ provider: 'openai' });
+  it.each(['openai', undefined, 'disabled'])('does not claim, reserve, embed or modify an index unless AI_PROVIDER is explicitly gemini (%s)', async (provider) => {
+    const handler = ingestion({ provider });
     const response = await handler.run({ documentId });
     expect(response.status).toBe(503);
     expect(await response.text()).toContain('original permanece salvo');

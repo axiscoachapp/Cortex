@@ -2,6 +2,9 @@ import { RequestError } from './errors.ts';
 import { assertAiEnabled, observeProviderOperation, providerOperation } from './operationControls.ts';
 export { RequestError } from './errors.ts';
 
+/** The standard answer when the AI cannot be used (switched off, no key, model or key refused). */
+export const AI_UNAVAILABLE_MESSAGE = 'IA indisponível no momento; registre manualmente.';
+
 /** Count actual bytes; Content-Length is optional and cannot enforce a limit. */
 export async function readJsonObject(req: Request, maxBytes = 128 * 1024): Promise<Awaited<ReturnType<Request['json']>>> {
   if (!req.body) throw new RequestError('Envie um objeto JSON.');
@@ -34,7 +37,8 @@ export async function fetchWithDeadline(input: RequestInfo | URL, init: RequestI
     const runtime = globalThis as typeof globalThis & { Deno?: { env: { get(name: string): string | undefined } } };
     const provider = runtime.Deno?.env.get('AI_PROVIDER');
     if (operation.provider === 'openai' && provider !== 'openai') throw new RequestError('IA indisponível: integração OpenAI ainda não ativada.', 503);
-    if (operation.provider !== 'openai' && provider === 'openai') throw new RequestError('Operação legada de IA indisponível durante o teste OpenAI.', 503);
+    // Legacy Gemini work needs an explicit opt-in: unsetting the flag must not reopen it.
+    if (operation.provider !== 'openai' && provider !== 'gemini') throw new RequestError('Operação legada de IA indisponível durante o teste OpenAI.', 503);
     return observeProviderOperation(operation, () => boundedFetch(input, init, timeoutMs, maxResponseBytes));
   }
   return boundedFetch(input, init, timeoutMs, maxResponseBytes);
