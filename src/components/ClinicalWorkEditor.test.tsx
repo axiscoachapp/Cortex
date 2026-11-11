@@ -217,13 +217,19 @@ describe('manual encounter approval', () => {
   });
   it('locks template replacement and close while the exact reviewed text is being saved', async () => {
     fixture.pending = true;
-    const close = vi.fn();
-    render(<ClinicalWorkEditor patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} onClose={close} />);
+    const guardChanged = vi.fn();
+    render(<ClinicalWorkEditor patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} onExitGuardChange={guardChanged} />);
     fireEvent.change(screen.getByLabelText('Conteúdo do registro'), { target: { value: 'Texto em salvamento' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Salvando'));
     expect(screen.getByLabelText('Estrutura da consulta')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Fechar' })).toBeDisabled();
+    // The dialog's own close asks this guard; it refuses while saving.
+    expect((guardChanged.mock.lastCall![0] as () => boolean)()).toBe(false);
+  });
+  it('has no heading or close of its own: the dialog around it names it and closes it (M 13)', () => {
+    render(<ClinicalWorkEditor patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} />);
+    expect(screen.queryByRole('heading', { name: 'Documentar e acompanhar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Fechar' })).not.toBeInTheDocument();
   });
   it('persists exactly the edited text and confirms through the atomic manual RPC', async () => {
     render(<ClinicalWorkEditor patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} onClose={vi.fn()} />);

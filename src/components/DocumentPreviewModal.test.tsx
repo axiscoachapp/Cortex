@@ -42,7 +42,7 @@ describe('document preview editing', () => {
     vi.spyOn(window, 'open').mockReturnValue(win as unknown as Window);
     setup();
     fireEvent.click(screen.getByRole('button', { name: 'Editar texto' }));
-    fireEvent.change(screen.getByLabelText('Texto do documento: Resumo para o Paciente'), { target: { value: 'Texto corrigido pelo médico' } });
+    fireEvent.change(screen.getByLabelText('Texto do documento: Resumo para o paciente'), { target: { value: 'Texto corrigido pelo médico' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ver documento' }));
     expect(screen.getByText('Texto corrigido pelo médico')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Copiar' }));

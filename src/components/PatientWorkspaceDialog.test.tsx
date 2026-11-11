@@ -54,6 +54,16 @@ describe('patient workspace in the patient page', () => {
     expect(screen.queryByRole('main')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Consulta e documentos' })).not.toBeInTheDocument();
   });
+  it.each([
+    [true, undefined, 'Escrever evolução'],
+    [false, undefined, 'Pendências e retornos'],
+    [false, 'instruction', 'Registrar orientações'],
+    [false, 'followup', 'Planejar retorno'],
+  ] as const)('is titled like the button that opened it (manual %s, entry %s)', async (manual, entry, title) => {
+    setup('A', manual, entry);
+    expect(await screen.findByRole('dialog', { name: title })).toBeInTheDocument();
+    expect(screen.queryByText('Acompanhamento do paciente', { selector: 'h2' })).not.toBeInTheDocument();
+  });
   it('keeps the panel open when the editor refuses an exit', async () => {
     const { onClose } = setup('A', true);
     await screen.findByTestId('work-editor'); fixture.allowExit = false;

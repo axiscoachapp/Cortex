@@ -78,7 +78,7 @@ export function DocumentPreviewModal({
     onClose();
   };
 
-  const title = type === 'patient_summary' ? 'Resumo para o Paciente' : 'Encaminhamento Médico';
+  const title = type === 'patient_summary' ? 'Resumo para o paciente' : 'Encaminhamento médico';
 
   const handleCopy = async () => {
     setError('');

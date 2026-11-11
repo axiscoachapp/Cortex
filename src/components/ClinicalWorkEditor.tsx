@@ -22,7 +22,6 @@ export function ClinicalWorkEditor({
   userId,
   onSaved,
   onFinalized,
-  onClose,
   onExitGuardChange,
   appointmentId,
   initialTitle,
@@ -39,7 +38,8 @@ export function ClinicalWorkEditor({
   onSaved: () => void;
   /** The manual consultation was confirmed (appointment completed, consultation created). */
   onFinalized?: () => void;
-  onClose: () => void;
+  /** Kept for callers; the surrounding dialog closes the editor now. */
+  onClose?: () => void;
   onExitGuardChange?: (guard: () => boolean) => void;
 }) {
   const defaults = workEntryDefaults(entry);
@@ -227,19 +227,9 @@ export function ClinicalWorkEditor({
     }
   };
   return (
+    // The dialog around it carries the title and the only "Fechar" (round 3, M 13).
     <section className="min-w-0 rounded-xl border bg-card p-4 sm:p-6 space-y-4" aria-label="Editor clínico">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="min-w-0 break-words font-serif text-xl sm:text-2xl">{locked ? 'Versão registrada' : 'Documentar e acompanhar'}</h2>
-        <Button
-          variant="ghost"
-          disabled={busy}
-          onClick={() => {
-            if (!busy && canClose(false)) onClose();
-          }}
-        >
-          Fechar
-        </Button>
-      </div>
+      {locked && <p className="text-sm font-semibold">Versão registrada</p>}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}{' '}
@@ -537,7 +527,7 @@ export function ClinicalWorkEditor({
                 >
                   <option value="phone">Telefone</option>
                   <option value="whatsapp">WhatsApp</option>
-                  <option value="email">Email</option>
+                  <option value="email">E-mail</option>
                   <option value="in_person">Presencial</option>
                 </select>
               </label>
