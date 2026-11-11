@@ -187,15 +187,67 @@ async function supabase(route) {
 
 // Settings audit (AUDIT_CLINIC_ADMIN=1): the doctor administers a synthetic clinic with a connected WhatsApp number.
 const CLINIC_ADMIN = process.env.AUDIT_CLINIC_ADMIN === '1';
+const waConv = (n, over) => ({
+  id: `d5160000-0000-4000-8000-00000000000${n}`, waId: `55419999900${n}0`, profileName: `Contato Sintético ${n}`, contactId: null, caseId: null,
+  queue: n === 1 ? 'agendamento' : 'geral', status: 'open', assignedTo: null, assignedAt: null, openedAt: day(-1), firstResponseAt: null, closedAt: null,
+  lastInboundAt: day(0, 8, 40), windowOpenUntil: null, lastMessageAt: day(0, 8, 40), lastMessagePreview: 'Mensagem sintética', unreadCount: 0, optedOut: false, consented: true, revision: 3, ...over,
+});
+const waMsg = (n, direction, body, status, at, over) => ({
+  id: `d5170000-0000-4000-8000-0000000000${String(n).padStart(2, '0')}`, direction, kind: 'text', body, media: null, template: null, status, error: null,
+  sentBy: direction === 'out' ? doctorId : null, at, ...over,
+});
+const waState = {
+  conversations: [
+    waConv(1, { assignedTo: doctorId, assignedAt: day(0, 8, 45), firstResponseAt: day(0, 8, 50), windowOpenUntil: day(1, 8, 40), unreadCount: 1,
+      lastMessagePreview: 'Pode ser na quinta de manhã? Tenho exame na quarta.' }),
+    waConv(2, { lastInboundAt: day(-3, 10, 0), lastMessageAt: day(-3, 10, 0), unreadCount: 2, lastMessagePreview: 'Queria remarcar a consulta da semana que vem.' }),
+  ],
+  messages: {
+    'd5160000-0000-4000-8000-000000000001': [
+      waMsg(1, 'in', 'Bom dia! Queria marcar um retorno com a Dra. Ana.', 'received', day(0, 8, 30)),
+      waMsg(2, 'out', 'Bom dia! Temos horário na quarta às 14h ou na quinta às 9h. Qual prefere?', 'read', day(0, 8, 50)),
+      waMsg(3, 'in', 'Pode ser na quinta de manhã? Tenho exame na quarta.', 'received', day(0, 8, 55)),
+      waMsg(4, 'out', 'Mensagem sintética que o WhatsApp recusou.', 'failed', day(0, 8, 58), { error: 'Synthetic failure' }),
+    ],
+    'd5160000-0000-4000-8000-000000000002': [
+      waMsg(11, 'in', 'Queria remarcar a consulta da semana que vem.', 'received', day(-3, 10, 0)),
+    ],
+  },
+};
 function whatsappAnswer(body) {
   const template = { name: 'lembrete_consulta', language: 'pt_BR', category: 'UTILITY', status: 'APPROVED', body: 'Olá {{1}}, sua consulta é {{2}} às {{3}}. Responda Confirmar ou Remarcar.', paramCount: 3 };
   switch (body.action) {
-    case 'conversations': return { conversations: [], nextBefore: null };
+    case 'conversations': return { conversations: waState.conversations.filter((c) => body.filter === 'mine' ? c.assignedTo === doctorId
+      : body.filter === 'unassigned' ? c.assignedTo === null : body.filter === 'closed' ? false : true), nextBefore: null };
+    case 'messages': {
+      const conversation = waState.conversations.find((c) => c.id === body.conversationId);
+      // Newest first, as the server lists them.
+      return conversation ? { conversation, messages: [...(waState.messages[conversation.id] ?? [])].reverse(), nextBefore: null } : { error: 'Conversa não encontrada', code: 'not_found' };
+    }
+    case 'botSession': return { session: null };
+    case 'send': {
+      const conversation = waState.conversations.find((c) => c.id === body.conversationId);
+      const id = `d5170000-0000-4000-8000-0000000001${String((waState.messages[conversation.id] ?? []).length).padStart(2, '0')}`;
+      waState.messages[conversation.id] = [...(waState.messages[conversation.id] ?? []),
+        { id, direction: 'out', kind: body.template ? 'template' : 'text', body: body.text ?? 'Modelo sintético enviado.', media: null,
+          template: body.template ? { name: body.template.name, language: body.template.language } : null, status: 'sent', error: null, sentBy: doctorId, at: now() }];
+      return { messageId: id, status: 'sent', duplicate: false };
+    }
+    case 'act': {
+      const conversation = waState.conversations.find((c) => c.id === body.conversationId);
+      if (!conversation) return { error: 'Conversa não encontrada', code: 'not_found' };
+      if (body.operation === 'mark_read') conversation.unreadCount = 0;
+      return { revision: conversation.revision, status: conversation.status, assignedTo: conversation.assignedTo };
+    }
     case 'dashboard': return { schemaVersion: 1, asOf: now(), window: { from: body.from, to: body.to, timeZone: 'America/Sao_Paulo' }, coverage: 'latest_cycle_only',
       cohort: { incomingCycles: 0, withHumanSend: 0, withoutHumanSend: 0, medianFirstHumanSendSeconds: null, closedWithoutHumanSend: 0 },
       openNow: { total: 0, unassigned: 0, assignedToIneligible: 0, owners: { items: [], nextBefore: null } }, unavailable: { abandonment: 'no_explicit_event', appointments: 'scoped_source_required' } };
-    case 'state': return { serverReady: true, connected: true, status: 'connected', displayPhone: '+55 41 3000-0000', verifiedName: 'Clínica Sintética', quality: 'GREEN',
-      connectedAt: day(-3), canManage: WORKSPACE_ROLE ? WORKSPACE_ROLE === 'admin' : CLINIC_ADMIN, canUseInbox: true, lastError: null, webhookUrl: `${SUPABASE}/functions/v1/whatsapp-webhook`, phoneNumberId: '200000000001', wabaId: '1000000001' };
+    case 'state': {
+      const canManage = WORKSPACE_ROLE ? WORKSPACE_ROLE === 'admin' : CLINIC_ADMIN;
+      return { serverReady: true, connected: true, status: 'connected', displayPhone: '+55 41 3000-0000', verifiedName: 'Clínica Sintética', quality: 'GREEN',
+        connectedAt: day(-3), canManage, canUseInbox: true,
+        ...(canManage ? { lastError: null, webhookUrl: `${SUPABASE}/functions/v1/whatsapp-webhook`, phoneNumberId: '200000000001', wabaId: '1000000001' } : {}) };
+    }
     case 'templates': return { templates: [template, { ...template, name: 'pre_consulta_link', status: 'PENDING', body: 'Olá {{1}}, antes da consulta acesse {{2}}.', paramCount: 2 }] };
     case 'automations': return {
       automations: [{ id: 'd5130000-0000-4000-8000-000000000001', name: 'Lembrete 48 h antes', enabled: true, trigger: 'before_start', offsetMinutes: 2880, templateName: 'lembrete_consulta',
@@ -352,6 +404,7 @@ async function inspect(page, width) {
 const ROUTES = [
   ['inicio', '/'],
   ['recepcao', '/recepcao'],
+  ['recepcao-conversas', '/recepcao?view=conversations'],
   ['recepcao-caso', '/recepcao?case=d5180000-0000-4000-8000-000000000001'],
   ['recepcao-conversas', '/recepcao?view=conversations'],
   ['recepcao-agenda', '/recepcao/agenda'],
@@ -657,6 +710,16 @@ try {
             pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
           await page.keyboard.press('Escape');
         } else report.routes[`${label} pre-consulta respostas`] = { missing: 'answers button not found' };
+      }
+      if (path === '/recepcao?view=conversations') {
+        for (const [n, name] of [[1, 'janela-aberta'], [2, 'janela-fechada']]) {
+          const item = page.getByRole('button', { name: new RegExp(`Contato Sintético ${n}`) }).first();
+          if (!(await item.count())) { report.routes[`${label} conversa ${name}`] = { missing: 'conversation not listed' }; continue; }
+          await item.click();
+          await page.waitForTimeout(900);
+          await page.screenshot({ path: resolve(artifacts, `${label}-conversa-${name}.png`), fullPage: true });
+          report.routes[`${label} conversa ${name}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        }
       }
       // Menu bot: the editor and a local simulated conversation (nothing is sent).
       if (CLINIC_ADMIN && path === '/configuracoes?secao=whatsapp') {

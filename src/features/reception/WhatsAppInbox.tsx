@@ -168,7 +168,7 @@ function ConversationList({ actor, clinic, channelVersion, drafts, requestId }: 
       </form>
       <Button variant="outline" size="icon" className="h-11 w-11" aria-label="Atualizar conversas" title="Atualizar conversas" disabled={list.fetchStatus!=='idle'||commandBusy||sending} onClick={refresh}><RefreshCw aria-hidden="true" className="h-4 w-4" /></Button>
     </div>
-    <div className="grid items-start gap-4 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)]">
+    <div className="grid items-start gap-4 shell:grid-cols-[minmax(15rem,0.7fr)_minmax(0,1.3fr)]">
       <section aria-labelledby="wa-list-heading" className="min-w-0 space-y-3">
         <h2 id="wa-list-heading" ref={heading} tabIndex={-1} className="font-semibold outline-none">Lista de conversas</h2>
         {(before || nextCursor) && <nav aria-label="Páginas das conversas" className="flex flex-wrap gap-2">

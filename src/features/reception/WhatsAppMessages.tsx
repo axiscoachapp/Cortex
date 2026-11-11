@@ -48,6 +48,11 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
     retry: false, gcTime: 0, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
   const locked=commandBlocked||sending;
+  // The latest message sits at the bottom, next to the reply box: keep it in view when the
+  // conversation opens and when a new message arrives (the server lists newest first).
+  const thread=useRef<HTMLOListElement>(null);
+  const newestMessage=messages.data?.messages[0]?.id??null;
+  useEffect(()=>{const list=thread.current;if(list&&before===null)list.scrollTop=list.scrollHeight;},[newestMessage,before,conversation.id]);
   // Only the recent page refreshes by itself, and never while a command or a send runs.
   const poll=useBackgroundRefresh(messages,before===null&&!locked);
   const settled=messages.isSuccess&&messages.isFetchedAfterMount;
@@ -109,7 +114,7 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
       </div>
       <div className="flex items-center gap-2">
         <Button variant="outline" size="icon" className="h-11 w-11" aria-label="Atualizar mensagens" title="Atualizar mensagens" disabled={messages.fetchStatus!=='idle'||locked} onClick={refresh}><RefreshCw aria-hidden="true" className="h-4 w-4" /></Button>
-        <Button variant="outline" className="lg:hidden" onClick={onClose}>Voltar à lista</Button>
+        <Button variant="outline" className="shell:hidden" onClick={onClose}>Voltar à lista</Button>
       </div>
     </div>
     {detail&&live && <>
@@ -142,7 +147,8 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
     </div> : null}
     {detail&&<>
       {detail.messages.length === 0 && <p className="text-sm text-muted-foreground">{before===null?'Nenhuma mensagem nesta conversa.':'Nenhuma mensagem anterior a este ponto.'}</p>}
-      <ol aria-label="Mensagens da conversa" className="flex flex-col gap-3">{detail.messages.slice().reverse().map(message => <MessageBubble key={message.id} message={message} />)}</ol>
+      {/* The thread scrolls by itself, so the reply box stays in view under the latest message. */}
+      <ol ref={thread} aria-label="Mensagens da conversa" tabIndex={0} className="flex max-h-[min(28rem,55dvh)] flex-col gap-3 overflow-y-auto pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{detail.messages.slice().reverse().map(message => <MessageBubble key={message.id} message={message} />)}</ol>
     </>}
     {(before!==null||nextCursor!==null)&&<nav aria-label="Páginas da conversa" className="flex flex-wrap gap-2">
       {before!==null&&<Button variant="outline" className="h-auto min-h-10 max-w-full whitespace-normal" onClick={refresh}>Mensagens mais recentes</Button>}
