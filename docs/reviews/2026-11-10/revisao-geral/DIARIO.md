@@ -31,6 +31,15 @@ Sessão autônoma do Claude, iniciada em 10/11/2026 às 22:18 (horário de São 
 | 23:10 | Caso de teste da IA | Escrito o caso sintético com 16 consultas e gabarito: `scripts/ai-eval/longitudinal/case.mjs`. A gravação no Supabase foi **só ensaiada** (transação desfeita): nada foi gravado. |
 | 23:20 | **Parada: limite de uso atingido** | Os sete revisores foram pausados antes de entregar os relatórios. Nenhuma correção foi feita no código e nada foi publicado no Supabase. Ver "Onde parou" abaixo. |
 | 11/11 05:18 | Retomada | Limite de uso renovado. Os sete revisores foram reativados de onde pararam. Suíte completa do app na linha de base: 2.591 testes passam. Um arquivo falhou ao carregar (`scripts/ai-eval/pipeline.test.mjs`) por causa minha: criei a pasta do caso novo dentro de `cases/` sem o `gold.json` que o carregador exige. Movi o caso para `scripts/ai-eval/longitudinal/`. |
+| 05:40 | Paciente sintética gravada | "Helena Duarte (paciente sintética de teste)", 16 consultas, na conta de teste nº 1. **Decisão:** deixei no ar para você experimentar; para apagar, é só arquivar/excluir a paciente ou me pedir. |
+| 05:50 | Funções temporárias de avaliação | **Decisão:** para chamar as funções reais sem criar conta nem entrar na sua, publiquei cópias fiéis com um acesso próprio (senha aleatória de uso único, com prazo; errada ou ausente = 401, conferido). Apagadas às 08:10. |
+| 06:10 | 1ª medição | Resumo pré-consulta bom; assistente sem inventar, mas sem o plano da última consulta e sem fatos antigos; **evolução do áudio vazia em 2 de 3 tentativas**. |
+| 06:40 | Sete relatórios dos revisores | Salvos em `relatorios/`. Viraram o [plano de melhoria](PLANO_DE_MELHORIA.md). |
+| 07:00 | Causa da evolução vazia | Regra do prompt que proibia a IA de identificar quem fala. Testei o modelo que separa vozes: pior (54 s, erros em termos). **Decisão:** atribuição pelo contexto, registrada no contrato do Codex. |
+| 07:20 | Migration `20261111100000` | Busca do histórico para o assistente reescrita. Backup cifrado (`conhcwuwtrkerpbblzgu-2026-11-11-pre-review`), ensaio com rollback, aplicada em 1,4 s. |
+| 07:30 | Testes de banco no Supabase | Novo `scripts/supabase-rollout/sqltest.mjs`: roda os arquivos de teste dentro de uma transação sempre desfeita. Substitui o Docker. |
+| 08:00 | 2ª medição | Evolução completa em 5 de 5; assistente 47/48; resumo 7/7. Detalhes em [AVALIACAO_IA_PACIENTE_ANTIGO.md](AVALIACAO_IA_PACIENTE_ANTIGO.md). |
+| 08:10 | Limpeza | Áudios e rascunhos de teste apagados, paciente sintética regravada no estado inicial (16 consultas), funções de avaliação apagadas. O uso de IA do dia na conta de teste (cerca de 100 créditos de 1.500) é dos testes. |
 
 ## Onde parou (10/11, 23:20) — retomado em 11/11 às 05:18
 

@@ -6,7 +6,7 @@ import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
-import { parseModelObject } from '../_shared/gemini.ts';
+import { assessmentAndPlan, parseModelObject } from '../_shared/gemini.ts';
 import { assertPromptSize, isRecord, readPatientContext } from '../_shared/modelInput.ts';
 import { clinicDate } from '../_shared/clinicDate.ts';
 
@@ -43,7 +43,12 @@ interface Briefing {
   details: { lastConsultationDate: string; mainComplaint: string; previousConduct: string; evolution: string };
 }
 interface BriefingSource { patientRevision: number; consultationRevision: number; clinicDate: string }
-const SYSTEM = 'Você é um assistente médico gerando resumos pré-consulta concisos e clinicamente relevantes. Destaque pendências, alertas e a evolução do quadro de forma objetiva para o médico.';
+const SYSTEM = `Você prepara o resumo pré-consulta de um retorno, para o médico ler em 20 segundos antes de chamar o paciente.
+Use SOMENTE o que está no contexto fornecido. Não invente exames, resultados, diagnósticos, datas nem condutas.
+- pending: o que ficou combinado e ainda precisa ser visto hoje (exames pedidos, retornos, decisões adiadas), com as datas quando constarem. String vazia se nada constar.
+- alert: o que pode mudar a conduta de hoje: alergias, contraindicações e riscos registrados na história médica ou no plano anterior. String vazia se nada constar.
+- details.evolution: como o quadro evoluiu ao longo das consultas listadas e das anotações entre consultas. Se só houver uma consulta e nenhuma anotação, escreva "Sem evolução registrada após a última consulta."
+Quando um trecho vier marcado como cortado, não suponha o que falta.`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -78,11 +83,10 @@ serve(async (req) => {
         .eq('patient_id', patientId)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(6),
       supabase
         .from('patients')
-        .select('name,age,date_of_birth,diagnoses,medications,allergies,clinical_notes,revision')
+        .select('name,age,date_of_birth,diagnoses,medications,allergies,medical_history,clinical_notes,revision')
         .eq('id', patientId)
         .eq('user_id', userId)
         .maybeSingle(),
@@ -90,7 +94,8 @@ serve(async (req) => {
     if (visitResult.error || patientResult.error) throw new RequestError('Não foi possível consultar o histórico clínico. Tente novamente.', 503);
     if (!patientResult.data) throw new RequestError('Paciente não encontrado.', 404);
     const patientRow = readPatientContext(patientResult.data)!;
-    const last = visitResult.data;
+    const visits = visitResult.data ?? [];
+    const last = visits[0];
 
     if (!last) {
       return new Response(JSON.stringify(null), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -118,13 +123,16 @@ serve(async (req) => {
       } catch { /* An incomplete cache entry must be regenerated. */ }
     }
 
-    // ── Build lean prompt: only send A+P sections (~60% fewer input tokens) ──
-    const apSection = extractAssessmentAndPlan(last.soap_note ?? '');
+    // ── Prompt: the last visit's assessment and plan in full, the medical history, and a short
+    // line for each of the previous visits so the model can describe how the case evolved.
+    const apSection = assessmentAndPlan(last.soap_note ?? '', 3000);
     const daysSince = Math.floor((Date.now() - new Date(last.created_at).getTime()) / 86400000);
-    const lastDate = new Date(last.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+    const dateOf = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+    const lastDate = dateOf(last.created_at);
 
     const diagnoses = patientRow.diagnoses?.map(d => typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`).join('; ') || 'Não informado';
     const meds = patientRow.medications?.map(m => typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`).join(', ') || 'Nenhum';
+    const history = (patientRow.medical_history ?? '').trim();
 
     // Only the last ~6 note entries to keep tokens lean.
     const recentNotes = (patientRow?.clinical_notes ?? '')
@@ -132,17 +140,19 @@ serve(async (req) => {
       .slice(-6)
       .join('\n')
       .trim();
+    const earlier = visits.slice(1).map(v =>
+      `- ${dateOf(v.created_at)} — ${(v.chief_complaint ?? '').trim() || 'sem queixa registrada'}: ${assessmentAndPlan(v.soap_note ?? '', 900).replace(/\s+/g, ' ')}`).join('\n');
 
-    const prompt = `Paciente: ${patientRow.name ?? 'paciente'}, ${patientRow.age == null ? 'idade não informada' : `${patientRow.age} anos`}
+    const prompt = `Paciente: ${patientRow.age == null ? 'idade não informada' : `${patientRow.age} anos`}
 Diagnósticos: ${diagnoses}
 Medicações: ${meds}
-Alergias: ${patientRow.allergies?.join(', ') || 'Nenhuma'}
+Alergias: ${patientRow.allergies?.join(', ') || 'Nenhuma'}${history ? `\nHistória médica: ${history.length > 1500 ? `${history.slice(0, 1500)} [texto cortado]` : history}` : ''}
 
 Última consulta: ${lastDate} (${daysSince} dias atrás)
 Queixa: ${last.chief_complaint || 'não registrada'}
 
 Avaliação e Plano da última consulta:
-${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consultas):\n${recentNotes}` : ''}`;
+${apSection}${earlier ? `\n\nConsultas anteriores (mais recente primeiro; só avaliação e plano resumidos):\n${earlier}` : ''}${recentNotes ? `\n\nAnotações recentes do médico (entre consultas):\n${recentNotes}` : ''}`;
     assertPromptSize(prompt, SYSTEM);
 
     let reservationId: string;
@@ -194,12 +204,3 @@ ${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consulta
     );
   }
 });
-
-// Extract only Assessment (A) and Plan (P) from SOAP — saves ~60% input tokens
-function extractAssessmentAndPlan(soap: string): string {
-  if (!soap) return '';
-  // Match **A section header only (not any letter 'a') — handles **A (Avaliação):** and **A — Avaliação**
-  const match = soap.match(/\*\*A[\s—(]/);
-  if (!match || match.index === undefined) return soap.slice(-800);
-  return soap.slice(match.index).slice(0, 800);
-}

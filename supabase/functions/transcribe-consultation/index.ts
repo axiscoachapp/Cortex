@@ -24,7 +24,7 @@ const corsHeaders = {
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
 
-const SPEAKER_NOTICE = 'A transcrição não identifica os falantes. Confira quem disse cada informação antes de registrar a evolução.';
+const SPEAKER_NOTICE = 'A gravação não separa as vozes: a IA identificou médico e paciente pelo contexto da conversa. Confira a evolução antes de salvar.';
 
 // SOAP_SYSTEM is now specialty-aware — resolved per request via getSpecialtyPrompt().
 
@@ -112,7 +112,7 @@ serve(async (req) => {
     // Verify the patient belongs to the authenticated user.
     const { data: ownedPatient } = await supabase
       .from('patients')
-      .select('id,name,age,date_of_birth,diagnoses,medications,allergies')
+      .select('id,name,age,date_of_birth,diagnoses,medications,allergies,medical_history')
       .eq('id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -122,6 +122,16 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    // Background for a returning patient: the last recorded visit. Best effort; a failed read
+    // only removes context, it never blocks the transcription.
+    const { data: lastConsultation } = await supabase
+      .from('consultations')
+      .select('created_at,chief_complaint,soap_note')
+      .eq('patient_id', patientId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     const { data: draft } = await supabase
       .from('consultation_drafts')
@@ -248,7 +258,7 @@ serve(async (req) => {
     if (!freshTranscription) return recoveryResponse();
 
     try {
-      const patientSummary = buildPatientSummary(ownedPatient, currentComplaint);
+      const patientSummary = buildPatientSummary(ownedPatient, currentComplaint, { lastConsultation });
       const commentsText =
         originalComments.length > 0
           ? `\n\nObservações do médico durante a consulta:\n${originalComments.join('\n')}`
@@ -263,7 +273,7 @@ serve(async (req) => {
         typeof templateContent === 'string' && templateContent.trim()
           ? buildCustomTemplatePrompt(templateContent)
           : getSpecialtyPrompt(userSpecialty);
-      const instruction = `${specialtyInstruction}\n\nA transcrição fornecida não contém diarização nem identidade confirmada dos falantes. Não atribua falas ao médico ou ao paciente por inferência. Não invente diálogo, exame, diagnóstico, conduta ou consentimento. Quando a origem de uma informação importar, peça esclarecimento ao médico. Se o conteúdo não sustentar uma evolução clínica, deixe soap_note vazio e explique em clarifications.`;
+      const instruction = `${specialtyInstruction}\n\nNão invente diálogo, exame, diagnóstico, conduta ou consentimento. Escreva sempre a evolução com o que a transcrição sustenta; o que faltar vai em clarifications, não em ressalvas dentro do texto.`;
       assertGeminiTextBudget(draftParts, instruction);
       const draftReservation = await checkQuota(supabase, userId, 100);
       const drafted = await callClinicalText(apiKey, draftParts, {

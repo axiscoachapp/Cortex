@@ -18,6 +18,7 @@ const soap = { soap_note: 'Nota sintética.', whatsapp_message: '', clarificatio
 function fixture(options: {
   transcript?: string; draftText?: string; draftReject?: boolean; settlementReject?: boolean; failedSettlement?: number;
   failedSave?: number; missingDraft?: boolean; wrongOwner?: boolean; provider?: string; priorContent?: Record<string, unknown>; missingRevision?: boolean; mutateBeforeSave?: number;
+  lastConsultation?: Record<string, unknown> | 'error'; medicalHistory?: string;
 } = {}) {
   let handler!: (request: Request) => Promise<Response>;
   const events: string[] = [];
@@ -30,8 +31,13 @@ function fixture(options: {
       let patch: Record<string, unknown> | undefined;
       const filters: Array<[string, unknown]> = [];
       const execute = async () => {
+        // The last recorded visit is background only: absent by default, and a failed read must not block.
+        if (table === 'consultations') {
+          if (options.lastConsultation === 'error') return { data: null, error: { message: 'Synthetic read failure' } };
+          return { data: options.lastConsultation ?? null, error: null };
+        }
         const row = table === 'patients'
-          ? { id: patientId, user_id: options.wrongOwner ? 'other' : userId, name: 'Synthetic', age: 30 }
+          ? { id: patientId, user_id: options.wrongOwner ? 'other' : userId, name: 'Synthetic', age: 30, medical_history: options.medicalHistory ?? null }
           : options.missingDraft ? null : source;
         if (patch) {
           events.push('save');
@@ -52,6 +58,8 @@ function fixture(options: {
       const query = {
         select: () => query,
         eq: (key: string, value: unknown) => { filters.push([key, value]); return query; },
+        order: () => query,
+        limit: () => query,
         maybeSingle: execute,
         update: (value: Record<string, unknown>) => { patch = value; return query; },
         then: (resolve: (value: unknown) => unknown) => execute().then(resolve),
@@ -117,8 +125,30 @@ describe('recorded OpenAI audio draft recovery', () => {
     expect(f.upload).not.toHaveBeenCalled();
     expect(f.saved[0]).toMatchObject({ transcription: transcript, soapDraft: '', aiMetadata: { transcription: metadata } });
     const result = await response.json();
-    expect(result.clarifications.join(' ')).toMatch(/falantes|diarização/);
+    // The doctor is told the speakers were identified from context, not by separate voices.
+    expect(result.clarifications.join(' ')).toMatch(/não separa as vozes/);
     expect(result).toMatchObject({ draftPersisted: true, draftUpdatedAt: f.source.updated_at, aiMetadata: { transcription: metadata } });
+  });
+  it('gives the draft the record background of a returning patient, marked as not being this consultation', async () => {
+    const f = fixture({
+      medicalHistory: 'TVP em 2019, no puerpério.',
+      lastConsultation: { created_at: '2026-10-06T17:00:00Z', chief_complaint: 'Decidiu iniciar terapia hormonal', soap_note: ['**S (Subjetivo):** relato.', '**A (Avaliação):** estrogênio oral contraindicado.', '**P (Plano):** retorno em 60 dias.'].join('\n\n') },
+    });
+    expect((await f.run()).status).toBe(200);
+    const [, parts, options] = f.generate.mock.calls[0] as unknown as [string, Array<{ text: string }>, { systemInstruction: string }];
+    expect(parts[0].text).toContain('CONTEXTO DO PRONTUÁRIO (não é conteúdo desta consulta');
+    expect(parts[0].text).toContain('História médica (cadastro): TVP em 2019');
+    expect(parts[0].text).toContain('estrogênio oral contraindicado');
+    expect(parts[0].text).not.toContain('**S (Subjetivo):** relato');
+    expect(parts[0].text.indexOf('FIM DO CONTEXTO DO PRONTUÁRIO')).toBeLessThan(parts[0].text.indexOf('Transcrição da consulta:'));
+    expect(options.systemInstruction).not.toMatch(/deixe soap_note vazio|Não atribua falas/);
+  });
+  it('still drafts the note when the last visit cannot be read', async () => {
+    const f = fixture({ lastConsultation: 'error' });
+    const response = await f.run();
+    expect(response.status).toBe(200);
+    expect((await response.json()).soapNote).toBe('Nota sintética.');
+    expect((f.generate.mock.calls[0] as unknown as [string, Array<{ text: string }>])[1][0].text).not.toContain('Última consulta registrada');
   });
   it.each([
     { draftReject: true },

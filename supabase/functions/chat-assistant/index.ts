@@ -39,12 +39,25 @@ Você também pode ajudar com:
 O Cortex não possui uma base farmacológica validada conectada. Não confirme nem descarte interações, contraindicações ou segurança de dose/associação. Não recomende iniciar, suspender, substituir ou alterar doses. Se a pergunta exigir essa avaliação, informe a necessidade de verificação farmacológica atualizada e revisão médica. Nem o prontuário, uma resposta anterior da IA, conhecimento geral do modelo ou um trecho de protocolo constituem essa verificação. Ausência de um risco nos trechos não demonstra segurança.
 
 Se não souber a resposta com segurança, diga claramente que não sabe. Nunca invente informações clínicas nem invente registros de consultas anteriores — se não estiverem no contexto recuperado, explicite a limitação da busca.`;
+const RECORD_ONLY_RULES = `MODO REGISTRO — a pergunta pede uma decisão sobre medicação (interação, contraindicação, dose, iniciar, manter ou suspender).
+Você NÃO responde se é seguro, indicado ou contraindicado, e NÃO recomenda conduta. Não use conhecimento farmacológico próprio.
+Responda só com o que o prontuário registra sobre o assunto: alergias e intolerâncias, contraindicações e pareceres anotados, medicações em uso e decisões anteriores do médico, sempre com a data e a consulta.
+Se o prontuário não registrar nada sobre o assunto, diga exatamente isso em uma frase.
+Comece por "O prontuário registra:" ou "O prontuário não registra nada sobre isso."`;
+
 interface ConsultationContext {
   id: string;
   truncated?: boolean;
   created_at: string;
   chief_complaint: string | null;
   soap_note: string | null;
+}
+/** A consultation that exists but was not sent whole: date, complaint and the start of its assessment. */
+interface ConsultationIndexEntry {
+  id: string;
+  created_at: string;
+  chief_complaint: string | null;
+  excerpt: string | null;
 }
 interface AttachedDocument {
   id: string;
@@ -60,7 +73,12 @@ function condense(text: string, max = 600): string {
     .replace(/\*\*/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-  return t.length > max ? t.slice(0, max) + '…' : t;
+  return t.length > max ? t.slice(0, max) + '… [texto cortado]' : t;
+}
+/** The doctor's notes are appended in time order: when they do not fit, keep the newest. */
+function newest(text: string, max: number): string {
+  const t = (text ?? '').replace(/\n{3,}/g, '\n\n').trim();
+  return t.length > max ? '[anotações mais antigas omitidas] …' + t.slice(-max) : t;
 }
 
 function formatDate(iso: string): string {
@@ -123,7 +141,11 @@ serve(async (req) => {
       if(error || data!==true)throw new RequestError('Não foi possível confirmar o salvamento da resposta. Reabra o prontuário antes de reenviar a pergunta.',503);
       activeTurn=null;
     };
-    if (requiresMedicationVerification(userMessage, chatHistory)) {
+    // A medication decision is never answered by the model. Without a patient the fixed notice is
+    // all there is; with a patient, the model may still report what the chart records on the
+    // subject (allergies, noted contraindications, opinions, earlier decisions), and the notice follows.
+    const recordOnly = requiresMedicationVerification(userMessage, chatHistory);
+    if (recordOnly && !patientId) {
       await preserveReply(MEDICATION_VERIFICATION_REPLY);
       return new Response(JSON.stringify(MEDICATION_VERIFICATION_REPLY), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -135,45 +157,21 @@ serve(async (req) => {
     // ── Pull patient row + recent consultations + attached docs when patientId ──
     let patientRow: PatientContext | null = null;
     let consultations: ConsultationContext[] = [];
+    let consultationIndex: ConsultationIndexEntry[] = [];
     let attachedDocs: AttachedDocument[] = [];
     let coverage: Record<string, unknown> = { limited: true };
     if (patientId) {
       // Ownership enforced: the service-role client bypasses RLS, so every
       // query MUST be scoped to the JWT-derived userId.
-      const [
-        { data: p, error: patientError },
-        { data: c, error: historyError },
-        { data: docs, error: documentsError },
-      ] = await Promise.all([
-        supabase
-          .from('patients')
-          .select(
-            'name, age, date_of_birth, diagnoses, medications, allergies, social_anamnesis, medical_history, clinical_notes',
-          )
-          .eq('id', patientId)
-          .eq('user_id', userId)
-          .maybeSingle(),
-        supabase
-          .from('consultations')
-          .select('id, created_at, chief_complaint, soap_note')
-          .eq('patient_id', patientId)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(5),
-        supabase
-          .from('patient_files')
-          .select('id, file_name, ai_summary, ai_review_status, created_at')
-          .eq('patient_id', patientId)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(8),
-      ]);
-      if (patientError || historyError || documentsError)
-        throw new RequestError('Não foi possível consultar o histórico clínico. Tente novamente.', 503);
+      const { data: p, error: patientError } = await supabase
+        .from('patients')
+        .select('name, age, date_of_birth, diagnoses, medications, allergies, social_anamnesis, medical_history, clinical_notes')
+        .eq('id', patientId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (patientError) throw new RequestError('Não foi possível consultar o histórico clínico. Tente novamente.', 503);
       if (!p) throw new RequestError('Paciente não encontrado.', 404);
       patientRow = readPatientContext(p);
-      consultations = c ?? [];
-      attachedDocs = docs ?? [];
       const { data: retrieved, error: retrievalError } = await supabase.rpc('retrieve_patient_context', {
         p_user_id: userId,
         p_patient_id: patientId,
@@ -187,6 +185,7 @@ serve(async (req) => {
       )
         throw new RequestError('Não foi possível pesquisar o prontuário. Tente novamente.', 503);
       consultations = retrieved.consultations;
+      consultationIndex = Array.isArray(retrieved.index) ? retrieved.index : [];
       attachedDocs = retrieved.documents;
       coverage = retrieved.coverage;
     }
@@ -210,7 +209,6 @@ serve(async (req) => {
       const allergies = Array.isArray(ctx.allergies) ? ctx.allergies.join(', ') || 'Nenhuma' : 'Nenhuma';
 
       patientSummary = `--- Contexto do Paciente ---
-Nome: ${ctx.name ?? 'Não informado'}
 Idade: ${ctx.age == null ? 'Não informada' : `${ctx.age} anos`}
 Diagnósticos: ${diagnoses}
 Medicações em uso: ${medications}
@@ -219,9 +217,9 @@ Alergias: ${allergies}`;
       const social = (ctx.social_anamnesis ?? ctx.socialAnamnesis ?? '').trim();
       const history = (ctx.medical_history ?? ctx.medicalHistory ?? '').trim();
       const notes = (ctx.clinical_notes ?? '').trim();
-      if (social) patientSummary += `\nAnamnese social: ${condense(social, 400)}`;
-      if (history) patientSummary += `\nHistória médica: ${condense(history, 400)}`;
-      if (notes) patientSummary += `\nAnotações do médico: ${condense(notes, 600)}`;
+      if (social) patientSummary += `\nAnamnese social: ${condense(social, 1500)}`;
+      if (history) patientSummary += `\nHistória médica: ${condense(history, 2500)}`;
+      if (notes) patientSummary += `\nAnotações do médico entre consultas (as mais recentes no fim):\n${newest(notes, 2500)}`;
       patientSummary += `\n----------------------------\n\n`;
     }
 
@@ -232,10 +230,17 @@ Alergias: ${allergies}`;
       for (const c of consultations) {
         const date = formatDate(c.created_at);
         const complaint = (c.chief_complaint ?? '').trim() || 'sem queixa registrada';
-        const soap = condense(c.soap_note ?? '', 5000);
-        historySummary += `\n[consulta:${c.id}] [${date}] Queixa: ${complaint}\n${soap}${c.truncated ? ' [trecho truncado]' : ''}\n`;
+        const soap = condense(c.soap_note ?? '', 6000);
+        historySummary += `\n[consulta:${c.id}] [${date}] Queixa: ${complaint}\n${soap}${c.truncated ? ' [texto cortado]' : ''}\n`;
       }
       historySummary += '----------------------------\n\n';
+      if (consultationIndex.length > 0) {
+        historySummary += '--- Outras consultas do prontuário (só data, queixa e início da avaliação; o texto completo NÃO está neste contexto) ---\n';
+        for (const c of consultationIndex) {
+          historySummary += `[consulta:${c.id}] [${formatDate(c.created_at)}] Queixa: ${(c.chief_complaint ?? '').trim() || 'sem queixa registrada'} — ${condense(c.excerpt ?? '', 320)}\n`;
+        }
+        historySummary += 'Se a resposta depender de uma destas consultas, diga a data e que o detalhe precisa ser conferido no prontuário.\n----------------------------\n\n';
+      }
     } else if (patientId) {
       historySummary =
         '--- Histórico de Consultas Anteriores ---\nNenhuma consulta incluída na recuperação atual; isso não comprova ausência de registros.\n----------------------------\n\n';
@@ -293,16 +298,21 @@ Alergias: ${allergies}`;
     coverage = { ...coverage, limited: true, knowledge: 'unavailable' };
     const promptText = `${patientSummary}${historySummary}${docsSummary}${knowledgeBlock}${conversationBlock}Médico: ${userMessage}`;
     assertPromptSize(promptText, CHAT_SYSTEM);
-    const { text: reply, usage } = await callClinicalText(OPENAI_API_KEY, [{ text: promptText }], {
-      systemInstruction: CHAT_SYSTEM,
-      maxOutputTokens: 600,
+    const { text: modelReply, usage } = await callClinicalText(OPENAI_API_KEY, [{ text: promptText }], {
+      systemInstruction: recordOnly ? `${CHAT_SYSTEM}
+
+${RECORD_ONLY_RULES}` : CHAT_SYSTEM,
+      maxOutputTokens: 1000,
     });
+    const reply = recordOnly ? `${modelReply.trim()}
+
+${MEDICATION_VERIFICATION_REPLY.message}` : modelReply;
 
     const credits = creditsFromUsage(usage);
 
     const response = {
         message: reply,
-        safety: { status: 'not_assessed' },
+        safety: recordOnly ? MEDICATION_VERIFICATION_REPLY.safety : { status: 'not_assessed' },
         credits,
         coverage,
         sources: [

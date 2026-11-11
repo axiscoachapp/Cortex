@@ -56,6 +56,8 @@ export interface ProfileUpdates {
   diagnoses: Array<{ description: string }>;
   medications: Array<{ name: string; dosage: string; instructions: string }>;
   allergies: string[];
+  /** Names, as stored in the chart, of medications the visit stopped (older servers omit it). */
+  medicationsStopped?: string[];
 }
 
 /** Changes the AI extracted from a doctor's comment, pending physician review. */

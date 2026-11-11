@@ -27,8 +27,14 @@ const EXTRACT_SYSTEM = `Você é um extrator de dados clínicos estruturados.
 Analise a evolução SOAP fornecida e extraia APENAS informações explicitamente presentes no texto.
 Não infira, não invente, não complete com conhecimento externo.
 - diagnoses: somente diagnósticos explicitamente confirmados; nunca hipóteses/diferenciais, como descrições simples sem código CID
-- medications: medicamentos prescritos/mantidos na seção P, com nome, dosagem e instruções de uso
+- medications: medicamentos INICIADOS ou com dose/posologia ALTERADA nesta consulta (seção P), com nome,
+  dosagem e instruções de uso. NÃO repita um medicamento da lista "Medicações em uso no cadastro" que foi
+  apenas mantido. Se a consulta alterar a dose de um medicamento do cadastro, use o nome exatamente como
+  está no cadastro.
 - allergies: alergias mencionadas em qualquer seção
+- medications_stopped: somente nomes da lista "Medicações em uso no cadastro" que a evolução manda
+  suspender, retirar ou substituir. Copie o nome exatamente como está na lista. Vazio se nenhuma.
+  Uma medicação apenas não citada NÃO foi suspensa.
 Retorne arrays vazios para campos sem informação no texto.`;
 
 const EXTRACT_SCHEMA = {
@@ -55,8 +61,9 @@ const EXTRACT_SCHEMA = {
       },
     },
     allergies: { type: 'array', items: { type: 'string' } },
+    medications_stopped: { type: 'array', items: { type: 'string' } },
   },
-  required: ['diagnoses', 'medications', 'allergies'],
+  required: ['diagnoses', 'medications', 'allergies', 'medications_stopped'],
 };
 
 const FINAL_SCHEMA = {
@@ -75,6 +82,7 @@ interface ProfileExtraction {
   diagnoses: Array<{ description: string }>;
   medications: Array<{ name: string; dosage: string; instructions: string }>;
   allergies: string[];
+  medications_stopped: string[];
 }
 interface HistoryExtraction {
   medical_history: string[];
@@ -134,7 +142,7 @@ serve(async (req) => {
     // patient belongs to the authenticated user before any write.
     const { data: ownedPatient } = await supabase
       .from('patients')
-      .select('id,name,age,date_of_birth,diagnoses,medications,allergies')
+      .select('id,name,age,date_of_birth,diagnoses,medications,allergies,medical_history')
       .eq('id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -224,7 +232,17 @@ serve(async (req) => {
       if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
 
       const doctorComments: string = body.doctorComments ?? '';
-      const patientSummary = buildPatientSummary(ownedPatient, chiefComplaint);
+      // Same record background as the first draft (the visit being saved is not stored yet).
+      const { data: lastConsultation } = await supabase
+        .from('consultations')
+        .select('created_at,chief_complaint,soap_note')
+        .eq('patient_id', patientId)
+        .eq('user_id', userId)
+        .neq('id', draftId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const patientSummary = buildPatientSummary(ownedPatient, chiefComplaint, { lastConsultation });
       const commentsSection = doctorComments.trim()
         ? `\n\nObservações do médico (incorpore obrigatoriamente no SOAP):\n${doctorComments.trim()}`
         : '';
@@ -320,21 +338,27 @@ serve(async (req) => {
       diagnoses: { description: string }[];
       medications: { name: string; dosage: string; instructions: string }[];
       allergies: string[];
-    } = { diagnoses: [], medications: [], allergies: [] };
+      /** Names, as stored in the chart, of medications this visit stopped. A proposal like the rest. */
+      medicationsStopped: string[];
+    } = { diagnoses: [], medications: [], allergies: [], medicationsStopped: [] };
 
     try {
       const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
       if (OPENAI_API_KEY && soapNote.trim()) {
-        assertGeminiTextBudget([{ text: soapNote }], EXTRACT_SYSTEM);
+        const currentMedications = (Array.isArray(ownedPatient.medications) ? ownedPatient.medications : [])
+          .map((m: unknown) => (typeof m === 'string' ? m : m && typeof m === 'object' && typeof (m as { name?: unknown }).name === 'string' ? (m as { name: string }).name : ''))
+          .map((name: string) => name.trim()).filter(Boolean);
+        const extractText = `Medicações em uso no cadastro:\n${currentMedications.length ? currentMedications.map((n: string) => `- ${n}`).join('\n') : '(nenhuma)'}\n\nEvolução SOAP desta consulta:\n${soapNote}`;
+        assertGeminiTextBudget([{ text: extractText }], EXTRACT_SYSTEM);
         // Gate the extraction on remaining budget too — a QuotaExceededError
         // here is caught below and simply skips extraction (the consultation
         // itself is already saved). Closes the saveDirect path where the main
         // quota check is skipped.
         assertOpenAiEnabled();
         const extractReservation = await checkQuota(supabase, userId, 8);
-        const { text: extractRaw, usage: extractUsage } = await callClinicalText(OPENAI_API_KEY, [{ text: soapNote }], {
+        const { text: extractRaw, usage: extractUsage } = await callClinicalText(OPENAI_API_KEY, [{ text: extractText }], {
           systemInstruction: EXTRACT_SYSTEM,
-          maxOutputTokens: 512,
+          maxOutputTokens: 1200,
           responseSchema: EXTRACT_SCHEMA,
         });
         await recordUsage(supabase, userId, creditsFromUsage(extractUsage), extractReservation.reservationId);
@@ -342,7 +366,11 @@ serve(async (req) => {
         const d = parsed.diagnoses.filter((x) => x.description.trim());
         const m = parsed.medications.filter((x) => x.name.trim());
         const a = parsed.allergies.filter((x) => x.trim());
-        if (d.length || m.length || a.length) profileUpdates = { diagnoses: d, medications: m, allergies: a };
+        // Only names that are really in the chart, and never one the same visit prescribes or keeps.
+        const kept = new Set(m.map((x) => x.name.trim().toLowerCase()));
+        const stopped = currentMedications.filter((name: string) =>
+          parsed.medications_stopped.some((x) => x.trim().toLowerCase() === name.toLowerCase()) && !kept.has(name.toLowerCase()));
+        if (d.length || m.length || a.length || stopped.length) profileUpdates = { diagnoses: d, medications: m, allergies: a, medicationsStopped: stopped };
       }
     } catch {
       /* non-critical — proceed without profile updates */

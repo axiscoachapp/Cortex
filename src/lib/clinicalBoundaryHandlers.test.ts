@@ -211,7 +211,8 @@ describe('clinical request boundaries before quota reservation', () => {
       const context = { name: 'x'.repeat(130900), age: 30, diagnoses: [], medications: [], allergies: [] };
       const request =
         name === 'chat-assistant'
-          ? { patientContext: context, userMessage: 'Question' }
+          // The assistant does not send the patient's name to the provider; a clinical field carries the size.
+          ? { patientContext: { ...context, name: 'x', diagnoses: ['x'.repeat(130900)] }, userMessage: 'Question' }
           : name === 'live-copilot'
             ? { patientContext: context, audioChunks: [{ data: 'YXVkaW8=', mimeType: 'audio/webm' }] }
             : name === 'suggest-questions'
@@ -371,7 +372,25 @@ describe('medication safety evidence boundary', () => {
     expect(handler.reserve).not.toHaveBeenCalled();
     expect(handler.generate).not.toHaveBeenCalled();
   });
-  it.each([null, patient])('does not infer interaction safety from chart excerpts (patient=%s)', async (patientId) => {
+  it('reports what the chart records on a medication question, under record-only rules, and still requires verification', async () => {
+    const db = database({ patients: [patientRow] });
+    db.rpc.mockImplementation(async (name: string) => ({ data: name === 'retrieve_patient_context'
+      ? { consultations: [{ id: 'c1', created_at: '2026-06-25T12:00:00Z', chief_complaint: 'Retorno', soap_note: 'Parecer: evitar estrogênio oral.' }], index: [], documents: [], coverage: {} } : true, error: null }));
+    const handler = loadHandler('chat-assistant', db);
+    handler.generate.mockResolvedValue({ text: 'O prontuário registra: evitar estrogênio oral (25/06/2026).', usage: { promptTokenCount: 0 } });
+    const response = await handler.run({ patientId: patient, userMessage: 'Posso prescrever estradiol oral para ela?' });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.safety).toEqual({ status: 'verification_required', topic: 'medication' });
+    expect(body.message).toMatch(/^O prontuário registra: evitar estrogênio oral/);
+    expect(body.message).toContain('não tem uma base farmacológica validada');
+    expect(handler.generate).toHaveBeenCalledOnce();
+    const options = handler.generate.mock.calls[0][2] as { systemInstruction: string };
+    expect(options.systemInstruction).toContain('MODO REGISTRO');
+    expect(options.systemInstruction).toContain('NÃO responde se é seguro');
+  });
+  it('does not infer interaction safety without a patient: fixed notice, no paid call', async () => {
+    const patientId = null;
     const db = database({ patients: [patientRow] });
     const handler = loadHandler('chat-assistant', db, (key) => key === 'GEMINI_API_KEY' ? undefined : 'synthetic');
     const response = await handler.run({ patientId, userMessage: 'Há interação entre paroxetina e propranolol?' });

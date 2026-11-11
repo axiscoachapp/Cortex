@@ -19,6 +19,14 @@ It lists:
 
 It exits with 1 when migrations or functions are behind. Run it before saying production is ready, and after every push to `main`.
 
+## 1b. Run SQL tests without a local database
+
+```bash
+node scripts/supabase-rollout/sqltest.mjs --project <ref> --with-pending supabase/tests/clinical-integrity.test.sql
+```
+
+Each file runs inside one outer transaction that is always rolled back; the file's own `begin`/`commit`/`rollback` become savepoints. `--with-pending` first runs, in the same transaction, the migrations the project does not have yet, so a new migration and its tests are proven together before anything is applied. Use it only on a project whose data is test data.
+
 ## 2. Backup and fingerprint
 
 ```bash

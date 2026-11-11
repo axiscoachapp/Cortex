@@ -28,3 +28,15 @@ A publicação deve coordenar as12 funções alteradas e a UI antes de habilitar
 - [Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra)
 - [Transcrição](https://developers.openai.com/api/docs/guides/speech-to-text) e [contrato](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create)
 - [Responses](https://developers.openai.com/api/docs/guides/migrate-to-responses), [JSON estrito](https://developers.openai.com/api/docs/guides/structured-outputs) e [anexos](https://developers.openai.com/api/docs/guides/file-inputs)
+
+## Alterações de 11/11/2026 (Claude, por pedido direto do usuário, com medição)
+
+Avaliação real com paciente sintética de 16 consultas e áudio de duas vozes: [AVALIACAO_IA_PACIENTE_ANTIGO.md](../../reviews/2026-11-10/revisao-geral/AVALIACAO_IA_PACIENTE_ANTIGO.md).
+
+- **Atribuição de falantes:** a regra "não inferir médico/paciente" deixou a evolução vazia em 2 de 3 execuções e cheia de ressalvas na terceira. Passa a valer a atribuição pelo contexto, sem ressalvas de autoria no texto; a dúvida vai para `clarifications` só quando muda o sentido clínico. A revisão do médico antes de salvar continua obrigatória. `gpt-4o-transcribe-diarize` foi testado e descartado (54 s e erros em termos clínicos).
+- **Contexto do prontuário na evolução:** `transcribe-consultation` e a regeneração de `finalize-consultation` recebem a história médica e a avaliação e o plano da última consulta, em bloco marcado como contexto. A regra "a evolução vem só do que foi dito" permanece.
+- **Alertas:** `drug_interaction_alerts` cobre também alergia registrada e contraindicação anotada no prontuário.
+- **Extração pós-salvamento:** recebe as medicações do cadastro, devolve só as iniciadas ou alteradas e `medicationsStopped` (proposta de retirada, confirmada pelo médico no cartão).
+- **Assistente:** `retrieve_patient_context` reescrita (migration `20261111100000`); anotações mais recentes; nome do paciente fora do prompt; pergunta de medicação com paciente responde só o que o prontuário registra e mantém o aviso fixo.
+- **Pré-consulta:** avaliação e plano completos da última consulta, história médica e resumo das cinco anteriores; regra de não inventar.
+

@@ -283,7 +283,28 @@ export function collapseBlankLines(s: string): string {
   return (s ?? '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-export function buildPatientSummary(ctx: unknown, _chiefComplaint: string): string {
+/** Assessment and plan of a stored note, for use as background in a later prompt. Handles
+ * "**A (Avaliação):**", "**A:**", "**A — Avaliação**" and markdown headings ("## Avaliação").
+ * Without a recognizable heading the end of the note is used. A cut is always marked. */
+export function assessmentAndPlan(note: string, max = 2400): string {
+  const text = (note ?? '').trim();
+  if (!text) return '';
+  const heading = /(^|\n)[ \t]*(\*\*A(?=[\s:*—(])|#{1,4}[ \t]*(A\b|Avalia))/.exec(text);
+  if (heading) {
+    const section = text.slice(heading.index).trim();
+    return section.length > max ? `${section.slice(0, max)} [texto cortado]` : section;
+  }
+  return text.length > max ? `[início omitido] ${text.slice(-max)}` : text;
+}
+
+export interface RecordBackground {
+  lastConsultation?: { created_at?: string | null; chief_complaint?: string | null; soap_note?: string | null } | null;
+}
+
+/** Patient block of the SOAP prompts. With `background`, adds the record context a returning
+ * patient needs (medical history and the last visit's assessment and plan), clearly marked as
+ * not being content of the current consultation. */
+export function buildPatientSummary(ctx: unknown, _chiefComplaint: string, background?: RecordBackground): string {
   if (!isRecord(ctx)) return '';
   const summarize = (value: unknown, fields: string[]) => Array.isArray(value)
     ? value.map(item => typeof item === 'string' ? item : isRecord(item) ? fields.map(field => typeof item[field] === 'string' ? item[field] : '').filter(Boolean).join(' ') : '').filter(Boolean).join('; ') : '';
@@ -291,5 +312,18 @@ export function buildPatientSummary(ctx: unknown, _chiefComplaint: string): stri
   const meds = summarize(ctx.medications, ['name','dosage']) || 'Nenhuma registrada';
   const allergies = (Array.isArray(ctx.allergies) ? ctx.allergies.filter(item => typeof item === 'string').join(', ') : '') || 'Não registradas';
   const age = currentPatientAge(ctx);
-  return `Paciente: ${ctx.name}, ${age === null ? 'idade não informada' : `${age} anos`}\nDiagnósticos: ${diagnoses}\nMedicações: ${meds}\nAlergias: ${allergies}`;
+  const base = `Paciente: ${ctx.name}, ${age === null ? 'idade não informada' : `${age} anos`}\nDiagnósticos: ${diagnoses}\nMedicações: ${meds}\nAlergias: ${allergies}`;
+  if (!background) return base;
+  const lines: string[] = [];
+  const history = typeof ctx.medical_history === 'string' ? ctx.medical_history.trim() : '';
+  if (history) lines.push(`História médica (cadastro): ${history.length > 1500 ? `${history.slice(0, 1500)} [texto cortado]` : history}`);
+  const last = background.lastConsultation;
+  if (last && typeof last.soap_note === 'string' && last.soap_note.trim()) {
+    const when = typeof last.created_at === 'string' && Number.isFinite(Date.parse(last.created_at))
+      ? new Date(last.created_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'data não registrada';
+    lines.push(`Última consulta registrada (${when}) — queixa: ${(last.chief_complaint ?? '').trim() || 'não registrada'}`);
+    lines.push(`Avaliação e plano registrados naquela consulta:\n${assessmentAndPlan(last.soap_note, 1800)}`);
+  }
+  if (!lines.length) return base;
+  return `CONTEXTO DO PRONTUÁRIO (não é conteúdo desta consulta; use só para entender referências e para os alertas):\n${base}\n${lines.join('\n')}\nFIM DO CONTEXTO DO PRONTUÁRIO`;
 }

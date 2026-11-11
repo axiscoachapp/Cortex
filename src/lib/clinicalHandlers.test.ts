@@ -76,6 +76,7 @@ function database(seed: Record<string, Row[]>) {
           filters.push((row) => expected.includes(row[key]));
           return query;
         },
+        neq: (key: string, excluded: unknown) => { filters.push((row) => row[key] !== excluded); return query; },
         order: () => query,
         limit: () => query,
         insert: (rows: Row | Row[]) => {

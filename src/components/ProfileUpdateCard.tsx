@@ -62,6 +62,10 @@ export function ProfileUpdateCard({
   const [editDx, setEditDx]      = useState<string[]>(initial.diagnoses.map(d => d.description));
   const [editMeds, setEditMeds]  = useState<Array<{ name: string; dosage: string; instructions: string }>>(initial.medications);
   const [editAlg, setEditAlg]    = useState<string[]>(initial.allergies);
+  // Medications the visit stopped: proposed for removal from "em uso"; the doctor can keep any of them.
+  const proposedStops = (initial.medicationsStopped ?? []).filter(name =>
+    existing.medications.some(m => m.name.trim().toLowerCase() === name.trim().toLowerCase()));
+  const [stops, setStops] = useState<string[]>(proposedStops);
 
   // "add" input buffers
   const [addDx, setAddDx]   = useState('');
@@ -85,25 +89,30 @@ export function ProfileUpdateCard({
     );
   }
 
-  const hasSomething = initial.diagnoses.length > 0 || initial.medications.length > 0 || initial.allergies.length > 0;
+  const hasSomething = initial.diagnoses.length > 0 || initial.medications.length > 0 || initial.allergies.length > 0 || proposedStops.length > 0;
   if (!hasSomething && missingFields.length === 0) return null;
 
   const handleAccept = async () => {
     const wasEditing = status === 'editing';
+    // Text still sitting in an "add" field counts: saving must not drop it silently.
+    const pendingDx = addDx.trim();
+    const pendingAlg = addAlg.trim();
+    const pendingMed = addMed.name.trim() ? [{ ...addMed, name: addMed.name.trim() }] : [];
     const data: ProfileUpdates =
       wasEditing
         ? {
-            diagnoses:   editDx.filter(Boolean).map(d => ({ description: d })),
-            medications: editMeds.filter(m => m.name.trim()),
-            allergies:   editAlg.filter(Boolean),
+            diagnoses:   [...editDx, pendingDx].filter(Boolean).map(d => ({ description: d })),
+            medications: [...editMeds, ...pendingMed].filter(m => m.name.trim()),
+            allergies:   [...editAlg, pendingAlg].filter(Boolean),
           }
         : initial;
+    const stopped = new Set(stops.map(name => name.trim().toLowerCase()));
 
     setStatus('saving');
     try {
       await onAccept({
         diagnoses:   mergeDiagnoses(existing.diagnoses, data.diagnoses),
-        medications: mergeMedications(existing.medications, data.medications),
+        medications: mergeMedications(existing.medications.filter(m => !stopped.has(m.name.trim().toLowerCase())), data.medications),
         allergies:   mergeAllergies(existing.allergies, data.allergies),
       });
       setStatus('accepted');
@@ -137,6 +146,19 @@ export function ProfileUpdateCard({
             </p>
           ) : null;
         })}
+        {proposedStops.length > 0 && (
+          <fieldset className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+            <legend className="px-1 font-semibold">Retirar das medicações em uso</legend>
+            <p className="mb-2">A evolução indica suspensão. Desmarque o que deve continuar no cadastro.</p>
+            {proposedStops.map(name => (
+              <label key={name} className="flex min-h-9 items-center gap-2">
+                <input type="checkbox" className="h-4 w-4" checked={stops.includes(name)} disabled={status === 'saving'}
+                  onChange={e => setStops(e.target.checked ? [...stops, name] : stops.filter(x => x !== name))} />
+                <span>{name}</span>
+              </label>
+            ))}
+          </fieldset>
+        )}
         {/* Diagnoses */}
         {(status === 'editing' ? editDx.length > 0 || true : initial.diagnoses.length > 0) && (
           <Section

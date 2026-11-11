@@ -36,9 +36,21 @@ set local role service_role;
 select set_config('request.jwt.claim.role','service_role',true);
 do $$ declare result jsonb; begin
  result:=public.retrieve_patient_context('91000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000011','PSA');
- assert result->'consultations'->0->>'id'='91000000-0000-4000-8000-000000000031','Relevant old encounter excluded by recency';
- assert result->'consultations'->0->>'soap_note' like '%PSA%','Matched evidence lost outside beginning of note';
+ -- 20261111100000: the relevant old encounter is kept (ranked by any matching word), the list is
+ -- ordered by date, the four most recent always come whole, and the rest is announced as an index.
+ assert exists(select 1 from jsonb_array_elements(result->'consultations') c where c->>'id'='91000000-0000-4000-8000-000000000031'
+   and c->>'soap_note' like '%PSA%' and (c->>'truncated')::boolean),'Relevant old encounter excluded by recency, or its matched evidence lost outside the beginning of the note';
+ assert result->'consultations'->-1->>'id'='91000000-0000-4000-8000-000000000031','Consultations not ordered most recent first';
+ assert jsonb_array_length(result->'consultations')=12 and jsonb_array_length(result->'index')=9,'Selected plus indexed consultations do not cover the chart';
+ assert (select bool_and(c->>'soap_note'='Rotina sintética' and not (c->>'truncated')::boolean) from jsonb_array_elements(result->'consultations') c
+   where c->>'id'<>'91000000-0000-4000-8000-000000000031'),'A short note was cut or marked as truncated';
  assert (result->'coverage'->>'consultationsTotal')::integer=21,'Total search coverage not exposed';
  assert (result->'coverage'->>'limited')::boolean,'Bounded excerpts presented as complete chart';
+ -- A natural question (several words, not all present in one note) still finds the encounter.
+ result:=public.retrieve_patient_context('91000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000011','Qual foi o resultado do PSA no ano passado?');
+ assert exists(select 1 from jsonb_array_elements(result->'consultations') c where c->>'id'='91000000-0000-4000-8000-000000000031'),'A multi-word question lost the matching encounter';
+ -- Only stop words: no query, the most recent ones come and nothing fails.
+ result:=public.retrieve_patient_context('91000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000011','e o que foi?');
+ assert jsonb_array_length(result->'consultations')=12,'Question without search terms returned nothing';
 end $$;
 rollback;
