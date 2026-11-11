@@ -24,6 +24,9 @@
 //     .clinic-subpage-shell, so a "full page" capture is only the first
 //     screen there anyway; this script then also saves a `-full` capture
 //     with the inner scroller expanded.
+//   AUDIT_DOCTOR_AGENDA=1                   doctor's /agenda: appointments in every status (one
+//                                           booked by the reception, one before 07:00) and the
+//                                           booking dialog empty / invalid / editing
 import { chromium, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
@@ -96,6 +99,17 @@ const state = {
     { id: 'd5110000-0000-4000-8000-0000000000b2', user_id: doctorId, title: 'Protocolo sintético de climatério', source_type: 'text', status: 'ready', review_status: 'approved', review_revision: 1, index_revision: 1, char_count: 1200, created_at: day(-20), indexed_at: day(-20), reviewed_at: day(-20), reviewed_by: doctorId, reviewer_name: 'Dra. Médica Sintética', source_reference: null, source_text: 'Texto sintético.', source_version: null, embedding_model: null, index_started_at: null, supersedes_document_id: null },
   ],
 };
+// Doctor agenda (AUDIT_DOCTOR_AGENDA=1, agenda-medico): more appointment states on the doctor's own agenda.
+if (process.env.AUDIT_DOCTOR_AGENDA === '1') {
+  const base = state.appointments[0];
+  const extra = (n, start, end, over) => ({ ...base, id: `d5110000-0000-4000-8000-0000000000e${n}`, start_time: start, end_time: end, ...over });
+  state.appointments.push(
+    extra(3, day(0, 11), day(0, 11, 30), { patient_id: pid(3), title: 'Reserva da recepção', clinic_id: 'd5120000-0000-4000-8000-000000000001', type: 'novo' }),
+    extra(4, day(0, 14), day(0, 14, 30), { patient_id: pid(2), title: 'Paciente Sintética 2', status: 'cancelado', type: 'urgencia' }),
+    extra(5, day(-1, 16), day(-1, 16, 45), { status: 'realizado', type: 'seguimento' }),
+    extra(6, day(1, 6, 30), day(1, 7), { patient_id: pid(2), title: 'Paciente Sintética 2', type: 'retorno' }),
+  );
+}
 const unknown = new Map();
 
 function respond(route, body, status = 200) {
@@ -890,6 +904,32 @@ try {
         await snap('agendamento-novo-contato-horarios');
         // An open dialog may abort the first navigation; retry once.
         await page.goto(origin + path).catch(async () => { await page.waitForTimeout(800); await page.goto(origin + path); });
+      }
+      // Doctor agenda (AUDIT_DOCTOR_AGENDA=1): booking dialog empty, invalid and editing; the waiting list view.
+      if (process.env.AUDIT_DOCTOR_AGENDA === '1' && path === '/agenda') {
+        const snap = async (name) => {
+          await page.waitForTimeout(500);
+          await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: false });
+          const box = (await page.getByRole('dialog').count()) ? await page.getByRole('dialog').first().boundingBox() : null;
+          report.routes[`${label} ${name}`] = { ...(await inspect(page, viewport.width)), ...(box ? { dialog: { top: Math.round(box.y), bottom: Math.round(box.y + box.height), viewport: viewport.height } } : {}),
+            pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        };
+        const dialog = page.getByRole('dialog');
+        await page.getByRole('button', { name: 'Novo agendamento' }).click();
+        await dialog.waitFor();
+        await snap('agenda-medico-novo');
+        await dialog.getByRole('button', { name: 'Agendar' }).click();
+        await snap('agenda-medico-novo-invalido');
+        await page.keyboard.press('Escape');
+        await dialog.waitFor({ state: 'detached' }).catch(() => {});
+        await page.locator('.rbc-event').first().click();
+        await dialog.waitFor();
+        await snap('agenda-medico-editar');
+        await page.keyboard.press('Escape');
+        await dialog.waitFor({ state: 'detached' }).catch(() => {});
+        await page.goto(origin + '/agenda?queue=scheduling');
+        await page.waitForTimeout(1200);
+        await snap('agenda-medico-lista-espera');
       }
       // Menu bot: the editor and a local simulated conversation (nothing is sent).
       if (CLINIC_ADMIN && path === '/configuracoes?secao=whatsapp') {
