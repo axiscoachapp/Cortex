@@ -15,6 +15,7 @@ import { functionErrorBody } from '@/lib/functionErrors';
 import { ClinicalMarkdown } from '@/components/ClinicalMarkdown';
 import { WorkspaceShell } from '@/components/WorkspaceShell';
 import { PageHeading } from '@/components/PageHeading';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 export interface DocumentTemplate {
   id: string;
@@ -44,6 +45,8 @@ export default function TemplatesPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [preview, setPreview] = useState<DocumentTemplate | null>(null);
+  // The template used for new evolutions lives in user_settings.active_template_id.
+  const { activeTemplateId, setActiveTemplateId, isSaving: settingsSaving, isLoading: settingsLoading } = useUserSettings();
 
   const {
     data: templates = [],
@@ -66,6 +69,8 @@ export default function TemplatesPage() {
     enabled: !!user?.id,
     staleTime: 30_000,
   });
+
+  const activeTemplate = templates.find((t) => t.id === activeTemplateId);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -227,6 +232,7 @@ export default function TemplatesPage() {
     if (error) toast({ title: 'Erro ao excluir', variant: 'destructive' });
     else {
       toast({ title: 'Modelo excluído' });
+      if (t.id === activeTemplateId) setActiveTemplateId(null);
       invalidate();
     }
   };
@@ -259,6 +265,29 @@ export default function TemplatesPage() {
           />
         </div>
 
+        {!isLoading && !isError && !settingsLoading && (
+          <div
+            role="status"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm"
+          >
+            <p className="min-w-0 break-words">
+              <span className="text-muted-foreground">Em uso nas evoluções: </span>
+              <span className="font-medium">{activeTemplate ? activeTemplate.name : 'estrutura SOAP padrão'}</span>
+            </p>
+            {activeTemplateId && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="min-h-10"
+                disabled={settingsSaving}
+                onClick={() => setActiveTemplateId(null)}
+              >
+                Usar a estrutura padrão
+              </Button>
+            )}
+          </div>
+        )}
+
         {isLoading ? (
           <div className="space-y-2">
             {[0, 1, 2].map((i) => (
@@ -278,6 +307,7 @@ export default function TemplatesPage() {
           <div className="space-y-2">
             {filtered.map((t) => {
               const builtin = t.user_id === null;
+              const active = t.id === activeTemplateId;
               return (
                 <div
                   key={t.id}
@@ -300,6 +330,22 @@ export default function TemplatesPage() {
                   >
                     {builtin ? 'Cortex' : 'Meu'}
                   </span>
+                  {active ? (
+                    <span className="text-[0.6875rem] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">
+                      Em uso
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 shrink-0 text-xs"
+                      aria-label={`Usar ${t.name} nas evoluções`}
+                      disabled={settingsSaving || settingsLoading}
+                      onClick={() => setActiveTemplateId(t.id)}
+                    >
+                      Usar nas evoluções
+                    </Button>
+                  )}
                   <div className="flex items-center gap-0.5 shrink-0">
                     {!builtin && (
                       <Button
@@ -349,9 +395,9 @@ export default function TemplatesPage() {
         )}
 
         <p className="text-[0.6875rem] text-muted-foreground leading-relaxed pt-2">
-          O modelo escolhido ao iniciar uma gravação substitui a estrutura SOAP padrão. Use títulos (##), itens com
-          descrição e comandos condicionais entre parênteses — ex.: "(incluir apenas se mencionado explicitamente na
-          transcrição. Caso contrário, omitir completamente)".
+          O modelo em uso organiza as próximas evoluções escritas pela IA, no lugar da estrutura SOAP padrão. Você
+          também pode trocá-lo em Configurações. Para personalizar, use um título por seção e diga entre parênteses
+          quando incluir um item, por exemplo: "(incluir só se for mencionado na consulta)".
         </p>
       </div>
 
