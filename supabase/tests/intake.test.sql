@@ -125,13 +125,14 @@ begin
   r := public.intake_review(c, req, doctor, 'health', rev);
   r := public.intake_review(c, req, rec, 'registration', (r->>'revision')::int);
   assert (select registration_reviewed_by=rec and health_reviewed_by=doctor from public.intake_requests where id=req), 'review marks';
-  assert public.intake_public_open(h1)->>'state'='reviewed' and not (public.intake_public_open(h1) ? 'form' and public.intake_public_open(h1)->'form' <> 'null'::jsonb),
-    'reviewed form still offered';
-  assert pg_temp.sqlstate_of(format($q$select public.intake_public_submit(%L,2,'[]','[]',false,'v1')$q$, h1))='55000', 'resubmitted after review';
+  -- Since 20261111140000 a review no longer locks the form: the patient corrects through the same link
+  -- and the reviewer sees the change (intake-history-export.test.sql).
+  assert public.intake_public_open(h1)->>'state'='answered' and public.intake_public_open(h1)->'form' <> 'null'::jsonb,
+    'reviewed form no longer correctable';
 
   -- Rotation: the old link stops working at once.
   r := public.intake_request_rotate(c, req, rec, 'bbbbbbbbbbbbbbbbbbbbbb', h2);
-  assert public.intake_public_open(h1) is null and public.intake_public_open(h2)->>'state'='reviewed', 'rotation';
+  assert public.intake_public_open(h1) is null and public.intake_public_open(h2)->>'state'='answered', 'rotation';
   assert pg_temp.sqlstate_of(format($q$select public.intake_request_rotate(%L,%L,%L,'cccccccccccccccccccccc',%L)$q$, c, req, rec2, repeat('3',64)))='42501', 'out-of-scope rotation';
 
   -- List: the reception sees its doctor's appointments and their state; out of scope sees nothing.

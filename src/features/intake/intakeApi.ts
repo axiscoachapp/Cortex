@@ -1,7 +1,7 @@
 // Clients of the pre-consultation Edge Functions. Contract: docs/product/pre-consulta/CONTRATO.md.
 import { supabase } from '@/integrations/supabase/client';
 import { functionErrorBody, functionErrorMessage } from '@/lib/functionErrors';
-import type { AnswerItem, IntakeForm } from '../../../supabase/functions/_shared/intakeForm';
+import type { AnswerChange, AnswerItem, IntakeForm } from '../../../supabase/functions/_shared/intakeForm';
 
 export class IntakeApiError extends Error {
   constructor(message: string, readonly code: string | null, readonly errors: string[] = []) {
@@ -52,6 +52,9 @@ export interface IntakeListItem {
   registrationReviewedAt: string | null;
   healthReviewedAt: string | null;
   revision: number | null;
+  /** The answers changed after the review (health: only for the appointment's doctor, otherwise null). */
+  registrationChangedAfterReview?: boolean | null;
+  healthChangedAfterReview?: boolean | null;
 }
 
 export interface IntakeResponse {
@@ -68,9 +71,18 @@ export interface IntakeResponse {
   healthReviewedAt: string | null;
   healthVisible: boolean;
   health: AnswerItem[] | null;
+  /** What changed since the submission the review covered; null when there is nothing to show. */
+  registrationChanges?: AnswerChange[] | null;
+  healthChanges?: AnswerChange[] | null;
 }
 
 export interface IntakeFormState { starter: boolean; revision: number; enabled: boolean; form: IntakeForm; updatedAt: string | null }
 
 export const dateTime = (iso: string) =>
   new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+/** A link is only made or copied while the visit is still ahead (the server refuses otherwise). */
+export function acceptsLink(i: Pick<IntakeListItem, 'appointmentStatus' | 'start' | 'end'>, now = Date.now()): boolean {
+  const end = Math.max(Date.parse(i.end), Date.parse(i.start));
+  return (i.appointmentStatus === 'agendado' || i.appointmentStatus === 'confirmado') && Number.isFinite(end) && end > now;
+}

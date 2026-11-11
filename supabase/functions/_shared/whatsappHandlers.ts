@@ -648,7 +648,10 @@ export function renderParams(rule: Pick<AutomationRow, 'params' | 'link_url'>, c
   });
 }
 
-export const renderBody = (body: string, params: string[]) => body.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, n) => params[Number(n) - 1] ?? '');
+/** Stored in place of the pre-consultation link (contracts: whatsapp and pre-consulta). */
+export const PRE_CONSULTA_PLACEHOLDER = '[link da pré-consulta]';
+
+export const renderBody =(body: string, params: string[]) => body.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, n) => params[Number(n) - 1] ?? '');
 
 export function inQuietHours(now: Date): boolean {
   const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(now));
@@ -705,12 +708,15 @@ export async function automationsHandler(req: Request, deps: WhatsAppDeps): Prom
     const finalSkip = skip ?? linkSkip;
     const params = finalSkip ? [] : renderParams(rule, c, preConsulta);
     if (!finalSkip && params.some((p) => !p.trim())) { await fail(rule, c, 'Campo do modelo vazio.'); tally.failed++; continue; }
+    // The pre-consultation link is a credential: the stored copy (inbox body and template fields)
+    // gets a placeholder; the real link only goes to Meta in the send below.
+    const stored = finalSkip ? [] : renderParams(rule, c, preConsulta ? PRE_CONSULTA_PLACEHOLDER : null);
     let begun: { runId: string; messageId?: string; to?: string; skipped: boolean } | null;
     try {
       begun = (await deps.rpc('whatsapp_automation_begin', {
         p_automation: rule.id, p_rule_revision: rule.revision, p_appointment: c.appointment_id, p_start: c.appointment_start,
         p_wa_id: finalSkip ? null : c.phone, p_skip_reason: finalSkip,
-        p_body: finalSkip ? '' : renderBody(template!.body, params), p_template: finalSkip ? null : { name: rule.template_name, language: rule.template_language, params },
+        p_body: finalSkip ? '' : renderBody(template!.body, stored), p_template: finalSkip ? null : { name: rule.template_name, language: rule.template_language, params: stored },
       })) as typeof begun;
     } catch (e) {
       await fail(rule, c, `Preparação: ${(e as { code?: string })?.code ?? 'erro'}`);

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { starterForm } from '../../supabase/functions/_shared/intakeForm';
+import { answerChanges, starterForm, type AnswerItem } from '../../supabase/functions/_shared/intakeForm';
 import {
   intakeApiHandler, intakeLink, intakePublicHandler, linkToken, tokenHash, type IntakeCaller, type IntakeDeps, type IntakeRequestRow,
 } from '../../supabase/functions/_shared/intakeHandlers';
@@ -12,7 +12,8 @@ const APPT = 'e8700000-0000-4000-8000-000000000001';
 const REQ = 'e8900000-0000-4000-8000-000000000001';
 const SECRET = 'synthetic-intake-secret-0123456789abcdef';
 
-function harness(opts: { caller?: IntakeCaller; config?: Partial<IntakeDeps['config']>; open?: Record<string, unknown> | null; request?: Partial<IntakeRequestRow> | null } = {}) {
+function harness(opts: { caller?: IntakeCaller; config?: Partial<IntakeDeps['config']>; open?: Record<string, unknown> | null; request?: Partial<IntakeRequestRow> | null;
+  history?: Record<number, { registration: AnswerItem[]; health: AnswerItem[] }> } = {}) {
   const calls: Array<[string, Record<string, unknown>]> = [];
   const results: Record<string, unknown> = {
     intake_public_open: opts.open === undefined ? { state: 'open', clinicName: 'Clínica Exemplo', doctorName: 'Dra. Exemplo', start: '2026-11-10T13:00:00Z',
@@ -25,7 +26,8 @@ function harness(opts: { caller?: IntakeCaller; config?: Partial<IntakeDeps['con
     id: REQ, clinic_id: CLINIC, appointment_id: APPT, doctor_id: DOCTOR, appointment_start: '2026-11-10T13:00:00Z', status: 'answered',
     answered_at: '2026-11-07T12:00:00Z', submissions: 1, registration: [{ id: 'nome', label: 'Nome', value: 'Maria', field: 'name' }],
     health: [{ id: 'motivo', label: 'Motivo', value: 'Rotina' }], whatsapp_consent: true, registration_reviewed_at: null, health_reviewed_at: null,
-    revision: 4, expires_at: '2026-11-10T15:30:00Z', opened_at: '2026-11-07T11:00:00Z', ...(opts.request ?? {}),
+    revision: 4, expires_at: '2026-11-10T15:30:00Z', opened_at: '2026-11-07T11:00:00Z',
+    registration_reviewed_submission: null, health_reviewed_submission: null, ...(opts.request ?? {}),
   };
   const deps: IntakeDeps = {
     corsHeaders: { 'Access-Control-Allow-Origin': '*' },
@@ -41,6 +43,7 @@ function harness(opts: { caller?: IntakeCaller; config?: Partial<IntakeDeps['con
       form: async () => null,
       clinicName: async () => 'Clínica Exemplo',
       requestByAppointment: async (clinicId, appointmentId) => (clinicId === CLINIC && appointmentId === APPT ? request : null),
+      submission: async (requestId, n) => (requestId === REQ ? opts.history?.[n] ?? null : null),
     },
   };
   const post = (handler: typeof intakeApiHandler, body: unknown) =>
@@ -164,5 +167,33 @@ describe('intake-api', () => {
     const off = await h.api({ action: 'link', appointmentId: APPT });
     expect([off.status, (await off.json()).error]).toEqual([409, 'A pré-consulta não está ativa nesta clínica']);
     expect((await h.api({ action: 'link', appointmentId: 'x' })).status).toBe(400);
+  });
+
+  it('tells each reviewer what changed after their review, and health changes only to the doctor', async () => {
+    const history = { 1: { registration: [{ id: 'nome', label: 'Nome', value: 'Mari', field: 'name' as const }], health: [{ id: 'motivo', label: 'Motivo', value: 'Dor' }] } };
+    const request = { submissions: 2, registration_reviewed_at: 'x', registration_reviewed_submission: 1, health_reviewed_at: 'y', health_reviewed_submission: 1 };
+    const doctor = await (await harness({ request, history, caller: { userId: DOCTOR, clinicId: CLINIC, admin: false, reception: false } })
+      .api({ action: 'response', appointmentId: APPT })).json();
+    expect(doctor.request.registrationChanges).toEqual([{ id: 'nome', label: 'Nome', before: 'Mari', after: 'Maria' }]);
+    expect(doctor.request.healthChanges).toEqual([{ id: 'motivo', label: 'Motivo', before: 'Dor', after: 'Rotina' }]);
+    const reception = await (await harness({ request, history }).api({ action: 'response', appointmentId: APPT })).json();
+    expect(reception.request.registrationChanges).toHaveLength(1);
+    expect(reception.request.healthChanges).toBeNull();
+    // Reviewed the latest submission: nothing to show.
+    const current = await (await harness({ request: { ...request, registration_reviewed_submission: 2 }, history }).api({ action: 'response', appointmentId: APPT })).json();
+    expect(current.request.registrationChanges).toBeNull();
+  });
+});
+
+describe('answerChanges', () => {
+  it('lists changed, added and removed answers in form order', () => {
+    const before: AnswerItem[] = [{ id: 'a', label: 'A', value: 'x' }, { id: 'b', label: 'B', value: true }, { id: 'c', label: 'C', value: ['1', '2'] }];
+    const after: AnswerItem[] = [{ id: 'a', label: 'A', value: 'x' }, { id: 'b', label: 'B', value: false }, { id: 'd', label: 'D', value: '2026-01-02' }];
+    expect(answerChanges(before, after)).toEqual([
+      { id: 'b', label: 'B', before: 'Sim', after: 'Não' },
+      { id: 'd', label: 'D', before: null, after: '02/01/2026' },
+      { id: 'c', label: 'C', before: '1, 2', after: null },
+    ]);
+    expect(answerChanges(before, before)).toEqual([]);
   });
 });

@@ -4,7 +4,7 @@
  * - intake-api: clinic staff (JWT + clinic_access), for the form, links, answers and reviews.
  * Contract: docs/product/pre-consulta/CONTRATO.md.
  */
-import { starterForm, validateAnswers, validateForm, type AnswerItem, type IntakeForm } from './intakeForm.ts';
+import { answerChanges, starterForm, validateAnswers, validateForm, type AnswerItem, type IntakeForm } from './intakeForm.ts';
 
 export interface IntakeCaller { userId: string; clinicId: string; admin: boolean; reception: boolean }
 
@@ -13,6 +13,8 @@ export interface IntakeRequestRow {
   answered_at: string | null; submissions: number; registration: AnswerItem[] | null; health: AnswerItem[] | null;
   whatsapp_consent: boolean | null; registration_reviewed_at: string | null; health_reviewed_at: string | null; revision: number;
   expires_at: string; opened_at: string | null;
+  /** Which submission each review covered (migration 20261111140000). */
+  registration_reviewed_submission: number | null; health_reviewed_submission: number | null;
 }
 
 export interface IntakeFormRow { clinic_id: string; enabled: boolean; definition: IntakeForm; revision: number; updated_at: string }
@@ -28,6 +30,8 @@ export interface IntakeDeps {
     form(clinicId: string): Promise<IntakeFormRow | null>;
     clinicName(clinicId: string): Promise<string>;
     requestByAppointment(clinicId: string, appointmentId: string): Promise<IntakeRequestRow | null>;
+    /** One entry of the append-only submission history. */
+    submission(requestId: string, submission: number): Promise<{ registration: AnswerItem[]; health: AnswerItem[] } | null>;
   };
   log?(event: string, detail: Record<string, unknown>): void;
 }
@@ -248,12 +252,21 @@ export async function intakeApiHandler(req: Request, deps: IntakeDeps): Promise<
         const allowed = await call<boolean>(deps, 'intake_scope_ok', { p_clinic: caller.clinicId, p_doctor: r.doctor_id, p_actor: caller.userId });
         if (!allowed) throw new HttpError(403, 'Sem permissão para esta agenda.', 'forbidden');
         const isDoctor = caller.userId === r.doctor_id;
+        // "Changed after your review": the current answers against the submission the review covered.
+        const since = async (part: 'registration' | 'health', reviewed: number | null) => {
+          if (!reviewed || reviewed >= r.submissions) return null;
+          const seen = await deps.store.submission(r.id, reviewed);
+          const changes = answerChanges(seen?.[part] ?? [], r[part] ?? []);
+          return changes.length ? changes : null;
+        };
         return json(deps, 200, { request: {
           id: r.id, state: r.status, revision: r.revision, openedAt: r.opened_at, answeredAt: r.answered_at, submissions: r.submissions,
           expiresAt: r.expires_at, whatsappConsent: r.whatsapp_consent, registration: r.registration ?? [],
           registrationReviewedAt: r.registration_reviewed_at, healthReviewedAt: r.health_reviewed_at,
           // Health answers only for the appointment's doctor.
           healthVisible: isDoctor, health: isDoctor ? (r.health ?? []) : null,
+          registrationChanges: await since('registration', r.registration_reviewed_submission),
+          healthChanges: isDoctor ? await since('health', r.health_reviewed_submission) : null,
         } });
       }
       case 'review': {

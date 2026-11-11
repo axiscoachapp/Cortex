@@ -433,8 +433,11 @@ describe('agenda automations', () => {
     h.rpcResults.whatsapp_automation_begin = { runId: 'r1', messageId: MSG, to: '5541999990000', skipped: false };
     expect(await (await cron(h)).json()).toMatchObject({ sent: 1 });
     expect(h.deps.intakeLink).toHaveBeenCalledWith(candidate.clinic_id, candidate.appointment_id);
-    expect(h.calls.find(([n]) => n === 'whatsapp_automation_begin')![1]).toMatchObject({
-      p_template: { params: ['Maria', 'https://app.example.com.br/pre-consulta/' + 'A'.repeat(43)] } });
+    // The stored copy (inbox body and template fields) never carries the usable link; Meta gets it.
+    const begin = h.calls.find(([n]) => n === 'whatsapp_automation_begin')![1];
+    expect(begin).toMatchObject({ p_template: { params: ['Maria', '[link da pré-consulta]'] } });
+    expect(JSON.stringify(begin)).not.toContain('A'.repeat(43));
+    expect(JSON.stringify(vi.mocked(h.graph.send).mock.calls)).toContain('https://app.example.com.br/pre-consulta/' + 'A'.repeat(43));
 
     const off = await connectedHarness();
     off.deps.now = () => new Date('2026-12-08T15:00:00Z');

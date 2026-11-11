@@ -141,7 +141,8 @@ Sempre `POST`, com JSON `{ "action": ..., ... }`. Os erros vêm como `{ error, c
 O administrador cria regras em Configurações. Cada regra combina:
 - quando: `before_start` (N minutos antes do início) ou `after_end` (N minutos depois do fim), com até 14 dias;
 - qual modelo aprovado enviar;
-- de onde vem cada campo do modelo: `paciente_primeiro_nome`, `data`, `hora`, `dia_semana`, `medico`, `clinica`, `link` (o `linkUrl` da regra, em HTTPS) ou `texto` (fixo, até 200 caracteres);
+- de onde vem cada campo do modelo: `paciente_primeiro_nome`, `data`, `hora`, `dia_semana`, `medico`, `clinica`, `link` (o `linkUrl` da regra, em HTTPS), `link_pre_consulta` (o link único da pré-consulta da consulta) ou `texto` (fixo, até 200 caracteres);
+  - o link da pré-consulta é uma credencial: a mensagem guardada (`whatsapp_messages.body` e `template.params`) leva `[link da pré-consulta]` no lugar dele, e o link de verdade só vai para a Meta no envio (desde 11/11/2026; contrato da pré-consulta);
 - filtros opcionais por médico e por tipo de consulta.
 
 **Funcionamento:**

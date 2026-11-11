@@ -6,9 +6,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { AuthError, authResponse, requireUser } from './auth.ts';
 import { fetchWithDeadline } from './http.ts';
 import type { IntakeCaller, IntakeDeps, IntakeFormRow, IntakeRequestRow } from './intakeHandlers.ts';
+import type { AnswerItem } from './intakeForm.ts';
 
 const REQUEST_COLUMNS = 'id, clinic_id, appointment_id, doctor_id, appointment_start, status, answered_at, submissions, registration, health, '
-  + 'whatsapp_consent, registration_reviewed_at, health_reviewed_at, revision, expires_at, opened_at';
+  + 'whatsapp_consent, registration_reviewed_at, health_reviewed_at, revision, expires_at, opened_at, '
+  + 'registration_reviewed_submission, health_reviewed_submission';
 
 export function intakeConfig() {
   return { linkSecret: Deno.env.get('INTAKE_LINK_SECRET') ?? '', appUrl: (Deno.env.get('INTAKE_APP_URL') ?? '').replace(/\/+$/, '') };
@@ -61,6 +63,12 @@ export function intakeDeps(): IntakeDeps {
         const { data, error } = await service.from('intake_requests').select(REQUEST_COLUMNS).eq('clinic_id', clinicId).eq('appointment_id', appointmentId).maybeSingle();
         if (error) fail('pré-consulta');
         return (data as IntakeRequestRow | null) ?? null;
+      },
+      async submission(requestId, submission) {
+        const { data, error } = await service.from('intake_submissions').select('registration, health')
+          .eq('request_id', requestId).eq('submission', submission).maybeSingle();
+        if (error) fail('histórico da pré-consulta');
+        return (data as { registration: AnswerItem[]; health: AnswerItem[] } | null) ?? null;
       },
     },
     log: (event, detail) => console.log(JSON.stringify({ event, ...detail })),

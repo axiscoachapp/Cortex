@@ -226,6 +226,26 @@ export function answerText(v: AnswerItem['value']): string {
   return String(v);
 }
 
+export interface AnswerChange { id: string; label: string; before: string | null; after: string | null }
+
+/**
+ * What changed between the submission a reviewer saw and the current one, in form order (removed
+ * answers last). Empty when nothing changed.
+ */
+export function answerChanges(before: AnswerItem[], after: AnswerItem[]): AnswerChange[] {
+  const old = new Map(before.map((a) => [a.id, a]));
+  const out: AnswerChange[] = [];
+  for (const a of after) {
+    const prev = old.get(a.id);
+    old.delete(a.id);
+    const now = answerText(a.value);
+    const was = prev ? answerText(prev.value) : null;
+    if (was !== now) out.push({ id: a.id, label: a.label, before: was, after: now });
+  }
+  for (const prev of old.values()) out.push({ id: prev.id, label: prev.label, before: answerText(prev.value), after: null });
+  return out;
+}
+
 /** Starter form for a gynecology/obstetrics and urology clinic; the admin edits it before enabling. */
 export function starterForm(clinicName: string): IntakeForm {
   const convenio = { question: 'tipo_atendimento', equals: 'Convênio' };

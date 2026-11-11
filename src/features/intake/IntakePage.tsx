@@ -1,26 +1,29 @@
 // "Pré-consultas": the week's clinic appointments with the state of their pre-consultation.
 // The reception copies links and reviews the registration part; the doctor reads the health part.
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ChevronLeft, ChevronRight, Copy, Loader2, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Copy, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { WorkspaceShell } from '@/components/WorkspaceShell';
 import { PageHeading } from '@/components/PageHeading';
 import { useClinicAccess } from '@/features/reception/accessContext';
-import { answerText } from '../../../supabase/functions/_shared/intakeForm';
-import { dateTime, intakeCall, type IntakeListItem, type IntakeResponse } from './intakeApi';
+import { answerText, type AnswerChange } from '../../../supabase/functions/_shared/intakeForm';
+import { acceptsLink, dateTime, intakeCall, type IntakeListItem, type IntakeResponse } from './intakeApi';
 
 const DAY = 24 * 3600 * 1000;
 
 function stateBadge(i: IntakeListItem) {
   if (i.appointmentStatus === 'cancelado') return <Badge variant="outline">Cancelada</Badge>;
+  if (i.state === 'answered' && (i.registrationChangedAfterReview || i.healthChangedAfterReview))
+    return <Badge className="bg-[#F2B23E]/20 text-[#0E2A33] hover:bg-[#F2B23E]/20">Alterada depois da conferência</Badge>;
   if (i.state === 'answered' && i.registrationReviewedAt) return <Badge className="bg-primary/15 text-primary hover:bg-primary/15">Conferida</Badge>;
   if (i.state === 'answered') return <Badge className="bg-[#F2B23E]/20 text-[#0E2A33] hover:bg-[#F2B23E]/20">Respondida</Badge>;
   if (i.state === 'pending' && i.openedAt) return <Badge variant="secondary">Aberta, sem resposta</Badge>;
@@ -43,6 +46,24 @@ function Answers({ title, items }: { title: string; items: IntakeResponse['regis
         </dl>
       )}
     </section>
+  );
+}
+
+/** "Respostas alteradas depois da sua conferência", with each change before → now. */
+function Changes({ title, changes }: { title: string; changes: AnswerChange[] }) {
+  return (
+    <div role="status" className="space-y-2 rounded-lg border border-[#F2B23E]/60 bg-[#F2B23E]/10 p-3 text-sm">
+      <p className="flex items-center gap-1.5 font-medium"><AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />{title}</p>
+      <ul className="space-y-1.5">
+        {changes.map((c) => (
+          <li key={c.id} className="break-words">
+            <span className="font-medium">{c.label}:</span>{' '}
+            {c.before === null ? <>nova resposta “{c.after}”</> : c.after === null ? <>resposta removida (era “{c.before}”)</>
+              : <>“{c.before}” → “{c.after}”</>}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -76,6 +97,7 @@ export function IntakeAnswersDialog({ appointmentId, open, onOpenChange }: { app
             <p role="alert" className="text-sm text-destructive">{(q.error as Error).message} <button type="button" className="underline" onClick={() => q.refetch()}>Tentar novamente</button></p>
           ) : !r || r.state !== 'answered' ? <p className="text-sm text-muted-foreground">O paciente ainda não respondeu.</p> : (
             <div className="space-y-5">
+              {r.registrationChanges?.length ? <Changes title="Dados alterados depois da conferência" changes={r.registrationChanges} /> : null}
               <Answers title="Dados cadastrais e convênio" items={r.registration} />
               <p className="text-sm">
                 {/* What the patient ticked in this submission; the effective consent lives in WhatsApp (an earlier SAIR or authorization prevails). */}
@@ -84,19 +106,24 @@ export function IntakeAnswersDialog({ appointmentId, open, onOpenChange }: { app
                   : 'O paciente não marcou a autorização de mensagens neste envio. Uma autorização ou saída registrada antes continua valendo.'}
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                {r.registrationReviewedAt ? (
+                {r.registrationReviewedAt && !r.registrationChanges?.length ? (
                   <span className="flex items-center gap-1.5 text-sm text-primary"><CheckCircle2 className="h-4 w-4" /> Dados conferidos em {dateTime(r.registrationReviewedAt)}</span>
                 ) : (
-                  <Button size="sm" className="h-auto min-h-9 whitespace-normal text-left" onClick={() => review.mutate('registration')} disabled={review.isPending}>Marcar dados como conferidos</Button>
+                  <Button size="sm" className="h-auto min-h-9 whitespace-normal text-left" onClick={() => review.mutate('registration')} disabled={review.isPending}>
+                    {r.registrationChanges?.length ? 'Marcar alterações como conferidas' : 'Marcar dados como conferidos'}
+                  </Button>
                 )}
               </div>
               {r.healthVisible ? (
                 <div className="space-y-3 rounded-lg bg-muted/40 p-3">
+                  {r.healthChanges?.length ? <Changes title="Respostas alteradas depois da sua conferência" changes={r.healthChanges} /> : null}
                   <Answers title="Sobre a consulta (só o médico vê)" items={r.health ?? []} />
-                  {r.healthReviewedAt ? (
+                  {r.healthReviewedAt && !r.healthChanges?.length ? (
                     <span className="flex items-center gap-1.5 text-sm text-primary"><CheckCircle2 className="h-4 w-4" /> Lidas em {dateTime(r.healthReviewedAt)}</span>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => review.mutate('health')} disabled={review.isPending}>Marcar como lidas</Button>
+                    <Button size="sm" variant="outline" onClick={() => review.mutate('health')} disabled={review.isPending}>
+                      {r.healthChanges?.length ? 'Marcar alterações como lidas' : 'Marcar como lidas'}
+                    </Button>
                   )}
                 </div>
               ) : (
@@ -105,6 +132,34 @@ export function IntakeAnswersDialog({ appointmentId, open, onOpenChange }: { app
               {review.isError && <p role="alert" className="text-sm text-destructive">{(review.error as Error).message}</p>}
             </div>
           )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Shown when the browser refuses the clipboard (Safari after a network call): the link to copy by hand. */
+function CopyLinkDialog({ url, onClose }: { url: string | null; onClose: () => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [copied, setCopied] = useState<'ok' | 'failed' | null>(null);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url ?? ''); setCopied('ok'); }
+    catch { input.current?.select(); setCopied('failed'); }
+  };
+  return (
+    <Dialog open={!!url} onOpenChange={(o) => { if (!o) { setCopied(null); onClose(); } }}>
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Copiar link</DialogTitle>
+          <DialogDescription>O navegador não deixou copiar sozinho. Copie o link abaixo e cole na conversa com o paciente.</DialogDescription>
+        </DialogHeader>
+        <Input ref={input} readOnly value={url ?? ''} aria-label="Link da pré-consulta" onFocus={(e) => e.currentTarget.select()} className="font-mono text-sm" />
+        <p role="status" aria-live="polite" className="min-h-5 text-sm text-muted-foreground">
+          {copied === 'ok' ? 'Link copiado.' : copied === 'failed' ? 'Não foi possível copiar. O link está selecionado: use Copiar do seu aparelho.' : ''}
+        </p>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+          <Button variant="outline" onClick={() => { setCopied(null); onClose(); }}>Fechar</Button>
+          <Button onClick={() => void copy()}><Copy className="mr-1.5 h-4 w-4" />Copiar</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -123,7 +178,7 @@ export default function IntakePage({ embedded = false }: { embedded?: boolean })
     const from = new Date(start.getTime() + offset * 7 * DAY);
     return { from, to: new Date(from.getTime() + 7 * DAY) };
   }, [offset]);
-  const state = useQuery({ queryKey: ['intake-state', ...scope], queryFn: () => intakeCall<{ ready: boolean; canEditForm: boolean; enabled: boolean }>('state'), staleTime: 0 });
+  const state = useQuery({ queryKey: ['intake-state', ...scope], queryFn: () => intakeCall<{ ready: boolean; canEditForm: boolean; enabled: boolean }>('state'), staleTime: 0, retry: false });
   const list = useQuery({
     queryKey: ['intake-list', ...scope, range.from.toISOString()],
     queryFn: () => intakeCall<{ items: IntakeListItem[] }>('list', { from: range.from.toISOString(), to: range.to.toISOString() }),
@@ -131,11 +186,12 @@ export default function IntakePage({ embedded = false }: { embedded?: boolean })
   });
   const [viewing, setViewing] = useState<string | null>(null);
   const [rotating, setRotating] = useState<IntakeListItem | null>(null);
+  const [manualCopy, setManualCopy] = useState<string | null>(null);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['intake-list', ...scope] });
 
   const copy = async (url: string) => {
     try { await navigator.clipboard.writeText(url); toast({ title: 'Link copiado', description: 'Cole na conversa com o paciente.' }); }
-    catch { toast({ title: 'Copie o link', description: url }); }
+    catch { setManualCopy(url); }
   };
   const link = useMutation({
     mutationFn: (appointmentId: string) => intakeCall<{ url: string }>('link', { appointmentId }),
@@ -150,12 +206,26 @@ export default function IntakePage({ embedded = false }: { embedded?: boolean })
 
   const items = list.data?.items ?? [];
   const label = `${range.from.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} a ${new Date(range.to.getTime() - DAY).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
+  // The list follows the reception agenda rule: a doctor sees their own visits, the reception the
+  // doctors it serves; being admin does not open another doctor's agenda.
+  const isDoctor = access?.kind === 'clinical' && !!access.doctors?.some((d) => d.id === access.actorId);
+  const empty = access?.kind === 'reception'
+    ? 'Nenhuma consulta dos médicos que você atende neste período.'
+    : isDoctor ? 'Nenhuma consulta sua na agenda da clínica neste período.' : 'Nenhuma consulta para você acompanhar neste período.';
+  const adminNote = access?.admin && access.kind !== 'reception'
+    ? 'A administração não vê aqui as consultas de outros médicos: cada médico e a recepção que o atende acompanham as próprias pré-consultas.' : null;
 
   const content = (
     <div className="min-w-0">
       <div className="w-full space-y-5">
         <PageHeading title="Pré-consultas" description="Acompanhe os formulários respondidos antes do atendimento, por um link único para cada consulta." />
 
+        {state.isError && (
+          <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+            Não foi possível verificar se a pré-consulta está ativa: {(state.error as Error).message}{' '}
+            <button type="button" className="underline" onClick={() => state.refetch()}>Tentar novamente</button>
+          </p>
+        )}
         {state.data && (!state.data.enabled || !state.data.ready) && (
           <div className="mb-4 rounded-lg border border-[#F2B23E]/60 bg-[#F2B23E]/10 p-3 text-sm">
             {!state.data.ready ? 'A pré-consulta ainda não foi configurada no servidor.' : 'O formulário da clínica está desligado.'}{' '}
@@ -176,12 +246,14 @@ export default function IntakePage({ embedded = false }: { embedded?: boolean })
           : list.isError ? (
             <p role="alert" className="text-sm text-destructive">{(list.error as Error).message} <button type="button" className="underline" onClick={() => list.refetch()}>Tentar novamente</button></p>
           ) : items.length === 0 ? (
-            <p className="rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground">Nenhuma consulta da agenda da clínica neste período.</p>
+            <div className="space-y-2 rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground">
+              <p>{empty}</p>
+              {adminNote && <p className="text-xs">{adminNote}</p>}
+            </div>
           ) : (
             <ul className="divide-y rounded-xl border bg-card">
               {items.map((i) => {
-                const cancelled = i.appointmentStatus === 'cancelado' || i.appointmentStatus === 'faltou';
-                const usable = !cancelled && state.data?.enabled && state.data?.ready;
+                const usable = acceptsLink(i) && state.data?.enabled && state.data?.ready;
                 return (
                   <li key={i.appointmentId} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-4">
                     <div className="min-w-0 flex-1">
@@ -210,6 +282,7 @@ export default function IntakePage({ embedded = false }: { embedded?: boolean })
           )}
       </div>
       <IntakeAnswersDialog appointmentId={viewing} open={!!viewing} onOpenChange={(o) => !o && setViewing(null)} />
+      <CopyLinkDialog url={manualCopy} onClose={() => setManualCopy(null)} />
       <AlertDialog open={!!rotating} onOpenChange={(o) => !o && setRotating(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
