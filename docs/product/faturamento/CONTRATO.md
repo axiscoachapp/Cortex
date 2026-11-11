@@ -70,7 +70,7 @@ O financeiro mostra o nome do paciente e o procedimento, que é dado de saúde i
 | `batches`, `openForBatch` `{payerId,guideType}`, `batchCharges` `{batchId}` | admin | Leituras dos lotes |
 | `createBatch` `{payerId,guideType,chargeIds}` | admin | `billing_batch_create` |
 | `cancelBatch` `{batchId,revision}` | admin | Só um lote em rascunho. As guias voltam a ficar em aberto e mantêm o número. O número do lote não é usado de novo (contador por convênio) |
-| `batchXml` `{batchId}` | admin | Devolve `{fileName, contentType, base64, hash, revision}`. Na primeira vez, gera o XML e grava o hash e o conteúdo; depois, inclusive em rascunho, devolve sempre o mesmo arquivo |
+| `batchXml` `{batchId}` | admin | Devolve `{fileName, contentType, base64, hash, revision}`. Na primeira vez, gera o XML e grava o hash e o conteúdo; depois, inclusive em rascunho, devolve sempre o mesmo arquivo, até um `clearBatchXml` |
 | `markSent` `{batchId,revision,sentAt,protocol}` | admin | Só depois do XML gerado |
 | `updateBatch` `{batchId,revision,nfseNumber?,notes?}` | admin | Número da NFS-e e observações. Só muda o que vier; NFS-e vazia apaga |
 | `reopenBatch` `{batchId,revision}` | admin | Reabre um lote com retorno lançado, para corrigir um valor digitado errado: as guias voltam a "Enviada" sem valores, e o recebimento do lote fica estornado (registrado) |
@@ -87,6 +87,30 @@ O financeiro mostra o nome do paciente e o procedimento, que é dado de saúde i
 - **Caixa:** despesas pagas contam pela data do pagamento, e as a pagar, pelo vencimento.
 - **SP/SADT:** uma descrição sem texto comum é recusada antes de gerar o XML, porque o XSD exige a descrição.
 
+## Correções e recuperação (11/11, plano de melhoria, rodada 2)
+
+**Migration:** `20261111130000_billing_corrections.sql`. Tudo que corrige um registro depois do fato fica em `billing_events` (quem, quando, o que mudou), só com `service_role`.
+
+| Ação | Papel | Faz |
+|---|---|---|
+| `createCharge` `{requestId?, ...}` | admin, recepção | Lê e confere todos os campos antes de gravar: um pedido recusado nunca deixa cobrança. O `requestId` (um por abertura do diálogo) devolve a cobrança já criada numa nova tentativa (`replayed: true`). Um agendamento não tem duas cobranças não canceladas do mesmo procedimento (índice único); a segunda tentativa recebe 409 `duplicate` com a cobrança existente. Particular sem procedimento vai para a tabela `00`, código `PARTICULAR` (a tela não mostra) |
+| `updateCharge` `{id, revision, ...campos}` | admin, recepção (escopo) | Corrige uma cobrança em aberto e sem pagamento (`billing_charge_edit`). A senha da autorização só muda quando é digitada. O evento guarda o antes e o depois de cada campo |
+| `representCharge` `{id, revision}` | admin | Guia glosada volta a "Em aberto", sai do lote antigo e mantém o número da guia (`billing_charge_represent`) |
+| `writeOffCharge` `{id, revision, note?}` | admin | Dá baixa numa glosa: a cobrança continua "Glosada", com `writtenOffAt`, e a glosa continua nos relatórios |
+| `clearBatchXml` `{batchId, revision}` | admin | Lote em rascunho descarta o XML guardado; o próximo download sai com os dados atuais |
+| `unsendBatch` `{batchId, revision}` | admin | Lote marcado como enviado por engano volta a rascunho (guias a "Em lote"), só enquanto o convênio não respondeu: `first_settled_at` vazio e nenhum recebimento do lote, nem estornado |
+| `toBill` | admin, recepção | Também devolve `earlier: [{month, count}]`: atendimentos sem cobrança dos 3 meses anteriores ao período |
+| `report` | admin, médico | Cada código de glosa traz `note`: o motivo mais digitado no retorno (o Cortex não tem o catálogo da tabela 38) |
+| `batches` | admin | Cada lote traz `answered` (o retorno já foi lançado alguma vez) |
+
+**Na tela:**
+- Abas do fluxo numeradas com o que espera ("1 A faturar (2)", "3 Lotes (1 a enviar)"); Relatórios e Cadastros separados; uma linha de próximo passo sob cada título.
+- Um lote em rascunho mostra as três etapas: baixar o XML, enviar no portal, marcar como enviado (a 3 fica desativada até a 1). Mostra quando o XML foi gerado e que os downloads seguintes trazem o mesmo arquivo; "Gerar de novo" pede confirmação.
+- Quando outra pessoa alterou o registro antes (409 `stale`), o diálogo mantém o que foi digitado e oferece "Atualizar e tentar de novo".
+- "Corrigir retorno" lê as linhas lançadas antes de reabrir e abre o retorno preenchido.
+- Cadastros só para leitura, com um único `SupportRequest`.
+- Relatórios com "Exportar CSV" (separado por ponto e vírgula; texto que começa com `=`, `+`, `-` ou `@` sai neutralizado).
+
 ## Fora da v1
 
 - **Webservice TISS e autorização online:** o caminho comum das operadoras de Curitiba é subir o XML no portal.
@@ -102,3 +126,4 @@ O financeiro mostra o nome do paciente e o procedimento, que é dado de saúde i
 - [ ] Cada médico confere o próprio nome, CRM e CBO.
 - [ ] Testar o primeiro lote de cada convênio no validador do portal antes de enviar de verdade.
 - [ ] **Produção:** aplicar a migration e publicar `billing-api`. Nada foi aplicado.
+- [ ] **Produção (11/11):** aplicar `20261111130000_billing_corrections.sql` antes de publicar `billing-api` (a função lê colunas novas). A migration recusa rodar se um agendamento já tiver duas cobranças não canceladas do mesmo procedimento; nesse caso, cancelar a sobra e rodar de novo.
