@@ -40,8 +40,8 @@ function mount() {
 async function typeDraft() {
   fireEvent.click(await screen.findByLabelText('Novo contato', { exact: true }));
   fireEvent.change(screen.getByLabelText('Nome de quem entrou em contato'), { target: { value: 'Maria sintética' } });
-  fireEvent.change(screen.getByLabelText('Assunto administrativo'), { target: { value: 'Quer marcar retorno' } });
-  expect(screen.getByLabelText('Assunto administrativo')).toHaveValue('Quer marcar retorno');
+  fireEvent.change(screen.getByLabelText('Assunto'), { target: { value: 'Quer marcar retorno' } });
+  expect(screen.getByLabelText('Assunto')).toHaveValue('Quer marcar retorno');
 }
 const failPoll = () => { for (let i = 0; i < 3; i++) mock.access.mockRejectedValueOnce(new ClinicAccessTransportError()); };
 
@@ -49,13 +49,13 @@ describe('guards pause instead of invalidating', () => {
   it('A: a same-session token refresh keeps the open dialog and its typed text', async () => {
     const { tree, view } = mount();
     await typeDraft();
-    const subject = screen.getByLabelText('Assunto administrativo');
+    const subject = screen.getByLabelText('Assunto');
     subject.focus();
     mock.expiry = 200;
     await act(async () => { view.rerender(tree()); });
     await waitFor(() => expect(mock.level).toHaveBeenCalledTimes(2));
     await act(async () => { await Promise.resolve(); });
-    expect(screen.getByLabelText('Assunto administrativo')).toBe(subject);
+    expect(screen.getByLabelText('Assunto')).toBe(subject);
     expect(subject).toHaveValue('Quer marcar retorno');
     expect(subject).toHaveFocus();
     expect(screen.getByLabelText('Nome de quem entrou em contato')).toHaveValue('Maria sintética');
@@ -72,7 +72,7 @@ describe('guards pause instead of invalidating', () => {
     expect(await screen.findByText(/Não foi possível atualizar o acesso à clínica/)).toBeInTheDocument();
     expect(screen.queryByText('Não foi possível verificar seu acesso à clínica.')).toBeNull();
     expect(document.querySelector('[data-clinic-page]')).not.toHaveAttribute('hidden');
-    expect(screen.getByLabelText('Assunto administrativo')).toHaveValue('Quer marcar retorno');
+    expect(screen.getByLabelText('Assunto')).toHaveValue('Quer marcar retorno');
     expect(screen.getByText(hint)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Adicionar à fila' })).toBeDisabled();
     fireEvent.submit(screen.getByRole('button', { name: 'Adicionar à fila' }).closest('form')!);
@@ -80,7 +80,7 @@ describe('guards pause instead of invalidating', () => {
     await act(async () => { await client.refetchQueries({ queryKey: ['clinic-access'] }); });
     await waitFor(() => expect(screen.queryByText(hint)).toBeNull());
     expect(screen.queryByText(/Não foi possível atualizar o acesso à clínica/)).toBeNull();
-    expect(screen.getByLabelText('Assunto administrativo')).toHaveValue('Quer marcar retorno');
+    expect(screen.getByLabelText('Assunto')).toHaveValue('Quer marcar retorno');
     expect(screen.getByLabelText('Nome de quem entrou em contato')).toHaveValue('Maria sintética');
     expect(screen.queryByText(interrupted)).toBeNull();
     expect(screen.getByRole('button', { name: 'Adicionar à fila' })).toBeEnabled();
@@ -93,7 +93,7 @@ describe('guards pause instead of invalidating', () => {
     await act(async () => { await client.refetchQueries({ queryKey: ['clinic-access'] }); });
     expect(screen.queryByText(/Não foi possível atualizar o acesso à clínica/)).toBeNull();
     expect(screen.queryByText(hint)).toBeNull();
-    expect(screen.getByLabelText('Assunto administrativo')).toHaveValue('Quer marcar retorno');
+    expect(screen.getByLabelText('Assunto')).toHaveValue('Quer marcar retorno');
   });
 
   it('a definitive refusal still hides and retires the dialog at once', async () => {
@@ -104,7 +104,7 @@ describe('guards pause instead of invalidating', () => {
     expect(await screen.findByText('Não foi possível verificar seu acesso à clínica.')).toBeInTheDocument();
     await act(async () => { await client.refetchQueries({ queryKey: ['clinic-access'] }); });
     expect(await screen.findByText(interrupted)).toBeInTheDocument();
-    expect(screen.queryByLabelText('Assunto administrativo')).toBeNull();
+    expect(screen.queryByLabelText('Assunto')).toBeNull();
     expect(screen.queryByDisplayValue('Quer marcar retorno')).toBeNull();
   });
 
