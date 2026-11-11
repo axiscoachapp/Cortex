@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { ClinicalWorkEditor } from './ClinicalWorkEditor';
 const fixture = vi.hoisted(() => ({
@@ -6,6 +6,8 @@ const fixture = vi.hoisted(() => ({
   rpc: vi.fn(),
   fail: false,
   pending: false,
+  release: null as null | (() => void),
+  inserts: 0,
 }));
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
@@ -23,6 +25,7 @@ vi.mock('@/integrations/supabase/client', () => ({
           : { data: fixture.fail ? null : fixture.saved, error: fixture.fail ? new Error('offline') : null };
       const q = {
         insert: (value: Record<string, unknown>) => {
+          fixture.inserts++;
           fixture.saved = { ...value, id: 'draft-id', revision: 0 };
           return q;
         },
@@ -32,7 +35,12 @@ vi.mock('@/integrations/supabase/client', () => ({
         },
         eq: () => q,
         select: () => q,
-        single: async () => (fixture.pending ? new Promise(() => {}) : result()),
+        single: async () =>
+          fixture.pending
+            ? new Promise((resolve) => {
+                fixture.release = () => resolve(result());
+              })
+            : result(),
         maybeSingle: async () => result(),
       };
       return q;
@@ -43,6 +51,8 @@ beforeEach(() => {
   fixture.saved = null;
   fixture.fail = false;
   fixture.pending = false;
+  fixture.release = null;
+  fixture.inserts = 0;
   fixture.rpc.mockReset().mockResolvedValue({ data: 'encounter-id', error: null });
   vi.spyOn(window, 'confirm').mockReturnValue(true);
 });
@@ -241,5 +251,46 @@ describe('manual encounter approval', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar');
     expect(screen.getByLabelText('Conteúdo do registro')).toHaveValue('Texto preservado na falha.');
     expect(fixture.rpc).not.toHaveBeenCalled();
+  });
+  it('keeps the textarea editable and focused while an automatic save is in flight', async () => {
+    fixture.pending = true;
+    render(<ClinicalWorkEditor patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} onClose={vi.fn()} />);
+    const text = screen.getByLabelText('Conteúdo do registro') as HTMLTextAreaElement;
+    text.focus();
+    fireEvent.change(text, { target: { value: 'S — paciente refere dor pélvica' } });
+    await waitFor(() => expect(fixture.inserts).toBe(1), { timeout: 3000 });
+    expect(screen.getByRole('status')).toHaveTextContent('Salvando…');
+    expect(text).not.toBeDisabled();
+    expect(document.activeElement).toBe(text);
+    // Typing during the request is kept and stays dirty after the save returns.
+    fireEvent.change(text, { target: { value: 'S — paciente refere dor pélvica há 3 dias' } });
+    expect(text).toHaveValue('S — paciente refere dor pélvica há 3 dias');
+    expect(screen.getByRole('button', { name: /Revisei: confirmar consulta/ })).toBeDisabled();
+    await act(async () => {
+      fixture.release?.();
+    });
+    expect(text).toHaveValue('S — paciente refere dor pélvica há 3 dias');
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Alterações ainda não salvas'));
+  });
+  it('does not count an untouched manual consultation opened with a chief complaint as unsaved', async () => {
+    let guard: () => boolean = () => false;
+    render(
+      <ClinicalWorkEditor
+        initialTitle="Dor pélvica"
+        patientId="patient-A"
+        userId="doctor-A"
+        onSaved={vi.fn()}
+        onClose={vi.fn()}
+        onExitGuardChange={(next) => {
+          guard = next;
+        }}
+      />,
+    );
+    expect(screen.getByLabelText('Título do registro')).toHaveValue('Dor pélvica');
+    expect(screen.queryByText('Alterações ainda não salvas')).not.toBeInTheDocument();
+    await waitFor(() => expect(guard()).toBe(true));
+    expect(window.confirm).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('Título do registro'), { target: { value: 'Dor pélvica crônica' } });
+    expect(screen.getByRole('status')).toHaveTextContent('Alterações ainda não salvas');
   });
 });

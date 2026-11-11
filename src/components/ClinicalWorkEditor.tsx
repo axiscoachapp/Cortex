@@ -51,7 +51,11 @@ export function ClinicalWorkEditor({
   );
   const [due, setDue] = useState(item?.due_date ?? '');
   const [saved, setSaved] = useState<Item | undefined>(item);
+  // `busy` covers explicit actions (save button, confirm, approve) and locks the form;
+  // an autosave only sets `autoSaving`, so the doctor can keep typing while it runs.
   const [busy, setBusy] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const pending = busy || autoSaving;
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [medicationContext, setMedicationContext] = useState<{
@@ -61,7 +65,8 @@ export function ClinicalWorkEditor({
   const [medicationError, setMedicationError] = useState('');
   const saving = useRef(false);
   const snapshot = JSON.stringify({ kind, title, content, details, due });
-  const [lastSaved, setLastSaved] = useState(item || defaults ? snapshot : '');
+  // The opening state (including a chief complaint carried over as title) is not unsaved work.
+  const [lastSaved, setLastSaved] = useState(snapshot);
   const locked =
     !!saved && ['approved', 'done'].includes(saved.status) && ['draft', 'instruction', 'medication'].includes(kind);
   const dirty = !locked && snapshot !== lastSaved && (!!content.trim() || title !== 'Consulta manual');
@@ -103,7 +108,7 @@ export function ClinicalWorkEditor({
     if (kind === 'medication' && !locked) void loadMedicationContext();
   }, [kind, locked, loadMedicationContext]);
   const value = (key: string, text: string) => setDetails((previous) => ({ ...previous, [key]: text }));
-  const save = async (approve = false): Promise<Item | undefined> => {
+  const save = async (approve = false, automatic = false): Promise<Item | undefined> => {
     if (saving.current || locked) return saved;
     const invalid = validateWorkItem(kind, title, content, details);
     if (invalid) {
@@ -111,7 +116,8 @@ export function ClinicalWorkEditor({
       return;
     }
     saving.current = true;
-    setBusy(true);
+    if (automatic) setAutoSaving(true);
+    else setBusy(true);
     setError('');
     const savingSnapshot = snapshot;
     try {
@@ -148,20 +154,21 @@ export function ClinicalWorkEditor({
       setError(e instanceof Error ? e.message : 'Não foi possível salvar. Tente novamente.');
     } finally {
       saving.current = false;
-      setBusy(false);
+      if (automatic) setAutoSaving(false);
+      else setBusy(false);
     }
   };
   // Direct post-consultation entries remain explicit even after a type change.
   // Other physician-authored manual drafts autosave; approval stays explicit.
   useEffect(() => {
-    if (explicitSaveOnly || kind !== 'draft' || !dirty || !content.trim() || busy || error) return;
+    if (explicitSaveOnly || kind !== 'draft' || !dirty || !content.trim() || pending || error) return;
     const timer = setTimeout(() => {
-      void save();
+      void save(false, true);
     }, 1200);
     return () => clearTimeout(timer);
     // save captures the exact content/revision associated with this timer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot, dirty, kind, busy, error]);
+  }, [snapshot, dirty, kind, pending, error]);
   const finalize = async () => {
     const row = dirty || !saved ? await save() : saved;
     if (!row) return;
@@ -187,7 +194,7 @@ export function ClinicalWorkEditor({
     }
   };
   const approveMedication = async () => {
-    if (!medicationContext || medicationError || busy) return;
+    if (!medicationContext || medicationError || pending) return;
     const row = dirty || !saved ? await save() : saved;
     if (!row) return;
     if (!window.confirm('Aprovar exatamente este medicamento, dose, instruções e estado na lista ativa do paciente?'))
@@ -246,7 +253,7 @@ export function ClinicalWorkEditor({
         </p>
       )}
       <p role="status" className="text-xs text-muted-foreground">
-        {busy
+        {pending
           ? 'Salvando…'
           : dirty
             ? 'Alterações ainda não salvas'
@@ -540,26 +547,26 @@ export function ClinicalWorkEditor({
       )}
       <div className="flex flex-wrap gap-2 [&>button]:max-w-full [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-10 [&>button]:py-2">
         {!locked && (
-          <Button disabled={busy} onClick={() => save(false)} className="gap-2">
+          <Button disabled={pending} onClick={() => save(false)} className="gap-2">
             <Save className="h-4 w-4" />
             Salvar{kind === 'draft' ? ' rascunho' : ''}
           </Button>
         )}
         {kind === 'draft' && !locked && (
-          <Button variant="outline" disabled={busy || !content.trim()} onClick={finalize}>
+          <Button variant="outline" disabled={pending || !content.trim()} onClick={finalize}>
             <Check className="h-4 w-4 mr-2" />
             Revisei: confirmar consulta
           </Button>
         )}
         {kind === 'instruction' && !locked && (
-          <Button variant="outline" disabled={busy} onClick={() => save(true)}>
+          <Button variant="outline" disabled={pending} onClick={() => save(true)}>
             Aprovar esta versão
           </Button>
         )}
         {kind === 'medication' && !locked && (
           <Button
             variant="outline"
-            disabled={busy || !medicationContext || !!medicationError}
+            disabled={pending || !medicationContext || !!medicationError}
             onClick={approveMedication}
           >
             Aprovar reconciliação
