@@ -43,6 +43,18 @@ Sessão autônoma do Claude, iniciada em 10/11/2026 às 22:18 (horário de São 
 | 08:40 | Publicação do lote da IA | Commit `be127ca`. 36 funções publicadas; migrations 84 = 84; verificador sem pendências. **`git push` não saiu:** o GitHub pede login neste computador e eu não posso entrar por você. O servidor novo é compatível com o site que está no ar. Rode `git push origin main` quando puder. |
 | 08:50 | Plano de melhoria | [PLANO_DE_MELHORIA.md](PLANO_DE_MELHORIA.md): 13 bloqueios, 24 defeitos, 12 itens de experiência. Começo pelos bloqueios. |
 
+**Sobre as horas de 11/11:** as linhas depois de "05:18 Retomada" estão na ordem certa, mas as horas foram estimadas e ficaram adiantadas. Tudo aconteceu entre 05:18 e 06:15.
+
+## Onde parou (11/11, 06:15) — limite de uso atingido de novo
+
+**Feito e publicado no Supabase:** todo o lote da IA (onda 0 do plano), migration `20261111100000`, 36 funções. Verificador sem pendências.
+
+**Feito, mas só neste computador:** 6 commits à frente do GitHub (`a13c390` a `1477bd3`). Falta `git push origin main`, que pede o seu login. Sem o push, a tela que propõe retirar a medicação suspensa (A5) não chega ao site.
+
+**Não começado:** ondas 1, 2 e 3 do [plano](PLANO_DE_MELHORIA.md). Nenhum dos 13 bloqueios foi corrigido ainda. Ordem sugerida para retomar: B2, B10, B5, B8, B3 (pequenos), depois B4 (layout no notebook), B1 (modo implantação) e B6 (responder WhatsApp).
+
+**Ficou no Supabase:** a paciente sintética "Helena Duarte (paciente sintética de teste)" na conta de teste nº 1, de propósito. Nada mais de teste ficou (funções de avaliação, áudios e rascunhos foram apagados).
+
 ## Onde parou (10/11, 23:20) — retomado em 11/11 às 05:18
 
 **Feito:** estado inicial conferido, linha de base (tipos ok, 6 erros de lint antigos), leitura de como a IA usa o histórico, caso sintético de 16 consultas com gabarito.
