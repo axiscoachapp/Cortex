@@ -36,11 +36,11 @@ export function SchedulingFollowups() {
   });
   if(!allowed)return null;
   return <section aria-label="Lista de espera e confirmações" className="min-w-0 rounded-xl border bg-background p-4 sm:p-6 space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <h2 className="text-lg font-semibold">Lista de espera e confirmações</h2>
-      <Button variant="outline" aria-label="Atualizar acompanhamentos da agenda" disabled={work.isFetching} onClick={()=>void work.refetch()}>Atualizar</Button>
+    {/* The agenda toolbar heading names this view; no second title here. */}
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <p className="min-w-0 flex-1 basis-64 text-sm text-muted-foreground">Acompanhamentos privados da sua conta. Abra o paciente para editar ou concluir um registro. Uma confirmação registrada não reserva horário.</p>
+      <Button variant="outline" className="min-h-11" aria-label="Atualizar acompanhamentos da agenda" disabled={work.isFetching} onClick={()=>void work.refetch()}>Atualizar</Button>
     </div>
-    <p className="text-sm text-muted-foreground">Acompanhamentos privados da sua conta. Abra o paciente para editar ou concluir um registro. Uma confirmação registrada não reserva horário.</p>
     {work.isError?<p role="alert">Não foi possível carregar os acompanhamentos.{' '}<button className="underline min-h-10" disabled={work.isFetching} onClick={()=>void work.refetch()}>Tentar carregar acompanhamentos</button></p>
       :work.isPending||work.isFetching?<p role="status">Carregando acompanhamentos…</p>
       :work.data?.length?<>

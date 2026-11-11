@@ -3,6 +3,8 @@ import { addWeeks, format, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import type { Appointment } from '@/types/patient';
+import { WEEK_STARTS_ON } from '@/lib/calendarLabels';
+import { statusLook } from '@/lib/appointmentStatus';
 
 const weekdays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 export function CompactWeekHeader({ date }: { date: Date }) {
@@ -14,7 +16,7 @@ export function CompactWeekHeader({ date }: { date: Date }) {
 
 /** Read-only companion to the seven-column grid; opens the existing editor only on human selection. */
 export function CalendarWeekDetails({ date, appointments, onSelect }: { date: Date; appointments: Appointment[]; onSelect: (appointment: Appointment) => void }) {
-  const heading = useId(), start = startOfWeek(date, { locale: ptBR }), end = addWeeks(start, 1);
+  const heading = useId(), start = startOfWeek(date, { weekStartsOn: WEEK_STARTS_ON }), end = addWeeks(start, 1);
   const rows = appointments.filter(appointment => appointment.startTime < end && appointment.endTime > start)
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime() || a.id.localeCompare(b.id));
   const groups = new Map<string, { date: Date; rows: Appointment[] }>();
@@ -33,7 +35,7 @@ export function CalendarWeekDetails({ date, appointments, onSelect }: { date: Da
         <Button type="button" variant="outline" className="h-auto min-h-11 w-full flex-col items-start gap-1 whitespace-normal p-3 text-left" onClick={() => onSelect(appointment)}>
           <span className="max-w-full break-words text-xs tabular-nums">{format(appointment.startTime, 'dd/MM HH:mm')} – {format(appointment.endTime, 'dd/MM HH:mm')}</span>
           <span className="max-w-full [overflow-wrap:anywhere]">{appointment.title}</span>
-          {appointment.status === 'cancelado' && <span className="text-xs text-muted-foreground">Cancelado</span>}
+          {appointment.status === 'cancelado' && <span className="text-xs text-muted-foreground line-through">{statusLook('cancelado').label}</span>}
         </Button>
       </li>)}</ul>
     </div>)}
