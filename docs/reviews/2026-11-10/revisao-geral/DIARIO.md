@@ -66,3 +66,15 @@ Sessão autônoma do Claude, iniciada em 10/11/2026 às 22:18 (horário de São 
 - Resultado da suíte completa de testes do app (estava em execução; ver `E:\Work\cortex-audit-tmp\review\baseline.txt`).
 
 **Já dá para adiantar, pela leitura do código:** para uma paciente antiga, o resumo pré-consulta e a evolução automática não enxergam as consultas anteriores; dependem do cadastro estar atualizado. Isso é o primeiro ponto a medir no teste real.
+
+## Terceira sessão (11/11, retomada)
+
+**Pedido do usuário:** corrigir os itens 2 a 6 do resumo (layout no notebook, WhatsApp da recepção, proteções que descartam o que se digita, gravação interrompida, senha de quem cria a conta), com agentes rodando Opus. O item 1 (clínica não consegue se configurar) **não é defeito**: a equipe Cortex faz a configuração completa.
+
+| O que | Detalhe |
+|---|---|
+| Cinco agentes Opus | Um por correção, cada um numa cópia isolada do repositório (worktree), com instruções, critérios de aceite e testes obrigatórios. Eu junto os cinco, rodo a verificação completa e publico. |
+| **Decisão:** incluí o B10 junto com a gravação | "Nova consulta" podia começar para um paciente que saiu da tela. É pequeno, fica no mesmo fluxo e o risco é atender no prontuário errado. |
+| **Decisão:** senha temporária continua, mas com cobrança no servidor | Não há e-mail configurado para convite. A marca de "trocar a senha" vai para um campo que só o servidor grava, vale por 72 horas, e o servidor recusa tudo até a troca. |
+| **Decisão:** tolerância de 45 s para falha de rede nas verificações de acesso | Uma falha isolada não esconde mais a tela nem descarta formulários. Recusa definitiva continua bloqueando na hora, e a página de Configurações continua estrita. |
+| Migration reservada | `20261111110000` para a cobrança da troca de senha. |

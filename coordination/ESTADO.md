@@ -1,5 +1,7 @@
 # Estado da coordenação
 
+**Correções 2–6 da revisão geral em andamento (Claude, 11/11):** pedido direto do usuário, com cinco agentes Opus em worktrees isoladas: layout no notebook, WhatsApp da recepção (responder e atualizar), proteções de sessão/acesso que descartavam formulários, gravação interrompida, troca obrigatória de senha cobrada no servidor. Migration **20261111110000 reservada** (Claude). O usuário decidiu que os cadastros técnicos só leitura são por desenho: a equipe Cortex configura cada clínica. [Plano](../docs/reviews/2026-11-10/revisao-geral/PLANO_DE_MELHORIA.md).
+
 **Migration 20261111100000 (Claude) aplicada em 11/11:** `patient_context_retrieval` reescreve `retrieve_patient_context` (mesma assinatura e grants). Próximo número livre do Claude: 20261111110000. Testes de banco agora rodam no projeto Supabase em transação desfeita: `scripts/supabase-rollout/sqltest.mjs`.
 
 **Revisão geral autônoma do Claude iniciada em 10/11 22:18:** pedido direto do usuário (todas as áreas, plano de melhoria, correções, teste da OpenAI com paciente de longo histórico, publicação e push autorizados; sem Docker, banco de teste no projeto Supabase existente). [Diário](../docs/reviews/2026-11-10/revisao-geral/DIARIO.md), [registro2218](mensagens/2026-11-10-2218_claude-para-codex_revisao-geral-autonoma.md).
