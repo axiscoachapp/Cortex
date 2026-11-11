@@ -71,7 +71,7 @@ export function WorkspaceShell({ children, section, contentClassName, shellClass
     <div className={cn('min-h-screen bg-background shell:grid shell:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)]', shellClassName)}>
       <aside aria-label="Navegação do ambiente" className="hidden border-r bg-sidebar shell:sticky shell:top-0 shell:flex shell:h-[100dvh] shell:flex-col shell:overflow-y-auto">
         <div className="shrink-0 space-y-3 px-3 pb-3 pt-4 xl:space-y-5 xl:px-4 xl:pb-4 xl:pt-6">
-          <Link to={home} aria-label="Haddad Nicola — Início" className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><BrandLockup compact className="[&_p]:hidden xl:[&_p]:block" /></Link>
+          <Link to={home} aria-label={`${access?.clinic?.name ?? 'Cortex'} — Início`} className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><BrandLockup compact className="[&_p]:hidden xl:[&_p]:block" /></Link>
           <WorkspaceMenu className="w-full" />
         </div>
         <nav ref={routine} aria-label={reception ? 'Recepção' : 'Consultório'} className="workspace-nav-scroll min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-2">

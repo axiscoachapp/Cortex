@@ -44,6 +44,7 @@ import { Patient, ChatMessage } from '@/types/patient';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useClinicAccess } from '@/features/reception/accessContext';
 import { ConsultationReviewModal } from '@/components/ConsultationReviewModal';
 import { DocumentPreviewModal } from '@/components/DocumentPreviewModal';
 import { ProfileUpdateCard, MergedProfile } from '@/components/ProfileUpdateCard';
@@ -1750,10 +1751,12 @@ export function ChatPanel({
     window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
+  // Printed documents carry the clinic's own name.
+  const clinicAccess = useClinicAccess();
   const handlePrintSOAP = (soapNote: string) => {
     if (!patient) return;
     printSoap(soapNote, patient, chiefComplaint, {
-      author: { name: prescriber.doctorName, crm: prescriber.crmNumber, crmUf: prescriber.crmUf },
+      author: { name: prescriber.doctorName, crm: prescriber.crmNumber, crmUf: prescriber.crmUf, clinicName: clinicAccess?.clinic?.name ?? undefined },
     });
   };
 

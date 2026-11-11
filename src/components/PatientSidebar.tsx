@@ -95,7 +95,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
 
       {/* Logo + Nova Consulta */}
       <div className="px-4 pt-5 pb-4 space-y-4">
-        <button onClick={onHome ?? (() => go('/'))} aria-label="Haddad Nicola — Início" className="flex items-center gap-2.5 mb-5 w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-medical-blue">
+        <button onClick={onHome ?? (() => go('/'))} aria-label={`${clinicAccess?.clinic?.name ?? 'Cortex'} — Início`} className="flex items-center gap-2.5 mb-5 w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-medical-blue">
           <BrandLockup compact className="shell:[&_p]:hidden xl:[&_p]:block" />
         </button>
 
