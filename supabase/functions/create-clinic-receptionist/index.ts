@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 import { readJsonObject, RequestError, fetchWithDeadline } from '../_shared/http.ts';
+import { temporaryPasswordAppMetadata } from '../_shared/passwordPolicy.ts';
 
 const headers = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
@@ -51,12 +52,15 @@ serve(async (req) => {
     const temporaryPassword = Array.from(crypto.getRandomValues(new Uint8Array(18)), (b) =>
       b.toString(16).padStart(2, '0'),
     ).join('');
+    // The flag lives in app_metadata (service role only) and is enforced by the server until the
+    // owner calls change-initial-password; the temporary password expires after 72 hours.
+    const now = new Date();
     const { data: created, error: createError } = await db.auth.admin.createUser({
       email,
       password: temporaryPassword,
       email_confirm: true,
-      app_metadata: { account_type: 'reception' },
-      user_metadata: { full_name: name, must_change_password: true },
+      app_metadata: { account_type: 'reception', provisioned_at: now.toISOString(), ...temporaryPasswordAppMetadata(now) },
+      user_metadata: { full_name: name },
     });
     if (createError || !created?.user)
       throw new RequestError('Não foi possível criar a conta. Use um e-mail exclusivo para a recepção.', 409);

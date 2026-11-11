@@ -68,6 +68,27 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
       setBusy(false);
     }
   }
+  async function reissue(id: string) {
+    if (busy) return;
+    if (!window.confirm('Gerar uma nova senha temporária? Só é possível enquanto a pessoa ainda não definiu a própria senha. A anterior deixa de funcionar.')) return;
+    setBusy(true);
+    setError(null);
+    setNotice('');
+    try {
+      const { data, error } = await supabase.functions.invoke('reissue-temporary-password', { body: { userId: id } });
+      if (error) throw new Error(await functionErrorMessage(error, 'Não foi possível gerar a nova senha temporária.'));
+      const result = z
+        .object({ success: z.literal(true), email: z.string(), temporaryPassword: z.string().min(12) })
+        .strict()
+        .safeParse(data);
+      if (!result.success) throw new Error('A operação retornou uma resposta inesperada. Tente novamente.');
+      setCredentials({ email: result.data.email, temporaryPassword: result.data.temporaryPassword });
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
   async function update(id: string, doctorIds: string[], active: boolean) {
     if (busy || (active && !directory.isSuccess)) return;
     setBusy(true);
@@ -165,6 +186,7 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
             onSave={(ids) => void update(staff.id, ids, true)}
             onReactivate={() => void update(staff.id, [], true)}
             onDeactivate={() => void update(staff.id, [], false)}
+            onReissue={() => void reissue(staff.id)}
           />
         ))}
       </section>
@@ -180,7 +202,7 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
           </DialogHeader>
           <DialogDescription>
             Entregue estas credenciais à pessoa responsável por um canal seguro. Ela deverá trocar a senha no primeiro
-            acesso.
+            acesso, em até 72 horas.
           </DialogDescription>
           <dl className="text-sm space-y-3">
             <div>
@@ -209,6 +231,7 @@ function StaffCard({
   onSave,
   onReactivate,
   onDeactivate,
+  onReissue,
 }: {
   staff: { id: string; name: string; active: boolean; doctorIds: string[] };
   embedded: boolean;
@@ -219,6 +242,7 @@ function StaffCard({
   onSave: (ids: string[]) => void;
   onReactivate: () => void;
   onDeactivate: () => void;
+  onReissue: () => void;
 }) {
   const Heading = embedded ? 'h4' : 'h3';
   const [selected, setSelected] = useState(staff.doctorIds);
@@ -253,6 +277,11 @@ function StaffCard({
         {staff.active && (
           <Button size="sm" variant="ghost" disabled={busy} onClick={onDeactivate}>
             Desativar acesso
+          </Button>
+        )}
+        {staff.active && (
+          <Button size="sm" variant="ghost" disabled={busy} onClick={onReissue}>
+            Nova senha temporária
           </Button>
         )}
       </div>

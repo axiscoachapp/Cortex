@@ -9,15 +9,20 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { fetchWithDeadline } from './http.ts';
+import type { PendingPasswordCaller } from './passwordChange.ts';
 
 export class AuthError extends Error {
-  constructor(message = "Não autorizado", public status = 401, public mfaRequired = false) {
+  constructor(message = "Não autorizado", public status = 401, public mfaRequired = false, public code?: string) {
     super(message);
     this.name = "AuthError";
   }
 }
 
+/** Machine-readable code of the 403 answered while a temporary password is pending. */
+export const PASSWORD_CHANGE_REQUIRED = 'password_change_required';
+
 type UserAuthOptions = { allowReception?: boolean };
+type InternalAuthOptions = UserAuthOptions & { allowPendingPasswordChange?: boolean };
 
 export type VerifiedUserContext = Readonly<{
   userId: string;
@@ -26,7 +31,15 @@ export type VerifiedUserContext = Readonly<{
   exp: number;
 }>;
 
-async function authenticateUser(req: Request, options: UserAuthOptions): Promise<{ userId: string; claims: Record<string, unknown> }> {
+type AuthenticatedUser = {
+  id: string;
+  email?: string;
+  created_at?: string;
+  app_metadata?: Record<string, unknown>;
+  user_metadata?: Record<string, unknown>;
+};
+
+async function authenticateUser(req: Request, options: InternalAuthOptions): Promise<{ userId: string; claims: Record<string, unknown>; user: AuthenticatedUser; token: string }> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) throw new AuthError();
 
@@ -52,13 +65,46 @@ async function authenticateUser(req: Request, options: UserAuthOptions): Promise
     throw new AuthError('Confirme o segundo fator para continuar.', 403, true);
   }
 
+  // A temporary password must be replaced before anything else. Both the live account and the
+  // signed claim count: a token issued before the change keeps the old claim until refreshed,
+  // and the database guards read the same claim (migration 20261111110000).
+  const tokenClaims = { app_metadata: asRecord(claims.app_metadata), user_metadata: asRecord(claims.user_metadata) };
+  if (!options.allowPendingPasswordChange && (passwordChangePending(user) || passwordChangePending(tokenClaims))) {
+    throw new AuthError('Troque a senha temporária para continuar.', 403, false, PASSWORD_CHANGE_REQUIRED);
+  }
+
   // app_metadata is managed by Auth administrators, unlike editable user_metadata.
   // Reception has its own scoped RPCs and cannot enter service-role clinical handlers.
   if (user.app_metadata?.account_type === 'reception' && !options.allowReception) {
     throw new AuthError('Esta operação é restrita ao ambiente médico.', 403);
   }
 
-  return { userId: user.id, claims };
+  return { userId: user.id, claims, user: user as AuthenticatedUser, token: token! };
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+/** Same rule as passwordPolicy.ts passwordChangePending, inlined to keep this module import-free. */
+function passwordChangePending(account: { app_metadata?: unknown; user_metadata?: unknown }): boolean {
+  return asRecord(account.app_metadata).must_change_password === true || asRecord(account.user_metadata).must_change_password === true;
+}
+
+/**
+ * Only for change-initial-password: the same verification (Auth, claims, MFA, identity) but a
+ * pending temporary password is accepted, so the owner can replace it. Reception accounts too.
+ */
+export async function requirePendingPasswordCaller(req: Request): Promise<PendingPasswordCaller> {
+  const { userId, user, token } = await authenticateUser(req, { allowReception: true, allowPendingPasswordChange: true });
+  return {
+    userId,
+    email: user.email ?? '',
+    createdAt: user.created_at ?? null,
+    appMetadata: asRecord(user.app_metadata),
+    userMetadata: asRecord(user.user_metadata),
+    accessToken: token,
+  };
 }
 
 /** Validates the bearer and preserves the existing user-id-only interface. */
@@ -88,7 +134,7 @@ export async function requireUserContext(req: Request, options: UserAuthOptions 
 /** 401 response the generic catch block can return for AuthError. */
 export function authResponse(err: AuthError, corsHeaders: Record<string, string>): Response {
   return new Response(
-    JSON.stringify({ error: err.message, ...(err.mfaRequired ? { mfaRequired: true } : {}) }),
+    JSON.stringify({ error: err.message, ...(err.mfaRequired ? { mfaRequired: true } : {}), ...(err.code ? { code: err.code } : {}) }),
     { status: err.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 }

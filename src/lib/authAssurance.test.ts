@@ -7,8 +7,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // below so it does not become a frontend runtime/type dependency.
 type ExpectedSessionContext = {userId:string;sessionId:string;aal:'aal1'|'aal2';exp:number};
 
-function load(factors: Array<{status:string}>=[], appMetadata: Record<string, unknown> = {}, userId='doctor') {
-  const getUser=vi.fn(async()=>({data:{user:{id:userId,factors,app_metadata:appMetadata}},error:null as unknown}));
+function load(factors: Array<{status:string}>=[], appMetadata: Record<string, unknown> = {}, userId='doctor', userMetadata: Record<string, unknown> = {}) {
+  const getUser=vi.fn(async():Promise<{data:{user:Record<string,unknown>|null};error:unknown}>=>({data:{user:{id:userId,email:'conta@example.invalid',created_at:'2026-11-10T12:00:00Z',factors,app_metadata:appMetadata,user_metadata:userMetadata}},error:null as unknown}));
   const source=readFileSync(new URL('../../supabase/functions/_shared/auth.ts',import.meta.url),'utf8');
   const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   const exports:Record<string,unknown>={};
@@ -16,7 +16,9 @@ function load(factors: Array<{status:string}>=[], appMetadata: Record<string, un
   const require=(id:string)=>id.includes('@supabase/supabase-js')?{createClient}:{fetchWithDeadline:vi.fn()};
   new Function('require','exports','Deno',compiled)(require,exports,{env:{get:()=> 'synthetic'}});
   return {getUser,createClient,requireUser:exports.requireUser as (request:Request, options?:{allowReception?:boolean})=>Promise<{userId:string}>,
-    requireUserContext:exports.requireUserContext as (request:Request, options?:{allowReception?:boolean})=>Promise<ExpectedSessionContext>};
+    requireUserContext:exports.requireUserContext as (request:Request, options?:{allowReception?:boolean})=>Promise<ExpectedSessionContext>,
+    requirePendingPasswordCaller:exports.requirePendingPasswordCaller as (request:Request)=>Promise<Record<string, unknown>>,
+    authResponse:exports.authResponse as (error:unknown, cors:Record<string,string>)=>Response};
 }
 const request=(claims:object)=>new Request('https://edge.invalid',{headers:{Authorization:`Bearer e30.${btoa(JSON.stringify(claims))}.synthetic-signature`}});
 describe('authenticated Edge MFA assurance',()=>{
@@ -106,5 +108,60 @@ describe('verified Edge session context',()=>{
     const {requireUserContext}=load([],{account_type:'reception'},actor);
     await expect(requireUserContext(request(claims()))).rejects.toMatchObject({status:403});
     await expect(requireUserContext(request(claims()),{allowReception:true})).resolves.toMatchObject({userId:actor,sessionId:session});
+  });
+});
+
+describe('pending temporary password on the Edge',()=>{
+  const actor='c7100000-0000-4000-8000-000000000002',session='c7110000-0000-4000-8000-000000000001';
+  const claims=(overrides:Record<string,unknown>={})=>({sub:actor,session_id:session,role:'authenticated',aal:'aal1',exp:Math.floor(Date.now()/1000)+3600,...overrides});
+  const flagged={must_change_password:true,temporary_password_expires_at:'2026-11-14T12:00:00Z'};
+  const refused={status:403,code:'password_change_required'};
+
+  it('refuses every requireUser and requireUserContext path while the server flag is set, with a machine-readable code',async()=>{
+    const {requireUser,requireUserContext,authResponse}=load([],flagged,actor);
+    const error=await requireUser(request(claims({app_metadata:flagged}))).catch(e=>e);
+    expect(error).toMatchObject(refused);
+    await expect(requireUserContext(request(claims({app_metadata:flagged})))).rejects.toMatchObject(refused);
+    await expect(requireUser(request(claims({app_metadata:flagged})),{allowReception:true})).rejects.toMatchObject(refused);
+    const response=authResponse(error,{});
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({error:'Troque a senha temporária para continuar.',code:'password_change_required'});
+  });
+  it('keeps refusing a token issued before the change (old claim) even after Auth cleared the flag',async()=>{
+    const {requireUser}=load([],{password_set_by_owner_at:'2026-11-11T12:00:00Z'},actor);
+    await expect(requireUser(request(claims({app_metadata:flagged})))).rejects.toMatchObject(refused);
+    await expect(requireUser(request(claims({app_metadata:{password_set_by_owner_at:'2026-11-11T12:00:00Z'}})))).resolves.toEqual({userId:actor});
+  });
+  it('refuses when the live account is flagged even if the presented claim is not',async()=>{
+    await expect(load([],flagged,actor).requireUser(request(claims()))).rejects.toMatchObject(refused);
+  });
+  it('treats the legacy user_metadata flag (accounts created before the change) as pending too',async()=>{
+    const {requireUser}=load([],{},actor,{must_change_password:true});
+    await expect(requireUser(request(claims({user_metadata:{must_change_password:true}})))).rejects.toMatchObject(refused);
+  });
+  it('leaves accounts without a temporary password untouched, including a cleared legacy flag',async()=>{
+    await expect(load([],{},actor).requireUser(request(claims()))).resolves.toEqual({userId:actor});
+    await expect(load([],{password_set_by_owner_at:'x'},actor,{must_change_password:false}).requireUser(request(claims({user_metadata:{must_change_password:false}})))).resolves.toEqual({userId:actor});
+  });
+  it('refuses a flagged reception account and keeps the reception and MFA rules once the flag is gone',async()=>{
+    await expect(load([],{account_type:'reception',...flagged},actor).requireUser(request(claims({app_metadata:{account_type:'reception',...flagged}})),{allowReception:true})).rejects.toMatchObject(refused);
+    await expect(load([],{account_type:'reception',...flagged},actor).requireUser(request(claims()))).rejects.toMatchObject(refused);
+    await expect(load([],{account_type:'reception'},actor).requireUser(request(claims()))).rejects.toMatchObject({status:403});
+    await expect(load([{status:'verified'}],{},actor).requireUser(request(claims()))).rejects.toMatchObject({status:403,mfaRequired:true});
+    await expect(load([{status:'verified'}],{},actor).requireUser(request(claims({aal:'aal2'})))).resolves.toEqual({userId:actor});
+  });
+  it('lets only change-initial-password through, still after Auth verification and the MFA rule',async()=>{
+    const {requirePendingPasswordCaller,getUser}=load([],{account_type:'reception',...flagged},actor);
+    const req=request(claims({app_metadata:flagged}));
+    await expect(requirePendingPasswordCaller(req)).resolves.toEqual({
+      userId:actor,email:'conta@example.invalid',createdAt:'2026-11-10T12:00:00Z',
+      appMetadata:{account_type:'reception',...flagged},userMetadata:{},
+      accessToken:req.headers.get('Authorization')!.slice('Bearer '.length),
+    });
+    expect(getUser).toHaveBeenCalledTimes(1);
+    await expect(load([{status:'verified'}],flagged,actor).requirePendingPasswordCaller(request(claims()))).rejects.toMatchObject({status:403,mfaRequired:true});
+    const invalid=load([],flagged,actor);
+    invalid.getUser.mockResolvedValue({data:{user:null},error:new Error('invalid signature')});
+    await expect(invalid.requirePendingPasswordCaller(request(claims()))).rejects.toMatchObject({status:401});
   });
 });

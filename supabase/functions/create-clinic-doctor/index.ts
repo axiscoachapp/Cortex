@@ -5,12 +5,15 @@
  * first and then receive that colleague's clinic invitation and shared charts.
  * Here the admin provisions the account: it is created confirmed, joins the
  * admin's clinic as an active doctor, and gets a temporary password that must
- * be changed on first sign-in (user_metadata.must_change_password).
+ * be changed on first sign-in. The flag and its 72-hour expiry live in
+ * app_metadata (service role only); until the owner calls change-initial-password
+ * the server refuses everything else (_shared/auth.ts, migration 20261111110000).
  */
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 import { readJsonObject, RequestError, fetchWithDeadline } from '../_shared/http.ts';
+import { generateTemporaryPassword, temporaryPasswordAppMetadata } from '../_shared/passwordPolicy.ts';
 
 const headers = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
@@ -19,13 +22,6 @@ const headers = {
   'Cache-Control': 'no-store',
   Vary: 'Origin',
 };
-
-function temporaryPassword(): string {
-  // No ambiguous characters (0/O, 1/l/I); 14 chars ≈ 79 bits of entropy.
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  const bytes = crypto.getRandomValues(new Uint8Array(14));
-  return [...bytes].map((b) => alphabet[b % alphabet.length]).join('');
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers });
@@ -57,12 +53,14 @@ serve(async (req) => {
     if (membershipError) throw new Error('Não foi possível verificar sua função na clínica.');
     if (!membership) throw new RequestError('Somente o administrador da clínica pode criar contas.', 403);
 
-    const password = temporaryPassword();
+    const password = generateTemporaryPassword();
+    const now = new Date();
     const { data: created, error: createError } = await db.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: { must_change_password: true, full_name: name },
+      app_metadata: { provisioned_at: now.toISOString(), ...temporaryPasswordAppMetadata(now) },
+      user_metadata: { full_name: name },
     });
     if (createError || !created?.user) {
       const exists = /already|registered|exists/i.test(createError?.message ?? '');

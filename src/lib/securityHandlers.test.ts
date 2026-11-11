@@ -9,6 +9,7 @@ import * as quota from '../../supabase/functions/_shared/quota';
 import * as http from '../../supabase/functions/_shared/http';
 import * as deletion from '../../supabase/functions/_shared/deletion';
 import * as providerFiles from '../../supabase/functions/_shared/providerFiles';
+import * as passwordPolicy from '../../supabase/functions/_shared/passwordPolicy';
 
 type Row = Record<string, unknown>;
 const user = '11111111-1111-4111-8111-111111111111';
@@ -125,6 +126,10 @@ function fakeDatabase(seed: Record<string, Row[]> = {}, maximumRows = Infinity) 
           insert = value;
           return query;
         },
+        insert: (value: Row) => {
+          insert = value;
+          return query;
+        },
         single: async () => {
           const result = execute();
           return { ...result, data: result.data[0] ?? null };
@@ -166,6 +171,7 @@ function loadHandler(
     },
     '../_shared/http.ts': { ...http, fetchWithDeadline: fetchStub },
     '../_shared/deletion.ts': deletion,
+    '../_shared/passwordPolicy.ts': passwordPolicy,
     '../_shared/providerFiles.ts': providerFiles,
     '../_shared/clinicalAi.ts': { callClinicalText: fetchStub, assertOpenAiEnabled: () => {} },
     '../_shared/gemini.ts': { uploadToGeminiFiles: fetchStub, callGemini: fetchStub, parseModelObject: fetchStub },
@@ -214,18 +220,50 @@ describe('security endpoint regressions', () => {
     expect(response.status).toBe(200);
     const created = await response.json();
     expect(created.temporaryPassword).toHaveLength(36);
-    expect(db.auth.admin.createUser).toHaveBeenCalledWith(
-      expect.objectContaining({
-        app_metadata: { account_type: 'reception' },
-        user_metadata: { full_name: body.name, must_change_password: true },
-      }),
-    );
+    // The flag lives where only the service role writes it (app_metadata), with a 72-hour expiry;
+    // user_metadata (editable by the account) carries nothing the server relies on.
+    const input = db.auth.admin.createUser.mock.calls[0][0] as { app_metadata: Row; user_metadata: Row };
+    expect(input.user_metadata).toEqual({ full_name: body.name });
+    expect(input.app_metadata).toEqual({
+      account_type: 'reception',
+      provisioned_at: expect.any(String),
+      must_change_password: true,
+      temporary_password_expires_at: expect.any(String),
+    });
+    expect(Date.parse(input.app_metadata.temporary_password_expires_at as string) - Date.parse(input.app_metadata.provisioned_at as string))
+      .toBe(72 * 60 * 60 * 1000);
     expect(db.rpc).toHaveBeenCalledWith('provision_clinic_receptionist', {
       p_actor: user,
       p_user: '99999999-9999-4999-8999-999999999999',
       p_name: body.name,
       p_doctors: [user],
     });
+  });
+  it('provisions a doctor with the temporary-password flag and expiry in app_metadata only', async () => {
+    const request = () => new Request('https://edge.invalid', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'Médica Exemplo', email: 'Medica@Example.invalid', crm: '123', crmUf: 'pr' }),
+    });
+    const outsider = fakeDatabase();
+    expect((await loadHandler('create-clinic-doctor', outsider)(request())).status).toBe(403);
+    expect(outsider.auth.admin.createUser).not.toHaveBeenCalled();
+    const db = fakeDatabase({ clinic_members: [{ user_id: user, clinic_id: patient, role: 'admin', status: 'active' }] });
+    const response = await loadHandler('create-clinic-doctor', db)(request());
+    expect(response.status).toBe(200);
+    const created = await response.json();
+    expect(created).toMatchObject({ success: true, email: 'medica@example.invalid' });
+    expect(created.temporaryPassword).toMatch(/^[A-HJ-NP-Za-km-z2-9]{14}$/);
+    const input = db.auth.admin.createUser.mock.calls[0][0] as { password: string; app_metadata: Row; user_metadata: Row };
+    expect(input.password).toBe(created.temporaryPassword);
+    expect(input.user_metadata).toEqual({ full_name: 'Médica Exemplo' });
+    expect(input.app_metadata).toEqual({
+      provisioned_at: expect.any(String),
+      must_change_password: true,
+      temporary_password_expires_at: expect.any(String),
+    });
+    expect(Date.parse(input.app_metadata.temporary_password_expires_at as string) - Date.parse(input.app_metadata.provisioned_at as string))
+      .toBe(72 * 60 * 60 * 1000);
+    expect(db.tables.clinic_members).toContainEqual({ clinic_id: patient, user_id: '99999999-9999-4999-8999-999999999999', role: 'doctor', status: 'active' });
   });
   it('rejects a foreign agenda before creating a reception login', async () => {
     const db = fakeDatabase({

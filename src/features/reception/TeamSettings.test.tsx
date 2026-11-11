@@ -119,6 +119,28 @@ describe('management directory separate from authorized agendas',()=>{
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(mocks.invoke).toHaveBeenCalledTimes(1);
  });
+ it('re-issues a temporary password only after confirmation and shows it once',async()=>{
+  const confirm=vi.spyOn(window,'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+  mocks.invoke.mockResolvedValue({data:{success:true,email:'staff@example.invalid',temporaryPassword:'NovaSenhaTemp2X'},error:null});
+  mount();await screen.findAllByText(b.name);
+  fireEvent.click(screen.getByRole('button',{name:'Nova senha temporária'}));
+  expect(mocks.invoke).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button',{name:'Nova senha temporária'}));
+  const dialog=await screen.findByRole('dialog');
+  expect(dialog).toHaveTextContent('NovaSenhaTemp2X');
+  expect(mocks.invoke).toHaveBeenCalledExactlyOnceWith('reissue-temporary-password',{body:{userId:staff}});
+  confirm.mockRestore();
+ });
+ it('explains a refused re-issue (the owner already chose a password)',async()=>{
+  vi.spyOn(window,'confirm').mockReturnValue(true);
+  const message='Esta pessoa já definiu a própria senha. Por segurança, o administrador não pode trocá-la.';
+  mocks.invoke.mockResolvedValue({data:null,error:{context:new Response(JSON.stringify({error:message,code:'password_owned'}),{status:409})}});
+  mount();await screen.findAllByText(b.name);
+  fireEvent.click(screen.getByRole('button',{name:'Nova senha temporária'}));
+  expect(await screen.findByRole('alert')).toHaveTextContent(message);
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  vi.mocked(window.confirm).mockRestore();
+ });
  it('reactivates with an empty scope list even if the old card carried agendas',async()=>{
   mount({inactive:true});
   const button=await screen.findByRole('button',{name:'Reativar conta'});

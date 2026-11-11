@@ -88,7 +88,7 @@ export default function SharingPage() {
   const [clinicName, setClinicName] = useState('');
   const [loadError, setLoadError] = useState('');
   const [newDoctor, setNewDoctor] = useState({ name: '', email: '', crm: '', crmUf: '' });
-  const [provisioned, setProvisioned] = useState<{ email: string; temporaryPassword: string } | null>(null);
+  const [provisioned, setProvisioned] = useState<{ email: string; temporaryPassword: string; reissued?: boolean } | null>(null);
   const [email, setEmail] = useState('');
   const [patients, setPatients] = useState<{ id: string; name: string }[]>([]);
   const [patientSearch, setPatientSearch] = useState('');
@@ -438,6 +438,32 @@ export default function SharingPage() {
                                   : 'Inativo'}
                             </span>
                           </span>
+                          {admin && m.user_id !== user?.id && m.status === 'active' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={busy}
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    'Gerar uma nova senha temporária? Só é possível enquanto o médico ainda não definiu a própria senha. A anterior deixa de funcionar.',
+                                  )
+                                ) {
+                                  setProvisioned(null);
+                                  void run(async () => {
+                                    const { data, error: invokeError } = await supabase.functions.invoke(
+                                      'reissue-temporary-password',
+                                      { body: { userId: m.user_id } },
+                                    );
+                                    if (invokeError) throw invokeError;
+                                    setProvisioned({ email: data.email, temporaryPassword: data.temporaryPassword, reissued: true });
+                                  }, 'Nova senha temporária gerada. Entregue ao médico pessoalmente; vale por 72 horas.');
+                                }
+                              }}
+                            >
+                              Nova senha temporária
+                            </Button>
+                          )}
                           {admin && m.user_id !== user?.id && m.status !== 'inactive' && (
                             <Button
                               variant="outline"
@@ -478,7 +504,7 @@ export default function SharingPage() {
                           if (invokeError) throw invokeError;
                           setProvisioned({ email: data.email, temporaryPassword: data.temporaryPassword });
                           setNewDoctor({ name: '', email: '', crm: '', crmUf: '' });
-                        }, 'Conta criada. Entregue a senha temporária ao médico pessoalmente.');
+                        }, 'Conta criada. Entregue a senha temporária ao médico pessoalmente; vale por 72 horas.');
                       }}
                     >
                       <h3 className="font-medium text-sm">Criar conta de médico</h3>
@@ -531,7 +557,8 @@ export default function SharingPage() {
                           className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm space-y-1"
                         >
                           <p>
-                            Conta criada para <strong>{provisioned.email}</strong>. Senha temporária (aparece só agora):
+                            {provisioned.reissued ? 'Nova senha temporária para' : 'Conta criada para'}{' '}
+                            <strong>{provisioned.email}</strong>. Senha temporária (aparece só agora, vale por 72 horas):
                           </p>
                           <p className="font-mono text-base select-all">{provisioned.temporaryPassword}</p>
                           <p className="text-xs text-muted-foreground">
