@@ -77,7 +77,7 @@ describe('finance page', () => {
   it('explains a doctor’s read-only charges without promising payment actions', async () => {
     invoke.mockImplementation(answer('doctor'));
     renderPage('doctor');
-    await screen.findByRole('tab', { name: 'Cobranças' });
+    await screen.findByRole('tab', { name: /Cobranças/ });
     expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Cobranças', 'Relatórios']);
     expect(screen.getByText('Consulte suas cobranças, os pagamentos registrados e os saldos em aberto.')).toBeVisible();
     expect(screen.queryByText(/registre o pagamento recebido/)).toBeNull();
@@ -86,25 +86,27 @@ describe('finance page', () => {
   it('describes cash according to role and the existing date scopes', async () => {
     invoke.mockImplementation(answer('reception'));
     const view = renderPage('reception');
-    await userEvent.click(await screen.findByRole('tab', { name: 'Caixa' }));
+    await userEvent.click(await screen.findByRole('tab', { name: /Caixa/ }));
     expect(screen.getByText('Confira os recebimentos do período pela data de pagamento.')).toBeVisible();
     view.unmount();
     invoke.mockImplementation(answer('admin'));
     renderPage('admin');
-    await userEvent.click(await screen.findByRole('tab', { name: 'Caixa' }));
+    await userEvent.click(await screen.findByRole('tab', { name: /Caixa/ }));
     expect(screen.getByText('Recebimentos pela data de pagamento; despesas em aberto pelo vencimento e despesas pagas pela data do pagamento.')).toBeVisible();
   });
 
   it('shows the tabs of each role', async () => {
     invoke.mockImplementation(answer('admin'));
     const { unmount } = renderPage('admin');
-    await screen.findByRole('tab', { name: 'A faturar' });
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['A faturar', 'Cobranças', 'Lotes', 'Caixa', 'Relatórios', 'Cadastros']);
+    await screen.findByRole('tab', { name: /A faturar \(1\)/ });
+    // The daily sequence is numbered, with what waits in each step; reference tabs come apart, unnumbered.
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['1 A faturar (1)', '2 Cobranças', '3 Lotes', '4 Caixa', 'Relatórios', 'Cadastros']);
     unmount();
     invoke.mockImplementation(answer('reception'));
     renderPage('reception');
-    await screen.findByRole('tab', { name: 'A faturar' });
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['A faturar', 'Cobranças', 'Caixa']);
+    await screen.findByRole('tab', { name: /A faturar \(1\)/ });
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['1 A faturar (1)', '2 Cobranças', '3 Caixa']);
+    expect(screen.getByText(/Próximo passo: clique em “Cobrar”/)).toBeVisible();
   });
 
   it('bills an attended appointment prefilled with the saved card and the price table', async () => {
@@ -115,9 +117,12 @@ describe('finance page', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByLabelText('Paciente')).toHaveValue('Paciente Exemplo');
     expect(within(dialog).getByLabelText('Número da carteirinha')).toHaveValue('0001 2345');
-    await user.click(within(dialog).getByRole('combobox', { name: 'Procedimento da tabela de preços' }));
-    await user.click(await screen.findByRole('option', { name: /10101012 · Consulta em consultório/ }));
+    // The plan's consultation price comes preselected; guide type, table and code stay folded.
+    expect(within(dialog).getByRole('combobox', { name: 'Procedimento da tabela de preços' })).toHaveTextContent('Consulta em consultório · R$ 150,00 · 10101012');
     expect(within(dialog).getByLabelText('Valor unitário (R$)')).toHaveValue('150,00');
+    expect(within(dialog).getByRole('button', { name: /Detalhes da guia/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(within(dialog).queryByLabelText('Código')).toBeNull();
+    expect(within(dialog).getByLabelText('Quantidade')).toHaveAccessibleDescription('A guia de consulta tem sempre 1.');
     await user.click(within(dialog).getByRole('button', { name: 'Salvar cobrança' }));
     await waitFor(() => expect(invoke.mock.calls.some(([, o]) => o?.body.action === 'createCharge')).toBe(true));
     const body = invoke.mock.calls.find(([, o]) => o?.body.action === 'createCharge')![1].body;
@@ -138,17 +143,17 @@ describe('finance page', () => {
     invoke.mockImplementation(answer('admin', { batches: { batches: [batch] }, batchCharges: { charges: [c1, c2] }, settle: { paid: 250, denied: 50 } }));
     const user = userEvent.setup();
     renderPage('admin');
-    await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await user.click(await screen.findByRole('tab', { name: /Lotes/ }));
     await user.click(await screen.findByRole('button', { name: 'Lançar o retorno do lote 4' }));
     const dialog = await screen.findByRole('dialog');
     const paid2 = await within(dialog).findByLabelText('Pago (R$)', { selector: `#settle-paid-${c2.id}` });
     await user.clear(paid2);
     await user.type(paid2, '100,00');
-    await user.click(within(dialog).getByRole('button', { name: 'Fechar o lote' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar retorno e fechar lote' }));
     expect(await within(dialog).findByText('Guia 2: informe o código da glosa.')).toBeInTheDocument();
     expect(invoke.mock.calls.some(([, o]) => o?.body.action === 'settle')).toBe(false);
     await user.type(within(dialog).getByLabelText('Código da glosa'), '1705');
-    await user.click(within(dialog).getByRole('button', { name: 'Fechar o lote' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar retorno e fechar lote' }));
     await waitFor(() => expect(invoke.mock.calls.some(([, o]) => o?.body.action === 'settle')).toBe(true));
     expect(invoke.mock.calls.find(([, o]) => o?.body.action === 'settle')![1].body).toMatchObject({
       batchId: BATCH, revision: 3, items: [{ chargeId: c1.id, paid: 150 }, { chargeId: c2.id, paid: 100, denialCode: '1705', denialNote: null }] });

@@ -13,14 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import {
-  EXPENSE_CATEGORIES, METHOD_LABELS, PAYMENT_METHODS, billingCall, billingKey, brl, dateBr, moneyInput, parseMoney, today,
+  EXPENSE_CATEGORIES, METHOD_LABELS, PAYMENT_METHODS, billingCall, billingKey, brl, dateBr, isStale, moneyInput, parseMoney, today,
   type BillingState, type Expense, type Payment, type PaymentMethod,
 } from './billingApi';
-import { DIALOG_CLASS, Field, QueryState, Stat } from './shared';
+import { DIALOG_CLASS, DialogError, Field, QueryState, STAT_GRID, Stat } from './shared';
 
 const NOT_PAID = '__open__';
 
-function ExpenseDialog({ open, expense, onOpenChange, onSaved }: { open: boolean; expense: Expense | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
+function ExpenseDialog({ open, expense, onOpenChange, onSaved, onRefresh }: {
+  open: boolean; expense: Expense | null; onOpenChange: (o: boolean) => void; onSaved: () => void; onRefresh: (id: string) => Promise<Expense | null>;
+}) {
   const init = () => ({
     description: expense?.description ?? '', category: expense?.category ?? 'outros', amount: expense ? moneyInput(expense.amount) : '',
     dueOn: expense?.dueOn ?? today(), paidOn: expense?.paidOn ?? '', method: (expense?.method ?? NOT_PAID) as PaymentMethod | typeof NOT_PAID, notes: expense?.notes ?? '',
@@ -29,20 +31,27 @@ function ExpenseDialog({ open, expense, onOpenChange, onSaved }: { open: boolean
   const [initial, setInitial] = useState(form);
   const submitting = useRef(false);
   const [key, setKey] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<{ message: string; stale?: boolean }>({ message: '' });
   const k = open ? expense?.id ?? 'new' : null;
-  if (k !== key) { const next = init(); setKey(k); setForm(next); setInitial(next); setError(''); }
-  const set = (patch: Partial<ReturnType<typeof init>>) => { setForm((f) => ({ ...f, ...patch })); setError(''); };
+  if (k !== key) { const next = init(); setKey(k); setForm(next); setInitial(next); setError({ message: '' }); }
+  const set = (patch: Partial<ReturnType<typeof init>>) => { setForm((f) => ({ ...f, ...patch })); setError({ message: '' }); };
   const save = useMutation({
-    mutationFn: () => billingCall('saveExpense', {
-      ...(expense ? { id: expense.id, revision: expense.revision } : {}), description: form.description.trim(), category: form.category,
+    mutationFn: (revision: number | null) => billingCall('saveExpense', {
+      ...(expense ? { id: expense.id, revision: revision ?? expense.revision } : {}), description: form.description.trim(), category: form.category,
       amount: parseMoney(form.amount), dueOn: form.dueOn, paidOn: form.method === NOT_PAID ? null : form.paidOn || today(),
       method: form.method === NOT_PAID ? null : form.method, notes: form.notes.trim(),
     }),
     onSuccess: () => { onSaved(); onOpenChange(false); },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError({ message: e.message, stale: isStale(e) }),
     onSettled: () => { submitting.current = false; },
   });
+  const retry = async () => {
+    if (!expense || submitting.current) return;
+    const fresh = await onRefresh(expense.id).catch(() => null);
+    if (!fresh) { setError({ message: 'Esta despesa não foi encontrada de novo. Feche e confira a lista.' }); return; }
+    submitting.current = true;
+    save.mutate(fresh.revision);
+  };
   const guard = useUnsavedChanges(open && (JSON.stringify(form) !== JSON.stringify(initial) || save.isPending),
     save.isPending ? 'Aguarde a confirmação da despesa antes de sair.' : 'Há uma despesa não salva. Sair e descartar o preenchimento?', { blocking: save.isPending });
   const changeOpen = (next: boolean) => { if (guard(next)) onOpenChange(next); };
@@ -51,9 +60,9 @@ function ExpenseDialog({ open, expense, onOpenChange, onSaved }: { open: boolean
     if (submitting.current) return;
     const n = parseMoney(form.amount);
     const problem = form.description.trim().length < 2 ? 'Descreva a despesa.' : !Number.isFinite(n) || n <= 0 ? 'Informe o valor.' : !form.dueOn ? 'Informe o vencimento.' : '';
-    if (problem) { setError(problem); return; }
+    if (problem) { setError({ message: problem }); return; }
     submitting.current = true;
-    save.mutate();
+    save.mutate(null);
   };
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
@@ -88,7 +97,7 @@ function ExpenseDialog({ open, expense, onOpenChange, onSaved }: { open: boolean
             )}
           </div>
           <Field id="exp-notes" label="Observações"><Input id="exp-notes" maxLength={300} value={form.notes} onChange={(e) => set({ notes: e.target.value })} /></Field>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          <DialogError message={error.message} stale={error.stale} onRetry={() => void retry()} />
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <Button type="button" variant="outline" onClick={() => changeOpen(false)}>Cancelar</Button>
             <Button type="submit" disabled={save.isPending}>{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
@@ -140,7 +149,7 @@ export function CashTab({ scope, state, range }: { scope: string[]; state: Billi
   return (
     <QueryState query={q}>
       <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <div className={STAT_GRID}>
           <Stat label="Recebido no mês" value={brl(received)} tone="good" />
           {admin && <Stat label="Despesas pagas" value={brl(paidExpenses)} />}
           {admin && <Stat label="Saldo" value={brl(received - paidExpenses)} tone={received - paidExpenses < 0 ? 'bad' : 'good'} />}
@@ -156,15 +165,15 @@ export function CashTab({ scope, state, range }: { scope: string[]; state: Billi
           {payments.length === 0 ? <p className="rounded-xl border bg-white p-6 text-center text-sm text-muted-foreground">Nenhum recebimento neste mês.</p> : (
             <ul className="divide-y rounded-xl border bg-white">
               {payments.map((p) => (
-                <li key={p.id} className="flex items-center gap-3 p-3 text-sm">
-                  <span className="w-24 shrink-0 tabular-nums">{dateBr(p.receivedOn)}</span>
-                  <span className="min-w-0 flex-1 truncate">
-                    {p.batchId ? 'Pagamento de lote do convênio' : `${p.patientName ?? 'Particular'}${p.description ? ` · ${p.description}` : ''}`}{p.notes ? ` · ${p.notes}` : ''}
+                <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-0.5 p-3 text-sm sm:grid-cols-[6.5rem_minmax(0,1fr)_7rem_8.5rem_auto]">
+                  <span className="col-span-3 min-w-0 break-words sm:order-2 sm:col-span-1">
+                    {p.batchId ? 'Recebimento de lote de convênio' : `${p.patientName ?? 'Particular'}${p.description ? ` · ${p.description}` : ''}`}{p.notes ? ` · ${p.notes}` : ''}
                   </span>
-                  <span className="hidden sm:inline text-muted-foreground">{METHOD_LABELS[p.method]}</span>
-                  <span className="font-medium tabular-nums">{brl(p.amount)}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums sm:order-1 sm:text-sm sm:text-foreground">{dateBr(p.receivedOn)}<span className="sm:hidden"> · {METHOD_LABELS[p.method]}</span></span>
+                  <span className="hidden text-muted-foreground sm:order-3 sm:inline">{METHOD_LABELS[p.method]}</span>
+                  <span className="whitespace-nowrap text-right font-medium tabular-nums sm:order-4">{brl(p.amount)}</span>
                   {admin && p.chargeId && (
-                    <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" aria-label={`Estornar pagamento de ${brl(p.amount)} de ${p.patientName ?? 'paciente'}`}
+                    <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0 sm:order-5" aria-label={`Estornar pagamento de ${brl(p.amount)} de ${p.patientName ?? 'paciente'}`}
                       onClick={() => setReversing(p)}>
                       <Undo2 className="h-4 w-4" />
                     </Button>
@@ -176,24 +185,28 @@ export function CashTab({ scope, state, range }: { scope: string[]; state: Billi
         </section>
         {admin && (
           <section className="space-y-2" aria-label="Despesas">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">Despesas</h2>
               <Button size="sm" variant="outline" onClick={() => setEditing({ open: true, expense: null })}><Plus className="mr-1.5 h-4 w-4" /> Nova despesa</Button>
             </div>
             {expenses.length === 0 ? <p className="rounded-xl border bg-white p-6 text-center text-sm text-muted-foreground">Nenhuma despesa com vencimento ou pagamento neste mês.</p> : (
               <ul className="divide-y rounded-xl border bg-white">
                 {expenses.map((e) => (
-                  <li key={e.id} className="flex flex-wrap items-center gap-2 p-3 text-sm">
+                  <li key={e.id} className="flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{e.description}</p>
+                      <p className="break-words font-medium">{e.description}</p>
                       <p className="text-xs text-muted-foreground">
                         {EXPENSE_CATEGORIES[e.category] ?? e.category} · vence {dateBr(e.dueOn)}{e.paidOn ? ` · paga em ${dateBr(e.paidOn)} (${METHOD_LABELS[e.method!]})` : ''}
                       </p>
                     </div>
-                    <span className="font-medium tabular-nums">{brl(e.amount)}</span>
-                    <Badge variant={e.paidOn ? 'secondary' : 'outline'}>{e.paidOn ? 'Paga' : 'A pagar'}</Badge>
-                    <Button size="icon" variant="ghost" aria-label={`Editar ${e.description}`} onClick={() => setEditing({ open: true, expense: e })}><Pencil className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" aria-label={`Excluir ${e.description}`} onClick={() => setDeleting(e)}><Trash2 className="h-4 w-4" /></Button>
+                    <div className="flex items-center gap-2">
+                      <span className="whitespace-nowrap font-medium tabular-nums sm:w-28 sm:text-right">{brl(e.amount)}</span>
+                      <Badge variant={e.paidOn ? 'secondary' : 'outline'}>{e.paidOn ? 'Paga' : 'A pagar'}</Badge>
+                      <span className="ml-auto flex">
+                        <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={`Editar ${e.description}`} onClick={() => setEditing({ open: true, expense: e })}><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={`Excluir ${e.description}`} onClick={() => setDeleting(e)}><Trash2 className="h-4 w-4" /></Button>
+                      </span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -201,6 +214,12 @@ export function CashTab({ scope, state, range }: { scope: string[]; state: Billi
           </section>
         )}
         <ExpenseDialog open={editing.open} expense={editing.expense} onOpenChange={(o) => setEditing((s) => ({ ...s, open: o }))}
+          onRefresh={async (id) => {
+            const r = await q.refetch();
+            const fresh = r.data?.expenses.find((x) => x.id === id) ?? null;
+            if (fresh) setEditing((s) => ({ ...s, expense: fresh }));
+            return fresh;
+          }}
           onSaved={() => { toast({ title: 'Despesa salva' }); void refresh(); }} />
         <AlertDialog open={!!reversing} onOpenChange={(o) => !o && setReversing(null)}>
           <AlertDialogContent>

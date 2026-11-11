@@ -1,7 +1,8 @@
-// New charge, from an attended appointment or on its own (private or by health plan).
+// New charge, from an attended appointment or on its own (private or by health plan), and the
+// correction of an open, unpaid charge.
 import { useMemo, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -10,9 +11,10 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import {
-  CONSULTATION_TYPES, billingCall, brl, moneyInput, parseMoney, today, type BillingState, type Charge, type GuideType, type Price,
+  CONSULTATION_TYPES, PRIVATE_CODE, billingCall, brl, isStale, moneyInput, parseMoney, today, type BillingState, type Charge, type GuideType, type Price,
 } from './billingApi';
-import { DIALOG_CLASS, Field } from './shared';
+import { consultationPrice } from './billingLogic';
+import { DIALOG_CLASS, DialogError, Field } from './shared';
 
 export interface ChargeSeed {
   appointmentId?: string;
@@ -37,27 +39,60 @@ interface Form {
   authorizationValidUntil: string; notes: string;
 }
 
-const blank = (seed: ChargeSeed | null, doctors: BillingState['doctors']): Form => ({
-  patientName: seed?.patientName ?? '', doctorId: seed?.doctorId ?? (doctors.length === 1 ? doctors[0].id : ''), serviceDate: seed?.serviceDate ?? today(),
-  payerId: seed?.payerId ?? PARTICULAR, cardNumber: seed?.cardNumber ?? '', cardValidUntil: seed?.cardValidUntil ?? '', newborn: false,
-  priceId: MANUAL, guideType: 'consulta', tableCode: '22', procedureCode: '', description: '', quantity: '1', unitAmount: '',
-  consultationType: seed?.consultationType ?? '1', authorizationNumber: '', authorizationPassword: '', authorizationDate: '', authorizationValidUntil: '', notes: '',
+const fromPrice = (p: Price, quantity: string): Partial<Form> => ({
+  priceId: p.id, tableCode: p.tableCode, procedureCode: p.procedureCode, description: p.description, guideType: p.guideType,
+  unitAmount: moneyInput(p.amount), quantity: p.guideType === 'consulta' ? '1' : quantity,
 });
 
-export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved }: {
+function blank(seed: ChargeSeed | null, state: BillingState, prices: Price[]): Form {
+  const base: Form = {
+    patientName: seed?.patientName ?? '', doctorId: seed?.doctorId ?? (state.doctors.length === 1 ? state.doctors[0].id : ''), serviceDate: seed?.serviceDate ?? today(),
+    payerId: seed?.payerId ?? PARTICULAR, cardNumber: seed?.cardNumber ?? '', cardValidUntil: seed?.cardValidUntil ?? '', newborn: false,
+    priceId: MANUAL, guideType: 'consulta', tableCode: '22', procedureCode: '', description: '', quantity: '1', unitAmount: '',
+    consultationType: seed?.consultationType ?? '1', authorizationNumber: '', authorizationPassword: '', authorizationDate: '', authorizationValidUntil: '', notes: '',
+  };
+  // From an attended visit, the plan's consultation price is the usual answer: start from it.
+  const price = seed?.appointmentId ? consultationPrice(prices, seed.payerId ?? null, seed.consultationType) : null;
+  return price ? { ...base, ...fromPrice(price, '1') } : base;
+}
+
+function fromCharge(c: Charge): Form {
+  return {
+    patientName: c.patientName, doctorId: c.doctorId, serviceDate: c.serviceDate, payerId: c.payerId ?? PARTICULAR, cardNumber: c.cardNumber ?? '', cardValidUntil: '',
+    newborn: c.newborn, priceId: MANUAL, guideType: c.guideType === 'sadt' ? 'sadt' : 'consulta', tableCode: c.tableCode,
+    procedureCode: c.procedureCode === PRIVATE_CODE ? '' : c.procedureCode, description: c.description, quantity: String(c.quantity), unitAmount: moneyInput(c.unitAmount),
+    consultationType: c.consultationType ?? '1', authorizationNumber: c.authorization.number ?? '', authorizationPassword: '',
+    authorizationDate: c.authorization.date ?? '', authorizationValidUntil: c.authorization.validUntil ?? '', notes: c.notes,
+  };
+}
+
+const newRequestId = () => (globalThis.crypto?.randomUUID?.() ?? null);
+
+export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved, editing = null, onRefreshEditing }: {
   open: boolean; onOpenChange: (o: boolean) => void; state: BillingState; prices: Price[]; seed: ChargeSeed | null; onSaved: (c: Charge) => void;
+  /** An open, unpaid charge to correct instead of a new one. */
+  editing?: Charge | null;
+  /** Reads the charge being corrected again (after someone else changed it). */
+  onRefreshEditing?: () => Promise<Charge | null>;
 }) {
-  const [form, setForm] = useState<Form>(() => blank(seed, state.doctors));
+  const [form, setForm] = useState<Form>(() => (editing ? fromCharge(editing) : blank(seed, state, prices)));
   const [initial, setInitial] = useState(form);
   const [wasOpen, setWasOpen] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<{ message: string; stale?: boolean }>({ message: '' });
+  const [details, setDetails] = useState(false);
+  // One id per opening: a retry after a lost reply returns the charge already created.
+  const [requestId, setRequestId] = useState<string | null>(null);
   // Refreshing billing metadata must not replace a draft in the same opening.
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) { const next = blank(seed, state.doctors); setForm(next); setInitial(next); setError(''); }
+    if (open) {
+      const next = editing ? fromCharge(editing) : blank(seed, state, prices);
+      setForm(next); setInitial(next); setError({ message: '' }); setRequestId(newRequestId());
+      setDetails(next.payerId !== PARTICULAR && next.priceId === MANUAL);
+    }
   }
   const submitting = useRef(false);
-  const set = (patch: Partial<Form>) => { setForm((f) => ({ ...f, ...patch })); setError(''); };
+  const set = (patch: Partial<Form>) => { setForm((f) => ({ ...f, ...patch })); setError({ message: '' }); };
   const payer = form.payerId === PARTICULAR ? null : state.payers.find((p) => p.id === form.payerId) ?? null;
   const priceList = useMemo(() => prices.filter((p) => p.active && (p.payerId ?? PARTICULAR) === form.payerId), [prices, form.payerId]);
   const guideType: GuideType | 'particular' = payer ? form.guideType : 'particular';
@@ -66,38 +101,66 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
   const total = Number.isFinite(unit) && Number.isInteger(quantity) ? Math.round(unit * quantity * 100) / 100 : NaN;
 
   // Changing the plan never keeps the previous plan's price: the same procedure code is looked up in the
-  // new table, and without a match the value is cleared for the person to fill in.
+  // new table, then the plan's consultation price; without a match the value is cleared for the person to fill in.
   const changePayer = (payerId: string) => {
     const same = prices.find((x) => x.active && (x.payerId ?? PARTICULAR) === payerId && x.procedureCode === form.procedureCode && x.tableCode === form.tableCode);
-    if (same) set({ payerId, priceId: same.id, description: same.description, guideType: same.guideType, unitAmount: moneyInput(same.amount),
-      quantity: same.guideType === 'consulta' ? '1' : form.quantity });
-    else set({ payerId, priceId: MANUAL, unitAmount: '' });
+    const usual = same ?? (seed?.appointmentId && !editing ? consultationPrice(prices, payerId === PARTICULAR ? null : payerId, form.consultationType) : null);
+    if (usual) set({ payerId, ...fromPrice(usual, form.quantity) });
+    else {
+      // A plan's procedure code means nothing on a private charge, where table and code are hidden.
+      set({ payerId, priceId: MANUAL, unitAmount: '', ...(payerId === PARTICULAR ? { procedureCode: '', tableCode: '22' } : {}) });
+      if (payerId !== PARTICULAR) setDetails(true);
+    }
   };
   const pickPrice = (id: string) => {
     const p = prices.find((x) => x.id === id);
-    if (!p) { set({ priceId: MANUAL }); return; }
-    set({ priceId: id, tableCode: p.tableCode, procedureCode: p.procedureCode, description: p.description, guideType: p.guideType,
-      unitAmount: moneyInput(p.amount), quantity: p.guideType === 'consulta' ? '1' : form.quantity });
+    if (!p) { set({ priceId: MANUAL }); if (payer) setDetails(true); return; }
+    set(fromPrice(p, form.quantity));
   };
 
   const save = useMutation({
-    mutationFn: () => billingCall<Charge>('createCharge', {
-      ...(seed?.appointmentId ? { appointmentId: seed.appointmentId } : { doctorId: form.doctorId }),
-      patientName: form.patientName.trim(), payerId: payer?.id ?? null, ...(payer ? {
-        cardNumber: form.cardNumber.trim(), cardValidUntil: form.cardValidUntil || null, newborn: form.newborn, guideType: form.guideType,
-      } : {}),
-      tableCode: form.tableCode, procedureCode: form.procedureCode.trim(), description: form.description.trim(), quantity, unitAmount: unit,
-      serviceDate: form.serviceDate, ...(guideType === 'consulta' ? { consultationType: form.consultationType } : {}),
-      ...(guideType === 'sadt' ? {
-        authorizationNumber: form.authorizationNumber.trim() || null, authorizationPassword: form.authorizationPassword.trim() || null,
-        authorizationDate: form.authorizationDate || null, authorizationValidUntil: form.authorizationValidUntil || null,
-      } : {}),
-      notes: form.notes.trim(), saveCoverage: true,
-    }),
+    mutationFn: (revision: number | null) => {
+      const privateManual = !payer && form.priceId === MANUAL && !form.procedureCode.trim();
+      const body = {
+        patientName: form.patientName.trim(), payerId: payer?.id ?? null, ...(payer ? {
+          cardNumber: form.cardNumber.trim(), cardValidUntil: form.cardValidUntil || null, newborn: form.newborn, guideType: form.guideType,
+        } : {}),
+        // A private charge typed by hand goes without table and code; the server files it in the clinic's own table.
+        ...(privateManual ? {} : { tableCode: form.tableCode, procedureCode: form.procedureCode.trim() }),
+        description: form.description.trim(), quantity, unitAmount: unit,
+        serviceDate: form.serviceDate, ...(guideType === 'consulta' ? { consultationType: form.consultationType } : {}),
+        ...(guideType === 'sadt' ? {
+          authorizationNumber: form.authorizationNumber.trim() || null, ...(form.authorizationPassword.trim() ? { authorizationPassword: form.authorizationPassword.trim() } : {}),
+          authorizationDate: form.authorizationDate || null, authorizationValidUntil: form.authorizationValidUntil || null,
+        } : {}),
+        notes: form.notes.trim(),
+      };
+      return editing
+        ? billingCall<Charge>('updateCharge', { id: editing.id, revision: revision ?? editing.revision, ...body })
+        : billingCall<Charge>('createCharge', {
+          ...(seed?.appointmentId ? { appointmentId: seed.appointmentId } : { doctorId: form.doctorId }), ...(requestId ? { requestId } : {}), ...body, saveCoverage: true,
+        });
+    },
     onSuccess: (c) => { onSaved(c); onOpenChange(false); },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError({ message: e.message, stale: isStale(e) }),
     onSettled: () => { submitting.current = false; },
   });
+  const [retrying, setRetrying] = useState(false);
+  const retryStale = async () => {
+    if (!onRefreshEditing || submitting.current) return;
+    setRetrying(true);
+    try {
+      const fresh = await onRefreshEditing();
+      if (!fresh || fresh.status !== 'open' || fresh.paidAmount > 0) {
+        setError({ message: 'Esta cobrança mudou e não pode mais ser corrigida (já recebeu pagamento ou entrou em lote). Feche e confira a lista.' });
+        return;
+      }
+      submitting.current = true;
+      save.mutate(fresh.revision);
+    } catch (e) {
+      setError({ message: (e as Error).message });
+    } finally { setRetrying(false); }
+  };
   const guard = useUnsavedChanges(open && (JSON.stringify(form) !== JSON.stringify(initial) || save.isPending),
     save.isPending ? 'Aguarde a confirmação da cobrança antes de sair.' : 'Há uma cobrança não salva. Sair e descartar o preenchimento?', { blocking: save.isPending });
   const changeOpen = (next: boolean) => { if (guard(next)) onOpenChange(next); };
@@ -105,27 +168,36 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
   const submit = (ev: React.FormEvent) => {
     ev.preventDefault();
     if (submitting.current) return;
+    const needsCode = !!payer && !form.procedureCode.trim();
     const problem = !form.patientName.trim() ? 'Informe o paciente.'
-      : !seed?.appointmentId && !form.doctorId ? 'Escolha o médico.'
+      : !editing && !seed?.appointmentId && !form.doctorId ? 'Escolha o médico.'
       : !form.serviceDate ? 'Informe a data do atendimento.'
       : payer && !form.cardNumber.trim() ? 'Informe o número da carteirinha.'
-      : !form.procedureCode.trim() || form.description.trim().length < 2 ? 'Escolha um procedimento da tabela ou informe código e descrição.'
+      : needsCode ? 'Escolha um procedimento da tabela ou informe o código em "Detalhes da guia".'
+      : form.description.trim().length < 2 ? 'Descreva o que está sendo cobrado.'
       : !Number.isFinite(unit) ? 'Informe o valor.'
       : !Number.isInteger(quantity) || quantity < 1 || quantity > 99 ? 'Quantidade de 1 a 99.'
       : guideType === 'consulta' && quantity !== 1 ? 'A guia de consulta tem um procedimento.'
       : guideType === 'sadt' && (form.authorizationNumber || form.authorizationPassword) && !form.authorizationDate ? 'Informe a data da autorização junto com a senha.'
       : '';
-    if (problem) { setError(problem); return; }
+    if (needsCode) setDetails(true);
+    if (problem) { setError({ message: problem }); return; }
     submitting.current = true;
-    save.mutate();
+    save.mutate(null);
   };
 
+  const title = editing ? 'Corrigir cobrança' : 'Nova cobrança';
+  // Without a private price list the field is hidden: description and value are all a private charge needs.
+  const priceHint = priceList.length > 0 ? undefined : 'Sem tabela de preços para este convênio: informe o código em "Detalhes da guia", a descrição e o valor.';
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
         <DialogHeader>
-          <DialogTitle>Nova cobrança</DialogTitle>
-          <DialogDescription>{seed?.appointmentId ? 'Do atendimento da agenda. O convênio e a carteirinha ficam guardados para a próxima vez.' : 'Cobrança avulsa, sem agendamento.'}</DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            {editing ? 'Corrija o que estiver errado. A correção fica registrada com seu nome.'
+              : seed?.appointmentId ? 'Do atendimento da agenda. O convênio e a carteirinha ficam guardados para a próxima vez.' : 'Cobrança avulsa, sem agendamento.'}
+          </DialogDescription>
         </DialogHeader>
         <form noValidate onSubmit={submit} className="space-y-4">
           <fieldset disabled={save.isPending} className="min-w-0 space-y-4">
@@ -134,7 +206,7 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
               <Input id="charge-patient" value={form.patientName} maxLength={200} onChange={(e) => set({ patientName: e.target.value })} />
             </Field>
             <Field id="charge-doctor" label="Médico">
-              <Select value={form.doctorId} onValueChange={(v) => set({ doctorId: v })} disabled={!!seed?.appointmentId}>
+              <Select value={form.doctorId} onValueChange={(v) => set({ doctorId: v })} disabled={!!seed?.appointmentId || !!editing}>
                 <SelectTrigger id="charge-doctor" aria-label="Médico"><SelectValue placeholder="Escolha" /></SelectTrigger>
                 <SelectContent>{state.doctors.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
               </Select>
@@ -168,50 +240,61 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
             </div>
           )}
 
-          <Field id="charge-price" label="Procedimento" hint={priceList.length === 0 ? 'Sem preços cadastrados para esta opção. Solicite a tabela à equipe Cortex ou preencha o procedimento abaixo.' : undefined}>
-            <Select value={form.priceId} onValueChange={pickPrice}>
-              <SelectTrigger id="charge-price" aria-label="Procedimento da tabela de preços"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={MANUAL}>Outro procedimento (preencher)</SelectItem>
-                {priceList.map((p) => <SelectItem key={p.id} value={p.id}>{p.procedureCode} · {p.description} · {brl(p.amount)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            {payer && (
-              <Field id="charge-guide" label="Guia">
-                <Select value={form.guideType} onValueChange={(v) => set({ guideType: v as GuideType, quantity: v === 'consulta' ? '1' : form.quantity })}>
-                  <SelectTrigger id="charge-guide" aria-label="Tipo de guia"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="consulta">Consulta</SelectItem><SelectItem value="sadt">SP/SADT (exames e procedimentos)</SelectItem></SelectContent>
-                </Select>
-              </Field>
-            )}
-            <Field id="charge-table" label="Tabela">
-              <Select value={form.tableCode} onValueChange={(v) => set({ tableCode: v })}>
-                <SelectTrigger id="charge-table" aria-label="Tabela TUSS"><SelectValue /></SelectTrigger>
-                <SelectContent>{TABLES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          {(priceList.length > 0 || payer) && (
+            <Field id="charge-price" label="Procedimento" hint={priceHint}>
+              <Select value={form.priceId} onValueChange={pickPrice}>
+                <SelectTrigger id="charge-price" aria-label="Procedimento da tabela de preços" className="text-left [&>span]:truncate"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={MANUAL}>Outro procedimento (preencher)</SelectItem>
+                  {priceList.map((p) => <SelectItem key={p.id} value={p.id}>{p.description} · {brl(p.amount)}{p.procedureCode !== PRIVATE_CODE ? ` · ${p.procedureCode}` : ''}</SelectItem>)}
+                </SelectContent>
               </Select>
             </Field>
-            <Field id="charge-code" label="Código">
-              <Input id="charge-code" value={form.procedureCode} maxLength={10} inputMode="numeric" onChange={(e) => set({ procedureCode: e.target.value, priceId: MANUAL })} />
-            </Field>
-          </div>
+          )}
+
+          {payer && (
+            <div className="rounded-lg border">
+              <button type="button" className="flex min-h-11 w-full items-center justify-between gap-2 px-3 text-left text-sm font-medium" aria-expanded={details}
+                aria-controls="charge-guide-details" onClick={() => setDetails((v) => !v)}>
+                <span>Detalhes da guia <span className="font-normal text-muted-foreground">· {form.guideType === 'sadt' ? 'SP/SADT' : 'Consulta'}{form.procedureCode ? ` · ${form.procedureCode}` : ''}</span></span>
+                <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${details ? 'rotate-180' : ''}`} aria-hidden="true" />
+              </button>
+              {details && (
+                <div id="charge-guide-details" className="grid gap-3 border-t p-3 sm:grid-cols-3">
+                  <Field id="charge-guide" label="Guia">
+                    <Select value={form.guideType} onValueChange={(v) => set({ guideType: v as GuideType, quantity: v === 'consulta' ? '1' : form.quantity })}>
+                      <SelectTrigger id="charge-guide" aria-label="Tipo de guia" className="text-left [&>span]:truncate"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="consulta">Consulta</SelectItem><SelectItem value="sadt">SP/SADT (exames e procedimentos)</SelectItem></SelectContent>
+                    </Select>
+                  </Field>
+                  <Field id="charge-table" label="Tabela">
+                    <Select value={form.tableCode} onValueChange={(v) => set({ tableCode: v })}>
+                      <SelectTrigger id="charge-table" aria-label="Tabela TUSS" className="text-left [&>span]:truncate"><SelectValue /></SelectTrigger>
+                      <SelectContent>{TABLES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </Field>
+                  <Field id="charge-code" label="Código">
+                    <Input id="charge-code" value={form.procedureCode} maxLength={10} inputMode="numeric" onChange={(e) => set({ procedureCode: e.target.value, priceId: MANUAL })} />
+                  </Field>
+                </div>
+              )}
+            </div>
+          )}
+
           <Field id="charge-description" label="Descrição">
             <Input id="charge-description" value={form.description} maxLength={150} onChange={(e) => set({ description: e.target.value, priceId: MANUAL })} />
           </Field>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Field id="charge-quantity" label="Quantidade">
+            <Field id="charge-quantity" label="Quantidade" hint={guideType === 'consulta' ? 'A guia de consulta tem sempre 1.' : undefined}>
               <Input id="charge-quantity" type="number" min={1} max={99} inputMode="numeric" value={form.quantity} disabled={guideType === 'consulta'}
-                onChange={(e) => set({ quantity: e.target.value })} />
+                aria-describedby={guideType === 'consulta' ? 'charge-quantity-hint' : undefined} onChange={(e) => set({ quantity: e.target.value })} />
             </Field>
             <Field id="charge-unit" label="Valor unitário (R$)">
               <Input id="charge-unit" inputMode="decimal" value={form.unitAmount} onChange={(e) => set({ unitAmount: e.target.value })} placeholder="0,00" />
             </Field>
-            <div className="min-w-0 space-y-1.5">
-              <p className="text-sm font-medium">Total</p>
-              <p className="flex h-10 items-center text-lg font-semibold tabular-nums" aria-live="polite">{Number.isFinite(total) ? brl(total) : '—'}</p>
-            </div>
+            <Field id="charge-total" label="Total">
+              <output id="charge-total" className="flex min-h-11 items-center text-lg font-semibold tabular-nums" aria-live="polite">{Number.isFinite(total) ? brl(total) : '—'}</output>
+            </Field>
           </div>
 
           {guideType === 'consulta' && (
@@ -228,7 +311,7 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
               <Field id="charge-auth-number" label="Número da guia na operadora">
                 <Input id="charge-auth-number" value={form.authorizationNumber} maxLength={20} onChange={(e) => set({ authorizationNumber: e.target.value })} />
               </Field>
-              <Field id="charge-auth-password" label="Senha">
+              <Field id="charge-auth-password" label="Senha" hint={editing?.authorization.password ? 'Já informada. Digite só para trocar.' : undefined}>
                 <Input id="charge-auth-password" value={form.authorizationPassword} maxLength={20} autoComplete="off" onChange={(e) => set({ authorizationPassword: e.target.value })} />
               </Field>
               <Field id="charge-auth-date" label="Data da autorização">
@@ -242,10 +325,10 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved 
           <Field id="charge-notes" label="Observações">
             <Textarea id="charge-notes" rows={2} maxLength={500} value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
           </Field>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          <DialogError message={error.message} stale={error.stale} onRetry={editing && onRefreshEditing ? () => void retryStale() : undefined} retrying={retrying} />
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <Button type="button" variant="outline" onClick={() => changeOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={save.isPending}>{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar cobrança</Button>
+            <Button type="submit" disabled={save.isPending}>{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editing ? 'Salvar correção' : 'Salvar cobrança'}</Button>
           </DialogFooter>
           </fieldset>
         </form>

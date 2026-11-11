@@ -53,11 +53,15 @@ export interface Charge {
   authorization: { number: string | null; password: string | null; date: string | null; validUntil: string | null };
   status: ChargeStatus; guideNumber: number | null; batchId: string | null; paidAmount: number; deniedAmount: number;
   denialCode: string | null; denialNote: string | null; notes: string; revision: number;
+  /** When a denied guide was written off (the clinic accepted the loss). */
+  writtenOffAt?: string | null;
 }
 export interface Batch {
   id: string; payerId: string; number: number; guideType: GuideType; status: 'draft' | 'sent' | 'closed'; totalAmount: number;
   paidAmount: number; deniedAmount: number; xmlHash: string | null; generatedAt: string | null; sentAt: string | null;
   protocol: string | null; paymentDate: string | null; nfseNumber: string | null; notes: string; revision: number; createdAt: string;
+  /** The plan's statement was recorded at least once (a send can no longer be taken back). */
+  answered?: boolean;
 }
 export interface ToBillItem {
   appointmentId: string; doctorId: string; start: string; type: string | null; contactId: string | null; patientName: string;
@@ -79,8 +83,11 @@ export interface Report {
   totals: Totals;
   doctors: Array<Totals & { doctorId: string; sharePercent: number | null; payout: number | null }>;
   payers: Array<Totals & { payerId: string | null; name: string }>;
-  denials: Array<{ code: string; count: number; amount: number }>;
+  denials: Array<{ code: string; count: number; amount: number; note?: string | null }>;
 }
+/** Unbilled attended visits of the months before the period. */
+export interface EarlierUnbilled { month: string; count: number }
+export interface ToBillAnswer { items: ToBillItem[]; earlier?: EarlierUnbilled[] }
 export interface BatchFile { fileName: string; contentType: string; base64: string; hash: string; revision: number }
 
 const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -132,6 +139,59 @@ export const moneyInput = (n: number) => n.toFixed(2).replace('.', ',');
 export function downloadBase64(fileName: string, contentType: string, base64: string) {
   const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
   const url = URL.createObjectURL(new Blob([bytes], { type: contentType }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** The server's refusal when someone else changed the record first (optimistic concurrency). */
+export const isStale = (e: unknown) => e instanceof BillingApiError && e.code === 'stale';
+
+/** Code the server gives a private charge typed without a procedure; never shown. */
+export const PRIVATE_CODE = 'PARTICULAR';
+
+/** "1 cobrança", "2 cobranças". */
+export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** "Novembro de 2026" from YYYY-MM. */
+export function monthLabel(month: string) {
+  const label = new Date(`${month}-15T12:00:00Z`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+/** Months between the current São Paulo month and YYYY-MM (negative in the past). */
+export function monthOffset(month: string) {
+  const now = today();
+  return (Number(month.slice(0, 4)) - Number(now.slice(0, 4))) * 12 + Number(month.slice(5, 7)) - Number(now.slice(5, 7));
+}
+
+/** Professional council (TISS table 26) and UF (IBGE code) in the words people use. */
+const COUNCILS: Record<string, string> = { '01': 'CRAS', '02': 'COREN', '03': 'CRF', '04': 'CRFA', '05': 'CREFITO', '06': 'CRM', '07': 'CRN', '08': 'CRO', '09': 'CRP', '10': 'Conselho' };
+const UF_BY_IBGE: Record<string, string> = {
+  '11': 'RO', '12': 'AC', '13': 'AM', '14': 'RR', '15': 'PA', '16': 'AP', '17': 'TO', '21': 'MA', '22': 'PI', '23': 'CE', '24': 'RN', '25': 'PB', '26': 'PE', '27': 'AL',
+  '28': 'SE', '29': 'BA', '31': 'MG', '32': 'ES', '33': 'RJ', '35': 'SP', '41': 'PR', '42': 'SC', '43': 'RS', '50': 'MS', '51': 'MT', '52': 'GO', '53': 'DF',
+};
+export const councilLabel = (council: string, ibgeUf: string) => `${COUNCILS[council] ?? `Conselho ${council}`}-${UF_BY_IBGE[ibgeUf] ?? ibgeUf}`;
+/** "TUSS 10101012", "Tabela própria 123". */
+export const procedureLabel = (table: string, code: string) =>
+  code === PRIVATE_CODE ? '' : table === '22' ? `TUSS ${code}` : table === '00' ? `Tabela própria ${code}` : `Tabela ${table} · ${code}`;
+
+/** A CSV cell for spreadsheets: quoted, and text that a spreadsheet would run as a formula is neutralised. */
+export function csvCell(value: string | number | null | undefined) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value.toFixed(2).replace('.', ',') : '';
+  const text = String(value ?? '');
+  const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+/** Semicolon-separated CSV with a BOM, as Excel in Portuguese expects. */
+export const toCsv = (rows: Array<Array<string | number | null | undefined>>) => `${String.fromCharCode(0xfeff)}${rows.map((r) => r.map(csvCell).join(';')).join('\r\n')}\r\n`;
+
+export function downloadText(fileName: string, contentType: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: contentType }));
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;

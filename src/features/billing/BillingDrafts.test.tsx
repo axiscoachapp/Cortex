@@ -64,7 +64,7 @@ function mount() {
   return { client, router };
 }
 async function openPayment() {
-  await userEvent.click(await screen.findByRole('tab', { name: 'Cobranças' }));
+  await userEvent.click(await screen.findByRole('tab', { name: /Cobranças/ }));
   fireEvent.click(await screen.findByRole('button', { name: 'Receber de Paciente Sintético' }));
   return screen.findByRole('dialog');
 }
@@ -129,7 +129,7 @@ describe('financial draft protection', () => {
 
   it('protects a new expense while allowing a rejected discard to keep its values', async () => {
     mount();
-    await userEvent.click(await screen.findByRole('tab', { name: 'Caixa' }));
+    await userEvent.click(await screen.findByRole('tab', { name: /Caixa/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Nova despesa' }));
     const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText('Descrição'), { target: { value: 'Material sintético' } });
@@ -141,18 +141,18 @@ describe('financial draft protection', () => {
   it('protects guide selection from section and guide-type changes until discard is confirmed', async () => {
     respond({ openForBatch: { charges: [batchCharge] } });
     mount();
-    await userEvent.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await userEvent.click(await screen.findByRole('tab', { name: /Lotes/ }));
     const selected = await screen.findByRole('checkbox', { name: /Incluir Paciente Sintético/ });
     await userEvent.click(selected);
-    await userEvent.click(screen.getByRole('tab', { name: 'Cadastros' }));
-    expect(screen.getByRole('tab', { name: 'Lotes' })).toHaveAttribute('data-state', 'active');
+    await userEvent.click(screen.getByRole('tab', { name: /Cadastros/ }));
+    expect(screen.getByRole('tab', { name: /Lotes/ })).toHaveAttribute('data-state', 'active');
     expect(selected).toBeChecked();
     await userEvent.click(screen.getByRole('combobox', { name: 'Tipo de guia do lote' }));
     await userEvent.click(await screen.findByRole('option', { name: 'SP/SADT' }));
     expect(selected).toBeChecked();
     expect(screen.getByRole('combobox', { name: 'Tipo de guia do lote' })).toHaveTextContent('Consulta');
     vi.mocked(window.confirm).mockReturnValue(true);
-    await userEvent.click(screen.getByRole('tab', { name: 'Cadastros' }));
+    await userEvent.click(screen.getByRole('tab', { name: /Cadastros/ }));
     expect(await screen.findByText(/equipe Cortex prepara/)).toBeVisible();
     expect(confirmSessionExit()).toBe(true);
     expect(invoke.mock.calls.some(([, options]) => options.body.action === 'createBatch')).toBe(false);
@@ -164,15 +164,15 @@ describe('financial draft protection', () => {
     const normal = invoke.getMockImplementation()!;
     invoke.mockImplementation((fn, options) => options.body.action === 'createBatch' ? new Promise(resolve => { finish = resolve; }) : normal(fn, options));
     mount();
-    await userEvent.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await userEvent.click(await screen.findByRole('tab', { name: /Lotes/ }));
     await userEvent.click(await screen.findByRole('checkbox', { name: /Incluir Paciente Sintético/ }));
     const create = screen.getByRole('button', { name: 'Criar lote' });
     act(() => { fireEvent.click(create); fireEvent.click(create); });
     await waitFor(() => expect(invoke.mock.calls.filter(([, options]) => options.body.action === 'createBatch')).toHaveLength(1));
     expect(confirmSessionExit()).toBe(false);
     expect(screen.getByRole('combobox', { name: 'Convênio do lote' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('tab', { name: 'Cadastros' }));
-    expect(screen.getByRole('tab', { name: 'Lotes' })).toHaveAttribute('data-state', 'active');
+    await userEvent.click(screen.getByRole('tab', { name: /Cadastros/ }));
+    expect(screen.getByRole('tab', { name: /Lotes/ })).toHaveAttribute('data-state', 'active');
     await act(async () => { finish({ data: { number: 6, guides: 1 }, error: null }); });
     await waitFor(() => expect(create).toBeDisabled());
     expect(confirmSessionExit()).toBe(true);
@@ -186,7 +186,7 @@ describe('financial draft protection', () => {
     ['Nota fiscal do lote 4', 'Número da NFS-e'],
   ])('protects and resets batch draft: %s', async (action, label) => {
     mount();
-    await userEvent.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await userEvent.click(await screen.findByRole('tab', { name: /Lotes/ }));
     fireEvent.click(await screen.findByRole('button', { name: action }));
     const dialog = await screen.findByRole('dialog');
     const input = await within(dialog).findByLabelText(label);
@@ -232,16 +232,15 @@ describe('financial draft protection', () => {
       if (action === 'createCharge') {
         fireEvent.click(await screen.findByRole('button', { name: 'Nova cobrança avulsa' }));
         fireEvent.change(screen.getByLabelText('Paciente'), { target: { value: 'Paciente Sintético' } });
-        fireEvent.change(screen.getByLabelText('Código'), { target: { value: '10101012' } });
         fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: 'Consulta sintética' } });
         fireEvent.change(screen.getByLabelText('Valor unitário (R$)'), { target: { value: '150,00' } });
       } else if (action === 'saveExpense') {
-        await userEvent.click(await screen.findByRole('tab', { name: 'Caixa' }));
+        await userEvent.click(await screen.findByRole('tab', { name: /Caixa/ }));
         fireEvent.click(await screen.findByRole('button', { name: 'Nova despesa' }));
         fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: 'Material sintético' } });
         fireEvent.change(screen.getByLabelText('Valor (R$)'), { target: { value: '120,00' } });
       } else {
-        await userEvent.click(await screen.findByRole('tab', { name: 'Lotes' }));
+        await userEvent.click(await screen.findByRole('tab', { name: /Lotes/ }));
         const button = action === 'settle' ? 'Lançar o retorno do lote 4' : action === 'markSent' ? 'Marcar o lote 5 como enviado' : 'Nota fiscal do lote 4';
         fireEvent.click(await screen.findByRole('button', { name: button }));
         if (action === 'settle') await screen.findByLabelText('Pago (R$)');
@@ -301,7 +300,7 @@ describe('financial draft protection', () => {
     respond({ prices: { prices: [{ id: 'price-example', payerId: payer, tableCode: '22', procedureCode: '10101012', description: 'Consulta sintética',
       guideType: 'consulta', amount: 150, active: true, revision: 1 }] } });
     mount();
-    await userEvent.click(await screen.findByRole('tab', { name: 'Cadastros' }));
+    await userEvent.click(await screen.findByRole('tab', { name: /Cadastros/ }));
     expect(await screen.findByText(/equipe Cortex prepara/)).toBeVisible();
     expect(screen.getByText('CLINICA SINTETICA')).toBeVisible();
     expect(screen.getByText('Consulta sintética')).toBeVisible();
@@ -315,7 +314,7 @@ describe('financial draft protection', () => {
     let fail = true;
     invoke.mockImplementation((fn, options) => options.body.action === 'prices' && fail ? Promise.reject(new Error('Falha sintética da tabela de preços.')) : normal(fn, options));
     mount();
-    await userEvent.click(await screen.findByRole('tab', { name: 'Cadastros' }));
+    await userEvent.click(await screen.findByRole('tab', { name: /Cadastros/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Falha sintética da tabela de preços.');
     expect(screen.queryByText(/Nenhum preço cadastrado/)).toBeNull();
     fail = false;
