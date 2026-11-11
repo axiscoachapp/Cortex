@@ -293,4 +293,11 @@ describe('manual encounter approval', () => {
     fireEvent.change(screen.getByLabelText('Título do registro'), { target: { value: 'Dor pélvica crônica' } });
     expect(screen.getByRole('status')).toHaveTextContent('Alterações ainda não salvas');
   });
+  it('reports a confirmed manual consultation so the agenda and history refresh', async () => {
+    const finalized = vi.fn();
+    render(<ClinicalWorkEditor patientId="patient-A" userId="doctor-A" onSaved={vi.fn()} onFinalized={finalized} onClose={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('Conteúdo do registro'), { target: { value: 'Evolução revisada.' } });
+    fireEvent.click(screen.getByRole('button', { name: /Revisei: confirmar consulta/ }));
+    await waitFor(() => expect(finalized).toHaveBeenCalledTimes(1));
+  });
 });

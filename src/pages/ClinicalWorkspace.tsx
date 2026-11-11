@@ -259,16 +259,30 @@ function ClinicalWorkspace({ patientId, schedulingQueue = false, embedded = fals
     void client.invalidateQueries({ queryKey: ['workspace-history'] });
     void client.invalidateQueries({ queryKey: ['patients'] });
   };
+  // A confirmed manual consultation completes its appointment and adds a consultation.
+  const refreshAfterFinalize = () => {
+    void client.invalidateQueries({ queryKey: ['appointments-today'] });
+    void client.invalidateQueries({ queryKey: ['appointments'] });
+    void client.invalidateQueries({ queryKey: ['patient-consultations', patientId] });
+    void client.invalidateQueries({ queryKey: ['patient-detail', patientId] });
+  };
+  const [transitioningId, setTransitioningId] = useState<string | null>(null);
   const transition = async (item: Item, status: string) => {
-    const { data, error } = await supabase
-      .from('clinical_work_items')
-      .update({ status })
-      .eq('id', item.id)
-      .eq('revision', item.revision)
-      .select('id')
-      .maybeSingle();
-    if (error || !data) window.alert('Não foi possível atualizar. Recarregue para conferir a versão.');
-    refresh();
+    if (transitioningId) return;
+    setTransitioningId(item.id);
+    try {
+      const { data, error } = await supabase
+        .from('clinical_work_items')
+        .update({ status })
+        .eq('id', item.id)
+        .eq('revision', item.revision)
+        .select('id')
+        .maybeSingle();
+      if (error || !data) window.alert('Não foi possível atualizar. Recarregue para conferir a versão.');
+      refresh();
+    } finally {
+      setTransitioningId(null);
+    }
   };
   if (embedded && !patientReady) return patient.isError || !user ? (
     <p role="alert">Paciente indisponível ou sem acesso. <button className="underline" onClick={() => patient.refetch()}>Tentar novamente</button></p>
@@ -408,6 +422,7 @@ function ClinicalWorkspace({ patientId, schedulingQueue = false, embedded = fals
                   patientId={patientId}
                   userId={user.id}
                   onSaved={refresh}
+                  onFinalized={refreshAfterFinalize}
                   onExitGuardChange={(guard) => {
                     exitEditor.current = guard;
                   }}
@@ -470,7 +485,7 @@ function ClinicalWorkspace({ patientId, schedulingQueue = false, embedded = fals
                         </Button>
                       )}
                       {item.kind === 'task' && item.status === 'open' && (
-                        <Button size="sm" variant="outline" onClick={() => transition(item, 'done')}>
+                        <Button size="sm" variant="outline" disabled={transitioningId === item.id} onClick={() => transition(item, 'done')}>
                           Marcar concluído
                         </Button>
                       )}

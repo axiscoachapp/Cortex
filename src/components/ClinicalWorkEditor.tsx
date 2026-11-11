@@ -21,6 +21,7 @@ export function ClinicalWorkEditor({
   patientId,
   userId,
   onSaved,
+  onFinalized,
   onClose,
   onExitGuardChange,
   appointmentId,
@@ -36,6 +37,8 @@ export function ClinicalWorkEditor({
   patientId: string;
   userId: string;
   onSaved: () => void;
+  /** The manual consultation was confirmed (appointment completed, consultation created). */
+  onFinalized?: () => void;
   onClose: () => void;
   onExitGuardChange?: (guard: () => boolean) => void;
 }) {
@@ -185,6 +188,7 @@ export function ClinicalWorkEditor({
       setSaved({ ...row, status: 'done' });
       setNotice('Consulta revisada registrada. Nenhuma chamada de IA foi necessária.');
       onSaved();
+      onFinalized?.();
     } catch {
       setError(
         'Não foi possível confirmar a consulta. Seu rascunho continua salvo; recarregue o item para conferir a versão e tente novamente.',

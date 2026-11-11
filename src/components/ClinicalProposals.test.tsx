@@ -46,9 +46,9 @@ const patient: Patient = {
   medications: [],
   allergies: [],
 };
-const renderProposals = () =>
+const renderProposals = (client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider client={client}>
       <ClinicalProposals patient={patient} userId="doctor" />
     </QueryClientProvider>,
   );
@@ -92,6 +92,17 @@ describe('clinical proposal approval', () => {
         p_accept: true,
       }),
     );
+  });
+  it('refreshes the chart views the approved note changes', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    renderProposals(client);
+    await screen.findByLabelText('Texto a acrescentar às notas clínicas');
+    await userEvent.click(screen.getByRole('button', { name: 'Aprovar texto revisado' }));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['patient-consultations', 'patient'] }));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['patient-detail', 'patient'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['patient-clinical-notes', 'patient'] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['consultations', 'patient'] });
   });
   it('keeps an edited note after a revision conflict instead of replacing it with the AI proposal', async () => {
     mocks.rpc.mockResolvedValue({ error: { code: '40001' } });

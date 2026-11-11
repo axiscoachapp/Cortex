@@ -206,7 +206,9 @@ function ProposalEditor({
         client.invalidateQueries({ queryKey: ['clinical-proposals', patientId, userId] }),
         client.invalidateQueries({ queryKey: ['patients', userId] }),
         client.invalidateQueries({ queryKey: ['patient-files', patientId] }),
-        client.invalidateQueries({ queryKey: ['consultations', patientId] }),
+        client.invalidateQueries({ queryKey: ['patient-detail', patientId] }),
+        client.invalidateQueries({ queryKey: ['patient-clinical-notes', patientId] }),
+        client.invalidateQueries({ queryKey: ['patient-consultations', patientId] }),
       ]);
     } catch {
       setError(
