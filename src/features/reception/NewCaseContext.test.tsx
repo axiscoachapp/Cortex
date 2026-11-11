@@ -3,7 +3,7 @@ import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 import {NewCaseDialog} from './NewCaseDialog';
 import {ClinicAccessContext} from './accessContext';
-import {SessionVisibilityContext} from '@/contexts/SessionVisibility';
+import {SessionPausedContext,SessionVisibilityContext} from '@/contexts/SessionVisibility';
 import type {ClinicAccess} from './contracts';
 import {confirmSessionExit} from '@/hooks/useUnsavedChanges';
 const mocks=vi.hoisted(()=>({createContact:vi.fn(),createCase:vi.fn(),contacts:vi.fn(),actor:'11111111-1111-4111-8111-111111111111' as string|null}));
@@ -33,4 +33,8 @@ describe('new case context and async boundaries',()=>{
  it('invalidates the form when the chosen physician is no longer in scope',async()=>{const view=mount();fill();fireEvent.change(screen.getByLabelText('Médico relacionado'),{target:{value:doctor}});view.rerender(view.tree({...access,doctors:[]}));await waitFor(()=>expect(screen.queryByLabelText('Assunto administrativo')).not.toBeInTheDocument(),{timeout:1500});expect(mocks.createCase).not.toHaveBeenCalled();});
  it('blocks ordinary exit during sending and removes the stale guard after invalidation',async()=>{let finish!:(v:string)=>void;mocks.createCase.mockReturnValue(new Promise(r=>{finish=r;}));const alert=vi.spyOn(window,'alert').mockImplementation(()=>{}),confirm=vi.spyOn(window,'confirm').mockReturnValue(true);try{const view=mount();fill();submit();await waitFor(()=>expect(mocks.createCase).toHaveBeenCalledTimes(1));expect(confirmSessionExit()).toBe(false);expect(alert).toHaveBeenCalledTimes(1);expect(confirm).not.toHaveBeenCalled();change(view,'inactive');await screen.findByRole('alert');expect(confirmSessionExit()).toBe(true);expect(confirm).not.toHaveBeenCalled();await act(async()=>finish(caseId));expect(view.created).not.toHaveBeenCalled();}finally{alert.mockRestore();confirm.mockRestore();}});
  it('does not reveal fields or submit when the dialog opens without current permission',async()=>{mount(true,{...access,active:false});expect(screen.queryByLabelText('Assunto administrativo')).not.toBeInTheDocument();expect(screen.getByRole('alert')).toBeVisible();expect(mocks.createCase).not.toHaveBeenCalled();});
+});
+describe('new case during a paused re-verification',()=>{
+ const paused=(on:boolean)=><QueryClientProvider client={new QueryClient()}><SessionPausedContext.Provider value={on}><ClinicAccessContext.Provider value={access}><NewCaseDialog contact={contact} onClose={vi.fn()} onCreated={vi.fn()}/></ClinicAccessContext.Provider></SessionPausedContext.Provider></QueryClientProvider>;
+ it('keeps the typed fields, refuses submission while paused and resumes without reopening',async()=>{const view=render(paused(false));fill();view.rerender(paused(true));expect(screen.getByLabelText('Assunto administrativo')).toHaveValue('Assunto sintético');expect(screen.getByText('Verificando acesso… O preenchimento continua preservado.')).toBeInTheDocument();expect(screen.getByRole('button',{name:'Adicionar à fila'})).toBeDisabled();submit();expect(mocks.createCase).not.toHaveBeenCalled();view.rerender(paused(false));expect(screen.queryByText(/verificação deste atendimento foi interrompida/)).toBeNull();expect(screen.getByLabelText('Assunto administrativo')).toHaveValue('Assunto sintético');submit();await waitFor(()=>expect(mocks.createCase).toHaveBeenCalledExactlyOnceWith(contactId,null,'Assunto sintético','scheduling',expect.any(String)));});
 });

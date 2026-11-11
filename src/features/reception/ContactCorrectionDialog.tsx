@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSessionHidden } from '@/contexts/SessionVisibility';
+import { useSessionHidden, useSessionPaused } from '@/contexts/SessionVisibility';
 import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
 import type { ContactEdit } from './contracts';
@@ -185,6 +185,8 @@ function CorrectionForm({
   readVersion: number;
 }) {
   const [initial] = useState(loaded);
+  // A paused re-verification keeps the typed correction; only saving waits.
+  const paused = useSessionPaused();
   const field = useId();
   const [name, setName] = useState(initial.name);
   const [phone, setPhone] = useState(initial.phone);
@@ -224,7 +226,7 @@ function CorrectionForm({
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
-        if (confirmed && dirty && !busy && mayContinue() && beginSave()) {
+        if (confirmed && dirty && !busy && !paused && mayContinue() && beginSave()) {
           save.mutate({ name: name.trim(), phone });
         }
       }}
@@ -293,7 +295,8 @@ function CorrectionForm({
         >
           Voltar
         </Button>
-        <Button type="submit" disabled={!dirty || !confirmed || busy}>
+        {paused && <p role="status" className="basis-full text-right text-xs text-muted-foreground">Verificando acesso… O preenchimento continua preservado.</p>}
+        <Button type="submit" disabled={!dirty || !confirmed || busy || paused}>
           {save.isPending ? 'Salvando…' : 'Salvar correção'}
         </Button>
       </div>

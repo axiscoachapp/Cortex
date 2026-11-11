@@ -3,24 +3,32 @@ import userEvent from '@testing-library/user-event';
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { AuthRetryableFetchError } from '@supabase/supabase-js';
 import { SessionAssurance } from './SessionAssurance';
+import { sessionIdOf } from '@/lib/sessionIdentity';
+import { useSessionHidden, useSessionPaused } from '@/contexts/SessionVisibility';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-const mock = vi.hoisted(() => ({ level: vi.fn(), factors: vi.fn(), verify: vi.fn(), actor: 'doctor', expiry: 100 }));
+const mock = vi.hoisted(() => ({ level: vi.fn(), factors: vi.fn(), verify: vi.fn(), actor: 'doctor', expiry: 100, token: 'never-put-token-in-query-key' }));
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: { auth: { mfa: { getAuthenticatorAssuranceLevel: mock.level, listFactors: mock.factors, challengeAndVerify: mock.verify } } },
 }));
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: mock.actor },
-    session: { access_token: 'never-put-token-in-query-key', expires_at: mock.expiry },
+    session: { access_token: mock.token, expires_at: mock.expiry },
     signOut: vi.fn(),
   }),
 }));
+// A synthetic, unsigned token: only its `session_id` claim is read by the guard.
+const tokenFor = (session: string, exp: number) => ['synthetic', btoa(JSON.stringify({ session_id: session, exp })).replace(/=+$/, ''), 'unsigned'].join('.');
+const verifiedLevel = { data: { currentLevel: 'aal2', nextLevel: 'aal2' }, error: null };
+const transportFailure = () => ({ data: null, error: new AuthRetryableFetchError('synthetic offline', 0) });
 beforeEach(() => {
   mock.level.mockReset();
   mock.actor = 'doctor';
   mock.expiry = 100;
+  mock.token = 'never-put-token-in-query-key';
   mock.factors.mockReset().mockResolvedValue({ data: { totp: [{ id: 'factor-synthetic', status: 'verified' }] }, error: null });
   mock.verify.mockReset().mockResolvedValue({ error: null });
 });
@@ -135,7 +143,8 @@ describe('session assurance', () => {
     let release!: (value: unknown) => void;
     mock.level.mockImplementation(() => new Promise(resolve => { release = resolve; }));
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    client.setQueryData(['session-assurance', 'doctor', 100], { currentLevel: 'aal2', nextLevel: 'aal2' });
+    // The key is the auth identity (user + session id), no longer the token expiry.
+    client.setQueryData(['session-assurance', 'doctor', null], { currentLevel: 'aal2', nextLevel: 'aal2' });
     render(<QueryClientProvider client={client}><MemoryRouter><SessionAssurance><p>Private chart from cache</p></SessionAssurance></MemoryRouter></QueryClientProvider>);
     expect(screen.queryByText('Private chart from cache')).not.toBeInTheDocument();
     await act(async () => release({ data: { currentLevel: 'aal1', nextLevel: 'aal2' }, error: null }));
@@ -165,12 +174,15 @@ describe('session assurance', () => {
   });
   it('preserves but conceals the same actor workspace during a new session-key check', async () => {
     mock.level.mockResolvedValue({ data: { currentLevel: 'aal2', nextLevel: 'aal2' }, error: null });
+    mock.token = tokenFor('session-a', 100);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const tree = () => <QueryClientProvider client={client}><MemoryRouter><SessionAssurance><textarea aria-label="Existing draft" defaultValue="Synthetic draft" /></SessionAssurance></MemoryRouter></QueryClientProvider>;
     const view = render(tree());
     const field = await screen.findByRole('textbox', { name: 'Existing draft' });
     let release!: (value: unknown) => void;
     mock.level.mockImplementation(() => new Promise(resolve => { release = resolve; }));
+    // A new auth session of the same user is a new identity (a token refresh is not).
+    mock.token = tokenFor('session-b', 200);
     mock.expiry = 200;
     view.rerender(tree());
     expect(field).toBeInTheDocument();
@@ -192,5 +204,127 @@ describe('session assurance', () => {
     await user.click(screen.getByRole('button', { name: 'Verificar código' }));
     expect(mock.verify).toHaveBeenCalledWith({ factorId: 'factor-synthetic', code: '123456' });
     expect(await screen.findByText('Private clinical chart')).toBeVisible();
+  });
+});
+
+function Probe() {
+  const hidden = useSessionHidden(), paused = useSessionPaused();
+  return <output aria-label="Estado da guarda">{hidden ? 'oculto' : paused ? 'pausado' : 'livre'}</output>;
+}
+describe('session assurance re-verification of the same identity', () => {
+  afterEach(() => vi.useRealTimers());
+  const mountWorkspace = () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const tree = () => <QueryClientProvider client={client}><MemoryRouter><SessionAssurance>
+      <label>Campo em digitação<textarea defaultValue="" /></label><Probe />
+    </SessionAssurance></MemoryRouter></QueryClientProvider>;
+    const view = render(tree());
+    return { client, view, tree };
+  };
+  it('reads only the session id claim and never fails on malformed tokens', () => {
+    expect(sessionIdOf(tokenFor('session-a', 1))).toBe('session-a');
+    expect(sessionIdOf('never-put-token-in-query-key')).toBeNull();
+    expect(sessionIdOf(undefined)).toBeNull();
+    expect(sessionIdOf('a.%%%.b')).toBeNull();
+  });
+  it('keeps the workspace visible, focused and typed through a same-session token refresh', async () => {
+    mock.level.mockResolvedValue(verifiedLevel);
+    mock.token = tokenFor('session-a', 100);
+    const { view, tree, client } = mountWorkspace();
+    const field = await screen.findByRole('textbox', { name: 'Campo em digitação' });
+    fireEvent.change(field, { target: { value: 'Texto em digitação sintético' } });
+    field.focus();
+    let release!: (value: unknown) => void;
+    mock.level.mockImplementation(() => new Promise(resolve => { release = resolve; }));
+    // TOKEN_REFRESHED: new access token and expiry, same user and auth session.
+    mock.token = tokenFor('session-a', 200);
+    mock.expiry = 200;
+    view.rerender(tree());
+    await waitFor(() => expect(mock.level).toHaveBeenCalledTimes(2));
+    expect(field).toBeVisible();
+    expect(field).toHaveFocus();
+    expect(screen.queryByText('Verificando sessão…')).toBeNull();
+    expect(screen.getByLabelText('Estado da guarda')).toHaveTextContent('livre');
+    await act(async () => release(verifiedLevel));
+    expect(screen.getByRole('textbox', { name: 'Campo em digitação' })).toBe(field);
+    expect(field).toHaveValue('Texto em digitação sintético');
+    expect(field).toHaveFocus();
+    expect(JSON.stringify(client.getQueryCache().getAll().map(q => q.queryKey))).not.toContain('synthetic.');
+  });
+  it('still hides when the step-up requirement appears after a token refresh', async () => {
+    mock.level.mockResolvedValue(verifiedLevel);
+    mock.token = tokenFor('session-a', 100);
+    const { view, tree } = mountWorkspace();
+    const field = await screen.findByRole('textbox', { name: 'Campo em digitação' });
+    mock.level.mockResolvedValue({ data: { currentLevel: 'aal1', nextLevel: 'aal2' }, error: null });
+    mock.expiry = 200;
+    view.rerender(tree());
+    expect(await screen.findByRole('heading', { name: 'Verifique seu acesso' })).toBeInTheDocument();
+    expect(field).not.toBeVisible();
+  });
+  it('unmounts the previous actor workspace when the user changes', async () => {
+    mock.level.mockResolvedValue(verifiedLevel);
+    const { view, tree } = mountWorkspace();
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Campo em digitação' }), { target: { value: 'Texto do primeiro usuário' } });
+    mock.actor = 'other-doctor';
+    view.rerender(tree());
+    expect(screen.queryByDisplayValue('Texto do primeiro usuário')).toBeNull();
+    await screen.findByRole('textbox', { name: 'Campo em digitação' });
+    expect(screen.queryByDisplayValue('Texto do primeiro usuário')).toBeNull();
+  });
+  it('keeps the workspace paused with a banner on a transport failure and recovers silently', async () => {
+    mock.level.mockResolvedValue(verifiedLevel);
+    const { client } = mountWorkspace();
+    const field = await screen.findByRole('textbox', { name: 'Campo em digitação' });
+    fireEvent.change(field, { target: { value: 'Preservado' } });
+    mock.level.mockResolvedValue(transportFailure());
+    await act(() => client.invalidateQueries({ queryKey: ['session-assurance'] }));
+    expect(mock.level.mock.calls.length).toBeGreaterThanOrEqual(4); // first try + quick retries
+    expect(await screen.findByRole('status', { name: 'Estado da verificação da sessão' })).toHaveTextContent('Não foi possível atualizar a verificação da sessão');
+    expect(field).toBeVisible();
+    expect(field).toHaveValue('Preservado');
+    expect(screen.getByLabelText('Estado da guarda')).toHaveTextContent('pausado');
+    expect(document.querySelector('[data-session-locked]')).toBeNull();
+    mock.level.mockResolvedValue(verifiedLevel);
+    fireEvent.click(screen.getByRole('button', { name: 'Verificar sessão novamente' }));
+    await waitFor(() => expect(screen.queryByRole('status', { name: 'Estado da verificação da sessão' })).toBeNull());
+    expect(screen.getByLabelText('Estado da guarda')).toHaveTextContent('livre');
+    expect(field).toHaveValue('Preservado');
+  });
+  it('blocks after 45 seconds of transport failures', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mock.level.mockResolvedValue(verifiedLevel);
+    const { client } = mountWorkspace();
+    const field = await screen.findByRole('textbox', { name: 'Campo em digitação' });
+    mock.level.mockResolvedValue(transportFailure());
+    await act(async () => { void client.invalidateQueries({ queryKey: ['session-assurance'] }); await vi.advanceTimersByTimeAsync(2_000); });
+    await screen.findByRole('status', { name: 'Estado da verificação da sessão' });
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(field).toBeVisible();
+    await act(() => vi.advanceTimersByTimeAsync(16_000));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível verificar a segurança da sessão');
+    expect(field).not.toBeVisible();
+    expect(screen.getByLabelText('Estado da guarda')).toHaveTextContent('oculto');
+  });
+  it('blocks at once on a definitive refusal, and a later transport error does not revive it', async () => {
+    mock.level.mockResolvedValue(verifiedLevel);
+    const { client } = mountWorkspace();
+    const field = await screen.findByRole('textbox', { name: 'Campo em digitação' });
+    mock.level.mockResolvedValue({ data: null, error: new Error('synthetic refusal') });
+    await act(() => client.invalidateQueries({ queryKey: ['session-assurance'] }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível verificar');
+    expect(field).not.toBeVisible();
+    expect(mock.level).toHaveBeenCalledTimes(2); // no retry of a refusal
+    mock.level.mockResolvedValue(transportFailure());
+    await act(() => client.invalidateQueries({ queryKey: ['session-assurance'] }));
+    expect(field).not.toBeVisible();
+    expect(screen.queryByRole('status', { name: 'Estado da verificação da sessão' })).toBeNull();
+  });
+  it('does not grant an initial check that fails with a transport error', async () => {
+    mock.level.mockResolvedValue(transportFailure());
+    mountWorkspace();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível verificar');
+    expect(screen.queryByRole('textbox', { name: 'Campo em digitação' })).toBeNull();
+    expect(mock.level).toHaveBeenCalledTimes(1);
   });
 });

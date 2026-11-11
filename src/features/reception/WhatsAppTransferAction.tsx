@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSessionHidden } from '@/contexts/SessionVisibility';
+import { useSessionHidden, useSessionPaused } from '@/contexts/SessionVisibility';
 import { useClinicAccess } from './accessContext';
 import { whatsappApi, type WhatsAppConversation } from './whatsappApi';
 import { readWhatsAppAssignees, type WhatsAppAssignee, type WhatsAppAssigneePage } from './whatsappAssignees';
@@ -79,12 +79,15 @@ function AssigneeChoice({ actor, catalog, selectable, onConfirm, onPage, before 
   onConfirm: (person: WhatsAppAssignee) => void; onPage: (cursor: string | null) => void; before: string | null;
 }) {
   const [chosen, setChosen] = useState<WhatsAppAssignee | null>(null);
+  // A paused re-verification keeps the choice; only confirming waits.
+  const paused = useSessionPaused();
   if (chosen) return <div className="min-w-0 space-y-4">
     <p className="text-sm [overflow-wrap:anywhere]">Novo responsável: <strong>{chosen.name}</strong> · {chosen.role === 'admin' ? 'Administração' : 'Recepção'}</p>
     <p className="text-sm">A conversa continuará aberta. A fila e os vínculos serão mantidos. Confira a pessoa antes de confirmar.</p>
     <Button type="button" variant="outline" className={control} onClick={() => setChosen(null)}>Escolher outra pessoa</Button>
+    {paused && <p role="status" className="text-xs text-muted-foreground">Verificando acesso… A escolha continua preservada.</p>}
     <DialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-      <CancelTransfer /><Button type="button" className={control} onClick={() => onConfirm(chosen)}>Confirmar transferência</Button>
+      <CancelTransfer /><Button type="button" className={control} disabled={paused} onClick={() => { if (!paused) onConfirm(chosen); }}>Confirmar transferência</Button>
     </DialogFooter>
   </div>;
   return <div className="min-w-0 space-y-4">

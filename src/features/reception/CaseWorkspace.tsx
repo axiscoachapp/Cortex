@@ -16,10 +16,12 @@ import { DoctorSuggestion } from './DoctorSuggestion';
 import { LinkRelationshipDialog } from './LinkRelationshipDialog';
 import { relationshipLabels } from './linkRelationships';
 
-export function CaseWorkspace({ data }: { data: ReceptionCase }) {
+// stale: the last refetch of this case failed. Everything stays mounted (open
+// dialogs, the draft) but actions on the case wait for a fresh read.
+export function CaseWorkspace({ data, stale = false }: { data: ReceptionCase; stale?: boolean }) {
   const access = useClinicAccess();
   const client = useQueryClient();
-  const draft = useCaseDraft(data.id, data.draft);
+  const draft = useCaseDraft(data.id, data.draft, access?.actorId);
   const request = useRequestId();
   const [target, setTarget] = useState('');
   const [doctor, setDoctor] = useState('');
@@ -41,7 +43,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
     onSettled: () => client.invalidateQueries({ queryKey: ['reception'] }),
   });
   async function post() {
-    if (posting || !draft.body.trim()) return;
+    if (posting || stale || !draft.body.trim()) return;
     setPosting(true);
     setPostError(null);
     try {
@@ -95,13 +97,13 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
         </p>
         <div className="flex flex-wrap gap-2">
           {closed ? (
-            <Button size="sm" onClick={() => change.mutate({ action: 'reopen' })} disabled={change.isPending}>
+            <Button size="sm" onClick={() => change.mutate({ action: 'reopen' })} disabled={stale || change.isPending}>
               Reabrir atendimento
             </Button>
           ) : (
             <>
               {!data.assignedTo && (
-                <Button size="sm" onClick={() => change.mutate({ action: 'claim' })} disabled={change.isPending}>
+                <Button size="sm" onClick={() => change.mutate({ action: 'claim' })} disabled={stale || change.isPending}>
                   Assumir atendimento
                 </Button>
               )}
@@ -113,13 +115,13 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
               )}
               {editable && (
                 <>
-                  <Button size="sm" variant="outline" onClick={() => setBooking(true)}>
+                  <Button size="sm" variant="outline" disabled={stale} onClick={() => setBooking(true)}>
                     Agendar consulta
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={change.isPending}
+                    disabled={stale || change.isPending}
                     onClick={() => change.mutate({ action: 'status', value: { status: 'resolved' } })}
                   >
                     Concluir atendimento
@@ -131,6 +133,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
         </div>
       </header>
       <div className="p-4 space-y-5">
+        {stale && <p role="status" className="text-xs text-muted-foreground">Atualize o atendimento para continuar. O rascunho e o que foi preenchido continuam preservados.</p>}
         <ReceptionNotice error={change.error} />
         {!closed && editable && (
           <section className="space-y-3">
@@ -157,8 +160,8 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
                   className="mt-2"
                   size="sm"
                   variant="outline"
-                  disabled={!doctorAuthorized || change.isPending}
-                  onClick={() => { if (doctorAuthorized && !change.isPending) change.mutate({ action: 'route', value: { doctorId: doctor } }); }}
+                  disabled={stale || !doctorAuthorized || change.isPending}
+                  onClick={() => { if (!stale && doctorAuthorized && !change.isPending) change.mutate({ action: 'route', value: { doctorId: doctor } }); }}
                 >
                   Encaminhar
                 </Button>
@@ -184,7 +187,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
                   className="mt-2"
                   size="sm"
                   variant="outline"
-                  disabled={!target || change.isPending}
+                  disabled={stale || !target || change.isPending}
                   onClick={() => change.mutate({ action: 'transfer', value: { assigneeId: target } })}
                 >
                   Transferir
@@ -197,7 +200,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
                   key={status}
                   size="sm"
                   variant={data.status === status ? 'secondary' : 'ghost'}
-                  disabled={change.isPending || !data.assignedTo || data.status === status}
+                  disabled={stale || change.isPending || !data.assignedTo || data.status === status}
                   onClick={() => change.mutate({ action: 'status', value: { status } })}
                 >
                   {statuses[status]}
@@ -206,7 +209,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
               <Button
                 size="sm"
                 variant="ghost"
-                disabled={change.isPending}
+                disabled={stale || change.isPending}
                 onClick={() => change.mutate({ action: 'status', value: { status: 'cancelled' } })}
               >
                 Cancelar demanda
@@ -223,7 +226,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
                 {p.dateOfBirth ? ' · nascimento ' + p.dateOfBirth.split('-').reverse().join('/') : ''}
                 {' · ' + relationshipLabels[p.relationship]}
               </p>
-              {access?.admin && <Button size="sm" variant="outline" className="h-auto min-h-10 max-w-full whitespace-normal" onClick={() => { setLinkNotice(false); setEditingLink(p); }}>Corrigir relação de {p.name}</Button>}</div>
+              {access?.admin && <Button size="sm" variant="outline" className="h-auto min-h-10 max-w-full whitespace-normal" disabled={stale} onClick={() => { setLinkNotice(false); setEditingLink(p); }}>Corrigir relação de {p.name}</Button>}</div>
             ))
           ) : (
             <p className="text-xs text-muted-foreground">
@@ -289,7 +292,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
               </Button>
             </div>
           )}
-          <Button size="sm" disabled={!editable || closed || posting || !draft.body.trim()} onClick={() => void post()}>
+          <Button size="sm" disabled={stale || !editable || closed || posting || !draft.body.trim()} onClick={() => void post()}>
             {posting ? 'Registrando…' : 'Registrar anotação'}
           </Button>
           {!editable && !closed && (
@@ -302,7 +305,7 @@ export function CaseWorkspace({ data }: { data: ReceptionCase }) {
           Ver agenda da equipe
         </Link>
       </div>
-      {booking && <BookingDialog receptionCase={data} onClose={() => setBooking(false)} />}
+      {booking && <BookingDialog receptionCase={data} paused={stale} onClose={() => setBooking(false)} />}
       {editingLink && access?.admin && <LinkRelationshipDialog key={`${access.actorId}:${data.id}:${editingLink.id}`} contactId={data.contactId} patientId={editingLink.id} doctorId={editingLink.doctorId} contactName={data.contactName} onClose={() => setEditingLink(null)} onSaved={() => { setEditingLink(null); setLinkNotice(true); }} />}
     </article>
   );

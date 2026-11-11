@@ -10,7 +10,8 @@ import { ClinicAccessContext } from './accessContext';
 import { confirmSessionExit } from '@/hooks/useUnsavedChanges';
 import { ClinicAccessTransportError } from './accessErrors';
 import type { ClinicAccess } from './contracts';
-import { SessionVisibilityContext } from '@/contexts/SessionVisibility';
+import { SessionPausedContext, SessionVisibilityContext } from '@/contexts/SessionVisibility';
+import { useGraceExpired, VERIFICATION_RETRIES, VERIFICATION_RETRY_DELAY_MS } from '@/hooks/useVerificationGrace';
 
 export function ClinicAccessGate({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
@@ -23,8 +24,11 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
   const receptionPage = matchRoutes([{ path: '/recepcao/*' }], pathname) !== null;
   const settingsPage = matchRoutes([{ path: '/configuracoes' }], pathname) !== null;
   const parentHidden = useContext(SessionVisibilityContext);
+  const parentPaused = useContext(SessionPausedContext);
   const workspace = useRef<HTMLDivElement>(null);
   const verified = useRef<{ access: ClinicAccess; locationKey: string } | null>(null);
+  const retryable = useRef({ settingsPage, actor: user?.id });
+  retryable.current = { settingsPage, actor: user?.id };
   const access = useQuery({
     queryKey: ['clinic-access', user?.id],
     queryFn: async () => {
@@ -39,7 +43,11 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
       }
     },
     enabled: !!user,
-    retry: false,
+    // Retry a transport failure quickly when this actor was already verified
+    // here. Settings keep the strict rule: the first failure unmounts them.
+    retry: (count, error) => count < VERIFICATION_RETRIES && error instanceof ClinicAccessTransportError
+      && !retryable.current.settingsPage && !!verified.current && verified.current.access.actorId === retryable.current.actor,
+    retryDelay: VERIFICATION_RETRY_DELAY_MS,
     staleTime: 0,
     refetchOnWindowFocus: true,
     refetchInterval: 15_000,
@@ -54,9 +62,18 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
   }, [fresh, current, locationKey]);
   const retained = workspace.current && verified.current && verified.current.access.actorId === user?.id && verified.current.locationKey === locationKey
     ? verified.current.access : null;
-  const continueClinical = !!retained && !!current && current.kind === 'clinical' && !receptionPage
-    && !settingsPage && access.isError && access.error instanceof ClinicAccessTransportError;
+  // A transport failure after a verified read keeps the last verified access on
+  // the same page (never Settings). Clinical pages continue as before; every
+  // other page (reception included) for VERIFICATION_GRACE_MS, then blocks.
+  const transportFailure = access.isError && access.error instanceof ClinicAccessTransportError;
+  const mayContinue = !!retained && !!current && !settingsPage && transportFailure;
+  const clinicalPage = !!current && current.kind === 'clinical' && !receptionPage;
+  const graceExpired = useGraceExpired(mayContinue && !clinicalPage, user?.id ?? null);
+  const continueClinical = mayContinue && (clinicalPage || !graceExpired);
   const blocked = !fresh && !continueClinical;
+  // Paused: retrying or continuing on the last verified access. Keep local
+  // state; dialogs disable their submit actions until a verified read.
+  const paused = parentPaused || (!blocked && (continueClinical || access.failureCount > 0));
   const value = current ?? retained;
   if (access.isPending || !access.isFetchedAfterMount)
     return (
@@ -121,6 +138,7 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
   }
   return (
     <SessionVisibilityContext.Provider value={parentHidden || blocked}>
+      <SessionPausedContext.Provider value={paused}>
       <ClinicAccessContext.Provider value={value}>
         <div className={continueClinical ? 'clinic-access-continued' : undefined}>
           {continueClinical && (
@@ -135,6 +153,7 @@ export function ClinicAccessGate({ children }: { children: ReactNode }) {
         </div>
         {blocked && failure}
       </ClinicAccessContext.Provider>
+      </SessionPausedContext.Provider>
     </SessionVisibilityContext.Provider>
   );
 }

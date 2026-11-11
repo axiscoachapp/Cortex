@@ -4,7 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useContext, useEffect, useRef, useState } from 'react';
-import { SessionVisibilityContext } from '@/contexts/SessionVisibility';
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
+import { SessionPausedContext, SessionVisibilityContext } from '@/contexts/SessionVisibility';
+import { useGraceExpired, VERIFICATION_RETRIES, VERIFICATION_RETRY_DELAY_MS } from '@/hooks/useVerificationGrace';
+import { sessionIdOf } from '@/lib/sessionIdentity';
 import { confirmSessionExit } from '@/hooks/useUnsavedChanges';
 import { Input } from '@/components/ui/input';
 import { mfaErrorMessage } from '@/lib/mfa';
@@ -100,12 +103,20 @@ function InlineFactorVerification({ onVerified }: { onVerified: () => void }) {
 export function SessionAssurance({ children }: { children: React.ReactNode }) {
   const { user, session, signOut } = useAuth();
   const parentHidden = useContext(SessionVisibilityContext);
+  const parentPaused = useContext(SessionPausedContext);
   const workspaceFocus = useRef<{ actor: string; element: HTMLElement } | null>(null);
   const exit = () => {
     if (confirmSessionExit()) void signOut();
   };
+  // Identity = user + auth session. A token refresh (new expires_at, same
+  // session) is not a change of identity and keeps the verified result.
+  const sessionId = sessionIdOf(session?.access_token);
+  const identity = user ? user.id + ':' + (sessionId ?? '') : null;
+  const [verifiedIdentity, setVerifiedIdentity] = useState<string | null>(null);
+  const retryable = useRef({ identity, verifiedIdentity });
+  retryable.current = { identity, verifiedIdentity };
   const query = useQuery({
-    queryKey: ['session-assurance', user?.id, session?.expires_at],
+    queryKey: ['session-assurance', user?.id, sessionId],
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -114,14 +125,40 @@ export function SessionAssurance({ children }: { children: React.ReactNode }) {
         throw new Error('Invalid session assurance');
       return data;
     },
+    // Retry a transport failure quickly, only for an identity already verified here.
+    retry: (count, error) => count < VERIFICATION_RETRIES && isAuthRetryableFetchError(error)
+      && !!retryable.current.identity && retryable.current.verifiedIdentity === retryable.current.identity,
+    retryDelay: VERIFICATION_RETRY_DELAY_MS,
+    // Keep trying while a transport failure is inside its grace period.
+    refetchInterval: current => current.state.status === 'error' && isAuthRetryableFetchError(current.state.error) ? 10_000 : false,
     staleTime: 30000,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
     networkMode: 'always',
   });
+  const refetchAssurance = query.refetch;
+  const expiry = session?.expires_at;
+  const seen = useRef({ expiry, identity });
+  useEffect(() => {
+    const previous = seen.current;
+    seen.current = { expiry, identity };
+    // Same identity, new token: re-verify in the background without hiding.
+    if (identity && previous.identity === identity && previous.expiry !== expiry) void refetchAssurance();
+  }, [expiry, identity, refetchAssurance]);
   const [authorizedActor, setAuthorizedActor] = useState<string | null>(null);
   const needsFactor = query.data?.nextLevel === 'aal2' && query.data.currentLevel !== 'aal2';
-  const allowed = !!user && query.isSuccess && query.isFetchedAfterMount && !needsFactor;
+  const verifiedNow = !!user && query.isSuccess && query.isFetchedAfterMount && !needsFactor;
+  const transportFailure = query.isError && isAuthRetryableFetchError(query.error);
+  const definitiveFailure = (query.isError && !transportFailure) || (query.isSuccess && needsFactor);
+  useEffect(() => {
+    if (verifiedNow) setVerifiedIdentity(identity);
+    // A definitive refusal ends the grace for good: a later transport error must not revive it.
+    else if (definitiveFailure) setVerifiedIdentity(null);
+  }, [verifiedNow, definitiveFailure, identity]);
+  const failing = transportFailure && !!identity && verifiedIdentity === identity && !!query.data && !needsFactor;
+  const expired = useGraceExpired(failing, identity);
+  const allowed = !!user && (verifiedNow || (failing && !expired));
+  const paused = allowed && (query.isError || query.failureCount > 0);
   useEffect(() => {
     if (allowed) setAuthorizedActor(user.id);
   }, [allowed, user?.id]);
@@ -154,10 +191,21 @@ export function SessionAssurance({ children }: { children: React.ReactNode }) {
   );
   return (
     <SessionVisibilityContext.Provider value={parentHidden || !allowed}>
+      <SessionPausedContext.Provider value={parentPaused || paused}>
       {(allowed || (!!user && authorizedActor === user.id)) && <div key={user?.id} data-session-content hidden={parentHidden || !allowed}
         onFocusCapture={event => {
           if (allowed && user && event.target instanceof HTMLElement) workspaceFocus.current = { actor: user.id, element: event.target };
         }}>{children}</div>}
+      {/* Fixed, so it never shifts the workspace layout or steals focus. */}
+      {allowed && query.isError && !parentHidden && (
+        <div role="status" aria-label="Estado da verificação da sessão" data-session-grace
+          className="fixed inset-x-4 bottom-4 z-[100] mx-auto max-w-md rounded-lg border border-border bg-muted p-3 text-sm shadow-md">
+          <p>Não foi possível atualizar a verificação da sessão. O trabalho aberto permanece disponível.</p>
+          <Button className="mt-2 h-auto min-h-9 max-w-full whitespace-normal" size="sm" variant="outline" disabled={query.isFetching}
+            onClick={() => void query.refetch()}>Verificar sessão novamente</Button>
+        </div>
+      )}
+      </SessionPausedContext.Provider>
       {/* A top modal suspends the existing Radix focus/pointer/ARIA layer while
           keeping its document state mounted. CSS alone cannot release that layer. */}
       {!allowed && <Dialog open={!parentHidden}>

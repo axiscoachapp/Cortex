@@ -161,7 +161,10 @@ function CaseQueue() {
           {selected ? (
             <>
               <ReceptionNotice loading={detail.isPending} error={detail.error} onRetry={() => void detail.refetch()} />
-              {detail.data && !detail.isError && <CaseWorkspace key={detail.data.id} data={detail.data} />}
+              {/* Once read, a failed background refetch keeps the workspace (dialogs,
+                  drafts) mounted and marks it stale; only a definitive refusal of
+                  this case removes it. */}
+              {detail.data && !definitiveCaseRefusal(detail.error) && <CaseWorkspace key={detail.data.id} data={detail.data} stale={detail.isError} />}
             </>
           ) : (
             <div className="rounded-xl border border-dashed bg-card p-8 text-sm text-muted-foreground">
@@ -181,4 +184,11 @@ function CaseQueue() {
       )}
     </div>
   );
+}
+
+// The server refused this case (no longer in scope) or answered something that
+// cannot be trusted: its data leaves the screen at once.
+function definitiveCaseRefusal(error: unknown) {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === '42501' || code === 'INVALID_RESPONSE';
 }

@@ -151,6 +151,8 @@ export const receptionApi = {
     ),
   saveDraft: (caseId: string, body: string, expected: number) =>
     rpc('reception_save_draft', { p_case: caseId, p_body: body, p_revision: expected }, revision),
+  // The user whose session the next request would carry (local read, no network).
+  sessionActor: async () => (await supabase.auth.getSession()).data.session?.user.id ?? null,
   appointments: (clinic: string, start: string, end: string, doctor: string | null) =>
     rpc(
       'reception_appointments',

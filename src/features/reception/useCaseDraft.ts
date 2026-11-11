@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { receptionApi } from './api';
 
-export function useCaseDraft(caseId: string, initial: { body: string; revision: number }) {
+export function useCaseDraft(caseId: string, initial: { body: string; revision: number }, owner?: string) {
   const [body, setValue] = useState(initial.body);
   const [savedBody, setSavedBody] = useState(initial.body);
   const [saving, setSaving] = useState(false);
@@ -19,6 +19,22 @@ export function useCaseDraft(caseId: string, initial: { body: string; revision: 
       alive.current = false;
     };
   }, []);
+  // Leaving the case (unmount or another case) saves text still waiting for the
+  // debounce. Only for the same signed-in owner: after an actor change the
+  // previous actor's text must never travel with the next actor's session.
+  useEffect(() => () => {
+    if (!owner || failed.current) return;
+    const text = latest.current;
+    const send = async () => {
+      if (failed.current || text === saved.current) return;
+      if (await receptionApi.sessionActor() !== owner || failed.current || text === saved.current) return;
+      const next = await receptionApi.saveDraft(caseId, text, version.current);
+      version.current = next;
+      saved.current = text;
+    };
+    if (text === saved.current && !pending.current) return;
+    void (pending.current ?? Promise.resolve()).catch(() => {}).then(send).catch(() => {});
+  }, [caseId, owner]);
   const setBody = useCallback((text: string) => {
     latest.current = text;
     setValue(text);

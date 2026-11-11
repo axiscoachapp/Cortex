@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { useSessionPaused } from '@/contexts/SessionVisibility';
 import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
 import { clinicTimestamp, clinicDay, clinicDateLabel } from './dates';
@@ -20,11 +21,16 @@ export function BookingDialog({
   receptionCase,
   onClose,
   day: initialDay,
+  paused: casePaused = false,
 }: {
   receptionCase?: ReceptionCase;
   onClose: () => void;
   day?: string;
+  // The bound case's last refetch failed: keep the form, wait to confirm.
+  paused?: boolean;
 }) {
+  const sessionPaused = useSessionPaused();
+  const paused = casePaused || sessionPaused;
   const access = useClinicAccess();
   const client = useQueryClient();
   const { toast } = useToast();
@@ -106,7 +112,7 @@ export function BookingDialog({
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (pending.current || working || linkNeedsReview || !confirmed || !contact || !doctor || !access?.clinic || !snapshot.data || snapshot.isFetching || snapshot.isError) return;
+    if (pending.current || working || paused || linkNeedsReview || !confirmed || !contact || !doctor || !access?.clinic || !snapshot.data || snapshot.isFetching || snapshot.isError) return;
     pending.current = true;
     const confirmedEpoch = reviewEpoch.current;
     setBusy(true);
@@ -479,10 +485,11 @@ export function BookingDialog({
             >
               Voltar
             </Button>
+            {paused && <p role="status" className="basis-full text-right text-xs text-muted-foreground">Verificando acesso… O preenchimento continua preservado.</p>}
             <Button
               type="submit"
               disabled={
-                working || linkNeedsReview || !confirmed || !contact || !doctor || !snapshot.data || snapshot.isFetching || snapshot.isError || (mode === 'existing' && !patient)
+                working || paused || linkNeedsReview || !confirmed || !contact || !doctor || !snapshot.data || snapshot.isFetching || snapshot.isError || (mode === 'existing' && !patient)
               }
             >
               {busy ? 'Confirmando…' : 'Confirmar agendamento'}

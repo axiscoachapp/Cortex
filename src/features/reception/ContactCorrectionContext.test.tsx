@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ContactCorrectionDialog } from './ContactCorrectionDialog';
 import { ClinicAccessContext } from './accessContext';
-import { SessionVisibilityContext } from '@/contexts/SessionVisibility';
+import { SessionPausedContext, SessionVisibilityContext } from '@/contexts/SessionVisibility';
 import { confirmSessionExit } from '@/hooks/useUnsavedChanges';
 import type { ClinicAccess, ContactEdit } from './contracts';
 
@@ -124,5 +124,25 @@ describe('contact correction context and async effects', () => {
   });
   it.each([{ active: false }, { admin: false }, { actorId: other }])('does not read without current administrative access (%#)', async patch => {
     mount({ ...access, ...patch }); await act(async () => {}); expect(mocks.read).not.toHaveBeenCalled(); expect(screen.queryByLabelText('Nome do contato')).not.toBeInTheDocument();
+  });
+});
+
+describe('contact correction during a paused re-verification', () => {
+  it('keeps the typed correction, refuses saving while paused and resumes without reopening', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const tree = (paused: boolean) => <QueryClientProvider client={client}><SessionPausedContext.Provider value={paused}><ClinicAccessContext.Provider value={access}><ContactCorrectionDialog contactId={contact.id} onClose={vi.fn()} /></ClinicAccessContext.Provider></SessionPausedContext.Provider></QueryClientProvider>;
+    const view = render(tree(false)); await edit();
+    view.rerender(tree(true));
+    expect(screen.getByLabelText('Nome do contato')).toHaveValue('Correção sintética');
+    expect(screen.getByText('Verificando acesso… O preenchimento continua preservado.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Salvar correção' })).toBeDisabled();
+    submit(); await act(async () => {});
+    expect(mocks.update).not.toHaveBeenCalled();
+    view.rerender(tree(false));
+    expect(screen.queryByText(/Esta correção foi interrompida/)).toBeNull();
+    expect(screen.getByLabelText('Nome do contato')).toHaveValue('Correção sintética');
+    expect(screen.getByRole('checkbox', { name: /Conferi a identidade/ })).toBeChecked();
+    submit();
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledExactlyOnceWith(contact.id, contact.revision, 'Correção sintética', contact.phone));
   });
 });

@@ -12,7 +12,7 @@ import { useRequestId } from './useRequestId';
 import { ReceptionNotice } from './ReceptionNotice';
 import { ContactSearch } from './ContactSearch';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSessionHidden } from '@/contexts/SessionVisibility';
+import { useSessionHidden, useSessionPaused } from '@/contexts/SessionVisibility';
 
 export interface ContactOption {
   id: string;
@@ -31,6 +31,8 @@ export function NewCaseDialog({
   const access = useClinicAccess();
   const { user } = useAuth();
   const hidden = useSessionHidden();
+  // A paused re-verification keeps everything typed; only submitting waits.
+  const paused = useSessionPaused();
   const client = useQueryClient();
   const field = useId();
   const [mode, setMode] = useState<'existing' | 'new'>('existing');
@@ -67,7 +69,7 @@ export function NewCaseDialog({
   );
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (pending.current || busy || !access?.clinic || !mayContinue()) return;
+    if (pending.current || busy || paused || !access?.clinic || !mayContinue()) return;
     pending.current = true;
     const origin = { actor: access.actorId, clinic: access.clinic.id };
     const snapshot = { selected, mode, name: name.trim(), phone: phone.trim(), subject: subject.trim(), doctor: doctor || null, kind };
@@ -254,7 +256,8 @@ export function NewCaseDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={busy || (!selected && mode === 'existing')}>
+            {paused && <p role="status" className="basis-full text-right text-xs text-muted-foreground">Verificando acesso… O preenchimento continua preservado.</p>}
+            <Button type="submit" disabled={busy || paused || (!selected && mode === 'existing')}>
               {busy ? 'Registrando…' : 'Adicionar à fila'}
             </Button>
           </div>

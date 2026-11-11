@@ -7,3 +7,5 @@ Nomes, nascimento, contato, ausência, contagens, cursor e ações aparecem apen
 O leitor passa AbortSignal ao RPC já existente, preservando corpo, DTO, limite50, ordenação/cursor, deadline20s e compatibilidade sem sinal. Desmontagem/perda de contexto cancela só o leitor. Ações continuam usando os mesmos identificadores explícitos e os editores atuais.
 
 Recorte: consulta e entrada dos editores. Não redesenha os efeitos assíncronos de uma correção/suspensão/reativação já enviada pelos editores; nenhuma promessa de aborto/rollback de escrita. Vínculo administrativo não compartilha prontuário nem funde identidades. Sem campos/projeções/permissões/RPC/SQL novos ou inferência. Ensaios sintéticos/isolados, sem hosted/Meta/carga/push. Guardas de UI não provam autorização/transação do servidor.
+
+11/11/2026 — renovação do token na mesma sessão e falha de transporte do clinic_access por até 45 s não ocultam mais a sessão; a janela de vínculos permanece montada (revisão 2026-11-10, recepção 3). Ocultação efetiva (troca de ator/sessão, recusa definitiva, 45 s sem verificação) continua desmontando o leitor.

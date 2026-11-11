@@ -1,12 +1,12 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClinicAccessGate } from './ClinicAccessGate';
 import { ClinicAccessTransportError } from './accessErrors';
-import { useSessionHidden } from '@/contexts/SessionVisibility';
+import { useSessionHidden, useSessionPaused } from '@/contexts/SessionVisibility';
 
 const mocks = vi.hoisted(() => ({ access: vi.fn(), clinicalRender: vi.fn(), clinicalUnmount: vi.fn(), userId: '11111111-1111-4111-8111-111111111111' }));
 vi.mock('@/contexts/AuthContext', () => ({
@@ -193,15 +193,21 @@ describe('reception routing before clinical components mount', () => {
     expect(await screen.findByRole('alert')).toBeVisible();
     expect(screen.queryByText('Prontuário privado')).toBeNull();
   });
-  it('does not keep reception administration visible during transport failure', async () => {
-    mocks.access.mockResolvedValue({ ...base, active: true, admin: true, clinic: { id: base.actorId, name: 'Clínica sintética' } });
+  it('keeps reception administration visible with the banner during a transport failure, then recovers silently', async () => {
+    const admin = { ...base, active: true, admin: true, clinic: { id: base.actorId, name: 'Clínica sintética' } };
+    mocks.access.mockResolvedValue(admin);
     const view = mount('/recepcao');
     expect(await screen.findByText('Ambiente da recepção')).toBeVisible();
     mocks.access.mockRejectedValue(new ClinicAccessTransportError());
     await refetch(view.client);
-    await screen.findByRole('alert');
-    expect(screen.getByText('Ambiente da recepção')).not.toBeVisible();
-    expect(screen.getByRole('alert')).toBeVisible();
+    expect(await screen.findByRole('status', { name: 'Estado da conexão com a clínica' })).toHaveTextContent('Não foi possível atualizar o acesso à clínica');
+    expect(screen.getByText('Ambiente da recepção')).toBeVisible();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(document.querySelector('[data-clinic-access-blocked]')).toBeNull();
+    mocks.access.mockResolvedValue(admin);
+    await refetch(view.client);
+    await waitFor(() => expect(screen.queryByRole('status', { name: 'Estado da conexão com a clínica' })).toBeNull());
+    expect(screen.getByText('Ambiente da recepção')).toBeVisible();
   });
   it('does not turn offboarded staff into a standalone doctor', async () => {
     mocks.access.mockResolvedValue({ ...base, kind: 'reception' });
@@ -251,5 +257,88 @@ describe('reception routing before clinical components mount', () => {
     await refetch(view.client);
     await screen.findByText(active ? 'Ambiente da recepção' : 'Acesso de recepção indisponível');
     expect(screen.queryByText('Prontuário privado')).toBeNull();
+  });
+});
+
+function ReceptionProbe() {
+  const hidden = useSessionHidden(), paused = useSessionPaused();
+  return <><p>Ambiente da recepção</p><textarea aria-label="Rascunho da recepção" />
+    <output aria-label="Estado da guarda">{hidden ? 'oculto' : paused ? 'pausado' : 'livre'}</output></>;
+}
+describe('reception grace period for transport failures', () => {
+  const reception = { ...base, kind: 'reception', active: true, clinic: { id: base.actorId, name: 'Clínica sintética' }, doctors: [{ id: base.actorId, name: 'Médico sintético', specialty: null }] };
+  beforeEach(() => { vi.resetAllMocks(); mocks.userId = base.actorId; });
+  afterEach(() => vi.useRealTimers());
+  function mountReception() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/recepcao']}><Routes>
+      <Route element={<ClinicAccessGate><Outlet /></ClinicAccessGate>}><Route path="/recepcao" element={<ReceptionProbe />} /></Route>
+    </Routes></MemoryRouter></QueryClientProvider>);
+    return client;
+  }
+  it('absorbs one transient poll failure with a quick retry, without banner or pause afterwards', async () => {
+    mocks.access.mockResolvedValue(reception);
+    const client = mountReception();
+    const draft = await screen.findByRole('textbox', { name: 'Rascunho da recepção' });
+    fireEvent.change(draft, { target: { value: 'Texto da recepção preservado' } });
+    mocks.access.mockRejectedValueOnce(new ClinicAccessTransportError());
+    await refetch(client);
+    expect(mocks.access).toHaveBeenCalledTimes(3);
+    expect(screen.queryByRole('status', { name: 'Estado da conexão com a clínica' })).toBeNull();
+    expect(screen.getByLabelText('Estado da guarda')).toHaveTextContent('livre');
+    expect(draft).toBeVisible();
+    expect(draft).toHaveValue('Texto da recepção preservado');
+  });
+  it('keeps reception working and paused while failing, then recovers silently', async () => {
+    mocks.access.mockResolvedValue(reception);
+    const client = mountReception();
+    const draft = await screen.findByRole('textbox', { name: 'Rascunho da recepção' });
+    fireEvent.change(draft, { target: { value: 'Texto da recepção preservado' } });
+    mocks.access.mockRejectedValue(new ClinicAccessTransportError());
+    await refetch(client);
+    expect(await screen.findByRole('status', { name: 'Estado da conexão com a clínica' })).toBeVisible();
+    expect(screen.getByLabelText('Estado da guarda')).toHaveTextContent('pausado');
+    expect(draft).toBeVisible();
+    mocks.access.mockResolvedValue(reception);
+    fireEvent.click(screen.getByRole('button', { name: 'Verificar acesso novamente' }));
+    await waitFor(() => expect(screen.getByLabelText('Estado da guarda')).toHaveTextContent('livre'));
+    expect(screen.queryByRole('status', { name: 'Estado da conexão com a clínica' })).toBeNull();
+    expect(draft).toHaveValue('Texto da recepção preservado');
+  });
+  it('blocks reception after 45 seconds without a verified read', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mocks.access.mockResolvedValue(reception);
+    const client = mountReception();
+    const draft = await screen.findByRole('textbox', { name: 'Rascunho da recepção' });
+    mocks.access.mockRejectedValue(new ClinicAccessTransportError());
+    await act(async () => { void client.invalidateQueries({ queryKey: ['clinic-access'] }); await vi.advanceTimersByTimeAsync(2_000); });
+    await screen.findByRole('status', { name: 'Estado da conexão com a clínica' });
+    await act(() => vi.advanceTimersByTimeAsync(30_000)); // two more failed 15 s polls
+    expect(draft).toBeVisible();
+    expect(screen.getByLabelText('Estado da guarda')).toHaveTextContent('pausado');
+    await act(() => vi.advanceTimersByTimeAsync(16_000));
+    expect(await screen.findByRole('alert')).toHaveTextContent('verificar seu acesso');
+    expect(draft).not.toBeVisible();
+    expect(screen.getByLabelText('Estado da guarda')).toHaveTextContent('oculto');
+  });
+  it('blocks reception at once on a definitive refusal, without retrying it', async () => {
+    mocks.access.mockResolvedValue(reception);
+    const client = mountReception();
+    const draft = await screen.findByRole('textbox', { name: 'Rascunho da recepção' });
+    mocks.access.mockRejectedValue(Object.assign(new Error('blocking'), { code: '42501' }));
+    await refetch(client);
+    expect(await screen.findByRole('alert')).toHaveTextContent('verificar seu acesso');
+    expect(draft).not.toBeVisible();
+    expect(mocks.access).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('status', { name: 'Estado da conexão com a clínica' })).toBeNull();
+  });
+  it('keeps Settings strict: the first transport failure unmounts them without retries', async () => {
+    mocks.access.mockResolvedValue({ ...base, active: true, admin: true, clinic: { id: base.actorId, name: 'Clínica sintética' } });
+    const view = mount('/configuracoes'); await screen.findByText('Configurações sintéticas');
+    mocks.access.mockRejectedValue(new ClinicAccessTransportError()); await refetch(view.client);
+    expect(await screen.findByRole('alert')).toBeVisible();
+    expect(screen.queryByText('Configurações sintéticas')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Editor administrativo sintético')).not.toBeInTheDocument();
+    expect(mocks.access).toHaveBeenCalledTimes(2);
   });
 });
