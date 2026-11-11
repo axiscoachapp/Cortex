@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   filters: vi.fn(),
   toast: vi.fn(),
   fresh: null as Record<string, unknown> | null,
+  insert: vi.fn(),
+  insertResult: { error: null as unknown },
 }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'doctor' }, loading: false }) }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
@@ -23,6 +25,10 @@ vi.mock('@/integrations/supabase/client', () => ({
         is: () => query,
         not: () => query,
         order: () => query,
+        insert: (rows: unknown) => {
+          mocks.insert(rows);
+          return Promise.resolve(mocks.insertResult);
+        },
         update: (value: unknown) => {
           updating = true;
           mocks.update(value);
@@ -105,11 +111,11 @@ describe('Patient directory', () => {
     await screen.findAllByText('Ana Silva');
     await userEvent.click(screen.getByRole('button', { name: 'Ações para Ana Silva' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Editar cadastro' }));
-    await userEvent.type(screen.getByLabelText('Nome *'), ' Atualizada');
+    await userEvent.type(screen.getByLabelText('Nome'), ' Atualizada');
     await userEvent.click(screen.getByRole('button', { name: 'Atualizar' }));
     await waitFor(() => expect(mocks.update).toHaveBeenCalled());
     expect(mocks.filters).toHaveBeenCalledWith('revision', 7);
-    expect(screen.getByLabelText('Nome *')).toHaveValue('Ana Silva Atualizada');
+    expect(screen.getByLabelText('Nome')).toHaveValue('Ana Silva Atualizada');
     expect(mocks.toast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Paciente atualizado com sucesso!' }),
     );
@@ -161,7 +167,7 @@ describe('Patient list layout and search', () => {
     expect(screen.getByText('Nenhum paciente com “Zuleica”.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Cadastrar paciente' }));
     expect(screen.getByRole('dialog', { name: 'Novo paciente' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Nome *')).toHaveValue('Zuleica');
+    expect(screen.getByLabelText('Nome')).toHaveValue('Zuleica');
   });
 
   it('clears the search from the empty result', async () => {
@@ -185,11 +191,15 @@ describe('Patient list layout and search', () => {
     renderDirectory();
     await userEvent.click(await screen.findByRole('button', { name: 'Ações para Ana Silva' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Editar cadastro' }));
-    await userEvent.type(screen.getByLabelText('Nome *'), ' Atualizada');
+    await userEvent.type(screen.getByLabelText('Nome'), ' Atualizada');
     await userEvent.click(screen.getByRole('button', { name: 'Atualizar' }));
-    await waitFor(() => expect(screen.getByLabelText('Profissão')).toHaveValue('Engenheira'));
-    expect(screen.getByLabelText('Nome *')).toHaveValue('Ana Silva Atualizada');
-    expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Paciente alterado em outra sessão' }));
+    await waitFor(() => expect(screen.getByLabelText('Profissão (opcional)')).toHaveValue('Engenheira'));
+    expect(screen.getByLabelText('Nome')).toHaveValue('Ana Silva Atualizada');
+    // The conflict is explained inside the dialog, above the buttons, not in a toast.
+    const alert = within(screen.getByRole('dialog', { name: 'Editar cadastro' })).getByRole('alert');
+    expect(alert).toHaveTextContent('Este paciente foi alterado em outra sessão');
+    expect(alert).toHaveFocus();
+    expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Paciente alterado em outra sessão' }));
     await userEvent.click(screen.getByRole('button', { name: 'Atualizar' }));
     await waitFor(() => expect(mocks.filters).toHaveBeenCalledWith('revision', 8));
   });
@@ -198,3 +208,90 @@ describe('Patient list layout and search', () => {
 vi.mock('@/hooks/useUnsavedChanges', () => ({
   useUnsavedChanges: (dirty: boolean) => (next: boolean) => next || !dirty || window.confirm('Descartar alterações?'),
 }));
+
+describe('Patient form dialog', () => {
+  const scrollIntoView = vi.fn();
+  beforeEach(() => {
+    mocks.result = { data: [{ id: 'ana', name: 'Ana Silva', age: 35, revision: 7, last_visit: '2026-05-01', status: 'novo' }], error: null };
+    mocks.fresh = null;
+    mocks.toast.mockReset();
+    mocks.insert.mockReset();
+    mocks.insertResult = { error: null };
+    scrollIntoView.mockReset();
+    Element.prototype.scrollIntoView = scrollIntoView;
+  });
+
+  it('shows what is missing under the field, focuses it and never uses a toast', async () => {
+    renderDirectory();
+    await screen.findByRole('list', { name: 'Pacientes' });
+    await userEvent.click(screen.getByRole('button', { name: 'Novo paciente' }));
+    const dialog = screen.getByRole('dialog', { name: 'Novo paciente' });
+    const add = within(dialog).getByRole('button', { name: 'Adicionar' });
+    expect(add).toBeEnabled();
+    // Cancelar comes before the primary in the fixed footer.
+    expect(within(dialog).getByRole('button', { name: 'Cancelar' }).compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(add);
+    const name = screen.getByLabelText('Nome');
+    expect(name).toHaveFocus();
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    expect(name).toHaveAccessibleDescription(/informe um nome válido/i);
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(mocks.toast).not.toHaveBeenCalled();
+    expect(mocks.insert).not.toHaveBeenCalled();
+
+    await userEvent.type(name, 'Pessoa sintética');
+    await userEvent.type(screen.getByLabelText('E-mail (opcional)'), 'sem-arroba');
+    await userEvent.click(add);
+    expect(name).not.toHaveAttribute('aria-invalid');
+    const email = screen.getByLabelText('E-mail (opcional)');
+    expect(email).toHaveFocus();
+    expect(email).toHaveAccessibleDescription('Informe um e-mail válido, ou deixe em branco.');
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
+  it('marks optional fields only with "(opcional)" and uses "Última consulta"', async () => {
+    renderDirectory();
+    await screen.findByRole('list', { name: 'Pacientes' });
+    await userEvent.click(screen.getByRole('button', { name: 'Novo paciente' }));
+    const dialog = screen.getByRole('dialog', { name: 'Novo paciente' });
+    expect(within(dialog).getByLabelText('Última consulta (opcional)')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Idade (opcional)')).toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent(/\*|se conhecida|Última visita/);
+  });
+
+  it('keeps a server refusal in the dialog, above the buttons', async () => {
+    mocks.insertResult = { error: new Error('violates check constraint') };
+    renderDirectory();
+    await screen.findByRole('list', { name: 'Pacientes' });
+    await userEvent.click(screen.getByRole('button', { name: 'Novo paciente' }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Pessoa sintética');
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await waitFor(() => expect(mocks.insert).toHaveBeenCalled());
+    const alert = await within(screen.getByRole('dialog', { name: 'Novo paciente' })).findByRole('alert');
+    expect(alert).toHaveTextContent('Não foi possível salvar o paciente');
+    expect(alert).not.toHaveTextContent('check constraint');
+    expect(alert).toHaveFocus();
+    expect(screen.getByLabelText('Nome')).toHaveValue('Pessoa sintética');
+    expect(mocks.toast).not.toHaveBeenCalled();
+  });
+
+  it('shows the last consultation as date and distance in the list', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-05-31T12:00:00-03:00'));
+    try {
+      renderDirectory();
+      const row = (await screen.findAllByRole('listitem'))[0];
+      expect(row).toHaveTextContent('01/05/2026 · há 30 dias');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('still asks before archiving a patient', async () => {
+    renderDirectory();
+    await userEvent.click(await screen.findByRole('button', { name: 'Ações para Ana Silva' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Arquivar…' }));
+    expect(screen.getByRole('alertdialog', { name: 'Arquivar Ana Silva?' })).toBeInTheDocument();
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+});
