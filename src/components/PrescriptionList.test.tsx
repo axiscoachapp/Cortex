@@ -35,7 +35,7 @@ describe('prescription trust display',()=>{
     expect(await screen.findByText('Reemitir documento')).toBeInTheDocument();
     expect(screen.getByText('Assinatura não verificada')).toBeInTheDocument();
     expect(screen.queryByText('Assinada')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button',{name:'Abrir documento'})[0]).toBeDisabled();
+    expect(screen.getAllByRole('button',{name:/^Abrir /})[0]).toBeDisabled();
   });
 });
 
@@ -43,7 +43,7 @@ describe('expiry display',()=>{
   it('expires prescriptions only; an old sick note stays openable, as on the public validator',async()=>{
     render(<QueryClientProvider client={new QueryClient()}><PrescriptionList patientId="patient" /></QueryClientProvider>);
     expect(await screen.findAllByText('Expirada')).toHaveLength(1);
-    const open=screen.getAllByRole('button',{name:'Abrir documento'});
+    const open=screen.getAllByRole('button',{name:/^Abrir /});
     expect(open[2]).toBeDisabled();
     expect(open[3]).toBeEnabled();
   });
@@ -54,7 +54,7 @@ describe('what was prescribed',()=>{
     render(<QueryClientProvider client={new QueryClient()}><PrescriptionList patientId="patient" /></QueryClientProvider>);
     expect(await screen.findByText('Amoxicilina 500 mg · Dipirona')).toBeInTheDocument();
     expect(screen.getByText(/Fora da validade: não abre mais na validação das farmácias/)).toBeInTheDocument();
-    expect(screen.getAllByRole('button',{name:'Abrir documento'})[2]).toBeDisabled();
+    expect(screen.getAllByRole('button',{name:/^Abrir /})[2]).toBeDisabled();
   });
   it('reads controlled items from the issuance copy and ignores malformed data',()=>{
     expect(prescribedItems({medications:[],issuance_snapshot:{controlled:{items:[{name:'Clonazepam',concentration:'2 mg'}]}}})).toEqual(['Clonazepam 2 mg']);

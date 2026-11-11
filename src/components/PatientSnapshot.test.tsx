@@ -86,7 +86,7 @@ describe('patient note ownership', () => {
     const { queryClient } = setup();
     await user.type(screen.getByRole('textbox'), 'Nota sintética');
     await user.click(screen.getByRole('button', { name: 'Processar com IA' }));
-    expect(await screen.findByRole('button', { name: 'Revisar insights' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Revisar sugestões' })).toBeInTheDocument();
     expect(screen.getByText(/Nada foi gravado no perfil/)).toBeInTheDocument();
     expect(queryClient.getQueryData(['ai-insights-proposal', 'A', 'doctor'])).toMatchObject({ insights: { summary: 'Resumo sintético' } });
     expect(screen.getByRole('textbox')).toHaveValue('');
@@ -99,6 +99,6 @@ describe('patient note ownership', () => {
     await user.type(screen.getByRole('textbox'), 'Nota sintética');
     await user.click(screen.getByRole('button', { name: 'Processar com IA' }));
     await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue(''));
-    expect(screen.queryByRole('button', { name: 'Revisar insights' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Revisar sugestões' })).not.toBeInTheDocument();
   });
 });

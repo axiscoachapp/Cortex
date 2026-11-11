@@ -21,7 +21,6 @@ interface PatientSnapshotProps {
   /** Optional callback — passed to the dossier drawer's "Perguntar à IA" button. */
   onAskAI?: () => void;
   onWorkStateChange?: (busy: boolean) => void;
-  profileRequest?: number;
 }
 
 function formatMedicationDuration(startedAt: string): string {
@@ -68,10 +67,9 @@ function SectionHeader({ icon: Icon, label, action }: {
   );
 }
 
-export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRequest = 0 }: PatientSnapshotProps) {
+export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: PatientSnapshotProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingList, setEditingList] = useState<ClinicalListKind | null>(null);
-  useEffect(()=>{if(profileRequest>0)setDrawerOpen(true);},[profileRequest]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
@@ -191,7 +189,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
       {/* Header */}
       <div className="px-5 pt-5 pb-4 border-b border-border/50 bg-white/60">
         <p className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-          Perfil Ativo
+          Perfil ativo
         </p>
         <div className="flex items-center gap-3">
           {patient.photoUrl ? (
@@ -307,7 +305,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
           <section className="p-4">
             <SectionHeader
               icon={StickyNote}
-              label="Anotações do Médico"
+              label="Anotações do médico"
               action={
                 notesReady ? <span className="text-[0.625rem] text-muted-foreground">{noteEntries.length}</span> : undefined
               }
@@ -363,9 +361,9 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
           </Button>
           {proposal && (
             <div role="status" className="mt-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs space-y-1.5">
-              <p>A IA sugeriu insights a partir das anotações. Nada foi gravado no perfil.</p>
+              <p>A IA fez sugestões a partir das anotações. Nada foi gravado no perfil.</p>
               <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => setDrawerOpen(true)}>
-                Revisar insights
+                Revisar sugestões
               </Button>
             </div>
           )}
@@ -383,7 +381,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
           )}
         >
           <FolderOpen className="w-3.5 h-3.5" />
-          Perfil Completo & Arquivos
+          Perfil completo e arquivos
         </button>
       </div>
 

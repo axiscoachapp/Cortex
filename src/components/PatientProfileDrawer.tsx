@@ -35,6 +35,7 @@ import { useUserSettings } from '@/hooks/useUserSettings';
 import { PatientFiles } from '@/components/PatientFiles';
 import { PrescriptionList } from '@/components/PrescriptionList';
 import { fetchAllRows } from '@/lib/pagination';
+import { lastConsultationLabel } from '@/lib/dates';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { hasInsights, useInsightsProposal, type AIInsights } from '@/hooks/useInsightsProposal';
 
@@ -66,21 +67,6 @@ interface PatientDetail {
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-function daysBetween(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-}
-
-function relativeDays(iso: string): string {
-  const d = daysBetween(iso);
-  if (d === 0) return 'hoje';
-  if (d === 1) return 'ontem';
-  if (d < 30) return `há ${d} dias`;
-  const months = Math.floor(d / 30);
-  if (d < 365) return `há ${months} ${months === 1 ? 'mês' : 'meses'}`;
-  const years = Math.floor(d / 365);
-  return `há ${years} ${years === 1 ? 'ano' : 'anos'}`;
 }
 
 /* ──────────────────────────────────────────────────────────────────────── */
@@ -215,12 +201,10 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
   );
 
   const stats = useMemo(() => {
-    const first = consultations[consultations.length - 1];
     const last = consultations[0];
     return {
       total: consultations.length,
-      firstVisit: first ? relativeDays(first.created_at) : '—',
-      lastVisit: last ? relativeDays(last.created_at) : '—',
+      lastVisit: last ? lastConsultationLabel(last.created_at) : '',
       activeMeds: patient?.medications.length ?? 0,
     };
   }, [consultations, patient?.medications.length]);
@@ -311,10 +295,10 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
       }
       setProposal(null);
       queryClient.invalidateQueries({ queryKey: ['patient-detail', requestedId] });
-      toast({ title: 'Insights aceitos', description: 'Os insights foram salvos no perfil.' });
+      toast({ title: 'Sugestões aceitas', description: 'As sugestões da IA foram salvas no perfil.' });
     } catch {
       if (activePatientId.current === requestedId)
-        setInsightsError('Não foi possível salvar os insights. A sugestão foi mantida; tente novamente.');
+        setInsightsError('Não foi possível salvar as sugestões. Elas foram mantidas aqui; tente de novo.');
     } finally {
       if (activePatientId.current === requestedId) setAcceptingInsights(false);
     }
@@ -322,7 +306,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
 
   const discardInsights = () => {
     if (acceptingInsights) return;
-    if (!window.confirm('Descartar os insights sugeridos? Para gerar de novo será preciso processar as anotações outra vez.')) return;
+    if (!window.confirm('Descartar as sugestões da IA? Para gerar de novo será preciso processar as anotações outra vez.')) return;
     setProposal(null);
     setInsightsError('');
   };
@@ -445,9 +429,8 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
           <p className="mt-3 text-sm text-muted-foreground" aria-live="polite">
             {consultationsReady
               ? [
+                  stats.total > 0 ? `Última consulta: ${stats.lastVisit}` : null,
                   stats.total === 1 ? '1 consulta' : `${stats.total} consultas`,
-                  stats.total > 0 ? `última ${stats.lastVisit}` : null,
-                  stats.total > 1 ? `primeira ${stats.firstVisit}` : null,
                   stats.activeMeds === 1 ? '1 medicação ativa' : `${stats.activeMeds} medicações ativas`,
                 ]
                   .filter(Boolean)
@@ -521,7 +504,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
             <EditableSection
               icon={<User className="w-4 h-4 text-medical-blue" />}
               iconBg="bg-medical-blue-light"
-              title="Anamnese Social"
+              title="Anamnese social"
               value={socialAnamnesis}
               isEditing={editingField === 'social'}
               draftValue={draftValue}
@@ -537,7 +520,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
             <EditableSection
               icon={<Heart className="w-4 h-4 text-success" />}
               iconBg="bg-success/10"
-              title="Histórico Médico"
+              title="Histórico médico"
               value={medicalHistory}
               isEditing={editingField === 'medical'}
               draftValue={draftValue}
@@ -558,7 +541,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                     <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/30 flex items-center justify-center">
                       <StickyNote className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     </div>
-                    <h3 className="font-semibold text-foreground">Anotações do Médico</h3>
+                    <h3 className="font-semibold text-foreground">Anotações do médico</h3>
                   </div>
                   <span className="text-[0.625rem] text-muted-foreground">{noteEntries.length}</span>
                 </div>
@@ -579,7 +562,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Brain className="w-4 h-4 text-primary" />
                 </div>
-                <h3 id="ai-insights-title" className="font-semibold text-foreground">Insights da IA</h3>
+                <h3 id="ai-insights-title" className="font-semibold text-foreground">Sugestões da IA</h3>
               </div>
               {proposal && (
                 <div className="pl-10 space-y-3">
@@ -601,7 +584,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                         Descartar
                       </Button>
                       <Button size="sm" onClick={acceptInsights} disabled={acceptingInsights || !detailReady}>
-                        {acceptingInsights ? 'Salvando…' : 'Aceitar insights'}
+                        {acceptingInsights ? 'Salvando…' : 'Aceitar sugestões'}
                       </Button>
                     </div>
                   </div>
@@ -615,7 +598,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
               ) : proposal ? null : (
                 <div className="pl-10 p-4 rounded-lg bg-secondary/50 border border-border">
                   <p className="text-sm text-muted-foreground">
-                    Nenhum insight salvo. Escreva anotações em “Extrair com IA”, no painel do paciente, e revise a
+                    Nenhuma sugestão salva. Escreva anotações em “Extrair com IA”, ao lado da consulta, e revise a
                     sugestão antes de salvar.
                   </p>
                 </div>
@@ -664,10 +647,9 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                           <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
                             <div className="flex flex-wrap items-center gap-2 min-w-0">
                               <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
-                              <span className="text-sm font-medium text-foreground">{formatDate(c.created_at)}</span>
-                              <span className="text-xs text-muted-foreground">{relativeDays(c.created_at)}</span>
+                              <span className="text-sm font-medium text-foreground">{lastConsultationLabel(c.created_at)}</span>
                               {isFirst && (
-                                <Badge className="bg-medical-blue text-primary-foreground text-xs">Última</Badge>
+                                <Badge className="bg-medical-blue text-primary-foreground text-xs">Última consulta</Badge>
                               )}
                             </div>
                             {(c.soap_note || c.whatsapp_message || c.transcription) && (
@@ -917,7 +899,7 @@ function EditableSection({
           <Button
             variant="ghost"
             size="icon"
-            aria-label={`Editar ${title}`}
+            aria-label={`Editar ${title.toLowerCase()}`}
             disabled={disabled}
             className="h-7 w-7"
             onClick={onEdit}

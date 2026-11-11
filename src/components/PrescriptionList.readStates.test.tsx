@@ -149,18 +149,18 @@ describe('document read states', () => {
   it.each(['fetching', 'paused'] as const)('qualifies cached rows and disables new document commands during %s', async mode => {
     const { client } = mount();
     const sign = await loaded();
-    const revoke = screen.getByRole('button', { name: 'Revogar documento' });
-    const open = screen.getByRole('button', { name: 'Abrir documento' });
-    const copy = screen.getByRole('button', { name: 'Copiar código de acesso' });
+    // Copy and revoke live in the row's "⋯" menu; a disabled trigger keeps both closed.
+    const more = screen.getByRole('button', { name: 'Mais ações para Receita simples' });
+    const open = screen.getByRole('button', { name: 'Abrir Receita simples' });
     const session = screen.getByRole('button', { name: 'Encerrar' });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const clipboard = vi.spyOn(navigator.clipboard, 'writeText');
     const interruption = await interruptRead(client, mode);
     try {
       await waitFor(() => expect(sign).toBeDisabled(), { timeout: 1500 });
       expect(screen.getByRole('status')).toHaveTextContent(/última leitura/i);
       expect(screen.getByText('Receita simples')).toBeVisible();
-      for (const button of [sign, revoke, open, copy]) {
+      for (const button of [sign, more, open]) {
         expect(button.isConnected).toBe(true);
         expect(button).toBeDisabled();
         await user.click(button);
@@ -172,7 +172,8 @@ describe('document read states', () => {
       expect(mocks.rpc).not.toHaveBeenCalled();
       expect(window.open).not.toHaveBeenCalled();
       expect(clipboard).not.toHaveBeenCalled();
-      expect(window.confirm).not.toHaveBeenCalled();
+      expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     } finally { await interruption.recover(); }
     expect(screen.getByRole('button', { name: 'Assinar digitalmente' })).toBe(sign);
     expect(sign).toBeEnabled();
@@ -189,7 +190,7 @@ describe('document read states', () => {
       expect(sign).not.toBeVisible();
       expect(sign).toBeDisabled();
       expect(screen.getByText('Receita simples')).not.toBeVisible();
-      expect(screen.queryByRole('button', { name: 'Abrir documento' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Abrir Receita simples' })).not.toBeInTheDocument();
       expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeEnabled();
     } finally { await interruption.recover(); }
@@ -233,14 +234,17 @@ describe('accepted document commands during read interruption', () => {
     mocks.rpc.mockReturnValueOnce(command.promise);
     const { client } = mount();
     await loaded();
-    const revoke = screen.getByRole('button', { name: 'Revogar documento' });
-    fireEvent.click(revoke);
+    const revoke = screen.getByRole('button', { name: 'Mais ações para Receita simples' });
+    const user = userEvent.setup();
+    await user.click(revoke);
+    await user.click(screen.getByRole('menuitem', { name: 'Revogar documento…' }));
+    await user.click(screen.getByRole('button', { name: 'Revogar documento' }));
     await waitFor(() => expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith('revoke_prescription', { p_id: row.id }));
     const interruption = await interruptRead(client, mode);
     try {
       expect(revoke.isConnected).toBe(true);
       await interruption.recover();
-      expect(screen.getByRole('button', { name: 'Revogar documento' })).toBe(revoke);
+      expect(screen.getByRole('button', { name: 'Mais ações para Receita simples' })).toBe(revoke);
       expect(revoke).toBeDisabled();
       expect(mocks.rpc).toHaveBeenCalledTimes(1);
     } finally {
@@ -273,5 +277,38 @@ describe('accepted document commands during read interruption', () => {
     }
     await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Sessão de assinatura encerrada' })));
     expect(sessionRevokeCalls()).toHaveLength(1);
+  });
+});
+
+describe('issued document row (M 27)', () => {
+  it('opens with a text button and keeps copy and a confirmed revoke in the "⋯" menu', async () => {
+    mount();
+    await loaded();
+    const user = userEvent.setup();
+    const clipboard = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+    const open = screen.getByRole('button', { name: 'Abrir Receita simples' });
+    expect(open).toHaveTextContent('Abrir');
+    await user.click(open);
+    expect(window.open).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /Revogar/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações para Receita simples' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Copiar código de validação' }));
+    expect(clipboard).toHaveBeenCalledWith('SYNTHETIC-CODE');
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações para Receita simples' }));
+    const revoke = screen.getByRole('menuitem', { name: 'Revogar documento…' });
+    expect(revoke.className).toContain('text-destructive');
+    await user.click(revoke);
+    const confirmation = screen.getByRole('alertdialog', { name: 'Revogar documento?' });
+    expect(confirmation).toHaveTextContent('Não dá para desfazer');
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(mocks.rpc).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações para Receita simples' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Revogar documento…' }));
+    await user.click(screen.getByRole('button', { name: 'Revogar documento' }));
+    await waitFor(() => expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith('revoke_prescription', { p_id: row.id }));
+    expect(window.confirm).not.toHaveBeenCalled();
   });
 });

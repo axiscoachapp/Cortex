@@ -1,7 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileSignature, ExternalLink, Ban, Copy, Loader2 } from 'lucide-react';
+import { FileSignature, Loader2, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -59,6 +66,8 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [busyId, setBusyId] = useState<string | null>(null);
+  // The document whose revocation is waiting for the doctor's confirmation.
+  const [confirmRevoke, setConfirmRevoke] = useState<PrescriptionRow | null>(null);
   const [visibleCount, setVisibleCount] = useState(20);
   const { user } = useAuth();
 
@@ -85,7 +94,8 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
   const refreshRows = () => queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patientId] });
 
   const handleRevoke = async (rx: PrescriptionRow) => {
-    if (!window.confirm('Revogar este documento? Farmácias não conseguirão mais validá-lo.')) return;
+    setConfirmRevoke(null);
+    if (busyId || rx.status === 'revoked') return;
     setBusyId(rx.id);
     try {
       const { error } = await supabase.rpc('revoke_prescription', { p_id: rx.id });
@@ -176,37 +186,68 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
                   <SignDocumentButton prescriptionId={rx.id} pdfSha256={signHash} sessionActive={signing.active} onSigned={refreshRows} />
                 )}
                 <Button
-                  size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground"
-                  title="Copiar código de acesso"
-                  aria-label="Copiar código de acesso"
-                  onClick={() => copyCode(rx)}
-                >
-                  <Copy className="w-3 h-3" />
-                </Button>
-                <Button
-                  size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground"
-                  title="Abrir documento"
-                  aria-label="Abrir documento"
+                  size="sm" variant="ghost" className="h-9 px-3 text-xs"
+                  aria-label={`Abrir ${TYPE_LABELS[rx.doc_type]}`}
                   onClick={() => window.open(`${FN_BASE}?id=${encodeURIComponent(rx.id)}&_secretCode=${encodeURIComponent(rx.secret_code)}`, '_blank', 'noopener,noreferrer')}
                   disabled={!trusted || rx.status === 'revoked' || expired}
                 >
-                  <ExternalLink className="w-3 h-3" />
+                  Abrir
                 </Button>
-                <Button
-                  size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-red-600"
-                  title="Revogar"
-                  aria-label="Revogar documento"
-                  onClick={() => handleRevoke(rx)}
-                  disabled={rx.status === 'revoked' || busyId === rx.id}
-                >
-                  {busyId === rx.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground"
+                      aria-label={`Mais ações para ${TYPE_LABELS[rx.doc_type]}`}
+                      disabled={busyId === rx.id}
+                    >
+                      {busyId === rx.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem className="min-h-11" disabled={!documentsReady} onSelect={() => void copyCode(rx)}>
+                      Copiar código de validação
+                    </DropdownMenuItem>
+                    {rx.status !== 'revoked' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="min-h-11 text-destructive focus:text-destructive"
+                          disabled={!documentsReady}
+                          onSelect={() => setConfirmRevoke(rx)}
+                        >
+                          Revogar documento…
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           );
         })}
         {visibleCount < rows.length && <Button variant="outline" onClick={() => setVisibleCount(value=>value+20)}>Mostrar mais receitas ({rows.length-visibleCount})</Button>}
       </fieldset>
+      <AlertDialog open={!!confirmRevoke} onOpenChange={(next) => { if (!next) setConfirmRevoke(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revogar documento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmRevoke ? `${TYPE_LABELS[confirmRevoke.doc_type]} de ${new Date(confirmRevoke.created_at).toLocaleDateString('pt-BR')}. ` : ''}
+              Farmácias e o paciente não conseguirão mais validá-lo. Não dá para desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!documentsReady}
+              onClick={() => { if (confirmRevoke && documentsReady) void handleRevoke(confirmRevoke); }}
+            >
+              Revogar documento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

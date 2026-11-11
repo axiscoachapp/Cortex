@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PatientProfileDrawer } from './PatientProfileDrawer';
 import type { Patient } from '@/types/patient';
+import { lastConsultationLabel } from '@/lib/dates';
 
 const mocks = vi.hoisted(() => ({
   revision: 2,
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   detailError: null as unknown,
   detailRead: null as Promise<unknown> | null,
   writeOk: false,
+  consultations: [] as Array<Record<string, unknown>>,
 }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'doctor' } }) }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
@@ -27,7 +29,7 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: () => {
     select: () => query, order: () => query,
     eq: (field: string, value: unknown) => { mocks.eq(field, value); return query; },
     single: () => mocks.detailRead ?? Promise.resolve({ error: mocks.detailError, data: { revision: mocks.revision, ai_insights: { summary: 'Resumo sintético anterior' }, social_anamnesis: 'Anamnese sintética anterior', medical_history: mocks.revision === 2 ? 'Histórico anterior' : 'Atualização de outro atendimento', clinical_notes: 'Anotação sintética anterior' } }),
-    range: () => Promise.resolve({ error: null, data: [] }),
+    range: (from: number) => Promise.resolve({ error: null, data: from ? [] : mocks.consultations }),
     update: (patch: unknown) => { mocks.update(patch); return query; },
     maybeSingle: () => {
       if (mocks.writeOk) return Promise.resolve({ data: { id: 'patient' }, error: null });
@@ -50,6 +52,7 @@ beforeEach(() => {
   mocks.detailError = null;
   mocks.detailRead = null;
   mocks.writeOk = false;
+  mocks.consultations = [];
   vi.clearAllMocks();
 });
 
@@ -61,7 +64,7 @@ describe('Clinical detail read states', () => {
     expect(screen.queryByText('Histórico antigo da lista')).not.toBeInTheDocument();
     expect(screen.queryByText('Anamnese antiga da lista')).not.toBeInTheDocument();
     expect(screen.queryByText(/Adicione cirurgias/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Editar Histórico Médico' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Editar histórico médico' })).toBeDisabled();
   });
 
   it('removes cached clinical fields, notes and insights after a failed refresh', async () => {
@@ -83,17 +86,17 @@ describe('Clinical detail read states', () => {
     const client = renderProfile();
     await screen.findByText('Histórico anterior');
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Editar Histórico Médico' }));
-    await user.type(screen.getByLabelText('Histórico Médico'), ' — rascunho de teste');
+    await user.click(screen.getByRole('button', { name: 'Editar histórico médico' }));
+    await user.type(screen.getByLabelText('Histórico médico'), ' — rascunho de teste');
     mocks.detailError = new Error('offline');
     await act(async () => { await client.invalidateQueries({ queryKey: ['patient-detail', patient.id] }); });
     await screen.findByRole('alert');
-    expect(screen.getByLabelText('Histórico Médico')).toHaveValue('Histórico anterior — rascunho de teste');
-    expect(screen.getByLabelText('Histórico Médico')).toBeDisabled();
+    expect(screen.getByLabelText('Histórico médico')).toHaveValue('Histórico anterior — rascunho de teste');
+    expect(screen.getByLabelText('Histórico médico')).toBeDisabled();
     mocks.detailError = null;
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
-    await waitFor(() => expect(screen.getByLabelText('Histórico Médico')).toBeEnabled());
-    expect(screen.getByLabelText('Histórico Médico')).toHaveValue('Histórico anterior — rascunho de teste');
+    await waitFor(() => expect(screen.getByLabelText('Histórico médico')).toBeEnabled());
+    expect(screen.getByLabelText('Histórico médico')).toHaveValue('Histórico anterior — rascunho de teste');
   });
 });
 
@@ -101,18 +104,18 @@ describe('Concurrent clinical history editing', () => {
   it('preserves the draft and requires review when the patient revision changed', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><PatientProfileDrawer patient={patient} open onOpenChange={vi.fn()} /></QueryClientProvider>);
-    const edit = await screen.findByRole('button', { name: 'Editar Histórico Médico' });
+    const edit = await screen.findByRole('button', { name: 'Editar histórico médico' });
     await waitFor(() => expect(edit).toBeEnabled());
     const user = userEvent.setup();
     await user.click(edit);
-    await user.type(screen.getByLabelText('Histórico Médico'), ' — minha revisão');
+    await user.type(screen.getByLabelText('Histórico médico'), ' — minha revisão');
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/outro atendimento/i);
     expect(mocks.eq).toHaveBeenCalledWith('revision', 2);
-    expect(screen.getByLabelText('Histórico Médico')).toHaveValue('Histórico anterior — minha revisão');
-    expect(screen.getByLabelText('Histórico Médico')).toBeDisabled();
+    expect(screen.getByLabelText('Histórico médico')).toHaveValue('Histórico anterior — minha revisão');
+    expect(screen.getByLabelText('Histórico médico')).toBeDisabled();
     await user.click(await screen.findByRole('button', { name: /conferi a versão atual/i }));
-    expect(screen.getByLabelText('Histórico Médico')).toBeEnabled();
+    expect(screen.getByLabelText('Histórico médico')).toBeEnabled();
   });
 });
 
@@ -121,6 +124,20 @@ describe('Profile header', () => {
     renderProfile({ ...patient, medications: [{ name: 'Medicamento sintético', dosage: '1', instructions: '' }] });
     expect(await screen.findByText('0 consultas · 1 medicação ativa')).toBeInTheDocument();
     expect(screen.queryByText(/limite diário/i)).not.toBeInTheDocument();
+  });
+
+  it('names the last consultation like the rest of the app: "Última consulta: 12/10/2026 · há N dias" (M 25)', async () => {
+    mocks.consultations = [
+      { id: 'c2', created_at: '2026-10-12T13:00:00.000Z', chief_complaint: 'Retorno', soap_note: null, whatsapp_message: null, transcription: null },
+      { id: 'c1', created_at: '2026-01-05T13:00:00.000Z', chief_complaint: 'Primeira', soap_note: null, whatsapp_message: null, transcription: null },
+    ];
+    renderProfile();
+    const label = lastConsultationLabel('2026-10-12T13:00:00.000Z');
+    expect(label).toMatch(/^12\/10\/2026 · /);
+    expect(await screen.findByText(`Última consulta: ${label} · 2 consultas · 0 medicações ativas`)).toBeInTheDocument();
+    expect(screen.queryByText(/primeira há/)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sugestões da IA' })).toBeInTheDocument();
+    expect(screen.queryByText('Insights da IA')).not.toBeInTheDocument();
   });
 });
 
@@ -141,7 +158,7 @@ describe('AI insights proposal', () => {
     expect(await screen.findByText('Resumo sintético anterior')).toBeInTheDocument();
     expect(mocks.update).not.toHaveBeenCalled();
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Aceitar insights' }));
+    await user.click(screen.getByRole('button', { name: 'Aceitar sugestões' }));
     await waitFor(() => expect(mocks.update).toHaveBeenCalledWith({ ai_insights: proposal.insights }));
     expect(mocks.eq).toHaveBeenCalledWith('revision', 2);
     await waitFor(() => expect(screen.queryByText('Sugestão da IA para revisar')).not.toBeInTheDocument());
@@ -151,7 +168,7 @@ describe('AI insights proposal', () => {
   it('keeps the suggestion when the chart changed elsewhere', async () => {
     renderWithProposal();
     const user = userEvent.setup();
-    const accept = await screen.findByRole('button', { name: 'Aceitar insights' });
+    const accept = await screen.findByRole('button', { name: 'Aceitar sugestões' });
     await waitFor(() => expect(accept).toBeEnabled());
     await user.click(accept);
     expect(await screen.findByRole('alert')).toHaveTextContent('alterado em outra tela');
