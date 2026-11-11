@@ -8,7 +8,7 @@ Cortex is a clinic system in Brazilian Portuguese: React 18 + Vite + TypeScript 
 ## Your workspace
 1. You are in an isolated git worktree. It is created from an OLD branch. First run `git log -1 --oneline` and `git branch --show-current`; then, with no changes yet, run `git reset --hard main` so your branch starts at the current `main`. Use `git -c core.longpaths=true` if a git command complains about long paths.
 2. There is no `node_modules`. Do not run `npm install`. From the worktree root (PowerShell): `New-Item -ItemType Junction -Path node_modules -Target 'E:\Work\Cortex\cortex\node_modules'`. Do not delete it when you finish.
-3. Never modify the main checkout `E:\Work\Cortex\cortex`. Scratch files and screenshots go only under `E:\Work\cortex-audit-tmp\round2\<your-name>\`.
+3. Never modify the main checkout `E:\Work\Cortex\cortex`. Scratch files and screenshots go only under `E:\Work\cortex-audit-tmp\round3\<your-name>\`.
 4. Checks: `npx vitest run <focused paths>` (the whole suite takes 25 minutes and the machine is shared: run focused files, and the folder of your area once at the end), `npm run typecheck`, `npx eslint <changed files>`, and `npm run typecheck:edge` if you touched `supabase/functions`.
 5. No Docker. No `supabase` CLI. No deploy. No `git push`. Do not read `.env*` files or any secret. No calls to OpenAI, Meta or the deployed site.
 6. Database: only if your brief gives you a migration number. One new additive file `supabase/migrations/<number>_<name>.sql` (applied migrations are immutable; change functions with `create or replace`, keeping grants and `search_path`; header comment says owner Claude, what and why) plus `supabase/tests/<name>.test.sql`. Prove it with `node scripts/supabase-rollout/sqltest.mjs --project conhcwuwtrkerpbblzgu --with-pending <test files>`: it runs your pending migration and the tests on the hosted TEST project inside a transaction that is always rolled back. That is the only database access allowed; never `migrate.mjs`, `backup.mjs` or anything that persists. Also run the existing suites your change could affect, and if one fails, run it without your migration to see whether the failure is yours.
@@ -24,7 +24,33 @@ Cortex is a clinic system in Brazilian Portuguese: React 18 + Vite + TypeScript 
 - Code comments and commit messages in English; comments only where they explain a rule or a reason.
 - Do not refactor beyond your items. Keep diffs focused.
 
-## Who owns what in this round (do not edit another owner's files; if you must, change one line and say so)
+## Round 3 (experience and consistency) — who owns what
+
+Round 2 below is merged. Round 3 closes wave 3 of the plan. The findings are numbered in [relatorios/ux-medico-paginas-publicas.md](relatorios/ux-medico-paginas-publicas.md) ("M n") and [relatorios/ux-recepcao-financeiro-configuracoes.md](relatorios/ux-recepcao-financeiro-configuracoes.md) ("R n"). Much of each report was already fixed in rounds 1 and 2: **check the current code and screen first, fix only what is still true**, and say "already done" for the rest. The screenshot paths in the reports are the reviewer's; make your own. Scratch folder: `E:\Work\cortex-audit-tmp\round3\<your-name>\`.
+
+Shared pieces that already exist — use them, do not make a second one:
+- `src/lib/dialogLayout.ts`: the frame of every form dialog (header, scrolling body, fixed footer, error above the buttons). The reception booking dialog is the reference use.
+- `src/lib/appointmentStatus.ts`: label and look of each appointment status and type (`statusLook`, `typeLabel`). No screen keeps its own map.
+- `src/lib/dates.ts`: `lastConsultationLabel` ("12/10/2026 · há 29 dias"), `formatDateOnly`, `relativeDayLabel`. The term is "Última consulta".
+- `src/components/SupportRequest.tsx`: "ask the Cortex team" with a way to do it.
+- Words agreed for this round: "Iniciar atendimento" (start a visit now, button and dialog title), "Novo agendamento" / "Editar agendamento", "Escrever evolução", "Pendências e retornos", "Última consulta", "E-mail", "(opcional)" as the only optional mark, "Sair" → asks "Sair da conta?".
+
+| Agent | Files | Findings |
+|---|---|---|
+| navegacao | `src/pages/Index.tsx`, `src/App.tsx`, `src/components/WorkspaceShell.tsx`, `MobileSubpageNavigation.tsx`, `PatientSidebar.tsx`, `WelcomeDashboard.tsx`, `ConsultationRecoveryNotice.tsx`, `src/hooks/useUnsavedChanges.ts`, new navigation/sign-out/unsaved-changes components | M 7, 8, 19, 22, 23, 24 (sidebar and home), 25 (home), 28, 33, 34 (loaders); R 8, 32 |
+| agenda-medico | `src/pages/Calendar.tsx`, `src/components/AppointmentModal.tsx`, `DailyAgenda.tsx`, `src/lib/calendarLabels.ts`, the waitlist and calendar components used only by the doctor's agenda | M 5, 9 and 10 (appointment dialog), 13 (agenda), 24 (agenda), 28 (agenda card), 30 |
+| formularios | `src/components/ui/dialog.tsx`, `alert-dialog.tsx`, `button.tsx`, `toast.tsx`, `toaster.tsx`, `sonner.tsx`, `NewConsultationModal.tsx`, `src/pages/PatientManagement.tsx` and the patient form/import components it uses | M 9, 10, 11 (where toasts appear), 13 (start-visit dialog), 14 (what is left), 25 (list), 34 (close target, list loading, empty search); R 34 |
+| consulta-tela | `src/components/ChatPanel.tsx`, `UsageMeter.tsx`, `PatientProfileDrawer.tsx`, `PatientSnapshot.tsx`, `PrescriptionList.tsx`, `PatientWorkspaceDialog.tsx`, `ClinicalWorkEditor.tsx`, `DocumentComposerModal.tsx`, `DocumentPreviewModal.tsx`, `RecordingModeDialog.tsx`, `src/lib/functionErrors.ts` | M 3, 11 (consultation and composer errors inline), 12, 13 (consultation), 15, 25 (profile), 26, 27, 32 (composer), 34 (dose field) |
+| recepcao-financeiro | everything under `src/features/` (reception, billing, settings, intake), `src/pages/Settings.tsx`, `Sharing.tsx`, `KnowledgeBase.tsx`, `Templates.tsx`, `AccountSecurity.tsx`, `SignatureReturn.tsx`, `GoogleOAuthCallback.tsx`, `src/components/ProtocolSharing.tsx` | R 11, 12, 19, 23, 24, 26, 29, 30, 31, 33, 35 and whatever is still true of R 9, 10, 13–18, 20–22, 27, 28; M 29, 32 (these pages) |
+
+Every agent also fixes M 31 (sentence case, "(opcional)", "E-mail", one name per page) inside its own files.
+
+Rules for the shared edges of this round:
+- `ChatPanel.tsx` belongs to consulta-tela. navegacao places the Consulta/Perfil switch from `Index.tsx` and does not edit `ChatPanel.tsx`.
+- `scripts/app-audit-browser.mjs` is edited by several agents: add options at the end of the options comment and synthetic data in your own clearly named block; do not reformat or reorder what is there.
+- No database or Edge Function changes in this round. If a finding needs one, describe it in your report instead.
+
+## Round 2 — who owned what (merged; kept for history)
 | Agent | Files |
 |---|---|
 | clin-consulta | `src/components/ChatPanel.tsx`, `src/pages/Index.tsx`, `PatientSidebar.tsx`, `WelcomeDashboard.tsx`, `CommentProposalCard.tsx`, `PrescriptionList.tsx`, `RecordingModeDialog.tsx`, `UsageMeter.tsx`, `src/hooks/useRecording.ts`, `src/lib/recordingRescue.ts`, `src/lib/functionErrors.ts` |
@@ -41,5 +67,5 @@ Cortex is a clinic system in Brazilian Portuguese: React 18 + Vite + TypeScript 
 
 ## Deliver
 - Commit on your worktree branch: `git add -- <path> <path>…` path by path (never `-A` or `.`); one commit per coherent piece is fine; conventional English messages that say what changed for the user and why; end each with the attribution line your environment gives you (if none: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`).
-- Backup patch: `git format-patch main --stdout > E:/Work/cortex-audit-tmp/round2/<your-name>/<your-name>.patch`.
+- Backup patch: `git format-patch main --stdout > E:/Work/cortex-audit-tmp/round3/<your-name>/<your-name>.patch`.
 - Final message (it is all the lead sees; keep it under 60 lines): summary in 3 lines; for each item of your brief: done / partly / not done, and the behaviour now in one line; changed test expectations with reasons; checks run with numbers; SQL suites run (if any) with pass/fail; what could not be verified; anything risky for the merge (files touched outside your list); deployment steps if any; branch name and commit SHAs.
