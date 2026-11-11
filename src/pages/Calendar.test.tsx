@@ -131,6 +131,14 @@ describe('doctor agenda toolbar', () => {
     expect(screen.getByText('06:00')).toBeInTheDocument();
   });
 
+  it('ignores an early appointment outside the visible day', async () => {
+    fixture.mobile = true;
+    fixture.appointments = [appointment({}), appointment({ id: 'tomorrow', start_time: '2026-11-12T09:30:00Z', end_time: '2026-11-12T10:00:00Z' })];
+    mount();
+    await screen.findByText('Paciente Sintética');
+    expect(screen.queryByText('06:00')).not.toBeInTheDocument();
+  });
+
   it('opens the waiting list as a view instead of a card above the grid', async () => {
     mount();
     await screen.findByText('Paciente Sintética');

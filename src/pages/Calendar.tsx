@@ -265,7 +265,13 @@ export default function CalendarPage() {
       })),
     [appointments, patientNames],
   );
-  const hours = useMemo(() => gridHours(events), [events]);
+  // Only appointments on the visible days widen the hours.
+  const rangeStartMs = range.start.getTime();
+  const rangeEndMs = range.end.getTime();
+  const hours = useMemo(
+    () => gridHours(events.filter((event) => event.start.getTime() < rangeEndMs && event.end.getTime() > rangeStartMs)),
+    [events, rangeStartMs, rangeEndMs],
+  );
   const wallAppointments = useMemo(
     () => events.map((event) => ({ ...event.resource, title: event.title, startTime: event.start, endTime: event.end })),
     [events],
