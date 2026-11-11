@@ -6,6 +6,9 @@ import { ClinicAccessContext } from './accessContext';
 import { SessionVisibilityContext } from '@/contexts/SessionVisibility';
 import type { ClinicAccess } from './contracts';
 import type { ContactOption } from './NewCaseDialog';
+// The shared Radix checkbox measures itself inside a form; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+
 
 const mocks = vi.hoisted(() => ({ contacts: vi.fn(), actor: '11111111-1111-4111-8111-111111111111', navigate: vi.fn() }));
 vi.mock('./api', () => ({ receptionApi: { contacts: mocks.contacts } }));
@@ -13,6 +16,7 @@ vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: mocks.a
 vi.mock('react-router-dom', () => ({ useNavigate: () => mocks.navigate, useSearchParams: () => [new URLSearchParams(), vi.fn()] }));
 vi.mock('./NewCaseDialog', () => ({ NewCaseDialog: ({ contact }: { contact?: ContactOption }) => <div role="dialog" aria-label="Atendimento sintético">{contact?.name}<span>{contact?.id}</span></div> }));
 vi.mock('./ContactCorrectionDialog', () => ({ ContactCorrectionDialog: ({ contactId }: { contactId: string }) => <div role="dialog" aria-label="Correção sintética">{contactId}</div> }));
+vi.mock('./BookingDialog', () => ({ BookingDialog: ({ contact }: { contact?: ContactOption }) => <div role="dialog" aria-label="Agendamento sintético">{contact?.id}</div> }));
 vi.mock('./ContactLinksDialog', () => ({ ContactLinksDialog: ({ contactId }: { contactId: string }) => <div role="dialog" aria-label="Vínculos sintéticos">{contactId}</div> }));
 
 const clinic = '22222222-2222-4222-8222-222222222222', other = '77777777-7777-4777-8777-777777777777';
@@ -61,7 +65,7 @@ describe('contact directory freshness and actions', () => {
     expect(screen.getByRole('alert')).not.toHaveTextContent('PRIVATE');
     expect(screen.queryByRole('button', { name: 'Novo atendimento para este contato' })).not.toBeInTheDocument();
     mocks.contacts.mockResolvedValue(page);
-    fireEvent.click(screen.getByRole('button', { name: 'Tentar carregar contatos' })); await card();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' })); await card();
     expect(mocks.contacts).toHaveBeenCalledTimes(3); expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
   it('retires rows during a pending refresh and does not show false empty results', async () => {
@@ -170,5 +174,20 @@ describe('contact directory freshness and actions', () => {
     mount(); await card(); fireEvent.click(screen.getByRole('button', { name: 'Atualizar contatos' }));
     await waitFor(() => expect(mocks.contacts).toHaveBeenCalledTimes(2)); await card();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+  // Round 3, R 27: a contact row books directly, without opening a queue case first.
+  it('books from the contact row with that exact contact and no queue case', async () => {
+    mount(); const heading = await card(); const article = within(heading.closest('article')!);
+    fireEvent.click(article.getByRole('button', { name: `Agendar para ${row.name}` }));
+    expect(screen.getByRole('dialog', { name: 'Agendamento sintético' })).toHaveTextContent(row.id);
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+  it('shows a failed read with the shared retry notice, not the server text', async () => {
+    mocks.contacts.mockRejectedValueOnce(new Error('Falha sintética do servidor'));
+    mount();
+    const alert = await screen.findByRole('alert', {}, { timeout: 1500 });
+    expect(alert).toHaveTextContent('Não foi possível carregar os contatos. Verifique a conexão e tente de novo.');
+    expect(alert).not.toHaveTextContent('Falha sintética');
+    fireEvent.click(within(alert).getByRole('button', { name: 'Tentar novamente' })); await card();
   });
 });

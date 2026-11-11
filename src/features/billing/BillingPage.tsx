@@ -54,7 +54,7 @@ export default function BillingPage({ embedded = false }: { embedded?: boolean }
     return n < 0 ? label : `${n + 1} ${label}${count}`;
   };
   const nextStep: Partial<Record<TabId, string>> = {
-    faturar: 'Próximo passo: clique em “Cobrar” em cada atendimento. A cobrança passa para Cobranças.',
+    faturar: 'Próximo passo: clique em “Cobrar atendimento” em cada atendimento. A cobrança passa para Cobranças.',
     cobrancas: role === 'admin' ? 'Próximo passo: receba as particulares aqui. As de convênio seguem para Lotes.'
       : role === 'reception' ? 'Próximo passo: receba as particulares aqui. As de convênio a administração envia em lotes.' : undefined,
     lotes: 'Próximo passo: monte o lote, baixe o XML, envie no portal do convênio e marque como enviado. Quando o convênio pagar, lance o retorno.',

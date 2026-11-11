@@ -42,7 +42,7 @@ export default function ReceptionDashboard() {
   if (hidden) return null;
   if (!access?.active || !access.clinic || user?.id !== access.actorId ||
     !(access.kind === 'reception' || (access.kind === 'clinical' && access.admin))) {
-    return <ReceptionAccessNotice title={DASHBOARD_TITLE} message="Acesso aos indicadores indisponível para a sua conta nesta clínica." />;
+    return <ReceptionAccessNotice title={DASHBOARD_TITLE} message="Sua conta não vê os indicadores do WhatsApp desta clínica." />;
   }
   return <DashboardPeriod key={`${access.actorId}:${access.clinic.id}:${access.kind}:${access.admin}`} actor={access.actorId} clinic={access.clinic.id} />;
 }

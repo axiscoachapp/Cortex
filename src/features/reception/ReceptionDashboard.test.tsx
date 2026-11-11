@@ -7,6 +7,9 @@ import { ClinicAccessContext } from './accessContext';
 import { SessionVisibilityContext } from '@/contexts/SessionVisibility';
 import type { ClinicAccess } from './contracts';
 import type { WhatsAppDashboard } from './whatsappDashboard';
+// The shared Radix checkbox measures itself inside a form; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+
 
 const mocks = vi.hoisted(() => ({ read: vi.fn(), actor: '11111111-1111-4111-8111-111111111111' }));
 vi.mock('./whatsappDashboard', () => ({ readWhatsAppDashboard: mocks.read }));
@@ -53,7 +56,7 @@ describe('K2 reception dashboard', () => {
     { ...access, active: false }, { ...access, clinic: null }, { ...access, kind: 'clinical' as const },
     { ...access, active: false, admin: true }, { ...access, actorId: 'different-actor' },
   ])('does not read under invalid context %j', denied => {
-    mount(denied); expect(screen.getByRole('alert')).toHaveTextContent('Acesso aos indicadores indisponível'); expect(mocks.read).not.toHaveBeenCalled();
+    mount(denied); expect(screen.getByRole('alert')).toHaveTextContent('Sua conta não vê os indicadores do WhatsApp'); expect(mocks.read).not.toHaveBeenCalled();
   });
   it('allows clinical administrators without changing medical scopes', async () => { mount({ ...access, kind: 'clinical', admin: true }); await ready(); expect(mocks.read).toHaveBeenCalledTimes(1); });
   it('hides the reader and aborts on session concealment', async () => {

@@ -12,6 +12,7 @@ import { NewContactDialog } from './NewContactDialog';
 import { ContactDirectory } from './ContactDirectory';
 import { ContactCorrectionDialog } from './ContactCorrectionDialog';
 import { ContactLinksDialog } from './ContactLinksDialog';
+import { BookingDialog } from './BookingDialog';
 import { ReceptionNotice } from './ReceptionNotice';
 import { displayPhone } from './queueTime';
 import { relationshipLabels } from './linkRelationships';
@@ -26,7 +27,8 @@ export default function ContactsPage() {
   const [selected, setSelected] = useState<ContactOption>();
   const [editing, setEditing] = useState<string | null>(null);
   const [viewingLinks, setViewingLinks] = useState<Pick<ContactOption, 'id' | 'name'> | null>(null);
-  useEffect(() => { setViewingLinks(null); setCreated(null); }, [access?.actorId, access?.clinic?.id, access?.admin, access?.active, access?.kind]);
+  const [booking, setBooking] = useState<ContactOption | null>(null);
+  useEffect(() => { setViewingLinks(null); setCreated(null); setBooking(null); }, [access?.actorId, access?.clinic?.id, access?.admin, access?.active, access?.kind]);
   // "Abrir contato" from a conversation lands here with the contact's id (never its name or phone).
   const focus = z.string().uuid().safeParse(params.get('contato'));
   const openCase = (contact: ContactOption) => { setSelected(contact); setCreating(true); };
@@ -45,7 +47,8 @@ export default function ContactsPage() {
       {focus.success && access?.clinic && <ContactFocus key={`${access.actorId}:${access.clinic.id}:${focus.data}`} contactId={focus.data}
         onOpen={openCase} onEdit={access.admin ? setEditing : undefined}
         onClose={() => setParams(old => { const next = new URLSearchParams(old); next.delete('contato'); return next; })} />}
-      <ContactDirectory onOpen={openCase} onEdit={setEditing} onLinks={setViewingLinks} />
+      <ContactDirectory onOpen={openCase} onEdit={setEditing} onLinks={setViewingLinks} onBook={setBooking} />
+      {booking && <BookingDialog key={booking.id} contact={booking} onClose={() => setBooking(null)} />}
       {addingContact && <NewContactDialog onClose={() => setAddingContact(false)} onCreated={contact => { setAddingContact(false); setCreated(contact); }} />}
       {creating && (
         <NewCaseDialog

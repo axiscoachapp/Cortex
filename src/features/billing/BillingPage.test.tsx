@@ -110,7 +110,7 @@ describe('finance page', () => {
     renderPage('reception');
     await screen.findByRole('tab', { name: /A faturar \(1\)/ });
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['1 A faturar (1)', '2 Cobranças', '3 Caixa']);
-    expect(screen.getByText(/Próximo passo: clique em “Cobrar”/)).toBeVisible();
+    expect(screen.getByText(/Próximo passo: clique em “Cobrar atendimento”/)).toBeVisible();
   });
 
   it('bills an attended appointment prefilled with the saved card and the price table', async () => {

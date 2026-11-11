@@ -10,6 +10,7 @@ import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
 import { displayPhone } from './queueTime';
 import type { ContactOption } from './NewCaseDialog';
+import { LoadErrorNotice, NoAccessNotice } from '@/features/shared/StatusNotice';
 
 /** Typing pauses this long before the directory is read again. */
 export const CONTACT_SEARCH_DEBOUNCE_MS = 300;
@@ -18,6 +19,7 @@ type Actions = {
   onOpen: (contact: ContactOption) => void;
   onEdit: (id: string) => void;
   onLinks: (contact: ContactOption) => void;
+  onBook?: (contact: ContactOption) => void;
 };
 
 export function ContactDirectory(actions: Actions) {
@@ -26,13 +28,13 @@ export function ContactDirectory(actions: Actions) {
   const hidden = useSessionHidden();
   if (hidden) return null;
   if (!access?.active || !access.clinic || user?.id !== access.actorId || !(access.admin || access.kind === 'reception')) {
-    return <p role="alert" className="rounded-lg border p-4 text-sm">Acesso aos contatos indisponível para a sua conta nesta clínica.</p>;
+    return <NoAccessNotice message="Sua conta não tem acesso aos contatos desta clínica." backTo={null} />;
   }
   return <DirectoryContents key={[access.actorId, access.clinic.id, access.admin, access.kind].join(':')}
     actor={access.actorId} clinic={access.clinic.id} canEdit={access.admin} canViewLinks={access.admin && access.kind === 'clinical'} {...actions} />;
 }
 
-function DirectoryContents({ actor, clinic, canEdit, canViewLinks, onOpen, onEdit, onLinks }: Actions & {
+function DirectoryContents({ actor, clinic, canEdit, canViewLinks, onOpen, onEdit, onLinks, onBook }: Actions & {
   actor: string; clinic: string; canEdit: boolean; canViewLinks: boolean;
 }) {
   const client = useQueryClient();
@@ -80,11 +82,7 @@ function DirectoryContents({ actor, clinic, canEdit, canViewLinks, onOpen, onEdi
     {!canEdit && <p className="text-sm text-muted-foreground">Para corrigir o nome ou o telefone de um contato, peça ao administrador da clínica.</p>}
     {contacts.fetchStatus === 'paused' ? <p role="status" className="text-sm">Aguardando conexão de rede para carregar contatos…</p>
       : reading ? <p role="status" className="text-sm">{previous ? 'Buscando contatos…' : 'Carregando contatos…'}</p>
-      : contacts.isError ? <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3 text-sm">
-        <p>Não foi possível carregar os contatos. Verifique a conexão e tente de novo.</p>
-        <Button type="button" variant="outline" className="h-auto min-h-11 whitespace-normal"
-          onClick={() => void contacts.refetch()}>Tentar carregar contatos</Button>
-      </div> : null}
+      : contacts.isError ? <LoadErrorNotice subject="os contatos" onRetry={() => void contacts.refetch()} /> : null}
     {rows.length > 0 && <ul aria-busy={previous} className={`divide-y rounded-xl border bg-card ${previous ? 'opacity-60' : ''}`}>
       {rows.map(contact => <li key={contact.id}>
         <article className="grid gap-2 p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:px-4 [overflow-wrap:anywhere]">
@@ -93,6 +91,8 @@ function DirectoryContents({ actor, clinic, canEdit, canViewLinks, onOpen, onEdi
             <p className="text-sm text-muted-foreground tabular-nums">{contact.phone ? displayPhone(contact.phone) : 'Sem telefone cadastrado'}</p>
           </div>
           <div className="flex flex-wrap gap-2 md:justify-end">
+            {onBook && <Button type="button" className="h-auto min-h-11 whitespace-normal" disabled={!fresh}
+              aria-label={`Agendar para ${contact.name}`} onClick={() => withSnapshot(() => onBook(contact))}>Agendar</Button>}
             <Button type="button" variant="outline" className="h-auto min-h-11 whitespace-normal" disabled={!fresh}
               onClick={() => withSnapshot(() => onOpen(contact))}>Novo atendimento para este contato</Button>
             {canEdit && <Button type="button" variant="ghost" className="h-auto min-h-11 whitespace-normal" disabled={!fresh}
