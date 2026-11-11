@@ -11,6 +11,7 @@ import { functionErrorMessage } from '@/lib/functionErrors';
 import { SIGNABLE_TYPES } from '@/lib/signatureClient';
 import { SignDocumentButton, SignatureSessionBar } from '@/components/SignatureControls';
 import { useSignatureSession } from '@/hooks/useSignatureSession';
+import { prescribedItems } from '@/lib/prescribedItems';
 
 interface PrescriptionRow {
   id: string;
@@ -22,7 +23,9 @@ interface PrescriptionRow {
   signature_verified_at?: string | null;
   issuance_verified_at?: string | null;
   /** The issued document; pdf_sha256 is the hash of the PDF the doctor saw. */
-  issuance_snapshot?: { pdf_sha256?: unknown } | null;
+  issuance_snapshot?: { pdf_sha256?: unknown; controlled?: { items?: unknown } } | null;
+  /** The items as issued (stored with the document). */
+  medications?: unknown;
 }
 
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -146,6 +149,7 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
           // dispensing window; sick notes and exam requests stay valid.
           const expired = isExpired(rx);
           const signHash = signing && !signing.mfaRequired ? signableHash(rx, expired) : null;
+          const items = prescribedItems(rx);
           return (
             <div key={rx.id} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3 py-2 rounded-lg border border-border/60 bg-card">
               <div className="flex-1 min-w-[10rem] break-words">
@@ -154,6 +158,14 @@ export function PrescriptionList({ patientId }: { patientId: string }) {
                   {new Date(rx.created_at).toLocaleDateString('pt-BR')} · código {rx.secret_code}
                   {expired && rx.status !== 'revoked' ? ' · expirada' : ''}
                 </p>
+                {items.length > 0 && (
+                  <p className="text-[0.6875rem] text-foreground/80 [overflow-wrap:anywhere]">
+                    <span className="sr-only">Itens prescritos: </span>{items.join(' · ')}
+                  </p>
+                )}
+                {trusted && expired && rx.status !== 'revoked' && (
+                  <p className="text-[0.625rem] text-muted-foreground">Fora da validade: não abre mais na validação das farmácias. Os itens prescritos ficam registrados aqui.</p>
+                )}
                 {!trusted && rx.status !== 'revoked' && <p className="text-[0.625rem] text-amber-800">Emissão anterior não verificada. Reemita para permitir a validação pública.</p>}
               </div>
               <span className={cn('text-[0.5625rem] font-bold px-1.5 py-0.5 rounded shrink-0', meta.cls)}>
