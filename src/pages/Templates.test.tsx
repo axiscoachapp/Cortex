@@ -47,6 +47,16 @@ beforeEach(() => {
 });
 
 describe('Templates page', () => {
+  it('is titled like its menu entry and opens a dialog named like its button', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Modelos' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Criar meu modelo' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Criar meu modelo' });
+    const footer = within(dialog).getAllByRole('button').map(b => b.textContent?.trim()).filter(t => t === 'Cancelar' || t === 'Criar modelo');
+    expect(footer).toEqual(['Cancelar', 'Criar modelo']);
+  });
+
   it('says the default structure is in use and activates a template for new evolutions', async () => {
     const user = userEvent.setup();
     renderPage();

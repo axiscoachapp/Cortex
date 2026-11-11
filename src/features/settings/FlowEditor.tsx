@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { LoadErrorNotice } from '@/features/shared/StatusNotice';
 import {
   decideStep, LIMITS, validateFlow, type BusinessHours, type FlowNode, type FlowSettings, type SessionState,
 } from '../../../supabase/functions/_shared/whatsappFlow';
@@ -77,10 +78,7 @@ export function FlowEditor() {
   // Error first: a failed first read must show the retry, not "Carregando" forever.
   if (flow.isError && !dirty)
     return (
-      <p role="alert" className="text-sm text-destructive">
-        {(flow.error as Error).message}{' '}
-        <button type="button" className="underline" onClick={() => flow.refetch()}>Tentar novamente</button>
-      </p>
+      <LoadErrorNotice subject="o robô de atendimento" retrying={flow.isFetching} onRetry={() => void flow.refetch()} />
     );
   // Cached data from an earlier visit is not shown until this mount's read answers.
   if (!draft || (!dirty && !flow.isFetchedAfterMount)) return <p className="text-sm text-muted-foreground">Carregando o robô…</p>;

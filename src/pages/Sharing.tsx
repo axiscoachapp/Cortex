@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, Loader2, LockKeyhole, Users, X } from 'lucide-react';
+import { Download, LockKeyhole, Users, X } from 'lucide-react';
 import { WorkspaceShell } from '@/components/WorkspaceShell';
 import { PageHeading } from '@/components/PageHeading';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { supabase } from '@/integrations/supabase/client';
 import { sharingRpc, sharedClinicalList, SharingError, type SharedChart, type SharingOverview } from '@/lib/sharing';
 import { functionErrorMessage } from '@/lib/functionErrors';
+import { LoadErrorNotice, LoadingNotice } from '@/features/shared/StatusNotice';
 
 const date = (value: string) => new Date(value).toLocaleString('pt-BR');
 const empty: SharingOverview = { memberships: [], members: [], received: [], granted: [] };
@@ -87,6 +88,9 @@ export default function SharingPage() {
   const [loading, setLoading] = useState(true);
   const [clinicName, setClinicName] = useState('');
   const [loadError, setLoadError] = useState('');
+  // Whether the overview was read at least once: until then an empty list means "not read", not "nothing here".
+  const [loaded, setLoaded] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [newDoctor, setNewDoctor] = useState({ name: '', email: '', crm: '', crmUf: '' });
   const [provisioned, setProvisioned] = useState<{ email: string; temporaryPassword: string; reissued?: boolean } | null>(null);
   const [email, setEmail] = useState('');
@@ -119,6 +123,7 @@ export default function SharingPage() {
   }, []);
   const active = overview.memberships.find((m) => m.status === 'active');
   const admin = active?.role === 'admin';
+  const invited = overview.memberships.some((m) => m.status === 'invited');
 
   const refresh = useCallback(async () => {
     if (overviewRequest.current) return;
@@ -128,9 +133,11 @@ export default function SharingPage() {
       if (!result || ![result.memberships, result.members, result.received, result.granted].every(Array.isArray))
         throw new Error('A resposta de permissões não pôde ser validada. Tente novamente.');
       setOverview(result);
+      setLoaded(true);
       setLoadError('');
-    } catch (err) {
-      setLoadError(await functionErrorMessage(err, 'Não foi possível carregar os compartilhamentos.'));
+    } catch {
+      // One plain sentence; the server's text is not shown.
+      setLoadError('Não foi possível carregar os compartilhamentos. Verifique a conexão e tente de novo.');
     } finally {
       overviewRequest.current = false;
       setLoading(false);
@@ -318,7 +325,7 @@ export default function SharingPage() {
 
   return (
     <WorkspaceShell section="Compartilhamento">
-      <PageHeading title="Compartilhamento entre médicos" description="Listas privadas. Acesso concedido paciente por paciente." />
+      <PageHeading title="Compartilhamento" description="Listas privadas. Acesso concedido paciente por paciente." />
       <div className="space-y-6">
         <div className="rounded-xl border bg-card p-4 flex gap-3 text-sm">
           <LockKeyhole className="w-5 h-5 shrink-0 text-primary" />
@@ -328,10 +335,16 @@ export default function SharingPage() {
             autoria são preservados após o desligamento de um médico.
           </p>
         </div>
-        {(error || loadError) && (
+        {error && (
           <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-destructive">
-            {error || loadError}
+            {error}
           </p>
+        )}
+        {loadError && !loading && (
+          <LoadErrorNotice message={loadError} retrying={retrying} onRetry={() => {
+            setRetrying(true);
+            void refresh().finally(() => setRetrying(false));
+          }} />
         )}
         {notice && (
           <p role="status" className="rounded-lg border border-primary/30 p-3 text-sm">
@@ -339,11 +352,8 @@ export default function SharingPage() {
           </p>
         )}
         {loading ? (
-          <p role="status" className="flex gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Carregando permissões…
-          </p>
-        ) : (
+          <LoadingNotice label="Carregando permissões…" className="p-0" />
+        ) : !loaded ? null : (
           <>
             {overview.memberships
               .filter((m) => m.status === 'invited')
@@ -384,9 +394,11 @@ export default function SharingPage() {
             <section className="rounded-xl border bg-card p-5 space-y-4">
               <h2 className="font-semibold flex items-center gap-2">
                 <Users className="w-4 h-4" />
-                {active ? active.name : 'Vincular equipe médica'}
+                {active ? active.name : invited ? 'Equipe médica' : 'Vincular equipe médica'}
               </h2>
-              {!active ? (
+              {!active && invited ? (
+                <p className="text-sm text-muted-foreground">Responda ao convite acima para fazer parte da equipe da clínica.</p>
+              ) : !active ? (
                 <>
                   <p className="text-sm text-muted-foreground">
                     Somente o administrador cria a equipe da clínica. Se a sua conta foi criada pelo administrador, você
@@ -580,7 +592,7 @@ export default function SharingPage() {
                       }}
                     >
                       <div className="flex-1 space-y-1 min-w-48">
-                        <Label htmlFor="doctor-email">Convidar uma conta que já existe (e-mail)</Label>
+                        <Label htmlFor="doctor-email">E-mail de uma conta que já existe</Label>
                         <Input
                           id="doctor-email"
                           type="email"

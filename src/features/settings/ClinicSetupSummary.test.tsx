@@ -1,17 +1,17 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClinicAccessContext } from '@/features/reception/accessContext';
 import type { ClinicAccess } from '@/features/reception/contracts';
 import { ClinicSetupSummary } from './ClinicSetupSummary';
-const mocks = vi.hoisted(() => ({ read: vi.fn(), retry: vi.fn(), error: false, loading: false, address: 'Endereço sintético' }));
+const mocks = vi.hoisted(() => ({ read: vi.fn(), retry: vi.fn(), error: false, loading: false, address: 'Endereço sintético', cpf: '11144477735' }));
 vi.mock('@/hooks/useUserSettings', () => ({ SPECIALTY_LABELS: { cardiologia: 'Cardiologia' }, useUserSettings: () => {
   mocks.read();
-  return { specialty: 'cardiologia', prescriber: { doctorName: 'Médico sintético', crmNumber: '00000', crmUf: 'PR', professionalAddress: mocks.address, professionalPhone: '', rqe: '', prescriberCpf: '11144477735' }, prescriberComplete: true, isError: mocks.error, isLoading: mocks.loading, retrySettings: mocks.retry };
+  return { specialty: 'cardiologia', prescriber: { doctorName: 'Médico sintético', crmNumber: '00000', crmUf: 'PR', professionalAddress: mocks.address, professionalPhone: '', rqe: '', prescriberCpf: mocks.cpf }, prescriberComplete: true, isError: mocks.error, isLoading: mocks.loading, retrySettings: mocks.retry };
 } }));
 const access: ClinicAccess = { kind: 'clinical', active: true, admin: true, actorId: 'synthetic', clinic: { id: 'synthetic', name: 'Clínica sintética' }, doctors: [], staff: [] };
 function mount(kind: ClinicAccess['kind'] = 'clinical') { return render(<ClinicAccessContext.Provider value={{ ...access, kind }}><ClinicSetupSummary /></ClinicAccessContext.Provider>); }
 describe('managed setup is readable without a second editor', () => {
-  beforeEach(() => { vi.clearAllMocks(); mocks.error = false; mocks.loading = false; mocks.address = 'Endereço sintético'; });
+  beforeEach(() => { vi.clearAllMocks(); mocks.error = false; mocks.loading = false; mocks.address = 'Endereço sintético'; mocks.cpf = '11144477735'; });
   it('shows the current professional details without inputs or full CPF', () => {
     mount();
     expect(screen.getByText('Cardiologia')).toBeVisible();
@@ -42,6 +42,18 @@ describe('managed setup is readable without a second editor', () => {
   it('names what is missing instead of a vague incomplete chip', () => {
     mocks.address = ''; mount();
     expect(screen.getByText('Falta: Endereço profissional')).toBeVisible();
+  });
+  it('lists a missing CPF in the chip instead of "Completo" above "Não cadastrado"', () => {
+    mocks.cpf = ''; mount();
+    expect(screen.getByText('Falta: CPF')).toBeVisible();
+    expect(screen.queryByText('Completo')).toBeNull();
+    cleanup(); mocks.cpf = '11144477735'; mount();
+    expect(screen.getByText('Completo')).toBeVisible();
+  });
+  it('offers a retry on a failed read', () => {
+    mocks.error = true; mount();
+    screen.getByRole('button', { name: 'Tentar novamente' }).click();
+    expect(mocks.retry).toHaveBeenCalledOnce();
   });
   it('distinguishes loading from an incomplete setup', () => {
     mocks.loading = true; mount();

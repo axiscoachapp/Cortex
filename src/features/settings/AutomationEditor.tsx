@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { dialogLayout } from '@/lib/dialogLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -82,6 +83,9 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
   const changeOpen = (next: boolean) => { if (guard(next)) onOpenChange(next); };
 
   const usesLink = params.some((p) => p.source === 'link');
+  const shownError = localError || error;
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => { if (shownError) errorRef.current?.focus(); }, [shownError]);
   const submit = () => {
     const offsetMinutes = Math.round(amount * UNIT_MINUTES[unit]);
     if (name.trim().length < 2) return setLocalError('Dê um nome à automação.');
@@ -102,13 +106,13 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
 
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
-      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
-        <DialogHeader>
+      <DialogContent className={`max-w-xl ${dialogLayout.content}`}>
+        <DialogHeader className={dialogLayout.header}>
           <DialogTitle>{initial ? 'Editar automação' : 'Nova automação'}</DialogTitle>
           <DialogDescription>Envia um modelo aprovado do WhatsApp a cada consulta que atender às condições.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <div className={dialogLayout.body}>
           <div className="space-y-1.5">
             <Label htmlFor="automation-name">Nome</Label>
             <Input id="automation-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Lembrete 48 h antes" />
@@ -230,13 +234,15 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
             <Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Automação ativa" />
           </label>
 
-          {(localError || error) && <p role="alert" className="text-sm text-destructive">{localError || error}</p>}
         </div>
 
-        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-          <Button variant="outline" onClick={() => changeOpen(false)} disabled={saving}>Cancelar</Button>
-          <Button onClick={submit} disabled={saving}>{saving ? 'Salvando…' : 'Salvar automação'}</Button>
-        </DialogFooter>
+        <div className={dialogLayout.footer}>
+          {shownError && <p ref={errorRef} role="alert" tabIndex={-1} className={dialogLayout.error}>{shownError}</p>}
+          <div className={dialogLayout.actions}>
+            <Button type="button" variant="outline" className={dialogLayout.button} onClick={() => changeOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button type="button" className={dialogLayout.button} onClick={submit} disabled={saving}>{saving ? 'Salvando…' : 'Salvar automação'}</Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

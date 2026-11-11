@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { sharingRpc } from '@/lib/sharing';
 import { functionErrorMessage } from '@/lib/functionErrors';
+import { LoadErrorNotice } from '@/features/shared/StatusNotice';
 
 interface SharedProtocol {
   id: string;
@@ -57,7 +58,8 @@ function useProtocolOverview(documentId: string | null = null, search = '', limi
     } catch (err) {
       if (request !== version.current) return;
       setData(empty);
-      setError(await functionErrorMessage(err, 'Compartilhamento indisponível.'));
+      // A failed read is one plain sentence; the server's text is not shown.
+      setError('Não foi possível carregar os compartilhamentos. Verifique a conexão e tente de novo.');
     } finally {
       busy.current = false;
       if (request === version.current) setLoading(false);
@@ -116,9 +118,9 @@ export function ProtocolShareControls({
         exportar sua biblioteca. Versões futuras exigem outro compartilhamento. Permissões de pacientes não concedem
         acesso a protocolos.
       </p>
-      {(overview.error || error) && (
+      {error && (
         <p role="alert" className="text-xs text-destructive">
-          {error || overview.error}
+          {error}
         </p>
       )}
       {notice && (
@@ -130,6 +132,8 @@ export function ProtocolShareControls({
         <p role="status" className="text-xs">
           Verificando médicos e permissões…
         </p>
+      ) : overview.error ? (
+        <LoadErrorNotice message={overview.error} onRetry={() => void overview.refresh()} />
       ) : (
         <>
           {source.review_status === 'approved' && source.status === 'ready' ? (
@@ -177,7 +181,7 @@ export function ProtocolShareControls({
             )
           ) : (
             <p className="text-xs text-muted-foreground">
-              A fonte precisa estar aprovada e com indexação concluída para receber novos compartilhamentos.
+              Só uma fonte aprovada e pronta para o assistente pode ser compartilhada.
             </p>
           )}
           <ul className="divide-y">
@@ -294,8 +298,7 @@ export function SharedProtocolsPanel() {
       <div>
         <h2 className="font-semibold">Protocolos compartilhados comigo</h2>
         <p className="text-xs text-muted-foreground mt-1">
-          Somente fontes e versões explicitamente concedidas. Acesso verificado a cada leitura e periodicamente;
-          retirada da fonte ou desligamento do médico interrompe o acesso.
+          Só as versões que outro médico compartilhou com você. Se ele retirar a fonte ou sair da equipe, o acesso termina.
         </p>
       </div>
       <Input
@@ -307,22 +310,21 @@ export function SharedProtocolsPanel() {
         }}
         placeholder="Buscar pelo título compartilhado"
       />
-      {overview.error && (
-        <p role="alert" className="text-sm text-destructive">
-          {overview.error}
-        </p>
-      )}
       {overview.loading ? (
         <p role="status" className="text-sm">
           Verificando compartilhamentos…
         </p>
+      ) : overview.error ? (
+        <LoadErrorNotice message={overview.error} onRetry={() => void overview.refresh()} />
       ) : (
         <>
           <p className="text-xs text-muted-foreground">
-            {overview.data.received.length} de {overview.data.received_count} fontes disponíveis.
+            {overview.data.received_count === 0 ? 'Nenhum protocolo compartilhado com você.'
+              : overview.data.received.length === overview.data.received_count ? `${overview.data.received_count} ${overview.data.received_count === 1 ? 'protocolo' : 'protocolos'}.`
+              : `${overview.data.received.length} de ${overview.data.received_count} protocolos.`}
           </p>
-          {!overview.data.received.length && (
-            <p className="text-sm text-muted-foreground">Nenhum protocolo compartilhado disponível.</p>
+          {!overview.data.received.length && overview.data.received_count > 0 && (
+            <p className="text-sm text-muted-foreground">Nenhum protocolo corresponde à busca.</p>
           )}
           <ul className="divide-y">
             {overview.data.received.map((item) => (

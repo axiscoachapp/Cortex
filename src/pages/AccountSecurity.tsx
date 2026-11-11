@@ -248,8 +248,8 @@ export default function AccountSecurity() {
           </form>
         )}
         <p className="text-xs text-muted-foreground border-t pt-4">
-          Se perder acesso ao autenticador, solicite recuperação ao responsável pelo ambiente. Desabilitar um fator
-          exige uma sessão verificada.
+          Se perder o celular com o autenticador, peça ajuda à equipe Cortex. Para remover o segundo fator, confirme
+          antes um código do autenticador.
         </p>
       </div>
     </WorkspaceShell>

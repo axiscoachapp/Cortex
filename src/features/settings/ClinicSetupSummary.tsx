@@ -1,26 +1,28 @@
 import { BadgeCheck, Building2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SupportRequest } from '@/components/SupportRequest';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { SPECIALTY_LABELS, useUserSettings } from '@/hooks/useUserSettings';
+import { LoadErrorNotice, LoadingNotice } from '@/features/shared/StatusNotice';
 
 /** Read-only by design: the Cortex team keeps this data; the screen offers the way to ask for a change. */
 function ProfessionalProfile({ clinicName }: { clinicName?: string | null }) {
   const settings = useUserSettings();
-  if (settings.isLoading) return <p role="status" className="p-5 text-sm text-muted-foreground">Carregando seu cadastro profissional…</p>;
-  if (settings.isError) return <div role="alert" className="space-y-3 rounded-xl border p-5"><p>Não foi possível consultar seu cadastro profissional.</p><Button variant="outline" onClick={() => void settings.retrySettings()}>Tentar novamente</Button></div>;
+  if (settings.isLoading) return <LoadingNotice label="Carregando seu cadastro profissional…" />;
+  if (settings.isError) return <LoadErrorNotice message="Não foi possível consultar seu cadastro profissional. Verifique a conexão e tente de novo." onRetry={() => void settings.retrySettings()} />;
   const { prescriber } = settings;
-  const fields: Array<[string, string, boolean]> = [
+  // [label, value, missing, short name for the "Falta:" chip]. RQE and phone are optional and never "missing";
+  // CPF is listed when absent so the chip never says "Completo" above a "Não cadastrado".
+  const fields: Array<[string, string, boolean, string?]> = [
     ['Especialidade', SPECIALTY_LABELS[settings.specialty] ?? 'Não informada', !SPECIALTY_LABELS[settings.specialty]],
     ['Nome profissional', prescriber.doctorName || 'Não cadastrado', !prescriber.doctorName],
     ['CRM e UF', [prescriber.crmNumber, prescriber.crmUf].filter(Boolean).join(' · ') || 'Não cadastrado', !prescriber.crmNumber || !prescriber.crmUf],
     ['RQE', prescriber.rqe || 'Não informado', false],
     ['Endereço profissional', prescriber.professionalAddress || 'Não cadastrado', !prescriber.professionalAddress],
     ['Telefone profissional', prescriber.professionalPhone || 'Não informado', false],
-    ['CPF (para documentos que o exigem)', prescriber.prescriberCpf ? 'Cadastrado' : 'Não cadastrado', false],
+    ['CPF (para documentos que o exigem)', prescriber.prescriberCpf ? 'Cadastrado' : 'Não cadastrado', !prescriber.prescriberCpf, 'CPF'],
   ];
-  const missing = fields.filter(([, , required]) => required).map(([label]) => label);
+  const missing = fields.filter(([, , absent]) => absent).map(([label, , , short]) => short ?? label);
   return <section className="space-y-5 rounded-2xl border bg-card p-5 md:p-6" aria-labelledby="setup-profile-title">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <h2 id="setup-profile-title" className="flex items-center gap-2 font-semibold"><BadgeCheck className="h-5 w-5 text-primary" />Seu cadastro profissional</h2>

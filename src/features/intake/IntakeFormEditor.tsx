@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useClinicAccess } from '@/features/reception/accessContext';
+import { LoadErrorNotice } from '@/features/shared/StatusNotice';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import {
   FIELD_LABELS, TYPE_LABELS, validateForm, type IntakeForm, type IntakeQuestion, type QuestionType, type RegistrationField,
@@ -65,7 +66,7 @@ export function IntakeFormEditor() {
   const discard = () => { setDirty(false); setMessage(null); void q.refetch(); };
 
   if (q.isError && !dirty)
-    return <p role="alert" className="text-sm text-destructive">{(q.error as Error).message} <button type="button" className="underline" onClick={() => q.refetch()}>Tentar novamente</button></p>;
+    return <LoadErrorNotice subject="as perguntas da pré-consulta" retrying={q.isFetching} onRetry={() => void q.refetch()} />;
   if (!draft || (!dirty && !q.isFetchedAfterMount)) return <p className="text-sm text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Carregando o formulário…</p>;
 
   const allQuestions = draft.sections.flatMap((s) => s.questions);

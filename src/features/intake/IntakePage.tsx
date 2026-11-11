@@ -3,14 +3,16 @@
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Copy, Loader2, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Copy, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { dialogLayout } from '@/lib/dialogLayout';
+import { LoadErrorNotice, LoadingNotice } from '@/features/shared/StatusNotice';
 import { useToast } from '@/hooks/use-toast';
 import { WorkspaceShell } from '@/components/WorkspaceShell';
 import { PageHeading } from '@/components/PageHeading';
@@ -87,14 +89,15 @@ export function IntakeAnswersDialog({ appointmentId, open, onOpenChange }: { app
   });
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90vh] grid-cols-1 overflow-y-auto overflow-x-hidden [&>*]:min-w-0">
-        <DialogHeader>
+      <DialogContent className={`max-w-2xl ${dialogLayout.content}`}>
+        <DialogHeader className={dialogLayout.header}>
           <DialogTitle>Respostas da pré-consulta</DialogTitle>
           <DialogDescription>{r?.answeredAt ? `Enviadas em ${dateTime(r.answeredAt)}${r.submissions > 1 ? ` (${r.submissions} envios)` : ''}.` : 'Ainda sem respostas.'}</DialogDescription>
         </DialogHeader>
-        {q.isLoading || (q.isFetching && !q.isFetchedAfterMount) ? <p className="text-sm text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Carregando…</p>
+        <div className={dialogLayout.body}>
+        {q.isLoading || (q.isFetching && !q.isFetchedAfterMount) ? <LoadingNotice className="p-0" />
           : q.isError ? (
-            <p role="alert" className="text-sm text-destructive">{(q.error as Error).message} <button type="button" className="underline" onClick={() => q.refetch()}>Tentar novamente</button></p>
+            <LoadErrorNotice subject="as respostas" retrying={q.isFetching} onRetry={() => void q.refetch()} />
           ) : !r || r.state !== 'answered' ? <p className="text-sm text-muted-foreground">O paciente ainda não respondeu.</p> : (
             <div className="space-y-5">
               {r.registrationChanges?.length ? <Changes title="Dados alterados depois da conferência" changes={r.registrationChanges} /> : null}
@@ -129,9 +132,15 @@ export function IntakeAnswersDialog({ appointmentId, open, onOpenChange }: { app
               ) : (
                 <p className="text-sm text-muted-foreground">As respostas sobre saúde ficam só para o médico da consulta.</p>
               )}
-              {review.isError && <p role="alert" className="text-sm text-destructive">{(review.error as Error).message}</p>}
             </div>
           )}
+        </div>
+        <div className={dialogLayout.footer}>
+          {review.isError && <p role="alert" className={dialogLayout.error}>{(review.error as Error).message}</p>}
+          <div className={dialogLayout.actions}>
+            <Button type="button" variant="outline" className={dialogLayout.button} onClick={() => onOpenChange(false)}>Fechar</Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -147,19 +156,23 @@ function CopyLinkDialog({ url, onClose }: { url: string | null; onClose: () => v
   };
   return (
     <Dialog open={!!url} onOpenChange={(o) => { if (!o) { setCopied(null); onClose(); } }}>
-      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg">
-        <DialogHeader>
+      <DialogContent className={`max-w-lg ${dialogLayout.content}`}>
+        <DialogHeader className={dialogLayout.header}>
           <DialogTitle>Copiar link</DialogTitle>
           <DialogDescription>O navegador não deixou copiar sozinho. Copie o link abaixo e cole na conversa com o paciente.</DialogDescription>
         </DialogHeader>
+        <div className={dialogLayout.body}>
         <Input ref={input} readOnly value={url ?? ''} aria-label="Link da pré-consulta" onFocus={(e) => e.currentTarget.select()} className="font-mono text-sm" />
         <p role="status" aria-live="polite" className="min-h-5 text-sm text-muted-foreground">
           {copied === 'ok' ? 'Link copiado.' : copied === 'failed' ? 'Não foi possível copiar. O link está selecionado: use Copiar do seu aparelho.' : ''}
         </p>
-        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-          <Button variant="outline" onClick={() => { setCopied(null); onClose(); }}>Fechar</Button>
-          <Button onClick={() => void copy()}><Copy className="mr-1.5 h-4 w-4" />Copiar</Button>
-        </DialogFooter>
+        </div>
+        <div className={dialogLayout.footer}>
+          <div className={dialogLayout.actions}>
+            <Button variant="outline" className={dialogLayout.button} onClick={() => { setCopied(null); onClose(); }}>Fechar</Button>
+            <Button className={dialogLayout.button} onClick={() => void copy()}><Copy className="mr-1.5 h-4 w-4" />Copiar link</Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -221,10 +234,8 @@ export default function IntakePage({ embedded = false }: { embedded?: boolean })
         <PageHeading title="Pré-consultas" description="Acompanhe os formulários respondidos antes do atendimento, por um link único para cada consulta." />
 
         {state.isError && (
-          <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-            Não foi possível verificar se a pré-consulta está ativa: {(state.error as Error).message}{' '}
-            <button type="button" className="underline" onClick={() => state.refetch()}>Tentar novamente</button>
-          </p>
+          <LoadErrorNotice message="Não foi possível verificar se a pré-consulta está ligada. Verifique a conexão e tente de novo."
+            retrying={state.isFetching} onRetry={() => void state.refetch()} />
         )}
         {state.data && (!state.data.enabled || !state.data.ready) && (
           <div className="mb-4 rounded-lg border border-[#F2B23E]/60 bg-[#F2B23E]/10 p-3 text-sm">
@@ -242,9 +253,9 @@ export default function IntakePage({ embedded = false }: { embedded?: boolean })
           {offset !== 0 && <Button variant="ghost" size="sm" onClick={() => setOffset(0)}>Hoje</Button>}
         </div>
 
-        {list.isLoading ? <p className="text-sm text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Carregando…</p>
+        {list.isLoading ? <LoadingNotice className="p-0" />
           : list.isError ? (
-            <p role="alert" className="text-sm text-destructive">{(list.error as Error).message} <button type="button" className="underline" onClick={() => list.refetch()}>Tentar novamente</button></p>
+            <LoadErrorNotice subject="as pré-consultas" retrying={list.isFetching} onRetry={() => void list.refetch()} />
           ) : items.length === 0 ? (
             <div className="space-y-2 rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground">
               <p>{empty}</p>

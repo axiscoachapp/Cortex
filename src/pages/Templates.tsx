@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { dialogLayout } from '@/lib/dialogLayout';
+import { LoadErrorNotice } from '@/features/shared/StatusNotice';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -239,10 +241,9 @@ export default function TemplatesPage() {
 
   return (
     <WorkspaceShell section="Modelos" contentClassName="space-y-6">
-      <PageHeading title="Modelos de documento" description="Escolha e personalize as estruturas usadas nas suas evoluções. Todo texto gerado precisa da sua revisão." actions={
+      <PageHeading title="Modelos" description="Escolha e personalize as estruturas usadas nas suas evoluções. Todo texto gerado precisa da sua revisão." actions={
           <Button
             variant="medical"
-            aria-label="Criar meu modelo"
             className="min-h-11 gap-2"
             onClick={() => {
               setCreateMode('ai');
@@ -295,12 +296,7 @@ export default function TemplatesPage() {
             ))}
           </div>
         ) : isError ? (
-          <div role="alert" className="text-center py-10 space-y-3">
-            <p>Não foi possível carregar os modelos.</p>
-            <Button variant="outline" onClick={() => refetch()}>
-              Tentar novamente
-            </Button>
-          </div>
+          <LoadErrorNotice subject="os modelos" onRetry={() => void refetch()} />
         ) : filtered.length === 0 ? (
           <div className="text-center py-14 text-sm text-muted-foreground">Nenhum modelo encontrado.</div>
         ) : (
@@ -402,23 +398,26 @@ export default function TemplatesPage() {
       </div>
 
       <Dialog open={!!preview} onOpenChange={open => { if (!open) setPreview(null); }}>
-        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{preview?.name}</DialogTitle><DialogDescription>{preview?.description || 'Pré-visualização do modelo. Nenhuma consulta é criada e nenhum crédito é consumido.'}</DialogDescription></DialogHeader>
-          <ClinicalMarkdown text={preview?.content ?? ''} />
-          <Button variant="outline" onClick={() => { if (preview) void handleDuplicate(preview); }}>Duplicar para personalizar</Button>
+        <DialogContent className={`max-w-2xl ${dialogLayout.content}`}>
+          <DialogHeader className={dialogLayout.header}><DialogTitle>{preview?.name}</DialogTitle><DialogDescription>{preview?.description || 'Pré-visualização do modelo. Nenhuma consulta é criada e nenhum crédito é consumido.'}</DialogDescription></DialogHeader>
+          <div className={dialogLayout.body}><ClinicalMarkdown text={preview?.content ?? ''} /></div>
+          <div className={dialogLayout.footer}><div className={dialogLayout.actions}>
+            <Button type="button" variant="outline" className={dialogLayout.button} onClick={() => setPreview(null)}>Fechar</Button>
+            <Button type="button" className={dialogLayout.button} onClick={() => { if (preview) void handleDuplicate(preview); }}>Duplicar para personalizar</Button>
+          </div></div>
         </DialogContent>
       </Dialog>
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={closeCreate}>
-        <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-lg max-h-[92vh] flex flex-col gap-0 p-0">
-          <DialogHeader className="px-5 py-4 border-b border-border/50 shrink-0">
-            <DialogTitle className="text-base font-semibold">Criar modelo</DialogTitle>
+        <DialogContent className={`max-w-lg ${dialogLayout.content}`}>
+          <DialogHeader className={dialogLayout.header}>
+            <DialogTitle>Criar meu modelo</DialogTitle>
             <DialogDescription className="sr-only">
               Crie um modelo a partir de uma estrutura vazia de especialidade ou de um modelo existente.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-            <div className="grid grid-cols-3 gap-2">
+          <div className={dialogLayout.body}>
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { value: 'ai' as const, label: 'Criar com IA', hint: 'Descreva o que deseja', icon: Sparkles },
 
@@ -492,15 +491,15 @@ export default function TemplatesPage() {
               </div>
             )}
           </div>
-          <div className="px-5 py-3 border-t border-border/50 shrink-0 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => closeCreate(false)} disabled={creating}>
+          <div className={dialogLayout.footer}><div className={dialogLayout.actions}>
+            <Button variant="outline" className={dialogLayout.button} onClick={() => closeCreate(false)} disabled={creating}>
               Cancelar
             </Button>
-            <Button size="sm" className="gap-1.5" onClick={handleCreate} disabled={creating}>
+            <Button className={`${dialogLayout.button} gap-1.5`} onClick={handleCreate} disabled={creating}>
               {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
               {createMode === 'existing' ? 'Duplicar' : 'Criar modelo'}
             </Button>
-          </div>
+          </div></div>
         </DialogContent>
       </Dialog>
 
@@ -511,16 +510,16 @@ export default function TemplatesPage() {
           if (!v) closeEditor();
         }}
       >
-        <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-2xl max-h-[92vh] flex flex-col gap-0 p-0">
-          <DialogHeader className="px-5 py-4 border-b border-border/50 shrink-0">
-            <DialogTitle className="text-base font-semibold">
+        <DialogContent className={`max-w-2xl ${dialogLayout.content}`}>
+          <DialogHeader className={dialogLayout.header}>
+            <DialogTitle>
               {editing?.id ? 'Editar modelo' : 'Revisar rascunho do modelo'}
             </DialogTitle>
             <DialogDescription className="sr-only">
               Revise o nome, a descrição e as instruções do modelo antes de salvar.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+          <div className={`${dialogLayout.body} [&>label]:block`}>
             <label htmlFor="template-name" className="text-xs font-medium">
               Nome
             </label>
@@ -531,13 +530,13 @@ export default function TemplatesPage() {
               placeholder="Nome"
             />
             <label htmlFor="template-description" className="text-xs font-medium">
-              Descrição
+              Descrição (opcional)
             </label>
             <Input
               id="template-description"
               value={editDraft.description}
               onChange={(e) => setEditDraft((d) => ({ ...d, description: e.target.value }))}
-              placeholder="Descrição (1 frase)"
+              placeholder="Uma frase"
             />
             <label htmlFor="template-content" className="text-xs font-medium">
               Conteúdo do modelo
@@ -548,31 +547,31 @@ export default function TemplatesPage() {
               onChange={(e) => setEditDraft((d) => ({ ...d, content: e.target.value }))}
               className="min-h-[380px] text-xs font-mono leading-relaxed"
             />
+            {!editing?.id && (
+              <label className="flex min-h-11 items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 shrink-0 accent-primary"
+                  checked={templateReviewed}
+                  onChange={(e) => setTemplateReviewed(e.target.checked)}
+                />
+                Revisei a estrutura e confirmei que não contém dados de pacientes, achados ou negativas predefinidas.
+              </label>
+            )}
           </div>
-          {!editing?.id && (
-            <label className="px-5 py-2 text-xs flex items-start gap-2">
-              <input
-                type="checkbox"
-                checked={templateReviewed}
-                onChange={(e) => setTemplateReviewed(e.target.checked)}
-              />
-              Revisei a estrutura e confirmei que não contém dados de pacientes, achados ou negativas predefinidas.
-            </label>
-          )}
-          <div className="px-5 py-3 border-t border-border/50 shrink-0 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={closeEditor} disabled={savingEdit}>
+          <div className={dialogLayout.footer}><div className={dialogLayout.actions}>
+            <Button variant="outline" className={dialogLayout.button} onClick={closeEditor} disabled={savingEdit}>
               Cancelar
             </Button>
             <Button
-              size="sm"
-              className="gap-1.5"
+              className={`${dialogLayout.button} gap-1.5`}
               onClick={handleSaveEdit}
               disabled={savingEdit || (!editing?.id && !templateReviewed)}
             >
               {savingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Salvar modelo
             </Button>
-          </div>
+          </div></div>
         </DialogContent>
       </Dialog>
     </WorkspaceShell>

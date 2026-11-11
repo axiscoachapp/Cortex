@@ -30,6 +30,9 @@ describe('TOTP metadata including abandoned setups', () => {
     expect(await screen.findByRole('heading', { name: 'Alterar senha' })).toBeVisible();
     expect(screen.getByLabelText('Senha atual')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Voltar ao início' })).toHaveAttribute('href', '/');
+    // Plain help text: who to ask and what to do, no "sessão verificada".
+    expect(screen.getByText(/peça ajuda à equipe Cortex/)).toBeVisible();
+    expect(screen.queryByText(/sessão verificada|responsável pelo ambiente/)).toBeNull();
   });
   it('lists pending TOTP setups while keeping them out of the verified selector', async () => {
     mount();

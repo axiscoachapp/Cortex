@@ -17,6 +17,8 @@ import { ProtocolShareControls, SharedProtocolsPanel } from '@/components/Protoc
 import { extractKnowledgeFile } from '@/lib/knowledgeFile';
 import { WorkspaceShell } from '@/components/WorkspaceShell';
 import { PageHeading } from '@/components/PageHeading';
+import { dialogLayout } from '@/lib/dialogLayout';
+import { LoadErrorNotice, LoadingNotice } from '@/features/shared/StatusNotice';
 
 interface KBDoc {
   id: string;
@@ -44,10 +46,10 @@ function statusLabel(doc: KBDoc) {
   return doc.status === 'ready'
     ? 'Revisado e disponível'
     : doc.status === 'processing'
-      ? 'Indexando'
+      ? 'Preparando para o assistente'
       : doc.status === 'error'
-        ? 'Falha na indexação'
-        : 'Revisado · não indexado';
+        ? 'Não ficou pronta para o assistente'
+        : 'Revisado · ainda não disponível';
 }
 
 export default function KnowledgeBasePage() {
@@ -67,6 +69,8 @@ export default function KnowledgeBasePage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [operationError, setOperationError] = useState('');
   const [draftError, setDraftError] = useState('');
+  const draftErrorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => { if (draftError) draftErrorRef.current?.focus(); }, [draftError]);
   const [importing, setImporting] = useState(false);
   const importController = useRef<AbortController | null>(null);
   useEffect(()=>()=>{importController.current?.abort();},[]);
@@ -205,17 +209,17 @@ export default function KnowledgeBasePage() {
       if (error) {
         const body = await functionErrorBody(error);
         throw new Error(
-          typeof body?.error === 'string' ? body.error : 'Não foi possível indexar. O original permanece salvo.',
+          typeof body?.error === 'string' ? body.error : 'Não foi possível preparar a fonte para o assistente. O texto original continua salvo.',
         );
       }
       if (data?.status !== 'ready')
-        throw new Error('A indexação ainda não foi confirmada. Reabra a fonte antes de tentar novamente.');
+        throw new Error('A fonte ainda não ficou pronta para o assistente. Abra a fonte de novo antes de tentar outra vez.');
       toast({
         title: 'Fonte revisada e disponível',
         description: 'O assistente pode consultar esta versão e citar a fonte.',
       });
     } catch (error) {
-      setOperationError(await functionErrorMessage(error, 'A indexação falhou. O original foi preservado.'));
+      setOperationError(await functionErrorMessage(error, 'Não foi possível preparar a fonte para o assistente. O texto original continua salvo.'));
     } finally {
       setBusyId(null);
       await refresh();
@@ -225,7 +229,7 @@ export default function KnowledgeBasePage() {
     if (
       busyId ||
       !window.confirm(
-        `Excluir "${doc.title}" definitivamente? O texto e o índice desta versão serão apagados e os compartilhamentos revogados.`,
+        `Excluir "${doc.title}" definitivamente? O texto desta versão será apagado e os compartilhamentos revogados.`,
       )
     )
       return;
@@ -250,7 +254,7 @@ export default function KnowledgeBasePage() {
   const retire = async (doc: SourceDetail) => {
     if (
       busyId ||
-      !window.confirm(`Retirar "${doc.title}" das referências do assistente? O original e a revisão serão preservados.`)
+      !window.confirm(`Retirar "${doc.title}" das referências do assistente? O texto original e a revisão continuam guardados.`)
     )
       return;
     setBusyId(doc.id);
@@ -267,14 +271,13 @@ export default function KnowledgeBasePage() {
   };
   return (
     <WorkspaceShell section="Conhecimento" contentClassName="space-y-6">
-      <PageHeading title="Biblioteca de protocolos" description="Mantenha fontes originais e versões revisadas para apoiar as respostas do assistente." actions={
+      <PageHeading title="Conhecimento" description="Seus protocolos e referências, revisados por você, para apoiar as respostas do assistente." actions={
           <Button
             className="min-h-11 gap-2"
             onClick={() => {
               setSupersedes(null);
               setAddOpen(true);
             }}
-            aria-label="Adicionar conhecimento"
           >
             <Plus className="w-4 h-4" />
             Adicionar fonte
@@ -282,8 +285,8 @@ export default function KnowledgeBasePage() {
       } />
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground rounded-xl border bg-card p-4">
-          Somente versões revisadas e com indexação concluída entram nas respostas do assistente. Use protocolos gerais
-          e referências; anexos e informações identificáveis de pacientes não devem ser reutilizados nesta biblioteca.
+          O assistente só usa as versões que você revisou e aprovou. Guarde aqui protocolos gerais e referências, sem
+          dados de pacientes.
         </p>
         <div className="relative">
           <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
@@ -299,14 +302,9 @@ export default function KnowledgeBasePage() {
           />
         </div>
         {isLoading ? (
-          <p role="status">Carregando fontes…</p>
+          <LoadingNotice label="Carregando fontes…" className="p-0" />
         ) : isError ? (
-          <div role="alert" className="space-y-3">
-            <p>Não foi possível carregar a biblioteca.</p>
-            <Button variant="outline" onClick={() => refetch()}>
-              Tentar novamente
-            </Button>
-          </div>
+          <LoadErrorNotice subject="suas fontes" onRetry={() => void refetch()} />
         ) : !docs.length ? (
           <div className="border rounded-xl bg-card py-12 text-center space-y-3">
             <BookOpen className="w-8 h-8 text-primary mx-auto" />
@@ -328,13 +326,12 @@ export default function KnowledgeBasePage() {
                 <h2 className="font-semibold break-words">{doc.title}</h2>
                 <p className="text-xs text-muted-foreground break-words">
                   Versão {doc.source_version ?? 'não informada'} ·{' '}
-                  {doc.source_reference ?? 'Fonte original não preservada'}
+                  {doc.source_reference ?? 'Fonte não informada'}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {doc.reviewed_at
                     ? `Revisão: ${date(doc.reviewed_at)} · ${doc.reviewer_name ?? 'Médico'}`
-                    : 'Revisão pendente'}{' '}
-                  · {doc.char_count.toLocaleString('pt-BR')} caracteres
+                    : 'Revisão pendente'}
                 </p>
                 <p className="text-xs font-medium">{statusLabel(doc)}</p>
               </div>
@@ -360,14 +357,15 @@ export default function KnowledgeBasePage() {
         <SharedProtocolsPanel />
       </div>
       <Dialog open={addOpen} onOpenChange={closeAdd}>
-        <DialogContent className="max-w-2xl max-h-[92dvh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>{supersedes ? 'Adicionar nova versão' : 'Adicionar fonte'}</DialogTitle>
+        <DialogContent className={`max-w-2xl ${dialogLayout.content}`}>
+          <DialogHeader className={dialogLayout.header}>
+            <DialogTitle>{supersedes ? 'Nova versão' : 'Adicionar fonte'}</DialogTitle>
             <DialogDescription>
-              O original é preservado. Alterações de conteúdo criam outra versão, com nova revisão.
+              O texto original fica guardado. Mudar o conteúdo cria outra versão, que você revisa de novo.
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto space-y-4 px-1">
+          <form className="flex min-h-0 flex-1 flex-col" noValidate onSubmit={(event) => { event.preventDefault(); if (!saving && !importing) void create(); }}>
+          <div className={dialogLayout.body}>
             <div className="space-y-1">
               <Label htmlFor="knowledge-title">Título</Label>
               <Input id="knowledge-title" maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -397,7 +395,7 @@ export default function KnowledgeBasePage() {
             <div className="space-y-2">
               <Label htmlFor="knowledge-file">Importar texto de PDF, TXT ou Markdown</Label>
               <Input id="knowledge-file" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" disabled={saving || importing} onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file)void importFile(file);}} />
-              <p className="text-xs text-muted-foreground">Leitura local, sem consumo de IA. PDF com texto selecionável: até 10 MB, 60 páginas e 60.000 caracteres. Revise o texto extraído; salvar não aprova nem indexa a fonte.</p>
+              <p className="text-xs text-muted-foreground">O arquivo é lido no seu aparelho, sem usar IA. PDF com texto selecionável, até 10 MB e 60 páginas. Revise o texto extraído; salvar não aprova a fonte.</p>
               {importing && <p role="status" className="text-sm">Extraindo texto do arquivo…</p>}
             </div>
             <div className="space-y-1">
@@ -411,24 +409,27 @@ export default function KnowledgeBasePage() {
                 onChange={(e) => setContent(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                {content.length.toLocaleString('pt-BR')} / 60.000 caracteres. Não inclua prontuários ou dados de
+                {content.length.toLocaleString('pt-BR')} de 60.000 caracteres. Não inclua prontuários ou dados de
                 pacientes.
               </p>
             </div>
+          </div>
+          <div className={dialogLayout.footer}>
             {draftError && (
-              <p role="alert" className="text-sm text-destructive">
+              <p ref={draftErrorRef} role="alert" tabIndex={-1} className={dialogLayout.error}>
                 {draftError}
               </p>
             )}
+            <div className={dialogLayout.actions}>
+              <Button type="button" variant="outline" className={dialogLayout.button} disabled={saving} onClick={() => closeAdd(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" className={dialogLayout.button} disabled={saving || importing}>
+                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar original para revisão
+              </Button>
+            </div>
           </div>
-          <div className="border-t pt-4 flex justify-end gap-2">
-            <Button variant="outline" disabled={saving} onClick={() => closeAdd(false)}>
-              Cancelar
-            </Button>
-            <Button disabled={saving || importing} onClick={create}>
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar original para revisão
-            </Button>
-          </div>
+          </form>
         </DialogContent>
       </Dialog>
       <Dialog
@@ -440,30 +441,25 @@ export default function KnowledgeBasePage() {
           }
         }}
       >
-        <DialogContent className="max-w-3xl max-h-[92dvh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className={`max-w-3xl ${dialogLayout.content}`}>
+          <DialogHeader className={dialogLayout.header}>
             <DialogTitle>{source.data?.title ?? 'Fonte original'}</DialogTitle>
             <DialogDescription>
               Revise o texto completo e sua procedência. A aprovação identifica o médico e a data desta versão.
             </DialogDescription>
           </DialogHeader>
           {source.isLoading ? (
-            <p role="status">Carregando original…</p>
+            <div className={dialogLayout.body}><LoadingNotice label="Carregando original…" className="p-0" /></div>
           ) : source.isError ? (
-            <div role="alert">
-              <p>Não foi possível carregar o original.</p>
-              <Button variant="outline" onClick={() => source.refetch()}>
-                Tentar novamente
-              </Button>
-            </div>
+            <div className={dialogLayout.body}><LoadErrorNotice subject="o texto original" retrying={source.isFetching} onRetry={() => void source.refetch()} /></div>
           ) : (
             source.data && (
               <>
-                <div className="overflow-y-auto space-y-4 px-1">
+                <div className={dialogLayout.body}>
                   <dl className="grid sm:grid-cols-2 gap-3 text-sm">
                     <div>
                       <dt className="font-medium">Fonte</dt>
-                      <dd className="break-words">{source.data.source_reference ?? 'Não preservada'}</dd>
+                      <dd className="break-words">{source.data.source_reference ?? 'Não informada'}</dd>
                     </div>
                     <div>
                       <dt className="font-medium">Versão</dt>
@@ -488,38 +484,48 @@ export default function KnowledgeBasePage() {
                     </pre>
                   ) : (
                     <p className="rounded-lg border p-4 text-sm">
-                      O texto original desta fonte antiga não foi preservado. Ela permanece fora das respostas. Adicione
-                      uma nova versão com o original para revisar e indexar.
-                    </p>
-                  )}
-                  {operationError && (
-                    <p role="alert" className="text-sm text-destructive">
-                      {operationError}
+                      O texto original desta fonte antiga não foi preservado. Ela fica fora das respostas do assistente.
+                      Adicione uma nova versão com o texto original para revisar e aprovar.
                     </p>
                   )}
                   <ProtocolShareControls source={source.data} />
                 </div>
-                <div className="flex flex-wrap gap-2 border-t pt-4">
-                  <Button variant="outline" disabled={!!busyId} onClick={() => newVersion(source.data!)}>
+                <div className={dialogLayout.footer}>
+                {operationError && (
+                  <p role="alert" className={dialogLayout.error}>
+                    {operationError}
+                  </p>
+                )}
+                <div className={dialogLayout.actions}>
+                  {!source.data.has_successor && (
+                    <Button
+                      variant="ghost"
+                      className={`${dialogLayout.button} mr-auto text-destructive`}
+                      disabled={!!busyId}
+                      onClick={() => removeSource(source.data!)}
+                    >
+                      Excluir fonte
+                    </Button>
+                  )}
+                  <Button variant="outline" className={dialogLayout.button} disabled={!!busyId} onClick={() => newVersion(source.data!)}>
                     <Plus className="w-4 h-4 mr-2" />
                     Nova versão
                   </Button>
                   {source.data.has_successor ? (
-                    <p className="text-sm text-muted-foreground self-center">
+                    <p className="basis-full text-sm text-muted-foreground">
                       Esta versão foi substituída por uma mais recente e não é mais usada pelo assistente.
                     </p>
                   ) : (
                     source.data.source_text &&
                     (source.data.review_status !== 'approved' ? (
-                      <Button disabled={!!busyId} onClick={() => index(source.data!, true)}>
-                        {busyId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Revisei o original · aprovar e
-                        indexar
+                      <Button className={dialogLayout.button} disabled={!!busyId} onClick={() => index(source.data!, true)}>
+                        {busyId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Revisei o original · aprovar
                       </Button>
                     ) : (
                       <>
                         <Button variant="outline" disabled={!!busyId} onClick={() => index(source.data!, false)}>
                           <RotateCw className="w-4 h-4 mr-2" />
-                          {source.data.status === 'ready' ? 'Reindexar mesma versão' : 'Tentar indexação'}
+                          {source.data.status === 'ready' ? 'Preparar de novo para o assistente' : 'Tentar de novo'}
                         </Button>
                         <Button variant="outline" disabled={!!busyId} onClick={() => retire(source.data!)}>
                           <Archive className="w-4 h-4 mr-2" />
@@ -528,16 +534,7 @@ export default function KnowledgeBasePage() {
                       </>
                     ))
                   )}
-                  {!source.data.has_successor && (
-                    <Button
-                      variant="ghost"
-                      className="text-destructive"
-                      disabled={!!busyId}
-                      onClick={() => removeSource(source.data!)}
-                    >
-                      Excluir fonte
-                    </Button>
-                  )}
+                </div>
                 </div>
               </>
             )

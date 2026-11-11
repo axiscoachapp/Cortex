@@ -168,6 +168,29 @@ describe('selective sharing workspace', () => {
     await act(async () => window.dispatchEvent(new Event('focus')));
     expect(await screen.findByLabelText('Texto revisado pelo médico')).toHaveValue('');
   });
+  it('shows one retry message instead of "nothing here" when the first read fails', async () => {
+    mocks.rpc.mockRejectedValueOnce(new Error('A resposta de permissões não pôde ser validada.'));
+    render(<SharingPage />);
+    expect(await screen.findByText('Não foi possível carregar os compartilhamentos. Verifique a conexão e tente de novo.')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhum prontuário compartilhado disponível.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Vincular equipe médica')).not.toBeInTheDocument();
+    expect(screen.queryByText(/não pôde ser validada/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(await screen.findByText('Synthetic A')).toBeInTheDocument();
+    expect(screen.queryByText(/Não foi possível carregar os compartilhamentos/)).not.toBeInTheDocument();
+  });
+  it('offers to create a clinic team only to a doctor with no clinic', async () => {
+    render(<SharingPage />);
+    expect(await screen.findByText('Vincular equipe médica')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Criar equipe' })).toBeInTheDocument();
+  });
+  it('hides the create-team form from a doctor invited to a clinic', async () => {
+    mocks.rpc.mockImplementation(async (name) => name === 'sharing_overview'
+      ? { ...overview, memberships: [{ clinic_id: 'c1', name: 'Clínica sintética', status: 'invited' as const, role: 'doctor' as const }] } : 'entry-id');
+    render(<SharingPage />);
+    expect(await screen.findByText('Convite para Clínica sintética')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Criar equipe' })).not.toBeInTheDocument();
+  });
   it('removes revoked patient names from the overview even when no chart is open', async () => {
     let poll!: () => void;
     const originalInterval = window.setInterval.bind(window);

@@ -45,8 +45,8 @@ export default function SignatureReturn() {
       setStatus('error');
       setMessage(
         error === 'access_denied'
-          ? 'A autorização foi negada no aplicativo do certificado.'
-          : 'O provedor não devolveu a autorização.',
+          ? 'A assinatura foi negada no aplicativo do certificado. Volte e abra a sessão de assinatura de novo.'
+          : 'A sessão de assinatura não foi aberta. Volte e tente de novo.',
       );
       return;
     }
@@ -75,7 +75,7 @@ export default function SignatureReturn() {
       },
       () => {
         setStatus('error');
-        setMessage('Não foi possível concluir a sessão de assinatura.');
+        setMessage('A sessão de assinatura não foi aberta. Volte e tente de novo.');
       },
     );
   }, [loading, user, location.search, navigate, queryClient, toast]);

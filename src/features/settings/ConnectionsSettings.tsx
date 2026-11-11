@@ -62,7 +62,7 @@ export function ConnectionsSettings({ clinical }: { clinical: boolean }) {
 
   const sig = signature.data;
   const sigStatus = signature.isLoading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-    : !sig || !sig.available || !sig.configured ? <Badge variant="outline">Em implantação</Badge>
+    : !sig || !sig.available || !sig.configured ? <Badge variant="outline">Em preparação</Badge>
     : sig.mfaRequired ? <Badge variant="outline">Ative o segundo fator</Badge>
     : sig.active ? <Badge className="bg-success/15 text-success hover:bg-success/15">Sessão ativa</Badge>
     : <Badge variant="secondary">Disponível</Badge>;

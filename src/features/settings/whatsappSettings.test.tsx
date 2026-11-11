@@ -45,6 +45,11 @@ describe('automation editor', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Salvar automação' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Escolha o modelo de mensagem.');
     expect(onSave).not.toHaveBeenCalled();
+    // Shared dialog frame: the error sits right above "Cancelar" then the primary, and takes focus.
+    const save = screen.getByRole('button', { name: 'Salvar automação' });
+    expect(Array.from(save.parentElement!.querySelectorAll('button')).map(b => b.textContent)).toEqual(['Cancelar', 'Salvar automação']);
+    expect(save.parentElement!.previousElementSibling).toBe(screen.getByRole('alert'));
+    expect(screen.getByRole('alert')).toHaveFocus();
   });
 
   it('lists only approved templates', async () => {

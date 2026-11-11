@@ -73,7 +73,11 @@ export default function SettingsPage() {
     </nav>;
 
   return <WorkspaceShell section="Configurações">
-    <PageHeading title={overview || current.ownHeading ? 'Configurações' : current.label} description={overview ? 'Suas preferências, a rotina da equipe e o que a equipe Cortex mantém para você.' : current.ownHeading ? undefined : current.description} actions={sectionNavigation} />
+    {/* A section with its own heading (Equipe da recepção, Acesso à minha agenda) shows that heading as the
+        page title: no visible "Configurações" stacked above it at the same size. */}
+    {current.ownHeading
+      ? <><h1 className="sr-only">Configurações</h1><div className="flex flex-wrap justify-end">{sectionNavigation}</div></>
+      : <PageHeading title={overview ? 'Configurações' : current.label} description={overview ? 'Suas preferências, a rotina da equipe e o que a equipe Cortex mantém para você.' : current.description} actions={sectionNavigation} />}
     {!overview && <Button variant="ghost" className="min-h-11 gap-2 px-2 text-xs text-muted-foreground" onClick={() => select('inicio')}><ArrowLeft className="h-4 w-4" />Todas as configurações</Button>}
     {unavailable && <p role="status" className="rounded-xl border border-[#F2B23E]/60 bg-[#F2B23E]/10 p-4 text-sm">Essa seção não existe ou não está disponível para a sua conta. Escolha uma das seções abaixo.</p>}
     <div className="min-w-0 space-y-6" role="region" aria-label={current.label}>
@@ -86,7 +90,7 @@ export default function SettingsPage() {
       {current.id === 'equipe' && admin && <TeamSettings embedded />}
       {current.id === 'permissoes' && clinical && <DelegationPermissions embedded />}
       {/* One page holds both the clinic's doctors and chart sharing: one card, not two rows to the same place. */}
-      {current.id === 'usuarios' && clinical && <div className="grid gap-3 md:grid-cols-2"><LinkCard to="/compartilhamento" icon={Share2} title={admin ? 'Médicos da clínica e compartilhamento' : 'Compartilhamento entre médicos'} description={admin ? 'Acompanhe os médicos da clínica e compartilhe prontuários de forma explícita e revogável. Fazer parte da clínica não libera acesso automático.' : 'Compartilhe prontuários de forma explícita e revogável. Fazer parte da clínica não libera acesso automático.'} /></div>}
+      {current.id === 'usuarios' && clinical && <div className="grid gap-3 md:grid-cols-2"><LinkCard to="/compartilhamento" icon={Share2} title={admin ? 'Médicos da clínica e compartilhamento' : 'Compartilhamento'} description={admin ? 'Acompanhe os médicos da clínica e compartilhe prontuários de forma explícita e revogável. Fazer parte da clínica não libera acesso automático.' : 'Compartilhe prontuários de forma explícita e revogável. Fazer parte da clínica não libera acesso automático.'} /></div>}
       {current.id === 'seguranca' && <div className="grid gap-3 md:grid-cols-2">
         <LinkCard to="/seguranca#alterar-senha" icon={KeyRound} title="Alterar senha" description="Troque a sua senha informando a atual." />
         <LinkCard to="/seguranca" icon={ShieldCheck} title="Segundo fator" description="O aplicativo autenticador que confirma o seu acesso. Ninguém da equipe Cortex precisa conhecer essas credenciais." />

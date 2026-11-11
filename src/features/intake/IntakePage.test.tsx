@@ -77,8 +77,10 @@ describe('Pré-consultas staff page', { timeout: 30_000 }, () => {
 
   it('shows a failed state read instead of silently hiding the buttons', async () => {
     setup({ stateError: true, items: [item({})] });
-    expect(await screen.findByText(/Não foi possível verificar se a pré-consulta está ativa/)).toBeInTheDocument();
+    expect(await screen.findByText('Não foi possível verificar se a pré-consulta está ligada. Verifique a conexão e tente de novo.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeInTheDocument();
+    // The server's own text is not shown to people.
+    expect(screen.queryByText(/Serviço indisponível/)).toBeNull();
   });
 
   it('shows the link in a dialog when the browser refuses the clipboard', async () => {
@@ -89,7 +91,10 @@ describe('Pré-consultas staff page', { timeout: 30_000 }, () => {
     await user.click(button);
     const dialog = await screen.findByRole('dialog', { name: 'Copiar link' });
     expect(within(dialog).getByRole('textbox', { name: 'Link da pré-consulta' })).toHaveValue('https://app.example.com.br/pre-consulta/' + 'A'.repeat(43));
-    expect(within(dialog).getByRole('button', { name: 'Copiar' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Copiar link' })).toBeInTheDocument();
+    // Shared dialog frame: "Fechar" before the primary action in the footer.
+    const footer = within(dialog).getByRole('button', { name: 'Copiar link' }).parentElement!;
+    expect(within(footer).getAllByRole('button').map(b => b.textContent)).toEqual(['Fechar', 'Copiar link']);
   });
 
   it('tells the doctor the answers changed after the review, with what changed', async () => {

@@ -63,7 +63,9 @@ describe('K6 C5 fresh reads and initial flow failure',()=>{
       expect(screen.getByText('Carregando o robô…')).toBeVisible();
       await act(async()=>first.reject(new Error('Falha sintética na leitura do fluxo')));
       await waitFor(()=>expect(cache.getQueryState(['whatsapp-flow',mocks.access.clinic.id,mocks.access.actorId])?.status).toBe('error'));
-      expect(screen.getByRole('alert')).toHaveTextContent('Falha sintética na leitura do fluxo');
+      // One plain sentence with a retry; the raw error text is not shown.
+      expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar o robô de atendimento.');
+      expect(screen.queryByText(/Falha sintética/)).toBeNull();
       expect(screen.queryByText('Carregando o robô…')).not.toBeInTheDocument();
       await userEvent.setup().click(screen.getByRole('button',{name:'Tentar novamente'}));
       await waitFor(()=>expect(mocks.call).toHaveBeenCalledTimes(2));
@@ -78,7 +80,8 @@ describe('K6 C5 fresh reads and initial flow failure',()=>{
   it('shows retry after an initial WhatsApp state failure',async()=>{
     mocks.call.mockRejectedValue(new Error('Falha sintética de estado'));
     render(<QueryClientProvider client={client()}><WhatsAppSettings /></QueryClientProvider>);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Falha sintética de estado');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar o WhatsApp da clínica.');
+    expect(screen.queryByText(/Falha sintética/)).toBeNull();
     expect(screen.getByRole('button',{name:'Tentar novamente'})).toBeVisible();
     expect(screen.queryByRole('button',{name:'Nova automação'})).not.toBeInTheDocument();
   });

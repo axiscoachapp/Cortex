@@ -66,4 +66,11 @@ describe('SignatureReturn', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('negada');
     await waitFor(() => expect(mocks.invoke).not.toHaveBeenCalled());
   });
+
+  it('a return without the authorization says what to do, not what the provider did', async () => {
+    renderAt('/assinatura/retorno');
+    expect(await screen.findByRole('alert')).toHaveTextContent('A sessão de assinatura não foi aberta. Volte e tente de novo.');
+    expect(screen.queryByText(/provedor/)).not.toBeInTheDocument();
+    await waitFor(() => expect(mocks.invoke).not.toHaveBeenCalled());
+  });
 });

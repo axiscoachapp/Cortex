@@ -35,6 +35,16 @@ describe('settings grouped by responsibility and account', () => {
     expect(screen.queryByLabelText('Ir para outra seção')).toBeNull();
     expect(screen.queryByLabelText('Especialidade')).toBeNull();
   });
+  it('lets the team section title stand alone instead of a visible "Configurações" above it', () => {
+    mount(access, '/configuracoes?secao=equipe');
+    expect(screen.getByText('Equipe sintética')).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: 'Configurações' })).toHaveClass('sr-only');
+    expect(screen.getByLabelText('Ir para outra seção')).toBeVisible();
+    expect(screen.getAllByRole('option').map(item => item.textContent)).toContain('Equipe da recepção');
+    cleanup();
+    mount(access, '/configuracoes?secao=implantacao');
+    expect(screen.getByRole('heading', { level: 1, name: 'Seu cadastro profissional' })).not.toHaveClass('sr-only');
+  });
   it('preserves unrelated query parameters when changing sections', async () => {
     mount(access, '/configuracoes?secao=perfil&clinica=synthetic&origin=calendar');
     expect(screen.getByText('Preferência pessoal sintética')).toBeVisible();

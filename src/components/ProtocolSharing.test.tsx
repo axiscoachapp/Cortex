@@ -58,9 +58,7 @@ describe('exact-version read-only protocol sharing', () => {
   });
   it('does not offer grants for an unapproved or retired source', async () => {
     render(<ProtocolShareControls source={{ ...ownerSource, review_status: 'retired' }} />);
-    await screen.findByText(
-      'A fonte precisa estar aprovada e com indexação concluída para receber novos compartilhamentos.',
-    );
+    await screen.findByText('Só uma fonte aprovada e pronta para o assistente pode ser compartilhada.');
     expect(screen.queryByRole('button', { name: 'Conceder leitura' })).not.toBeInTheDocument();
     expect(mocks.rpc).not.toHaveBeenCalledWith('grant_protocol_share', expect.anything());
   });
@@ -85,6 +83,22 @@ describe('exact-version read-only protocol sharing', () => {
     await waitFor(() => expect(screen.queryByText(source.source_text)).not.toBeInTheDocument());
     expect(screen.queryByText(source.title)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ler versão' })).not.toBeInTheDocument();
+  });
+  it('shows one retry message instead of "nothing shared" when the read fails', async () => {
+    mocks.rpc.mockRejectedValueOnce(new Error('Não foi possível validar as permissões.'));
+    render(<SharedProtocolsPanel />);
+    expect(await screen.findByText('Não foi possível carregar os compartilhamentos. Verifique a conexão e tente de novo.')).toBeInTheDocument();
+    expect(screen.queryByText(/de 0/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Nenhum protocolo compartilhado com você.')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(await screen.findByRole('button', { name: 'Ler versão' })).toBeInTheDocument();
+    expect(screen.getByText('1 protocolo.')).toBeInTheDocument();
+  });
+  it('does not say "no other doctor" when the owner read fails', async () => {
+    mocks.rpc.mockRejectedValueOnce(new Error('offline'));
+    render(<ProtocolShareControls source={ownerSource} />);
+    expect(await screen.findByRole('button', { name: 'Tentar novamente' })).toBeInTheDocument();
+    expect(screen.queryByText(/Não há outro médico ativo/)).not.toBeInTheDocument();
   });
   it('ignores a delayed source result after another protocol is selected', async () => {
     let resolveFirst!: (value: typeof source) => void;

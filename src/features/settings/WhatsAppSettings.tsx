@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { managedWhatsAppReason } from '@/lib/managedSetupMessages';
+import { LoadErrorNotice } from '@/features/shared/StatusNotice';
 import { AutomationEditor } from './AutomationEditor';
 import { FlowEditor } from './FlowEditor';
 import {
@@ -78,10 +79,7 @@ export function WhatsAppSettings() {
     return <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Verificando o WhatsApp…</p>;
   if (state.isError || !s)
     return (
-      <div role="alert" className="text-sm text-destructive">
-        {(state.error as Error)?.message ?? 'Não foi possível verificar o WhatsApp.'}{' '}
-        <button type="button" className="underline" onClick={() => state.refetch()}>Tentar novamente</button>
-      </div>
+      <LoadErrorNotice subject="o WhatsApp da clínica" retrying={state.isFetching} onRetry={() => void state.refetch()} />
     );
 
   const templateList = templates.data?.templates ?? [];
