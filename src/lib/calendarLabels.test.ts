@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { formatCalendarDay, formatCalendarWeekRange } from './calendarLabels';
+import { formatCalendarDay, formatCalendarPeriod, formatCalendarWeekRange } from './calendarLabels';
+
+describe('agenda toolbar period', () => {
+  it.each([
+    ['day', new Date(2026, 10, 11), 'Quarta, 11 de novembro'],
+    ['day', new Date(2026, 10, 14), 'Sábado, 14 de novembro'],
+    ['week', new Date(2026, 10, 11), '9–15 de novembro'],
+    ['week', new Date(2026, 10, 15), '9–15 de novembro'],
+    ['week', new Date(2026, 10, 16), '16–22 de novembro'],
+    ['month', new Date(2026, 10, 11), 'Novembro de 2026'],
+  ] as const)('labels a %s view of %s as %s', (view, date, expected) => {
+    expect(formatCalendarPeriod(view, date)).toBe(expected);
+  });
+});
 
 describe('Portuguese calendar week caption', () => {
   it.each([
