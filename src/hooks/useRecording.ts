@@ -1,5 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AUDIO_UPLOAD_LIMIT_BYTES,
+  RECORDING_BITS_PER_SECOND,
+  RECORDING_STOP_BYTES,
+  RECORDING_WARN_BYTES,
+} from '@/lib/recordingLimits';
 
 /** 'presencial' = in-person, microphone only.
  *  'online'     = teleconsultation: microphone + computer/tab audio mixed. */
@@ -15,6 +21,8 @@ export interface RecordingState {
   audioLevel: number;
   /** Mode of the recording currently in progress (null when idle). */
   mode: ConsultationMode | null;
+  /** Bytes of audio captured so far in the current recording. */
+  recordedBytes: number;
 }
 
 export interface RecordingActions {
@@ -65,6 +73,17 @@ interface UseRecordingOptions {
 
 /** How often the audio captured so far is checkpointed. */
 export const CHECKPOINT_MS = 5_000;
+
+export { AUDIO_UPLOAD_LIMIT_BYTES, RECORDING_BITS_PER_SECOND, RECORDING_STOP_BYTES, RECORDING_WARN_BYTES };
+
+/** A recorder with a low, explicit bitrate; browsers that refuse the option record with their default. */
+export function createRecorder(stream: MediaStream, mimeType: string): MediaRecorder {
+  try {
+    return new MediaRecorder(stream, { mimeType, audioBitsPerSecond: RECORDING_BITS_PER_SECOND });
+  } catch {
+    return new MediaRecorder(stream, { mimeType });
+  }
+}
 
 interface WakeLockHandle { release: () => Promise<void> }
 type WakeLockApi = { request: (type: 'screen') => Promise<WakeLockHandle> };
@@ -125,6 +144,7 @@ export function useRecording({
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [audioLevel, setAudioLevel] = useState(0);
   const [mode, setMode] = useState<ConsultationMode | null>(null);
+  const [recordedBytes, setRecordedBytes] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   /** Every stream we opened (mic, and in online mode the display capture) so
@@ -185,7 +205,7 @@ export function useRecording({
       // Guard: main recording may have ended between interval ticks.
       if (!liveStreamRef.current || liveGenerationRef.current !== generation) return;
       const chunks: Blob[] = [];
-      const rec = new MediaRecorder(stream, { mimeType });
+      const rec = createRecorder(stream, mimeType);
       liveRecorderRef.current = rec;
       rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       rec.onstop = () => {
@@ -325,7 +345,8 @@ export function useRecording({
 
       // Microphone (both modes). Echo cancellation stays ON so the patient's
       // voice coming out of the speakers isn't captured a second time.
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Mono is enough for speech and halves the size where the browser honours it.
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: { ideal: 1 } } });
       streamsRef.current.push(micStream);
       if (!stillActive()) { releaseAttempt(); return; }
 
@@ -348,6 +369,8 @@ export function useRecording({
       if (selectedMode === 'online' && displayStream) {
         const mixBus = ctx.createGain();
         const destination = ctx.createMediaStreamDestination();
+        // One channel for the mix as well: the call and the doctor are speech.
+        try { destination.channelCount = 1; destination.channelCountMode = 'explicit'; } catch { /* keep the default */ }
 
         ctx.createMediaStreamSource(micStream).connect(mixBus);
         ctx.createMediaStreamSource(displayStream).connect(mixBus);
@@ -375,14 +398,43 @@ export function useRecording({
 
       runAudioLevel(analyser);
 
-      const recorder = new MediaRecorder(recordStream, { mimeType });
+      const recorder = createRecorder(recordStream, mimeType);
       mediaRecorderRef.current = recorder;
 
       // Native stop/dataavailable events can arrive after another recording
       // starts. Each recorder owns its chunks, streams, comments and callbacks.
       const recordingChunks: Blob[] = [];
       const ownedStreams = [...streamsRef.current];
-      recorder.ondataavailable = e => { if (e.data.size > 0) recordingChunks.push(e.data); };
+      // The server cannot process audio above AUDIO_UPLOAD_LIMIT_BYTES, so the
+      // size is watched while recording: a warning first, then a clean stop
+      // that keeps (and processes) everything recorded until then.
+      let capturedBytes = 0;
+      let sizeWarned = false;
+      let stoppedAtLimit = false;
+      recorder.ondataavailable = e => {
+        if (e.data.size <= 0) return;
+        recordingChunks.push(e.data);
+        capturedBytes += e.data.size;
+        if (mediaRecorderRef.current !== recorder) return;
+        if (mountedRef.current) setRecordedBytes(capturedBytes);
+        if (!sizeWarned && capturedBytes >= RECORDING_WARN_BYTES) {
+          sizeWarned = true;
+          toast({
+            title: 'Gravação perto do limite',
+            description: 'Esta gravação está chegando ao tamanho máximo que a IA processa. Finalize a consulta em breve; no limite, a gravação para sozinha e o áudio é guardado.',
+            variant: 'destructive',
+          });
+        }
+        if (!stoppedAtLimit && capturedBytes >= RECORDING_STOP_BYTES) {
+          stoppedAtLimit = true;
+          toast({
+            title: 'Gravação encerrada no limite de tamanho',
+            description: 'O áudio gravado até aqui foi guardado e será processado. Revise e salve esta parte; para continuar a consulta, grave o restante em uma nova gravação depois.',
+            variant: 'destructive',
+          });
+          confirmStop();
+        }
+      };
       let finalComments: string[] | null = null;
       freezeCommentsRef.current = () => { finalComments = [...(consultationCommentsRef.current ?? [])]; };
       const finishForOriginalPatient = onStopRef.current;
@@ -518,6 +570,7 @@ export function useRecording({
       setIsRecording(true);
       setIsPaused(false);
       setRecordingSeconds(0);
+      setRecordedBytes(0);
       startTimer();
       toast({
         title: selectedMode === 'online' ? 'Gravação online iniciada' : 'Gravação iniciada',
@@ -595,6 +648,7 @@ export function useRecording({
     setIsPaused(false);
     setStopConfirming(false);
     setRecordingSeconds(0);
+    setRecordedBytes(0);
     setMode(null);
   }, [invalidateCapture]);
 
@@ -648,6 +702,7 @@ export function useRecording({
     recordingSeconds,
     audioLevel,
     mode,
+    recordedBytes,
     // actions
     start,
     stop,
