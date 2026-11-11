@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReceptionCalendar from './ReceptionCalendar';
@@ -6,8 +7,8 @@ import { ClinicAccessContext } from './accessContext';
 import { clinicDay, clinicTimestamp, nextClinicDay } from './dates';
 import type { ReceptionAppointment } from './contracts';
 
-const mocks = vi.hoisted(() => ({ read: vi.fn(), change: vi.fn(), block: vi.fn() }));
-vi.mock('./api', () => ({ receptionApi: { appointments: mocks.read, changeAppointment: mocks.change, block: mocks.block } }));
+const mocks = vi.hoisted(() => ({ read: vi.fn(), change: vi.fn(), block: vi.fn(), busy: vi.fn() }));
+vi.mock('./api', () => ({ receptionApi: { appointments: mocks.read, changeAppointment: mocks.change, block: mocks.block, busyIntervals: mocks.busy } }));
 vi.mock('./BookingDialog', () => ({ BookingDialog: () => null }));
 
 const clinic = '66666666-6666-4666-8666-666666666666';
@@ -31,7 +32,8 @@ function mount(admin = true) {
 
 async function reschedule() {
   const heading = await screen.findByRole('heading', { name: appointment.patientName });
-  fireEvent.click(within(heading.closest('article')!).getByRole('button', { name: 'Remarcar' }));
+  await userEvent.click(within(heading.closest('article')!).getByRole('button', { name: /^Mais ações/ }));
+  await userEvent.click(screen.getByRole('menuitem', { name: 'Remarcar' }));
   return screen.getByRole('dialog');
 }
 
@@ -41,33 +43,51 @@ describe('reception calendar operational feedback', () => {
     mocks.read.mockResolvedValue({ items: [appointment], blocks: [] });
     mocks.change.mockResolvedValue(4);
     mocks.block.mockResolvedValue({ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', revision: 1 });
+    mocks.busy.mockResolvedValue([]);
   });
 
   it.each(['08:59', '09:00'])('keeps a reschedule ending at %s local and explains the invalid interval', async end => {
     mount();
     const dialog = within(await reschedule());
     fireEvent.change(dialog.getByLabelText('Novo término'), { target: { value: end } });
-    fireEvent.click(dialog.getByRole('checkbox'));
     expect(dialog.getByRole('alert')).toHaveTextContent('O término deve ser depois do início, no mesmo dia.');
     expect(dialog.getByLabelText('Novo término')).toHaveAttribute('aria-invalid', 'true');
-    expect(dialog.getByRole('button', { name: 'Confirmar remarcação' })).toBeDisabled();
-    fireEvent.submit(dialog.getByRole('button', { name: 'Confirmar remarcação' }).closest('form')!);
+    expect(dialog.getByRole('button', { name: 'Remarcar' })).toBeDisabled();
+    fireEvent.submit(dialog.getByRole('button', { name: 'Remarcar' }).closest('form')!);
     await waitFor(() => expect(mocks.change).not.toHaveBeenCalled());
   });
 
-  it('clears the interval error after correction and requires a new human confirmation', async () => {
+  it('clears the interval error after correction and reschedules only on the explicit button', async () => {
     mount();
     const dialog = within(await reschedule());
-    fireEvent.click(dialog.getByRole('checkbox'));
     fireEvent.change(dialog.getByLabelText('Novo término'), { target: { value: '08:00' } });
-    expect(dialog.getByRole('checkbox')).not.toBeChecked();
+    expect(dialog.getByRole('button', { name: 'Remarcar' })).toBeDisabled();
     fireEvent.change(dialog.getByLabelText('Novo término'), { target: { value: '10:00' } });
     expect(dialog.queryByRole('alert')).not.toBeInTheDocument();
-    expect(dialog.getByRole('button', { name: 'Confirmar remarcação' })).toBeDisabled();
-    fireEvent.click(dialog.getByRole('checkbox'));
-    fireEvent.click(dialog.getByRole('button', { name: 'Confirmar remarcação' }));
+    expect(mocks.change).not.toHaveBeenCalled();
+    fireEvent.click(dialog.getByRole('button', { name: /^Remarcar para .* às 09:00 · Médico sintético$/ }));
     await waitFor(() => expect(mocks.change).toHaveBeenCalledWith(clinic, appointment.id, 3, 'reschedule', clinicTimestamp(day, '09:00'), clinicTimestamp(day, '10:00')));
     expect(mocks.change).toHaveBeenCalledOnce();
+  });
+
+  it('moves the end with the start, keeping the appointment length', async () => {
+    mount();
+    const dialog = within(await reschedule());
+    fireEvent.change(dialog.getByLabelText('Novo início'), { target: { value: '14:00' } });
+    expect(dialog.getByLabelText('Novo término')).toHaveValue('14:30');
+    expect(dialog.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows a reschedule failure above the buttons and focuses it', async () => {
+    mocks.change.mockRejectedValue(new Error('Horário ocupado ou bloqueado. Escolha outro intervalo.'));
+    mount();
+    const dialog = within(await reschedule());
+    fireEvent.click(dialog.getByRole('button', { name: /^Remarcar para/ }));
+    const alert = await dialog.findByRole('alert');
+    expect(alert).toHaveTextContent('Horário ocupado');
+    expect(alert).toHaveFocus();
+    // Directly above the footer actions, never under the header.
+    expect(alert.nextElementSibling).toContainElement(dialog.getByRole('button', { name: 'Cancelar' }));
   });
 
   it.each(['11:59', '12:00'])('prevents a block ending at %s before making a request', async end => {
@@ -78,8 +98,8 @@ describe('reception calendar operational feedback', () => {
     fireEvent.change(dialog.getByLabelText('Término do bloqueio'), { target: { value: end } });
     expect(dialog.getByRole('alert')).toHaveTextContent('O término deve ser depois do início, no mesmo dia.');
     expect(dialog.getByLabelText('Término do bloqueio')).toHaveAttribute('aria-invalid', 'true');
-    expect(dialog.getByRole('button', { name: 'Confirmar bloqueio' })).toBeDisabled();
-    fireEvent.submit(dialog.getByRole('button', { name: 'Confirmar bloqueio' }).closest('form')!);
+    expect(dialog.getByRole('button', { name: 'Bloquear horário' })).toBeDisabled();
+    fireEvent.submit(dialog.getByRole('button', { name: 'Bloquear horário' }).closest('form')!);
     await waitFor(() => expect(mocks.block).not.toHaveBeenCalled());
   });
 
@@ -91,7 +111,7 @@ describe('reception calendar operational feedback', () => {
     fireEvent.change(dialog.getByLabelText('Término do bloqueio'), { target: { value: '11:00' } });
     fireEvent.change(dialog.getByLabelText('Término do bloqueio'), { target: { value: '14:00' } });
     expect(dialog.queryByRole('alert')).not.toBeInTheDocument();
-    fireEvent.click(dialog.getByRole('button', { name: 'Confirmar bloqueio' }));
+    fireEvent.click(dialog.getByRole('button', { name: 'Bloquear horário' }));
     await waitFor(() => expect(mocks.block).toHaveBeenCalledWith(clinic, doctor, clinicTimestamp(day, '12:00'), clinicTimestamp(day, '14:00'), 'Indisponível', expect.any(String)));
     expect(mocks.block).toHaveBeenCalledOnce();
   });
@@ -118,7 +138,7 @@ describe('reception calendar operational feedback', () => {
       endTime: clinicTimestamp(day, '00:00'), reason: 'Bloqueio sintético', revision: 1 }] });
     mount();
     fireEvent.click(screen.getByRole('button', { name: 'Semana' }));
-    await waitFor(() => expect(screen.getAllByText('Nenhum agendamento neste dia e filtro.')).toHaveLength(7));
+    await waitFor(() => expect(screen.getAllByText('Nenhum agendamento neste dia.')).toHaveLength(7));
     expect(screen.queryByText(/Bloqueio sintético/)).not.toBeInTheDocument();
   });
 
