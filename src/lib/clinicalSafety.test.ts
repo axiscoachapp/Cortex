@@ -4,7 +4,8 @@ import { mergeMedications } from './medicationMerge';
 import { createPaginatedWriter, wrapMeasuredText, validateDocumentCounts, validateCertificateDays } from '../../supabase/functions/_shared/documentLayout';
 
 describe('clinical generation boundaries', () => {
-  beforeEach(()=>vi.stubGlobal('Deno',{env:{get:()=> 'true'}}));
+  // Legacy Gemini generation requires an explicit AI_PROVIDER=gemini.
+  beforeEach(()=>vi.stubGlobal('Deno',{env:{get:(key:string)=> key==='AI_PROVIDER'?'gemini':'true'}}));
   afterEach(()=>vi.unstubAllGlobals());
   it('rejects truncated, blocked and empty model responses', async () => {
     for (const response of [

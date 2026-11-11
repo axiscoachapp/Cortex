@@ -3,6 +3,7 @@
  * Each variant keeps the core rules (source-of-truth, hallucination prevention,
  * quality rating) and overrides only the S/O section structure for the specialty.
  */
+import { RequestError } from './errors.ts';
 
 const BASE_RULES = `
 ATRIBUIÇÃO DOS FALANTES:
@@ -299,8 +300,13 @@ export function getSpecialtyPrompt(specialty: string | undefined | null): string
  * rating, clarifications and the JSON output fields; the template replaces
  * only the document structure.
  */
+export const MAX_TEMPLATE_CHARS = 20_000;
+
+/** A template is never cut: a cut one silently loses its last sections in the generated note. */
 export function buildCustomTemplatePrompt(templateContent: string): string {
-  const template = templateContent.slice(0, 6000);
+  const template = templateContent;
+  if (template.length > MAX_TEMPLATE_CHARS)
+    throw new RequestError(`O modelo personalizado tem ${template.length.toLocaleString('pt-BR')} caracteres; o limite para a IA é ${MAX_TEMPLATE_CHARS.toLocaleString('pt-BR')}. Encurte o modelo em Modelos de documento ou use o modelo da especialidade.`, 413);
   return `Você é um médico especialista gerando documentação clínica em português brasileiro.
 
 A transcrição não identifica os falantes: siga a regra de atribuição pelo contexto definida abaixo.

@@ -1,7 +1,7 @@
-import { fetchWithDeadline, readJsonObject, RequestError } from '../_shared/http.ts';
+import { AI_UNAVAILABLE_MESSAGE, readJsonObject, RequestError } from '../_shared/http.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
-import { reserveAdmittedCredits, admitOperation, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
+import { reserveAdmittedCredits, admitOperation, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError, settleFailedCall } from '../_shared/quota.ts';
 import { requiresMedicationVerification, MEDICATION_VERIFICATION_REPLY } from '../_shared/clinicalQuestionSafety.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 import { callClinicalText, assertOpenAiEnabled } from '../_shared/clinicalAi.ts';
@@ -94,6 +94,10 @@ serve(async (req) => {
   let paidStarted = false;
   try {
     const { userId } = await requireUser(req);
+    // AI availability first: nothing else may fail differently while it is switched off.
+    assertOpenAiEnabled();
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new RequestError(AI_UNAVAILABLE_MESSAGE, 503);
 
     const body: Record<string, unknown> = await readJsonObject(req);
     const { chatHistory, userMessage } = body;
@@ -151,9 +155,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) throw new RequestError('IA indisponível: conexão do servidor não configurada.', 503);
-
     // ── Pull patient row + recent consultations + attached docs when patientId ──
     let patientRow: PatientContext | null = null;
     let consultations: ConsultationContext[] = [];
@@ -298,11 +299,15 @@ Alergias: ${allergies}`;
     coverage = { ...coverage, limited: true, knowledge: 'unavailable' };
     const promptText = `${patientSummary}${historySummary}${docsSummary}${knowledgeBlock}${conversationBlock}Médico: ${userMessage}`;
     assertPromptSize(promptText, CHAT_SYSTEM);
+    // 200 words plus [consulta:UUID] citations: room so a complete answer is not cut into a failure.
     const { text: modelReply, usage } = await callClinicalText(OPENAI_API_KEY, [{ text: promptText }], {
       systemInstruction: recordOnly ? `${CHAT_SYSTEM}
 
 ${RECORD_ONLY_RULES}` : CHAT_SYSTEM,
-      maxOutputTokens: 1000,
+      maxOutputTokens: 1500,
+    }).catch(async (error) => {
+      await settleFailedCall(supabase, userId, reservationId, error);
+      throw error;
     });
     const reply = recordOnly ? `${modelReply.trim()}
 

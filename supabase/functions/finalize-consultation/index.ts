@@ -1,7 +1,7 @@
 import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
-import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
+import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError, settleFailedCall } from '../_shared/quota.ts';
 import {
   buildPatientSummary,
   parseModelObject,
@@ -9,7 +9,7 @@ import {
   collapseBlankLines,
 } from '../_shared/gemini.ts';
 import { assertAudioPath } from '../_shared/storage.ts';
-import { readJsonObject, RequestError } from '../_shared/http.ts';
+import { AI_UNAVAILABLE_MESSAGE, readJsonObject, RequestError } from '../_shared/http.ts';
 import { getSpecialtyPrompt, buildCustomTemplatePrompt } from '../_shared/specialty_prompts.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 
@@ -113,6 +113,21 @@ const HISTORY_SCHEMA = {
   required: ['medical_history', 'social_anamnesis'],
 };
 
+/** The doctor-edited note is never cut: a cut note loses corrections the model must preserve. */
+const MAX_REVIEWED_SOAP_CHARS = 30_000;
+const PROFILE_NOTICE = 'As sugestões de atualização do cadastro (diagnósticos, medicações e alergias) desta consulta não foram geradas. Confira o cadastro manualmente.';
+const HISTORY_NOTICE = 'As sugestões de história médica e anamnese social desta primeira consulta não foram geradas. Preencha esses campos manualmente.';
+/** Why an optional post-save proposal is missing, in words the doctor can act on. */
+function skippedNotice(base: string, error: unknown): string {
+  if (error instanceof QuotaExceededError) return `${base} Motivo: limite diário de IA atingido.`;
+  if (error instanceof RequestError && error.status === 503) return `${base} Motivo: IA indisponível no momento.`;
+  return base;
+}
+const textList = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+const recordList = <T>(value: unknown): T[] =>
+  Array.isArray(value) ? value.filter((item) => !!item && typeof item === 'object' && !Array.isArray(item)) as T[] : [];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -135,6 +150,15 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    // Regeneration is AI work: its availability is checked before anything else can fail.
+    // Saving a reviewed note (saveDirect) never depends on the AI.
+    const regenerate = !body.saveDirect;
+    if (regenerate) {
+      assertOpenAiEnabled();
+      if (!Deno.env.get('OPENAI_API_KEY')) throw new RequestError(AI_UNAVAILABLE_MESSAGE, 503);
+      if (typeof body.reviewedSoap === 'string' && body.reviewedSoap.trim().length > MAX_REVIEWED_SOAP_CHARS)
+        throw new RequestError(`A evolução editada tem mais de ${MAX_REVIEWED_SOAP_CHARS.toLocaleString('pt-BR')} caracteres e não pode ser enviada inteira à IA. Encurte o texto ou edite a evolução manualmente.`, 413);
+    }
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
@@ -155,7 +179,7 @@ serve(async (req) => {
 
     const { data: priorSave } = await supabase
       .from('consultations')
-      .select('id,soap_note,whatsapp_message,history_proposals,chief_complaint,transcription')
+      .select('id,soap_note,whatsapp_message,history_proposals,profile_proposals,chief_complaint,transcription')
       .eq('id', draftId)
       .eq('patient_id', patientId)
       .eq('user_id', userId)
@@ -205,13 +229,21 @@ serve(async (req) => {
       }
       await completeSavedMetadata();
       await cleanupSavedDraft();
+      // A retry after a lost response returns the proposals stored with the consultation.
+      const stored = priorSave.profile_proposals && typeof priorSave.profile_proposals === 'object' ? priorSave.profile_proposals as Record<string, unknown> : {};
       return new Response(
         JSON.stringify({
           consultationId: priorSave.id,
           soapNote: priorSave.soap_note,
           whatsappMessage: priorSave.whatsapp_message,
           historyProposals: priorSave.history_proposals,
-          profileUpdates: { diagnoses: [], medications: [], allergies: [] },
+          profileUpdates: {
+            diagnoses: recordList(stored.diagnoses),
+            medications: recordList(stored.medications),
+            allergies: textList(stored.allergies),
+            medicationsStopped: textList(stored.medicationsStopped),
+          },
+          notices: textList(stored.notices),
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
@@ -228,8 +260,7 @@ serve(async (req) => {
       whatsappMessage = body.whatsappMessage ?? '';
     } else {
       // ── Path B: incorporate doctor comments → re-generate final SOAP ──────
-      const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-      if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
+      const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
 
       const doctorComments: string = body.doctorComments ?? '';
       // Same record background as the first draft (the visit being saved is not stored yet).
@@ -242,14 +273,15 @@ serve(async (req) => {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      const patientSummary = buildPatientSummary(ownedPatient, chiefComplaint, { lastConsultation });
+      // The name stays: the regenerated patient message addresses the patient.
+      const patientSummary = buildPatientSummary(ownedPatient, chiefComplaint, { lastConsultation }, { includeName: true });
       const commentsSection = doctorComments.trim()
         ? `\n\nObservações do médico (incorpore obrigatoriamente no SOAP):\n${doctorComments.trim()}`
         : '';
       // The physician may have edited the draft directly before adding
       // comments. That text is authoritative: regenerate on top of it.
       const reviewedSoap =
-        typeof body.reviewedSoap === 'string' ? body.reviewedSoap.trim().slice(0, 20000) : '';
+        typeof body.reviewedSoap === 'string' ? body.reviewedSoap.trim() : '';
       const reviewedSection = reviewedSoap
         ? `\n\nRascunho já revisado e editado pelo médico (use como base; preserve TODAS as correções, doses e dados que o médico escreveu, alterando apenas o necessário para incorporar as observações abaixo):\n${reviewedSoap}`
         : '';
@@ -273,10 +305,15 @@ serve(async (req) => {
         throw err;
       }
 
+      const reservationId = finalReservation.reservationId;
+      // Same output room as the first draft: a regeneration rewrites a note of that size.
       const { text: finalRaw, usage: finalUsage } = await callClinicalText(OPENAI_API_KEY, finalParts, {
         systemInstruction: instruction,
-        maxOutputTokens: 3000, // headroom for custom templates
+        maxOutputTokens: 6000,
         responseSchema: FINAL_SCHEMA,
+      }).catch(async (error) => {
+        await settleFailedCall(supabase, userId, reservationId, error);
+        throw error;
       });
       await recordUsage(supabase, userId, creditsFromUsage(finalUsage), finalReservation.reservationId);
 
@@ -342,24 +379,32 @@ serve(async (req) => {
       medicationsStopped: string[];
     } = { diagnoses: [], medications: [], allergies: [], medicationsStopped: [] };
 
+    // A skipped or failed proposal is reported, never silently replaced by "nothing to propose".
+    const notices: string[] = [];
+    const aiKey = () => {
+      assertOpenAiEnabled();
+      const key = Deno.env.get('OPENAI_API_KEY');
+      if (!key) throw new RequestError(AI_UNAVAILABLE_MESSAGE, 503);
+      return key;
+    };
     try {
-      const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-      if (OPENAI_API_KEY && soapNote.trim()) {
+      {
+        const OPENAI_API_KEY = aiKey();
         const currentMedications = (Array.isArray(ownedPatient.medications) ? ownedPatient.medications : [])
           .map((m: unknown) => (typeof m === 'string' ? m : m && typeof m === 'object' && typeof (m as { name?: unknown }).name === 'string' ? (m as { name: string }).name : ''))
           .map((name: string) => name.trim()).filter(Boolean);
         const extractText = `Medicações em uso no cadastro:\n${currentMedications.length ? currentMedications.map((n: string) => `- ${n}`).join('\n') : '(nenhuma)'}\n\nEvolução SOAP desta consulta:\n${soapNote}`;
         assertGeminiTextBudget([{ text: extractText }], EXTRACT_SYSTEM);
-        // Gate the extraction on remaining budget too — a QuotaExceededError
-        // here is caught below and simply skips extraction (the consultation
-        // itself is already saved). Closes the saveDirect path where the main
-        // quota check is skipped.
-        assertOpenAiEnabled();
-        const extractReservation = await checkQuota(supabase, userId, 8);
+        // Gate the extraction on remaining budget too: the consultation itself is already saved,
+        // and the saveDirect path skips the main quota check.
+        const extractReservation = await checkQuota(supabase, userId, 15);
         const { text: extractRaw, usage: extractUsage } = await callClinicalText(OPENAI_API_KEY, [{ text: extractText }], {
           systemInstruction: EXTRACT_SYSTEM,
-          maxOutputTokens: 1200,
+          maxOutputTokens: 2000,
           responseSchema: EXTRACT_SCHEMA,
+        }).catch(async (error) => {
+          await settleFailedCall(supabase, userId, extractReservation.reservationId, error);
+          throw error;
         });
         await recordUsage(supabase, userId, creditsFromUsage(extractUsage), extractReservation.reservationId);
         const parsed = parseModelObject<ProfileExtraction>(extractRaw, EXTRACT_SCHEMA);
@@ -372,8 +417,9 @@ serve(async (req) => {
           parsed.medications_stopped.some((x) => x.trim().toLowerCase() === name.toLowerCase()) && !kept.has(name.toLowerCase()));
         if (d.length || m.length || a.length || stopped.length) profileUpdates = { diagnoses: d, medications: m, allergies: a, medicationsStopped: stopped };
       }
-    } catch {
-      /* non-critical — proceed without profile updates */
+    } catch (error) {
+      // Non-critical: the consultation is saved; the doctor is told the proposals are missing.
+      notices.push(skippedNotice(PROFILE_NOTICE, error));
     }
 
     // ── First-visit history proposals (never written automatically) ─────────
@@ -388,27 +434,31 @@ serve(async (req) => {
     };
     if (isFirstVisit) {
       try {
-        const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-        if (OPENAI_API_KEY && soapNote.trim()) {
-          const { data: existing } = await supabase
+        {
+          const { data: existing, error: existingError } = await supabase
             .from('patients')
             .select('medical_history, social_anamnesis,revision')
             .eq('id', patientId)
             .eq('user_id', userId)
             .maybeSingle();
+          if (existingError) throw existingError;
 
           const needMedical = !existing?.medical_history?.trim();
           const needSocial = !existing?.social_anamnesis?.trim();
 
           if (needMedical || needSocial) {
+            const OPENAI_API_KEY = aiKey();
             const historyParts = [{ text: `Evolução SOAP:\n${soapNote}\n\nTranscrição:\n${transcription}` }];
             assertGeminiTextBudget(historyParts, HISTORY_SYSTEM);
-            assertOpenAiEnabled();
-            const historyReservation = await checkQuota(supabase, userId, 10);
+            const historyReservation = await checkQuota(supabase, userId, 20);
+            // Up to 60 short items: room for all of them instead of a truncation failure.
             const { text: histRaw, usage: histUsage } = await callClinicalText(OPENAI_API_KEY, historyParts, {
               systemInstruction: HISTORY_SYSTEM,
-              maxOutputTokens: 700,
+              maxOutputTokens: 2500,
               responseSchema: HISTORY_SCHEMA,
+            }).catch(async (error) => {
+              await settleFailedCall(supabase, userId, historyReservation.reservationId, error);
+              throw error;
             });
             await recordUsage(supabase, userId, creditsFromUsage(histUsage), historyReservation.reservationId);
 
@@ -423,15 +473,24 @@ serve(async (req) => {
               : [];
           }
         }
-      } catch {
-        /* non-critical — the consultation is already saved */
+      } catch (error) {
+        // Non-critical: the consultation is saved; the doctor is told the proposals are missing.
+        notices.push(skippedNotice(HISTORY_NOTICE, error));
       }
     }
 
-    if (historyProposals.medicalHistory.length || historyProposals.socialAnamnesis.length) {
+    // Proposals and notices are stored with the consultation, so a retry after a lost response
+    // (the already-saved path above) returns them instead of empty lists.
+    const hasHistory = historyProposals.medicalHistory.length > 0 || historyProposals.socialAnamnesis.length > 0;
+    const hasProfile = profileUpdates.diagnoses.length + profileUpdates.medications.length +
+      profileUpdates.allergies.length + profileUpdates.medicationsStopped.length > 0;
+    if (hasHistory || hasProfile || notices.length) {
       const { error: proposalError } = await supabase
         .from('consultations')
-        .update({ history_proposals: historyProposals })
+        .update({
+          ...(hasHistory ? { history_proposals: historyProposals } : {}),
+          profile_proposals: { sourceConsultationId: consultation.id, ...profileUpdates, notices },
+        })
         .eq('id', consultation.id)
         .eq('patient_id', patientId)
         .eq('user_id', userId);
@@ -448,6 +507,7 @@ serve(async (req) => {
         isFirstVisit,
         historyFilled,
         historyProposals,
+        notices,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );

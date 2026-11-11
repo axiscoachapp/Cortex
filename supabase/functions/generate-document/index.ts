@@ -1,9 +1,9 @@
 import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
-import { readJsonObject, RequestError } from "../_shared/http.ts";
+import { AI_UNAVAILABLE_MESSAGE, readJsonObject, RequestError } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
-  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
+  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError, settleFailedCall,
 } from "../_shared/quota.ts";
 import { buildPatientSummary } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
@@ -84,6 +84,10 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
+    // AI availability first: nothing else may fail differently while it is switched off.
+    assertOpenAiEnabled();
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new RequestError(AI_UNAVAILABLE_MESSAGE, 503);
     const body: Record<string, unknown> = await readJsonObject(req);
     const { type, soapNote } = body;
     const chiefComplaint = optionalText(body.chiefComplaint, 'Queixa principal');
@@ -104,15 +108,13 @@ serve(async (req) => {
       );
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    const patientSummary = buildPatientSummary(patientContext, chiefComplaint);
+    // Only the referral names the patient; the patient summary has no name field.
+    const patientSummary = buildPatientSummary(patientContext, chiefComplaint, undefined, { includeName: type === 'referral' });
     const referralTarget = targetSpecialty ? `\n\nEspecialidade de destino: ${targetSpecialty}` : '';
 
     const systemInstruction = type === 'patient_summary'
@@ -137,7 +139,10 @@ serve(async (req) => {
         systemInstruction,
         maxOutputTokens: 1000,
       },
-    );
+    ).catch(async (error) => {
+      await settleFailedCall(supabase, userId, reservationId, error);
+      throw error;
+    });
 
     await recordUsage(supabase, userId, creditsFromUsage(usage), reservationId);
 

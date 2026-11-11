@@ -13,18 +13,19 @@ const patientId = '22222222-2222-4222-8222-222222222222';
 const fileId = '33333333-3333-4333-8333-333333333333';
 const insights = { summary: 'Synthetic insight', symptoms: [], behavioral_observations: [], risk_factors: [], family_history: [], social_factors: [], clinical_changes: [] };
 
-function handler(name: string, output: unknown, options: { foreignFile?: boolean; concurrent?: boolean; provider?: string; key?: string; failed?: boolean } = {}) {
+function handler(name: string, output: unknown, options: { foreignFile?: boolean; concurrent?: boolean; provider?: string; key?: string; failed?: boolean; medications?: unknown[] } = {}) {
   let run!: (req: Request) => Promise<Response>;
   const filters: Array<[string, unknown]> = [];
   const writes: unknown[] = [];
   const rpc = vi.fn(async () => ({ data: true, error: null }));
   const download = vi.fn(async () => ({ data: new Blob(['synthetic-pdf'], { type: 'application/pdf' }), error: null }));
-  const generate = vi.fn(async () => {
+  const generate = vi.fn(async (..._args: unknown[]) => {
     if (options.failed) throw new http.RequestError('IA indisponível.', 503);
     return { text: typeof output === 'string' ? output : JSON.stringify(output), usage: undefined, metadata: { provider: 'openai' } };
   });
   const reserve = vi.fn(async () => ({ reservationId: 'synthetic-reservation' }));
   const settle = vi.fn(async () => {});
+  const settleFailedCall = vi.fn(async (..._args: unknown[]) => {});
   const legacyGenerate = vi.fn(async () => { throw new Error('Unexpected legacy inference'); });
   const db = {
     rpc,
@@ -33,7 +34,7 @@ function handler(name: string, output: unknown, options: { foreignFile?: boolean
       let patch: unknown;
       const row = table === 'patient_files'
         ? { id: fileId, patient_id: patientId, user_id: options.foreignFile ? 'other' : userId, storage_path: `patients/${userId}/${patientId}/synthetic.pdf`, file_name: 'synthetic.pdf', mime_type: 'application/pdf', size_bytes: 13, ai_review_status: 'pending' }
-        : { id: patientId, user_id: userId, name: 'Synthetic patient', clinical_notes: 'Original note', revision: 4, allergies: [], medications: [], diagnoses: [] };
+        : { id: patientId, user_id: userId, name: 'Synthetic patient', clinical_notes: 'Original note', revision: 4, allergies: [], medications: options.medications ?? [], diagnoses: [] };
       const local: Array<[string, unknown]> = [];
       const execute = () => {
         const owned = local.every(([key, value]) => row[key as keyof typeof row] === value);
@@ -63,7 +64,7 @@ function handler(name: string, output: unknown, options: { foreignFile?: boolean
     '../_shared/storage.ts': storage,
     '../_shared/clinicDate.ts': dates,
     '../_shared/auth.ts': { requireUser: async () => ({ userId }), AuthError: class extends Error {}, authResponse: () => new Response(null, { status: 401 }) },
-    '../_shared/quota.ts': { checkQuota: reserve, recordUsage: settle, creditsFromUsage: () => 0, QuotaExceededError: class extends Error {}, quotaResponse: () => new Response(null, { status: 429 }) },
+    '../_shared/quota.ts': { checkQuota: reserve, recordUsage: settle, settleFailedCall, creditsFromUsage: () => 0, QuotaExceededError: class extends Error {}, quotaResponse: () => new Response(null, { status: 429 }) },
   };
   const compiled = ts.transpileModule(readFileSync(new URL(`../../supabase/functions/${name}/index.ts`, import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const require = (id: string) => {
@@ -73,7 +74,7 @@ function handler(name: string, output: unknown, options: { foreignFile?: boolean
     throw new Error(`Unexpected dependency ${id}`);
   };
   new Function('require', 'exports', 'Deno', compiled)(require, {}, { env: { get: (key: string) => key === 'OPENAI_API_KEY' ? options.key ?? 'synthetic-openai' : key === 'AI_PROVIDER' ? options.provider ?? 'openai' : key === 'GEMINI_API_KEY' ? 'synthetic-legacy' : 'synthetic' } });
-  return { generate, legacyGenerate, reserve, settle, rpc, download, filters, writes, run: (body: unknown) => run(new Request('https://synthetic.invalid', { method: 'POST', body: JSON.stringify(body) })) };
+  return { generate, legacyGenerate, reserve, settle, settleFailedCall, rpc, download, filters, writes, run: (body: unknown) => run(new Request('https://synthetic.invalid', { method: 'POST', body: JSON.stringify(body) })) };
 }
 
 describe('OpenAI text handler integration', () => {
@@ -168,5 +169,64 @@ describe('OpenAI text handler integration', () => {
     expect((await test.run({ fileId })).status).toBe(503);
     expect(test.rpc).not.toHaveBeenCalled();
     expect(test.writes).toEqual([]);
+    // The failed call's reservation is settled instead of blocking the quota.
+    expect(test.settleFailedCall).toHaveBeenCalledWith(expect.anything(), userId, 'synthetic-reservation', expect.any(http.RequestError));
+  });
+});
+
+describe('AI guard order and data sent to the provider', () => {
+  it.each([
+    ['create-template-ai', { mode: 'from_structure', specialty: 'geral' }],
+    ['suggest-questions', { chiefComplaint: 'Synthetic complaint' }],
+    ['generate-document', { type: 'patient_summary', soapNote: 'Synthetic note' }],
+    ['analyze-document', { fileId }],
+    ['generate-prebriefing', { patientId }],
+  ])('%s answers a missing key with the standard text before reading anything', async (name, body) => {
+    const test = handler(name as string, {}, { key: '' });
+    const response = await test.run(body);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'IA indisponível no momento; registre manualmente.' });
+    expect(test.filters).toEqual([]);
+    expect(test.download).not.toHaveBeenCalled();
+    expect(test.reserve).not.toHaveBeenCalled();
+    expect(test.generate).not.toHaveBeenCalled();
+  });
+  it('checks that the AI is enabled before validating the document request', async () => {
+    const test = handler('analyze-document', {}, { provider: 'not-enabled', foreignFile: true });
+    expect((await test.run({ fileId })).status).toBe(503);
+    expect(test.filters).toEqual([]);
+  });
+  it('does not send the uploaded file name to the provider', async () => {
+    const test = handler('analyze-document', { document_type: 'Exame', summary: 'Resumo', key_findings: [], profile_note: '' });
+    expect((await test.run({ fileId })).status).toBe(200);
+    expect(JSON.stringify(test.generate.mock.calls[0][1])).not.toContain('synthetic.pdf');
+  });
+  it('does not send the patient name to the question checklist, and marks a cut history', async () => {
+    const test = handler('suggest-questions', { questions: ['Pergunta?'] });
+    await test.run({ chiefComplaint: 'Queixa', patientContext: { name: 'Nome Sintético Privado', age: 40, medicalHistory: `${'h'.repeat(3000)}FIM DO HISTÓRICO` } });
+    const prompt = JSON.stringify(test.generate.mock.calls[0][1]);
+    expect(prompt).not.toContain('Nome Sintético Privado');
+    expect(prompt).toContain('40 anos');
+    expect(prompt).toContain('[texto cortado]');
+    expect(prompt).not.toContain('FIM DO HISTÓRICO');
+  });
+  it('sends the name only for the referral document', async () => {
+    const context = { name: 'Nome Sintético Privado', age: 40, diagnoses: [], medications: [], allergies: [] };
+    const summary = handler('generate-document', 'Documento');
+    await summary.run({ type: 'patient_summary', soapNote: 'SOAP', patientContext: context });
+    expect(JSON.stringify(summary.generate.mock.calls[0][1])).not.toContain('Nome Sintético Privado');
+    const referral = handler('generate-document', 'Documento');
+    await referral.run({ type: 'referral', soapNote: 'SOAP', patientContext: context });
+    expect(JSON.stringify(referral.generate.mock.calls[0][1])).toContain('Nome Sintético Privado');
+  });
+  it('sends bounded comment context without the patient name', async () => {
+    const extraction = { allergies_add: [], medications_add: [], medications_remove: [], diagnoses_add: [], consultation_addendum: '', long_term_note: 'Nota', summary: 'Resumo' };
+    const test = handler('process-comment', extraction, { medications: Array.from({ length: 100 }, (_, i) => ({ name: `Medicamento ${i}`, dosage: '1 cp' })) });
+    expect((await test.run({ patientId, comment: 'Comentário sintético', mode: 'extract' })).status).toBe(200);
+    const prompt = (test.generate.mock.calls[0][1] as Array<{ text: string }>)[0].text;
+    expect(prompt).not.toContain('Synthetic patient');
+    expect(prompt).toContain('Medicamento 79 1 cp');
+    expect(prompt).not.toContain('Medicamento 80 ');
+    expect(prompt).toContain('(+20 itens não listados)');
   });
 });

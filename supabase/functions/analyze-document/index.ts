@@ -1,5 +1,5 @@
 import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
-import { readJsonObject, RequestError } from "../_shared/http.ts";
+import { AI_UNAVAILABLE_MESSAGE, readJsonObject, RequestError } from "../_shared/http.ts";
 /**
  * AI review of an attached patient document (exam PDF, imaging photo, external
  * prescription...). Reads the file from storage, has the model produce a short
@@ -13,7 +13,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { assertPatientFilePath } from "../_shared/storage.ts";
 import {
-  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
+  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError, settleFailedCall,
 } from "../_shared/quota.ts";
 import { parseModelObject } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
@@ -65,6 +65,10 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
+    // AI availability first: nothing else may fail differently while it is switched off.
+    assertOpenAiEnabled();
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new RequestError(AI_UNAVAILABLE_MESSAGE, 503);
     const { fileId } = await readJsonObject(req);
 
     if (!fileId) {
@@ -73,9 +77,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
-
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -120,25 +121,28 @@ serve(async (req) => {
     const { data: blob, error: dlErr } = await supabase.storage
       .from('patient-files')
       .download(storagePath);
-    if (dlErr || !blob) throw new Error(`Erro ao baixar arquivo: ${dlErr?.message}`);
+    if (dlErr || !blob) throw new RequestError('Não foi possível baixar o arquivo. Tente novamente.', 503);
 
     if (!blob.size || blob.size > MAX_ANALYZE_BYTES) throw new RequestError('Arquivo vazio ou muito grande para análise.', 413);
     const buffer = await blob.arrayBuffer();
-    assertOpenAiEnabled();
 
     const {reservationId} = await checkQuota(supabase,userId,400);
+    // The uploaded file name often carries the patient's name: it is not sent to the provider.
     const { text: raw, usage } = await callClinicalText(
       OPENAI_API_KEY,
       [
         { document: { data: new Uint8Array(buffer), mimeType: mime } },
-        { text: `Nome do arquivo: ${fileRow.file_name}\nAnalise o documento acima.` },
+        { text: 'Analise o documento acima.' },
       ],
       {
         systemInstruction: SYSTEM,
         maxOutputTokens: 800,
         responseSchema: SCHEMA,
       },
-    );
+    ).catch(async (error) => {
+      await settleFailedCall(supabase, userId, reservationId, error);
+      throw error;
+    });
     await recordUsage(supabase, userId, creditsFromUsage(usage), reservationId);
 
     const parsed = parseModelObject(raw, SCHEMA) as {

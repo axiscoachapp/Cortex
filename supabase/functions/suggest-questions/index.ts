@@ -1,5 +1,5 @@
 import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
-import { readJsonObject, RequestError } from "../_shared/http.ts";
+import { AI_UNAVAILABLE_MESSAGE, readJsonObject, RequestError } from "../_shared/http.ts";
 /**
  * Pre-consultation question checklist.
  *
@@ -15,7 +15,7 @@ import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
-  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
+  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError, settleFailedCall,
 } from "../_shared/quota.ts";
 import { parseModelObject } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
@@ -58,9 +58,15 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
+    // AI availability first: nothing else may fail differently while it is switched off.
+    assertOpenAiEnabled();
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new RequestError(AI_UNAVAILABLE_MESSAGE, 503);
     const body: Record<string, unknown> = await readJsonObject(req);
 
     const ctx = readPatientContext(body.patientContext) ?? {};
+    // Bounded input; a cut is marked so the model does not take the excerpt for the whole field.
+    const bounded = (value: string, max: number) => value.length > max ? `${value.slice(0, max)} [texto cortado]` : value;
     const diagnoses = Array.isArray(ctx.diagnoses)
       ? ctx.diagnoses.map(d => (typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim())).filter(Boolean).join('; ')
       : '';
@@ -68,9 +74,9 @@ serve(async (req) => {
       ? ctx.medications.map(m => (typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim())).filter(Boolean).join(', ')
       : '';
     const allergies = Array.isArray(ctx.allergies) ? ctx.allergies.join(', ') : '';
-    const medicalHistory  = (ctx.medicalHistory  ?? ctx.medical_history  ?? '').toString().slice(0, 1500);
-    const socialAnamnesis = (ctx.socialAnamnesis ?? ctx.social_anamnesis ?? '').toString().slice(0, 1500);
-    const complaint = optionalText(body.chiefComplaint, 'Queixa principal').slice(0, 500);
+    const medicalHistory  = bounded((ctx.medicalHistory  ?? ctx.medical_history  ?? '').toString().trim(), 3000);
+    const socialAnamnesis = bounded((ctx.socialAnamnesis ?? ctx.social_anamnesis ?? '').toString().trim(), 3000);
+    const complaint = bounded(optionalText(body.chiefComplaint, 'Queixa principal').trim(), 1000);
 
     // Nothing to base questions on → return empty rather than pay for a call.
     if (!complaint && !diagnoses && !meds && !medicalHistory && !socialAnamnesis) {
@@ -80,16 +86,14 @@ serve(async (req) => {
       );
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
+    // The questions do not need the patient's name, so it is not sent.
     const prompt = [
-      `Paciente: ${ctx.name ?? 'não informado'}, ${ctx.age == null ? 'idade não informada' : `${ctx.age} anos`}`,
+      `Paciente: ${ctx.age == null ? 'idade não informada' : `${ctx.age} anos`}`,
       `Queixa principal: ${complaint || 'não informada'}`,
       `Diagnósticos: ${diagnoses || 'nenhum registrado'}`,
       `Medicações em uso: ${meds || 'nenhuma'}`,
@@ -116,7 +120,10 @@ serve(async (req) => {
         maxOutputTokens: 700,
         responseSchema: SCHEMA,
       },
-    );
+    ).catch(async (error) => {
+      await settleFailedCall(supabase, userId, reservationId, error);
+      throw error;
+    });
 
     await recordUsage(supabase, userId, creditsFromUsage(usage), reservationId);
 

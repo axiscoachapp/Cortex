@@ -396,7 +396,9 @@ describe('security endpoint regressions', () => {
       'analyze-document',
       db,
     )(new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ fileId: 'file' }) }));
-    expect(response.status).toBe(500);
+    // A storage failure is a retryable 503 with a plain message, no longer a 500 with the storage text.
+    expect(response.status).toBe(503);
+    expect(JSON.stringify(await response.json())).not.toContain('offline');
     expect(db.rpc).not.toHaveBeenCalled();
   });
   it('never downloads a prescription path that aliases a different bucket', async () => {

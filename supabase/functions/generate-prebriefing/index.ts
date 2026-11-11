@@ -1,9 +1,9 @@
 import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
-import { readJsonObject, RequestError } from "../_shared/http.ts";
+import { AI_UNAVAILABLE_MESSAGE, readJsonObject, RequestError } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
-  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
+  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError, settleFailedCall,
 } from "../_shared/quota.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import { assessmentAndPlan, parseModelObject } from '../_shared/gemini.ts';
@@ -57,6 +57,10 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
+    // AI availability first: nothing else may fail differently while it is switched off.
+    assertOpenAiEnabled();
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new RequestError(AI_UNAVAILABLE_MESSAGE, 503);
     const { patientId } = await readJsonObject(req);
 
     if (typeof patientId !== 'string' || !patientId) {
@@ -65,9 +69,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
-
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -86,7 +87,7 @@ serve(async (req) => {
         .limit(6),
       supabase
         .from('patients')
-        .select('name,age,date_of_birth,diagnoses,medications,allergies,medical_history,clinical_notes,revision')
+        .select('age,date_of_birth,diagnoses,medications,allergies,medical_history,clinical_notes,revision')
         .eq('id', patientId)
         .eq('user_id', userId)
         .maybeSingle(),
@@ -168,6 +169,9 @@ ${apSection}${earlier ? `\n\nConsultas anteriores (mais recente primeiro; só av
       systemInstruction: SYSTEM,
       maxOutputTokens: 1024,
       responseSchema: BRIEFING_SCHEMA,
+    }).catch(async (error) => {
+      await settleFailedCall(supabase, userId, reservationId, error);
+      throw error;
     });
     await recordUsage(supabase, userId, creditsFromUsage(usage), reservationId);
 

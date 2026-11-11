@@ -1,11 +1,11 @@
 import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
-import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
+import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError, settleFailedCall } from '../_shared/quota.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 import { parseModelObject, assertGeminiTextBudget } from '../_shared/gemini.ts';
 import { clinicDayBounds } from '../_shared/clinicDate.ts';
-import { readJsonObject, RequestError } from '../_shared/http.ts';
+import { AI_UNAVAILABLE_MESSAGE, readJsonObject, RequestError } from '../_shared/http.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -137,6 +137,8 @@ const json = (body: unknown, status = 200) =>
 
 const MAX_ITEMS = 30;
 const MAX_TEXT = 300;
+/** Items of each current list sent as context to the extraction. */
+const CONTEXT_ITEMS = 80;
 function stringList(value: unknown, field: string): string[] {
   if (value === undefined || value === null) return [];
   if (
@@ -287,7 +289,7 @@ serve(async (req) => {
     const [{ data: patient }, { data: todayConsult }] = await Promise.all([
       supabase
         .from('patients')
-        .select('name, allergies, medications, diagnoses, clinical_notes,revision')
+        .select('allergies, medications, diagnoses, clinical_notes,revision')
         .eq('id', patientId)
         .eq('user_id', userId)
         .maybeSingle(),
@@ -386,11 +388,18 @@ serve(async (req) => {
     const existingMeds: StoredMedication[] = Array.isArray(patient?.medications) ? patient!.medications : [];
     const existingDiag: StoredDiagnosis[] = Array.isArray(patient?.diagnoses) ? patient!.diagnoses : [];
 
+    // Bounded context, without the patient's name (the extraction does not need it). A list that
+    // does not fit says how many items were left out, so the model never takes it for the whole list.
+    const boundedList = (items: string[], separator: string, empty: string) => {
+      const shown = items.map((item) => item.trim()).filter(Boolean).slice(0, CONTEXT_ITEMS).map((item) => item.slice(0, MAX_TEXT));
+      if (!shown.length) return empty;
+      const omitted = items.length - shown.length;
+      return `${shown.join(separator)}${omitted > 0 ? `${separator}(+${omitted} itens não listados)` : ''}`;
+    };
     const ctxLines = [
-      `Paciente: ${patient?.name ?? 'desconhecido'}`,
-      `Alergias atuais: ${existingAllergies.join(', ') || 'nenhuma'}`,
-      `Medicações atuais: ${existingMeds.map((m) => (typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`.trim())).join(', ') || 'nenhuma'}`,
-      `Diagnósticos atuais: ${existingDiag.map((d) => (typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`.trim())).join('; ') || 'nenhum'}`,
+      `Alergias atuais: ${boundedList(existingAllergies.filter((a) => typeof a === 'string'), ', ', 'nenhuma')}`,
+      `Medicações atuais: ${boundedList(existingMeds.map((m) => (typeof m === 'string' ? m : `${m.name ?? ''} ${m.dosage ?? ''}`)), ', ', 'nenhuma')}`,
+      `Diagnósticos atuais: ${boundedList(existingDiag.map((d) => (typeof d === 'string' ? d : `${d.code ?? ''} ${d.description ?? ''}`)), '; ', 'nenhum')}`,
       `Há consulta registrada para HOJE: ${hasConsultToday ? 'sim' : 'não'}`,
     ].join('\n');
 
@@ -404,7 +413,7 @@ Comentário do médico:
     let reservation: { reservationId: string };
     try {
       assertOpenAiEnabled();
-      if (!OPENAI_API_KEY) throw new RequestError('IA indisponível', 503);
+      if (!OPENAI_API_KEY) throw new RequestError(AI_UNAVAILABLE_MESSAGE, 503);
       reservation = await checkQuota(supabase, userId, 100);
     } catch (err) {
       if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
@@ -418,6 +427,9 @@ Comentário do médico:
       systemInstruction: SYSTEM,
       maxOutputTokens: 1024,
       responseSchema: COMMENT_SCHEMA,
+    }).catch(async (error) => {
+      await settleFailedCall(supabase, userId, reservation.reservationId, error);
+      throw error;
     });
     await recordUsage(supabase, userId, creditsFromUsage(usage), reservation.reservationId);
     const parsed = parseModelObject<CommentExtraction>(rawText, COMMENT_SCHEMA);

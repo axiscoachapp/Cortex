@@ -8,6 +8,7 @@ import * as modelInput from '../../supabase/functions/_shared/modelInput';
 import * as clinicDates from '../../supabase/functions/_shared/clinicDate';
 import * as questionSafety from '../../supabase/functions/_shared/clinicalQuestionSafety';
 import * as quota from '../../supabase/functions/_shared/quota';
+import { AiProviderError } from '../../supabase/functions/_shared/clinicalAi';
 
 type Row = Record<string, unknown>;
 const user = '11111111-1111-4111-8111-111111111111';
@@ -216,7 +217,8 @@ describe('clinical request boundaries before quota reservation', () => {
           : name === 'live-copilot'
             ? { patientContext: context, audioChunks: [{ data: 'YXVkaW8=', mimeType: 'audio/webm' }] }
             : name === 'suggest-questions'
-              ? { patientContext: context, chiefComplaint: 'Complaint' }
+              // The checklist does not send the patient's name either; a clinical field carries the size.
+              ? { patientContext: { ...context, name: 'x', diagnoses: ['x'.repeat(130900)] }, chiefComplaint: 'Complaint' }
               : { patientContext: context, type: 'referral', soapNote: 'SOAP' };
       const response = await handler.run(request);
       expect(response.status).toBe(413);
@@ -414,6 +416,36 @@ describe('medication safety evidence boundary', () => {
     expect(response.status).toBe(200);
     expect((await response.json()).safety?.status).toBe('verification_required');
     expect(handler.generate).not.toHaveBeenCalled();
+  });
+  it('answers an ordinary follow-up after a medication question normally', async () => {
+    const handler = loadHandler('chat-assistant');
+    handler.generate.mockResolvedValue({ text: 'A queixa foi cefaleia.', usage: { promptTokenCount: 1 } });
+    const response = await handler.run({
+      userMessage: 'E qual foi a queixa da última consulta?',
+      chatHistory: [{ type: 'user', content: 'Há interação entre paroxetina e propranolol?' }],
+    });
+    const body = await response.json();
+    expect(body.safety).toEqual({ status: 'not_assessed' });
+    expect(handler.generate).toHaveBeenCalledOnce();
+    expect((handler.generate.mock.calls[0][2] as { systemInstruction: string; maxOutputTokens: number })).toMatchObject({ maxOutputTokens: 1500 });
+    expect((handler.generate.mock.calls[0][2] as { systemInstruction: string }).systemInstruction).not.toContain('MODO REGISTRO');
+  });
+  it('releases the reservation of a question the provider refused, so failures do not lock the doctor out', async () => {
+    const db = database({ patients: [patientRow] });
+    db.rpc.mockImplementation(async (name: string) => ({ data: name === 'retrieve_patient_context' ? { consultations: [], documents: [], coverage: {} } : true, error: null }));
+    const handler = loadHandler('chat-assistant', db);
+    handler.generate.mockRejectedValue(new AiProviderError('IA indisponível no momento; registre manualmente.', 503, 'none', false));
+    const response = await handler.run({ patientId: patient, userMessage: 'Qual foi a conduta anterior?' });
+    expect(response.status).toBe(503);
+    expect((await response.json()).error).toBe('IA indisponível no momento; registre manualmente.');
+    expect(db.rpc).toHaveBeenCalledWith('settle_usage', { p_user_id: user, p_reservation_id: 'reservation', p_credits: 0 });
+  });
+  it('answers a missing key with the standard text, never an internal variable name', async () => {
+    const handler = loadHandler('chat-assistant', database(), (key) => (key === 'OPENAI_API_KEY' ? undefined : 'synthetic'));
+    const response = await handler.run({ userMessage: 'Pergunta' });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'IA indisponível no momento; registre manualmente.' });
+    expect(handler.admit).not.toHaveBeenCalled();
   });
   it('does not bypass patient ownership for a guarded question', async () => {
     const handler = loadHandler('chat-assistant', database({ patients: [{ ...patientRow, user_id: 'other' }] }));

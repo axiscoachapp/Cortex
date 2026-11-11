@@ -303,8 +303,9 @@ export interface RecordBackground {
 
 /** Patient block of the SOAP prompts. With `background`, adds the record context a returning
  * patient needs (medical history and the last visit's assessment and plan), clearly marked as
- * not being content of the current consultation. */
-export function buildPatientSummary(ctx: unknown, _chiefComplaint: string, background?: RecordBackground): string {
+ * not being content of the current consultation. The name is sent only with `includeName`, for
+ * outputs that address the patient by name (the patient message, the referral). */
+export function buildPatientSummary(ctx: unknown, _chiefComplaint: string, background?: RecordBackground, options: { includeName?: boolean } = {}): string {
   if (!isRecord(ctx)) return '';
   const summarize = (value: unknown, fields: string[]) => Array.isArray(value)
     ? value.map(item => typeof item === 'string' ? item : isRecord(item) ? fields.map(field => typeof item[field] === 'string' ? item[field] : '').filter(Boolean).join(' ') : '').filter(Boolean).join('; ') : '';
@@ -312,7 +313,8 @@ export function buildPatientSummary(ctx: unknown, _chiefComplaint: string, backg
   const meds = summarize(ctx.medications, ['name','dosage']) || 'Nenhuma registrada';
   const allergies = (Array.isArray(ctx.allergies) ? ctx.allergies.filter(item => typeof item === 'string').join(', ') : '') || 'Não registradas';
   const age = currentPatientAge(ctx);
-  const base = `Paciente: ${ctx.name}, ${age === null ? 'idade não informada' : `${age} anos`}\nDiagnósticos: ${diagnoses}\nMedicações: ${meds}\nAlergias: ${allergies}`;
+  const name = options.includeName && typeof ctx.name === 'string' && ctx.name.trim() ? `${ctx.name.trim()}, ` : '';
+  const base = `Paciente: ${name}${age === null ? 'idade não informada' : `${age} anos`}\nDiagnósticos: ${diagnoses}\nMedicações: ${meds}\nAlergias: ${allergies}`;
   if (!background) return base;
   const lines: string[] = [];
   const history = typeof ctx.medical_history === 'string' ? ctx.medical_history.trim() : '';

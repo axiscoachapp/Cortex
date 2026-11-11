@@ -103,7 +103,7 @@ function database(seed: Record<string, Row[]>) {
   return db;
 }
 
-function handler(name: string, db: ReturnType<typeof database>, generation = vi.fn(), network = vi.fn()) {
+function handler(name: string, db: ReturnType<typeof database>, generation = vi.fn(), network = vi.fn(), environment: (key: string) => string | undefined = () => 'synthetic') {
   let run!: (request: Request) => Promise<Response>;
   const source = readFileSync(new URL(`../../supabase/functions/${name}/index.ts`, import.meta.url), 'utf8');
   const compiled = ts.transpileModule(source, {
@@ -140,6 +140,8 @@ function handler(name: string, db: ReturnType<typeof database>, generation = vi.
     '../_shared/quota.ts': {
       checkQuota: async () => ({ reservationId: 'reservation' }),
       recordUsage: async () => {},
+      settleFailedCall: async () => {},
+      transcriptionReservationCredits: () => 400,
       creditsFromUsage: () => 1,
       QuotaExceededError: class extends Error {},
     },
@@ -182,7 +184,7 @@ function handler(name: string, db: ReturnType<typeof database>, generation = vi.
     if (id in dependencies) return dependencies[id];
     throw new Error(`Unexpected dependency ${id}`);
   };
-  new Function('require', 'exports', 'Deno', compiled)(require, {}, { env: { get: () => 'synthetic' } });
+  new Function('require', 'exports', 'Deno', compiled)(require, {}, { env: { get: environment } });
   return (body: Row) => run(new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify(body) }));
 }
 
@@ -346,6 +348,91 @@ describe('clinical edge handler regressions', () => {
         socialAnamnesis: ['Outro fato para revisão'],
       },
     });
+  });
+  it('returns the stored profile proposal, including stopped medications, when a retry finds the visit saved', async () => {
+    const db = database({
+      patients: [{ id: patient, user_id: user, revision: 1, medications: [{ name: 'Medicamento A', dosage: '1 cp' }], medical_history: 'Já preenchida', social_anamnesis: 'Já preenchida' }],
+      consultation_drafts: [{ id: draftId, patient_id: patient, user_id: user }],
+    });
+    const generation = vi.fn().mockResolvedValueOnce({
+      text: JSON.stringify({ diagnoses: [{ description: 'Diagnóstico sintético' }], medications: [], allergies: ['Alergia sintética'], medications_stopped: ['Medicamento A'] }),
+    });
+    const run = handler('finalize-consultation', db, generation);
+    const body = { patientId: patient, draftId, transcription: 'Fonte', saveDirect: true, reviewed: true, soapNote: 'SOAP aprovado', whatsappMessage: '' };
+    const first = await (await run(body)).json();
+    const expected = { diagnoses: [{ description: 'Diagnóstico sintético' }], medications: [], allergies: ['Alergia sintética'], medicationsStopped: ['Medicamento A'] };
+    expect(first.profileUpdates).toEqual(expected);
+    expect(first.notices).toEqual([]);
+    expect(db.tables.consultations[0].profile_proposals).toMatchObject({ sourceConsultationId: draftId, ...expected });
+    // The response was lost; the identical retry takes the already-saved path.
+    const retry = await run(body);
+    expect(retry.status).toBe(200);
+    expect(await retry.json()).toMatchObject({ consultationId: draftId, profileUpdates: expected, notices: [] });
+    expect(generation).toHaveBeenCalledTimes(1);
+    expect(db.tables.consultations).toHaveLength(1);
+  });
+  it('tells the doctor when the post-save proposals could not be generated, also on a retry', async () => {
+    const db = database({
+      patients: [{ id: patient, user_id: user, revision: 1, medical_history: '', social_anamnesis: '' }],
+      consultation_drafts: [{ id: draftId, patient_id: patient, user_id: user }],
+    });
+    const generation = vi.fn(async () => { throw new http.RequestError('A IA retornou conteúdo incompleto ou inválido.', 502); });
+    const run = handler('finalize-consultation', db, generation);
+    const body = { patientId: patient, draftId, transcription: 'Fonte', saveDirect: true, reviewed: true, soapNote: 'SOAP aprovado', whatsappMessage: '' };
+    const first = await run(body);
+    expect(first.status).toBe(200);
+    const result = await first.json();
+    expect(result.profileUpdates).toEqual({ diagnoses: [], medications: [], allergies: [], medicationsStopped: [] });
+    expect(result.notices).toEqual([
+      expect.stringMatching(/atualização do cadastro .* não foram geradas/),
+      expect.stringMatching(/história médica e anamnese social .* não foram geradas/),
+    ]);
+    expect((await (await run(body)).json()).notices).toEqual(result.notices);
+  });
+  it('says the AI was unavailable when the proposals were skipped for that reason', async () => {
+    const db = database({ patients: [{ id: patient, user_id: user, medical_history: 'x', social_anamnesis: 'y' }], consultation_drafts: [{ id: draftId, patient_id: patient, user_id: user }] });
+    const generation = vi.fn();
+    const response = await handler('finalize-consultation', db, generation, vi.fn(), (key) => key === 'OPENAI_API_KEY' ? undefined : 'synthetic')({
+      patientId: patient, draftId, transcription: 'Fonte', saveDirect: true, reviewed: true, soapNote: 'SOAP aprovado', whatsappMessage: '',
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).notices).toEqual([expect.stringMatching(/não foram geradas.*Motivo: IA indisponível no momento\./)]);
+    expect(generation).not.toHaveBeenCalled();
+  });
+  it('gives the extraction, the first-visit history and a regeneration room for complete answers', async () => {
+    const db = database({
+      patients: [{ id: patient, user_id: user, revision: 1, medical_history: '', social_anamnesis: '' }],
+      consultation_drafts: [{ id: draftId, patient_id: patient, user_id: user }],
+    });
+    const generation = vi.fn()
+      .mockResolvedValueOnce({ text: '{"soap_note":"Revisada","whatsapp_message":""}' })
+      .mockResolvedValueOnce({ text: JSON.stringify({ diagnoses: [], medications: [], allergies: [], medications_stopped: [] }) })
+      .mockResolvedValueOnce({ text: JSON.stringify({ medical_history: [], social_anamnesis: [] }) });
+    const run = handler('finalize-consultation', db, generation);
+    await run({ patientId: patient, draftId, transcription: 'Consulta', doctorComments: 'Ajuste' });
+    await run({ patientId: patient, draftId, transcription: 'Fonte', saveDirect: true, reviewed: true, soapNote: 'SOAP aprovado', whatsappMessage: '' });
+    const caps = generation.mock.calls.map((call) => (call[2] as { maxOutputTokens: number }).maxOutputTokens);
+    expect(caps).toEqual([6000, 2000, 2500]);
+  });
+  it('rejects an edited note too long for the regeneration instead of cutting it', async () => {
+    const db = database({ patients: [{ id: patient, user_id: user }], consultation_drafts: [{ id: draftId, patient_id: patient, user_id: user }] });
+    const generation = vi.fn();
+    const response = await handler('finalize-consultation', db, generation)({
+      patientId: patient, draftId, transcription: 'Consulta', doctorComments: 'Ajuste', reviewedSoap: 'x'.repeat(30_001),
+    });
+    expect(response.status).toBe(413);
+    expect((await response.json()).error).toMatch(/evolução editada tem mais de 30\.000 caracteres/);
+    expect(generation).not.toHaveBeenCalled();
+  });
+  it('answers a regeneration without a key with the standard text, before reading the chart', async () => {
+    const db = database({ patients: [{ id: patient, user_id: user }], consultation_drafts: [{ id: draftId, patient_id: patient, user_id: user }] });
+    const from = vi.spyOn(db, 'from');
+    const response = await handler('finalize-consultation', db, vi.fn(), vi.fn(), (key) => key === 'OPENAI_API_KEY' ? undefined : 'synthetic')({
+      patientId: patient, draftId, transcription: 'Consulta', doctorComments: 'Ajuste',
+    });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'IA indisponível no momento; registre manualmente.' });
+    expect(from).not.toHaveBeenCalled();
   });
   it('rejects an audio path that is not the exact source registered for the draft', async () => {
     const db = database({

@@ -1,5 +1,5 @@
 import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
-import { readJsonObject, RequestError } from "../_shared/http.ts";
+import { AI_UNAVAILABLE_MESSAGE, readJsonObject, RequestError } from "../_shared/http.ts";
 /**
  * AI creation of document templates (Modelos de Documento).
  *
@@ -14,7 +14,7 @@ import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
-  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
+  checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError, settleFailedCall,
 } from "../_shared/quota.ts";
 import { parseModelObject } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
@@ -62,6 +62,10 @@ serve(async (req) => {
 
   try {
     const { userId } = await requireUser(req);
+    // AI availability first: nothing else may fail differently while it is switched off.
+    assertOpenAiEnabled();
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new RequestError(AI_UNAVAILABLE_MESSAGE, 503);
     const { mode, input, specialty } = await readJsonObject(req);
 
     if (typeof input === 'string' && input.length > 12000) throw new RequestError('O texto excede 12.000 caracteres.', 413);
@@ -74,9 +78,6 @@ serve(async (req) => {
     const source = `Crie uma estrutura vazia de documentação para ${specialties[specialty]}. Inclua apenas campos e instruções condicionais; não acrescente achados, negativas, nomes, datas ou valores de exemplo.`;
     const systemInstruction = FROM_DESCRIPTION_SYSTEM;
     assertPromptSize(source, systemInstruction);
-
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -101,7 +102,10 @@ serve(async (req) => {
         maxOutputTokens: 3000,
         responseSchema: SCHEMA,
       },
-    );
+    ).catch(async (error) => {
+      await settleFailedCall(supabase, userId, reservationId, error);
+      throw error;
+    });
     await recordUsage(supabase, userId, creditsFromUsage(usage), reservationId);
 
     const out = parseModelObject<{ name: string; description: string; content: string }>(raw, SCHEMA);
