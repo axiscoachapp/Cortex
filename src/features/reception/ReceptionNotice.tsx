@@ -52,7 +52,7 @@ export function ReceptionAccessNotice({
       <Heading className="text-2xl font-semibold leading-tight tracking-tight">{title}</Heading>
       <div role="alert" className="max-w-2xl space-y-3 rounded-lg border bg-card p-4 text-sm">
         <p>{message}</p>
-        <Button asChild variant="outline" className="min-h-11 gap-2">
+        <Button asChild variant="outline" className="h-auto min-h-11 max-w-full gap-2 whitespace-normal">
           <Link to={backTo}><ArrowLeft className="h-4 w-4" aria-hidden="true" />{backLabel}</Link>
         </Button>
       </div>

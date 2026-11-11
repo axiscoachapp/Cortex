@@ -115,8 +115,8 @@ function CaseQueue() {
           </Button>
         </div>
       } />
-      <div className="space-y-3 rounded-xl border bg-card p-3 md:p-4">
-        <div className="flex items-end gap-2">
+      <div className="space-y-3 rounded-xl border bg-card p-3 md:p-4 xl:flex xl:items-end xl:gap-3 xl:space-y-0">
+        <div className="flex items-end gap-2 xl:w-80 xl:flex-none">
           <div className="min-w-0 flex-1 space-y-2">
             <Label htmlFor="queue-search">Buscar na fila</Label>
             <Input id="queue-search" type="search" className="h-11" maxLength={80} value={search} placeholder="Nome ou telefone"
@@ -129,7 +129,7 @@ function CaseQueue() {
           </Button>
         </div>
         {/* On the phone the filters fold behind "Filtros", so the first case shows on the first screen. */}
-        <div id={filtersId} className={`${filtersOpen ? 'grid' : 'hidden'} items-end gap-3 md:grid md:grid-cols-2 shell:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto_auto]`}>
+        <div id={filtersId} className={`${filtersOpen ? 'grid' : 'hidden'} items-end gap-3 md:grid md:grid-cols-2 shell:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto_auto] xl:flex-1`}>
           <div className="min-w-0 space-y-2">
             <Label htmlFor="queue-status">Situação</Label>
             <select id="queue-status" value={status} onChange={(e) => change('status', e.target.value)} className={selectClass}>

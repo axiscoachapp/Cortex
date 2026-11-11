@@ -68,13 +68,13 @@ function DirectoryContents({ actor, clinic, canEdit, canViewLinks, onOpen, onEdi
   };
   const rows = (fresh || previous) && contacts.data ? contacts.data.pages.flatMap(page => page.items) : [];
   return <section aria-label="Diretório de contatos" className="space-y-4 min-w-0">
-    <form role="search" className="flex flex-wrap items-end gap-3" onSubmit={event => { event.preventDefault(); setSearch(draft.trim()); }}>
-      <div className="min-w-0 flex-1 basis-64 max-w-xl space-y-2">
+    <form role="search" className="flex items-end gap-3" onSubmit={event => { event.preventDefault(); setSearch(draft.trim()); }}>
+      <div className="min-w-0 flex-1 max-w-xl space-y-2">
         <Label htmlFor={field}>Buscar contatos</Label>
         <Input id={field} type="text" placeholder="Nome ou telefone" maxLength={200} value={draft}
           onChange={event => setDraft(event.target.value)} className="h-11" />
       </div>
-      <Button type="button" variant="outline" size="icon" className="h-11 w-11" aria-label="Atualizar contatos" title="Atualizar contatos" disabled={reading}
+      <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" aria-label="Atualizar contatos" title="Atualizar contatos" disabled={reading}
         onClick={() => void contacts.refetch()}><RefreshCw className="h-4 w-4" aria-hidden="true" /></Button>
     </form>
     {!canEdit && <p className="text-sm text-muted-foreground">Para corrigir o nome ou o telefone de um contato, peça ao administrador da clínica.</p>}
