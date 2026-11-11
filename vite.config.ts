@@ -29,6 +29,8 @@ export default defineConfig(({ mode, command }) => {
     css: false,
     pool: 'threads',
     maxWorkers: 1,
+    // Agent worktrees live under .claude/ inside the repository: their copies are not this checkout's tests.
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.claude/**'],
     coverage: { include: ['src/**/*.{ts,tsx}'], exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/integrations/supabase/types.ts'] },
   },
 });
