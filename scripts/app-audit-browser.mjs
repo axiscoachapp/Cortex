@@ -635,6 +635,56 @@ try {
           }
         }
       }
+      // Doctor's documents: composer, clinical-list editor, profile, patient search, templates.
+      if (process.env.AUDIT_DOCTOR_DOCUMENTS === '1' && [`/?patient=${pid(1)}`, '/gerenciar-pacientes', '/modelos'].includes(path)) {
+        const snap = async (name) => {
+          await page.waitForTimeout(600);
+          await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: FULL_PAGE });
+          report.routes[`${label} ${name}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        };
+        const reload = async () => { await page.goto(origin + path); await page.waitForTimeout(1200); };
+        if (path === '/gerenciar-pacientes') {
+          await page.getByRole('searchbox', { name: 'Buscar pacientes' }).fill('zzzz');
+          await snap('pacientes-busca-vazia');
+          await page.getByRole('searchbox', { name: 'Buscar pacientes' }).fill('');
+          await page.getByRole('button', { name: /^Ações para / }).first().click();
+          await snap('pacientes-menu');
+          await page.keyboard.press('Escape');
+        }
+        if (path === '/modelos') {
+          await page.getByRole('button', { name: /nas evoluções$/ }).first().click();
+          await snap('modelos-em-uso');
+        }
+        if (path === `/?patient=${pid(1)}`) {
+          const closeDialog = async () => {
+            await page.keyboard.press('Escape');
+            await page.getByRole('dialog').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+          };
+          // On the phone the "Perfil" tab opens the full profile over the patient panel.
+          if (viewport.width < SHELL_BREAKPOINT) await page.getByRole('button', { name: 'Perfil', exact: true }).last().click();
+          else await page.getByRole('button', { name: /Perfil Completo/ }).click();
+          await expect(page.getByRole('dialog')).toBeVisible();
+          await snap('perfil');
+          await closeDialog();
+          await page.getByRole('button', { name: 'Editar alergias' }).click();
+          await expect(page.getByRole('dialog', { name: 'Editar alergias' })).toBeVisible();
+          await snap('alergias-dialogo');
+          await closeDialog();
+          await reload();
+          await page.getByRole('button', { name: /Receita \/ atestado/ }).first().click();
+          await expect(page.getByRole('dialog')).toBeVisible();
+          await snap('composer');
+          await page.getByLabel('Buscar medicamento na base Anvisa').fill('zzzz');
+          await page.waitForTimeout(900);
+          await snap('composer-busca-vazia');
+          await page.getByRole('button', { name: /manualmente$/ }).first().click();
+          await snap('composer-manual');
+          // Leave the composer clean so the next route can load.
+          await page.getByRole('dialog').getByRole('button', { name: 'Cancelar' }).first().click();
+          await page.keyboard.press('Escape');
+          await page.getByRole('dialog').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+        }
+      }
       // Finance: every tab, and the dialogs that carry forms.
       if (['/financeiro', '/recepcao/financeiro'].includes(path) && WORKSPACE_ROLE === 'doctor') {
         for (const [tab, name] of [['Cobranças', 'cobrancas'], ['Relatórios', 'relatorios']]) {
