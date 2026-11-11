@@ -16,6 +16,7 @@
 //   AUDIT_LAPTOPS=1                         add laptop sizes: laptop 1366x768,
 //                                           hd 1536x864, notebook 1280x800
 //   AUDIT_EXTRA_VIEWPORTS=1440x900,...      add sizes (label = w1440x900)
+//   AUDIT_CASE_CLAIMED=1                    the opened reception case is already the person's
 //   AUDIT_FULL_PAGE=0                       capture only the first screen (fold).
 //     Below the desktop frame (SHELL_BREAKPOINT) subpages scroll inside
 //     .clinic-subpage-shell, so a "full page" capture is only the first
@@ -126,6 +127,10 @@ async function supabase(route) {
   if (path.startsWith('/auth/v1/factors')) return respond(route, { all: [], totp: [], phone: [] });
   // A clinic without a signing provider yet: the documents tab asks for this.
   if (path === '/functions/v1/signature-session/state') return respond(route, { configured: false, active: false, expiresAt: null });
+  if (path === '/functions/v1/whatsapp-api' && request.postDataJSON?.()?.action === 'media')
+    // Synthetic received photo: a 1x1 PNG, answered as the server does (bytes, attachment).
+    return route.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Content-Type': 'image/png', 'Content-Disposition': 'attachment' },
+      body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') });
   if (path === '/functions/v1/whatsapp-api') return respond(route, whatsappAnswer(request.postDataJSON?.() ?? {}));
   if (path === '/functions/v1/intake-api') return respond(route, intakeAnswer(request.postDataJSON?.() ?? {}));
   if (path === '/functions/v1/intake-public') return respond(route, intakePublicAnswer(request.postDataJSON?.() ?? {}));
@@ -147,7 +152,11 @@ async function supabase(route) {
   if (table in state) return rows(state[table]);
   if (table === 'rpc/update_user_settings') return respond(route, null);
   if (table === 'patient_files' || table === 'usage_daily') return rows([]);
-  if (table === 'rpc/reception_team_doctors') return respond(route, [{ id: doctorId, name: 'Dra. Ana Exemplo', specialty: 'ginecologia' }]);
+  if (table === 'rpc/reception_contact') return respond(route, { id: 'd5190000-0000-4000-8000-000000000001', clinicId: 'd5120000-0000-4000-8000-000000000001',
+    name: 'Contato Sintético 1', phone: '+5541999990001', beneficiaries: [{ id: pid(1), name: 'Paciente Sintética 1', dateOfBirth: null, doctorId, relationship: 'self' }] });
+  if (table === 'rpc/reception_staff_permissions') return respond(route, { items: [
+    { doctorId, doctorName: 'Dra. Ana Exemplo', effective: true, source: 'physician_approval', requestId: 'd51a0000-0000-4000-8000-000000000001' }], nextCursor: null });
+  if (table === 'rpc/reception_team_doctors') return respond(route, [{ id: doctorId, name: 'Dra. Ana Exemplo', specialty: 'ginecologia' }, { id: 'd5110000-0000-4000-8000-0000000000b2', name: 'Dr. Bruno Exemplo', specialty: 'ginecologia' }]);
   if (table === 'rpc/reception_delegation_requests') return respond(route, { canManage: CLINIC_ADMIN || WORKSPACE_ROLE === 'admin', items: [], nextCursor: null });
   if (table === 'rpc/reception_contacts') return respond(route, { items: [
     { id: 'd5190000-0000-4000-8000-000000000001', name: 'Contato Sintético 1', phone: '+5541999990001', createdAt: day(-1) },
@@ -167,14 +176,15 @@ async function supabase(route) {
   ], nextCursor: null });
   if (table === 'rpc/reception_case') return respond(route, {
     id: 'd5180000-0000-4000-8000-000000000001', clinicId: 'd5120000-0000-4000-8000-000000000001', contactId: 'd5190000-0000-4000-8000-000000000001',
-    contactName: 'Contato Sintético 1', phone: '+5541999990001', doctorId, subject: 'Organizar primeira consulta', kind: 'first_consult', status: 'new',
-    assignedTo: null, revision: 1, createdAt: day(0), beneficiaries: [], eligibleAssignees: [{ id: doctorId, name: 'Atendente Sintética' }],
+    contactName: 'Contato Sintético 1', phone: '+5541999990001', doctorId, subject: 'Organizar primeira consulta', kind: 'first_consult', status: CASE_CLAIMED ? 'assigned' : 'new',
+    assignedTo: CASE_CLAIMED ? doctorId : null, revision: 1, createdAt: day(0), beneficiaries: [], eligibleAssignees: [{ id: doctorId, name: 'Atendente Sintética' }],
     notes: [{ id: 'd5180000-0000-4000-8000-000000000021', body: 'Nota sintética de acompanhamento.', actorId: doctorId, actorName: 'Atendente Sintética', createdAt: day(0) }],
     noteCount: 1, draft: { body: '', revision: 0 } });
   if (table === 'rpc/clinic_access')
     return respond(route, CLINIC_ADMIN || WORKSPACE_ROLE
       ? { kind: WORKSPACE_ROLE === 'reception' ? 'reception' : 'clinical', active: true, admin: WORKSPACE_ROLE ? WORKSPACE_ROLE === 'admin' : true, actorId: doctorId, clinic: { id: 'd5120000-0000-4000-8000-000000000001', name: 'Clínica Sintética' },
-          doctors: [{ id: doctorId, name: 'Dra. Ana Exemplo', specialty: 'ginecologia' }], staff: [] }
+          doctors: [{ id: doctorId, name: 'Dra. Ana Exemplo', specialty: 'ginecologia' }],
+          staff: [{ id: 'd51b0000-0000-4000-8000-000000000001', name: 'Secretária Sintética', active: true, doctorIds: [doctorId] }] }
       : { kind: 'clinical', active: true, admin: false, actorId: doctorId, clinic: null, doctors: [], staff: [] });
   if (table === 'rpc/workspace_directory') return respond(route, { patients: state.patients, counts: { total: state.patients.length, new: 1, returns: 2 } });
   if (table === 'rpc/list_patient_chat_turns' || table === 'consultation_drafts') return respond(route, []);
@@ -187,6 +197,8 @@ async function supabase(route) {
 
 // Settings audit (AUDIT_CLINIC_ADMIN=1): the doctor administers a synthetic clinic with a connected WhatsApp number.
 const CLINIC_ADMIN = process.env.AUDIT_CLINIC_ADMIN === '1';
+// AUDIT_CASE_CLAIMED=1: the opened reception case is already with the person (the state after "Assumir").
+const CASE_CLAIMED = process.env.AUDIT_CASE_CLAIMED === '1';
 const waConv = (n, over) => ({
   id: `d5160000-0000-4000-8000-00000000000${n}`, waId: `55419999900${n}0`, profileName: `Contato Sintético ${n}`, contactId: null, caseId: null,
   queue: n === 1 ? 'agendamento' : 'geral', status: 'open', assignedTo: null, assignedAt: null, openedAt: day(-1), firstResponseAt: null, closedAt: null,
@@ -198,7 +210,7 @@ const waMsg = (n, direction, body, status, at, over) => ({
 });
 const waState = {
   conversations: [
-    waConv(1, { assignedTo: doctorId, assignedAt: day(0, 8, 45), firstResponseAt: day(0, 8, 50), windowOpenUntil: day(1, 8, 40), unreadCount: 1,
+    waConv(1, { contactId: 'd5190000-0000-4000-8000-000000000001', caseId: 'd5180000-0000-4000-8000-000000000001', assignedTo: doctorId, assignedAt: day(0, 8, 45), firstResponseAt: day(0, 8, 50), windowOpenUntil: day(1, 8, 40), unreadCount: 1,
       lastMessagePreview: 'Pode ser na quinta de manhã? Tenho exame na quarta.' }),
     waConv(2, { lastInboundAt: day(-3, 10, 0), lastMessageAt: day(-3, 10, 0), unreadCount: 2, lastMessagePreview: 'Queria remarcar a consulta da semana que vem.' }),
   ],
@@ -207,6 +219,8 @@ const waState = {
       waMsg(1, 'in', 'Bom dia! Queria marcar um retorno com a Dra. Ana.', 'received', day(0, 8, 30)),
       waMsg(2, 'out', 'Bom dia! Temos horário na quarta às 14h ou na quinta às 9h. Qual prefere?', 'read', day(0, 8, 50)),
       waMsg(3, 'in', 'Pode ser na quinta de manhã? Tenho exame na quarta.', 'received', day(0, 8, 55)),
+      waMsg(5, 'in', '', 'received', day(0, 8, 56), { kind: 'image', media: { mime: 'image/png', filename: null, voice: false } }),
+      waMsg(6, 'in', '', 'received', day(0, 8, 57), { kind: 'document', media: { mime: 'application/pdf', filename: 'pedido-de-exame.pdf', voice: false } }),
       waMsg(4, 'out', 'Mensagem sintética que o WhatsApp recusou.', 'failed', day(0, 8, 58), { error: 'Synthetic failure' }),
     ],
     'd5160000-0000-4000-8000-000000000002': [
