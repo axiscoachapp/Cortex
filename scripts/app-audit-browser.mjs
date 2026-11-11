@@ -27,6 +27,9 @@
 //   AUDIT_DOCTOR_AGENDA=1                   doctor's /agenda: appointments in every status (one
 //                                           booked by the reception, one before 07:00) and the
 //                                           booking dialog empty / invalid / editing
+//   AUDIT_CONSULTATION_ERRORS=1             consultation (round 3, consulta-tela): the phone
+//                                           "Ações" menu, a failed AI question, a failed
+//                                           "Gerar documento", the issued-document "⋯" menu
 import { chromium, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
@@ -736,7 +739,7 @@ try {
           };
           // On the phone the "Perfil" tab opens the full profile over the patient panel.
           if (viewport.width < SHELL_BREAKPOINT) await page.getByRole('button', { name: 'Perfil', exact: true }).last().click();
-          else await page.getByRole('button', { name: /Perfil Completo/ }).click();
+          else await page.getByRole('button', { name: /Perfil completo/i }).click();
           await expect(page.getByRole('dialog')).toBeVisible();
           await snap('perfil');
           await closeDialog();
@@ -745,7 +748,11 @@ try {
           await snap('alergias-dialogo');
           await closeDialog();
           await reload();
-          await page.getByRole('button', { name: /Receita \/ atestado/ }).first().click();
+          // Below sm (640 x 1.35) the consultation actions are in one "Ações" menu.
+          if (viewport.width < 864) {
+            await page.getByRole('button', { name: 'Ações', exact: true }).click();
+            await page.getByRole('menuitem', { name: 'Receita / atestado' }).click();
+          } else await page.getByRole('button', { name: /Receita \/ atestado/ }).first().click();
           await expect(page.getByRole('dialog')).toBeVisible();
           await snap('composer');
           await page.getByLabel('Buscar medicamento na base Anvisa').fill('zzzz');
@@ -982,6 +989,52 @@ try {
       await page.getByRole('button', { name: /^Início$/ }).first().click();
       await expect(page.getByRole('button', { name: 'Voltar à consulta de Paciente Sintética 1' }).first()).toBeVisible();
       await shot('consulta-inicio-voltar');
+    }
+    // AUDIT_CONSULTATION_ERRORS=1 (round 3, consulta-tela): every AI function
+    // answers 503 here, so a question and a document both fail on purpose.
+    if (process.env.AUDIT_CONSULTATION_ERRORS === '1') {
+      const shot = async (name) => {
+        await page.waitForTimeout(700);
+        await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: FULL_PAGE });
+        report.routes[`${label} ${name}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+      };
+      const phone = viewport.width < 864;
+      await page.goto(origin + `/?patient=${pid(1)}`);
+      await expect(page.getByRole('heading', { name: 'Paciente Sintética 1', exact: true }).first()).toBeVisible({ timeout: 15000 });
+      await shot('consulta-tela');
+      if (phone) {
+        await page.getByRole('button', { name: 'Ações', exact: true }).click();
+        await expect(page.getByRole('menuitem', { name: 'Escrever evolução' })).toBeVisible();
+        await shot('consulta-acoes-menu');
+        await page.keyboard.press('Escape');
+      }
+      await page.getByLabel('Pergunta ao assistente clínico').fill('Qual a conduta para o climatério?');
+      await page.getByLabel('Pergunta ao assistente clínico').press('Enter');
+      await expect(page.getByText('Não enviada', { exact: false }).first()).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('alert').filter({ hasText: 'Nada foi perdido' }).first()).toBeVisible();
+      await shot('consulta-pergunta-falhou');
+      if (phone) {
+        await page.getByRole('button', { name: 'Ações', exact: true }).click();
+        await page.getByRole('menuitem', { name: 'Receita / atestado' }).click();
+      } else await page.getByRole('button', { name: /Receita \/ atestado/ }).first().click();
+      const composer = page.getByRole('dialog');
+      await expect(composer).toBeVisible();
+      await composer.getByRole('button', { name: /^Atestado médico/ }).click();
+      await composer.getByRole('button', { name: 'Gerar documento' }).click();
+      await expect(composer.getByRole('alert').filter({ hasText: 'Nada foi perdido' })).toBeVisible({ timeout: 10000 });
+      await shot('consulta-documento-falhou');
+      page.once('dialog', (d) => d.accept());
+      await composer.getByRole('button', { name: 'Cancelar' }).click();
+      await composer.waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+      // Issued documents: "Abrir" and a "⋯" menu per row.
+      if (viewport.width < SHELL_BREAKPOINT) await page.getByRole('button', { name: 'Perfil', exact: true }).last().click();
+      const full = page.getByRole('button', { name: /Perfil completo/i }).first();
+      if (await full.isVisible().catch(() => false)) await full.click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.getByRole('tab', { name: /^Documentos/ }).click();
+      await page.getByRole('button', { name: /^Mais ações para / }).first().click();
+      await expect(page.getByRole('menuitem', { name: 'Revogar documento…' })).toBeVisible();
+      await shot('perfil-documentos-menu');
     }
     // Interactions: the patient's full profile (history, documents, files).
     if (!only) {
