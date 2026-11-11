@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useClinicAccess } from '@/features/reception/accessContext';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import {
   FIELD_LABELS, TYPE_LABELS, validateForm, type IntakeForm, type IntakeQuestion, type QuestionType, type RegistrationField,
 } from '../../../supabase/functions/_shared/intakeForm';
@@ -42,6 +43,7 @@ export function IntakeFormEditor() {
     setEnabled(q.data.enabled);
     setRevision(q.data.revision);
   }, [q.data, dirty]);
+  useUnsavedChanges(dirty, 'As perguntas da pré-consulta têm mudanças não salvas. Sair e descartar essas mudanças?');
   const errors = useMemo(() => (draft ? validateForm(draft) : []), [draft]);
   const edit = (fn: (f: IntakeForm) => void) => {
     setDraft((f) => { if (!f) return f; const next = structuredClone(f); fn(next); return next; });
@@ -58,6 +60,9 @@ export function IntakeFormEditor() {
     },
     onError: (e: Error) => setMessage({ kind: 'error', text: e.message }),
   });
+
+  // A refused save (someone else saved first) keeps the old revision: discarding reads the form again.
+  const discard = () => { setDirty(false); setMessage(null); void q.refetch(); };
 
   if (q.isError && !dirty)
     return <p role="alert" className="text-sm text-destructive">{(q.error as Error).message} <button type="button" className="underline" onClick={() => q.refetch()}>Tentar novamente</button></p>;
@@ -207,7 +212,7 @@ export function IntakeFormEditor() {
         <Button onClick={() => save.mutate()} disabled={!dirty || errors.length > 0 || save.isPending}>
           {save.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Salvar formulário
         </Button>
-        {dirty && <Button variant="ghost" onClick={() => { setDirty(false); setMessage(null); }}>Descartar mudanças</Button>}
+        {dirty && <Button variant="ghost" onClick={discard}>Descartar mudanças</Button>}
       </div>
     </div>
   );

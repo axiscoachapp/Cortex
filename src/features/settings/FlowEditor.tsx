@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useClinicAccess } from '@/features/reception/accessContext';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import {
   decideStep, LIMITS, validateFlow, type BusinessHours, type FlowNode, type FlowSettings, type SessionState,
 } from '../../../supabase/functions/_shared/whatsappFlow';
@@ -58,13 +59,16 @@ export function FlowEditor() {
     setDirty(true);
     setMessage(null);
   };
+  useUnsavedChanges(dirty, 'O robô de atendimento tem mudanças não salvas. Sair e descartar essas mudanças?');
   const errors = useMemo(() => (draft ? validateFlow(draft) : []), [draft]);
+  // A refused save (someone else saved first) keeps the old revision: discarding reads the flow again.
+  const discard = () => { setDirty(false); setMessage(null); void flow.refetch(); };
   const save = useMutation({
     mutationFn: () => whatsappCall<{ revision: number }>('saveFlow', { revision, flow: draft }),
     onSuccess: (r) => {
       setRevision(r.revision);
       setDirty(false);
-      setMessage({ kind: 'ok', text: draft?.enabled ? 'Fluxo salvo e ativo.' : 'Fluxo salvo. O robô está desligado.' });
+      setMessage({ kind: 'ok', text: draft?.enabled ? 'Robô salvo e ativo.' : 'Robô salvo. Ele está desligado.' });
       void queryClient.invalidateQueries({ queryKey: ['whatsapp-flow', ...scope] });
     },
     onError: (e: Error) => setMessage({ kind: 'error', text: e.message }),
@@ -79,7 +83,7 @@ export function FlowEditor() {
       </p>
     );
   // Cached data from an earlier visit is not shown until this mount's read answers.
-  if (!draft || (!dirty && !flow.isFetchedAfterMount)) return <p className="text-sm text-muted-foreground">Carregando o fluxo…</p>;
+  if (!draft || (!dirty && !flow.isFetchedAfterMount)) return <p className="text-sm text-muted-foreground">Carregando o robô…</p>;
 
   const nodes = draft.definition.nodes;
   const ids = Object.keys(nodes);
@@ -234,9 +238,11 @@ export function FlowEditor() {
             </ul>
           )}
           {message && <p role={message.kind === 'error' ? 'alert' : 'status'} className={message.kind === 'error' ? 'text-sm text-destructive' : 'text-sm text-success'}>{message.text}</p>}
-          <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={() => save.mutate()} disabled={save.isPending || errors.length > 0 || !dirty}>{save.isPending ? 'Salvando…' : 'Salvar fluxo'}</Button>
-            {dirty && <span className="text-sm text-muted-foreground">Alterações não salvas</span>}
+          {/* Sticky: the editor is long, and saving must not need a scroll back. */}
+          <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded-lg border bg-white/95 px-3 py-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/85">
+            <Button onClick={() => save.mutate()} disabled={save.isPending || errors.length > 0 || !dirty}>{save.isPending ? 'Salvando…' : 'Salvar robô'}</Button>
+            {dirty && <Button variant="ghost" onClick={discard} disabled={save.isPending}>Descartar mudanças</Button>}
+            <span role="status" className="text-sm text-muted-foreground">{dirty ? 'Mudanças não salvas' : ''}</span>
           </div>
         </div>
 
@@ -303,7 +309,7 @@ function FlowSimulator({ flow, valid }: { flow: FlowSettings; valid: boolean }) 
         ))}
       </div>
       <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); send(text); }}>
-        <Input aria-label="Mensagem do paciente (simulação)" value={text} onChange={(e) => setText(e.target.value)} placeholder={valid ? 'Oi' : 'Corrija o fluxo para simular'} disabled={!valid} />
+        <Input aria-label="Mensagem do paciente (simulação)" value={text} onChange={(e) => setText(e.target.value)} placeholder={valid ? 'Oi' : 'Corrija o robô para simular'} disabled={!valid} />
         <Button type="submit" size="icon" aria-label="Enviar na simulação" disabled={!valid || !text.trim()}><Send className="h-4 w-4" /></Button>
       </form>
     </aside>

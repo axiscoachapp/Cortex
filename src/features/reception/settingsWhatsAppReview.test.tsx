@@ -60,15 +60,15 @@ describe('K6 C5 fresh reads and initial flow failure',()=>{
     const cache=client();
     render(<QueryClientProvider client={cache}><FlowEditor /></QueryClientProvider>);
     try {
-      expect(screen.getByText('Carregando o fluxo…')).toBeVisible();
+      expect(screen.getByText('Carregando o robô…')).toBeVisible();
       await act(async()=>first.reject(new Error('Falha sintética na leitura do fluxo')));
       await waitFor(()=>expect(cache.getQueryState(['whatsapp-flow',mocks.access.clinic.id,mocks.access.actorId])?.status).toBe('error'));
       expect(screen.getByRole('alert')).toHaveTextContent('Falha sintética na leitura do fluxo');
-      expect(screen.queryByText('Carregando o fluxo…')).not.toBeInTheDocument();
+      expect(screen.queryByText('Carregando o robô…')).not.toBeInTheDocument();
       await userEvent.setup().click(screen.getByRole('button',{name:'Tentar novamente'}));
       await waitFor(()=>expect(mocks.call).toHaveBeenCalledTimes(2));
       expect(mocks.call.mock.calls).toEqual([['flow',context],['flow',context]]);
-      expect(screen.getByText('Carregando o fluxo…')).toBeVisible();
+      expect(screen.getByText('Carregando o robô…')).toBeVisible();
       await act(async()=>retry.resolve(flow));
       expect(await screen.findByText('Robô de atendimento')).toBeVisible();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();

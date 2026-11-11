@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import {
   APPOINTMENT_TYPES, PARAM_LABELS, previewBody,
   type Automation, type AutomationParam, type AutomationRule, type ParamSource, type WhatsAppTemplate,
@@ -43,6 +44,8 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
   const [doctorIds, setDoctorIds] = useState<string[]>([]);
   const [types, setTypes] = useState<string[]>([]);
   const [localError, setLocalError] = useState('');
+  const [baseline, setBaseline] = useState<string | null>(null);
+  const [armed, setArmed] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -60,6 +63,8 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
     setDoctorIds(initial?.doctorIds ?? []);
     setTypes(initial?.appointmentTypes ?? []);
     setLocalError('');
+    setBaseline(null);
+    setArmed(true);
   }, [open, initial, preset]);
 
   const template = templates.find((t) => `${t.name}|${t.language}` === templateKey);
@@ -67,6 +72,14 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
     if (!template) return;
     setParams((current) => Array.from({ length: template.paramCount }, (_, i) => current[i] ?? { source: i === 0 ? 'paciente_primeiro_nome' : 'data' }));
   }, [template]);
+
+  // What the dialog opened with, to know whether closing it would discard typing.
+  const snapshot = JSON.stringify({ name, enabled, trigger, amount, unit, templateKey, params, linkUrl, allDoctors, doctorIds, types });
+  // Taken one render after the reset above, when the fields already hold the opened values.
+  useEffect(() => { if (armed && open) { setBaseline(snapshot); setArmed(false); } }, [armed, open, snapshot]);
+  const dirty = open && baseline !== null && baseline !== snapshot;
+  const guard = useUnsavedChanges(dirty || (open && saving), saving ? 'Aguarde a automação ser salva.' : 'A automação tem mudanças não salvas. Fechar e descartar?', { blocking: open && saving });
+  const changeOpen = (next: boolean) => { if (guard(next)) onOpenChange(next); };
 
   const usesLink = params.some((p) => p.source === 'link');
   const submit = () => {
@@ -88,7 +101,7 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
     setParams((list) => list.map((p, i) => (i === index ? { ...p, ...patch, ...(patch.source && patch.source !== 'texto' ? { text: undefined } : {}) } : p)));
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}>
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className="w-[calc(100vw-1.5rem)] max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{initial ? 'Editar automação' : 'Nova automação'}</DialogTitle>
@@ -221,7 +234,7 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
         </div>
 
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+          <Button variant="outline" onClick={() => changeOpen(false)} disabled={saving}>Cancelar</Button>
           <Button onClick={submit} disabled={saving}>{saving ? 'Salvando…' : 'Salvar automação'}</Button>
         </DialogFooter>
       </DialogContent>
