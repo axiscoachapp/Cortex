@@ -5,6 +5,8 @@
  * styles used by ChatPanel, PatientProfileDrawer, PatientSnapshot.
  */
 
+import { escapeHtml, markdownToPrintHtml, parseSoapBlocks } from '@/lib/soapSections';
+
 interface PatientLike {
   name: string;
   age: number | null;
@@ -34,14 +36,7 @@ function openPrintable(html: string) {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-export function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+export { escapeHtml };
 
 function todayPtBR(): string {
   return new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -55,6 +50,14 @@ export interface PrintAuthor {
   name?: string;
   crm?: string;
   crmUf?: string;
+  /** Clinic name from the access context; printed in headers and footers. */
+  clinicName?: string;
+}
+
+/** "Clínica X · Cortex", or just "Cortex" when the clinic is unknown. */
+function brandLine(author?: PrintAuthor): string {
+  const clinic = author?.clinicName?.trim();
+  return clinic ? `${escapeHtml(clinic)} · Cortex` : 'Cortex';
 }
 
 function authorLine(author?: PrintAuthor): string {
@@ -86,32 +89,25 @@ export function printSoap(
   const isReprint = !!options.consultationDate && encounterDate !== todayPtBR();
   const dateLabel = isReprint ? `Consulta de ${encounterDate} · impresso em ${todayPtBR()}` : encounterDate;
   const ageLabel = patient.age === null ? 'Idade não informada' : patient.age + (isReprint ? ' anos (idade atual)' : ' anos');
-  const sections: Array<{ letter: string; title: string; content: string }> = [];
-  const re = /\*\*([A-Z])\s*(?:\([^)]+\))?\*\*[:\s]*([\s\S]*?)(?=\n\s*\n?\*\*[A-Z]|$)/g;
-  let m;
-  while ((m = re.exec(soapNote)) !== null) {
-    sections.push({
-      letter: m[1],
-      title: m[0].match(/\*\*([^*]+)\*\*/)?.[1]?.trim() ?? m[1],
-      content: m[2].trim(),
-    });
-  }
+  const blocks = parseSoapBlocks(soapNote);
 
   const bg: Record<string, string> = { S: '#eff6ff', O: '#f8fafc', A: '#fffbeb', P: '#f0fdf4' };
   const border: Record<string, string> = { S: '#3b82f6', O: '#94a3b8', A: '#f59e0b', P: '#22c55e' };
 
-  const sectionsHtml =
-    sections.length > 0
-      ? sections
-          .map(
-            ({ letter, title, content }) =>
-              `<div style="margin-bottom:14px;background:${bg[letter] ?? '#f9fafb'};border-left:3px solid ${border[letter] ?? '#e5e7eb'};padding:10px 14px;border-radius:0 6px 6px 0">
-          <div style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.55;margin-bottom:5px">${escapeHtml(title)}</div>
-          <div style="font-size:10.5pt;line-height:1.65;white-space:pre-wrap">${escapeHtml(content || 'Não relatado na consulta.')}</div>
+  const textBox = (content: string) =>
+    `<div style="margin-bottom:14px;font-size:10.5pt;line-height:1.65;white-space:pre-wrap">${markdownToPrintHtml(content)}</div>`;
+  const sectionsHtml = blocks
+    ? blocks
+        .map((block) =>
+          block.kind === 'text'
+            ? textBox(block.content)
+            : `<div style="margin-bottom:14px;background:${bg[block.letter] ?? '#f9fafb'};border-left:3px solid ${border[block.letter] ?? '#e5e7eb'};padding:10px 14px;border-radius:0 6px 6px 0">
+          <div style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.55;margin-bottom:5px">${escapeHtml(block.title)}</div>
+          <div style="font-size:10.5pt;line-height:1.65;white-space:pre-wrap">${block.content ? markdownToPrintHtml(block.content) : 'Não relatado na consulta.'}</div>
         </div>`,
-          )
-          .join('')
-      : `<div style="white-space:pre-wrap;font-size:10.5pt;line-height:1.65">${escapeHtml(soapNote)}</div>`;
+        )
+        .join('')
+    : textBox(soapNote);
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Evolução — ${escapeHtml(patient.name)}</title>
@@ -121,7 +117,7 @@ export function printSoap(
 <div class="sub">${ageLabel}${patient.profession ? ` · ${escapeHtml(patient.profession)}` : ''} &nbsp;·&nbsp; ${dateLabel}${chiefComplaint ? ` &nbsp;·&nbsp; Queixa: ${escapeHtml(chiefComplaint)}` : ''}</div>
 ${sectionsHtml}
 ${authorLine(options.author)}
-<div class="footer">Haddad Nicola · Cortex</div>
+<div class="footer">${brandLine(options.author)}</div>
 </body></html>`;
 
   openPrintable(html);
@@ -152,7 +148,7 @@ export function printMedicationList(patient: PatientLike, author?: PrintAuthor) 
 <title>Medicamentos em uso — ${escapeHtml(patient.name)}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:11pt;color:#111827;padding:60px;max-width:680px;margin:0 auto}.hdr{text-align:center;border-bottom:2px solid #846015;padding-bottom:16px;margin-bottom:24px}.hdr h1{font-size:18pt;font-weight:700;color:#846015}.hdr p{font-size:10pt;color:#6b7280;margin-top:4px}.pbox{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px 16px;margin-bottom:24px;font-size:10pt;color:#374151}.allergy{color:#dc2626;margin-top:4px}.rx{font-size:26pt;font-style:italic;font-weight:700;color:#846015;margin-bottom:20px}.ftr{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:flex-end;font-size:10pt;color:#6b7280}.sig{text-align:center}.sig-line{width:200px;border-top:1px solid #374151;margin:50px auto 4px;font-size:9pt;color:#6b7280}@media print{body{padding:40px}}</style>
 </head><body>
-<div class="hdr"><h1>MEDICAMENTOS EM USO</h1><p>Haddad Nicola · Cortex</p><p style="font-size:8.5pt">Lista informativa — não é receita médica.</p></div>
+<div class="hdr"><h1>MEDICAMENTOS EM USO</h1><p>${brandLine(author)}</p><p style="font-size:8.5pt">Lista informativa — não é receita médica.</p></div>
 <div class="pbox">
   <div><strong>Paciente:</strong> ${escapeHtml(patient.name)} &nbsp;·&nbsp; <strong>Idade:</strong> ${patient.age === null ? 'Idade não informada' : patient.age + ' anos'}${patient.profession ? ` &nbsp;·&nbsp; ${escapeHtml(patient.profession)}` : ''}</div>
   ${patient.allergies && patient.allergies.length > 0 ? `<div class="allergy">⚠ Alergias: ${escapeHtml(patient.allergies.join(', '))}</div>` : ''}
@@ -177,6 +173,7 @@ interface ConsultationLike {
 }
 
 interface DossierExtras {
+  author?: PrintAuthor;
   socialAnamnesis?: string;
   medicalHistory?: string;
   clinicalNotes?: string;
@@ -216,7 +213,7 @@ export function printDossier(patient: PatientLike, consultations: ConsultationLi
           });
           return `<article class="consult">
           <h3>${date}${c.chief_complaint ? ` — ${escapeHtml(c.chief_complaint)}` : ''}</h3>
-          ${c.soap_note ? `<div class="soap">${escapeHtml(c.soap_note).replace(/\n/g, '<br>')}</div>` : ''}
+          ${c.soap_note ? `<div class="soap">${markdownToPrintHtml(c.soap_note)}</div>` : ''}
         </article>`;
         })
         .join('')}</section>`
@@ -237,7 +234,7 @@ li{padding:4px 0;font-size:10pt;line-height:1.55}
 .body{white-space:pre-wrap;line-height:1.6;color:#374151}
 .allergy{color:#b91c1c;font-weight:600}
 .consult{margin-bottom:18px;padding:12px 14px;background:#f9fafb;border-radius:6px;border-left:3px solid #94a3b8}
-.consult .soap{margin-top:6px;font-size:9.5pt;color:#374151;line-height:1.6}
+.consult .soap{margin-top:6px;font-size:9.5pt;color:#374151;line-height:1.6;white-space:pre-wrap}
 .footer{margin-top:32px;padding-top:12px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:8pt}
 @media print{body{padding:24px 32px}}
 </style>
@@ -251,7 +248,7 @@ ${section('Anamnese Social', extras.socialAnamnesis ?? '')}
 ${section('Histórico Médico', extras.medicalHistory ?? '')}
 ${section('Anotações do Médico', extras.clinicalNotes ?? '')}
 ${consultationsHtml}
-<div class="footer">Haddad Nicola · Cortex em ${new Date().toLocaleString('pt-BR')}</div>
+<div class="footer">${brandLine(extras.author)} em ${new Date().toLocaleString('pt-BR')}</div>
 </body></html>`;
 
   openPrintable(html);
