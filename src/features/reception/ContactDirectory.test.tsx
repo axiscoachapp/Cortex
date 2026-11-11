@@ -10,7 +10,7 @@ import type { ContactOption } from './NewCaseDialog';
 const mocks = vi.hoisted(() => ({ contacts: vi.fn(), actor: '11111111-1111-4111-8111-111111111111', navigate: vi.fn() }));
 vi.mock('./api', () => ({ receptionApi: { contacts: mocks.contacts } }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: mocks.actor } }) }));
-vi.mock('react-router-dom', () => ({ useNavigate: () => mocks.navigate }));
+vi.mock('react-router-dom', () => ({ useNavigate: () => mocks.navigate, useSearchParams: () => [new URLSearchParams(), vi.fn()] }));
 vi.mock('./NewCaseDialog', () => ({ NewCaseDialog: ({ contact }: { contact?: ContactOption }) => <div role="dialog" aria-label="Atendimento sintético">{contact?.name}<span>{contact?.id}</span></div> }));
 vi.mock('./ContactCorrectionDialog', () => ({ ContactCorrectionDialog: ({ contactId }: { contactId: string }) => <div role="dialog" aria-label="Correção sintética">{contactId}</div> }));
 vi.mock('./ContactLinksDialog', () => ({ ContactLinksDialog: ({ contactId }: { contactId: string }) => <div role="dialog" aria-label="Vínculos sintéticos">{contactId}</div> }));
@@ -30,7 +30,7 @@ function mount(value = access, cached?: Page) {
   return { ...render(tree()), client, tree };
 }
 const card = () => screen.findByRole('heading', { name: row.name }, { timeout: 1500 });
-const open = () => screen.getByRole('button', { name: 'Abrir atendimento' });
+const open = () => screen.getByRole('button', { name: 'Novo atendimento para este contato' });
 const search = (text: string) => fireEvent.change(screen.getByRole('textbox', { name: 'Buscar contatos' }), { target: { value: text } });
 
 beforeEach(() => { vi.resetAllMocks(); mocks.actor = access.actorId; mocks.contacts.mockResolvedValue(page); });
@@ -41,7 +41,7 @@ describe('contact directory freshness and actions', () => {
     expect(mocks.contacts).toHaveBeenCalledExactlyOnceWith(clinic, '', null, expect.any(AbortSignal));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Corrigir contato' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Consultar vínculos' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ver pacientes ligados' })).not.toBeInTheDocument();
     fireEvent.click(open());
     expect(screen.getByRole('dialog')).toHaveTextContent(row.id);
     expect(mocks.navigate).not.toHaveBeenCalled();
@@ -59,7 +59,7 @@ describe('contact directory freshness and actions', () => {
     await act(async () => { await view.client.invalidateQueries({ queryKey: key }); });
     await waitFor(() => expect(screen.queryByRole('heading', { name: row.name })).not.toBeInTheDocument(), { timeout: 1500 });
     expect(screen.getByRole('alert')).not.toHaveTextContent('PRIVATE');
-    expect(screen.queryByRole('button', { name: 'Abrir atendimento' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Novo atendimento para este contato' })).not.toBeInTheDocument();
     mocks.contacts.mockResolvedValue(page);
     fireEvent.click(screen.getByRole('button', { name: 'Tentar carregar contatos' })); await card();
     expect(mocks.contacts).toHaveBeenCalledTimes(3); expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -101,7 +101,7 @@ describe('contact directory freshness and actions', () => {
     await screen.findByRole('heading', { name: second.name });
     expect(mocks.contacts.mock.calls[1]).toEqual([clinic, '', other, expect.any(AbortSignal)]);
     expect(screen.queryByRole('button', { name: 'Carregar mais contatos' })).not.toBeInTheDocument();
-    search('Outra busca'); await screen.findByText('Nenhum contato encontrado neste filtro.');
+    search('Outra busca'); await screen.findByText('Nenhum contato encontrado para esta busca.');
     expect(mocks.contacts.mock.calls[2]).toEqual([clinic, 'Outra busca', null, expect.any(AbortSignal)]);
     expect(screen.queryByRole('heading', { name: second.name })).not.toBeInTheDocument();
   });
@@ -115,7 +115,7 @@ describe('contact directory freshness and actions', () => {
   it('cancels an old search and ignores a late response', async () => {
     const pending = deferred<Page>(); mocks.contacts.mockReturnValueOnce(pending.promise).mockResolvedValue({ items: [], nextCursor: null });
     mount(); await waitFor(() => expect(mocks.contacts).toHaveBeenCalledTimes(1)); const signal = mocks.contacts.mock.calls[0][3] as AbortSignal;
-    search('Outra busca'); await screen.findByText('Nenhum contato encontrado neste filtro.'); expect(signal?.aborted).toBe(true);
+    search('Outra busca'); await screen.findByText('Nenhum contato encontrado para esta busca.'); expect(signal?.aborted).toBe(true);
     await act(async () => pending.resolve(page)); expect(screen.queryByRole('heading', { name: row.name })).not.toBeInTheDocument();
   });
   it.each(['unmount', 'clinic', 'actor', 'inactive', 'hidden', 'role', 'admin'])('cancels old directory observation after %s changes', async change => {
@@ -150,7 +150,7 @@ describe('contact directory freshness and actions', () => {
     expect(mocks.contacts.mock.calls[2]).toEqual([clinic, '', null, expect.any(AbortSignal)]);
     expect(screen.queryByRole('heading', { name: second.name })).not.toBeInTheDocument();
   });
-  it.each(['Corrigir contato', 'Consultar vínculos'])('refuses stale admin action %s before a refresh notification', async action => {
+  it.each(['Corrigir contato', 'Ver pacientes ligados'])('refuses stale admin action %s before a refresh notification', async action => {
     const view = mount({ ...access, admin: true, kind: 'clinical' }); await card();
     const button = screen.getByRole('button', { name: action }); mocks.contacts.mockReturnValue(new Promise(() => {}));
     void view.client.invalidateQueries({ queryKey: ['reception', access.actorId, 'contacts', clinic] }); fireEvent.click(button);
@@ -159,12 +159,12 @@ describe('contact directory freshness and actions', () => {
   it('keeps admin correction and clinical link actions gated and passes the exact selected id', async () => {
     mount({ ...access, admin: true, kind: 'clinical' }); const heading = await card(); const article = within(heading.closest('article')!);
     fireEvent.click(article.getByRole('button', { name: 'Corrigir contato' })); expect(screen.getByRole('dialog', { name: 'Correção sintética' })).toHaveTextContent(row.id);
-    fireEvent.click(article.getByRole('button', { name: 'Consultar vínculos' })); expect(screen.getByRole('dialog', { name: 'Vínculos sintéticos' })).toHaveTextContent(row.id);
+    fireEvent.click(article.getByRole('button', { name: 'Ver pacientes ligados' })); expect(screen.getByRole('dialog', { name: 'Vínculos sintéticos' })).toHaveTextContent(row.id);
   });
   it('does not reuse a cached empty page as a fresh absence', async () => {
     const pending = deferred<Page>(); mocks.contacts.mockReturnValue(pending.promise); mount(access, { items: [], nextCursor: null });
-    expect(screen.queryByText('Nenhum contato encontrado neste filtro.')).not.toBeInTheDocument();
-    await act(async () => pending.resolve({ items: [], nextCursor: null })); expect(await screen.findByText('Nenhum contato encontrado neste filtro.')).toBeVisible();
+    expect(screen.queryByText('Nenhum contato cadastrado ainda.')).not.toBeInTheDocument();
+    await act(async () => pending.resolve({ items: [], nextCursor: null })); expect(await screen.findByText('Nenhum contato cadastrado ainda.')).toBeVisible();
   });
   it('refreshes manually without opening an editor or navigating', async () => {
     mount(); await card(); fireEvent.click(screen.getByRole('button', { name: 'Atualizar contatos' }));
