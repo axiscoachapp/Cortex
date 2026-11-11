@@ -64,6 +64,6 @@ export function questionError(form: IntakeForm, q: IntakeQuestion, answers: Reco
 /** "3 partes · cerca de 5 minutos" */
 export function formSize(form: IntakeForm): string {
   const parts = form.sections.length;
-  const minutes = Math.max(2, Math.round(questionsOf(form).length / 5));
+  const minutes = Math.max(3, Math.round(questionsOf(form).length / 5));
   return `${parts} ${parts === 1 ? 'parte' : 'partes'} · cerca de ${minutes} minutos`;
 }

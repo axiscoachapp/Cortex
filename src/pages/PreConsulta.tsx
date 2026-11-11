@@ -259,7 +259,7 @@ export default function PreConsultaPage() {
       {summary.length > 0 && (
         <div ref={errorBox} tabIndex={-1} role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-base text-destructive focus:outline-none">
           <p className="font-medium">Revise antes de enviar:</p>
-          <ul className="mt-1 list-disc space-y-1 pl-5">
+          <ul className="mt-1 space-y-1.5">
             {summary.slice(0, 8).map((s) => (
               <li key={s.key}>
                 {s.target ? <button type="button" className="text-left underline underline-offset-2" onClick={() => document.getElementById(s.target)?.focus()}>{s.text}</button> : s.text}

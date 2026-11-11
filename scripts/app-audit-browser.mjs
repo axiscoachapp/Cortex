@@ -135,7 +135,7 @@ async function supabase(route) {
       body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') });
   if (path === '/functions/v1/whatsapp-api') return respond(route, whatsappAnswer(request.postDataJSON?.() ?? {}));
   if (path === '/functions/v1/intake-api') return respond(route, intakeAnswer(request.postDataJSON?.() ?? {}));
-  if (path === '/functions/v1/intake-public') return respond(route, intakePublicAnswer(request.postDataJSON?.() ?? {}));
+  if (path === '/functions/v1/intake-public') { const [body, status] = intakePublicAnswer(request.postDataJSON?.() ?? {}); return respond(route, body, status); }
   if (path === '/functions/v1/billing-api') return respond(route, billingAnswer(request.postDataJSON?.() ?? {}));
   if (process.env.AUDIT_OPENAI_MIGRATION === '1' && path === '/functions/v1/chat-assistant')
     return respond(route, { message: 'Resposta sintética para revisão médica.', safety: { status: 'not_assessed' }, coverage: { limited: true, knowledge: 'unavailable' }, sources: [] });
@@ -342,9 +342,20 @@ function intakeAnswer(body) {
     default: return { error: 'Operação externa bloqueada no ensaio', code: 'server' };
   }
 }
+// One token per state of the patient's page: A open (submit succeeds), B unknown link, C closed,
+// D already answered, E server failure. Answers are only echoed, never kept.
 function intakePublicAnswer(body) {
-  if (body.action === 'open') return { state: 'open', clinicName: 'Clínica Sintética', doctorName: 'Dra. Ana Exemplo', start: day(2), form: INTAKE_FORM, formRevision: 2, answeredAt: null, privacyVersion: 'v1' };
-  return { error: 'Operação externa bloqueada no ensaio', code: 'server' };
+  const kind = typeof body.token === 'string' ? body.token[0] : 'A';
+  const opened = { state: 'open', clinicName: 'Clínica Sintética', doctorName: 'Dra. Ana Exemplo', start: day(2), form: INTAKE_FORM, formRevision: 2, answeredAt: null, privacyVersion: 'v1' };
+  if (kind === 'B') return [{ error: 'Link inválido ou vencido.', code: 'not_found' }, 404];
+  if (kind === 'E') return [{ error: 'Não foi possível concluir agora.', code: 'server' }, 500];
+  if (body.action === 'open') {
+    if (kind === 'C') return [{ ...opened, state: 'closed', form: null }];
+    if (kind === 'D') return [{ ...opened, state: 'answered', answeredAt: day(-1) }];
+    return [opened];
+  }
+  if (body.action === 'submit') return [{ answeredAt: now(), thanks: INTAKE_FORM.thanks }];
+  return [{ error: 'Operação externa bloqueada no ensaio', code: 'server' }, 500];
 }
 
 // Finance (synthetic): one plan, prices, charges in every state, a sent batch, cash and a report.
@@ -477,6 +488,10 @@ const ROUTES = [
   ['recepcao-pre-consultas', '/recepcao/pre-consultas'],
   ['recepcao-financeiro', '/recepcao/financeiro'],
   ['pre-consulta-paciente', `/pre-consulta/${'A'.repeat(43)}`],
+  ['pre-consulta-link-invalido', `/pre-consulta/${'B'.repeat(43)}`],
+  ['pre-consulta-encerrada', `/pre-consulta/${'C'.repeat(43)}`],
+  ['pre-consulta-respondida', `/pre-consulta/${'D'.repeat(43)}`],
+  ['pre-consulta-erro', `/pre-consulta/${'E'.repeat(43)}`],
   ['financeiro', '/financeiro'],
   ['config-conexoes', '/configuracoes?secao=conexoes'],
   ['config-permissoes', '/configuracoes?secao=permissoes'],
@@ -619,14 +634,15 @@ try {
         await expect(page.getByRole('button', { name: 'Conectar número', exact: true })).toHaveCount(0);
         await expect(page.getByRole('button', { name: 'Desconectar', exact: true })).toHaveCount(0);
         if (path === '/configuracoes?secao=implantacao') {
-          await expect(page.getByText('Desativado', { exact: true })).toBeVisible();
+          await expect(page.getByText('Copiloto ao vivo')).toHaveCount(0);
           if (WORKSPACE_ROLE === 'reception') await expect(page.getByRole('heading', { name: 'Seu cadastro profissional' })).toHaveCount(0);
           else await expect(page.getByRole('heading', { name: 'Seu cadastro profissional' })).toBeVisible();
         }
         if (path === '/configuracoes') {
           await page.goto(origin + '/configuracoes?origin=audit');
-          await page.getByLabel('Acessar seção').selectOption('implantacao');
-          await expect(page.getByRole('region', { name: 'Dados da implantação' })).toBeVisible();
+          const setupLabel = WORKSPACE_ROLE === 'reception' ? 'Dados da clínica' : 'Seu cadastro profissional';
+          await page.getByRole('button', { name: new RegExp('^' + setupLabel) }).first().click();
+          await expect(page.getByRole('region', { name: setupLabel })).toBeVisible();
           if (new URL(page.url()).searchParams.get('origin') !== 'audit') throw new Error('Settings navigation lost context parameters');
           await page.screenshot({ path: resolve(artifacts, `${label}-config-navegacao.png`), fullPage: FULL_PAGE });
           report.routes[`${label} configurações navegação`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
@@ -792,6 +808,25 @@ try {
           if (await payer.count()) { await payer.click(); await snap('convenio-dialogo'); await close(); }
         }
       }
+      // Patient form: errors after an empty send, then a filled send and the success screen.
+      if (path === `/pre-consulta/${'A'.repeat(43)}`) {
+        const send = page.getByRole('button', { name: 'Enviar respostas' });
+        if (await send.count()) {
+          await send.click();
+          await page.waitForTimeout(400);
+          await page.screenshot({ path: resolve(artifacts, `${label}-pre-consulta-erros.png`), fullPage: FULL_PAGE });
+          await page.getByLabel(/Nome completo/).fill('Paciente Sintética');
+          await page.getByLabel(/Data de nascimento/).fill('1990-05-20');
+          await page.getByLabel(/^CPF/).fill('52998224725');
+          await page.getByRole('radio', { name: 'Particular' }).click();
+          await page.getByLabel(/motivo da consulta/).fill('Rotina (texto sintético).');
+          await page.getByRole('checkbox', { name: /Li o aviso de privacidade/ }).click();
+          await send.click();
+          await page.getByText('Pronto! Respostas enviadas').waitFor({ timeout: 5000 }).catch(() => {});
+          await page.screenshot({ path: resolve(artifacts, `${label}-pre-consulta-sucesso.png`), fullPage: FULL_PAGE });
+          report.routes[`${label} pre-consulta sucesso`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        }
+      }
       // Pre-consultation answers dialog (reception list).
       if (path === '/pre-consultas') {
         const view = page.getByRole('button', { name: 'Ver respostas' }).first();
@@ -858,6 +893,15 @@ try {
       }
       // Menu bot: the editor and a local simulated conversation (nothing is sent).
       if (CLINIC_ADMIN && path === '/configuracoes?secao=whatsapp') {
+        // The settings open on "Lembretes automáticos"; the bot and the number have their own tabs.
+        const botTab = page.getByRole('tab', { name: 'Robô de atendimento' });
+        if (await botTab.count()) {
+          await botTab.click();
+          await page.screenshot({ path: resolve(artifacts, `${label}-whatsapp-aba-robo.png`), fullPage: FULL_PAGE });
+          await page.getByRole('tab', { name: 'Número e modelos' }).click();
+          await page.screenshot({ path: resolve(artifacts, `${label}-whatsapp-aba-numero.png`), fullPage: FULL_PAGE });
+          await botTab.click();
+        }
         const editor = page.locator('div.rounded-xl', { has: page.getByText('Robô de atendimento', { exact: true }) }).first();
         if (await editor.count()) {
           await editor.scrollIntoViewIfNeeded();
