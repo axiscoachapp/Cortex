@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Printer, Copy, Check, Loader2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Printer, Copy, Check, Loader2, X, Pencil } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { escapeHtml } from '@/lib/printDoc';
 import { Button } from '@/components/ui/button';
 import {
@@ -63,12 +64,25 @@ export function DocumentPreviewModal({
 }: DocumentPreviewModalProps) {
   const [copied, setCopied] = useState(false);
   const [error,setError]=useState('');
+  // The doctor may edit the generated text before copying or printing it.
+  const [draft, setDraft] = useState(content);
+  const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    setDraft(content);
+    setEditing(false);
+  }, [content]);
+
+  // A generated document exists only here; closing loses it (and regenerating costs credits).
+  const requestClose = () => {
+    if (!isLoading && draft.trim() && !window.confirm('Fechar e descartar este documento? Para gerá-lo de novo, a IA será usada outra vez.')) return;
+    onClose();
+  };
 
   const title = type === 'patient_summary' ? 'Resumo para o Paciente' : 'Encaminhamento Médico';
 
   const handleCopy = async () => {
     setError('');
-    try {await navigator.clipboard.writeText(content);}
+    try {await navigator.clipboard.writeText(draft);}
     catch {setError('Não foi possível copiar. Selecione o texto e copie manualmente ou permita o acesso à área de transferência.');return;}
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -95,7 +109,7 @@ export function DocumentPreviewModal({
 <body>
   <h1>${escapeHtml(title)}</h1>
   <p class="meta">Paciente: ${escapeHtml(patientName)} · ${new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-  <div>${content
+  <div>${draft
     .split('\n')
     .map(line => {
       // Escape BEFORE re-introducing the intended markup — the content is
@@ -111,17 +125,18 @@ export function DocumentPreviewModal({
 </html>`);
     win.document.close();
     win.focus();
+    // Close only after printing: closing right after print() can cancel it on iOS.
+    win.addEventListener('afterprint', () => win.close(), { once: true });
     win.print();
-    win.close();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) requestClose(); }}>
       <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-lg max-h-[90vh] flex flex-col gap-0 p-0">
         <DialogHeader className="px-5 py-4 border-b border-border/50 shrink-0">
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="text-base font-semibold">{title}</DialogTitle>
-            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fechar prévia do documento" className="h-7 w-7 text-muted-foreground shrink-0">
+            <Button variant="ghost" size="icon" onClick={requestClose} aria-label="Fechar prévia do documento" className="h-10 w-10 text-muted-foreground shrink-0">
               <X className="w-3.5 h-3.5" />
             </Button>
           </div>
@@ -135,15 +150,32 @@ export function DocumentPreviewModal({
               <Loader2 className="w-7 h-7 animate-spin text-medical-blue" />
               <p className="text-sm text-muted-foreground">Gerando documento...</p>
             </div>
+          ) : editing ? (
+            <Textarea
+              aria-label={`Texto do documento: ${title}`}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              className="min-h-[320px] text-sm leading-relaxed"
+            />
           ) : (
             <div className="space-y-0.5">
-              {content.split('\n').map((line, i) => renderDocumentLine(line, i))}
+              {draft.split('\n').map((line, i) => renderDocumentLine(line, i))}
             </div>
           )}
         </div>
 
         {!isLoading && content && (
-          <div className="px-5 py-3 border-t border-border/50 shrink-0 flex gap-2">
+          <div className="px-5 py-3 border-t border-border/50 shrink-0 flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditing((value) => !value)}
+              className="gap-2"
+              aria-pressed={editing}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              {editing ? 'Ver documento' : 'Editar texto'}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -155,6 +187,7 @@ export function DocumentPreviewModal({
             <Button
               size="sm"
               onClick={handlePrint}
+              disabled={!draft.trim()}
               className="gap-2"
             >
               <Printer className="w-3.5 h-3.5" />

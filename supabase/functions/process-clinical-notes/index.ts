@@ -78,12 +78,8 @@ serve(async (req) => {
     // The doctor's note is saved first and verbatim, whatever happens to the AI step.
     const stamp = `[${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}]`;
     const updatedNotes = patient.clinical_notes
-      ? `${patient.clinical_notes}
-
-${stamp}
-${notes}`
-      : `${stamp}
-${notes}`;
+      ? `${patient.clinical_notes}\n\n${stamp}\n${notes}`
+      : `${stamp}\n${notes}`;
 
     const { data: saved, error: updateError } = await supabaseClient
       .from('patients')
