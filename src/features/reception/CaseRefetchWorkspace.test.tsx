@@ -10,8 +10,8 @@ import { ClinicAccessContext } from './accessContext';
 
 const actor = '11111111-1111-4111-8111-111111111111', clinic = '22222222-2222-4222-8222-222222222222', caseId = '33333333-3333-4333-8333-333333333333',
   contactId = '44444444-4444-4444-8444-444444444444', doctor = '55555555-5555-4555-8555-555555555555';
-const mocks = vi.hoisted(() => ({ queue: vi.fn(), detail: vi.fn(), contact: vi.fn(), saveDraft: vi.fn(), patients: vi.fn(), book: vi.fn(), sessionActor: vi.fn() }));
-vi.mock('./api', () => ({ receptionApi: { queue: mocks.queue, case: mocks.detail, contact: mocks.contact, saveDraft: mocks.saveDraft, patients: mocks.patients, book: mocks.book, sessionActor: mocks.sessionActor } }));
+const mocks = vi.hoisted(() => ({ queue: vi.fn(), detail: vi.fn(), contact: vi.fn(), saveDraft: vi.fn(), patients: vi.fn(), book: vi.fn(), sessionActor: vi.fn(), appointments: vi.fn(), busy: vi.fn() }));
+vi.mock('./api', () => ({ receptionApi: { queue: mocks.queue, case: mocks.detail, contact: mocks.contact, saveDraft: mocks.saveDraft, patients: mocks.patients, book: mocks.book, sessionActor: mocks.sessionActor, appointments: mocks.appointments, busyIntervals: mocks.busy } }));
 vi.mock('./WhatsAppInbox', () => ({ default: () => null }));
 // The queue page also reads the unread WhatsApp count; it is not what this test is about.
 vi.mock('./whatsappApi', () => ({ whatsappApi: { conversations: async () => ({ conversations: [], nextBefore: null }) } }));
@@ -30,6 +30,8 @@ beforeEach(() => {
   mocks.patients.mockReset().mockResolvedValue([]);
   mocks.book.mockReset();
   mocks.sessionActor.mockReset().mockResolvedValue(actor);
+  mocks.appointments.mockReset().mockResolvedValue({ items: [], blocks: [] });
+  mocks.busy.mockReset().mockResolvedValue([]);
 });
 function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -48,18 +50,18 @@ describe('case workspace survives a failed background refetch', () => {
   it('C1: keeps the open booking dialog and its contents, pausing only the confirmation', async () => {
     const { client } = mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Agendar consulta' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Confirmar agendamento' });
+    const dialog = await screen.findByRole('dialog', { name: 'Agendar consulta' });
     fireEvent.click(await screen.findByLabelText('Primeiro cadastro com este médico'));
     fireEvent.change(screen.getByLabelText('Nome do novo paciente'), { target: { value: 'Paciente sintética nova' } });
     await failOnce(client);
     expect(await screen.findByText('Falha de rede sintética')).toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: 'Confirmar agendamento' })).toBe(dialog);
+    expect(screen.getByRole('dialog', { name: 'Agendar consulta' })).toBe(dialog);
     expect(screen.getByDisplayValue('Paciente sintética nova')).toBeInTheDocument();
     expect(screen.getByText('Verificando acesso… O preenchimento continua preservado.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Confirmar agendamento' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Agendar (?!consulta)/ })).toBeDisabled();
     await refetchCase(client);
     await waitFor(() => expect(screen.queryByText('Verificando acesso… O preenchimento continua preservado.')).toBeNull());
-    expect(screen.getByRole('dialog', { name: 'Confirmar agendamento' })).toBe(dialog);
+    expect(screen.getByRole('dialog', { name: 'Agendar consulta' })).toBe(dialog);
     expect(screen.getByDisplayValue('Paciente sintética nova')).toBeInTheDocument();
     expect(screen.queryByText('Falha de rede sintética')).toBeNull();
     expect(mocks.book).not.toHaveBeenCalled();
@@ -91,9 +93,9 @@ describe('case workspace survives a failed background refetch', () => {
   it('removes the case at once when the server definitively refuses it', async () => {
     const { client } = mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Agendar consulta' }));
-    await screen.findByRole('dialog', { name: 'Confirmar agendamento' });
+    await screen.findByRole('dialog', { name: 'Agendar consulta' });
     await failOnce(client, Object.assign(new Error('Você não tem mais permissão para esta ação. Atualize a página.'), { code: '42501' }));
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Confirmar agendamento' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Agendar consulta' })).toBeNull());
     expect(screen.queryByLabelText('Anotação')).toBeNull();
     expect(screen.queryByText('Contato sintético')).toBeNull();
   });

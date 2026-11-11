@@ -4,12 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BookingDialog } from './BookingDialog';
 import { confirmSessionExit } from '@/hooks/useUnsavedChanges';
 
-const mocks = vi.hoisted(() => ({ contact: vi.fn(), patients: vi.fn(), link: vi.fn(), book: vi.fn(), close: vi.fn() }));
+const mocks = vi.hoisted(() => ({ contact: vi.fn(), patients: vi.fn(), link: vi.fn(), book: vi.fn(), close: vi.fn(), appointments: vi.fn(), busy: vi.fn() }));
 const patient = { id: 'patient-a', name: 'Paciente sintético A', dateOfBirth: null };
 const otherPatient = { id: 'patient-b', name: 'Paciente sintético B', dateOfBirth: null };
 const snapshot = { id: 'contact', clinicId: 'clinic', name: 'Contato sintético', phone: '', beneficiaries: [{ ...patient, doctorId: 'doctor', relationship: 'guardian' }] };
 vi.mock('./accessContext', () => ({ useClinicAccess: () => ({ actorId: 'staff', clinic: { id: 'clinic' }, doctors: [{ id: 'doctor', name: 'Médico sintético' }] }) }));
-vi.mock('./api', () => ({ receptionApi: { contact: mocks.contact, patients: mocks.patients, linkPatient: mocks.link, book: mocks.book } }));
+vi.mock('./api', () => ({ receptionApi: { contact: mocks.contact, patients: mocks.patients, linkPatient: mocks.link, book: mocks.book, appointments: mocks.appointments, busyIntervals: mocks.busy } }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('./ContactSearch', () => ({ ContactSearch: ({ onSelect }: { onSelect: (contact: typeof snapshot) => void }) => <button onClick={() => onSelect(snapshot)}>Selecionar contato sintético</button> }));
 function mount() {
@@ -19,7 +19,7 @@ function mount() {
   return client;
 }
 const relationship = () => screen.getByLabelText('Relação do contato com o paciente');
-const confirm = () => fireEvent.click(screen.getByRole('checkbox', { name: /Conferi o paciente/ }));
+const save = () => screen.getByRole('button', { name: /^Agendar / });
 describe('reception booking relationship confirmation', () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -27,6 +27,8 @@ describe('reception booking relationship confirmation', () => {
     mocks.patients.mockResolvedValue([patient, otherPatient]);
     mocks.link.mockResolvedValue(true);
     mocks.book.mockResolvedValue('booking');
+    mocks.appointments.mockResolvedValue({ items: [], blocks: [] });
+    mocks.busy.mockResolvedValue([]);
   });
   it('preserves and locks the relationship of a linked patient when found through search', async () => {
     mount();
@@ -37,8 +39,7 @@ describe('reception booking relationship confirmation', () => {
     fireEvent.click(results.at(-1)!);
     expect(relationship()).toHaveValue('guardian');
     expect(relationship()).toBeDisabled();
-    confirm();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar agendamento' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Agendar / }));
     await waitFor(() => expect(mocks.close).toHaveBeenCalledOnce());
     expect(mocks.link).toHaveBeenCalledWith('contact', 'doctor', patient.id, 'guardian');
   });
@@ -50,8 +51,7 @@ describe('reception booking relationship confirmation', () => {
     fireEvent.click(await screen.findByRole('button', { name: otherPatient.name }));
     expect(relationship()).toBeEnabled();
     fireEvent.change(relationship(), { target: { value: 'family' } });
-    confirm();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar agendamento' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Agendar / }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Horário ocupado');
     expect(relationship()).toHaveValue('family');
     expect(relationship()).toBeDisabled();
@@ -78,9 +78,9 @@ describe('reception booking relationship confirmation', () => {
     mocks.contact.mockResolvedValue({ ...snapshot, beneficiaries: [{ ...snapshot.beneficiaries[0], relationship: 'family' }] });
     await act(async () => { await client.invalidateQueries({ queryKey: ['reception'] }); });
     expect(relationship()).toHaveValue('guardian');
-    await screen.findByText(/O vínculo selecionado mudou/);
-    expect(screen.getByRole('button', { name: 'Confirmar agendamento' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar agendamento' }));
+    await screen.findByText(/A relação registrada mudou/);
+    expect(save()).toBeDisabled();
+    fireEvent.click(await screen.findByRole('button', { name: /^Agendar / }));
     expect(mocks.link).not.toHaveBeenCalled();
     expect(mocks.book).not.toHaveBeenCalled();
   });
@@ -89,9 +89,8 @@ describe('reception booking relationship confirmation', () => {
     mocks.link.mockReturnValue(new Promise<boolean>((resolve) => { finish = resolve; }));
     mount();
     fireEvent.click(await screen.findByRole('button', { name: patient.name }));
-    confirm();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar agendamento' }));
-    await screen.findByRole('button', { name: 'Confirmando…' });
+    fireEvent.click(await screen.findByRole('button', { name: /^Agendar / }));
+    await screen.findByRole('button', { name: 'Agendando…' });
     const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
     expect(confirmSessionExit()).toBe(false);
     await act(async () => { finish!(true); });
@@ -108,8 +107,7 @@ describe('reception booking relationship confirmation', () => {
     fireEvent.change(screen.getByLabelText('Buscar outro paciente na agenda deste médico'), { target: { value: 'Outro' } });
     fireEvent.click(await screen.findByRole('button', { name: otherPatient.name }));
     fireEvent.change(relationship(), { target: { value: 'family' } });
-    confirm();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar agendamento' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Agendar / }));
     await waitFor(() => expect(mocks.link).toHaveBeenCalledOnce());
     mocks.contact.mockReturnValue(new Promise<typeof snapshot>((resolve) => { finishRead = resolve; }));
     let refresh!: Promise<void>;
