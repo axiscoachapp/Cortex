@@ -738,8 +738,10 @@ try {
             await page.getByRole('dialog').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
           };
           // On the phone the "Perfil" tab opens the full profile over the patient panel.
+          // The Perfil tab shows the patient panel; the full profile opens from it.
           if (viewport.width < SHELL_BREAKPOINT) await page.getByRole('button', { name: 'Perfil', exact: true }).last().click();
-          else await page.getByRole('button', { name: /Perfil completo/i }).click();
+          const fullProfile = page.getByRole('button', { name: /Perfil completo/i }).first();
+          if (await fullProfile.isVisible().catch(() => false)) await fullProfile.click();
           await expect(page.getByRole('dialog')).toBeVisible();
           await snap('perfil');
           await closeDialog();
@@ -1023,9 +1025,9 @@ try {
       await composer.getByRole('button', { name: 'Gerar documento' }).click();
       await expect(composer.getByRole('alert').filter({ hasText: 'Nada foi perdido' })).toBeVisible({ timeout: 10000 });
       await shot('consulta-documento-falhou');
-      page.once('dialog', (d) => d.accept());
-      await composer.getByRole('button', { name: 'Cancelar' }).click();
-      await composer.waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+      // The composer is dirty (its confirm is dismissed here): reload instead of closing it.
+      await page.goto(origin + `/?patient=${pid(1)}`);
+      await expect(page.getByRole('heading', { name: 'Paciente Sintética 1', exact: true }).first()).toBeVisible({ timeout: 15000 });
       // Issued documents: "Abrir" and a "⋯" menu per row.
       if (viewport.width < SHELL_BREAKPOINT) await page.getByRole('button', { name: 'Perfil', exact: true }).last().click();
       const full = page.getByRole('button', { name: /Perfil completo/i }).first();

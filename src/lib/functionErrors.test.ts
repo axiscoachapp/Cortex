@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AI_UNAVAILABLE_FAILURE,
   BUSY_FAILURE,
   CONNECTION_FAILURE,
   FAILURE_SENTENCES,
@@ -25,7 +26,8 @@ describe('plainFailureMessage (round 3, M 11)', () => {
     expect(await plainFailureMessage(new Error('Failed to send a request to the Edge Function'), 'document')).toBe(CONNECTION_FAILURE);
     expect(await plainFailureMessage({ name: 'FunctionsFetchError', message: 'x' }, 'question')).toBe(CONNECTION_FAILURE);
     expect(await plainFailureMessage(http(401, { error: 'JWT expired' }), 'question')).toBe(SESSION_FAILURE);
-    expect(await plainFailureMessage(http(503, { error: 'IA indisponível: integração OpenAI ainda não ativada.' }), 'question')).toBe(UNAVAILABLE_FAILURE);
+    expect(await plainFailureMessage(http(503, { error: 'IA indisponível: integração OpenAI ainda não ativada.' }), 'question')).toBe(AI_UNAVAILABLE_FAILURE);
+    expect(await plainFailureMessage(http(503, { error: 'Não foi possível consultar a base Anvisa.' }), 'document')).toBe(UNAVAILABLE_FAILURE);
     expect(await plainFailureMessage(http(400, { error: 'x', code: 'not_configured' }), 'document')).toBe(UNAVAILABLE_FAILURE);
     expect(await plainFailureMessage(http(429, { limited: true }), 'question')).toBe(BUSY_FAILURE);
     expect(await plainFailureMessage(http(400, { error: 'Dados do prescritor incompletos', missingPrescriber: true }), 'document')).toBe(PRESCRIBER_FAILURE);

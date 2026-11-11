@@ -73,6 +73,8 @@ export const FAILURE_SENTENCES: Record<FailedAction, string> = {
 
 export const CONNECTION_FAILURE = 'Sem conexão com o servidor. Nada foi perdido. Verifique a internet e tente de novo.';
 export const UNAVAILABLE_FAILURE = 'O serviço está indisponível agora. Nada foi perdido. Tente de novo em alguns minutos.';
+export const AI_UNAVAILABLE_FAILURE = 'A IA está indisponível agora. Nada foi perdido. Tente de novo em alguns minutos.';
+const AI_ACTIONS: ReadonlySet<FailedAction> = new Set(['aiDocument', 'question', 'comment', 'consultation']);
 export const SESSION_FAILURE = 'Sua sessão terminou. Entre de novo para continuar. Nada foi perdido.';
 export const BUSY_FAILURE = 'Muitas solicitações seguidas. Aguarde um minuto e tente de novo. Nada foi perdido.';
 export const PRESCRIBER_FAILURE =
@@ -95,7 +97,7 @@ export async function plainFailureMessage(error: unknown, action: FailedAction):
   const body = await functionErrorBody(error);
   if (body?.missingPrescriber) return PRESCRIBER_FAILURE;
   if (status === 401) return SESSION_FAILURE;
-  if (status === 503 || body?.code === 'not_configured') return UNAVAILABLE_FAILURE;
+  if (status === 503 || body?.code === 'not_configured') return AI_ACTIONS.has(action) ? AI_UNAVAILABLE_FAILURE : UNAVAILABLE_FAILURE;
   if (status === 429 && !body?.quotaExceeded) return BUSY_FAILURE;
   const text = typeof body?.error === 'string' ? body.error.trim() : '';
   if (status === 422 && text && !TECHNICAL_MESSAGES.some((re) => re.test(text)) && /[ãáéíóúçõâêô]|\b(não|informe|complete|paciente)\b/i.test(text))

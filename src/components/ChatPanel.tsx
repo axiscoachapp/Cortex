@@ -2704,7 +2704,7 @@ export function ChatPanel({
             <UsageMeter variant="inline" className="ml-auto shrink-0" />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <input
               ref={attachInputRef}
               type="file"
@@ -2721,7 +2721,7 @@ export function ChatPanel({
               title={inputMode === 'question' ? 'Trocar para comentário' : 'Trocar para pergunta'}
               onClick={() => setInputMode(inputMode === 'question' ? 'comment' : 'question')}
               className={cn(
-                'sm:hidden h-10 w-10 shrink-0 rounded-xl',
+                'sm:hidden h-9 w-9 shrink-0 rounded-xl',
                 inputMode === 'question' ? 'bg-medical-blue/10 text-medical-blue' : 'bg-amber-100 text-amber-800',
               )}
             >
@@ -2749,7 +2749,7 @@ export function ChatPanel({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSubmit();
                 }}
-                placeholder={inputMode === 'question' ? 'Faça uma pergunta' : 'Comentário clínico'}
+                placeholder={inputMode === 'question' ? 'Pergunte à IA' : 'Comentário'}
                 title={
                   inputMode === 'question'
                     ? 'Pergunte ao assistente — o que conversamos na última consulta?'
