@@ -2,7 +2,7 @@ import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts'
 import { readJsonObject, RequestError } from '../_shared/http.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
-import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
+import { checkQuota, recordUsage, creditsFromUsage, QuotaExceededError } from '../_shared/quota.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 import { parseModelObject } from '../_shared/gemini.ts';
 import { assertPromptSize } from '../_shared/modelInput.ts';
@@ -55,9 +55,6 @@ serve(async (req) => {
       });
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
-
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -65,7 +62,7 @@ serve(async (req) => {
 
     const { data: patient, error: patientError } = await supabaseClient
       .from('patients')
-      .select('clinical_notes, ai_insights, revision')
+      .select('clinical_notes, revision')
       .eq('id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -78,55 +75,74 @@ serve(async (req) => {
       });
     }
 
-    const prompt = `Notas clínicas novas:
-${notes}
-
-Notas anteriores:
-${patient?.clinical_notes || 'Nenhuma nota anterior'}`;
-    assertPromptSize(prompt, SYSTEM);
-
-    let reservationId: string;
-    try {
-      assertOpenAiEnabled();
-      ({ reservationId } = await checkQuota(supabaseClient, userId, 100));
-    } catch (err) {
-      if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
-      throw err;
-    }
-
-    const { text: rawText, usage } = await callClinicalText(OPENAI_API_KEY, [{ text: prompt }], {
-      systemInstruction: SYSTEM,
-      maxOutputTokens: 1024,
-      responseSchema: INSIGHTS_SCHEMA,
-    });
-    await recordUsage(supabaseClient, userId, creditsFromUsage(usage), reservationId);
-    const insights = parseModelObject(rawText, INSIGHTS_SCHEMA);
-
+    // The doctor's note is saved first and verbatim, whatever happens to the AI step.
     const stamp = `[${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}]`;
-    const updatedNotes = patient?.clinical_notes
-      ? `${patient.clinical_notes}\n\n${stamp}\n${notes}`
-      : `${stamp}\n${notes}`;
+    const updatedNotes = patient.clinical_notes
+      ? `${patient.clinical_notes}
+
+${stamp}
+${notes}`
+      : `${stamp}
+${notes}`;
 
     const { data: saved, error: updateError } = await supabaseClient
       .from('patients')
-      .update({ clinical_notes: updatedNotes, ai_insights: insights })
+      .update({ clinical_notes: updatedNotes })
       .eq('id', patientId)
       .eq('user_id', userId)
       .eq('revision', patient.revision)
-      .select('id')
+      .select('id, revision')
       .maybeSingle();
 
     if (updateError) throw updateError;
     if (!saved) throw new RequestError('O prontuário foi alterado. Recarregue e envie as anotações novamente.', 409);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        insights,
-        message: 'Notas processadas e perfil atualizado.',
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    const respond = (body: Record<string, unknown>) =>
+      new Response(JSON.stringify({ success: true, saved: true, revision: saved.revision, ...body }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+
+    // Insights are only a proposal: they are returned for the doctor to accept
+    // or discard and never written to the patient row here.
+    const prompt = `Notas clínicas novas:
+${notes}
+
+Notas anteriores:
+${patient.clinical_notes || 'Nenhuma nota anterior'}`;
+
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    let reservationId: string;
+    try {
+      assertOpenAiEnabled();
+      if (!OPENAI_API_KEY) throw new RequestError('IA indisponível', 503);
+      assertPromptSize(prompt, SYSTEM);
+      ({ reservationId } = await checkQuota(supabaseClient, userId, 100));
+    } catch (err) {
+      if (err instanceof QuotaExceededError)
+        return respond({
+          insights: null,
+          quotaExceeded: true,
+          message: 'Anotação salva. O limite diário de IA foi atingido; os insights não foram gerados.',
+        });
+      if (err instanceof RequestError)
+        return respond({ insights: null, message: 'Anotação salva. A IA está indisponível; os insights não foram gerados.' });
+      throw err;
+    }
+
+    let insights: Record<string, unknown>;
+    try {
+      const { text: rawText, usage } = await callClinicalText(OPENAI_API_KEY, [{ text: prompt }], {
+        systemInstruction: SYSTEM,
+        maxOutputTokens: 1024,
+        responseSchema: INSIGHTS_SCHEMA,
+      });
+      await recordUsage(supabaseClient, userId, creditsFromUsage(usage), reservationId);
+      insights = parseModelObject(rawText, INSIGHTS_SCHEMA);
+    } catch {
+      return respond({ insights: null, message: 'Anotação salva. Não foi possível gerar os insights agora.' });
+    }
+
+    return respond({ insights, message: 'Anotação salva. Revise os insights sugeridos pela IA antes de aceitar.' });
   } catch (error) {
     if (error instanceof RequestError)
       return new Response(JSON.stringify({ error: error.message }), {

@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { printMedicationList } from '@/lib/printDoc';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { hasInsights, useInsightsProposal, type AIInsights } from '@/hooks/useInsightsProposal';
 import { functionErrorBody, functionErrorMessage } from '@/lib/functionErrors';
 
 interface PatientSnapshotProps {
@@ -82,6 +83,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
   const draftKey = `${userId ?? ''}/${patient?.id ?? ''}`;
   const notes = drafts[draftKey] ?? '';
   const isProcessing = processing[draftKey] ?? false;
+  const { proposal, setProposal } = useInsightsProposal(patient?.id, userId);
   const hasWork = Object.values(drafts).some(value => value.trim()) || Object.values(processing).some(Boolean);
   useEffect(() => { onWorkStateChange?.(hasWork); }, [hasWork, onWorkStateChange]);
 
@@ -153,7 +155,10 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
         }
         throw error;
       }
-      toast({ title: 'Notas processadas!', description: data.message || 'Perfil atualizado com insights da IA.' });
+      // The note is saved; insights only come back as a proposal to review.
+      const insights = data?.insights as AIInsights | null | undefined;
+      if (hasInsights(insights)) setProposal({ insights, createdAt: new Date().toISOString() });
+      toast({ title: 'Anotação salva', description: data?.message || 'A anotação foi salva no prontuário.' });
       setDrafts(prev => prev[submittedKey] === submitted ? { ...prev, [submittedKey]: '' } : prev);
       queryClient.invalidateQueries({ queryKey: ['patient-clinical-notes', patient.id] });
       queryClient.invalidateQueries({ queryKey: ['patient-detail', patient.id] });
@@ -356,6 +361,14 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
             <Sparkles className="w-3.5 h-3.5" />
             {isProcessing ? 'Processando...' : 'Processar com IA'}
           </Button>
+          {proposal && (
+            <div role="status" className="mt-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs space-y-1.5">
+              <p>A IA sugeriu insights a partir das anotações. Nada foi gravado no perfil.</p>
+              <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => setDrawerOpen(true)}>
+                Revisar insights
+              </Button>
+            </div>
+          )}
         </section>
       </div>
 

@@ -29,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { printSoap, printDossier, escapeHtml } from '@/lib/printDoc';
@@ -39,6 +40,7 @@ import { PrescriptionList } from '@/components/PrescriptionList';
 import { UsageMeter } from '@/components/UsageMeter';
 import { fetchAllRows } from '@/lib/pagination';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { hasInsights, useInsightsProposal, type AIInsights } from '@/hooks/useInsightsProposal';
 
 interface PatientProfileDrawerProps {
   patient: Patient | null;
@@ -48,15 +50,6 @@ interface PatientProfileDrawerProps {
   onAskAI?: () => void;
 }
 
-interface AIInsights {
-  symptoms?: string[];
-  behavioral_observations?: string[];
-  risk_factors?: string[];
-  family_history?: string[];
-  social_factors?: string[];
-  clinical_changes?: string[];
-  summary?: string;
-}
 
 interface Consultation {
   id: string;
@@ -106,12 +99,15 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
   const [saveError, setSaveError] = useState('');
   const [conflict, setConflict] = useState(false);
   const [visibleHistory, setVisibleHistory] = useState(50);
+  const [acceptingInsights, setAcceptingInsights] = useState(false);
+  const [insightsError, setInsightsError] = useState('');
   useUnsavedChanges(!!editingField && draftValue !== editBase);
   const activePatientId = useRef(patient?.id);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { prescriber } = useUserSettings();
+  const { proposal, setProposal } = useInsightsProposal(patient?.id, user?.id);
   const access = useClinicAccess();
   const printAuthor = {
     name: prescriber.doctorName,
@@ -131,6 +127,8 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
     setConflict(false);
     setSaving(false);
     setVisibleHistory(50);
+    setInsightsError('');
+    setAcceptingInsights(false);
     activePatientId.current = patient?.id;
   }, [patient?.id]);
   useEffect(() => {
@@ -293,6 +291,46 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
       if (activePatientId.current === requestedId) setSaving(false);
     }
   };
+  /* ── AI insights proposal ─────────────────────────────────────────── */
+  const acceptInsights = async () => {
+    if (!patient?.id || !proposal || !detailReady || acceptingInsights) return;
+    const requestedId = patient.id;
+    setAcceptingInsights(true);
+    setInsightsError('');
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .update({ ai_insights: proposal.insights as Json })
+        .eq('id', requestedId)
+        .eq('revision', detail.revision)
+        .select('id')
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        if (activePatientId.current === requestedId) {
+          setInsightsError('O prontuário foi alterado em outra tela. Os dados foram atualizados; confira e aceite de novo.');
+          await refetchDetail();
+        }
+        return;
+      }
+      setProposal(null);
+      queryClient.invalidateQueries({ queryKey: ['patient-detail', requestedId] });
+      toast({ title: 'Insights aceitos', description: 'Os insights foram salvos no perfil.' });
+    } catch {
+      if (activePatientId.current === requestedId)
+        setInsightsError('Não foi possível salvar os insights. A sugestão foi mantida; tente novamente.');
+    } finally {
+      if (activePatientId.current === requestedId) setAcceptingInsights(false);
+    }
+  };
+
+  const discardInsights = () => {
+    if (acceptingInsights) return;
+    if (!window.confirm('Descartar os insights sugeridos? Para gerar de novo será preciso processar as anotações outra vez.')) return;
+    setProposal(null);
+    setInsightsError('');
+  };
+
   const requestOpenChange = (next: boolean) => {
     if (
       saving ||
@@ -554,77 +592,49 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
             )}
 
             {/* AI Insights */}
-            <section className="space-y-3">
+            <section className="space-y-3" aria-labelledby="ai-insights-title">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Brain className="w-4 h-4 text-primary" />
                 </div>
-                <h3 className="font-semibold text-foreground">Insights da IA</h3>
+                <h3 id="ai-insights-title" className="font-semibold text-foreground">Insights da IA</h3>
               </div>
-              {!detailReady ? null : aiInsights && Object.keys(aiInsights).length > 0 ? (
-                <div className="pl-10 space-y-4">
-                  {aiInsights.summary && (
-                    <div className="p-4 rounded-lg bg-medical-blue-light/30 border border-medical-blue/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="w-4 h-4 text-medical-blue" />
-                        <span className="text-xs font-semibold text-medical-blue uppercase">Resumo</span>
-                      </div>
-                      <p className="text-sm text-foreground/90 leading-relaxed">{aiInsights.summary}</p>
+              {proposal && (
+                <div className="pl-10 space-y-3">
+                  <div className="p-4 rounded-lg border border-primary/40 bg-primary/5 space-y-4">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Sugestão da IA para revisar</p>
+                      <p className="text-xs text-muted-foreground">
+                        Gerada a partir das suas anotações. Nada foi salvo no perfil até você aceitar.
+                      </p>
                     </div>
-                  )}
-                  {aiInsights.symptoms?.length ? (
-                    <InsightList
-                      title="Sintomas"
-                      items={aiInsights.symptoms}
-                      bullet="•"
-                      bulletColor="text-medical-blue"
-                    />
-                  ) : null}
-                  {aiInsights.behavioral_observations?.length ? (
-                    <InsightList
-                      title="Observações Comportamentais"
-                      items={aiInsights.behavioral_observations}
-                      bullet="•"
-                      bulletColor="text-medical-blue"
-                    />
-                  ) : null}
-                  {aiInsights.risk_factors?.length ? (
-                    <InsightList
-                      title="Fatores de Risco"
-                      items={aiInsights.risk_factors}
-                      bullet="⚠️"
-                      bulletColor="text-destructive"
-                    />
-                  ) : null}
-                  {aiInsights.family_history?.length ? (
-                    <InsightList
-                      title="Histórico Familiar"
-                      items={aiInsights.family_history}
-                      bullet="•"
-                      bulletColor="text-medical-blue"
-                    />
-                  ) : null}
-                  {aiInsights.social_factors?.length ? (
-                    <InsightList
-                      title="Fatores Sociais"
-                      items={aiInsights.social_factors}
-                      bullet="•"
-                      bulletColor="text-medical-blue"
-                    />
-                  ) : null}
-                  {aiInsights.clinical_changes?.length ? (
-                    <InsightList
-                      title="Mudanças Clínicas"
-                      items={aiInsights.clinical_changes}
-                      bullet="✓"
-                      bulletColor="text-success"
-                    />
-                  ) : null}
+                    <InsightsView insights={proposal.insights} />
+                    {insightsError && (
+                      <p role="alert" className="text-sm text-destructive">
+                        {insightsError}
+                      </p>
+                    )}
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                      <Button size="sm" variant="outline" onClick={discardInsights} disabled={acceptingInsights}>
+                        Descartar
+                      </Button>
+                      <Button size="sm" onClick={acceptInsights} disabled={acceptingInsights || !detailReady}>
+                        {acceptingInsights ? 'Salvando…' : 'Aceitar insights'}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              ) : (
+              )}
+              {!detailReady ? null : hasInsights(aiInsights) ? (
+                <div className="pl-10 space-y-4">
+                  {proposal && <p className="text-xs font-semibold text-muted-foreground uppercase">Salvos no perfil</p>}
+                  <InsightsView insights={aiInsights} />
+                </div>
+              ) : proposal ? null : (
                 <div className="pl-10 p-4 rounded-lg bg-secondary/50 border border-border">
                   <p className="text-sm text-muted-foreground">
-                    Nenhum insight gerado ainda. Cole notas longas em "Extrair com IA", no painel Perfil.
+                    Nenhum insight salvo. Escreva anotações em “Extrair com IA”, no painel do paciente, e revise a
+                    sugestão antes de salvar.
                   </p>
                 </div>
               )}
@@ -993,6 +1003,36 @@ function EditableSection({
         </ul>
       )}
     </section>
+  );
+}
+
+function InsightsView({ insights }: { insights: AIInsights }) {
+  const lists: Array<[keyof AIInsights, string, string, string]> = [
+    ['symptoms', 'Sintomas', '•', 'text-medical-blue'],
+    ['behavioral_observations', 'Observações comportamentais', '•', 'text-medical-blue'],
+    ['risk_factors', 'Fatores de risco', '⚠️', 'text-destructive'],
+    ['family_history', 'Histórico familiar', '•', 'text-medical-blue'],
+    ['social_factors', 'Fatores sociais', '•', 'text-medical-blue'],
+    ['clinical_changes', 'Mudanças clínicas', '✓', 'text-success'],
+  ];
+  return (
+    <div className="space-y-4">
+      {insights.summary && (
+        <div className="p-4 rounded-lg bg-medical-blue-light/30 border border-medical-blue/20">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="w-4 h-4 text-medical-blue" />
+            <span className="text-xs font-semibold text-medical-blue uppercase">Resumo</span>
+          </div>
+          <p className="text-sm text-foreground/90 leading-relaxed">{insights.summary}</p>
+        </div>
+      )}
+      {lists.map(([key, title, bullet, color]) => {
+        const items = insights[key];
+        return Array.isArray(items) && items.length ? (
+          <InsightList key={key} title={title} items={items} bullet={bullet} bulletColor={color} />
+        ) : null;
+      })}
+    </div>
   );
 }
 

@@ -80,4 +80,25 @@ describe('patient note ownership', () => {
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     }
   });
+  it('keeps AI insights as a suggestion to review after the note is saved', async () => {
+    api.invoke.mockResolvedValueOnce({ data: { saved: true, insights: { summary: 'Resumo sintético' }, message: 'Anotação salva.' }, error: null });
+    const user = userEvent.setup();
+    const { queryClient } = setup();
+    await user.type(screen.getByRole('textbox'), 'Nota sintética');
+    await user.click(screen.getByRole('button', { name: 'Processar com IA' }));
+    expect(await screen.findByRole('button', { name: 'Revisar insights' })).toBeInTheDocument();
+    expect(screen.getByText(/Nada foi gravado no perfil/)).toBeInTheDocument();
+    expect(queryClient.getQueryData(['ai-insights-proposal', 'A', 'doctor'])).toMatchObject({ insights: { summary: 'Resumo sintético' } });
+    expect(screen.getByRole('textbox')).toHaveValue('');
+  });
+
+  it('saves the note without a suggestion when the AI returns none', async () => {
+    api.invoke.mockResolvedValueOnce({ data: { saved: true, insights: null, message: 'Anotação salva. A IA está indisponível.' }, error: null });
+    const user = userEvent.setup();
+    setup();
+    await user.type(screen.getByRole('textbox'), 'Nota sintética');
+    await user.click(screen.getByRole('button', { name: 'Processar com IA' }));
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue(''));
+    expect(screen.queryByRole('button', { name: 'Revisar insights' })).not.toBeInTheDocument();
+  });
 });

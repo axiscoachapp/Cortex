@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   update: vi.fn(),
   detailError: null as unknown,
   detailRead: null as Promise<unknown> | null,
+  writeOk: false,
 }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'doctor' } }) }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
@@ -28,7 +29,11 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: () => {
     single: () => mocks.detailRead ?? Promise.resolve({ error: mocks.detailError, data: { revision: mocks.revision, ai_insights: { summary: 'Resumo sintético anterior' }, social_anamnesis: 'Anamnese sintética anterior', medical_history: mocks.revision === 2 ? 'Histórico anterior' : 'Atualização de outro atendimento', clinical_notes: 'Anotação sintética anterior' } }),
     range: () => Promise.resolve({ error: null, data: [] }),
     update: (patch: unknown) => { mocks.update(patch); return query; },
-    maybeSingle: () => { mocks.revision = 3; return Promise.resolve({ data: null, error: null }); },
+    maybeSingle: () => {
+      if (mocks.writeOk) return Promise.resolve({ data: { id: 'patient' }, error: null });
+      mocks.revision = 3;
+      return Promise.resolve({ data: null, error: null });
+    },
   }; return query;
 } } }));
 
@@ -44,6 +49,7 @@ beforeEach(() => {
   mocks.revision = 2;
   mocks.detailError = null;
   mocks.detailRead = null;
+  mocks.writeOk = false;
   vi.clearAllMocks();
 });
 
@@ -107,5 +113,52 @@ describe('Concurrent clinical history editing', () => {
     expect(screen.getByLabelText('Histórico Médico')).toBeDisabled();
     await user.click(await screen.findByRole('button', { name: /conferi a versão atual/i }));
     expect(screen.getByLabelText('Histórico Médico')).toBeEnabled();
+  });
+});
+
+describe('AI insights proposal', () => {
+  const proposal = { insights: { summary: 'Resumo sugerido sintético', family_history: ['Mãe com HAS'] }, createdAt: '2026-11-11T12:00:00Z' };
+  function renderWithProposal() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(['ai-insights-proposal', 'patient', 'doctor'], proposal);
+    render(<QueryClientProvider client={client}><PatientProfileDrawer patient={patient} open onOpenChange={vi.fn()} /></QueryClientProvider>);
+    return client;
+  }
+
+  it('shows suggested insights apart from the saved ones and writes them only on accept', async () => {
+    mocks.writeOk = true;
+    const client = renderWithProposal();
+    expect(await screen.findByText('Sugestão da IA para revisar')).toBeInTheDocument();
+    expect(screen.getByText('Resumo sugerido sintético')).toBeInTheDocument();
+    expect(await screen.findByText('Resumo sintético anterior')).toBeInTheDocument();
+    expect(mocks.update).not.toHaveBeenCalled();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Aceitar insights' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledWith({ ai_insights: proposal.insights }));
+    expect(mocks.eq).toHaveBeenCalledWith('revision', 2);
+    await waitFor(() => expect(screen.queryByText('Sugestão da IA para revisar')).not.toBeInTheDocument());
+    expect(client.getQueryData(['ai-insights-proposal', 'patient', 'doctor'])).toBeNull();
+  });
+
+  it('keeps the suggestion when the chart changed elsewhere', async () => {
+    renderWithProposal();
+    const user = userEvent.setup();
+    const accept = await screen.findByRole('button', { name: 'Aceitar insights' });
+    await waitFor(() => expect(accept).toBeEnabled());
+    await user.click(accept);
+    expect(await screen.findByRole('alert')).toHaveTextContent('alterado em outra tela');
+    expect(screen.getByText('Resumo sugerido sintético')).toBeInTheDocument();
+  });
+
+  it('discards the suggestion only after confirmation, without writing', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+    renderWithProposal();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Descartar' }));
+    expect(screen.getByText('Sugestão da IA para revisar')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Descartar' }));
+    await waitFor(() => expect(screen.queryByText('Sugestão da IA para revisar')).not.toBeInTheDocument());
+    expect(mocks.update).not.toHaveBeenCalled();
+    confirm.mockRestore();
   });
 });

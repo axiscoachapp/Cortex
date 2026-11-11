@@ -81,7 +81,6 @@ describe('OpenAI text handler integration', () => {
   it.each([
     ['create-template-ai', { mode: 'from_structure', specialty: 'geral' }],
     ['suggest-questions', { chiefComplaint: 'Synthetic complaint' }],
-    ['process-clinical-notes', { patientId, notes: 'Synthetic new note' }],
     ['generate-document', { type: 'patient_summary', soapNote: 'Synthetic note' }],
     ['analyze-document', { fileId }],
   ])('does not reserve quota or infer in %s until the provider is activated', async (name, body) => {
@@ -108,20 +107,36 @@ describe('OpenAI text handler integration', () => {
     expect(test.reserve).not.toHaveBeenCalled();
   });
 
-  it('uses OpenAI for notes while preserving owner and revision checks', async () => {
+  it('saves the note and returns OpenAI insights as a proposal without writing them', async () => {
     const test = handler('process-clinical-notes', insights);
-    expect((await test.run({ patientId, notes: 'Synthetic new note' })).status).toBe(200);
+    const result = await test.run({ patientId, notes: 'Synthetic new note' });
+    expect(result.status).toBe(200);
+    expect(await result.json()).toMatchObject({ saved: true, revision: 4, insights });
     expect(test.filters).toContainEqual(['user_id', userId]);
     expect(test.filters).toContainEqual(['revision', 4]);
     expect(test.generate).toHaveBeenCalledTimes(1);
-    expect(test.writes).toEqual([expect.objectContaining({ clinical_notes: expect.stringContaining('Original note'), ai_insights: insights })]);
+    expect(test.writes).toEqual([{ clinical_notes: expect.stringMatching(/Original note[\s\S]*Synthetic new note/) }]);
     expect(test.legacyGenerate).not.toHaveBeenCalled();
   });
 
-  it('does not overwrite notes changed during generation', async () => {
+  it.each([
+    ['the AI is off', { provider: 'not-enabled' }],
+    ['the server key is missing', { key: '' }],
+    ['generation fails', { failed: true }],
+  ])('saves the note verbatim when %s', async (_case, options) => {
+    const test = handler('process-clinical-notes', insights, options);
+    const result = await test.run({ patientId, notes: 'Synthetic new note' });
+    expect(result.status).toBe(200);
+    expect(await result.json()).toMatchObject({ saved: true, insights: null, message: expect.stringContaining('Anotação salva') });
+    expect(test.writes).toEqual([{ clinical_notes: expect.stringContaining('Synthetic new note') }]);
+  });
+
+  it('does not overwrite notes changed elsewhere and spends no credits on it', async () => {
     const test = handler('process-clinical-notes', insights, { concurrent: true });
     expect((await test.run({ patientId, notes: 'Synthetic new note' })).status).toBe(409);
     expect(test.writes).toEqual([]);
+    expect(test.reserve).not.toHaveBeenCalled();
+    expect(test.generate).not.toHaveBeenCalled();
   });
 
   it('saves the physician comment verbatim when OpenAI is not activated', async () => {
