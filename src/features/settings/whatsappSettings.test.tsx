@@ -52,6 +52,6 @@ describe('automation editor', () => {
     Object.assign(HTMLElement.prototype, { hasPointerCapture: () => false, releasePointerCapture: () => {}, scrollIntoView: () => {} });
     setup();
     await userEvent.setup().click(screen.getByLabelText('Modelo de mensagem'));
-    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['lembrete_consulta (pt_BR)']);
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Lembrete consulta · Português · Aviso']);
   });
 });

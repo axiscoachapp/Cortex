@@ -21,18 +21,28 @@ function mount({ connected = false, canManage = true, lastError = null as string
   return render(<QueryClientProvider client={client}><ClinicAccessContext.Provider value={{ kind: 'reception', active: true, admin: canManage, actorId: 'synthetic', clinic: { id: 'synthetic', name: 'Clínica sintética' }, doctors: [], staff: [] }}><WhatsAppSettings /></ClinicAccessContext.Provider></QueryClientProvider>);
 }
 describe('WhatsApp setup belongs to implementation', () => {
+  it('tells a receptionist plainly who can act when no number is connected', async () => {
+    mount({ canManage: false });
+    expect(await screen.findByText('O WhatsApp da clínica ainda não está conectado. Avise o administrador da clínica.')).toBeVisible();
+  });
+  it('puts reminders first, then the bot, then number and models', async () => {
+    mount({ connected: true });
+    expect((await screen.findAllByRole('tab')).map((t) => t.textContent)).toEqual(['Lembretes automáticos', 'Robô de atendimento', 'Número e modelos']);
+    expect(screen.getByRole('tab', { name: 'Lembretes automáticos' })).toHaveAttribute('aria-selected', 'true');
+  });
   beforeEach(() => vi.clearAllMocks());
   it('does not ask even an admin to enter technical credentials', async () => {
     mount();
-    expect(await screen.findByText(/A equipe de implantação conecta e valida/)).toBeVisible();
+    expect(await screen.findByText('O WhatsApp da clínica ainda não foi conectado. A conexão é feita pela equipe Cortex.')).toBeVisible();
+    expect(screen.getByRole('button', { name: /Copiar pedido/ })).toBeVisible();
     expect(screen.queryByLabelText(/Token|ID do|PIN/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Conectar número' })).toBeNull();
     expect(mocks.call.mock.calls.map(call => call[0])).toEqual(['state']);
   });
   it('keeps operational sync but sends technical failures to implementation', async () => {
     mount({ connected: true, lastError: 'Reconecte o número em Configurações.' });
-    await userEvent.click(await screen.findByRole('button', { name: 'Sincronizar modelos' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('equipe de implantação');
+    await userEvent.click(await screen.findByRole('button', { name: 'Atualizar modelos' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('equipe Cortex');
     expect(screen.queryByRole('button', { name: 'Desconectar' })).toBeNull();
     expect(screen.queryByText(/Reconecte o número/)).toBeNull();
     await waitFor(() => expect(mocks.call).toHaveBeenCalledWith('syncTemplates'));
@@ -40,9 +50,9 @@ describe('WhatsApp setup belongs to implementation', () => {
   });
   it('does not ask a non-manager to access Meta tools or sync models', async () => {
     mount({ connected: true, canManage: false });
-    expect(await screen.findByText(/Nenhum modelo sincronizado/)).toBeVisible();
+    expect(await screen.findByText(/Nenhum modelo ainda/)).toBeVisible();
     expect(screen.queryByText(/WhatsApp Manager/)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Sincronizar modelos' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Atualizar modelos' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Nova automação' })).toBeNull();
   });
 });

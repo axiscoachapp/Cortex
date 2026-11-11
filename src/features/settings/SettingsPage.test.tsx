@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -17,18 +17,28 @@ const access: ClinicAccess = { kind: 'clinical', active: true, admin: true, acto
 function Location() { return <output aria-label="URL atual">{useLocation().search}</output>; }
 function mount(value = access, path = '/configuracoes') { render(<MemoryRouter initialEntries={[path]}><ClinicAccessContext.Provider value={value}><SettingsPage /><Location /></ClinicAccessContext.Provider></MemoryRouter>); }
 describe('settings grouped by responsibility and account', () => {
+  it('names the professional data plainly and points its rows at different places', async () => {
+    mount(access, '/configuracoes?secao=usuarios');
+    expect(screen.getAllByRole('link', { name: /compartilhamento/i })).toHaveLength(1);
+    cleanup();
+    mount(access, '/configuracoes?secao=seguranca');
+    expect(screen.getByRole('link', { name: /Alterar senha/ })).toHaveAttribute('href', '/seguranca#alterar-senha');
+    expect(screen.getAllByRole('option').map(item => item.textContent)).toContain('Seu cadastro profissional');
+  });
   it('starts at an overview instead of asking a doctor to configure specialty', () => {
     mount();
     expect(screen.getAllByRole('main')).toHaveLength(1);
     expect(screen.getByRole('region', { name: 'Visão geral' })).toBeVisible();
     expect(screen.getByRole('heading', { level: 1, name: 'Configurações' })).toBeVisible();
-    expect(screen.getByText(/Especialidade, dados do prescritor e conexões técnicas são preparados/)).toBeVisible();
+    expect(screen.getByText(/mantidos pela equipe Cortex/)).toBeVisible();
+    // The cards list every section; no duplicate picker on the overview.
+    expect(screen.queryByLabelText('Ir para outra seção')).toBeNull();
     expect(screen.queryByLabelText('Especialidade')).toBeNull();
   });
   it('preserves unrelated query parameters when changing sections', async () => {
     mount(access, '/configuracoes?secao=perfil&clinica=synthetic&origin=calendar');
     expect(screen.getByText('Preferência pessoal sintética')).toBeVisible();
-    await userEvent.selectOptions(screen.getByLabelText('Acessar seção'), 'implantacao');
+    await userEvent.selectOptions(screen.getByLabelText('Ir para outra seção'), 'implantacao');
     expect(screen.getByText('Consulta de implantação sintética')).toBeVisible();
     const params = new URLSearchParams(screen.getByLabelText('URL atual').textContent!);
     expect(params.get('clinica')).toBe('synthetic'); expect(params.get('origin')).toBe('calendar'); expect(params.get('secao')).toBe('implantacao');
@@ -37,16 +47,21 @@ describe('settings grouped by responsibility and account', () => {
     mount({ ...access, admin: false }, '/configuracoes?secao=' + section);
     expect(screen.getByRole('region', { name: 'Visão geral' })).toBeVisible();
     expect(screen.queryByText('Equipe sintética')).toBeNull(); expect(screen.queryByText('Formulário sintético')).toBeNull();
+    expect(screen.getByText('Essa seção não existe ou não está disponível para a sua conta. Escolha uma das seções abaixo.')).toBeVisible();
   });
   it.each([false, true])('does not offer clinical readers to reception with admin=%s', admin => {
     mount({ ...access, kind: 'reception', admin }, '/configuracoes?secao=perfil');
+    expect(screen.queryByText('Preferência pessoal sintética')).toBeNull();
+    expect(screen.getByText(/não está disponível para a sua conta/)).toBeVisible();
+    cleanup();
+    mount({ ...access, kind: 'reception', admin }, '/configuracoes?secao=sobre');
     const choices = screen.getAllByRole('option').map(item => item.textContent);
     expect(choices).not.toContain('Preferências de atendimento'); expect(choices).not.toContain('Agenda e assinatura'); expect(choices).not.toContain('Delegações da recepção');
     expect(screen.queryByText('Preferência pessoal sintética')).toBeNull();
-    expect(choices).toContain('Segurança e privacidade'); expect(choices).toContain('Dados da implantação');
+    expect(choices).toContain('Segurança e privacidade'); expect(choices).toContain('Dados da clínica');
   });
   it('does not advertise clinic administration when membership is inactive', () => {
-    mount({ ...access, active: false });
+    mount({ ...access, active: false }, '/configuracoes?secao=sobre');
     const choices = screen.getAllByRole('option').map(item => item.textContent);
     expect(choices).not.toContain('Equipe e acessos'); expect(choices).not.toContain('WhatsApp e lembretes');
   });

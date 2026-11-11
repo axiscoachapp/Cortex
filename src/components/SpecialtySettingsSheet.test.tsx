@@ -8,7 +8,7 @@ describe('settings shortcut follows assisted implementation', () => {
   it('opens navigation instead of a specialty, prescriber or copilot editor', async () => {
     mount();
     await userEvent.click(screen.getByRole('button', { name: 'Configurações' }));
-    expect(screen.getByRole('link', { name: /Dados da implantação/ })).toHaveAttribute('href', '/configuracoes?secao=implantacao');
+    expect(screen.getByRole('link', { name: /Seu cadastro profissional/ })).toHaveAttribute('href', '/configuracoes?secao=implantacao');
     expect(screen.getByRole('link', { name: /Preferências de atendimento/ })).toHaveAttribute('href', '/configuracoes?secao=perfil');
     expect(screen.getByRole('link', { name: /Segurança e privacidade/ })).toBeVisible();
     expect(screen.queryAllByRole('textbox')).toHaveLength(0);

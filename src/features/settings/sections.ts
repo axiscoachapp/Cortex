@@ -7,7 +7,7 @@ export interface SettingsSection { id: SectionId; label: string; icon: typeof Se
 export function settingsSections(access: ClinicAccess | null | undefined): SettingsSection[] {
   const clinical = access?.kind === 'clinical', clinic = !!access?.active && !!access.clinic, admin = clinic && access?.admin;
   return [
-    { id: 'inicio', label: 'Visão geral', icon: Home, description: 'Encontre o que você pode ajustar e o que é cuidado pela implantação.', group: 'Configurações' },
+    { id: 'inicio', label: 'Visão geral', icon: Home, description: 'Encontre o que você pode ajustar e o que a equipe Cortex mantém.', group: 'Configurações' },
     ...(clinical ? [
       { id: 'perfil' as const, label: 'Preferências de atendimento', icon: BadgeCheck, description: 'Escolha o modelo usado nas suas evoluções.', group: 'Seu trabalho' },
       { id: 'usuarios' as const, label: admin ? 'Médicos e compartilhamento' : 'Compartilhamento', icon: UserCog, description: 'Acesso a prontuários depende de compartilhamento explícito entre médicos.', group: 'Seu trabalho' },
@@ -18,9 +18,11 @@ export function settingsSections(access: ClinicAccess | null | undefined): Setti
       { id: 'pre-consulta' as const, label: 'Perguntas da pré-consulta', icon: ClipboardList, description: 'Mantenha as perguntas que a clínica envia antes do atendimento.', group: 'Rotina da clínica' },
       { id: 'equipe' as const, label: 'Equipe da recepção', icon: Users, description: 'Consulte a equipe e mantenha seus acessos operacionais.', group: 'Rotina da clínica', ownHeading: true },
     ] : []),
-    { id: 'implantacao', label: 'Dados da implantação', icon: Settings2, description: 'Configurações preparadas e mantidas pela equipe de implantação.', group: 'Implantação e conexões' },
-    ...(clinical ? [{ id: 'conexoes' as const, label: 'Agenda e assinatura', icon: Plug, description: 'Conexões que precisam da autorização pessoal do médico.', group: 'Implantação e conexões' }] : []),
-    { id: 'seguranca', label: 'Segurança e privacidade', icon: Shield, description: 'Senha, segundo fator e seus dados pessoais.', group: 'Sua conta' },
+    clinical
+      ? { id: 'implantacao', label: 'Seu cadastro profissional', icon: Settings2, description: 'Dados usados nas suas receitas, atestados e pedidos de exame.', group: 'Cadastro e conexões' }
+      : { id: 'implantacao', label: 'Dados da clínica', icon: Settings2, description: 'Configuração da clínica mantida pela equipe Cortex.', group: 'Cadastro e conexões' },
+    ...(clinical ? [{ id: 'conexoes' as const, label: 'Agenda e assinatura', icon: Plug, description: 'Conexões que precisam da autorização pessoal do médico.', group: 'Cadastro e conexões' }] : []),
+    { id: 'seguranca', label: 'Segurança e privacidade', icon: Shield, description: 'Alterar senha, segundo fator e seus dados pessoais.', group: 'Sua conta' },
     { id: 'sobre', label: 'Sobre o Cortex', icon: Info, description: 'Informações do ambiente e avisos.', group: 'Sua conta' },
   ];
 }

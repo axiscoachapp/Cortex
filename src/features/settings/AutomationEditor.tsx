@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import {
-  APPOINTMENT_TYPES, PARAM_LABELS, previewBody,
+  APPOINTMENT_TYPES, PARAM_LABELS, previewBody, templateDetails, templateLabel,
   type Automation, type AutomationParam, type AutomationRule, type ParamSource, type WhatsAppTemplate,
 } from './whatsappApi';
 
@@ -148,7 +148,7 @@ export function AutomationEditor({ open, onOpenChange, templates, doctors, initi
               <SelectTrigger id="automation-template"><SelectValue placeholder={approved.length ? 'Escolha um modelo aprovado' : 'Nenhum modelo aprovado'} /></SelectTrigger>
               <SelectContent>
                 {approved.map((t) => (
-                  <SelectItem key={`${t.name}|${t.language}`} value={`${t.name}|${t.language}`}>{t.name} ({t.language})</SelectItem>
+                  <SelectItem key={`${t.name}|${t.language}`} value={`${t.name}|${t.language}`}>{templateLabel(t.name)} · {templateDetails(t)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

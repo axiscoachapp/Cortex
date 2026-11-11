@@ -123,3 +123,14 @@ export const AUTOMATION_PRESETS: Array<{ label: string; hint: string; rule: Part
   { label: 'Pós-consulta', hint: 'Agradecimento, orientações ou pesquisa', rule: { name: 'Pós-consulta', trigger: 'after_end', offsetMinutes: 120 } },
 ];
 
+
+const LANGUAGES: Record<string, string> = { pt_BR: 'Português', pt_PT: 'Português (Portugal)', en_US: 'Inglês', en: 'Inglês', es: 'Espanhol', es_ES: 'Espanhol' };
+const CATEGORIES: Record<string, string> = { UTILITY: 'Aviso', MARKETING: 'Divulgação', AUTHENTICATION: 'Código de acesso' };
+
+/** "lembrete_consulta" → "Lembrete consulta": the Meta name is technical, the clinic reads this. */
+export function templateLabel(name: string): string {
+  const words = name.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return words ? words.charAt(0).toLocaleUpperCase('pt-BR') + words.slice(1) : name;
+}
+export const templateDetails = (t: Pick<WhatsAppTemplate, 'language' | 'category'>) =>
+  [LANGUAGES[t.language] ?? t.language, CATEGORIES[t.category?.toUpperCase()] ?? t.category?.toLowerCase()].filter(Boolean).join(' · ');
