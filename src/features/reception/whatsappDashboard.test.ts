@@ -8,6 +8,17 @@ const owner={userId:id(1),name:'Equipe sintética A',role:'reception' as const,a
 const data=()=>({schemaVersion:1,asOf:'2026-11-07T12:00:00.000Z',window:{from:'2026-11-01T00:00:00.000Z',to:'2026-11-07T00:00:00.000Z',timeZone:'America/Sao_Paulo'},coverage:'latest_cycle_only',cohort:{incomingCycles:4,withHumanSend:2,withoutHumanSend:2,medianFirstHumanSendSeconds:600,closedWithoutHumanSend:1},openNow:{total:3,unassigned:1,assignedToIneligible:0,owners:{items:[owner],nextBefore:null as string|null}},unavailable:{abandonment:'no_explicit_event',appointments:'scoped_source_required'}});
 describe('read the agreed K2 aggregate without deriving missing metrics or authority',()=>{
   beforeEach(()=>{vi.resetAllMocks();mocks.invoke.mockResolvedValue({data:data(),error:null});});
+  it('clamps an end in the future to one minute before now, so a default period never fails',async()=>{
+    const now=vi.spyOn(Date,'now').mockReturnValue(Date.parse('2026-11-07T00:00:42Z'));
+    try{
+      mocks.invoke.mockResolvedValue({data:{...data(),window:{...data().window,to:'2026-11-06T23:59:00.000Z'}},error:null});
+      await readWhatsAppDashboard({from:input.from,to:'2026-11-08T02:59:00Z'});
+      expect(mocks.invoke.mock.calls[0][1].body.to).toBe('2026-11-06T23:59:00.000Z');
+      // A period that starts after that instant is refused before transport.
+      await expect(readWhatsAppDashboard({from:'2026-11-06T23:59:30Z',to:'2026-11-07T02:00:00Z'})).rejects.toMatchObject({code:'invalid'});
+      expect(mocks.invoke).toHaveBeenCalledTimes(1);
+    }finally{now.mockRestore();}
+  });
   it('sends only canonical dates and bounded paging and retains the complete DTO',async()=>{
     expect(await readWhatsAppDashboard(input)).toEqual(data());expect(mocks.invoke).toHaveBeenCalledExactlyOnceWith('whatsapp-api',{body:{action:'dashboard',from:data().window.from,to:data().window.to,before:null,limit:50},signal:undefined});
   });
