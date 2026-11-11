@@ -4,19 +4,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+// A disabled filled button turns neutral grey with readable text (muted-foreground on muted is
+// about 5:1), so it never reads as a soft version of the primary colour.
+const disabledFilled =
+  "disabled:border disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none";
+
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        record: "bg-record-red hover:bg-record-red-hover text-primary-foreground shadow-lg shadow-record-red/30 hover:shadow-record-red/40 hover:scale-105 active:scale-95",
-        medical: "bg-medical-blue text-primary-foreground hover:bg-medical-blue-dark shadow-sm",
+        default: `bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm ${disabledFilled}`,
+        destructive: `bg-destructive text-destructive-foreground hover:bg-destructive/90 ${disabledFilled}`,
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground disabled:text-muted-foreground disabled:opacity-70",
+        secondary: `bg-secondary text-secondary-foreground hover:bg-secondary/80 ${disabledFilled}`,
+        ghost: "hover:bg-accent hover:text-accent-foreground disabled:text-muted-foreground disabled:opacity-70",
+        link: "text-primary underline-offset-4 hover:underline disabled:text-muted-foreground disabled:no-underline",
+        record: `bg-record-red hover:bg-record-red-hover text-primary-foreground shadow-lg shadow-record-red/30 hover:shadow-record-red/40 hover:scale-105 active:scale-95 ${disabledFilled}`,
+        medical: `bg-medical-blue text-primary-foreground hover:bg-medical-blue-dark shadow-sm ${disabledFilled}`,
       },
       size: {
         default: "h-10 px-4 py-2",
