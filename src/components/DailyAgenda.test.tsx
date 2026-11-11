@@ -28,6 +28,25 @@ describe('daily clinical agenda', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(props.onRetry).toHaveBeenCalledOnce();
   });
+  it('says the failure in one sentence with a retry inside the card', () => {
+    mount({ appointments: [], error: true });
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/^Não foi possível carregar a agenda de hoje\.Tentar novamente$/);
+    expect(alert.closest('section')).toHaveAccessibleName('Agenda de hoje');
+  });
+  it('loads with skeleton rows shaped like the appointment rows, not a bare spinner', () => {
+    mount({ appointments: [], loading: true });
+    const loading = screen.getByRole('status');
+    expect(loading).toHaveTextContent('Carregando agenda…');
+    expect(loading.querySelectorAll('li')).toHaveLength(3);
+    expect(loading.className).toContain('min-h-');
+  });
+  it('uses the shared status and type labels and clinic time', () => {
+    mount({ appointments: [{ ...appointment, type: 'urgencia', status: 'cancelado' }] });
+    expect(screen.getByText('Encaixe')).toBeVisible();
+    expect(screen.getByText('Cancelado')).toHaveClass('line-through');
+    expect(screen.getByText('09:00')).toBeVisible(); // 12:00Z in São Paulo
+  });
   it('offers an explicit agenda action for an empty day', async () => {
     const props = mount({ appointments: [] });
     await userEvent.click(screen.getByRole('button', { name: 'Agendar consulta' }));
