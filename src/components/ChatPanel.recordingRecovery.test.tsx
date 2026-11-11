@@ -91,11 +91,11 @@ describe('recording recovery after an abrupt end', () => {
   it('persists chunks during capture, offers them on the next visit and clears them after upload', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     const firstTab = render(tree());
-    const record = await screen.findByRole('button', { name: 'Iniciar gravação da consulta' });
+    const record = await screen.findByRole('button', { name: 'Gravar consulta' });
     await waitFor(() => expect(record).toBeEnabled());
     fireEvent.click(record);
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Presencial' })); });
-    await screen.findByRole('button', { name: 'Finalizar gravação da consulta' });
+    await screen.findByRole('button', { name: 'Finalizar gravação' });
 
     act(() => { recorders[0].emit('voz-1'); vi.advanceTimersByTime(CHECKPOINT_MS); });
     act(() => { recorders[0].emit('voz-2'); vi.advanceTimersByTime(CHECKPOINT_MS); });

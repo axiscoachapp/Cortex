@@ -36,10 +36,10 @@ try {
   await expect(page.getByRole('heading',{name:'Paciente Exemplo A',exact:true}).first()).toBeVisible();
   const fontSize=await page.evaluate(()=>getComputedStyle(document.documentElement).fontSize);
   if(fontSize!==`${16*INTERFACE_SCALE}px`)throw new Error(`Expected the default ${INTERFACE_SCALE*100}% scale, received `+fontSize);checks.push(`${INTERFACE_SCALE*100}% default interface scale`);
-  await expect(page.getByRole('button',{name:'Gerar resumo com IA',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Resumir com IA',exact:true})).toBeVisible();
   if(api.metrics.briefings!==0 || api.metrics.checklists!==0 || api.metrics.patientWrites!==0)throw new Error('Opening the chart caused a paid operation or status write');checks.push('read-only chart opening');
   await expect(page.getByRole('button',{name:'Receita / atestado',exact:true})).toBeVisible();checks.push('document action discoverability');
-  await page.getByRole('button',{name:'Gerar resumo com IA',exact:true}).click();await expect(page.getByText('Resumo sintético estável')).toBeVisible();checks.push('explicit summary generation');
+  await page.getByRole('button',{name:'Resumir com IA',exact:true}).click();await expect(page.getByText('Resumo sintético estável')).toBeVisible();checks.push('explicit summary generation');
   await page.getByLabel('Pergunta ao assistente clínico').fill('Há interação entre paroxetina e propranolol?');
   await page.getByRole('button',{name:/enviar/i}).last().click();
   await expect(page.getByText(/Verificação farmacológica necessária/)).toBeVisible();

@@ -106,10 +106,10 @@ vi.mock('@/components/PatientSidebar', () => ({
     </aside>
   ),
 }));
-vi.mock('@/components/WelcomeDashboard', () => ({ WelcomeDashboard: ({onResumeConsultation,onSignOut}) => <div><h1>Dashboard</h1><button onClick={onSignOut}>Sair da conta</button><button onClick={()=>onResumeConsultation('A')}>Resume A</button><button onClick={()=>onResumeConsultation('outside')}>Resume outside</button></div> }));
-vi.mock('@/components/PatientSnapshot', () => ({ PatientSnapshot: () => null }));
+vi.mock('@/components/WelcomeDashboard', () => ({ WelcomeDashboard: ({onResumeConsultation,onSignOut,openConsultation}) => <div><h1>Dashboard</h1><button onClick={onSignOut}>Sair da conta</button><button onClick={()=>onResumeConsultation('A')}>Resume A</button><button onClick={()=>onResumeConsultation('outside')}>Resume outside</button>{openConsultation && <button onClick={openConsultation.onReturn}>Voltar à consulta de {openConsultation.name}</button>}</div> }));
+vi.mock('@/components/PatientSnapshot', () => ({ PatientSnapshot: ({ profileRequest }) => <p>profile-request:{String(profileRequest ?? 0)}</p> }));
 vi.mock('@/components/ChatPanel', () => ({
-  ChatPanel: ({ patient, preBriefing, briefingError, onCaptureStateChange, onRetryBriefing, onOpenPatientWork }) => {
+  ChatPanel: ({ patient, preBriefing, briefingError, onCaptureStateChange, onRetryBriefing, onOpenPatientWork, onOpenPatientPanel }) => {
     useEffect(() => {
       fixture.chatMount();
     }, []);
@@ -122,6 +122,7 @@ vi.mock('@/components/ChatPanel', () => ({
         <button onClick={() => onCaptureStateChange(true)}>Capture fixture</button>
         <button onClick={() => onOpenPatientWork(true)}>Manual fixture</button>
         <button onClick={() => onOpenPatientWork(false)}>Work fixture</button>
+        <button onClick={onOpenPatientPanel}>Safety row fixture</button>
       </div>
     );
   },
@@ -393,3 +394,30 @@ describe('desktop layout at the desktop-frame breakpoint, including fractional w
     expect(fixture.chatMount).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('patient panel and the way back to the consultation (phone and tablet)', () => {
+  it('the Perfil tab shows the patient panel only; the full profile opens from "Perfil completo"', async () => {
+    setup('/?patient=A');
+    await screen.findByRole('heading', { name: 'Patient A' });
+    await userEvent.click(screen.getByRole('button', { name: 'Perfil' }));
+    expect(screen.getByRole('button', { name: 'Perfil' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByText('profile-request:0')).toBeInTheDocument();
+  });
+
+  it('the safety row under the name opens the patient panel', async () => {
+    setup('/?patient=A');
+    await screen.findByRole('heading', { name: 'Patient A' });
+    await userEvent.click(screen.getByRole('button', { name: 'Safety row fixture' }));
+    expect(screen.getByRole('button', { name: 'Perfil' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('Início keeps a "Voltar à consulta" while a patient is open', async () => {
+    setup('/?patient=A');
+    await screen.findByRole('heading', { name: 'Patient A' });
+    await userEvent.click(screen.getByRole('button', { name: 'Início' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Voltar à consulta de Patient A' }));
+    expect(screen.getByRole('button', { name: 'Consulta' })).toHaveAttribute('aria-current', 'page');
+    expect(fixture.chatMount).toHaveBeenCalledTimes(1);
+  });
+});
+

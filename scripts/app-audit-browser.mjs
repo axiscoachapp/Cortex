@@ -738,13 +738,39 @@ try {
         } else report.routes[`${label} robo simulador`] = { missing: 'bot editor not found' };
       }
     }
+    // AUDIT_CONSULTATION=1: consultation-screen states (patient panel from the
+    // safety row, last note, recording dialog, Início with the way back).
+    if (process.env.AUDIT_CONSULTATION === '1') {
+      const shot = async (name) => {
+        await page.waitForTimeout(700);
+        await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: FULL_PAGE });
+        report.routes[`${label} ${name}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+      };
+      await page.goto(origin + `/?patient=${pid(1)}`);
+      await expect(page.getByRole('heading', { name: 'Paciente Sintética 1', exact: true }).first()).toBeVisible({ timeout: 15000 });
+      await page.getByRole('button', { name: 'Ver evolução', exact: true }).click();
+      await shot('consulta-ultima-evolucao');
+      await page.getByRole('button', { name: 'Gravar consulta', exact: true }).click();
+      await expect(page.getByRole('dialog', { name: 'Gravar consulta' })).toBeVisible();
+      await shot('consulta-gravar-dialogo');
+      await page.keyboard.press('Escape');
+      if (viewport.width < SHELL_BREAKPOINT) {
+        await page.getByRole('button', { name: /Abrir painel do paciente/ }).click();
+        await expect(page.getByRole('dialog')).toHaveCount(0);
+        await shot('consulta-painel-paciente');
+        await page.getByRole('button', { name: 'Consulta', exact: true }).click();
+      }
+      await page.getByRole('button', { name: /^Início$/ }).first().click();
+      await expect(page.getByRole('button', { name: 'Voltar à consulta de Paciente Sintética 1' }).first()).toBeVisible();
+      await shot('consulta-inicio-voltar');
+    }
     // Interactions: the patient's full profile (history, documents, files).
     if (!only) {
       await page.goto(origin + `/?patient=${pid(1)}`);
       await page.waitForTimeout(1200);
-      const open = viewport.width >= SHELL_BREAKPOINT
-        ? page.getByRole('button', { name: /Perfil Completo/i }).first()
-        : page.getByRole('button', { name: /^Perfil$/ }).first();
+      // On the phone the Perfil tab shows the patient panel; the full profile opens from it.
+      if (viewport.width < SHELL_BREAKPOINT) await page.getByRole('button', { name: /^Perfil$/ }).first().click().catch(() => {});
+      const open = page.getByRole('button', { name: /Perfil Completo/i }).first();
       if (await open.count()) {
         await open.click();
         await page.waitForTimeout(1200);

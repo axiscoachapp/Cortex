@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -115,5 +115,49 @@ describe('dashboard date labels', () => {
   it('capitalizes only the start of the date sentence', () => {
     renderDashboard();
     expect(screen.getByText('Quinta-feira, 5 de novembro')).toBeInTheDocument();
+  });
+});
+
+describe('open consultation behind Início', () => {
+  it('offers the way back to the consultation that is still open', async () => {
+    const onReturn = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <WelcomeDashboard patients={[patient]} userId="doctor" onSelectPatient={vi.fn()} onNewConsultation={vi.fn()}
+            openConsultation={{ name: 'Pessoa de teste', onReturn }} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar à consulta de Pessoa de teste' }));
+    expect(onReturn).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not show zeros or an open "Primeiros passos" while patients load or fail', () => {
+    const dashboard = (patientsState: 'loading' | 'error' | 'ready', patients: Patient[] = []) => (
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <WelcomeDashboard patients={patients} userId="doctor" onSelectPatient={vi.fn()} onNewConsultation={vi.fn()} patientsState={patientsState} />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(dashboard('loading'));
+    const counters = screen.getByRole('region', { name: 'Seu cadastro de pacientes' });
+    expect(within(counters).queryByText('0')).not.toBeInTheDocument();
+    expect(within(counters).getAllByText('…')).toHaveLength(3);
+    expect(screen.queryByText('Primeiros passos no consultório')).not.toBeInTheDocument();
+    rerender(dashboard('error'));
+    expect(within(counters).getAllByText('—')).toHaveLength(3);
+    expect(screen.getByText('Não foi possível carregar seus pacientes agora.')).toBeInTheDocument();
+    rerender(dashboard('ready'));
+    expect(screen.getByText('Primeiros passos no consultório')).toBeInTheDocument();
+    // Every step done: the card renders nothing, so neither does its disclosure.
+    rerender(dashboard('ready', [patient]));
+    expect(screen.queryByText('Primeiros passos no consultório')).not.toBeInTheDocument();
+  });
+
+  it('shows nothing about a consultation when none is open', () => {
+    renderDashboard();
+    expect(screen.queryByRole('button', { name: /Voltar à consulta/ })).not.toBeInTheDocument();
   });
 });

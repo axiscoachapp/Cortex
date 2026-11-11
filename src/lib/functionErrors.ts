@@ -23,6 +23,14 @@ export async function functionErrorBody(error: unknown): Promise<Record<string, 
   return read;
 }
 
+/** HTTP status of a failed Edge Function call (FunctionsHttpError keeps the Response on `context`). */
+export function functionErrorStatus(error: unknown): number | null {
+  if (!error || typeof error !== 'object' || !('context' in error)) return null;
+  const context = (error as { context: unknown }).context;
+  const status = context && typeof context === 'object' && 'status' in context ? (context as { status: unknown }).status : null;
+  return typeof status === 'number' ? status : null;
+}
+
 // Transport/library messages are English and meaningless to a doctor.
 const TECHNICAL_MESSAGES = [
   /non-2xx status code/i,

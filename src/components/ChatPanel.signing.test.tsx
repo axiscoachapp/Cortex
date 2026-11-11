@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Patient } from '@/types/patient';
 import { forgetOperation } from '@/lib/signatureClient';
 import { ChatPanel } from './ChatPanel';
+import { Toast, ToastProvider, ToastViewport } from '@/components/ui/toast';
 
 const RX = '55555555-5555-4555-8555-555555555555';
 const HASH = 'f'.repeat(64);
@@ -156,11 +157,17 @@ describe('Gerar e assinar from the consultation', () => {
     }));
   });
 
-  it('a normal "Gerar documento" is unchanged: opens the preview and does not sign', async () => {
+  it('a normal "Gerar documento" does not sign and offers "Abrir PDF" instead of a pop-up after the await', async () => {
     await openComposer();
     await act(async () => { await mocks.composer.onGenerate!(sickNote(false)); });
     expect(calls('sign-document')).toHaveLength(0);
-    expect(mocks.open).toHaveBeenCalledWith('https://storage.synthetic.invalid/unsigned.pdf', '_blank');
+    // A window opened after the generation await is blocked as a pop-up.
+    expect(mocks.open).not.toHaveBeenCalled();
+    const result = mocks.toast.mock.calls.map(([toast]) => toast).find((toast) => toast.title === 'Atestado gerado');
+    expect(result.description).toContain('ABC123');
+    render(<ToastProvider><Toast open>{result.action}</Toast><ToastViewport /></ToastProvider>);
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir PDF' }));
+    expect(mocks.open).toHaveBeenCalledWith('https://storage.synthetic.invalid/unsigned.pdf', '_blank', 'noopener,noreferrer');
   });
 
   it('passes no signing to the composer when it is not configured', async () => {

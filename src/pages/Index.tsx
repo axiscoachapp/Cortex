@@ -41,7 +41,6 @@ const Index = () => {
   const [snapshotBusy, setSnapshotBusy] = useState(false);
   const [captureBusy, setCaptureBusy] = useState(false);
   const [patientLoading,setPatientLoading]=useState(false);
-  const [profileRequest,setProfileRequest]=useState(0);
   const [recoveryRequest,setRecoveryRequest]=useState(0);
   const [patientWork, setPatientWork] = useState<{ actor: string; patientId: string; manual: boolean; entry?: WorkEntry; appointmentId?: string; initialTitle: string } | null>(null);
   const patientWorkExit = useRef<() => boolean>(() => true);
@@ -393,6 +392,7 @@ const Index = () => {
             onNavigate={path => navigate(path)}
             userId={user?.id ?? ''}
             homeActive={mobileView === 'home' || !selectedPatient}
+            openConsultation={selectedPatient && (isMobile ? mobileView !== 'chat' : mobileView === 'home') ? { name: selectedPatient.name, onReturn: () => setMobileView('chat') } : undefined}
           />
         </div>
 
@@ -431,6 +431,8 @@ const Index = () => {
                     appointmentId: entry ? undefined : selectedAppointmentId ?? undefined, initialTitle: entry ? '' : chiefComplaint });
                 }}
                 onRetryBriefing={() => { if (selectedPatient) void loadBriefing(selectedPatient); }}
+                onOpenPatientPanel={() => setMobileView('info')}
+                onReturnToConsultation={() => setMobileView('chat')}
                 briefingLoading={briefingLoading}
                 userId={user?.id ?? ''}
                 onConsultationSaved={() => { preBriefingCache.current.clear(); briefingRequestRef.current++; void queryClient.invalidateQueries({queryKey:['consultation-recovery',user?.id]}); }}
@@ -446,6 +448,8 @@ const Index = () => {
               onSelectPatient={handleSelectPatient}
               onNewConsultation={() => setShowNewConsultationModal(true)}
               onSignOut={handleSignOut}
+              openConsultation={selectedPatient ? { name: selectedPatient.name, onReturn: () => setMobileView('chat') } : undefined}
+              patientsState={patientsError ? 'error' : directory ? 'ready' : 'loading'}
               onResumeConsultation={patientId => {
                 if (!confirmPatientChange(patientId)) return;
                 if (patientId === selectedPatientIdRef.current && selectedPatient?.id === patientId) {
@@ -469,7 +473,6 @@ const Index = () => {
         )}>
           <PatientSnapshot
             patient={selectedPatient}
-            profileRequest={profileRequest}
             onWorkStateChange={setSnapshotBusy}
             onAskAI={() => {
               // On mobile, jump to the chat tab; on desktop, chat is already visible.
@@ -506,7 +509,7 @@ const Index = () => {
           {mobileView !== 'home' && navItems.map(({ id, icon: Icon, label, disabled }) => (
             <button
               key={id}
-              onClick={() => { if(!disabled){setMobileView(id);if(id==='info')setProfileRequest(value=>value+1);} }}
+              onClick={() => { if(!disabled) setMobileView(id); }}
               disabled={disabled}
               aria-current={mobileView === id ? 'page' : undefined}
               className={cn(

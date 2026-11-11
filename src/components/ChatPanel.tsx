@@ -27,6 +27,7 @@ import {
   FileSignature,
 } from 'lucide-react';
 import { useRecording, ConsultationMode } from '@/hooks/useRecording';
+import { AUDIO_UPLOAD_LIMIT_BYTES, RECORDING_STOP_BYTES, RECORDING_WARN_BYTES } from '@/lib/recordingLimits';
 import { RecordingModeDialog } from '@/components/RecordingModeDialog';
 import { LiveCopilotCard, CopilotState } from '@/components/LiveCopilotCard';
 import { QuestionChecklistCard } from '@/components/QuestionChecklistCard';
@@ -51,7 +52,8 @@ import { ProfileUpdates } from '@/types/patient';
 import { printSoap } from '@/lib/printDoc';
 import { UsageMeter, UsageOverBanner } from '@/components/UsageMeter';
 import { ConsultationDraft, loadConsultationDraft, saveConsultationDraft } from '@/lib/consultationDrafts';
-import { functionErrorBody, functionErrorMessage } from '@/lib/functionErrors';
+import { functionErrorBody, functionErrorMessage, functionErrorStatus } from '@/lib/functionErrors';
+import { ToastAction } from '@/components/ui/toast';
 import {
   saveRescuedRecording,
   saveRecordingCheckpoint,
@@ -67,6 +69,75 @@ import { ClinicalAnswer } from '@/components/ClinicalAnswer';
 /** Thrown after an error was already surfaced to the user (e.g. quota toast)
  *  so upstream catch blocks skip their generic error toast. */
 class HandledError extends Error {}
+/** Audio above the server's limit: uploading or retrying it can never work. */
+class AudioTooLargeError extends Error {}
+
+const audioSizeMb = (bytes: number) => Math.max(1, Math.round(bytes / (1024 * 1024)));
+
+/** "YYYY-MM-DD" stays a calendar date (no time-zone shift); timestamps use the local date. */
+function formatVisitDate(value: string): string {
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (day) return `${day[3]}/${day[2]}/${day[1]}`;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('pt-BR');
+}
+
+/**
+ * Allergies, medications and main diagnoses under the patient's name, for
+ * layouts where the patient column is hidden (below the desktop frame).
+ */
+function ClinicalSafetyRow({ patient, onOpen }: { patient: Patient; onOpen?: () => void }) {
+  const allergies = patient.allergies.filter((value) => typeof value === 'string' && value.trim());
+  const medications = patient.medications.length;
+  const diagnoses = patient.diagnoses
+    .map((diagnosis) => (diagnosis.code?.trim() ? diagnosis.code.trim() : diagnosis.description?.trim()))
+    .filter((value): value is string => !!value);
+  const shownAllergies = allergies.slice(0, 3);
+  const shownDiagnoses = diagnoses.slice(0, 2);
+  const chip = 'inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-medium [overflow-wrap:anywhere]';
+  const content = (
+    <>
+      {shownAllergies.length ? (
+        shownAllergies.map((allergy) => (
+          <span key={allergy} className={cn(chip, 'border-destructive/40 bg-destructive/10 text-destructive')}>
+            Alergia: {allergy}
+          </span>
+        ))
+      ) : (
+        <span className={cn(chip, 'border-border bg-muted/50 text-muted-foreground')}>Sem alergias registradas</span>
+      )}
+      {allergies.length > shownAllergies.length && (
+        <span className={cn(chip, 'border-destructive/40 bg-destructive/10 text-destructive')}>
+          +{allergies.length - shownAllergies.length} alergias
+        </span>
+      )}
+      <span className={cn(chip, 'border-border bg-muted/50 text-foreground/80')}>
+        {medications === 0 ? 'Sem medicações em uso' : `${medications} ${medications === 1 ? 'medicação' : 'medicações'} em uso`}
+      </span>
+      {shownDiagnoses.map((diagnosis) => (
+        <span key={diagnosis} className={cn(chip, 'border-border bg-muted/50 text-foreground/80')}>
+          {diagnosis}
+        </span>
+      ))}
+      {diagnoses.length > shownDiagnoses.length && (
+        <span className={cn(chip, 'border-border bg-muted/50 text-foreground/80')}>+{diagnoses.length - shownDiagnoses.length}</span>
+      )}
+    </>
+  );
+  // One target for the whole row: 44 px tall on the phone without a tall header.
+  return onOpen ? (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="shell:hidden mt-1.5 flex min-h-11 w-full flex-wrap items-center gap-1.5 rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-medical-blue sm:min-h-0"
+    >
+      <span className="sr-only">Abrir painel do paciente: </span>
+      {content}
+    </button>
+  ) : (
+    <div className="shell:hidden mt-1.5 flex flex-wrap items-center gap-1.5">{content}</div>
+  );
+}
 
 /** Encode an audio Blob as base64 for inline transport to the copilot function. */
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -119,6 +190,10 @@ interface ChatPanelProps {
   onOpenPatientWork?: (manual: boolean, entry?: WorkEntry) => void;
   /** Explicit Home resume; never reloads automatically after a blocked request. */
   recoveryRequest?: number;
+  /** Shows the patient panel (allergies, medications, diagnoses) where it is hidden. */
+  onOpenPatientPanel?: () => void;
+  /** Brings this consultation back on screen (from Início while it stays open). */
+  onReturnToConsultation?: () => void;
 }
 
 export function ChatPanel({
@@ -143,6 +218,8 @@ export function ChatPanel({
   onCaptureStateChange,
   onOpenPatientWork,
   recoveryRequest = 0,
+  onOpenPatientPanel,
+  onReturnToConsultation,
 }: ChatPanelProps) {
   const sessionHidden = useSessionHidden();
   const [showBriefing, setShowBriefing] = useState(true);
@@ -153,6 +230,7 @@ export function ChatPanel({
   const [inputValue, setInputValue] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
   const editRevisionRef = useRef<number | null>(null);
   const [currentConsultationId, setCurrentConsultationId] = useState<string | null>(null);
   const [reviewData, setReviewData] = useState<ConsultationDraft | null>(null);
@@ -168,6 +246,9 @@ export function ChatPanel({
   const [isGeneratingFinal, setIsGeneratingFinal] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const retryTurn = useRef<{patientId:string;text:string;id:string;timestamp:Date} | null>(null);
+  // Questions whose request failed: they stay in the thread with a retry.
+  const [failedQuestions, setFailedQuestions] = useState<Record<string, string>>({});
+  const [lastNoteOpen, setLastNoteOpen] = useState(false);
   const [inputMode, setInputMode] = useState<'question' | 'comment'>('question');
   const [savingNote, setSavingNote] = useState(false);
   const [consultationComments, setConsultationComments] = useState<string[]>([]);
@@ -255,11 +336,33 @@ export function ChatPanel({
     staleTime: 5 * 60_000,
   });
 
+  // The last saved consultation, for the first card of the chart. Its key sits
+  // under 'patient-consultations', so every save already refreshes it.
+  const { data: lastConsultation } = useQuery<{ id: string; created_at: string; chief_complaint: string | null; soap_note: string | null } | null>({
+    queryKey: ['patient-consultations', patient?.id, userId, 'latest'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('consultations')
+        .select('id,created_at,chief_complaint,soap_note')
+        .eq('patient_id', patient!.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data ?? null;
+    },
+    enabled: !!patient?.id && !!userId,
+    staleTime: 60_000,
+    retry: false,
+  });
+
   // ── Copies of the audio kept in this browser until the server has it ────────
   // Each capture is checkpointed under its capture id, which the draft reuses,
   // so the entry, the draft and the uploaded file all share one id.
   const [rescued, setRescued] = useState<RescuedRecording[]>([]);
   const [rescueFailed, setRescueFailed] = useState<Record<string, true>>({});
+  // Recordings above the server limit, by draft/capture id: no retry is offered.
+  const [tooLarge, setTooLarge] = useState<Record<string, number>>({});
   const rescueBusyRef = useRef(false);
   const captureLocksRef = useRef(new Map<string, Promise<(() => void) | null>>());
   const checkpointWarnedRef = useRef(new Set<string>());
@@ -394,8 +497,12 @@ export function ChatPanel({
   const recoveryPending = isRecording || recording.isStarting || recording.isStopping || isProcessing || audioTasks > 0 ||
     isGeneratingFinal || isChatLoading || savingNote || generatingRx || attachingFile || !!documentModal?.isLoading ||
     checklistLoading || copilotRefreshing || draftLoading || draftMutations > 0;
+  // A comment proposal not yet applied or discarded is the doctor's typed work.
+  const pendingProposals = messages.some(
+    (message) => message.type === 'comment-proposal' && !!message.commentProposal && (message.commentProposal.status ?? 'pending') === 'pending',
+  );
   const recoveryDirty = !!reviewData || !!recoveryDraft || composerOpen || !!documentModal || !!editingId ||
-    !!inputValue.trim() || consultationComments.length > 0;
+    !!inputValue.trim() || consultationComments.length > 0 || pendingProposals;
   useEffect(() => {
     if (lastRecoveryRequest.current === recoveryRequest) return;
     lastRecoveryRequest.current = recoveryRequest;
@@ -424,6 +531,7 @@ export function ChatPanel({
       attachingFile ||
       draftMutations > 0 ||
       !!editingId ||
+      pendingProposals ||
       !!inputValue.trim();
     onWorkStateChange?.(busy);
     return () => onWorkStateChange?.(false);
@@ -443,6 +551,7 @@ export function ChatPanel({
     attachingFile,
     draftMutations,
     editingId,
+    pendingProposals,
     inputValue,
     onWorkStateChange,
   ]);
@@ -460,6 +569,7 @@ export function ChatPanel({
     else if (recordingRef.current.isRecording) recordingRef.current.confirmStop();
     setShowBriefing(true);
     setBriefingExpanded(false);
+    setLastNoteOpen(false);
     consultationCommentsRef.current = [];
     setConsultationComments([]);
     setCurrentConsultationId(null);
@@ -470,6 +580,7 @@ export function ChatPanel({
     setInputValue('');
     setEditingId(null);
     setEditedContent('');
+    setSavingEdit(false);
     setDocumentModal(null);
     setComposerOpen(false);
     setIsProcessing(false);
@@ -960,10 +1071,18 @@ export function ChatPanel({
       }
       if (!stillHere()) return;
       setComposerOpen(false);
-      if (data?.previewUrl) window.open(data.previewUrl, '_blank');
+      // A pop-up opened after an await is usually blocked (the click's
+      // activation has lapsed), so the result carries its own "Abrir PDF".
+      const previewUrl = typeof data?.previewUrl === 'string' && /^https:\/\//.test(data.previewUrl) ? data.previewUrl : '';
       toast({
         title: docLabel,
         description: `Imprima, assine e carimbe (ainda sem assinatura digital ICP-Brasil). Código de acesso do paciente: ${data?.accessCode}.`,
+        duration: previewUrl ? 120_000 : undefined,
+        action: previewUrl ? (
+          <ToastAction altText="Abrir PDF do documento" onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}>
+            Abrir PDF
+          </ToastAction>
+        ) : undefined,
       });
       queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patient.id] });
     } catch (err: unknown) {
@@ -1121,6 +1240,9 @@ export function ChatPanel({
     // Whether a draft row with this id exists on the server.
     let draftSaved = !!draft.audioStoragePath;
     try {
+      // The server refuses audio above its limit and cannot split it: never
+      // upload (or keep retrying) a file that can only be refused.
+      if (!audioOnServer && audioBlob.size > AUDIO_UPLOAD_LIMIT_BYTES) throw new AudioTooLargeError();
       if (!draft.audioStoragePath) {
         await saveConsultationDraft(userId, { ...draft, status: 'processing' });
         draftSaved = true;
@@ -1158,6 +1280,7 @@ export function ChatPanel({
       });
       if (error) {
         if (await handleQuotaError(error)) throw new HandledError();
+        if (functionErrorStatus(error) === 413) throw new AudioTooLargeError();
         throw error;
       }
       let ready: ConsultationDraft = {
@@ -1213,7 +1336,14 @@ export function ChatPanel({
         if (draftSaved || !parkedHere) setRecoveryDraft(latest?.id === draft.id ? latest : failed);
         else if (!previous) setRescueFailed((list) => ({ ...list, [draft.id]: true }));
       }
-      if (!(error instanceof HandledError)) {
+      if (error instanceof AudioTooLargeError) {
+        if (mountedRef.current) setTooLarge((list) => ({ ...list, [draft.id]: audioBlob.size }));
+        toast({
+          title: 'Gravação grande demais para a IA',
+          description: 'Esta gravação passa de 25 MB e não pode ser processada. Baixe uma cópia do áudio se quiser guardá-lo e escreva a evolução manualmente.',
+          variant: 'destructive',
+        });
+      } else if (!(error instanceof HandledError)) {
         const reason = await functionErrorMessage(error, 'Não foi possível processar a consulta.');
         toast({
           title: 'Consulta preservada para nova tentativa',
@@ -1244,7 +1374,19 @@ export function ChatPanel({
     }
   };
 
+  /** Explicit download of audio that is only on the server (for a recording too large to process). */
+  const downloadStoredAudio = async (draft: ConsultationDraft) => {
+    if (!draft.audioStoragePath) return;
+    const { data, error } = await supabase.storage.from('audio-recordings').download(draft.audioStoragePath);
+    if (error || !data) {
+      toast({ title: 'Não foi possível baixar o áudio', description: 'Verifique a conexão e tente de novo.', variant: 'destructive' });
+      return;
+    }
+    downloadLocalAudio(data, draft.audioMimeType);
+  };
+
   const recoverConsultation = async (draft: ConsultationDraft) => {
+    if (tooLarge[draft.id] !== undefined) return;
     if (draft.status === 'review') {
       setReviewData(draft);
       setRecoveryDraft(null);
@@ -1311,10 +1453,26 @@ export function ChatPanel({
   const handleSendMessage = async () => {
     if (!patient || !inputValue.trim() || isChatLoading) return;
     const text = inputValue.trim();
+    setInputValue('');
+    await sendQuestion(text);
+  };
+
+  /** Sends again a question that failed, reusing its turn when the server allows it. */
+  const retryQuestion = async (messageId: string) => {
+    const text = failedQuestions[messageId];
+    if (!text || isChatLoading) return;
+    await sendQuestion(text, messageId);
+  };
+
+  const sendQuestion = async (text: string, failedMessageId?: string) => {
+    if (!patient || isChatLoading) return;
     const prior = retryTurn.current;
     const turn = prior?.patientId === patient.id && prior.text === text ? prior : {patientId:patient.id,text,id:crypto.randomUUID(),timestamp:new Date()};
     retryTurn.current = turn;
-    setInputValue('');
+    const retried = new Set([turn.id + '/user', ...(failedMessageId ? [failedMessageId] : [])]);
+    setFailedQuestions((list) => Object.fromEntries(Object.entries(list).filter(([id]) => !retried.has(id))));
+    // A new turn replaces the failed bubble instead of repeating the question.
+    if (failedMessageId && failedMessageId !== turn.id + '/user') onMessagesChange((prev) => prev.filter((message) => message.id !== failedMessageId));
 
     const userMsg: ChatMessage = {
       id: turn.id + '/user',
@@ -1384,10 +1542,14 @@ export function ChatPanel({
         },
       ]);
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
-    } catch {
+    } catch (err: unknown) {
       queryClient.invalidateQueries({queryKey:['patient-conversation',userId,turn.patientId]});
-      if (isCurrentPatient(turn.patientId)) setInputValue(current => current || text);
-      toast({ title: 'Erro ao consultar IA', description: 'Tente novamente.', variant: 'destructive' });
+      if (isCurrentPatient(turn.patientId)) setFailedQuestions((list) => ({ ...list, [userMsg.id]: text }));
+      toast({
+        title: 'Pergunta não enviada',
+        description: await functionErrorMessage(err, 'Não foi possível consultar a IA. Use "Tentar novamente" na pergunta.'),
+        variant: 'destructive',
+      });
     } finally {
       if (isCurrentPatient(patient.id)) setIsChatLoading(false);
     }
@@ -1413,6 +1575,22 @@ export function ChatPanel({
   };
 
   const handleSaveEdit = async (messageId: string) => {
+    if (savingEdit) return;
+    setSavingEdit(true);
+    try {
+      await saveEdit(messageId);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+  const cancelEdit = () => {
+    if (savingEdit) return;
+    setEditingId(null);
+    setEditedContent('');
+    editRevisionRef.current = null;
+  };
+
+  const saveEdit = async (messageId: string) => {
     // Update the consultation this specific message belongs to — using the
     // panel-level currentConsultationId here would overwrite the LATEST
     // consultation even when the doctor edited an older SOAP card.
@@ -1440,6 +1618,7 @@ export function ChatPanel({
     }
     if (!patient || !isCurrentPatient(patient.id)) return;
     onMessagesChange((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: editedContent } : m)));
+    editRevisionRef.current = null;
     setEditingId(null);
     toast({ title: 'Alterações salvas', description: 'A evolução clínica foi atualizada.' });
   };
@@ -1512,7 +1691,11 @@ export function ChatPanel({
       await submitFinalSoap({ ...reviewData, soapDraft: reviewedText ?? reviewData.soapDraft }, comments);
     } catch (err) {
       if (!(err instanceof HandledError)) {
-        toast({ title: 'Erro ao gerar evolução', description: 'Tente novamente.', variant: 'destructive' });
+        toast({
+          title: 'Erro ao gerar evolução',
+          description: await functionErrorMessage(err, 'A revisão continua aberta. Tente novamente.'),
+          variant: 'destructive',
+        });
       }
     } finally {
       if (isCurrentPatient(patient.id)) setIsGeneratingFinal(false);
@@ -1655,6 +1838,7 @@ export function ChatPanel({
   }
 
   const activeBriefing = preBriefing;
+  const lastVisitDate = lastConsultation?.created_at ?? patient.lastVisit ?? null;
 
   return (
     <div className="flex-1 flex flex-col bg-card h-full">
@@ -1668,7 +1852,19 @@ export function ChatPanel({
             className="fixed top-0 inset-x-0 z-40 min-h-14 bg-card border-b-2 border-record-red px-3 py-2 flex flex-wrap items-center justify-center gap-3 shadow-sm"
           >
             <span className="text-sm font-semibold text-record-red">
-              {patient.name} ·{' '}
+              {onReturnToConsultation ? (
+                <button
+                  type="button"
+                  onClick={onReturnToConsultation}
+                  aria-label={`Voltar à consulta de ${patient.name}`}
+                  className="underline underline-offset-2 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-record-red"
+                >
+                  {patient.name}
+                </button>
+              ) : (
+                patient.name
+              )}{' '}
+              ·{' '}
               {isRecording
                 ? (isPaused ? 'Gravação pausada' : 'Gravando') + ' ' + formatTimer(recordingSeconds)
                 : 'Preservando áudio…'}
@@ -1707,6 +1903,7 @@ export function ChatPanel({
             <Badge variant={patient.status} className="mt-1">
               {({retorno:'Retorno',seguimento:'Seguimento',novo:'Novo',atendimento:'Em atendimento'})[patient.status]}
             </Badge>
+            <ClinicalSafetyRow patient={patient} onOpen={onOpenPatientPanel} />
           </div>
           <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto sm:ml-auto">
           <Button variant="outline" size="sm" className="text-xs whitespace-normal h-auto min-h-8 py-1.5 px-2" onClick={() => onOpenPatientWork?.(true)} disabled={!onOpenPatientWork}>
@@ -1742,24 +1939,72 @@ export function ChatPanel({
               Uma gravação desta consulta, de {new Date(entry.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}, não chegou ao
               servidor e está guardada neste navegador.
             </p>
-            {rescueFailed[entry.id] && (
+            {tooLarge[entry.id] !== undefined ? (
+              <p role="alert" className="text-destructive">
+                Esta gravação tem {audioSizeMb(tooLarge[entry.id])} MB e passa do limite de 25 MB que a IA processa. Baixe uma
+                cópia se quiser guardar o áudio e escreva a evolução manualmente.
+              </p>
+            ) : rescueFailed[entry.id] && (
               <p role="alert" className="text-destructive">
                 Não foi possível enviar esta gravação. Ela continua guardada neste navegador; tente de novo.
               </p>
             )}
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" disabled={!!rescueBlockReason} onClick={() => void processRescued(entry)}>
-                {rescueFailed[entry.id] ? 'Tentar enviar de novo' : 'Processar gravação'}
-              </Button>
+              {tooLarge[entry.id] !== undefined ? (
+                <>
+                  <Button variant="outline" onClick={() => downloadLocalAudio(entry.blob, entry.mimeType)}>
+                    Baixar cópia do áudio
+                  </Button>
+                  <Button variant="outline" disabled={!onOpenPatientWork} onClick={() => onOpenPatientWork?.(true)}>
+                    Escrever evolução
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" disabled={!!rescueBlockReason} onClick={() => void processRescued(entry)}>
+                  {rescueFailed[entry.id] ? 'Tentar enviar de novo' : 'Processar gravação'}
+                </Button>
+              )}
               <Button variant="ghost" disabled={isProcessing} onClick={() => void discardRescued(entry)}>
                 Descartar
               </Button>
             </div>
-            {rescueBlockReason && <p className="text-xs text-muted-foreground">{rescueBlockReason}</p>}
+            {rescueBlockReason && tooLarge[entry.id] === undefined && <p className="text-xs text-muted-foreground">{rescueBlockReason}</p>}
           </div>
         ))}
 
-        {recoveryDraft && recoveryDraft.patientId === patient.id && (() => {
+        {recoveryDraft && recoveryDraft.patientId === patient.id && tooLarge[recoveryDraft.id] !== undefined && (() => {
+          const parkedCopy = rescued.find((entry) => entry.id === recoveryDraft.id);
+          const local = localAudioRef.current.get(recoveryDraft.id) ?? parkedCopy;
+          return (
+            <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm space-y-2">
+              <p className="font-medium">Esta gravação é grande demais para a IA processar.</p>
+              <p>
+                O áudio{tooLarge[recoveryDraft.id] > 0 ? ` (${audioSizeMb(tooLarge[recoveryDraft.id])} MB)` : ''} passa do limite de 25 MB
+                e não pode ser dividido aqui, então tentar de novo não resolve. Baixe uma cópia se quiser guardar o áudio, escreva a
+                evolução manualmente e exclua este rascunho para gravar de novo.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(local || recoveryDraft.audioStoragePath) && (
+                  <Button
+                    variant="outline"
+                    disabled={isProcessing}
+                    onClick={() => (local ? downloadLocalAudio(local.blob, local.mimeType) : void downloadStoredAudio(recoveryDraft))}
+                  >
+                    Baixar cópia do áudio
+                  </Button>
+                )}
+                <Button variant="outline" disabled={!onOpenPatientWork} onClick={() => onOpenPatientWork?.(true)}>
+                  Escrever evolução
+                </Button>
+                <Button variant="ghost" disabled={isProcessing} onClick={() => void discardSavedDraft(recoveryDraft)}>
+                  Excluir rascunho
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
+
+        {recoveryDraft && recoveryDraft.patientId === patient.id && tooLarge[recoveryDraft.id] === undefined && (() => {
           const parkedHere = rescued.some((entry) => entry.id === recoveryDraft.id);
           const hasLocal = parkedHere || localAudioRef.current.has(recoveryDraft.id);
           return (
@@ -1830,122 +2075,112 @@ export function ChatPanel({
         {conversationLoading && <p role="status" className="text-sm text-muted-foreground">Recuperando conversa salva…</p>}
         {conversationError && <div role="alert" className="text-sm text-destructive">Não foi possível recuperar a conversa salva. As mensagens não foram apagadas. <button type="button" className="underline" onClick={onRetryConversation}>Tentar novamente</button></div>}
         {onLoadOlderMessages && <Button variant="outline" size="sm" disabled={loadingOlderMessages} onClick={onLoadOlderMessages}>Carregar mensagens anteriores</Button>}
-        {/* Pre-consultation Briefing */}
+        {/* First step: what happened last time, in a neutral card. */}
         {showBriefing && (
-          <div className="alert-briefing rounded-lg py-3 px-4 animate-fade-in-up">
+          <section aria-label="Antes da consulta" className="rounded-lg border border-border/70 bg-muted/30 py-3 px-4 animate-fade-in-up">
             <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2.5 flex-1">
-                <AlertTriangle className="w-4 h-4 text-alert-amber shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground text-xs mb-1.5">Resumo Pré-Consulta</h3>
+              <div className="min-w-0 flex-1 space-y-2">
+                <h3 className="text-sm font-semibold text-foreground [overflow-wrap:anywhere]">
+                  {lastVisitDate
+                    ? `Última consulta: ${formatVisitDate(lastVisitDate)}${lastConsultation?.chief_complaint?.trim() ? ` — ${lastConsultation.chief_complaint.trim()}` : ''}`
+                    : 'Nenhuma consulta anterior registrada'}
+                </h3>
+                {(lastConsultation?.soap_note || (!briefingRequested && onRetryBriefing && lastVisitDate)) && (
+                  <div className="flex flex-wrap gap-2">
+                    {lastConsultation?.soap_note && (
+                      <Button variant="outline" size="sm" aria-expanded={lastNoteOpen} onClick={() => setLastNoteOpen((open) => !open)}>
+                        {lastNoteOpen ? 'Ocultar evolução' : 'Ver evolução'}
+                      </Button>
+                    )}
+                    {!briefingRequested && onRetryBriefing && lastVisitDate && (
+                      <Button variant="outline" size="sm" onClick={onRetryBriefing}>
+                        Resumir com IA
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {lastNoteOpen && lastConsultation?.soap_note && (
+                  <div className="rounded-md border border-border/60 bg-card p-3 text-sm">
+                    <SoapNoteView text={lastConsultation.soap_note} />
+                  </div>
+                )}
 
-                  {briefingLoading ? (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Gerando resumo com IA...
-                    </div>
-                  ) : briefingError ? (
-                    <div role="alert" className="space-y-2 text-sm text-destructive">
-                      <p>
-                        Não foi possível carregar o resumo pré-consulta. O histórico pode estar temporariamente
-                        indisponível.
+                {briefingLoading ? (
+                  <div role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Gerando resumo com IA...
+                  </div>
+                ) : briefingError ? (
+                  <div role="alert" className="space-y-2 text-sm text-destructive">
+                    <p>
+                      Não foi possível gerar o resumo. O histórico pode estar temporariamente indisponível.
+                    </p>
+                    {onRetryBriefing && (
+                      <Button variant="outline" size="sm" onClick={onRetryBriefing}>
+                        Tentar novamente
+                      </Button>
+                    )}
+                  </div>
+                ) : activeBriefing?.returnInfo ? (
+                  <div className="space-y-2">
+                    <ul className="space-y-1.5 text-xs text-foreground/80 list-disc pl-4">
+                      <li>{activeBriefing.returnInfo}</li>
+                      <li>{activeBriefing.previousComplaint}</li>
+                      {activeBriefing.pending && <li>{activeBriefing.pending}</li>}
+                    </ul>
+                    {activeBriefing.alert && (
+                      <p className="flex items-start gap-1.5 border-t border-destructive/20 pt-1.5 text-xs">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-destructive mt-0.5" />
+                        <span className="text-destructive font-medium leading-snug">{activeBriefing.alert}</span>
                       </p>
-                      {onRetryBriefing && (
-                        <Button variant="outline" size="sm" onClick={onRetryBriefing}>
-                          Tentar novamente
-                        </Button>
-                      )}
-                    </div>
-                  ) : activeBriefing?.returnInfo ? (
-                    <>
-                      <div className="space-y-1.5 text-xs text-foreground/80">
-                        <div className="flex items-start gap-1.5">
-                          <span className="shrink-0 font-medium text-foreground/50 w-1.5 h-1.5 mt-1.5 rounded-full bg-amber-400 inline-block" />
-                          <span>{activeBriefing.returnInfo}</span>
-                        </div>
-                        <div className="flex items-start gap-1.5">
-                          <span className="shrink-0 font-medium text-foreground/50 w-1.5 h-1.5 mt-1.5 rounded-full bg-amber-400 inline-block" />
-                          <span>{activeBriefing.previousComplaint}</span>
-                        </div>
-                        {activeBriefing.pending && (
-                          <div className="flex items-start gap-1.5">
-                            <span className="shrink-0 w-1.5 h-1.5 mt-1.5 rounded-full bg-amber-400 inline-block" />
-                            <span>{activeBriefing.pending}</span>
-                          </div>
-                        )}
-                        {activeBriefing.alert && (
-                          <div className="flex items-start gap-1.5 mt-1 pt-1.5 border-t border-destructive/20">
-                            <span className="shrink-0 text-destructive mt-0.5">⚠️</span>
-                            <span className="text-destructive font-medium leading-snug">{activeBriefing.alert}</span>
-                          </div>
-                        )}
-                      </div>
+                    )}
 
-                      {briefingExpanded && activeBriefing.details && (
-                        <div className="mt-3 pt-3 border-t border-border/30 space-y-2 text-xs text-foreground/80">
-                          {activeBriefing.details.lastConsultationDate && (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[0.625rem]">
-                                Última Consulta
-                              </span>
-                              <span>{activeBriefing.details.lastConsultationDate}</span>
+                    {briefingExpanded && activeBriefing.details && (
+                      <dl className="pt-2 border-t border-border/30 space-y-2 text-xs text-foreground/80">
+                        {(
+                          [
+                            ['Última consulta', activeBriefing.details.lastConsultationDate],
+                            ['Queixa principal', activeBriefing.details.mainComplaint],
+                            ['Conduta anterior', activeBriefing.details.previousConduct],
+                            ['Evolução', activeBriefing.details.evolution],
+                          ] as const
+                        )
+                          .filter(([, value]) => !!value)
+                          .map(([label, value]) => (
+                            <div key={label} className="flex flex-col gap-0.5">
+                              <dt className="font-semibold text-foreground/70">{label}</dt>
+                              <dd>{value}</dd>
                             </div>
-                          )}
-                          {activeBriefing.details.mainComplaint && (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[0.625rem]">
-                                Queixa Principal
-                              </span>
-                              <span>{activeBriefing.details.mainComplaint}</span>
-                            </div>
-                          )}
-                          {activeBriefing.details.previousConduct && (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[0.625rem]">
-                                Conduta Anterior
-                              </span>
-                              <span>{activeBriefing.details.previousConduct}</span>
-                            </div>
-                          )}
-                          {activeBriefing.details.evolution && (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-foreground/60 uppercase tracking-wide text-[0.625rem]">
-                                Evolução
-                              </span>
-                              <span>{activeBriefing.details.evolution}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                          ))}
+                      </dl>
+                    )}
 
+                    {activeBriefing.details && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setBriefingExpanded(!briefingExpanded)}
-                        className="mt-2 h-7 px-2 text-xs text-medical-blue hover:text-medical-blue-dark"
+                        className="h-7 px-2 text-xs text-medical-blue hover:text-medical-blue-dark"
                       >
                         {briefingExpanded ? 'Ver menos' : 'Ver mais detalhes'}
                       </Button>
-                    </>
-                  ) : (
-                    <div className="space-y-2 text-xs text-muted-foreground">
-                      <p>{briefingRequested ? 'Nenhuma consulta anterior disponível para resumir.' : 'Prontuário aberto para visualização. O resumo com IA é opcional e só será solicitado pelo botão abaixo.'}</p>
-                      {!briefingRequested && onRetryBriefing && <Button variant="outline" size="sm" onClick={onRetryBriefing}>Gerar resumo com IA</Button>}
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                ) : briefingRequested ? (
+                  <p className="text-xs text-muted-foreground">Nenhuma consulta anterior disponível para resumir.</p>
+                ) : null}
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="Ocultar resumo pré-consulta"
+                aria-label="Ocultar resumo da última consulta"
                 onClick={() => setShowBriefing(false)}
                 className="shrink-0 h-8 w-8 text-muted-foreground hover:text-foreground"
               >
                 <X className="w-3.5 h-3.5" />
               </Button>
             </div>
-          </div>
+          </section>
         )}
 
         {/* Pre-consult question checklist — from history + chief complaint */}
@@ -1981,6 +2216,24 @@ export function ChatPanel({
                 {message.type === 'comment-proposal' && message.commentProposal ? (
                   <CommentProposalCard
                     {...message.commentProposal}
+                    onStatusChange={(status, summary) =>
+                      onMessagesChange((prev) =>
+                        prev.map((item) =>
+                          item.id === message.id && item.commentProposal
+                            ? { ...item, commentProposal: { ...item.commentProposal, status, summary } }
+                            : item,
+                        ),
+                      )
+                    }
+                    onRevisionRefreshed={(revision) =>
+                      onMessagesChange((prev) =>
+                        prev.map((item) =>
+                          item.id === message.id && item.commentProposal
+                            ? { ...item, commentProposal: { ...item.commentProposal, expectedRevision: revision } }
+                            : item,
+                        ),
+                      )
+                    }
                     onApplied={(summary) => {
                       for (const key of [
                         ['patients', userId],
@@ -2005,8 +2258,29 @@ export function ChatPanel({
                     onDismiss={() => {}}
                   />
                 ) : message.type === 'user' ? (
-                  <div className="max-w-[88%] md:max-w-[75%] bg-medical-blue text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2 text-sm">
-                    {message.content}
+                  <div className="flex max-w-[88%] flex-col items-end gap-1 md:max-w-[75%]">
+                    <div
+                      className={cn(
+                        'bg-medical-blue text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2 text-sm',
+                        failedQuestions[message.id] !== undefined && 'opacity-70',
+                      )}
+                    >
+                      {message.content}
+                    </div>
+                    {failedQuestions[message.id] !== undefined && (
+                      <p className="flex flex-wrap items-center justify-end gap-x-1 text-xs text-destructive">
+                        Não enviada ·
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-auto min-h-11 px-1 text-xs text-destructive sm:min-h-0"
+                          disabled={isChatLoading}
+                          onClick={() => void retryQuestion(message.id)}
+                        >
+                          Tentar novamente
+                        </Button>
+                      </p>
+                    )}
                   </div>
                 ) : message.type === 'assistant' ? (
                   <div className="flex items-start gap-3">
@@ -2032,21 +2306,34 @@ export function ChatPanel({
                         >
                           <Download className="w-3.5 h-3.5" />
                         </Button>
+                        {editingId === message.id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Cancelar edição da evolução"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            disabled={savingEdit}
+                            onClick={cancelEdit}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
                           aria-label={editingId === message.id ? 'Salvar edição da evolução' : 'Editar evolução'}
                           className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          disabled={editingId === message.id && savingEdit}
                           onClick={() => {
                             if (editingId === message.id) {
-                              handleSaveEdit(message.id);
+                              void handleSaveEdit(message.id);
                             } else {
                               void beginEdit(message);
                             }
                           }}
                         >
                           {editingId === message.id ? (
-                            <Check className="w-3.5 h-3.5 text-success" />
+                            savingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-success" />
                           ) : (
                             <Pencil className="w-3.5 h-3.5" />
                           )}
@@ -2084,7 +2371,11 @@ export function ChatPanel({
                       <textarea
                         aria-label="Editar evolução clínica"
                         value={editedContent}
+                        readOnly={savingEdit}
                         onChange={(e) => setEditedContent(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
                         className="w-full min-h-[120px] md:min-h-[200px] text-sm leading-relaxed bg-muted/30 border border-border rounded-lg p-3 text-foreground/90 focus:outline-none focus:ring-2 focus:ring-medical-blue/30 resize-y"
                         autoFocus
                       />
@@ -2320,10 +2611,21 @@ export function ChatPanel({
                     )}
                   </Button>
                 </div>
-                <p className="text-[0.6875rem] text-muted-foreground leading-snug">
-                  Use o modo <span className="font-semibold text-foreground/80">Comentário</span> abaixo para adicionar
-                  notas que ajudarão a IA a transcrever melhor.
-                </p>
+                {(recording.recordedBytes ?? 0) >= RECORDING_WARN_BYTES ? (
+                  <p role="alert" className="text-xs font-medium text-destructive leading-snug">
+                    {(() => {
+                      const bytes = recording.recordedBytes;
+                      const perSecond = recordingSeconds > 0 ? bytes / recordingSeconds : 0;
+                      const minutes = perSecond > 0 ? Math.max(1, Math.floor((RECORDING_STOP_BYTES - bytes) / perSecond / 60)) : null;
+                      return `Gravação perto do limite de tamanho${minutes ? ` (cerca de ${minutes} min restantes)` : ''}. Finalize a consulta em breve; no limite, a gravação para sozinha e o áudio é guardado.`;
+                    })()}
+                  </p>
+                ) : (
+                  <p className="text-[0.6875rem] text-muted-foreground leading-snug">
+                    Use o modo <span className="font-semibold text-foreground/80">Comentário</span> abaixo para adicionar
+                    notas que ajudarão a IA a transcrever melhor.
+                  </p>
+                )}
                 {consultationComments.length > 0 && (
                   <div className="mt-2 space-y-1">
                     {consultationComments.map((c, i) => (
@@ -2446,9 +2748,9 @@ export function ChatPanel({
             <Button
               variant={isRecording ? 'destructive' : 'record'}
               size="icon-lg"
-              className="rounded-full h-10 w-10 sm:h-14 sm:w-14"
+              className="rounded-full h-10 w-10 gap-2 sm:h-12 sm:w-auto sm:px-5"
               onClick={isRecording ? handleStopRecording : handleStartRecording}
-              aria-label={isRecording ? 'Finalizar gravação da consulta' : 'Iniciar gravação da consulta'}
+              aria-label={isRecording ? 'Finalizar gravação' : 'Gravar consulta'}
               disabled={
                 recording.isStarting ||
                 recording.isStopping ||
@@ -2461,18 +2763,15 @@ export function ChatPanel({
               }
             >
               {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mic className="w-5 h-5" />}
+              <span className="hidden sm:inline text-sm font-semibold">{isRecording ? 'Finalizar gravação' : 'Gravar consulta'}</span>
             </Button>
           </div>
         </div>
-        <p className="text-[0.625rem] sm:text-xs text-muted-foreground text-center">
-          {isProcessing
-            ? 'Processando consulta, aguarde...'
-            : isChatLoading
-              ? 'Assistente clínico pensando...'
-              : isRecording
-                ? 'Clique no botão vermelho para finalizar · use Comentário para guiar a IA'
-                : 'Grave com o botão vermelho · Pergunta consulta a IA · Comentário vira anotação'}
-        </p>
+        {(isProcessing || isChatLoading) && (
+          <p className="text-[0.625rem] sm:text-xs text-muted-foreground text-center">
+            {isProcessing ? 'Processando consulta, aguarde...' : 'Assistente clínico pensando...'}
+          </p>
+        )}
       </div>
 
       <ConsultationReviewModal

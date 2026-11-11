@@ -35,6 +35,8 @@ interface PatientSidebarProps {
   onHome?: () => void;
   onNavigate?: (path: string) => void;
   homeActive?: boolean;
+  /** A consultation open but not on screen, with the way back to it. */
+  openConsultation?: { name: string; onReturn: () => void };
 }
 
 const typeLabels: Record<string, string> = {
@@ -55,7 +57,7 @@ const NAV_ITEMS = [
   { to: '/conhecimento',         icon: BookOpen,    label: 'Conhecimento' },
 ];
 
-export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId, onHome, onNavigate, homeActive = false }: PatientSidebarProps) {
+export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId, onHome, onNavigate, homeActive = false, openConsultation }: PatientSidebarProps) {
   const clinicAccess=useClinicAccess();
   const navigate = useNavigate();
   const go = onNavigate ?? navigate;
@@ -103,6 +105,12 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
           <button type="button" onClick={onHome ?? (() => go('/'))} aria-current={homeActive ? 'page' : undefined} className={cn('workspace-nav-item w-full text-left', homeActive && 'workspace-nav-item-active')}><Home className="h-4 w-4" />Início</button>
           {[{ to: '/agenda', label: 'Agenda', icon: CalendarDays }, { to: '/gerenciar-pacientes', label: 'Pacientes', icon: Users }].map(({ to, label, icon: Icon }) => <button type="button" key={to} onClick={() => go(to)} className="workspace-nav-item w-full text-left"><Icon className="h-4 w-4" />{label}</button>)}
         </nav>
+        {openConsultation && (
+          <Button variant="outline" className="w-full min-h-11 h-auto py-2 gap-2 text-sm font-medium whitespace-normal text-left justify-start" onClick={openConsultation.onReturn}>
+            <ChevronRight className="w-4 h-4 shrink-0 rotate-180" />
+            Voltar à consulta de {openConsultation.name}
+          </Button>
+        )}
         {!homeActive && <Button
           variant="default"
           className="w-full min-h-11 h-auto py-2 gap-2 text-sm font-medium"

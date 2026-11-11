@@ -40,6 +40,10 @@ interface WelcomeDashboardProps {
   userId: string;
   onResumeConsultation?: (patientId: string) => void;
   onSignOut?: () => void | Promise<void>;
+  /** A consultation still open behind the dashboard, with the way back to it. */
+  openConsultation?: { name: string; onReturn: () => void };
+  /** Whether the patient directory behind the counters has loaded. */
+  patientsState?: 'loading' | 'error' | 'ready';
 }
 
 const typeLabels: Record<string, string> = {
@@ -87,6 +91,8 @@ export function WelcomeDashboard({
   userId,
   onResumeConsultation,
   onSignOut,
+  openConsultation,
+  patientsState = 'ready',
 }: WelcomeDashboardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -134,6 +140,15 @@ export function WelcomeDashboard({
   const totalPatients = counts?.total ?? patients.length;
   const newPatients = counts?.new ?? patients.filter((p) => p.status === 'novo').length;
   const pendingReturns = counts?.returns ?? patients.filter((p) => p.status === 'retorno').length;
+
+  const hasConsultation = patients.some((patient) => patient.status !== 'novo');
+  // Same rule as OnboardingCard, so the disclosure never opens on an empty card,
+  // and nothing claims "no patients" before the directory has loaded.
+  const onboardingDismissed = (() => {
+    try { return localStorage.getItem(`cortex_onboarding_dismissed_${userId}`) === '1'; } catch { return false; }
+  })();
+  const showOnboarding = patientsState === 'ready' && !onboardingDismissed && !(totalPatients > 0 && hasConsultation);
+  const counterValue = (value: number) => (patientsState === 'ready' ? value : patientsState === 'loading' ? '…' : '—');
 
   // Recent patients (last 5 by lastVisit)
   const recentPatients = [...patients]
@@ -205,6 +220,14 @@ export function WelcomeDashboard({
             {onSignOut && <Button type="button" variant="ghost" size="icon" className="h-11 w-11" aria-label="Sair da conta" onClick={() => void onSignOut()}><LogOut className="h-4 w-4" /></Button>}
           </div>
         </header>
+        {openConsultation && (
+          <div role="region" aria-label="Consulta aberta" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
+            <p className="min-w-0 text-sm [overflow-wrap:anywhere]">A consulta de <strong>{openConsultation.name}</strong> continua aberta.</p>
+            <Button onClick={openConsultation.onReturn} className="min-h-11 h-auto whitespace-normal">
+              Voltar à consulta de {openConsultation.name}
+            </Button>
+          </div>
+        )}
         {onResumeConsultation && <ConsultationRecoveryNotice userId={userId} onResume={onResumeConsultation} />}
         {onResumeConsultation && <LocalRecordingRecoveryNotice userId={userId} onResume={onResumeConsultation} />}
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(16rem,1fr)]">
@@ -222,10 +245,10 @@ export function WelcomeDashboard({
                 </div>;
               })}</div>
             </section>}
-            <details className="rounded-xl border bg-card px-4 py-3" open={totalPatients === 0 ? true : undefined}>
+            {showOnboarding && <details className="rounded-xl border bg-card px-4 py-3" open={totalPatients === 0 ? true : undefined}>
               <summary className="cursor-pointer py-1 text-sm font-medium">Primeiros passos no consultório</summary>
-              <div className="pt-4"><OnboardingCard onNewConsultation={onNewConsultation} patientCount={totalPatients} hasConsultation={patients.some(patient => patient.status !== 'novo')} userId={userId} /></div>
-            </details>
+              <div className="pt-4"><OnboardingCard onNewConsultation={onNewConsultation} patientCount={totalPatients} hasConsultation={hasConsultation} userId={userId} /></div>
+            </details>}
           </div>
           <aside className="min-w-0 space-y-5" aria-label="Continuidade dos pacientes">
             <section className="rounded-2xl border bg-card p-3 md:p-4">
@@ -234,7 +257,8 @@ export function WelcomeDashboard({
             </section>
             <section className="rounded-xl border bg-card p-5 space-y-4" aria-label="Seu cadastro de pacientes">
               <h2 className="flex items-center gap-2 text-sm font-medium"><Users className="h-4 w-4 text-primary" />Seu cadastro de pacientes</h2>
-              <dl className="grid grid-cols-3 gap-3">{[['Pacientes', totalPatients], ['Novos', newPatients], ['Em retorno', pendingReturns]].map(([label, value]) => <div key={label} className="min-w-0"><dd className="text-xl font-semibold tabular-nums [overflow-wrap:anywhere]">{value}</dd><dt className="mt-1 text-[0.625rem] text-muted-foreground">{label}</dt></div>)}</dl>
+              <dl aria-busy={patientsState === 'loading'} className="grid grid-cols-3 gap-3">{([['Pacientes', totalPatients], ['Novos', newPatients], ['Em retorno', pendingReturns]] as const).map(([label, value]) => <div key={label} className="min-w-0"><dd className="text-xl font-semibold tabular-nums [overflow-wrap:anywhere]">{counterValue(value)}</dd><dt className="mt-1 text-[0.625rem] text-muted-foreground">{label}</dt></div>)}</dl>
+              {patientsState === 'error' && <p className="text-xs text-muted-foreground">Não foi possível carregar seus pacientes agora.</p>}
             </section>
             {returnPatients.length > 0 && <details className="rounded-xl border bg-card px-4 py-3"><summary className="cursor-pointer py-1 text-sm font-medium">Pacientes em retorno<span className="ml-2 text-xs font-normal text-muted-foreground">{pendingReturns}</span></summary><p className="py-2 text-xs text-muted-foreground">Cadastros marcados como retorno; não representam consultas já agendadas.</p>{returnPatients.map(patient => <PatientShortcut key={patient.id} patient={patient} dateLabel={relativeDate(patient.lastVisit)} onSelect={onSelectPatient} />)}</details>}
           </aside>
