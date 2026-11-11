@@ -7,6 +7,7 @@ import { PatientFiles } from './PatientFiles';
 const mocks = vi.hoisted(() => ({
   remove: vi.fn().mockResolvedValue({ error: new Error('offline') }),
   deleteRow: vi.fn(),
+  createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: 'https://storage.invalid/signed' }, error: null }),
 }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('@/integrations/supabase/client', () => ({
@@ -38,9 +39,26 @@ vi.mock('@/integrations/supabase/client', () => ({
       };
       return query;
     },
-    storage: { from: () => ({ remove: mocks.remove }) },
+    storage: { from: () => ({ remove: mocks.remove, createSignedUrl: mocks.createSignedUrl }) },
   },
 }));
+
+describe('Patient file opening', () => {
+  it('opens the signed URL without giving the file access to the app or its address', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PatientFiles patientId="patient" userId="doctor" />
+      </QueryClientProvider>,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Abrir ou baixar documento.pdf' }));
+    await waitFor(() => expect(open).toHaveBeenCalledWith('https://storage.invalid/signed', '_blank', 'noopener,noreferrer'));
+    expect(mocks.createSignedUrl).toHaveBeenCalledWith('patients/doctor/patient/file.pdf', 60);
+    // With noopener the browser returns no window handle: that is not an error.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    open.mockRestore();
+  });
+});
 
 describe('Patient file removal', () => {
   it('retains metadata and offers a retry when the storage deletion fails', async () => {

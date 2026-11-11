@@ -163,7 +163,8 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
         .from(BUCKET)
         .createSignedUrl(f.storage_path, 60); // 60s is plenty for a click
       if (error || !data?.signedUrl) throw error ?? new Error('Sem URL');
-      window.open(data.signedUrl, '_blank');
+      // The opened file must not reach back into the app (window.opener) nor learn its URL (Referer).
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
     } catch {
       setOperationError('Não foi possível abrir o arquivo. Tente novamente.');
     } finally {
