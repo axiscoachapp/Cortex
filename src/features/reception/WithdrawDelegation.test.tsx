@@ -1,6 +1,9 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WithdrawDelegation } from './WithdrawDelegation';
+// The shared Radix checkbox measures itself inside a form; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+
 const mocks=vi.hoisted(()=>({withdrawal:vi.fn(),change:vi.fn(),onRevoked:vi.fn()}));
 vi.mock('./delegationApi',()=>({delegationApi:{withdrawal:mocks.withdrawal,change:mocks.change}}));
 const clinic='11111111-1111-4111-8111-111111111111',staff='22222222-2222-4222-8222-222222222222',doctor='33333333-3333-4333-8333-333333333333',request='44444444-4444-4444-8444-444444444444';
@@ -11,7 +14,7 @@ describe('explicit withdrawal from staff card',()=>{
  beforeEach(()=>{vi.resetAllMocks();mocks.withdrawal.mockResolvedValue(review);mocks.change.mockResolvedValue({id:request,state:'revoked',revision:3,capabilityVersion:'clinic_reception_v1'});mocks.onRevoked.mockResolvedValue(undefined);});
  it('loads the current server review and makes no write on opening or cancelling',async()=>{
   mount();await open();expect(mocks.withdrawal).toHaveBeenCalledWith(request);expect(screen.getByRole('dialog')).toHaveTextContent('Clínica sintética');expect(screen.getByRole('dialog')).toHaveTextContent('Recepção sintética');expect(mocks.change).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button',{name:'Voltar'}));expect(mocks.change).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button',{name:'Cancelar'}));expect(mocks.change).not.toHaveBeenCalled();
  });
  it('uses the fetched revision and preserves operation on lost reply',async()=>{
   mocks.change.mockRejectedValueOnce(new Error('Resposta não confirmada.')).mockResolvedValue({id:request,state:'revoked',revision:3});
@@ -35,7 +38,7 @@ describe('explicit withdrawal from staff card',()=>{
  });
  it('does not confirm a different request returned by the writer',async()=>{
   mocks.change.mockResolvedValue({id:doctor,state:'revoked',revision:3});mount();await open();fireEvent.click(screen.getByRole('button',{name:'Confirmar revogação'}));
-  await screen.findByText(/não pôde ser confirmada/);expect(mocks.onRevoked).not.toHaveBeenCalled();
+  await screen.findByText(/Não foi possível confirmar a revogação/);expect(mocks.onRevoked).not.toHaveBeenCalled();
  });
  it('sends one write while a confirmation is already in progress',async()=>{
   mocks.change.mockImplementation(()=>new Promise(()=>{}));mount();await open();

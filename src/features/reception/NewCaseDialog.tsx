@@ -13,6 +13,7 @@ import { ContactSearch } from './ContactSearch';
 import { NewContactFields } from './NewContactFields';
 import { FormError } from './FormError';
 import { dialogLayout } from './dialogLayout';
+import { selectClass } from './ReceptionControls';
 import { phoneProblem } from './contactPhone';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSessionHidden, useSessionPaused } from '@/contexts/SessionVisibility';
@@ -115,14 +116,18 @@ export function NewCaseDialog({
     }
   }
   if (blocked) return <Dialog open={!hidden} onOpenChange={open => { if (!open) onClose(); }}>
-    <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
-      <DialogHeader><DialogTitle>Novo atendimento</DialogTitle></DialogHeader>
-      <div role="alert" className="space-y-3 text-sm">
-        <p>A verificação deste atendimento foi interrompida. Feche esta janela e confira os contatos e a fila antes de abrir outro atendimento.</p>
-        {started.current && <p>Uma solicitação enviada antes da mudança pode ter sido concluída.</p>}
-        <p>Fechar esta janela descarta o preenchimento.</p>
+    <DialogContent className={`max-w-2xl ${dialogLayout.content}`}>
+      <DialogHeader className={dialogLayout.header}><DialogTitle>Novo atendimento</DialogTitle></DialogHeader>
+      <div className={dialogLayout.body}>
+        <div role="alert" className="space-y-3 text-sm">
+          <p>Este atendimento foi interrompido porque o acesso mudou. Feche esta janela e confira os contatos e a fila antes de abrir outro atendimento.</p>
+          {started.current && <p>Uma solicitação enviada antes da mudança pode ter sido concluída.</p>}
+          <p>Fechar esta janela descarta o preenchimento.</p>
+        </div>
       </div>
-      <Button type="button" variant="outline" className="h-auto min-h-11 whitespace-normal" onClick={onClose}>Fechar atendimento</Button>
+      <div className={dialogLayout.footer}><div className={dialogLayout.actions}>
+        <Button type="button" variant="outline" className={dialogLayout.button} onClick={onClose}>Fechar janela</Button>
+      </div></div>
     </DialogContent>
   </Dialog>;
   return (
@@ -150,18 +155,20 @@ export function NewCaseDialog({
               <>
                 <fieldset className="flex flex-wrap gap-3">
                   <legend className="sr-only">Cadastro do contato</legend>
-                  <label className="flex gap-2 text-xs">
+                  <label className="flex min-h-11 items-center gap-2 text-sm">
                     <input
                       type="radio"
+                      className="h-4 w-4 accent-primary"
                       name={field + 'mode'}
                       checked={mode === 'existing'}
                       onChange={() => setMode('existing')}
                     />
                     Contato existente
                   </label>
-                  <label className="flex gap-2 text-xs">
+                  <label className="flex min-h-11 items-center gap-2 text-sm">
                     <input
                       type="radio"
+                      className="h-4 w-4 accent-primary"
                       name={field + 'mode'}
                       checked={mode === 'new'}
                       onChange={() => setMode('new')}
@@ -184,6 +191,7 @@ export function NewCaseDialog({
                 required
                 minLength={2}
                 maxLength={200}
+                className="h-11"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Ex.: solicitar um horário de retorno"
@@ -194,7 +202,7 @@ export function NewCaseDialog({
                 <Label htmlFor={field + 'kind'}>Tipo</Label>
                 <select
                   id={field + 'kind'}
-                  className="w-full rounded-md border bg-background p-2 text-sm"
+                  className={selectClass}
                   value={kind}
                   onChange={(e) => setKind(e.target.value as keyof typeof kinds)}
                 >
@@ -209,7 +217,7 @@ export function NewCaseDialog({
                 <Label htmlFor={field + 'doctor'}>Médico relacionado</Label>
                 <select
                   id={field + 'doctor'}
-                  className="w-full rounded-md border bg-background p-2 text-sm"
+                  className={selectClass}
                   value={doctor}
                   onChange={(e) => setDoctor(e.target.value)}
                 >

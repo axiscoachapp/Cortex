@@ -9,6 +9,9 @@ import { SessionAssurance } from '@/components/SessionAssurance';
 import { ClinicAccessGate } from './ClinicAccessGate';
 import { NewCaseDialog } from './NewCaseDialog';
 import { ClinicAccessTransportError } from './accessErrors';
+// The shared Radix checkbox measures itself inside a form; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+
 
 const actor = '11111111-1111-4111-8111-111111111111', other = '66666666-6666-4666-8666-666666666666',
   clinic = '22222222-2222-4222-8222-222222222222', doctor = '55555555-5555-4555-8555-555555555555';
@@ -18,7 +21,7 @@ vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: mock.us
 vi.mock('./api', () => ({ receptionApi: { access: mock.access, contacts: mock.contacts, createCase: mock.createCase, createContact: mock.createContact } }));
 
 const accessValue = { kind: 'reception', active: true, admin: false, actorId: actor, clinic: { id: clinic, name: 'Clínica sintética' }, doctors: [{ id: doctor, name: 'Médica sintética', specialty: null }], staff: [] };
-const interrupted = /verificação deste atendimento foi interrompida/;
+const interrupted = /Este atendimento foi interrompido/;
 const hint = 'Verificando acesso… O preenchimento continua preservado.';
 beforeEach(() => {
   mock.expiry = 100;

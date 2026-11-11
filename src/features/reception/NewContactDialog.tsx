@@ -3,10 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { dialogLayout } from './dialogLayout';
+import { FormError } from './FormError';
 import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
-import { ReceptionNotice } from './ReceptionNotice';
 import { useRequestId } from './useRequestId';
 
 /** A phone the front desk can call back: DDD + number (10 or 11 digits), optionally with 55 in front. Empty is allowed. */
@@ -27,10 +28,8 @@ export function NewContactDialog({ onClose, onCreated }: { onClose: () => void; 
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const errorRef = useRef<HTMLDivElement>(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   const nameProblem = name.trim().length < 2 ? 'Informe o nome do contato (ao menos 2 letras).' : null;
   const problem = phoneProblem(phone);
   async function save(event: React.FormEvent) {
@@ -52,13 +51,13 @@ export function NewContactDialog({ onClose, onCreated }: { onClose: () => void; 
     }
   }
   return <Dialog open onOpenChange={open => { if (!open && !busy) onClose(); }}>
-    <DialogContent className="flex max-h-[90dvh] flex-col gap-0 p-0">
+    <DialogContent className={`max-w-lg ${dialogLayout.content}`}>
+      <DialogHeader className={dialogLayout.header}>
+        <DialogTitle>Novo contato</DialogTitle>
+        <DialogDescription>Quem entrou em contato com a clínica. O prontuário continua separado, com cada médico.</DialogDescription>
+      </DialogHeader>
       <form noValidate onSubmit={save} className="flex min-h-0 flex-1 flex-col">
-        <DialogHeader className="p-6 pb-3 text-left">
-          <DialogTitle>Novo contato</DialogTitle>
-          <DialogDescription>Quem entrou em contato com a clínica. O prontuário continua separado, com cada médico.</DialogDescription>
-        </DialogHeader>
-        <fieldset disabled={busy} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-4">
+        <fieldset disabled={busy} className={dialogLayout.body}>
           <div className="space-y-2">
             <Label htmlFor={field + 'name'}>Nome</Label>
             <Input id={field + 'name'} className="h-11" value={name} maxLength={200} autoComplete="off" onChange={event => setName(event.target.value)}
@@ -73,11 +72,13 @@ export function NewContactDialog({ onClose, onCreated }: { onClose: () => void; 
             {touched && problem && <p id={field + 'phone-error'} className="text-sm text-destructive">{problem}</p>}
           </div>
         </fieldset>
-        <div ref={errorRef} tabIndex={-1} className="px-6 outline-none empty:hidden"><ReceptionNotice error={error} /></div>
-        <DialogFooter className="gap-2 border-t p-4 sm:space-x-0">
-          <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={onClose}>Cancelar</Button>
-          <Button type="submit" className="min-h-11" disabled={busy}>{busy ? 'Salvando…' : 'Salvar contato'}</Button>
-        </DialogFooter>
+        <div className={dialogLayout.footer}>
+          <FormError error={error} />
+          <div className={dialogLayout.actions}>
+            <Button type="button" variant="outline" className={dialogLayout.button} disabled={busy} onClick={onClose}>Cancelar</Button>
+            <Button type="submit" className={dialogLayout.button} disabled={busy}>{busy ? 'Salvando…' : 'Salvar contato'}</Button>
+          </div>
+        </div>
       </form>
     </DialogContent>
   </Dialog>;

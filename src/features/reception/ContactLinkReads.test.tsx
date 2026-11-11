@@ -5,6 +5,9 @@ import { ContactLinksDialog } from './ContactLinksDialog';
 import { ClinicAccessContext } from './accessContext';
 import { SessionVisibilityContext } from '@/contexts/SessionVisibility';
 import type { ClinicAccess, LinkEdit } from './contracts';
+// The shared Radix checkbox measures itself inside a form; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+
 const mocks = vi.hoisted(() => ({ read: vi.fn(), editor: vi.fn(), state: vi.fn(), actor: '11111111-1111-4111-8111-111111111111' }));
 vi.mock('./api', () => ({ receptionApi: { contactLinks: mocks.read } }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: mocks.actor } }) }));
@@ -44,8 +47,8 @@ describe('verified contact link reads', () => {
     const pending = deferred<typeof page>(); mocks.read.mockReturnValue(pending.promise); let refresh!: Promise<void>;
     act(() => { refresh = view.client.invalidateQueries({ queryKey: prefix }); });
     await waitFor(() => expect(screen.queryByText(row.patientName)).not.toBeInTheDocument(), { timeout: 1500 });
-    for (const text of ['Contato: Contato sintético', row.doctorName, '02/01/2000', '1 vínculo carregado']) expect(screen.queryByText(text)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Carregar mais vínculos' })).not.toBeInTheDocument(); expect(screen.queryByText(/Nenhum vínculo administrativo/)).not.toBeInTheDocument();
+    for (const text of ['Contato: Contato sintético', row.doctorName, '02/01/2000', '1 paciente ligado']) expect(screen.queryByText(text)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Carregar mais pacientes' })).not.toBeInTheDocument(); expect(screen.queryByText(/Nenhum paciente ligado/)).not.toBeInTheDocument();
     await act(async () => { pending.resolve(page); await refresh; }); await loaded();
   });
   it('uses a generic error and retry only restores reading', async () => {
@@ -61,13 +64,13 @@ describe('verified contact link reads', () => {
     try {
       refresh = view.client.invalidateQueries({ queryKey: prefix }); await waitFor(() => expect(query(view).state.fetchStatus).toBe('paused'));
       await waitFor(() => expect(screen.queryByText(row.patientName)).not.toBeInTheDocument(), { timeout: 1500 });
-      expect(screen.getByText('Aguardando conexão de rede para consultar vínculos…')).toBeVisible();
+      expect(screen.getByText('Aguardando a conexão para carregar os pacientes ligados…')).toBeVisible();
     } finally { await act(async () => { onlineManager.setOnline(true); await refresh; }); }
     await loaded(); expect(mocks.editor).not.toHaveBeenCalled(); expect(mocks.state).not.toHaveBeenCalled();
   });
   it.each(['correct', 'suspend', 'reactivate'])('blocks stale %s before React receives the refresh', async action => {
     mocks.read.mockResolvedValue({ ...page, items: [{ ...row, active: action !== 'reactivate' }] });
-    const view = mount(); await loaded(); const name = (action === 'correct' ? 'Corrigir relação de ' : action === 'suspend' ? 'Suspender vínculo de ' : 'Reativar vínculo de ') + row.patientName;
+    const view = mount(); await loaded(); const name = (action === 'correct' ? 'Corrigir relação de ' : action === 'suspend' ? 'Suspender ligação de ' : 'Reativar ligação de ') + row.patientName;
     const button = screen.getByRole('button', { name }), pending = deferred<typeof page>(); mocks.read.mockReturnValue(pending.promise);
     const refresh = view.client.invalidateQueries({ queryKey: prefix }); fireEvent.click(button);
     expect(mocks.editor).not.toHaveBeenCalled(); expect(mocks.state).not.toHaveBeenCalled();
@@ -97,7 +100,7 @@ describe('verified contact link reads', () => {
   it('starts the first page after immediate access loss and recovery instead of refetching old cursors', async () => {
     const second = { ...row, patientId: other, patientName: 'Segundo beneficiário sintético' };
     mocks.read.mockImplementation((_clinic, _contact, cursor) => Promise.resolve(cursor ? { items: [second], nextCursor: null } : { ...page, nextCursor: row.patientId }));
-    const view = mount(); await loaded(); fireEvent.click(screen.getByRole('button', { name: 'Carregar mais vínculos' })); await screen.findByText(second.patientName);
+    const view = mount(); await loaded(); fireEvent.click(screen.getByRole('button', { name: 'Carregar mais pacientes' })); await screen.findByText(second.patientName);
     view.rerender(view.tree({ ...access, admin: false })); view.rerender(view.tree());
     await waitFor(() => expect(mocks.read.mock.calls.length).toBeGreaterThanOrEqual(3)); await waitFor(() => expect(view.client.isFetching()).toBe(0));
     expect(mocks.read).toHaveBeenCalledTimes(3); expect(screen.queryByText(second.patientName)).not.toBeInTheDocument();

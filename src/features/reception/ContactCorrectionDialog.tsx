@@ -12,6 +12,10 @@ import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
 import type { ContactEdit } from './contracts';
 import { ReceptionNotice } from './ReceptionNotice';
+import { LoadErrorNotice } from '@/features/shared/StatusNotice';
+import { ConfirmCheck } from './ConfirmCheck';
+import { FormError } from './FormError';
+import { dialogLayout } from './dialogLayout';
 
 export function ContactCorrectionDialog({ contactId, onClose }: { contactId: string; onClose: () => void }) {
   const access = useClinicAccess();
@@ -91,13 +95,22 @@ export function ContactCorrectionDialog({ contactId, onClose }: { contactId: str
     }
   };
   if (blocked) return <Dialog open={!hidden} onOpenChange={open => { if (!open) onClose(); }}>
-    <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
-      <DialogHeader><DialogTitle>Corrigir contato</DialogTitle><DialogDescription>Fechar esta janela descarta o preenchimento.</DialogDescription></DialogHeader>
-      <p role="alert" className="text-sm">Esta correção foi interrompida. Feche a janela e confira o cadastro antes de abrir outra correção.</p>
-      {started.current && <p className="text-sm">Uma solicitação enviada antes da mudança pode ter sido concluída.</p>}
-      <Button type="button" variant="outline" className="h-auto min-h-11 whitespace-normal" onClick={onClose}>Fechar correção</Button>
+    <DialogContent className={`max-w-2xl ${dialogLayout.content}`}>
+      <DialogHeader className={dialogLayout.header}><DialogTitle>Corrigir contato</DialogTitle><DialogDescription>Fechar esta janela descarta o preenchimento.</DialogDescription></DialogHeader>
+      <div className={dialogLayout.body}>
+        <p role="alert" className="text-sm">Esta correção foi interrompida. Feche a janela e confira o cadastro antes de abrir outra correção.</p>
+        {started.current && <p className="text-sm">Uma solicitação enviada antes da mudança pode ter sido concluída.</p>}
+      </div>
+      <div className={dialogLayout.footer}><div className={dialogLayout.actions}>
+        <Button type="button" variant="outline" className={dialogLayout.button} onClick={onClose}>Fechar janela</Button>
+      </div></div>
     </DialogContent>
   </Dialog>;
+  const status = snapshot.fetchStatus === 'paused' ? <p role="status" className="text-sm">Aguardando conexão de rede para conferir o cadastro…</p>
+    : snapshot.isPending || snapshot.fetchStatus === 'fetching' ? <ReceptionNotice loading />
+    : (reloadError || snapshot.isError) ? <LoadErrorNotice subject="o cadastro" onRetry={() => {
+      if (mayContinue()) { setReloadError(null); void snapshot.refetch(); }
+    }} /> : null;
   return (
     <Dialog
       open={!hidden}
@@ -105,28 +118,20 @@ export function ContactCorrectionDialog({ contactId, onClose }: { contactId: str
         if (!open && canClose.current()) onClose();
       }}
     >
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className={`max-w-2xl ${dialogLayout.content}`}>
+        <DialogHeader className={dialogLayout.header}>
           <DialogTitle>Corrigir contato</DialogTitle>
           <DialogDescription>
             Atualize os dados da pessoa que entra em contato com a clínica. Um telefone pode ser compartilhado por uma
             família.
           </DialogDescription>
         </DialogHeader>
-        {snapshot.fetchStatus === 'paused' ? <p role="status" className="text-sm">Aguardando conexão de rede para conferir o cadastro…</p>
-          : snapshot.isPending || snapshot.fetchStatus === 'fetching' ? <ReceptionNotice loading />
-          : (reloadError || snapshot.isError) ? <div role="alert" className="min-w-0 rounded-lg border p-4 space-y-3 text-sm">
-            <p>Não foi possível conferir o cadastro. Verifique o acesso e tente novamente.</p>
-            <Button type="button" variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" onClick={() => {
-              if (mayContinue()) { setReloadError(null); void snapshot.refetch(); }
-            }}>Tentar novamente</Button>
-          </div> : null}
-        {recovering && !readerReady && <Button type="button" disabled className="h-auto min-h-11 max-w-full whitespace-normal">Recuperando cadastro…</Button>}
-        {baseline && (
+        {baseline ? (
             <CorrectionForm
               key={reloadCount}
               initial={baseline}
               ready={readerReady && !reloadError}
+              status={status}
               readVersion={snapshot.data?.readVersion ?? 0}
               onClose={onClose}
               onReload={() => void recover()}
@@ -149,7 +154,12 @@ export function ContactCorrectionDialog({ contactId, onClose }: { contactId: str
               recovering={recovering}
               closeCheck={canClose}
             />
-        )}
+        ) : <>
+          <div className={dialogLayout.body}>{status}</div>
+          <div className={dialogLayout.footer}><div className={dialogLayout.actions}>
+            <Button type="button" variant="outline" className={dialogLayout.button} onClick={onClose}>Cancelar</Button>
+          </div></div>
+        </>}
       </DialogContent>
     </Dialog>
   );
@@ -167,6 +177,7 @@ function CorrectionForm({
   onStart,
   onSaved,
   ready,
+  status,
   maySubmit,
   readVersion,
 }: {
@@ -181,6 +192,8 @@ function CorrectionForm({
   onStart: () => void;
   onSaved: () => Promise<void>;
   ready: boolean;
+  /** Loading or failed-read notice of the dialog, shown at the top of the body. */
+  status: React.ReactNode;
   maySubmit: () => boolean;
   readVersion: number;
 }) {
@@ -220,85 +233,88 @@ function CorrectionForm({
     };
   });
   useLayoutEffect(() => { setConfirmed(false); }, [ready, readVersion]);
-  if (!ready) return null;
   return (
     <form
-      className="space-y-4"
+      className="flex min-h-0 flex-1 flex-col"
       onSubmit={(event) => {
         event.preventDefault();
-        if (confirmed && dirty && !busy && !paused && mayContinue() && beginSave()) {
+        if (ready && confirmed && dirty && !busy && !paused && mayContinue() && beginSave()) {
           save.mutate({ name: name.trim(), phone });
         }
       }}
     >
-      <ReceptionNotice error={save.error} />
-      <fieldset disabled={busy} className="space-y-4">
-        <div>
-          <Label htmlFor={field + 'name'}>Nome do contato</Label>
-          <Input
-            id={field + 'name'}
-            required
-            minLength={2}
-            maxLength={200}
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setConfirmed(false);
+      <div className={dialogLayout.body}>
+        {status}
+        {recovering && !ready && <Button type="button" variant="ghost" disabled className="h-auto min-h-11 whitespace-normal px-2">Recarregando…</Button>}
+        {ready && <fieldset disabled={busy} className="min-w-0 space-y-4">
+          <div>
+            <Label htmlFor={field + 'name'}>Nome do contato</Label>
+            <Input
+              id={field + 'name'}
+              required
+              minLength={2}
+              maxLength={200}
+              className="h-11"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setConfirmed(false);
+              }}
+            />
+          </div>
+          <div>
+            <Label htmlFor={field + 'phone'}>Telefone do contato</Label>
+            <Input
+              id={field + 'phone'}
+              type="tel"
+              maxLength={40}
+              className="h-11"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setConfirmed(false);
+              }}
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Informe DDD em um novo número brasileiro. Deixe vazio quando o telefone for desconhecido.
+            </p>
+          </div>
+          {/* Kept on purpose: a wrong phone sends the clinic's messages to someone else. */}
+          <ConfirmCheck id={field + 'confirm'} checked={confirmed} onChange={setConfirmed}>
+            Conferi a identidade do contato e os novos dados.
+          </ConfirmCheck>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-auto min-h-11 whitespace-normal px-2"
+            disabled={busy}
+            onClick={() => {
+              if (!dirty || window.confirm('Descartar o que você digitou e recarregar o cadastro?')) onReload();
             }}
-          />
-        </div>
-        <div>
-          <Label htmlFor={field + 'phone'}>Telefone do contato</Label>
-          <Input
-            id={field + 'phone'}
-            type="tel"
-            maxLength={40}
-            value={phone}
-            onChange={(e) => {
-              setPhone(e.target.value);
-              setConfirmed(false);
+          >
+            {recovering ? 'Recarregando…' : 'Descartar e recarregar'}
+          </Button>
+        </fieldset>}
+      </div>
+      <div className={dialogLayout.footer}>
+        {ready && <FormError error={save.error} />}
+        {paused && <p role="status" className="text-right text-xs text-muted-foreground">Verificando acesso… O preenchimento continua preservado.</p>}
+        <div className={dialogLayout.actions}>
+          <Button
+            type="button"
+            variant="outline"
+            className={dialogLayout.button}
+            disabled={busy}
+            onClick={() => {
+              if (close()) onClose();
             }}
-          />
-          <p className="text-xs text-muted-foreground mt-2">
-            Informe DDD em um novo número brasileiro. Deixe vazio quando o telefone for desconhecido.
-          </p>
+          >
+            Cancelar
+          </Button>
+          {ready && <Button type="submit" className={dialogLayout.button} disabled={!dirty || !confirmed || busy || paused}>
+            {save.isPending ? 'Salvando…' : 'Salvar correção'}
+          </Button>}
         </div>
-        <label className="flex items-start gap-2 text-xs">
-          <input
-            className="mt-1 accent-primary"
-            type="checkbox"
-            checked={confirmed}
-            onChange={(e) => setConfirmed(e.target.checked)}
-          />
-          Conferi a identidade do contato e os novos dados.
-        </label>
-      </fieldset>
-      <div className="flex flex-wrap gap-2 justify-end">
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-auto min-h-10 whitespace-normal text-left"
-          disabled={busy}
-          onClick={() => {
-            if (!dirty || window.confirm('Substituir o preenchimento pelo cadastro atual do servidor?')) onReload();
-          }}
-        >
-          {recovering ? 'Recuperando cadastro…' : 'Recuperar cadastro do servidor'}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={busy}
-          onClick={() => {
-            if (close()) onClose();
-          }}
-        >
-          Voltar
-        </Button>
-        {paused && <p role="status" className="basis-full text-right text-xs text-muted-foreground">Verificando acesso… O preenchimento continua preservado.</p>}
-        <Button type="submit" disabled={!dirty || !confirmed || busy || paused}>
-          {save.isPending ? 'Salvando…' : 'Salvar correção'}
-        </Button>
       </div>
     </form>
   );

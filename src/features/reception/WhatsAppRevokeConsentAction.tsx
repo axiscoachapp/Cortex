@@ -12,7 +12,7 @@ export function WhatsAppRevokeConsentAction({conversation,disabled,busy,onConfir
         <AlertDialogDescription className="[overflow-wrap:anywhere]">
           <span className="block">Conversa com <strong>{conversation.profileName||'Contato sem nome'}</strong>. Telefone do WhatsApp: <strong>+{conversation.waId}</strong>.</span>
           <span className="mt-2 block">A autorização de lembretes deste telefone será retirada na clínica. Isso também pode afetar outras conversas do mesmo número.</span>
-          <span className="mt-2 block">Mensagens já preparadas ou enviadas podem continuar. A conversa, o responsável e os vínculos serão mantidos.</span>
+          <span className="mt-2 block">Mensagens já preparadas ou enviadas podem continuar. A conversa, o responsável e os pacientes ligados continuam iguais.</span>
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">

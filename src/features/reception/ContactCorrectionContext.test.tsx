@@ -6,6 +6,9 @@ import { ClinicAccessContext } from './accessContext';
 import { SessionPausedContext, SessionVisibilityContext } from '@/contexts/SessionVisibility';
 import { confirmSessionExit } from '@/hooks/useUnsavedChanges';
 import type { ClinicAccess, ContactEdit } from './contracts';
+// The shared Radix checkbox measures itself inside a form; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+
 
 const mocks = vi.hoisted(() => ({ read: vi.fn(), update: vi.fn(), toast: vi.fn(), actor: '11111111-1111-4111-8111-111111111111' }));
 vi.mock('./api', () => ({ receptionApi: { contactEdit: mocks.read, updateContact: mocks.update } }));
@@ -70,8 +73,8 @@ describe('contact correction context and async effects', () => {
     const view = mount(); await edit(); const pending = deferred<ContactEdit>(); mocks.read.mockReturnValueOnce(pending.promise);
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true), invalidate = vi.spyOn(view.client, 'invalidateQueries');
     try {
-      fireEvent.click(screen.getByRole('button', { name: 'Recuperar cadastro do servidor' }));
-      await screen.findByRole('button', { name: 'Recuperando cadastro…' }); change(view, kind);
+      fireEvent.click(screen.getByRole('button', { name: 'Descartar e recarregar' }));
+      await screen.findByRole('button', { name: 'Recarregando…' }); change(view, kind);
       await act(async () => pending.resolve({ ...contact, name: 'Resposta tardia sintética', revision: 5 }));
       expect(invalidate).not.toHaveBeenCalled(); expect(view.close).not.toHaveBeenCalled(); expect(mocks.toast).not.toHaveBeenCalled();
       expect(screen.queryByLabelText('Nome do contato')).not.toBeInTheDocument();
@@ -91,7 +94,7 @@ describe('contact correction context and async effects', () => {
   it.each(['save-first', 'recover-first'])('excludes interleaved save and recovery before a render (%s)', async order => {
     const view = mount(); await edit(); const writing = deferred<number>(), reading = deferred<ContactEdit>();
     mocks.update.mockReturnValue(writing.promise); mocks.read.mockReturnValueOnce(reading.promise);
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true), target = form(), recover = screen.getByRole('button', { name: 'Recuperar cadastro do servidor' });
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true), target = form(), recover = screen.getByRole('button', { name: 'Descartar e recarregar' });
     try {
       act(() => { if (order === 'save-first') { fireEvent.submit(target); fireEvent.click(recover); } else { fireEvent.click(recover); fireEvent.submit(target); } });
       await act(async () => {});
@@ -112,7 +115,7 @@ describe('contact correction context and async effects', () => {
   it('keeps an invalidated window blocked after the original clinic returns', async () => {
     const view = mount(); await edit(); change(view, 'clinic'); view.rerender(view.tree());
     expect(screen.queryByLabelText('Nome do contato')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Fechar correção' })); expect(view.close).toHaveBeenCalledTimes(1); expect(mocks.update).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar janela' })); expect(view.close).toHaveBeenCalledTimes(1); expect(mocks.update).not.toHaveBeenCalled();
   });
   it('removes the old session exit guard when sending loses context', async () => {
     const pending = deferred<number>(); mocks.update.mockReturnValue(pending.promise); const view = mount(); await edit(); submit();

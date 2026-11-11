@@ -83,7 +83,7 @@ function AssigneeChoice({ actor, catalog, selectable, onConfirm, onPage, before 
   const paused = useSessionPaused();
   if (chosen) return <div className="min-w-0 space-y-4">
     <p className="text-sm [overflow-wrap:anywhere]">Novo responsável: <strong>{chosen.name}</strong> · {chosen.role === 'admin' ? 'Administração' : 'Recepção'}</p>
-    <p className="text-sm">A conversa continuará aberta. A fila e os vínculos serão mantidos. Confira a pessoa antes de confirmar.</p>
+    <p className="text-sm">A conversa continua aberta, na mesma fila e com os mesmos pacientes ligados. Confira a pessoa antes de confirmar.</p>
     <Button type="button" variant="outline" className={control} onClick={() => setChosen(null)}>Escolher outra pessoa</Button>
     {paused && <p role="status" className="text-xs text-muted-foreground">Verificando acesso… A escolha continua preservada.</p>}
     <DialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">

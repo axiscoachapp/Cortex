@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ContactCorrectionDialog } from './ContactCorrectionDialog';
 import { confirmSessionExit } from '@/hooks/useUnsavedChanges';
 import { ClinicAccessContext } from './accessContext';
+// The shared Radix checkbox measures itself inside a form; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+
 
 const mocks = vi.hoisted(() => ({ snapshot: vi.fn(), update: vi.fn(), toast: vi.fn(), close: vi.fn() }));
 vi.mock('./api', () => ({ receptionApi: { contactEdit: mocks.snapshot, updateContact: mocks.update } }));
@@ -55,10 +58,10 @@ describe('administrative contact correction', () => {
     await waitFor(() => expect(screen.getByLabelText('Nome do contato')).toHaveValue('Meu preenchimento'), { timeout: 1500 });
     expect(mocks.close).not.toHaveBeenCalled();
     const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Recuperar cadastro do servidor' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Descartar e recarregar' }));
     expect(mocks.snapshot).toHaveBeenCalledTimes(1);
     mocks.snapshot.mockResolvedValue({ ...original, name: 'Versão de outra pessoa', revision: 2 });
-    fireEvent.click(screen.getByRole('button', { name: 'Recuperar cadastro do servidor' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Descartar e recarregar' }));
     await waitFor(() => expect(screen.getByLabelText('Nome do contato')).toHaveValue('Versão de outra pessoa'));
     confirm.mockRestore();
   });
@@ -94,7 +97,7 @@ describe('administrative contact correction', () => {
     await act(async () => {
       await client.invalidateQueries({ queryKey: ['reception'] });
     });
-    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível conferir o cadastro');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar o cadastro');
     expect(screen.queryByLabelText('Nome do contato')).not.toBeInTheDocument();
     mocks.snapshot.mockResolvedValue({ ...original, revision: 2 });
     fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
@@ -134,8 +137,8 @@ describe('administrative contact correction', () => {
         finish = resolve;
       }),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Recuperar cadastro do servidor' }));
-    expect(await screen.findByRole('button', { name: 'Recuperando cadastro…' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Descartar e recarregar' }));
+    expect(await screen.findByRole('button', { name: 'Recarregando…' })).toBeDisabled();
     expect(screen.queryByLabelText('Nome do contato')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Salvar correção' })).not.toBeInTheDocument();
     const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
@@ -148,5 +151,20 @@ describe('administrative contact correction', () => {
     await waitFor(() => expect(screen.getByLabelText('Nome do contato')).toHaveValue('Cadastro recuperado'));
     expect(screen.getByLabelText('Nome do contato')).toBeEnabled();
     expect(mocks.update).not.toHaveBeenCalled();
+  });
+  // Round 3, R 30: the shared dialog frame.
+  it('puts the error right above "Cancelar" and the primary, and focuses it', async () => {
+    mocks.update.mockRejectedValue(new Error('O contato mudou em outra tela.'));
+    mount();
+    fireEvent.change(await screen.findByLabelText('Nome do contato'), { target: { value: 'Contato Corrigido' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Conferi a identidade/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }));
+    const alert = await screen.findByRole('alert');
+    await waitFor(() => expect(alert).toHaveFocus());
+    const cancel = screen.getByRole('button', { name: 'Cancelar' }), save = screen.getByRole('button', { name: 'Salvar correção' });
+    expect(alert.compareDocumentPosition(cancel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cancel.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cancel.parentElement).toBe(save.parentElement);
+    expect(screen.queryByRole('button', { name: 'Voltar' })).not.toBeInTheDocument();
   });
 });

@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClinicAccessContext } from './accessContext';
 import type { ClinicAccess, LinkEdit } from './contracts';
 import { ContactLinksDialog } from './ContactLinksDialog';
+// The shared Radix checkbox measures itself inside a form; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+
 const mocks = vi.hoisted(() => ({ page: vi.fn(), close: vi.fn(), editor: vi.fn(), state: vi.fn() }));
 vi.mock('./api', () => ({ receptionApi: { contactLinks: mocks.page } }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: '11111111-1111-4111-8111-111111111111' } }) }));
@@ -27,43 +30,43 @@ describe('administrative contact links dialog',()=>{
   it('loads only the first page and retrieves more through its cursor',async()=>{
     mocks.page.mockImplementation((_clinic,_contact,after)=>Promise.resolve(after?{items:[second],nextCursor:null}:{items:[first],nextCursor:first.patientId}));
     mount();await screen.findByText(first.patientName);expect(screen.getByText(first.doctorName)).toBeVisible();expect(screen.getByText('02/01/2000')).toBeVisible();expect(screen.getByText('Responsável')).toBeVisible();
-    expect(mocks.page).toHaveBeenCalledTimes(1);fireEvent.click(screen.getByRole('button',{name:'Carregar mais vínculos'}));await screen.findByText(second.patientName);
-    expect(mocks.page).toHaveBeenLastCalledWith(clinic,contact,first.patientId,50,expect.any(AbortSignal));expect(screen.queryByRole('button',{name:'Carregar mais vínculos'})).not.toBeInTheDocument();expect(screen.getByText('2 vínculos carregados')).toBeVisible();
+    expect(mocks.page).toHaveBeenCalledTimes(1);fireEvent.click(screen.getByRole('button',{name:'Carregar mais pacientes'}));await screen.findByText(second.patientName);
+    expect(mocks.page).toHaveBeenLastCalledWith(clinic,contact,first.patientId,50,expect.any(AbortSignal));expect(screen.queryByRole('button',{name:'Carregar mais pacientes'})).not.toBeInTheDocument();expect(screen.getByText('2 pacientes ligados')).toBeVisible();
   });
   it('opens the existing editor with exact identities and returns to the list on cancel or save',async()=>{
     mount();await screen.findByText(first.patientName);fireEvent.click(edit());expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();
     expect(mocks.editor).toHaveBeenLastCalledWith(expect.objectContaining({contactId:contact,patientId:first.patientId,doctorId:first.doctorId}));
     fireEvent.click(screen.getByRole('button',{name:'Cancelar edição sintética'}));await screen.findByText(first.patientName);fireEvent.click(edit());fireEvent.click(screen.getByRole('button',{name:'Salvar edição sintética'}));
-    expect(await screen.findByText('Relação administrativa corrigida.')).toBeVisible();expect(mocks.close).not.toHaveBeenCalled();
+    expect(await screen.findByText('Relação corrigida.')).toBeVisible();expect(mocks.close).not.toHaveBeenCalled();
   });
   it('keeps unavailable beneficiaries visible and prevents their correction',async()=>{
     mocks.page.mockResolvedValue({items:[{...first,patientAvailable:false},{...second,doctorActive:false}],nextCursor:null});mount();await screen.findByText(first.patientName);
     expect(edit()).toBeDisabled();expect(edit(second)).toBeDisabled();expect(screen.getByText('Paciente indisponível')).toBeVisible();expect(screen.getByText('Médico indisponível')).toBeVisible();
   });
   it('opens explicit state targets with exact identities and refreshes the list even on return without a new write',async()=>{
-    mount();await screen.findByText(first.patientName);fireEvent.click(screen.getByRole('button',{name:'Suspender vínculo de '+first.patientName}));
+    mount();await screen.findByText(first.patientName);fireEvent.click(screen.getByRole('button',{name:'Suspender ligação de '+first.patientName}));
     expect(mocks.state).toHaveBeenLastCalledWith(expect.objectContaining({contactId:contact,patientId:first.patientId,doctorId:first.doctorId,targetActive:false}));
-    mocks.page.mockResolvedValue({items:[{...first,active:false}],nextCursor:null});fireEvent.click(screen.getByRole('button',{name:'Voltar do estado sintético'}));await screen.findByRole('button',{name:'Reativar vínculo de '+first.patientName});expect(mocks.page).toHaveBeenCalledTimes(2);
-    fireEvent.click(screen.getByRole('button',{name:'Reativar vínculo de '+first.patientName}));expect(mocks.state).toHaveBeenLastCalledWith(expect.objectContaining({targetActive:true}));fireEvent.click(screen.getByRole('button',{name:'Salvar estado sintético'}));await screen.findByText('Vínculo reativado.');
+    mocks.page.mockResolvedValue({items:[{...first,active:false}],nextCursor:null});fireEvent.click(screen.getByRole('button',{name:'Voltar do estado sintético'}));await screen.findByRole('button',{name:'Reativar ligação de '+first.patientName});expect(mocks.page).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole('button',{name:'Reativar ligação de '+first.patientName}));expect(mocks.state).toHaveBeenLastCalledWith(expect.objectContaining({targetActive:true}));fireEvent.click(screen.getByRole('button',{name:'Salvar estado sintético'}));await screen.findByText('Ligação reativada.');
   });
   it('permits suspension for unavailable people but refuses their reactivation',async()=>{
     mocks.page.mockResolvedValue({items:[{...first,doctorActive:false},{...second,active:false,patientAvailable:false}],nextCursor:null});mount();await screen.findByText(first.patientName);
-    expect(screen.getByRole('button',{name:'Suspender vínculo de '+first.patientName})).toBeEnabled();expect(screen.getByRole('button',{name:'Reativar vínculo de '+second.patientName})).toBeDisabled();
+    expect(screen.getByRole('button',{name:'Suspender ligação de '+first.patientName})).toBeEnabled();expect(screen.getByRole('button',{name:'Reativar ligação de '+second.patientName})).toBeDisabled();
   });
   it('does not read or render cached patients for a non-admin',()=>{
     mount({admin:false,cached:true});expect(mocks.page).not.toHaveBeenCalled();expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();
   });
   it('withholds a cached list until the fresh mount read succeeds, then hides it on failure',async()=>{
     let fail!:(error:Error)=>void;mocks.page.mockReturnValue(new Promise((_,reject)=>{fail=reject;}));mount({cached:true});expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();
-    await act(async()=>{fail(new Error('Permissão retirada'));});expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível consultar os vínculos');expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();expect(screen.queryByText(/Nenhum vínculo/)).not.toBeInTheDocument();
+    await act(async()=>{fail(new Error('Permissão retirada'));});expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar os pacientes ligados');expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();expect(screen.queryByText(/Nenhum paciente ligado/)).not.toBeInTheDocument();
     mocks.page.mockResolvedValue({items:[first],nextCursor:null});fireEvent.click(screen.getByRole('button',{name:'Tentar novamente'}));expect(await screen.findByText(first.patientName)).toBeVisible();
   });
   it('hides rows and correction actions when loading the next page is refused',async()=>{
-    mocks.page.mockResolvedValueOnce({items:[first],nextCursor:first.patientId}).mockRejectedValueOnce(new Error('Sem permissão para continuar'));mount();await screen.findByText(first.patientName);fireEvent.click(screen.getByRole('button',{name:'Carregar mais vínculos'}));
+    mocks.page.mockResolvedValueOnce({items:[first],nextCursor:first.patientId}).mockRejectedValueOnce(new Error('Sem permissão para continuar'));mount();await screen.findByText(first.patientName);fireEvent.click(screen.getByRole('button',{name:'Carregar mais pacientes'}));
     await screen.findByRole('alert');expect(screen.queryByText(first.patientName)).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:/Corrigir relação/})).not.toBeInTheDocument();
   });
   it('separates empty results from failures',async()=>{
-    mocks.page.mockResolvedValue({items:[],nextCursor:null});mount();expect(await screen.findByText('Nenhum vínculo administrativo neste contato.')).toBeVisible();expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    mocks.page.mockResolvedValue({items:[],nextCursor:null});mount();expect(await screen.findByText('Nenhum paciente ligado a este contato.')).toBeVisible();expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
   it('does not show a delayed page from the previous contact after switching context',async()=>{
     let finish!:(value:unknown)=>void;mocks.page.mockImplementation((_clinic,id)=>id===contact?new Promise(resolve=>{finish=resolve;}):Promise.resolve({items:[{...second,contactId:otherContact}],nextCursor:null}));

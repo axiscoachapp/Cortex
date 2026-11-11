@@ -5,6 +5,9 @@ import { ContactCorrectionDialog } from './ContactCorrectionDialog';
 import { ClinicAccessContext } from './accessContext';
 import { SessionVisibilityContext } from '@/contexts/SessionVisibility';
 import type { ClinicAccess, ContactEdit } from './contracts';
+// The shared Radix checkbox measures itself inside a form; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+
 
 const mocks = vi.hoisted(() => ({ read: vi.fn(), update: vi.fn(), toast: vi.fn() }));
 vi.mock('./api', () => ({ receptionApi: { contactEdit: mocks.read, updateContact: mocks.update } }));

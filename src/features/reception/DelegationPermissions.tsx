@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { PageHeading } from '@/components/PageHeading';
 import { WorkspaceShell } from '@/components/WorkspaceShell';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { dialogLayout } from './dialogLayout';
+import { FormError } from './FormError';
 import { delegationApi, type DelegationAction, type DelegationCursor, type DelegationRequest } from './delegationApi';
 import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
@@ -130,11 +132,15 @@ function Permissions({ actorId, clinicId, embedded }: { actorId: string; clinicI
       {requests.hasNextPage && <Button variant="outline" disabled={!ready} onClick={() => void requests.fetchNextPage()}>Carregar mais pedidos</Button>}
     </section>}
     <Dialog open={!!confirmation} onOpenChange={open => { if (!open && !busy) setConfirmation(null); }}>
-      <DialogContent><DialogHeader><DialogTitle>{confirmation?.action === 'approve' ? 'Aprovar acesso da recepção?' : 'Revogar acesso da recepção?'}</DialogTitle><DialogDescription>{confirmation?.row.staffName} · {confirmation?.row.clinicName} · {confirmation?.row.doctorName}</DialogDescription></DialogHeader>
-        <p className="text-sm leading-relaxed">{confirmation?.action === 'approve' ? 'Esta conta poderá operar seus contatos, fila e agenda da clínica. Seus prontuários e documentos clínicos continuam privados.' : 'Esta conta perderá o acesso delegado à sua agenda da clínica. O histórico será preservado.'}</p>
-        {!confirmCurrent && <p role="alert" className="text-sm">O pedido mudou. Feche esta confirmação e atualize a lista.</p>}
-        <ReceptionNotice error={error} />
-        <DialogFooter><Button variant="outline" disabled={busy} onClick={() => setConfirmation(null)}>Voltar</Button><Button disabled={!ready || !confirmCurrent} onClick={() => { if (confirmation && confirmCurrent) void mutate({ kind: 'change', ...confirmation }); }}>{confirmation?.action === 'approve' ? 'Confirmar aprovação' : 'Confirmar revogação'}</Button></DialogFooter>
+      <DialogContent className={`max-w-lg ${dialogLayout.content}`}><DialogHeader className={dialogLayout.header}><DialogTitle>{confirmation?.action === 'approve' ? 'Aprovar acesso?' : 'Revogar acesso?'}</DialogTitle><DialogDescription>{confirmation?.row.staffName} · {confirmation?.row.clinicName} · {confirmation?.row.doctorName}</DialogDescription></DialogHeader>
+        <div className={dialogLayout.body}>
+          <p className="text-sm leading-relaxed">{confirmation?.action === 'approve' ? 'Esta conta poderá operar seus contatos, fila e agenda da clínica. Seus prontuários e documentos clínicos continuam privados.' : 'Esta conta perderá o acesso à sua agenda da clínica. O histórico é mantido.'}</p>
+          {!confirmCurrent && <p role="alert" className="text-sm">O pedido mudou. Feche esta confirmação e atualize a lista.</p>}
+        </div>
+        <div className={dialogLayout.footer}>
+          <FormError error={error} />
+          <div className={dialogLayout.actions}><Button variant="outline" className={dialogLayout.button} disabled={busy} onClick={() => setConfirmation(null)}>Cancelar</Button><Button className={dialogLayout.button} disabled={!ready || !confirmCurrent} onClick={() => { if (confirmation && confirmCurrent) void mutate({ kind: 'change', ...confirmation }); }}>{confirmation?.action === 'approve' ? 'Confirmar aprovação' : 'Confirmar revogação'}</Button></div>
+        </div>
       </DialogContent>
     </Dialog>
   </Container>;

@@ -23,12 +23,13 @@ import { StaffAccessProvenance } from './StaffAccessProvenance';
 import { WithdrawDelegation } from './WithdrawDelegation';
 import { DisabledHint } from './ReceptionControls';
 import { TEAM_TITLE } from './teamNames';
+import { dialogLayout } from './dialogLayout';
 import type { ClinicAccess } from './contracts';
 
 
 export default function TeamSettings({ embedded = false }: { embedded?: boolean }) {
   const access = useClinicAccess();
-  if (!access?.admin) return <ReceptionAccessNotice title={TEAM_TITLE} headingLevel={embedded ? 2 : 1} message="Esta página é só para o administrador da clínica." />;
+  if (!access?.admin) return <ReceptionAccessNotice title={TEAM_TITLE} headingLevel={embedded ? 2 : 1} message="Esta página é só para o administrador da clínica." grantedBy={null} />;
   return <TeamSection key={`${access.actorId}:${access.clinic?.id ?? 'none'}`} access={access} embedded={embedded} />;
 }
 
@@ -197,15 +198,15 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
           if (!open) setCredentials(null);
         }}
       >
-        <DialogContent className="max-h-[90dvh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className={`max-w-lg ${dialogLayout.content}`}>
+          <DialogHeader className={dialogLayout.header}>
             <DialogTitle>Credenciais temporárias</DialogTitle>
+            <DialogDescription>
+              Entregue estas credenciais à pessoa responsável por um canal seguro. Ela deverá trocar a senha no primeiro
+              acesso, em até 72 horas.
+            </DialogDescription>
           </DialogHeader>
-          <DialogDescription>
-            Entregue estas credenciais à pessoa responsável por um canal seguro. Ela deverá trocar a senha no primeiro
-            acesso, em até 72 horas.
-          </DialogDescription>
-          <dl className="text-sm space-y-3">
+          <div className={dialogLayout.body}><dl className="text-sm space-y-3">
             <div>
               <dt>E-mail</dt>
               <dd className="break-all font-medium">{credentials?.email}</dd>
@@ -214,8 +215,10 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
               <dt>Senha temporária</dt>
               <dd className="break-all font-mono select-all bg-muted p-3 rounded">{credentials?.temporaryPassword}</dd>
             </div>
-          </dl>
-          <Button onClick={() => setCredentials(null)}>Concluir</Button>
+          </dl></div>
+          <div className={dialogLayout.footer}><div className={dialogLayout.actions}>
+            <Button className={dialogLayout.button} onClick={() => setCredentials(null)}>Concluir</Button>
+          </div></div>
         </DialogContent>
       </Dialog>
     </Container>

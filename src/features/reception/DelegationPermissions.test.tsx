@@ -4,6 +4,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DelegationPermissions from './DelegationPermissions';
 import { ClinicAccessContext } from './accessContext';
+// The shared Radix checkbox measures itself inside a form; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+
 const mocks = vi.hoisted(() => ({ list: vi.fn(), request: vi.fn(), change: vi.fn(), teamDoctors: vi.fn(), actor: '33333333-3333-4333-8333-333333333333' }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: mocks.actor } }) }));
 vi.mock('./delegationApi', () => ({ delegationApi: { list: mocks.list, request: mocks.request, change: mocks.change } }));
