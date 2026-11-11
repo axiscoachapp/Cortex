@@ -17,6 +17,8 @@
 //                                           hd 1536x864, notebook 1280x800
 //   AUDIT_EXTRA_VIEWPORTS=1440x900,...      add sizes (label = w1440x900)
 //   AUDIT_CASE_CLAIMED=1                    the opened reception case is already the person's
+//   AUDIT_AGENDA_INTERACTIONS=1             on /recepcao/agenda: week, booking dialog
+//                                           empty / with free times / conflict / new caller
 //   AUDIT_FULL_PAGE=0                       capture only the first screen (fold).
 //     Below the desktop frame (SHELL_BREAKPOINT) subpages scroll inside
 //     .clinic-subpage-shell, so a "full page" capture is only the first
@@ -158,14 +160,36 @@ async function supabase(route) {
     { doctorId, doctorName: 'Dra. Ana Exemplo', effective: true, source: 'physician_approval', requestId: 'd51a0000-0000-4000-8000-000000000001' }], nextCursor: null });
   if (table === 'rpc/reception_team_doctors') return respond(route, [{ id: doctorId, name: 'Dra. Ana Exemplo', specialty: 'ginecologia' }, { id: 'd5110000-0000-4000-8000-0000000000b2', name: 'Dr. Bruno Exemplo', specialty: 'ginecologia' }]);
   if (table === 'rpc/reception_delegation_requests') return respond(route, { canManage: CLINIC_ADMIN || WORKSPACE_ROLE === 'admin', items: [], nextCursor: null });
-  if (table === 'rpc/reception_contacts') return respond(route, { items: [
-    { id: 'd5190000-0000-4000-8000-000000000001', name: 'Contato Sintético 1', phone: '+5541999990001', createdAt: day(-1) },
-    { id: 'd5190000-0000-4000-8000-000000000002', name: 'Contato Sintético 2', phone: '+5541999990002', createdAt: day(-2) },
-  ], nextCursor: null });
-  if (table === 'rpc/reception_appointments') return respond(route, { items: [
-    { id: 'd5180000-0000-4000-8000-000000000003', doctorId, patientId: pid(1), contactId: 'd5190000-0000-4000-8000-000000000001', caseId: null,
-      patientName: 'Paciente Sintética 1', startTime: day(0, 9), endTime: day(0, 9, 30), type: 'retorno', status: 'agendado', revision: 1, checkedInAt: null, googleSyncStatus: 'failed' },
-  ], blocks: [{ id: 'd5180000-0000-4000-8000-000000000004', doctorId, startTime: day(0, 12), endTime: day(0, 13), reason: 'Intervalo sintético', revision: 1 }] });
+  if (table === 'rpc/reception_contacts') {
+    // Name or phone digits, like the server; an unknown name returns nothing (new-contact path).
+    const search = String(request.postDataJSON?.()?.p_search ?? '').toLowerCase(), digits = search.replace(/\D/g, '');
+    return respond(route, { items: [
+      { id: 'd5190000-0000-4000-8000-000000000001', name: 'Contato Sintético 1', phone: '+5541999990001', createdAt: day(-1) },
+      { id: 'd5190000-0000-4000-8000-000000000002', name: 'Contato Sintético 2', phone: '+5541999990002', createdAt: day(-2) },
+    ].filter(c => !search || c.name.toLowerCase().includes(search) || (digits && c.phone.replace(/\D/g, '').includes(digits))), nextCursor: null });
+  }
+  if (table === 'rpc/reception_contact') {
+    const id = request.postDataJSON?.()?.p_contact, known = id === 'd5190000-0000-4000-8000-000000000001';
+    return respond(route, { id, clinicId: 'd5120000-0000-4000-8000-000000000001', name: known ? 'Contato Sintético 1' : 'Pessoa Nova Sintética', phone: known ? '+5541999990001' : '',
+      beneficiaries: known ? [{ id: pid(1), name: 'Paciente Sintética 1', dateOfBirth: null, doctorId, relationship: 'self' }] : [] });
+  }
+  if (table === 'rpc/reception_create_contact') return respond(route, 'd5190000-0000-4000-8000-0000000000f1');
+  if (table === 'rpc/reception_link_patient') return respond(route, true);
+  // Every synthetic booking meets a conflict, so the dialog's error state can be captured.
+  if (table === 'rpc/reception_book_appointment') return respond(route, { code: '23P01', message: 'Horário ocupado ou bloqueado. Escolha outro intervalo.', details: null, hint: null }, 409);
+  if (table === 'rpc/reception_appointments') {
+    const row = (n, start, end, over) => ({ id: `d5180000-0000-4000-8000-0000000000${n}`, doctorId, patientId: pid(1), contactId: 'd5190000-0000-4000-8000-000000000001', caseId: null,
+      patientName: 'Paciente Sintética 1', startTime: start, endTime: end, type: 'retorno', status: 'agendado', revision: 1, checkedInAt: null, googleSyncStatus: 'idle', ...over });
+    return respond(route, { items: [
+      row(31, day(0, 8, 30), day(0, 9), { patientName: 'Paciente Sintética 2', checkedInAt: day(0, 8, 22), status: 'confirmado' }),
+      row(32, day(0, 9), day(0, 9, 30), { googleSyncStatus: 'failed' }),
+      row(33, day(0, 10, 30), day(0, 11, 30), { patientName: 'Paciente Sintética com um nome bem comprido para testar quebras', type: 'novo', status: 'confirmado' }),
+      row(34, day(1, 9), day(1, 9, 30), { patientName: 'Paciente Sintética 3', type: 'seguimento' }),
+      row(35, day(2, 14), day(2, 14, 30), { patientName: 'Paciente Sintética 4', status: 'cancelado' }),
+    ], blocks: [{ id: 'd5180000-0000-4000-8000-000000000004', doctorId, startTime: day(0, 12), endTime: day(0, 13), reason: 'Intervalo sintético', revision: 1 }] });
+  }
+  // Only start and end of the doctor's own commitments, as the server returns them.
+  if (table === 'rpc/reception_busy_intervals') return respond(route, [{ doctorId, startTime: day(0, 14), endTime: day(0, 15, 30) }, { doctorId, startTime: day(1, 11), endTime: day(1, 12) }]);
   if (table === 'rpc/reception_queue') return respond(route, { items: [
     { id: 'd5180000-0000-4000-8000-000000000001', subject: 'Organizar primeira consulta', kind: 'first_consult', status: 'new', revision: 1,
       contactId: 'd5190000-0000-4000-8000-000000000001', contactName: 'Contato Sintético 1', phone: '+5541999990001', doctorId, assignedTo: null, assigneeName: null, createdAt: day(0) },
@@ -790,6 +814,43 @@ try {
           await page.screenshot({ path: resolve(artifacts, `${label}-conversa-${name}.png`), fullPage: true });
           report.routes[`${label} conversa ${name}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
         }
+      }
+      // Team agenda (AUDIT_AGENDA_INTERACTIONS=1): week, booking empty, with free times, with a conflict, and a new caller.
+      if (process.env.AUDIT_AGENDA_INTERACTIONS === '1' && path === '/recepcao/agenda') {
+        const snap = async (name) => {
+          await page.waitForTimeout(500);
+          await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: false });
+          const box = (await page.getByRole('dialog').count()) ? await page.getByRole('dialog').first().boundingBox() : null;
+          report.routes[`${label} ${name}`] = { ...(await inspect(page, viewport.width)), ...(box ? { dialog: { top: Math.round(box.y), bottom: Math.round(box.y + box.height), viewport: viewport.height } } : {}),
+            pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        };
+        await page.getByRole('button', { name: 'Semana', exact: true }).click();
+        await snap('agenda-semana');
+        await page.getByRole('button', { name: 'Dia', exact: true }).click();
+        const dialog = page.getByRole('dialog');
+        await page.getByRole('button', { name: 'Novo agendamento' }).click();
+        await dialog.waitFor();
+        await snap('agendamento-vazio');
+        await dialog.getByLabel('Buscar contato por nome ou telefone').fill('Contato');
+        await dialog.getByRole('button', { name: /^Selecionar contato Contato Sintético 1/ }).click();
+        await dialog.getByRole('button', { name: 'Paciente Sintética 1' }).click();
+        await dialog.getByRole('group', { name: 'Horários livres' }).waitFor({ timeout: 10000 }).catch(() => {});
+        await snap('agendamento-horarios');
+        await dialog.getByRole('button', { name: /^Agendar / }).click();
+        await dialog.getByRole('alert').first().waitFor({ timeout: 10000 }).catch(() => {});
+        await snap('agendamento-conflito');
+        await page.goto(origin + path);
+        await page.getByRole('button', { name: 'Novo agendamento' }).click();
+        await dialog.waitFor();
+        await dialog.getByLabel('Buscar contato por nome ou telefone').fill('Pessoa Nova');
+        await dialog.getByRole('button', { name: /^Cadastrar “Pessoa Nova”/ }).click();
+        await dialog.getByLabel('Telefone com DDD').fill('41 9888');
+        await snap('agendamento-novo-contato');
+        await dialog.getByLabel('Telefone com DDD').fill('(41) 98888-0001');
+        await dialog.getByRole('button', { name: 'Cadastrar contato' }).click();
+        await dialog.getByRole('group', { name: 'Horários livres' }).waitFor({ timeout: 10000 }).catch(() => {});
+        await snap('agendamento-novo-contato-horarios');
+        await page.goto(origin + path);
       }
       // Menu bot: the editor and a local simulated conversation (nothing is sent).
       if (CLINIC_ADMIN && path === '/configuracoes?secao=whatsapp') {
