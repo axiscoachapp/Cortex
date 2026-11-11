@@ -20,6 +20,8 @@ import { addMinutes, bookingSummary, dayHeading, freeSlots, minutesBetween, occu
 import { DayAgenda } from './DayAgenda';
 import { FormError } from './FormError';
 import { dialogLayout } from './dialogLayout';
+import { selectClass } from './ReceptionControls';
+import { appointmentTypeLabel } from '@/lib/appointmentStatus';
 
 const CONFLICT = 'Este horário já está ocupado na agenda do médico, por uma consulta ou um compromisso particular. Escolha outro horário.';
 
@@ -40,8 +42,11 @@ export function BookingDialog({
   doctor: initialDoctor,
   start: initialStart,
   paused: casePaused = false,
+  contact: initialContact,
 }: {
   receptionCase?: ReceptionCase;
+  // A contact chosen in the directory ("Agendar"): booking starts with it, and it can be changed.
+  contact?: ContactOption;
   onClose: () => void;
   day?: string;
   doctor?: string;
@@ -58,7 +63,7 @@ export function BookingDialog({
   const field = useId();
   const request = useRequestId();
   const [contact, setContact] = useState<ContactOption | null>(
-    receptionCase ? { id: receptionCase.contactId, name: receptionCase.contactName, phone: receptionCase.phone } : null,
+    receptionCase ? { id: receptionCase.contactId, name: receptionCase.contactName, phone: receptionCase.phone } : initialContact ?? null,
   );
   const [doctor, setDoctor] = useState(
     receptionCase?.doctorId ?? (initialDoctor && access?.doctors.some(d => d.id === initialDoctor) ? initialDoctor : access?.doctors.length === 1 ? access.doctors[0].id : ''),
@@ -311,7 +316,7 @@ export function BookingDialog({
                   id={field + 'doctor'}
                   required
                   disabled={!!receptionCase?.doctorId}
-                  className="block min-h-11 w-full border rounded-md p-2 text-sm bg-background"
+                  className={selectClass}
                   value={doctor}
                   onChange={(e) => {
                     setDoctor(e.target.value);
@@ -363,12 +368,9 @@ export function BookingDialog({
                   if (timeSource === 'chip') setEnd(addMinutes(start, typeMinutes[next]) ?? end);
                   edited();
                 }}
-                className="block min-h-11 w-full rounded-md border bg-background p-2 text-sm"
+                className={selectClass}
               >
-                <option value="novo">Primeira consulta</option>
-                <option value="retorno">Retorno</option>
-                <option value="seguimento">Seguimento</option>
-                <option value="urgencia">Encaixe avaliado pela equipe</option>
+                {(Object.keys(appointmentTypeLabel) as BookingDetails['type'][]).map(value => <option key={value} value={value}>{appointmentTypeLabel[value]}</option>)}
               </select>
             </div>
             <section aria-label="Horário" className="space-y-3">
@@ -557,7 +559,7 @@ export function BookingDialog({
                       />
                     </div>
                     <div>
-                      <Label htmlFor={field + 'birth'}>Nascimento (se souber)</Label>
+                      <Label htmlFor={field + 'birth'}>Nascimento (opcional)</Label>
                       <Input
                         id={field + 'birth'}
                         type="date"
@@ -581,7 +583,7 @@ export function BookingDialog({
                     id={field + 'relationship'}
                     disabled={relationshipLocked}
                     aria-describedby={relationshipLocked ? field + 'relationship-hint' : undefined}
-                    className="block min-h-11 w-full border rounded-md p-2 text-sm bg-background"
+                    className={selectClass}
                     value={relationship}
                     onChange={(e) => {
                       setRelationship(e.target.value as typeof relationship);

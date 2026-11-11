@@ -19,6 +19,7 @@ import { DayAgenda } from './DayAgenda';
 import { addMinutes, bookingSummary, dayEntries, dayHeading, minutesBetween } from './agendaTime';
 import { FormError } from './FormError';
 import { dialogLayout } from './dialogLayout';
+import { SegmentedControl, selectClass } from './ReceptionControls';
 
 function intervalError(day: string, start: string, end: string): string | null {
   try {
@@ -135,7 +136,7 @@ export default function ReceptionCalendar() {
           <Label htmlFor="reception-calendar-doctor">Agenda do médico</Label>
           <select
             id="reception-calendar-doctor"
-            className="block min-h-11 w-full min-w-0 rounded-md border bg-background px-3 py-2 text-sm"
+            className={selectClass}
             value={doctor}
             onChange={(e) => setDoctor(e.target.value)}
           >
@@ -147,26 +148,9 @@ export default function ReceptionCalendar() {
             ))}
           </select>
         </div>
-        <div role="group" aria-label="Período da agenda" className="flex gap-1 md:col-span-2 2xl:col-span-1">
-          <Button
-            size="sm"
-            className="min-h-11 flex-1"
-            variant={view === 'day' ? 'default' : 'outline'}
-            aria-pressed={view === 'day'}
-            onClick={() => setView('day')}
-          >
-            Dia
-          </Button>
-          <Button
-            size="sm"
-            className="min-h-11 flex-1"
-            variant={view === 'week' ? 'default' : 'outline'}
-            aria-pressed={view === 'week'}
-            onClick={() => setView('week')}
-          >
-            Semana
-          </Button>
-        </div>
+        <SegmentedControl<'day' | 'week'> label="Período da agenda" value={view} onChange={setView}
+          className="grid w-full grid-cols-2 md:col-span-2 sm:inline-flex sm:w-auto 2xl:col-span-1"
+          options={[{ value: 'day', label: 'Dia' }, { value: 'week', label: 'Semana' }] as const} />
       </div>
       <ReceptionNotice error={periodError || unblock.error} />
       <ReceptionNotice
@@ -366,7 +350,7 @@ function BlockDialog({ day: initialDay, onClose }: { day: string; onClose: () =>
                 required
                 value={doctor}
                 onChange={(e) => setDoctor(e.target.value)}
-                className="block min-h-11 border rounded-md p-2 bg-background w-full text-sm"
+                className={selectClass}
               >
                 <option value="">Selecione o médico</option>
                 {access?.doctors.map((d) => (

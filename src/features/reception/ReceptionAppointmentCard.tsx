@@ -15,15 +15,9 @@ import { receptionApi } from './api';
 import { clinicDateLabel, clinicDay, clinicTime } from './dates';
 import { typeLabels } from './agendaTime';
 import type { ReceptionAppointment } from './contracts';
+import { StatusChip } from './AppointmentStatusChip';
 
-const chip = 'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap';
-export function StatusChip({ appointment: a }: { appointment: ReceptionAppointment }) {
-  if (a.status === 'cancelado') return <span className={`${chip} border-muted-foreground/30 text-muted-foreground line-through`}>Cancelado</span>;
-  if (a.status === 'realizado') return <span className={`${chip} border-muted-foreground/30 bg-muted text-muted-foreground`}>Realizado</span>;
-  if (a.checkedInAt) return <span className={`${chip} border-emerald-600/30 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200`}>Chegou {clinicTime(a.checkedInAt)}</span>;
-  if (a.status === 'confirmado') return <span className={`${chip} border-sky-600/30 bg-sky-50 text-sky-800 dark:bg-sky-950/40 dark:text-sky-200`}>Confirmado</span>;
-  return <span className={`${chip} border-slate-400/40 bg-slate-50 text-slate-700 dark:bg-slate-900/40 dark:text-slate-200`}>Agendado</span>;
-}
+export { StatusChip };
 
 /**
  * One appointment as a compact row: time · name · type · status, the main action

@@ -2,12 +2,12 @@ import { clinicDay, clinicTime, clinicTimestamp, nextClinicDay } from './dates';
 import { appointmentTiming } from './appointmentTiming';
 import type { ReceptionAppointment, ScheduleBlock } from './contracts';
 import type { BusyInterval } from './busyIntervals';
+import { appointmentTypeLabel } from '@/lib/appointmentStatus';
 
 // No per-clinic durations exist yet; these are the front-desk defaults.
 export const typeMinutes: Record<ReceptionAppointment['type'], number> = { novo: 60, retorno: 30, seguimento: 30, urgencia: 30 };
-export const typeLabels: Record<ReceptionAppointment['type'], string> = {
-  novo: 'Primeira consulta', retorno: 'Retorno', seguimento: 'Seguimento', urgencia: 'Encaixe',
-};
+/** The app-wide type names (`src/lib/appointmentStatus.ts`), under the name the reception screens use. */
+export const typeLabels: Record<ReceptionAppointment['type'], string> = appointmentTypeLabel;
 // Hours offered as free time and slot chips; anything booked outside still shows.
 export const WORK_START = '08:00';
 export const WORK_END = '18:00';

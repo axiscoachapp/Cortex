@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { clinicTime } from './dates';
 import { dayEntries, typeLabels } from './agendaTime';
 import { appointmentTiming } from './appointmentTiming';
+import { StatusChip } from './AppointmentStatusChip';
 import type { ReceptionAppointment, ScheduleBlock } from './contracts';
 import type { BusyInterval } from './busyIntervals';
 
@@ -54,6 +55,7 @@ function CompactAppointment({ appointment: a }: { appointment: ReceptionAppointm
   return <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-card px-3 py-2 text-sm ${a.status === 'cancelado' ? 'line-through opacity-60' : ''}`}>
     <span className="font-semibold tabular-nums">{appointmentTiming(a).label}</span>
     <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{a.patientName}</span>
-    <span className="text-xs text-muted-foreground">{a.status === 'cancelado' ? 'Cancelado' : typeLabels[a.type]}</span>
+    <span className="text-xs text-muted-foreground">{typeLabels[a.type]}</span>
+    <StatusChip appointment={a} />
   </div>;
 }
