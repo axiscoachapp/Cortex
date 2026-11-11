@@ -129,6 +129,7 @@ describe('OpenAI text handler integration', () => {
     expect(result.status).toBe(200);
     expect(await result.json()).toMatchObject({ saved: true, insights: null, message: expect.stringContaining('Anotação salva') });
     expect(test.writes).toEqual([{ clinical_notes: expect.stringContaining('Synthetic new note') }]);
+    if ('failed' in options) expect(test.settleFailedCall).toHaveBeenCalledWith(expect.anything(), userId, 'synthetic-reservation', expect.any(http.RequestError));
   });
 
   it('does not overwrite notes changed elsewhere and spends no credits on it', async () => {

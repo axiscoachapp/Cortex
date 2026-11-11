@@ -2,7 +2,7 @@ import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts'
 import { readJsonObject, RequestError } from '../_shared/http.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
-import { checkQuota, recordUsage, creditsFromUsage, QuotaExceededError } from '../_shared/quota.ts';
+import { checkQuota, recordUsage, creditsFromUsage, QuotaExceededError, settleFailedCall } from '../_shared/quota.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 import { parseModelObject } from '../_shared/gemini.ts';
 import { assertPromptSize } from '../_shared/modelInput.ts';
@@ -131,6 +131,10 @@ ${patient.clinical_notes || 'Nenhuma nota anterior'}`;
         systemInstruction: SYSTEM,
         maxOutputTokens: 1024,
         responseSchema: INSIGHTS_SCHEMA,
+      }).catch(async (error) => {
+        // A failed call must not keep the reservation blocking the quota.
+        await settleFailedCall(supabaseClient, userId, reservationId, error);
+        throw error;
       });
       await recordUsage(supabaseClient, userId, creditsFromUsage(usage), reservationId);
       insights = parseModelObject(rawText, INSIGHTS_SCHEMA);
