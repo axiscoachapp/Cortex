@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { functionErrorMessage } from '@/lib/functionErrors';
+import { functionErrorMessage, functionErrorStatus } from '@/lib/functionErrors';
 import type { CommentProposal } from '@/types/patient';
 
 interface Props {
@@ -12,7 +12,15 @@ interface Props {
   expectedRevision: number;
   /** Called with the server summary once the approved subset is applied. */
   onApplied: (summary: string) => void;
+  /** Outcome kept by the owner (on the chat message) so it survives a patient switch. */
+  status?: ProposalStatus;
+  summary?: string;
+  onStatusChange?: (status: ProposalStatus, summary?: string) => void;
+  /** The chart changed since the proposal (409): the card adopted this revision. */
+  onRevisionRefreshed?: (revision: number) => void;
 }
+
+export type ProposalStatus = 'pending' | 'done' | 'dismissed';
 
 type Key = string;
 
@@ -21,7 +29,17 @@ type Key = string;
  * Nothing is written to the chart until the doctor confirms; unchecked items
  * are never applied.
  */
-export function CommentProposalCard({ patientId, comment, proposal, expectedRevision, onApplied }: Props) {
+export function CommentProposalCard({
+  patientId,
+  comment,
+  proposal,
+  expectedRevision,
+  onApplied,
+  status = 'pending',
+  summary: savedSummary = '',
+  onStatusChange,
+  onRevisionRefreshed,
+}: Props) {
   const items: Array<{ key: Key; label: string }> = [
     ...proposal.allergies.map((a, i) => ({ key: `allergy-${i}`, label: `Adicionar alergia: ${a}` })),
     ...proposal.medicationsAdd.map((m, i) => ({
@@ -37,9 +55,11 @@ export function CommentProposalCard({ patientId, comment, proposal, expectedRevi
     ...(proposal.longTermNote ? [{ key: 'note', label: `Anotação no prontuário: ${proposal.longTermNote}` }] : []),
   ];
   const [selected, setSelected] = useState<Set<Key>>(() => new Set(items.map((item) => item.key)));
-  const [state, setState] = useState<'pending' | 'saving' | 'done' | 'dismissed'>('pending');
+  const [state, setState] = useState<'pending' | 'saving' | 'done' | 'dismissed'>(status);
   const [error, setError] = useState('');
-  const [summary, setSummary] = useState('');
+  const [summary, setSummary] = useState(savedSummary);
+  const [revision, setRevision] = useState(expectedRevision);
+  useEffect(() => setRevision(expectedRevision), [expectedRevision]);
 
   const toggle = (key: Key) =>
     setSelected((current) => {
@@ -61,8 +81,23 @@ export function CommentProposalCard({ patientId, comment, proposal, expectedRevi
       longTermNote: selected.has('note') ? proposal.longTermNote : '',
     };
     const { data, error: invokeError } = await supabase.functions.invoke('process-comment', {
-      body: { patientId, comment, mode: 'apply', expectedRevision, approved },
+      body: { patientId, comment, mode: 'apply', expectedRevision: revision, approved },
     });
+    if (invokeError && functionErrorStatus(invokeError) === 409) {
+      // The chart changed after this proposal (often another card applied
+      // first). Read the current revision so the doctor can check the items
+      // against the updated chart and apply again, without retyping.
+      const { data: current } = await supabase.from('patients').select('revision').eq('id', patientId).maybeSingle();
+      if (typeof current?.revision === 'number') {
+        setRevision(current.revision);
+        onRevisionRefreshed?.(current.revision);
+        setError('O prontuário mudou depois desta sugestão. Confira os itens com o prontuário atual e aplique de novo.');
+      } else {
+        setError('O prontuário mudou depois desta sugestão e não foi possível atualizá-la. Verifique a conexão e tente de novo.');
+      }
+      setState('pending');
+      return;
+    }
     if (invokeError || !data?.applied) {
       setError(await functionErrorMessage(invokeError, 'Não foi possível aplicar. Tente novamente.'));
       setState('pending');
@@ -71,6 +106,7 @@ export function CommentProposalCard({ patientId, comment, proposal, expectedRevi
     const text = typeof data.summary === 'string' ? data.summary : 'Alterações aplicadas.';
     setSummary(text);
     setState('done');
+    onStatusChange?.('done', text);
     onApplied(text);
   };
 
@@ -119,7 +155,10 @@ export function CommentProposalCard({ patientId, comment, proposal, expectedRevi
         <Button size="sm" onClick={() => void apply()} disabled={state === 'saving' || selected.size === 0}>
           {state === 'saving' ? 'Aplicando…' : `Aplicar selecionados (${selected.size})`}
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => setState('dismissed')} disabled={state === 'saving'}>
+        <Button size="sm" variant="ghost" onClick={() => {
+            setState('dismissed');
+            onStatusChange?.('dismissed');
+          }} disabled={state === 'saving'}>
           Descartar
         </Button>
       </div>

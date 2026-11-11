@@ -3,8 +3,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CommentProposalCard } from './CommentProposalCard';
 
-const mocks = vi.hoisted(() => ({ invoke: vi.fn() }));
-vi.mock('@/integrations/supabase/client', () => ({ supabase: { functions: { invoke: mocks.invoke } } }));
+const mocks = vi.hoisted(() => ({ invoke: vi.fn(), revision: vi.fn() }));
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    functions: { invoke: mocks.invoke },
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: mocks.revision }) }) }),
+  },
+}));
+const conflict = () => ({ data: null, error: { context: { status: 409, json: async () => ({ error: 'O prontuário foi alterado em outra janela.' }) } } });
 
 const proposal = {
   allergies: ['Penicilina'],
@@ -50,5 +56,35 @@ describe('CommentProposalCard', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Descartar' }));
     expect(screen.getByText(/Nada foi alterado/)).toBeInTheDocument();
     expect(mocks.invoke).not.toHaveBeenCalled();
+  });
+
+  it('a second proposal refreshes its revision on 409 and applies on the next confirmation, without retyping', async () => {
+    mocks.invoke.mockReset().mockResolvedValueOnce(conflict()).mockResolvedValueOnce({ data: { applied: true, summary: 'Aplicado' }, error: null });
+    mocks.revision.mockReset().mockResolvedValue({ data: { revision: 7 }, error: null });
+    const onRevisionRefreshed = vi.fn(), onStatusChange = vi.fn(), onApplied = vi.fn();
+    render(
+      <CommentProposalCard patientId="p1" comment="x" proposal={proposal} expectedRevision={4} onApplied={onApplied}
+        onRevisionRefreshed={onRevisionRefreshed} onStatusChange={onStatusChange} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Aplicar selecionados/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('O prontuário mudou depois desta sugestão');
+    expect(onRevisionRefreshed).toHaveBeenCalledWith(7);
+    expect(onApplied).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: /Aplicar selecionados/ }));
+    await waitFor(() => expect(onApplied).toHaveBeenCalledWith('Aplicado'));
+    expect(mocks.invoke.mock.calls.map(([, options]) => options.body.expectedRevision)).toEqual([4, 7]);
+    expect(onStatusChange).toHaveBeenCalledWith('done', 'Aplicado');
+  });
+
+  it('restores a decided card from its saved status instead of offering it again', () => {
+    mocks.invoke.mockClear();
+    const { unmount } = render(
+      <CommentProposalCard patientId="p1" comment="x" proposal={proposal} expectedRevision={1} onApplied={vi.fn()} status="done" summary="Alergia adicionada" />,
+    );
+    expect(screen.getByText('Alergia adicionada')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Aplicar/ })).not.toBeInTheDocument();
+    unmount();
+    render(<CommentProposalCard patientId="p1" comment="x" proposal={proposal} expectedRevision={1} onApplied={vi.fn()} status="dismissed" />);
+    expect(screen.getByText(/Nada foi alterado/)).toBeInTheDocument();
   });
 });

@@ -75,7 +75,7 @@ export interface ChatMessage {
   id: string;
   type: 'soap' | 'whatsapp' | 'system' | 'user' | 'assistant' | 'profile-update' | 'comment-proposal';
   /** For 'comment-proposal' messages. */
-  commentProposal?: { patientId: string; comment: string; proposal: CommentProposal; expectedRevision: number };
+  commentProposal?: { patientId: string; comment: string; proposal: CommentProposal; expectedRevision: number; status?: 'pending' | 'done' | 'dismissed'; summary?: string };
   title: string;
   content: string;
   timestamp: Date;
