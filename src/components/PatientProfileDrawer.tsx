@@ -32,6 +32,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { printSoap, printDossier, escapeHtml } from '@/lib/printDoc';
+import { useClinicAccess } from '@/features/reception/accessContext';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { PatientFiles } from '@/components/PatientFiles';
 import { PrescriptionList } from '@/components/PrescriptionList';
@@ -111,7 +112,13 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { prescriber } = useUserSettings();
-  const printAuthor = { name: prescriber.doctorName, crm: prescriber.crmNumber, crmUf: prescriber.crmUf };
+  const access = useClinicAccess();
+  const printAuthor = {
+    name: prescriber.doctorName,
+    crm: prescriber.crmNumber,
+    crmUf: prescriber.crmUf,
+    clinicName: access?.clinic?.name,
+  };
 
   // Reset transient UI state on patient switch.
   useEffect(() => {
@@ -306,6 +313,7 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
   const handlePrintDossier = () => {
     if (!patient || !detailReady || !consultationsReady) return;
     printDossier(patient, consultations, {
+      author: printAuthor,
       socialAnamnesis,
       medicalHistory,
       clinicalNotes,

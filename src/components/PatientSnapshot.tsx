@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { printMedicationList } from '@/lib/printDoc';
+import { useClinicAccess } from '@/features/reception/accessContext';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { functionErrorBody, functionErrorMessage } from '@/lib/functionErrors';
 
@@ -61,6 +62,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
   const { user } = useAuth();
   const userId = user?.id;
   const { prescriber } = useUserSettings();
+  const access = useClinicAccess();
   const draftKey = `${userId ?? ''}/${patient?.id ?? ''}`;
   const notes = drafts[draftKey] ?? '';
   const isProcessing = processing[draftKey] ?? false;
@@ -108,7 +110,12 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
       toast({ title: 'Nenhuma medicação registrada', description: 'Adicione medicações ao perfil antes de imprimir a lista.', variant: 'destructive' });
       return;
     }
-    printMedicationList(patient, { name: prescriber.doctorName, crm: prescriber.crmNumber, crmUf: prescriber.crmUf });
+    printMedicationList(patient, {
+      name: prescriber.doctorName,
+      crm: prescriber.crmNumber,
+      crmUf: prescriber.crmUf,
+      clinicName: access?.clinic?.name,
+    });
   };
 
   const handleProcessNotes = async () => {
