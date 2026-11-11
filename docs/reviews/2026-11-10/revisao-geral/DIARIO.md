@@ -40,6 +40,8 @@ Sessão autônoma do Claude, iniciada em 10/11/2026 às 22:18 (horário de São 
 | 07:30 | Testes de banco no Supabase | Novo `scripts/supabase-rollout/sqltest.mjs`: roda os arquivos de teste dentro de uma transação sempre desfeita. Substitui o Docker. |
 | 08:00 | 2ª medição | Evolução completa em 5 de 5; assistente 47/48; resumo 7/7. Detalhes em [AVALIACAO_IA_PACIENTE_ANTIGO.md](AVALIACAO_IA_PACIENTE_ANTIGO.md). |
 | 08:10 | Limpeza | Áudios e rascunhos de teste apagados, paciente sintética regravada no estado inicial (16 consultas), funções de avaliação apagadas. O uso de IA do dia na conta de teste (cerca de 100 créditos de 1.500) é dos testes. |
+| 08:40 | Publicação do lote da IA | Commit `be127ca`. 36 funções publicadas; migrations 84 = 84; verificador sem pendências. **`git push` não saiu:** o GitHub pede login neste computador e eu não posso entrar por você. O servidor novo é compatível com o site que está no ar. Rode `git push origin main` quando puder. |
+| 08:50 | Plano de melhoria | [PLANO_DE_MELHORIA.md](PLANO_DE_MELHORIA.md): 13 bloqueios, 24 defeitos, 12 itens de experiência. Começo pelos bloqueios. |
 
 ## Onde parou (10/11, 23:20) — retomado em 11/11 às 05:18
 
