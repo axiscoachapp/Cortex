@@ -5,13 +5,40 @@ import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 import { removeStoragePrefix } from '../_shared/storage.ts';
 import { requireSafeDeletion } from '../_shared/deletion.ts';
 import { retryProviderCleanup } from '../_shared/providerFiles.ts';
+import { corsHeadersFor } from '../_shared/cors.ts';
+import { googleTokenKeys, isSealedGoogleToken, openGoogleToken } from '../_shared/oauth.ts';
+import { bearerToken } from '../_shared/secrets.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Cache-Control': 'no-store',
-  Vary: 'Origin',
-};
+const corsHeaders = corsHeadersFor(Deno.env.get('ALLOWED_ORIGIN'), { 'Cache-Control': 'no-store' });
+
+/** Step-up window: the calling session must have proven a credential this recently. */
+const STEP_UP_MS = 10 * 60_000;
+/** Methods that prove the person at the keyboard (a refresh or an e-mailed link does not). */
+const STEP_UP_METHODS = new Set(['password', 'totp', 'mfa/totp', 'phone', 'mfa/phone', 'webauthn', 'mfa/webauthn']);
+
+/**
+ * When the calling session last proved a credential, in ms, from the `amr` claim of its own
+ * access token (Supabase Auth keeps one entry per method with the time it was used in this
+ * session; refreshing the token does not change them). The bearer was already verified by
+ * requireUser, so its claims can be read; 0 when there is no usable entry.
+ */
+function sessionAuthenticatedAt(authorization: string | null, userId: string, now: number): number {
+  try {
+    const payload = bearerToken(authorization).split('.')[1] ?? '';
+    const text = atob(payload.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (payload.length % 4)) % 4));
+    const claims = JSON.parse(text);
+    if (!claims || claims.sub !== userId || !Array.isArray(claims.amr)) return 0;
+    let latest = 0;
+    for (const entry of claims.amr) {
+      const at = Number(entry?.timestamp) * 1000;
+      if (STEP_UP_METHODS.has(entry?.method) && Number.isFinite(at) && at <= now + 60_000) latest = Math.max(latest, at);
+    }
+    return latest;
+  } catch {
+    return 0;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') return new Response(null, { status: 405, headers: corsHeaders });
@@ -33,12 +60,13 @@ serve(async (req) => {
           'Confirme que exportou seus prontuários e que conhece a obrigação de guardá-los por 20 anos.',
           400,
         );
-      // Irreversible: require a sign-in within the last 10 minutes, so a stolen
-      // or left-open session cannot destroy the account on its own.
-      const { data: authUser, error: authUserError } = await admin.auth.admin.getUserById(userId);
-      if (authUserError) throw new Error('Não foi possível confirmar a identidade');
-      const lastSignIn = authUser.user?.last_sign_in_at ? Date.parse(authUser.user.last_sign_in_at) : 0;
-      if (!lastSignIn || Date.now() - lastSignIn > 10 * 60_000)
+      // Irreversible: THIS session must have entered the password (or a second
+      // factor) within the last 10 minutes, so a stolen or left-open session
+      // cannot destroy the account on its own. The account-wide last_sign_in_at
+      // is not used: a sign-in on another device would refresh it.
+      const now = Date.now();
+      const authenticatedAt = sessionAuthenticatedAt(req.headers.get('Authorization'), userId, now);
+      if (!authenticatedAt || now - authenticatedAt > STEP_UP_MS)
         return new Response(
           JSON.stringify({ error: 'Por segurança, confirme sua senha antes de excluir a conta.', reauthRequired: true }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -59,10 +87,19 @@ serve(async (req) => {
       .maybeSingle();
     if (integrationError) throw new Error('Não foi possível verificar as integrações');
     if (integration?.google_refresh_token) {
+      // Sealed tokens need GOOGLE_TOKEN_KEYS; a legacy plaintext one is used as it is.
+      let token: string | null;
+      try {
+        const keys = isSealedGoogleToken(integration.google_refresh_token)
+          ? googleTokenKeys(Deno.env.get('GOOGLE_TOKEN_KEYS')) : { current: '', keys: {} };
+        token = await openGoogleToken(keys, integration.google_refresh_token, userId, 'refresh');
+      } catch {
+        throw new Error('Não foi possível desconectar o Google. Tente a exclusão novamente.');
+      }
       const response = await fetchWithDeadline('https://oauth2.googleapis.com/revoke', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ token: integration.google_refresh_token }),
+        body: new URLSearchParams({ token: token ?? '' }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null);

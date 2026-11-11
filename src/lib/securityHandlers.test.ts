@@ -10,6 +10,15 @@ import * as http from '../../supabase/functions/_shared/http';
 import * as deletion from '../../supabase/functions/_shared/deletion';
 import * as providerFiles from '../../supabase/functions/_shared/providerFiles';
 import * as passwordPolicy from '../../supabase/functions/_shared/passwordPolicy';
+import * as cors from '../../supabase/functions/_shared/cors';
+import * as secrets from '../../supabase/functions/_shared/secrets';
+
+/** Bearer of a session that entered the password `ageMs` ago (requireUser is stubbed; delete-user-data reads `amr`). */
+const sessionHeader = (ageMs = 0) => {
+  const b64 = (o: unknown) => btoa(JSON.stringify(o)).replace(/=+$/, '');
+  const claims = { sub: '11111111-1111-4111-8111-111111111111', amr: [{ method: 'password', timestamp: Math.floor((Date.now() - ageMs) / 1000) }] };
+  return { Authorization: `Bearer ${b64({ alg: 'none' })}.${b64(claims)}.signature` };
+};
 
 type Row = Record<string, unknown>;
 const user = '11111111-1111-4111-8111-111111111111';
@@ -172,6 +181,8 @@ function loadHandler(
     '../_shared/http.ts': { ...http, fetchWithDeadline: fetchStub },
     '../_shared/deletion.ts': deletion,
     '../_shared/passwordPolicy.ts': passwordPolicy,
+    '../_shared/cors.ts': cors,
+    '../_shared/secrets.ts': secrets,
     '../_shared/providerFiles.ts': providerFiles,
     '../_shared/clinicalAi.ts': { callClinicalText: fetchStub, assertOpenAiEnabled: () => {} },
     '../_shared/gemini.ts': { uploadToGeminiFiles: fetchStub, callGemini: fetchStub, parseModelObject: fetchStub },
@@ -183,6 +194,7 @@ function loadHandler(
     OPENAI_API_KEY: 'synthetic',
     GOOGLE_CLIENT_ID: 'client',
     GOOGLE_CLIENT_SECRET: 'synthetic',
+    GOOGLE_TOKEN_KEYS: `k1:${'A'.repeat(43)}=`,
     ALLOWED_ORIGIN: 'https://cortex.example',
     RESEND_API_KEY: 'synthetic-resend-key',
   };
@@ -407,7 +419,7 @@ describe('security endpoint regressions', () => {
         {
           id: rxId,
           user_id: user,
-          secret_code: 'ABC',
+          secret_code: 'ABCD2345',
           status: 'generated',
           issuance_verified_at: '2026-01-01',
           expires_at: '2099-01-01',
@@ -418,7 +430,7 @@ describe('security endpoint regressions', () => {
     const response = await loadHandler(
       'validate-prescription',
       db,
-    )(new Request(`https://edge.invalid?id=${rxId}&code=ABC`));
+    )(new Request(`https://edge.invalid?id=${rxId}&code=ABCD2345`));
     expect(response.status).toBe(500);
     expect(db.download).not.toHaveBeenCalled();
     expect(db.createSignedUrl).not.toHaveBeenCalled();
@@ -429,7 +441,7 @@ describe('security endpoint regressions', () => {
         {
           id: rxId,
           user_id: user,
-          secret_code: 'ABC',
+          secret_code: 'ABCD2345',
           status: 'generated',
           issuance_verified_at: '2000-01-01',
           expires_at: '2001-01-01',
@@ -440,7 +452,7 @@ describe('security endpoint regressions', () => {
     const response = await loadHandler(
       'validate-prescription',
       db,
-    )(new Request(`https://edge.invalid?id=${rxId}&code=ABC&_format=application%2Fvalidador-iti%2Bjson`));
+    )(new Request(`https://edge.invalid?id=${rxId}&code=ABCD2345&_format=application%2Fvalidador-iti%2Bjson`));
     expect(response.status).toBe(410);
     expect(db.createSignedUrl).not.toHaveBeenCalled();
   });
@@ -450,7 +462,7 @@ describe('security endpoint regressions', () => {
         {
           id: rxId,
           user_id: user,
-          secret_code: 'ABC',
+          secret_code: 'ABCD2345',
           status: 'signed',
           signed_at: '2026-01-01',
           issuance_verified_at: '2026-01-01',
@@ -465,7 +477,7 @@ describe('security endpoint regressions', () => {
     const handler = loadHandler('validate-prescription', db);
     // Incomplete signed state: 409 in every format, never the generated file instead.
     for (const format of ['', '&_format=application%2Fvalidador-iti%2Bjson', '&_format=application%2Fjson']) {
-      const response = await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABC${format}`));
+      const response = await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABCD2345${format}`));
       expect(response.status).toBe(409);
       expect(await response.json()).toMatchObject({ status: 'signature_incomplete' });
     }
@@ -479,7 +491,7 @@ describe('security endpoint regressions', () => {
     const row = (extra: Row = {}): Row => ({
       id: rxId,
       user_id: user,
-      secret_code: 'ABC',
+      secret_code: 'ABCD2345',
       status: 'signed',
       signed_at: '2026-01-01',
       signature_verified_at: '2026-01-01',
@@ -496,14 +508,14 @@ describe('security endpoint regressions', () => {
     it('accepts any canonical operation UUID, as the producer does (Codex 05/11 03:39)', async () => {
       const canonical = `rx/${user}/${rxId}/signed-44444444-4444-4444-4444-444444444444.pdf`;
       const db = fakeDatabase({ prescriptions: [row({ signed_storage_path: canonical })] });
-      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&_secretCode=ABC${iti}`));
+      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&_secretCode=ABCD2345${iti}`));
       expect(response.status).toBe(200);
       expect(db.createSignedUrl).toHaveBeenCalledWith(canonical, 300);
     });
 
     it('answers exactly the official structure with a short URL of the signed PDF', async () => {
       const db = fakeDatabase({ prescriptions: [row()] });
-      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&_secretCode=ABC${iti}`));
+      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&_secretCode=ABCD2345${iti}`));
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Type')).toBe('application/validador-iti+json');
       expect(await response.json()).toEqual({ version: '1.0.0', prescription: { signatureFiles: [{ url: 'https://example.invalid/pdf' }] } });
@@ -512,7 +524,7 @@ describe('security endpoint regressions', () => {
 
     it('refuses a generated, unsigned document in the ITI branch without minting a URL', async () => {
       const db = fakeDatabase({ prescriptions: [row({ status: 'generated', signed_at: null, signature_verified_at: null, signed_storage_path: null })] });
-      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&_secretCode=ABC${iti}`));
+      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&_secretCode=ABCD2345${iti}`));
       expect(response.status).toBe(409);
       expect(await response.json()).toMatchObject({ status: 'unsigned' });
       expect(db.createSignedUrl).not.toHaveBeenCalled();
@@ -530,7 +542,7 @@ describe('security endpoint regressions', () => {
         const db = fakeDatabase({ prescriptions: [row({ signed_storage_path: path })] });
         const handler = loadHandler('validate-prescription', db);
         for (const format of [iti, '']) {
-          const response = await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABC${format}`));
+          const response = await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABCD2345${format}`));
           expect(response.status).toBe(409);
         }
         expect(db.createSignedUrl).not.toHaveBeenCalled();
@@ -540,16 +552,16 @@ describe('security endpoint regressions', () => {
 
     it('serves the signed PDF when validly signed and the original while only generated', async () => {
       const signed = fakeDatabase({ prescriptions: [row()] });
-      expect((await loadHandler('validate-prescription', signed)(new Request(`https://edge.invalid?id=${rxId}&code=ABC`))).status).toBe(200);
+      expect((await loadHandler('validate-prescription', signed)(new Request(`https://edge.invalid?id=${rxId}&code=ABCD2345`))).status).toBe(200);
       expect(signed.download).toHaveBeenCalledWith(signedPath);
       const generated = fakeDatabase({ prescriptions: [row({ status: 'generated', signed_at: null, signature_verified_at: null, signed_storage_path: null })] });
-      expect((await loadHandler('validate-prescription', generated)(new Request(`https://edge.invalid?id=${rxId}&code=ABC`))).status).toBe(200);
+      expect((await loadHandler('validate-prescription', generated)(new Request(`https://edge.invalid?id=${rxId}&code=ABCD2345`))).status).toBe(200);
       expect(generated.download).toHaveBeenCalledWith(`rx/${user}/${rxId}.pdf`);
     });
 
     it('keeps the own manifest on the generated PDF and its own digest, never the signed file with that digest', async () => {
       const db = fakeDatabase({ prescriptions: [row()] });
-      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&code=ABC&_format=application%2Fjson`));
+      const response = await loadHandler('validate-prescription', db)(new Request(`https://edge.invalid?id=${rxId}&code=ABCD2345&_format=application%2Fjson`));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body).toMatchObject({ status: 'assinada', sha256: issuanceSnapshot.pdf_sha256 });
@@ -562,7 +574,7 @@ describe('security endpoint regressions', () => {
       const handler = loadHandler('validate-prescription', db);
       for (const format of ['', iti, '&_format=application%2Fjson']) {
         const wrong = await handler(new Request(`https://edge.invalid?id=${rxId}&_secretCode=XYZ${format}`));
-        const unknown = await handler(new Request(`https://edge.invalid?id=66666666-6666-4666-8666-666666666666&_secretCode=ABC${format}`));
+        const unknown = await handler(new Request(`https://edge.invalid?id=66666666-6666-4666-8666-666666666666&_secretCode=ABCD2345${format}`));
         expect(wrong.status).toBe(404);
         expect(unknown.status).toBe(404);
         expect(await wrong.text()).toBe(await unknown.text());
@@ -574,10 +586,10 @@ describe('security endpoint regressions', () => {
     it('checks only _secretCode when present, never falling back to the code of the QR link', async () => {
       const db = fakeDatabase({ prescriptions: [row()] });
       const handler = loadHandler('validate-prescription', db);
-      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABC&_secretCode=XYZ${iti}`))).status).toBe(404);
-      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABC&_secretCode=${iti}`))).status).toBe(404);
-      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=XYZ&_secretCode=ABC${iti}`))).status).toBe(200);
-      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABC${iti}`))).status).toBe(200);
+      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABCD2345&_secretCode=XYZ${iti}`))).status).toBe(404);
+      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABCD2345&_secretCode=${iti}`))).status).toBe(404);
+      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=XYZ&_secretCode=ABCD2345${iti}`))).status).toBe(200);
+      expect((await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABCD2345${iti}`))).status).toBe(200);
     });
   });
   it('quarantines legacy forged future expiry without serving or signing a download URL', async () => {
@@ -586,7 +598,7 @@ describe('security endpoint regressions', () => {
         {
           id: rxId,
           user_id: user,
-          secret_code: 'ABC',
+          secret_code: 'ABCD2345',
           status: 'generated',
           created_at: '2098-01-01',
           expires_at: '2099-01-01',
@@ -597,7 +609,7 @@ describe('security endpoint regressions', () => {
     });
     const handler = loadHandler('validate-prescription', db);
     for (const format of ['', '&_format=application%2Fvalidador-iti%2Bjson']) {
-      const response = await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABC${format}`));
+      const response = await handler(new Request(`https://edge.invalid?id=${rxId}&code=ABCD2345${format}`));
       expect(response.status).toBe(409);
       expect(await response.json()).toMatchObject({ status: 'unverified' });
     }
@@ -662,7 +674,7 @@ describe('security endpoint regressions', () => {
     const response = await loadHandler(
       'delete-user-data',
       db,
-    )(new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }));
+    )(new Request('https://edge.invalid', { method: 'POST', headers: sessionHeader(), body: JSON.stringify({ retentionAcknowledged: true }) }));
     expect(response.status).toBe(503);
     expect(db.deleteUser).not.toHaveBeenCalled();
     expect(db.tables.account_deletion_requests).toEqual([{ user_id: user }]);
@@ -678,6 +690,7 @@ describe('security endpoint regressions', () => {
       )(
         new Request('https://edge.invalid', {
           method: 'POST',
+          headers: sessionHeader(),
           body: JSON.stringify({ patientId: patient, retentionAcknowledged: true }),
         }),
       );
@@ -713,19 +726,16 @@ describe('security endpoint regressions', () => {
     expect(db.deleteUser).not.toHaveBeenCalled();
     expect(db.remove).not.toHaveBeenCalled();
   });
-  it('requires a recent sign-in (step-up) before deleting the account', async () => {
+  it('requires a recent sign-in (step-up) in the calling session before deleting the account', async () => {
+    // The account signed in a moment ago (another device), but this session entered its password an hour ago.
     const db = fakeDatabase();
-    const stale = new Date(Date.now() - 60 * 60_000).toISOString();
-    (db.auth.admin.getUserById as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { user: { id: user, email: 'doctor@example.invalid', last_sign_in_at: stale } },
-      error: null,
-    });
     const response = await loadHandler(
       'delete-user-data',
       db,
-    )(new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }));
+    )(new Request('https://edge.invalid', { method: 'POST', headers: sessionHeader(60 * 60_000), body: JSON.stringify({ retentionAcknowledged: true }) }));
     expect(response.status).toBe(403);
     expect((await response.json()).reauthRequired).toBe(true);
+    expect(db.auth.admin.getUserById).not.toHaveBeenCalled();
     expect(db.deleteUser).not.toHaveBeenCalled();
     expect(db.remove).not.toHaveBeenCalled();
   });
@@ -830,7 +840,7 @@ describe('security endpoint regressions', () => {
     const response = await loadHandler(
       'delete-user-data',
       db,
-    )(new Request('https://edge.invalid', { method: 'POST', body: JSON.stringify({ retentionAcknowledged: true }) }));
+    )(new Request('https://edge.invalid', { method: 'POST', headers: sessionHeader(), body: JSON.stringify({ retentionAcknowledged: true }) }));
     expect(response.status).toBe(503);
     expect(db.list).not.toHaveBeenCalled();
     expect(db.deleteUser).not.toHaveBeenCalled();

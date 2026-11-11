@@ -6,6 +6,7 @@
 // clinic_access()), never from the body. Logs carry ids and codes only.
 
 import { openSecret, sealSecret } from './psc.ts';
+import { secretEquals } from './secrets.ts';
 import { GraphError, parseWebhook, sha256Hex, validSignature, windowOpenUntil, type GraphClient, type InboundMessage } from './whatsapp.ts';
 import {
   decideStep, isOpenNow, isQuietWord, SESSION_IDLE_MS, starterFlow, validateFlow,
@@ -180,7 +181,7 @@ export async function webhookHandler(req: Request, deps: WhatsAppDeps): Promise<
   if (req.method === 'GET') {
     const url = new URL(req.url);
     const challenge = url.searchParams.get('hub.challenge') ?? '';
-    if (url.searchParams.get('hub.mode') === 'subscribe' && url.searchParams.get('hub.verify_token') === verifyToken && /^[0-9A-Za-z_-]{1,200}$/.test(challenge))
+    if (url.searchParams.get('hub.mode') === 'subscribe' && await secretEquals(verifyToken, url.searchParams.get('hub.verify_token'), 16) && /^[0-9A-Za-z_-]{1,200}$/.test(challenge))
       return text(200, challenge);
     return text(403);
   }

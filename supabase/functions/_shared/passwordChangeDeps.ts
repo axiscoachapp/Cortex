@@ -3,14 +3,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { AuthError, authResponse, requirePendingPasswordCaller, requireUser } from './auth.ts';
 import { fetchWithDeadline } from './http.ts';
+import { corsHeadersFor } from './cors.ts';
 import { generateTemporaryPassword } from './passwordPolicy.ts';
 import type { ChangeInitialPasswordDeps, ReissueTemporaryPasswordDeps } from './passwordChange.ts';
 
-const cors = () => ({
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  Vary: 'Origin',
-});
+const cors = () => corsHeadersFor(Deno.env.get('ALLOWED_ORIGIN'));
 const noSession = { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false };
 const service = () => createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {
   auth: noSession, global: { fetch: fetchWithDeadline },

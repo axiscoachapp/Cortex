@@ -46,6 +46,9 @@ function signedFileOf(rx: { status?: unknown; signature_verified_at?: unknown; s
 }
 class SignatureIncomplete extends Error {}
 import { fetchWithDeadline } from "../_shared/http.ts";
+import { secretEquals } from "../_shared/secrets.ts";
+
+const MIN_ACCESS_CODE_LENGTH = 8;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',   // deliberately public — pharmacies/validators
@@ -102,8 +105,12 @@ Em caso de dúvida, entre em contato com o médico emissor.`;
       .eq('id', id)
       .maybeSingle();
 
-    // Same response for not-found and wrong code — no enumeration oracle.
-    if (!rx || !code || code.toUpperCase() !== rx.secret_code.toUpperCase()) {
+    // Same response for not-found and wrong code — no enumeration oracle. The
+    // comparison takes the same time whatever the code shares with the stored one;
+    // stored codes are 8 characters (generate-prescription accessCode).
+    const codeMatches = await secretEquals(
+      typeof rx?.secret_code === 'string' ? rx.secret_code.toUpperCase() : '', code.toUpperCase(), MIN_ACCESS_CODE_LENGTH);
+    if (!rx || !codeMatches) {
       return reply(404, { error: 'Documento não encontrado ou código de acesso incorreto.' });
     }
 

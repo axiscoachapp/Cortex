@@ -12,6 +12,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { fetchWithDeadline } from '../_shared/http.ts';
+import { bearerToken, secretEquals } from '../_shared/secrets.ts';
 
 const CSV_URL = 'https://dados.anvisa.gov.br/dados/DADOS_ABERTOS_MEDICAMENTOS.csv';
 
@@ -78,9 +79,7 @@ serve(async (req) => {
 
   // The scheduled job supplies the exact Vault service secret. Fail closed
   // without configuration and never treat a decoded role as authentication.
-  const auth = req.headers.get('Authorization') ?? '';
-  const token = auth.replace(/^Bearer\s+/i, '');
-  if (!SERVICE_KEY || token !== SERVICE_KEY) {
+  if (!(await secretEquals(SERVICE_KEY, bearerToken(req.headers.get('Authorization'))))) {
     return new Response(JSON.stringify({ error: 'Não autorizado' }), {
       status: 401, headers: { 'Content-Type': 'application/json' },
     });

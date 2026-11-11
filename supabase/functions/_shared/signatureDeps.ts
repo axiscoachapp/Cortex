@@ -9,14 +9,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { AuthError, authResponse, requireUserContext } from "./auth.ts";
 import { fetchWithDeadline } from "./http.ts";
+import { corsHeadersFor } from "./cors.ts";
 import { certificateDiscovery, exchangeCode, parseKeyList, signHash } from "./psc.ts";
 import { readSignatureConfig, storageAdapter, type HandlerDeps } from "./signatureHandlers.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Vary': 'Origin',
-};
+const corsHeaders = corsHeadersFor(Deno.env.get('ALLOWED_ORIGIN'));
 
 // Storage errors are classified by their structured answer only
 // (storageAdapter/storageErrorKind, Codex 05/11 05:09 and 06:35 R4): an

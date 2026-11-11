@@ -4,6 +4,7 @@ import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
 import * as http from '../../supabase/functions/_shared/http';
 import * as storage from '../../supabase/functions/_shared/storage';
+import * as secrets from '../../supabase/functions/_shared/secrets';
 const user = '11111111-1111-4111-8111-111111111111',
   draftId = '22222222-2222-4222-8222-222222222222',
   exportId = '33333333-3333-4333-8333-333333333333';
@@ -59,6 +60,7 @@ function load(name: string, db: ReturnType<typeof database>) {
   const modules: Record<string, unknown> = {
     '../_shared/http.ts': http,
     '../_shared/storage.ts': storage,
+    '../_shared/secrets.ts': secrets,
     '../_shared/auth.ts': { requireUser: async () => ({ userId: user }), AuthError: class extends Error {} },
     '../_shared/providerFiles.ts': { retryProviderCleanup: async () => {} },
   };
@@ -98,7 +100,7 @@ describe('privacy edge regressions', () => {
     Object.assign(db.row, {
       user_id: user,
       storage_path: `rx/${user}/${draftId}.pdf`,
-      secret_code: 'code',
+      secret_code: 'CODE2345',
       status: 'generated',
       issuance_verified_at: new Date().toISOString(),
       expires_at: '2099-01-01T00:00:00Z',
@@ -110,7 +112,7 @@ describe('privacy edge regressions', () => {
     });
     const response = await load('validate-prescription', db)(
       {},
-      `?id=${draftId}&code=code&_format=application%2Fjson`,
+      `?id=${draftId}&code=code2345&_format=application%2Fjson`,
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
@@ -123,12 +125,12 @@ describe('privacy edge regressions', () => {
     Object.assign(db.row, {
       user_id: user,
       storage_path: `rx/${user}/${draftId}.pdf`,
-      secret_code: 'code',
+      secret_code: 'CODE2345',
       status: 'generated',
       issuance_verified_at: new Date().toISOString(),
       expires_at: '2099-01-01T00:00:00Z',
     });
-    expect((await load('validate-prescription', db)({}, `?id=${draftId}&code=code`)).status).toBe(409);
+    expect((await load('validate-prescription', db)({}, `?id=${draftId}&code=CODE2345`)).status).toBe(409);
   });
   it('creates one server snapshot rather than paginating mutable tables', async () => {
     const db = database();

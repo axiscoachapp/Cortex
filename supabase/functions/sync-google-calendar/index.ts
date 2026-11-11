@@ -2,16 +2,17 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import { fetchWithDeadline, readJsonObject, RequestError } from '../_shared/http.ts';
+import { corsHeadersFor } from '../_shared/cors.ts';
+import {
+  googleTokenKeys, GoogleTokensNotConfigured, isSealedGoogleToken, openGoogleToken, sealGoogleToken, type GoogleTokenKeys,
+} from '../_shared/oauth.ts';
 
-// Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
-// secret to your app's origin to lock cross-origin access down to it.
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Vary': 'Origin',
-};
+// Secrets: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_TOKEN_KEYS (tokens are
+// sealed at rest, see _shared/oauth.ts) and ALLOWED_ORIGIN.
+// Contract: docs/product/google-agenda/CONTRATO.md.
+const corsHeaders = corsHeadersFor(Deno.env.get('ALLOWED_ORIGIN'));
 
-async function getAccessToken(supabase: SupabaseClient, userId: string): Promise<string> {
+async function getAccessToken(supabase: SupabaseClient, userId: string, keys: GoogleTokenKeys): Promise<string> {
   const { data, error } = await supabase
     .from('user_integrations')
     .select('google_refresh_token, google_access_token, google_token_expiry')
@@ -21,13 +22,16 @@ async function getAccessToken(supabase: SupabaseClient, userId: string): Promise
   if (error || !data?.google_refresh_token) {
     throw new Error('Google Calendar não conectado para este usuário');
   }
+  const unreadable = () => new RequestError('Não foi possível abrir a conexão Google. Reconecte pela agenda.', 409);
+  const refreshToken = await openGoogleToken(keys, data.google_refresh_token, userId, 'refresh').catch(() => { throw unreadable(); });
+  if (!refreshToken) throw unreadable();
 
-  // If token still valid (with 60s buffer), reuse it
-  if (data.google_access_token && data.google_token_expiry) {
-    const expiry = new Date(data.google_token_expiry);
-    if (expiry.getTime() > Date.now() + 60000) {
-      return data.google_access_token;
-    }
+  // A still-valid access token (60 s buffer) is reused while the row is
+  // already sealed; a legacy plaintext row is refreshed now so it is rewritten sealed.
+  const sealedRow = isSealedGoogleToken(data.google_refresh_token) && isSealedGoogleToken(data.google_access_token);
+  if (sealedRow && data.google_token_expiry && new Date(data.google_token_expiry).getTime() > Date.now() + 60000) {
+    const access = await openGoogleToken(keys, data.google_access_token, userId, 'access').catch(() => null);
+    if (access) return access;
   }
 
   // Refresh the access token
@@ -40,7 +44,7 @@ async function getAccessToken(supabase: SupabaseClient, userId: string): Promise
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'refresh_token',
-      refresh_token: data.google_refresh_token,
+      refresh_token: refreshToken,
       client_id: GOOGLE_CLIENT_ID!,
       client_secret: GOOGLE_CLIENT_SECRET!,
     }),
@@ -52,10 +56,19 @@ async function getAccessToken(supabase: SupabaseClient, userId: string): Promise
   if (typeof tokens.access_token !== 'string' || !Number.isFinite(tokens.expires_in) || tokens.expires_in <= 0) throw new RequestError('Resposta Google inválida.', 502);
   const newExpiry = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
+  // Google may rotate the refresh token; otherwise the current one is re-sealed
+  // (this is where a legacy plaintext row becomes sealed).
+  const nextRefresh = typeof tokens.refresh_token === 'string' && tokens.refresh_token ? tokens.refresh_token : refreshToken;
   const { error: saveError } = await supabase
     .from('user_integrations')
-    .update({ google_access_token: tokens.access_token, google_token_expiry: newExpiry })
-    .eq('user_id', userId);
+    .update({
+      google_refresh_token: await sealGoogleToken(keys, nextRefresh, userId, 'refresh'),
+      google_access_token: await sealGoogleToken(keys, tokens.access_token, userId, 'access'),
+      google_token_expiry: newExpiry,
+    })
+    .eq('user_id', userId)
+    // Only over the value read above: a reconnection in the meantime wins.
+    .eq('google_refresh_token', data.google_refresh_token);
   if (saveError) throw new Error('Não foi possível salvar a conexão Google.');
 
   return tokens.access_token;
@@ -80,6 +93,8 @@ serve(async (req) => {
       );
     }
 
+    // Without the token key nothing is claimed, opened or written.
+    const keys = googleTokenKeys(Deno.env.get('GOOGLE_TOKEN_KEYS'));
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -115,7 +130,7 @@ serve(async (req) => {
       await finalizeOperation('synced'); finalizeOperation = undefined;
       return new Response(JSON.stringify({success:true}), { headers: {...corsHeaders, 'Content-Type':'application/json'} });
     }
-    const accessToken = await getAccessToken(supabase, userId);
+    const accessToken = await getAccessToken(supabase, userId, keys);
     const calendarId = 'primary';
     const baseUrl = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`;
 
@@ -188,6 +203,8 @@ serve(async (req) => {
     if (finalizeOperation) {
       try { await finalizeOperation('failed', 'Falha de sincronização. Tente novamente pela agenda.'); } catch { /* durable lease expires; do not hide the original failure */ }
     }
+    if (error instanceof GoogleTokensNotConfigured)
+      return new Response(JSON.stringify({ error: error.message, code: 'not_configured' }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     if (error instanceof RequestError) return new Response(JSON.stringify({error:error.message}),{status:error.status,headers:{...corsHeaders,'Content-Type':'application/json'}});
     if (error instanceof AuthError) return authResponse(error, corsHeaders);
     console.error('sync-google-calendar failed');

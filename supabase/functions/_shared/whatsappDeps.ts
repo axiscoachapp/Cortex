@@ -7,6 +7,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { AuthError, authResponse, requireUser } from './auth.ts';
 import { fetchWithDeadline } from './http.ts';
+import { corsHeadersFor } from './cors.ts';
 import { parseKeyList } from './psc.ts';
 import { DEFAULT_GRAPH_VERSION, graphClient } from './whatsapp.ts';
 import { intakeConfig } from './intakeDeps.ts';
@@ -14,11 +15,8 @@ import { intakeLink } from './intakeHandlers.ts';
 import type { AssigneeRow, AutomationRow, AutomationRunRow, BotSessionRow, Caller, FlowRow, ChannelRow, ConversationRow, MessageRow, TemplateRow, WhatsAppDeps, WhatsAppStore } from './whatsappHandlers.ts';
 const AUTOMATION_COLUMNS = 'id, clinic_id, name, enabled, trigger, offset_minutes, template_name, template_language, params, link_url, doctor_ids, appointment_types, revision, updated_at';
 
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  Vary: 'Origin',
-};
+// No ALLOWED_ORIGIN, no cross-origin access (see cors.ts).
+export const corsHeaders = corsHeadersFor(Deno.env.get('ALLOWED_ORIGIN'));
 
 const CONVERSATION_COLUMNS = 'id, clinic_id, wa_id, user_id, profile_name, contact_id, case_id, queue, status, assigned_to, assigned_at, opened_at, first_response_at, closed_at, last_inbound_at, last_message_at, last_message_preview, unread_count, opted_out_at, revision';
 const MESSAGE_COLUMNS = 'id, clinic_id, conversation_id, direction, wamid, kind, body, media, template, status, error, sent_by, provider_at, created_at';

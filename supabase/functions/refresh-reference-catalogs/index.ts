@@ -11,8 +11,9 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
-import { fetchWithDeadline } from '../_shared/http.ts';
+import { fetchWithDeadline, readJsonObject } from '../_shared/http.ts';
 import { refreshCatalog, type CatalogSource } from '../_shared/referenceCatalogs.ts';
+import { bearerToken, secretEquals } from '../_shared/secrets.ts';
 
 /** dados.anvisa.gov.br serves its leaf certificate without the intermediate;
  *  same pinned Sectigo OV R36 intermediate as refresh-medication-catalog. */
@@ -57,13 +58,13 @@ const SOURCES: CatalogSource[] = ['tuss', 'cid10', 'cmed', 'dcb'];
 
 serve(async (req) => {
   const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
-  if (!SERVICE_KEY || token !== SERVICE_KEY) {
+  if (!(await secretEquals(SERVICE_KEY, bearerToken(req.headers.get('Authorization'))))) {
     return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
   }
   let wanted = SOURCES;
   try {
-    const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+    // Bounded streaming read (finding 16); an absent or unreadable body means "all sources".
+    const body = req.method === 'POST' ? await readJsonObject(req, 4 * 1024).catch(() => ({})) : {};
     if (Array.isArray(body?.sources)) wanted = SOURCES.filter((s) => body.sources.includes(s));
   } catch { /* default: all */ }
 
