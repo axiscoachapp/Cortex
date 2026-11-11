@@ -7,8 +7,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
 
   return (
+    // Same placement as the main toaster (components/ui/toast.tsx): top centre, clear of the
+    // primary actions, with a visible close button.
     <Sonner
       theme={theme as ToasterProps["theme"]}
+      position="top-center"
+      closeButton
+      containerAriaLabel="Notificações"
       className="toaster group"
       toastOptions={{
         classNames: {
