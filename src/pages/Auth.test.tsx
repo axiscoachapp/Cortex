@@ -52,7 +52,7 @@ describe('Auth page', () => {
     function Destination() { const location=useLocation(); return <output aria-label="Destino">{location.pathname+location.search}</output>; }
     render(<MemoryRouter initialEntries={['/auth?next='+encodeURIComponent('/google-oauth-callback?code=test&state=nonce')]}><Auth /><Destination /></MemoryRouter>);
     const user=userEvent.setup();
-    await user.type(screen.getByLabelText('Email'),'review@example.invalid');
+    await user.type(screen.getByLabelText('E-mail'),'review@example.invalid');
     await user.type(screen.getByLabelText('Senha'),'synthetic-password');
     await user.click(screen.getByRole('button',{name:/^entrar$/i}));
     await waitFor(() => expect(screen.getByLabelText('Destino')).toHaveTextContent('/google-oauth-callback?code=test&state=nonce'));
@@ -65,31 +65,33 @@ describe('Auth page', () => {
   it('lets a user request password recovery without disclosing account existence', async () => {
     renderAuth();
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText('Email'), 'review@example.invalid');
+    await user.type(screen.getByLabelText('E-mail'), 'review@example.invalid');
     await user.click(screen.getByRole('button', { name: /esqueci minha senha/i }));
     expect(authMocks.resetPassword).toHaveBeenCalledWith('review@example.invalid');
     expect(await screen.findByRole('status')).toHaveTextContent(/se houver uma conta/i);
   });
-  it('renders the sign-in tab by default', () => {
-    renderAuth();
-    expect(screen.getByRole('tab', { name: /entrar/i })).toBeInTheDocument();
-  });
-
-  it('renders email and password inputs', () => {
-    renderAuth();
-    // Auth page has two forms (sign-in + sign-up tabs), so getAllByLabelText is correct.
-    expect(screen.getAllByLabelText(/email/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText(/senha/i).length).toBeGreaterThan(0);
-  });
-
   it('renders a sign-in submit button', () => {
     renderAuth();
     expect(screen.getByRole('button', { name: /entrar/i })).toBeInTheDocument();
   });
 
-  it('does not offer public sign-up (accounts are created by the clinic admin)', () => {
+  it('has no public sign-up path and no tab that looks like the button', () => {
     renderAuth();
-    expect(screen.queryByRole('tab', { name: /criar conta/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/criadas pelo administrador da clínica/i)).toBeInTheDocument();
+    expect(screen.queryByRole('tab')).toBeNull();
+    expect(screen.queryByText(/criar conta/i)).toBeNull();
+    expect(screen.getAllByRole('button', { name: /entrar/i })).toHaveLength(1);
+    expect(authMocks.signUp).not.toHaveBeenCalled();
+    expect(screen.getByText(/criadas pelo administrador da clínica ou pela equipe Cortex/i)).toBeInTheDocument();
+  });
+
+  it('shows a sign-in error directly above the submit button', async () => {
+    authMocks.signIn.mockResolvedValueOnce({ error: new Error('invalid') });
+    renderAuth();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('E-mail'), 'review@example.invalid');
+    await user.type(screen.getByLabelText('Senha'), 'wrong-password');
+    await user.click(screen.getByRole('button', { name: /^entrar$/i }));
+    const alert = await screen.findByRole('alert');
+    expect(alert.nextElementSibling).toBe(screen.getByRole('button', { name: /^entrar$/i }));
   });
 });

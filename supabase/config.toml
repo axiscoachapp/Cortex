@@ -1,6 +1,12 @@
 project_id = "cortex-local"
 
 [auth]
+# Accounts are created by the clinic admin (create-clinic-doctor / reception provisioning) or by the
+# Cortex team, never by public sign-up (review 2026-11-10, security finding 5). The hosted project
+# must match: Authentication -> Sign In / Providers -> "Allow new users to sign up" off.
+enable_signup = false
+# Same minimum as supabase/functions/_shared/passwordPolicy.ts.
+minimum_password_length = 10
 site_url = "http://localhost:8080"
 additional_redirect_urls = ["http://localhost:8080/**", "http://127.0.0.1:8080/**"]
 
