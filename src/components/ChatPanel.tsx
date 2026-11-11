@@ -54,10 +54,12 @@ import { ConsultationDraft, loadConsultationDraft, saveConsultationDraft } from 
 import { functionErrorBody, functionErrorMessage } from '@/lib/functionErrors';
 import {
   saveRescuedRecording,
+  saveRecordingCheckpoint,
   listRescuedRecordings,
   deleteRescuedRecording,
   type RescuedRecording,
 } from '@/lib/recordingRescue';
+import { capturesInProgress, tryHoldCaptureLock } from '@/lib/recordingCaptureLock';
 import { ClinicalProposals } from '@/components/ClinicalProposals';
 import { useSessionHidden } from '@/contexts/SessionVisibility';
 import { ClinicalAnswer } from '@/components/ClinicalAnswer';
@@ -253,8 +255,58 @@ export function ChatPanel({
     staleTime: 5 * 60_000,
   });
 
+  // ── Copies of the audio kept in this browser until the server has it ────────
+  // Each capture is checkpointed under its capture id, which the draft reuses,
+  // so the entry, the draft and the uploaded file all share one id.
+  const [rescued, setRescued] = useState<RescuedRecording[]>([]);
+  const [rescueFailed, setRescueFailed] = useState<Record<string, true>>({});
+  const rescueBusyRef = useRef(false);
+  const captureLocksRef = useRef(new Map<string, Promise<(() => void) | null>>());
+  const checkpointWarnedRef = useRef(new Set<string>());
+  const parkedEntry = (id: string, blob: Blob, mimeType: string, comments: string[], createdAt: string): RescuedRecording | undefined =>
+    patient ? { id, userId, patientId: patient.id, patientName: patient.name, mimeType, blob, comments, createdAt } : undefined;
+  const holdCapture = (id: string) => {
+    if (!captureLocksRef.current.has(id)) captureLocksRef.current.set(id, tryHoldCaptureLock(id));
+  };
+  const releaseCapture = (id: string) => {
+    const held = captureLocksRef.current.get(id);
+    captureLocksRef.current.delete(id);
+    void held?.then((release) => release?.());
+  };
+  /** Removes this browser's copy once it is no longer needed. */
+  const forgetParked = async (id: string) => {
+    const remove = () => Promise.resolve().then(() => deleteRescuedRecording(id));
+    await remove().catch(remove).catch(() => {});
+    if (mountedRef.current) {
+      setRescued((list) => list.filter((item) => item.id !== id));
+      setRescueFailed(({ [id]: _gone, ...rest }) => rest);
+    }
+  };
+
   const recording = useRecording({
-    onStop: processConsultation,
+    // Bound at recording start, like the other callbacks: the patient is the
+    // one being recorded even if the doctor switches patients before the stop.
+    onStop: (blob, mimeType, comments, capture) =>
+      processConsultation(blob, mimeType, comments, undefined, capture ? parkedEntry(capture.captureId, blob, mimeType, comments, capture.startedAt) : undefined),
+    onCheckpoint: (checkpoint) => {
+      const entry = parkedEntry(checkpoint.captureId, checkpoint.blob, checkpoint.mimeType, checkpoint.consultationComments, checkpoint.startedAt);
+      if (!entry) return;
+      holdCapture(entry.id);
+      void Promise.resolve()
+        .then(() => saveRecordingCheckpoint(entry))
+        .catch(() => {
+          if (checkpointWarnedRef.current.has(entry.id)) return;
+          checkpointWarnedRef.current.add(entry.id);
+          toast({
+            title: 'Cópia de segurança indisponível',
+            description: 'Não foi possível guardar a gravação neste navegador enquanto ela acontece. A gravação continua; não feche a aba até o envio terminar.',
+            variant: 'destructive',
+          });
+        });
+    },
+    onCheckpointDiscard: (capture) => {
+      void forgetParked(capture.captureId).finally(() => releaseCapture(capture.captureId));
+    },
     consultationCommentsRef,
     onCommentsReset: () => {
       if (!patient || !isCurrentPatient(patient.id)) return;
@@ -266,46 +318,71 @@ export function ChatPanel({
     onLiveChunk: liveCopilotEnabled ? handleLiveChunk : undefined,
     // Unmounted mid-recording (session ended elsewhere, crash): park the audio
     // in this browser so it can be processed after signing in again.
-    onRescue: (blob, mimeType, comments) => {
-      if (!patient) return;
-      void saveRescuedRecording({
-        id: crypto.randomUUID(),
-        userId,
-        patientId: patient.id,
-        patientName: patient.name,
-        mimeType,
-        blob,
-        comments,
-        createdAt: new Date().toISOString(),
-      }).catch(() => {});
+    // The full audio replaces this capture's last checkpoint (same id).
+    onRescue: (blob, mimeType, comments, capture) => {
+      const entry = parkedEntry(capture.captureId, blob, mimeType, comments, capture.startedAt);
+      if (!entry) return;
+      void Promise.resolve()
+        .then(() => saveRescuedRecording(entry))
+        .catch(() => {})
+        .finally(() => releaseCapture(entry.id));
     },
   });
 
-  const [rescued, setRescued] = useState<RescuedRecording[]>([]);
   useEffect(() => {
     let active = true;
     if (!patient) {
       setRescued([]);
       return;
     }
-    void listRescuedRecordings(userId).then((all) => {
-      if (active) setRescued(all.filter((entry) => entry.patientId === patient.id));
+    // Entries another live tab is still recording or uploading are not
+    // interrupted: offering them here would process the same audio twice.
+    void Promise.all([listRescuedRecordings(userId), capturesInProgress()]).then(([all, live]) => {
+      if (active) setRescued(all.filter((entry) => entry.patientId === patient.id && !live.has(entry.id)));
     });
     return () => {
       active = false;
     };
   }, [userId, patient?.id, draftRetryKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // One draft per patient (unique(user_id, patient_id)): a parked recording can
+  // only become a new draft when this patient has none open or pending.
+  const rescueBlockReason =
+    recording.isRecording || recording.isStarting || recording.isStopping
+      ? 'Termine a gravação em andamento antes de processar esta.'
+      : draftLoading
+        ? 'Verificando os rascunhos deste paciente…'
+        : draftLoadError
+          ? 'Não foi possível verificar os rascunhos deste paciente. Use "Tentar novamente" acima.'
+          : reviewData
+            ? 'Há uma consulta em revisão deste paciente. Conclua ou descarte essa revisão antes de processar esta gravação.'
+            : recoveryDraft && recoveryDraft.patientId === patient?.id
+              ? 'Há uma consulta preservada deste paciente. Conclua ou exclua esse rascunho antes de processar esta gravação.'
+              : isProcessing
+                ? 'Aguarde o processamento atual terminar.'
+                : null;
+
   const processRescued = async (entry: RescuedRecording) => {
-    setRescued((list) => list.filter((item) => item.id !== entry.id));
-    await deleteRescuedRecording(entry.id).catch(() => {});
-    // processConsultation keeps the audio in this tab if the upload fails.
-    await processConsultation(entry.blob, entry.mimeType, entry.comments);
+    if (rescueBlockReason || rescueBusyRef.current) return;
+    rescueBusyRef.current = true;
+    try {
+      const release = await tryHoldCaptureLock(entry.id);
+      if (!release) {
+        toast({ title: 'Gravação em uso em outra aba', description: 'Esta gravação está sendo enviada em outra aba. Aguarde e atualize a página.' });
+        return;
+      }
+      captureLocksRef.current.set(entry.id, Promise.resolve(release));
+      setRescueFailed(({ [entry.id]: _retry, ...rest }) => rest);
+      // The entry stays in this browser until the audio is on the server;
+      // processConsultation removes it only then.
+      await processConsultation(entry.blob, entry.mimeType, entry.comments, undefined, entry);
+    } finally {
+      rescueBusyRef.current = false;
+    }
   };
   const discardRescued = async (entry: RescuedRecording) => {
-    if (!window.confirm('Descartar esta gravação interrompida? O áudio será apagado deste navegador.')) return;
-    await deleteRescuedRecording(entry.id).catch(() => {});
-    setRescued((list) => list.filter((item) => item.id !== entry.id));
+    if (!window.confirm('Descartar esta gravação? O áudio será apagado deste navegador.')) return;
+    await forgetParked(entry.id);
   };
 
   const { isRecording, isPaused, stopConfirming, recordingSeconds, audioLevel } = recording;
@@ -1011,11 +1088,15 @@ export function ChatPanel({
     mimeType: string,
     comments: string[],
     previous?: ConsultationDraft,
+    /** This browser's copy of the audio (IndexedDB). The draft takes its id;
+     *  the copy is deleted only once the audio is on the server, and kept (or
+     *  written again) on any failure before that. */
+    parked?: RescuedRecording,
   ) {
     if (!patient) return;
     if (mountedRef.current) setAudioTasks((count) => count + 1);
     const draft: ConsultationDraft = previous ?? {
-      id: crypto.randomUUID(),
+      id: parked?.id ?? crypto.randomUUID(),
       patientId: patient.id,
       chiefComplaint,
       appointmentId,
@@ -1037,8 +1118,13 @@ export function ChatPanel({
     // server, so its audio is already uploaded.
     let audioOnServer = !!draft.audioStoragePath && !localAudioRef.current.has(draft.id);
     let processingRequested = false;
+    // Whether a draft row with this id exists on the server.
+    let draftSaved = !!draft.audioStoragePath;
     try {
-      if (!draft.audioStoragePath) await saveConsultationDraft(userId, { ...draft, status: 'processing' });
+      if (!draft.audioStoragePath) {
+        await saveConsultationDraft(userId, { ...draft, status: 'processing' });
+        draftSaved = true;
+      }
       void queryClient.invalidateQueries({queryKey:['consultation-recovery',userId]});
       if (!audioOnServer) {
         const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('ogg') ? 'ogg' : 'webm';
@@ -1053,6 +1139,9 @@ export function ChatPanel({
         audioOnServer = true;
         localAudioRef.current.delete(draft.id);
       }
+      // The draft and its audio are both on the server: only now may this
+      // browser's copy go (a no-op when there is none).
+      await forgetParked(draft.id);
       processingRequested = true;
       const { data, error } = await supabase.functions.invoke('transcribe-consultation', {
         body: {
@@ -1100,29 +1189,60 @@ export function ChatPanel({
       // tab so the doctor can resend it or explicitly download a copy.
       const failed = { ...draft, status: 'error' as const };
       if (!audioOnServer) localAudioRef.current.set(draft.id, { blob: audioBlob, mimeType });
+      // Audio that is not on the server stays in (or goes back to) this
+      // browser's IndexedDB, so a reload or a closed tab does not lose it.
+      let parkedHere = false;
+      if (!audioOnServer && parked) {
+        const entry: RescuedRecording = { ...parked, id: draft.id, blob: audioBlob, mimeType, comments: [...draft.originalComments] };
+        parkedHere = await Promise.resolve()
+          .then(() => saveRescuedRecording(entry))
+          .then(() => true, () => false);
+        if (parkedHere && isCurrentPatient(draft.patientId)) {
+          setRescued((list) => [...list.filter((item) => item.id !== entry.id), entry]);
+        }
+      }
       // An interrupted response may have already preserved a transcript. Read
       // its current version instead of writing the pre-request snapshot back.
       const latest = processingRequested
         ? await loadConsultationDraft(userId, draft.patientId).catch(() => null)
         : null;
-      if (!processingRequested && !draft.audioStoragePath) await saveConsultationDraft(userId, failed).catch(() => {});
-      if (isCurrentPatient(draft.patientId)) setRecoveryDraft(latest?.id === draft.id ? latest : failed);
+      // A parked recording whose draft never reached the server stays only a
+      // parked recording: no draft is invented for it, here or on the server.
+      if (!processingRequested && !draft.audioStoragePath && !parkedHere) await saveConsultationDraft(userId, failed).catch(() => {});
+      if (isCurrentPatient(draft.patientId)) {
+        if (draftSaved || !parkedHere) setRecoveryDraft(latest?.id === draft.id ? latest : failed);
+        else if (!previous) setRescueFailed((list) => ({ ...list, [draft.id]: true }));
+      }
       if (!(error instanceof HandledError)) {
         const reason = await functionErrorMessage(error, 'Não foi possível processar a consulta.');
         toast({
           title: 'Consulta preservada para nova tentativa',
           description: audioOnServer
             ? `${reason} O áudio está salvo no rascunho; use "Recuperar consulta" para tentar de novo.`
-            : `${reason} O áudio ainda não foi enviado e está guardado apenas nesta aba: reenvie ou baixe uma cópia antes de fechá-la.`,
+            : parkedHere
+              ? `${reason} O áudio ainda não foi enviado e continua guardado neste navegador. Tente de novo quando a conexão voltar.`
+              : `${reason} O áudio ainda não foi enviado e está guardado apenas nesta aba: reenvie ou baixe uma cópia antes de fechá-la.`,
           variant: 'destructive',
         });
       }
     } finally {
+      releaseCapture(draft.id);
       if (mountedRef.current) setAudioTasks((count) => Math.max(0, count - 1));
       if (isCurrentPatient(draft.patientId)) setIsProcessing(false);
       void queryClient.invalidateQueries({queryKey:['consultation-recovery',userId]});
     }
   }
+
+  /** True only when Storage says the object is not there; unknown (offline)
+   *  counts as present, so processing runs and reports its own error. */
+  const storedAudioMissing = async (path: string) => {
+    try {
+      const { data } = await supabase.storage.from('audio-recordings').exists(path);
+      return data === false;
+    } catch {
+      return false;
+    }
+  };
 
   const recoverConsultation = async (draft: ConsultationDraft) => {
     if (draft.status === 'review') {
@@ -1131,18 +1251,29 @@ export function ChatPanel({
       return;
     }
     if (!isCurrentPatient(draft.patientId)) return;
-    const local = localAudioRef.current.get(draft.id);
+    const parked = rescued.find((entry) => entry.id === draft.id);
+    const local = localAudioRef.current.get(draft.id) ?? (parked && { blob: parked.blob, mimeType: parked.mimeType });
     if (local) {
-      // Upload never completed: resend the audio kept in this tab.
-      await processConsultation(local.blob, local.mimeType, draft.originalComments, draft);
+      // Upload never completed: resend the audio kept in this tab or browser
+      // (marked local, so it is uploaded again even if a path was registered).
+      localAudioRef.current.set(draft.id, local);
+      await processConsultation(local.blob, local.mimeType, draft.originalComments, draft, parked);
       return;
     }
     if (!draft.audioStoragePath) return;
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.storage.from('audio-recordings').download(draft.audioStoragePath);
-      if (error || !data) throw error;
-      await processConsultation(data, draft.audioMimeType, draft.originalComments, draft);
+      if (await storedAudioMissing(draft.audioStoragePath)) {
+        toast({
+          title: 'Áudio não encontrado no servidor',
+          description: 'O envio desta gravação não terminou e o áudio não está no servidor nem neste navegador. Se você tem o arquivo, use "Enviar áudio salvo"; se não, exclua este rascunho.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      // The audio is already in Storage and the server reads it by path:
+      // nothing needs to be downloaded here.
+      await processConsultation(new Blob([], { type: draft.audioMimeType }), draft.audioMimeType, draft.originalComments, draft);
     } catch {
       toast({
         title: 'Não foi possível recuperar o áudio',
@@ -1168,6 +1299,8 @@ export function ChatPanel({
         return;
       }
       localAudioRef.current.delete(draft.id);
+      // The confirmation promised the audio goes too, including this browser's copy.
+      await forgetParked(draft.id);
       if (isCurrentPatient(draft.patientId)) setRecoveryDraft(null);
     } finally {
       setDraftMutations(count => count - 1);
@@ -1602,27 +1735,39 @@ export function ChatPanel({
           </div>
         )}
 
-        {rescued.map((entry) => (
+        {/* A parked recording that already belongs to the open or pending draft is handled there. */}
+        {rescued.filter((entry) => entry.id !== recoveryDraft?.id && entry.id !== reviewData?.id).map((entry) => (
           <div key={entry.id} role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm space-y-2">
             <p>
-              Uma gravação desta consulta foi interrompida em {new Date(entry.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} (a
-              sessão foi encerrada) e ficou guardada neste navegador.
+              Uma gravação desta consulta, de {new Date(entry.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}, não chegou ao
+              servidor e está guardada neste navegador.
             </p>
+            {rescueFailed[entry.id] && (
+              <p role="alert" className="text-destructive">
+                Não foi possível enviar esta gravação. Ela continua guardada neste navegador; tente de novo.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" disabled={isProcessing} onClick={() => void processRescued(entry)}>
-                Processar gravação
+              <Button variant="outline" disabled={!!rescueBlockReason} onClick={() => void processRescued(entry)}>
+                {rescueFailed[entry.id] ? 'Tentar enviar de novo' : 'Processar gravação'}
               </Button>
               <Button variant="ghost" disabled={isProcessing} onClick={() => void discardRescued(entry)}>
                 Descartar
               </Button>
             </div>
+            {rescueBlockReason && <p className="text-xs text-muted-foreground">{rescueBlockReason}</p>}
           </div>
         ))}
 
-        {recoveryDraft && recoveryDraft.patientId === patient.id && (
+        {recoveryDraft && recoveryDraft.patientId === patient.id && (() => {
+          const parkedHere = rescued.some((entry) => entry.id === recoveryDraft.id);
+          const hasLocal = parkedHere || localAudioRef.current.has(recoveryDraft.id);
+          return (
           <div role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm space-y-2">
             <p>
-              {localAudioRef.current.has(recoveryDraft.id)
+              {parkedHere
+                ? 'O áudio desta consulta não chegou ao servidor e está guardado neste navegador. Reenvie quando a conexão voltar.'
+                : hasLocal
                 ? 'O áudio desta consulta não chegou ao servidor e está guardado apenas nesta aba. Reenvie agora ou baixe uma cópia antes de fechar a aba.'
                 : 'Há uma consulta preservada para este paciente. Retome a revisão ou tente processar o áudio novamente.'}
             </p>
@@ -1632,22 +1777,23 @@ export function ChatPanel({
                 isProcessing ||
                 (!recoveryDraft.audioStoragePath &&
                   recoveryDraft.status !== 'review' &&
-                  !localAudioRef.current.has(recoveryDraft.id))
+                  !hasLocal)
               }
               onClick={() => void recoverConsultation(recoveryDraft)}
             >
               {recoveryDraft.status === 'review'
                 ? 'Retomar revisão'
-                : localAudioRef.current.has(recoveryDraft.id)
+                : hasLocal
                   ? 'Reenviar áudio'
                   : 'Recuperar consulta'}
             </Button>
-            {localAudioRef.current.has(recoveryDraft.id) && (
+            {hasLocal && (
               <Button
                 variant="outline"
                 disabled={isProcessing}
                 onClick={() => {
-                  const local = localAudioRef.current.get(recoveryDraft.id);
+                  const parkedCopy = rescued.find((entry) => entry.id === recoveryDraft.id);
+                  const local = localAudioRef.current.get(recoveryDraft.id) ?? parkedCopy;
                   if (local) downloadLocalAudio(local.blob, local.mimeType);
                 }}
               >
@@ -1678,7 +1824,8 @@ export function ChatPanel({
               Excluir rascunho
             </Button>
           </div>
-        )}
+          );
+        })()}
 
         {conversationLoading && <p role="status" className="text-sm text-muted-foreground">Recuperando conversa salva…</p>}
         {conversationError && <div role="alert" className="text-sm text-destructive">Não foi possível recuperar a conversa salva. As mensagens não foram apagadas. <button type="button" className="underline" onClick={onRetryConversation}>Tentar novamente</button></div>}

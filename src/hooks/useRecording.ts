@@ -28,9 +28,23 @@ export interface RecordingActions {
   discard: () => void;
 }
 
+/** Identifies one capture. Its checkpoints, the final audio and the rescue
+ *  all carry the same id, so the draft can reuse it. */
+export interface CaptureInfo {
+  captureId: string;
+  startedAt: string;
+}
+
+/** The audio captured so far, for crash recovery. */
+export interface RecordingCheckpoint extends CaptureInfo {
+  blob: Blob;
+  mimeType: string;
+  consultationComments: string[];
+}
+
 interface UseRecordingOptions {
   /** Called with the finished audio blob once the user confirms stop. */
-  onStop: (blob: Blob, mimeType: string, consultationComments: string[]) => void;
+  onStop: (blob: Blob, mimeType: string, consultationComments: string[], capture: CaptureInfo) => void;
   consultationCommentsRef: React.RefObject<string[]>;
   onCommentsReset: () => void;
   /** Optional live-copilot feed: called every ~30s with a SELF-CONTAINED audio
@@ -39,8 +53,21 @@ interface UseRecordingOptions {
   /** Called when the component unmounts mid-recording (session ended, crash).
    *  Receives the audio captured so far so it can be parked for recovery
    *  instead of being dropped. Captured at start, like onStop. */
-  onRescue?: (blob: Blob, mimeType: string, consultationComments: string[]) => void;
+  onRescue?: (blob: Blob, mimeType: string, consultationComments: string[], capture: CaptureInfo) => void;
+  /** Called every CHECKPOINT_MS while new audio arrives, when the page is
+   *  hidden or unloaded, and once with the full audio just before onStop, so an
+   *  abrupt end (crash, tab discard, screen lock) leaves a recoverable copy.
+   *  Captured at start, like onStop. */
+  onCheckpoint?: (checkpoint: RecordingCheckpoint) => void;
+  /** The doctor discarded the capture: its checkpoint must go too. */
+  onCheckpointDiscard?: (capture: CaptureInfo) => void;
 }
+
+/** How often the audio captured so far is checkpointed. */
+export const CHECKPOINT_MS = 5_000;
+
+interface WakeLockHandle { release: () => Promise<void> }
+type WakeLockApi = { request: (type: 'screen') => Promise<WakeLockHandle> };
 
 /** Rotation interval for live chunks. Each chunk is an independent WebM file
  *  (MediaRecorder slices share one header, so we restart a second recorder
@@ -62,6 +89,8 @@ export function useRecording({
   onCommentsReset,
   onLiveChunk,
   onRescue,
+  onCheckpoint,
+  onCheckpointDiscard,
 }: UseRecordingOptions): RecordingState & RecordingActions {
   // Store callbacks in refs so recorder.onstop always calls the latest version,
   // avoiding stale-closure issues and forward-reference problems at call sites.
@@ -72,8 +101,15 @@ export function useRecording({
   /** Unmount path for the active recorder: hands its audio to onRescue. */
   const rescueActiveRef = useRef<(() => void) | null>(null);
   const freezeCommentsRef = useRef<() => void>(() => {});
+  const onCheckpointRef = useRef(onCheckpoint);
+  const onCheckpointDiscardRef = useRef(onCheckpointDiscard);
+  /** Per-capture extras of the active recorder (checkpoint timer, page and
+   *  microphone listeners, wake lock). Each capture owns its own. */
+  const activeCaptureRef = useRef<{ teardown: () => void; discardCheckpoint: () => void } | null>(null);
   useEffect(() => { onStopRef.current = onStop; });
   useEffect(() => { onRescueRef.current = onRescue; });
+  useEffect(() => { onCheckpointRef.current = onCheckpoint; });
+  useEffect(() => { onCheckpointDiscardRef.current = onCheckpointDiscard; });
   useEffect(() => { onCommentsResetRef.current = onCommentsReset; });
   useEffect(() => { onLiveChunkRef.current = onLiveChunk; });
 
@@ -229,6 +265,7 @@ export function useRecording({
     setIsStarting(true);
     let micStream: MediaStream | null = null;
     let displayStream: MediaStream | null = null;
+    let teardownThisCapture: (() => void) | null = null;
     const stillActive = () => mountedRef.current && generation === captureGenerationRef.current;
     const releaseAttempt = () => {
       const owned = [micStream, displayStream].filter((stream): stream is MediaStream => !!stream);
@@ -351,22 +388,115 @@ export function useRecording({
       const finishForOriginalPatient = onStopRef.current;
       const resetOriginalComments = onCommentsResetRef.current;
       const rescueForOriginalPatient = onRescueRef.current;
+      const checkpointForOriginalPatient = onCheckpointRef.current;
+      const discardForOriginalPatient = onCheckpointDiscardRef.current;
+      const capture: CaptureInfo = { captureId: crypto.randomUUID(), startedAt: new Date().toISOString() };
+
+      // ── Crash safety: checkpoints, wake lock, microphone watch ──────────────
+      let checkpointedChunks = 0;
+      const checkpoint = (comments?: string[], force = false) => {
+        if (!checkpointForOriginalPatient || recordingChunks.length === 0) return;
+        if (!force && recordingChunks.length === checkpointedChunks) return;
+        checkpointedChunks = recordingChunks.length;
+        try {
+          checkpointForOriginalPatient({
+            ...capture,
+            blob: new Blob(recordingChunks, { type: mimeType }),
+            mimeType,
+            consultationComments: comments ?? [...(consultationCommentsRef.current ?? [])],
+          });
+        } catch { /* a checkpoint must never break the recording */ }
+      };
+      const checkpointTimer = setInterval(() => checkpoint(), CHECKPOINT_MS);
+
+      let wakeLock: WakeLockHandle | null = null;
+      let wakeWanted = true;
+      const requestWakeLock = () => {
+        const api = (navigator as Navigator & { wakeLock?: WakeLockApi }).wakeLock;
+        if (!api?.request || !wakeWanted || wakeLock) return;
+        api.request('screen').then(
+          (lock) => { if (wakeWanted) wakeLock = lock; else lock.release().catch(() => {}); },
+          () => { /* not allowed now (battery saver, hidden page): recording goes on */ },
+        );
+      };
+      const onVisibility = () => {
+        if (document.visibilityState === 'hidden') {
+          // The page may be frozen or discarded next: save what we have now.
+          try { recorder.requestData(); } catch { /* not supported */ }
+          checkpoint(undefined, true);
+        } else {
+          // The browser drops the wake lock whenever the page is hidden.
+          wakeLock = null;
+          requestWakeLock();
+        }
+      };
+      const onPageHide = () => checkpoint(undefined, true);
+      document.addEventListener('visibilitychange', onVisibility);
+      window.addEventListener('pagehide', onPageHide);
+      requestWakeLock();
+
+      // A microphone that ends or is muted by the system would otherwise record
+      // silence (or, online, only the call) without the doctor noticing.
+      const micTracks = typeof micStream.getAudioTracks === 'function' ? micStream.getAudioTracks() : [];
+      const isCurrent = () => mediaRecorderRef.current === recorder;
+      const onMicEnded = () => {
+        if (!isCurrent()) return;
+        toast(selectedMode === 'online'
+          ? { title: 'Microfone desconectado', description: 'Sua voz parou de ser gravada; a gravação continua só com o áudio da chamada. Verifique o microfone.', variant: 'destructive' }
+          : { title: 'Microfone desconectado', description: 'A gravação parou. O áudio gravado até aqui será processado. Verifique o microfone antes de gravar de novo.', variant: 'destructive' });
+      };
+      const onMicMute = () => {
+        if (!isCurrent()) return;
+        toast({ title: 'Microfone sem som', description: 'O microfone foi silenciado pelo sistema ou por outro aplicativo. Verifique-o para não gravar silêncio.', variant: 'destructive' });
+      };
+      micTracks.forEach(track => {
+        track.addEventListener?.('ended', onMicEnded);
+        track.addEventListener?.('mute', onMicMute);
+      });
+
+      let tornDown = false;
+      const teardown = () => {
+        if (tornDown) return;
+        tornDown = true;
+        clearInterval(checkpointTimer);
+        document.removeEventListener('visibilitychange', onVisibility);
+        window.removeEventListener('pagehide', onPageHide);
+        micTracks.forEach(track => {
+          track.removeEventListener?.('ended', onMicEnded);
+          track.removeEventListener?.('mute', onMicMute);
+        });
+        wakeWanted = false;
+        wakeLock?.release().catch(() => {});
+        wakeLock = null;
+        if (activeCaptureRef.current?.teardown === teardown) activeCaptureRef.current = null;
+      };
+      teardownThisCapture = teardown;
+      activeCaptureRef.current = {
+        teardown,
+        discardCheckpoint: () => { try { discardForOriginalPatient?.(capture); } catch { /* best effort */ } },
+      };
+
       rescueActiveRef.current = () => {
         // Replace the normal handler: there is no mounted UI to process it.
         recorder.onstop = () => {
+          teardown();
           ownedStreams.forEach(stream => stream.getTracks().forEach(track => track.stop()));
           const audioBlob = new Blob(recordingChunks, { type: mimeType });
-          if (audioBlob.size > 0) rescueForOriginalPatient?.(audioBlob, mimeType, [...(consultationCommentsRef.current ?? [])]);
+          if (audioBlob.size > 0) rescueForOriginalPatient?.(audioBlob, mimeType, [...(consultationCommentsRef.current ?? [])], capture);
         };
       };
 
       recorder.onstop = () => {
+        teardown();
         ownedStreams.forEach(stream => stream.getTracks().forEach(track => track.stop()));
         streamsRef.current = streamsRef.current.filter(stream => !ownedStreams.includes(stream));
         const audioBlob = new Blob(recordingChunks, { type: mimeType });
         const comments = finalComments ?? [...(consultationCommentsRef.current ?? [])];
+        // The full audio is checkpointed before processing starts, so the copy
+        // in this browser stays complete until the upload confirms.
+        checkpoint(comments, true);
         resetOriginalComments();
-        finishForOriginalPatient(audioBlob, mimeType, comments);
+        finishForOriginalPatient(audioBlob, mimeType, comments, capture);
         if (mountedRef.current) setPendingStops(count => Math.max(0, count - 1));
         if (mediaRecorderRef.current === recorder) {
           mediaRecorderRef.current = null;
@@ -397,6 +527,7 @@ export function useRecording({
       });
     } catch {
       // Release anything already opened so no device stays live on failure.
+      teardownThisCapture?.();
       releaseAttempt();
       if (!stillActive()) return;
       stopAudioLevel();
@@ -423,6 +554,9 @@ export function useRecording({
     stopAudioLevel();
     stopLiveRecorder(true);   // emit the trailing partial chunk for a last refresh
     rescueActiveRef.current = null; // a confirmed stop processes the audio normally
+    // Stop the periodic checkpoints and release the wake lock now; the final
+    // checkpoint is written by this recorder's own stop event.
+    activeCaptureRef.current?.teardown();
     const recorder = mediaRecorderRef.current;
     if (recorder && recorder.state !== 'inactive') {
       setPendingStops(count => count + 1);
@@ -444,6 +578,9 @@ export function useRecording({
     setIsStarting(false);
     stopLiveRecorder(false);   // drop trailing chunk — this recording is abandoned
     rescueActiveRef.current = null; // explicit discard: nothing to rescue
+    const discarded = activeCaptureRef.current;
+    discarded?.teardown();
+    discarded?.discardCheckpoint();
     const rec = mediaRecorderRef.current;
     if (rec && rec.state !== 'inactive') {
       // Detach the handler first so the audio is dropped, not processed.
@@ -468,6 +605,8 @@ export function useRecording({
     mountedRef.current = false;
     invalidateCapture();
     stopLiveRecorder(false);
+    // Timers, listeners and the wake lock go; the checkpoint stays for recovery.
+    activeCaptureRef.current?.teardown();
     const rec = mediaRecorderRef.current;
     if (rec && rec.state !== 'inactive') {
       // Unmount is not a user decision to discard: park the audio for recovery.

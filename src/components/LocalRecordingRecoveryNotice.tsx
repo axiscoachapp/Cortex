@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { listRescuedRecordingMetadata } from '@/lib/recordingRescue';
+import { capturesInProgress } from '@/lib/recordingCaptureLock';
 
 const patientRow=z.object({id:z.string().uuid(),name:z.string().min(1).max(2000)}).strict();
 
@@ -11,8 +12,10 @@ export function LocalRecordingRecoveryNotice({userId,onResume}:{userId:string;on
   const local=useQuery({
     queryKey:['local-recording-recovery',userId],enabled:!!userId,retry:false,gcTime:0,staleTime:0,refetchOnMount:'always',refetchOnWindowFocus:false,refetchOnReconnect:false,
     queryFn:async({signal})=>{
-      const entries=await listRescuedRecordingMetadata(userId,signal);
+      const [stored,live]=await Promise.all([listRescuedRecordingMetadata(userId,signal),capturesInProgress()]);
       signal.throwIfAborted();
+      // A recording another tab is still capturing or uploading is not interrupted.
+      const entries=stored.filter(row=>!live.has(row.id));
       const visible=entries.slice(0,50),ids=[...new Set(visible.map(row=>row.patientId))];
       const groups=new Map<string,{id:string;name:string;count:number;createdAt:string}>();
       let unavailable=0;

@@ -46,7 +46,7 @@ describe('recording ownership', () => {
     await act(async () => { await view.result.current.start('presencial'); });
     view.rerender({ callback: later });
     act(() => view.result.current.confirmStop());
-    expect(original).toHaveBeenCalledWith(expect.any(Blob), 'audio/mp4', ['Correção do médico']);
+    expect(original).toHaveBeenCalledWith(expect.any(Blob), 'audio/mp4', ['Correção do médico'], expect.objectContaining({ captureId: expect.any(String) }));
     expect(later).not.toHaveBeenCalled();
     expect(track.stop).toHaveBeenCalled();
   });

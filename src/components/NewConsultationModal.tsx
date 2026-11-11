@@ -97,7 +97,8 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
 
   const validAge = newPatientAge === '' || (Number.isInteger(Number(newPatientAge)) && Number(newPatientAge) >= 0 && Number(newPatientAge) <= 130);
   const registrationError=validatePatientRegistration({name:newPatientName,age:dateOfBirth?ageFromBirthdate(dateOfBirth,clinicDate()):newPatientAge===''?null:Number(newPatientAge),profession:newPatientProfession,...administrative});
-  const isValid = !!chiefComplaint.trim() && (isNewPatient ? !registrationError && (dateOfBirth ? ageFromBirthdate(dateOfBirth, clinicDate()) !== null : validAge) : !!selectedPatientId);
+  const selectedIsVisible = !!selectedPatientId && visiblePatients.some((p) => p.id === selectedPatientId);
+  const isValid = !!chiefComplaint.trim() && (isNewPatient ? !registrationError && (dateOfBirth ? ageFromBirthdate(dateOfBirth, clinicDate()) !== null : validAge) : selectedIsVisible);
   const canClose = useUnsavedChanges(open && (!!chiefComplaint.trim() || !!newPatientName.trim() || !!dateOfBirth || !!newPatientAge || Object.values(administrative).some(Boolean) || !!newPatientProfession));
   const close = (next: boolean) => {
     if (saving) return;
@@ -145,7 +146,12 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
               <Input
                 id="patient-search"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  // A new search hides the earlier choice, so drop it: the consultation
+                  // must never start for a patient the doctor cannot see on screen.
+                  setSearch(e.target.value);
+                  setSelectedPatientId('');
+                }}
                 placeholder="Digite o nome (mín. 2 letras)"
                 autoComplete="off"
               />

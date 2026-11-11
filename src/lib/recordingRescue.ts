@@ -1,8 +1,11 @@
 // Recordings interrupted by an unmount (session ended, sign-out from another
 // device, render crash) used to be dropped silently. They are now parked in
 // this browser's IndexedDB, scoped to the doctor and patient, so the doctor can
-// process them after signing in again. Nothing is written to the Downloads
-// folder, and entries are removed as soon as they are processed or discarded.
+// process them after signing in again. While recording, the audio captured so
+// far is also checkpointed here every few seconds under the same id the draft
+// will use, so a crash, tab discard or screen lock leaves a recoverable entry.
+// Nothing is written to the Downloads folder. An entry is removed only after
+// its audio is on the server (or the doctor discards it).
 
 import { z } from 'zod';
 
@@ -50,8 +53,38 @@ async function withStore<T>(mode: IDBTransactionMode, run: (store: IDBObjectStor
   }
 }
 
-export async function saveRescuedRecording(entry: RescuedRecording): Promise<void> {
-  await withStore('readwrite', (store) => store.put(entry));
+// Writes from this tab run one at a time, in call order. A checkpoint queued
+// while recording can then never land after the delete that follows a
+// successful upload and bring the entry back.
+let writes: Promise<unknown> = Promise.resolve();
+function serial<T>(run: () => Promise<T>): Promise<T> {
+  const next = writes.then(run, run);
+  writes = next.catch(() => {});
+  return next;
+}
+const pendingCheckpoints = new Map<string, { entry: RescuedRecording; done: Promise<void> }>();
+
+export function saveRescuedRecording(entry: RescuedRecording): Promise<void> {
+  pendingCheckpoints.delete(entry.id);
+  return serial(async () => { await withStore('readwrite', (store) => store.put(entry)); });
+}
+
+/** Saves the audio captured so far. Checkpoints of one recording that pile up
+ *  behind a slow write collapse into the latest one. */
+export function saveRecordingCheckpoint(entry: RescuedRecording): Promise<void> {
+  const pending = pendingCheckpoints.get(entry.id);
+  if (pending) {
+    pending.entry = entry;
+    return pending.done;
+  }
+  const slot = { entry, done: Promise.resolve() };
+  slot.done = serial(async () => {
+    if (pendingCheckpoints.get(entry.id) !== slot) return; // superseded by a final save or a delete
+    pendingCheckpoints.delete(entry.id);
+    await withStore('readwrite', (store) => store.put(slot.entry));
+  });
+  pendingCheckpoints.set(entry.id, slot);
+  return slot.done;
 }
 
 export async function listRescuedRecordings(userId: string): Promise<RescuedRecording[]> {
@@ -104,6 +137,7 @@ export async function listRescuedRecordingMetadata(userId: string, signal?: Abor
   } finally { db.close(); }
 }
 
-export async function deleteRescuedRecording(id: string): Promise<void> {
-  await withStore('readwrite', (store) => store.delete(id));
+export function deleteRescuedRecording(id: string): Promise<void> {
+  pendingCheckpoints.delete(id);
+  return serial(async () => { await withStore('readwrite', (store) => store.delete(id)); });
 }
