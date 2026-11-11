@@ -532,7 +532,7 @@ try {
         }
       };
       for (const width of [933, 375, 1280, 1920]) {
-        await capture(doctor, app, 'clinical', '/', width, async page => { await page.getByRole('button', { name: 'Nova Consulta', exact: true }).first().click(); await expect(dialog()).toBeVisible(); await expect(dialog().getByRole('option', { name: /Paciente Exemplo A/ })).toBeVisible(); }, 'consultation-existing');
+        await capture(doctor, app, 'clinical', '/', width, async page => { await page.getByRole('button', { name: 'Iniciar atendimento', exact: true }).first().click(); await expect(dialog()).toBeVisible(); await expect(dialog().getByRole('option', { name: /Paciente Exemplo A/ })).toBeVisible(); }, 'consultation-existing');
         const marker = randomUUID(); await doctor.evaluate(value => { document.documentElement.dataset.auditDocument = value; }, marker);
         const sameDocument = async () => assert.equal(await doctor.evaluate(() => document.documentElement.dataset.auditDocument), marker);
         await capture(doctor, app, 'clinical', '/', width, async () => { await dialog().getByRole('button', { name: 'Novo Paciente', exact: true }).click(); await expect(dialog().getByLabel('Nome do Paciente *', { exact: true })).toBeVisible(); }, 'consultation-new-empty', { navigate: false });
@@ -1072,13 +1072,12 @@ try {
     await expect(doctor).toHaveURL(doctorApp.origin + '/gerenciar-pacientes');
     await expect(nav.getByRole('link', { name: 'Pacientes', exact: true })).toHaveAttribute('aria-current', 'page');
     await nav.getByRole('button', { name: 'Mais páginas', exact: true }).focus(); await doctor.keyboard.press('Enter');
-    await expect(doctor.getByRole('menuitem', { name: 'Assistente', exact: true })).toBeFocused();
-    await doctor.keyboard.press('ArrowDown');
-    await expect(doctor.getByRole('menuitem', { name: 'Modelos', exact: true })).toBeFocused();
-    await doctor.keyboard.press('ArrowDown');
-    await expect(doctor.getByRole('menuitem', { name: 'Conhecimento', exact: true })).toBeFocused();
-    await doctor.keyboard.press('Enter'); await expect(doctor).toHaveURL(doctorApp.origin + '/conhecimento');
-    await expect(doctor.getByRole('menu')).toHaveCount(0); navigationKeyboardVerified = true;
+    // "Mais" is a sheet (round 3): its links are reached with Tab and opened with Enter.
+    const more = doctor.getByRole('dialog', { name: 'Mais' });
+    await expect(more).toBeVisible();
+    await more.getByRole('link', { name: 'Conhecimento', exact: true }).focus(); await doctor.keyboard.press('Enter');
+    await expect(doctor).toHaveURL(doctorApp.origin + '/conhecimento');
+    await expect(more).toHaveCount(0); navigationKeyboardVerified = true;
   }
   for (const width of [375, 1280]) await capture(doctor, doctorApp, 'clinical', '/privacidade', width, async page => {
     await page.getByRole('button', { name: 'Excluir minha conta', exact: true }).click();

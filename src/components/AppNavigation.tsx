@@ -77,7 +77,10 @@ export function useAppNavigation() {
   return { access, reception, home, groups, workspaces, workspace, primary, more, pathname };
 }
 
-const itemClass = ({ isActive }: { isActive: boolean }) => cn('workspace-nav-item', isActive && 'workspace-nav-item-active');
+// Laptop heights (1200 px up to xl) get 44 px (2.04rem at the 135% type) items so more of the list fits a
+// 768 px screen; from xl the shared 2.25rem returns. Phones keep 44 px targets.
+const compact = 'shell:min-h-[2.04rem] shell:py-0.5 xl:min-h-[2.25rem] xl:py-1';
+const itemClass = ({ isActive }: { isActive: boolean }) => cn('workspace-nav-item', compact, isActive && 'workspace-nav-item-active');
 
 type HomeControl = {
   /** On the home page, "Início" returns to the dashboard without leaving the route (the consultation stays mounted). */
@@ -87,7 +90,7 @@ type HomeControl = {
 
 function HomeItem({ item, onHome, homeActive, className }: HomeControl & { item: NavigationItem; className?: string }) {
   const Icon = item.icon;
-  if (onHome) return <button type="button" onClick={onHome} aria-current={homeActive ? 'page' : undefined} className={cn('workspace-nav-item w-full text-left', homeActive && 'workspace-nav-item-active', className)}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" />{item.label}</button>;
+  if (onHome) return <button type="button" onClick={onHome} aria-current={homeActive ? 'page' : undefined} className={cn('workspace-nav-item w-full text-left', compact, homeActive && 'workspace-nav-item-active', className)}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" />{item.label}</button>;
   return <NavLink to={item.to} end className={state => cn(itemClass(state), className)}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" />{item.label}</NavLink>;
 }
 
@@ -99,33 +102,36 @@ export function AppSidebar({ onHome, homeActive, children, className }: HomeCont
   const list = useRef<HTMLDivElement>(null);
   useEffect(() => { list.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest' }); }, [pathname, homeActive]);
   return <aside aria-label="Navegação do ambiente" className={cn('hidden h-[100dvh] w-[13rem] shrink-0 flex-col border-r bg-sidebar shell:sticky shell:top-0 shell:flex xl:w-[15rem]', className)}>
-    <div className="shrink-0 space-y-3 px-3 pb-3 pt-4 xl:space-y-4 xl:px-4 xl:pb-4 xl:pt-5">
+    <div className="shrink-0 space-y-2 px-3 pb-2 pt-3 xl:space-y-4 xl:px-4 xl:pb-4 xl:pt-5">
       <Link to={home} aria-label={`${access?.clinic?.name ?? 'Cortex'} — Início`} className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <BrandLockup compact className="[&_p]:hidden" />
         <span className="mt-1 hidden text-[0.625rem] text-muted-foreground xl:block">com Cortex</span>
       </Link>
-      <WorkspaceMenu className="w-full" />
+      <WorkspaceMenu className="w-full shell:min-h-[2.5rem] shell:py-1 xl:min-h-12 xl:py-2" />
     </div>
     <div ref={list} className="workspace-nav-scroll min-h-0 flex-1 overflow-y-auto px-3 py-2">
-      <nav aria-label={reception ? 'Recepção' : 'Consultório'} className="space-y-3">
-        {!groups.length && <Link to={home} className="workspace-nav-item"><ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />Voltar ao início</Link>}
-        {groups.map(group => <div key={group.label} className="space-y-0.5">
+      <nav aria-label={reception ? 'Recepção' : 'Consultório'} className="space-y-2 xl:space-y-3">
+        {!groups.length && <Link to={home} className={cn('workspace-nav-item', compact)}><ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />Voltar ao início</Link>}
+        {groups.map((group, index) => <div key={group.label} className="space-y-0.5">
           <p className="px-3 pb-1 text-[0.625rem] font-medium uppercase tracking-widest text-muted-foreground">{group.label}</p>
           {group.items.map(item => item.to === '/'
             ? <HomeItem key={item.to} item={item} onHome={onHome} homeActive={homeActive} />
             : <NavLink key={item.to} to={item.to} end className={itemClass}><item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />{item.label}</NavLink>)}
+          {/* Page content (today's agenda during a consultation) follows the daily
+              destinations, so it is on the first screen; the items keep their order. */}
+          {index === 0 && children}
         </div>)}
+        {!groups.length && children}
       </nav>
-      {children}
     </div>
-    <nav aria-label="Conta e preferências" className="shrink-0 space-y-0.5 border-t p-2 xl:p-3">
+    <nav aria-label="Conta e preferências" className="shrink-0 space-y-0.5 border-t px-2 py-1.5 xl:p-3">
       {account.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} className={itemClass}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" />{label}</NavLink>)}
-      <SignOutButton />
+      <SignOutButton className={compact} />
     </nav>
   </aside>;
 }
 
-const barItem = (active: boolean) => cn('flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg text-[0.625rem]', active ? 'bg-primary/10 font-semibold text-primary' : 'text-muted-foreground');
+const barItem = (active: boolean) => cn('flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg text-[0.5625rem] min-[390px]:text-[0.625rem]', active ? 'bg-primary/10 text-primary' : 'text-muted-foreground');
 
 /**
  * Phone bar (below the `shell` frame) on every route: the three daily destinations
@@ -144,8 +150,8 @@ export function MobileBottomBar({ onHome, homeActive, placement = 'fixed' }: Hom
       style={placement === 'fixed' ? { height: 'calc(4rem + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)' } : { paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex h-16 items-stretch gap-1 px-1">
         {items.map(({ to, label, icon: Icon }) => onHome && to === '/'
-          ? <button key={to} type="button" onClick={onHome} aria-current={homeActive ? 'page' : undefined} className={barItem(!!homeActive)}><Icon className="h-4 w-4" aria-hidden="true" />{label}</button>
-          : <NavLink key={to} to={to} end={to === '/' || to === '/recepcao' || !groups.length} className={({ isActive }) => barItem(isActive && !(onHome && to === '/'))}><Icon className="h-4 w-4" aria-hidden="true" />{label}</NavLink>)}
+          ? <button key={to} type="button" onClick={onHome} aria-current={homeActive ? 'page' : undefined} className={barItem(!!homeActive)}><Icon className="h-4 w-4" aria-hidden="true" /><span className="max-w-full truncate">{label}</span></button>
+          : <NavLink key={to} to={to} end={to === '/' || to === '/recepcao' || !groups.length} className={({ isActive }) => barItem(isActive && !(onHome && to === '/'))}><Icon className="h-4 w-4" aria-hidden="true" /><span className="max-w-full truncate">{label}</span></NavLink>)}
         <button type="button" onClick={() => setSheet(true)} aria-haspopup="dialog" aria-expanded={sheet} aria-label="Mais páginas" className={barItem(false)}><Menu className="h-4 w-4" aria-hidden="true" />Mais</button>
       </div>
     </nav>

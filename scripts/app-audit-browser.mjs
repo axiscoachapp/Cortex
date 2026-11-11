@@ -687,15 +687,15 @@ try {
           await page.keyboard.press('Escape');
         }
         if (path === '/' && viewport.width < SHELL_BREAKPOINT && WORKSPACE_ROLE !== 'reception') {
-          await page.getByRole('button', { name: 'Menu', exact: true }).click();
-          const settings = page.getByRole('button', { name: 'Configurações', exact: true }).first();
+          await page.getByRole('button', { name: 'Mais páginas' }).click();
+          const settings = page.getByRole('dialog', { name: 'Mais' }).getByRole('link', { name: 'Configurações', exact: true });
           await settings.scrollIntoViewIfNeeded();
           await expect(settings).toBeInViewport();
           await snapshot('inicio-menu-curto');
-          await page.getByRole('button', { name: 'Início', exact: true }).last().click();
+          await page.keyboard.press('Escape');
         }
         if (path === '/' && WORKSPACE_ROLE !== 'reception') {
-          await page.getByRole('button', { name: 'Nova Consulta', exact: true }).first().click();
+          await page.getByRole('button', { name: 'Iniciar atendimento', exact: true }).first().click();
           await expect(page.getByRole('dialog')).toBeVisible();
           await snapshot('inicio-consulta-existente');
           await page.getByRole('button', { name: 'Novo Paciente', exact: true }).click();
@@ -704,7 +704,8 @@ try {
           await expect(page.getByRole('dialog')).toHaveCount(0);
         }
         if (path === '/recepcao') {
-          await expect(page.getByRole('button', { name: 'Sair', exact: true }).first()).toBeVisible();
+          // "Sair" lives in the sidebar footer on desktop and in "Mais" on the phone.
+          if (viewport.width >= SHELL_BREAKPOINT) await expect(page.getByRole('button', { name: 'Sair', exact: true }).first()).toBeVisible();
           if (viewport.width < SHELL_BREAKPOINT) {
             await page.getByRole('button', { name: 'Mais páginas' }).click();
             await snapshot('recepcao-mais');

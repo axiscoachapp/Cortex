@@ -73,7 +73,7 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
   });
 
   return (
-    <section aria-labelledby="sidebar-today" className="mt-4 space-y-2 border-t pt-4">
+    <section aria-labelledby="sidebar-today" className="!my-3 space-y-2 border-y py-3">
       {onNewConsultation && <Button variant="default" className="w-full min-h-11 h-auto py-2 gap-2 text-xs font-medium whitespace-normal" onClick={onNewConsultation}>
         <Plus className="w-4 h-4 shrink-0" aria-hidden="true" />Iniciar atendimento
       </Button>}
