@@ -1156,6 +1156,10 @@ export function ChatPanel({
       return;
     }
     onConsultationSaved?.(draft.patientId);
+    // The consultation is saved; when a chart proposal could not be prepared, say why.
+    if (Array.isArray(data.notices) && data.notices.some((notice: unknown) => typeof notice === 'string' && notice.trim())) {
+      toast({ title: 'Consulta salva', description: data.notices.filter((notice: unknown): notice is string => typeof notice === 'string').join(' ') });
+    }
     for (const key of [
       ['patients', userId],
       ['patient-detail'],
@@ -1265,31 +1269,41 @@ export function ChatPanel({
       // browser's copy go (a no-op when there is none).
       await forgetParked(draft.id);
       processingRequested = true;
-      const { data, error } = await supabase.functions.invoke('transcribe-consultation', {
-        body: {
-          patientId: draft.patientId,
-          draftId: draft.id,
-          chiefComplaint: draft.chiefComplaint,
-          audioStoragePath: draft.audioStoragePath,
-          audioMimeType: mimeType,
-          consultationComments: draft.originalComments,
-          patientContext,
-          userSpecialty: specialty,
-          templateContent: activeTemplateContent ?? undefined,
-        },
-      });
-      if (error) {
-        if (await handleQuotaError(error)) throw new HandledError();
-        if (functionErrorStatus(error) === 413) throw new AudioTooLargeError();
-        throw error;
+      const transcribeBody = {
+        patientId: draft.patientId,
+        draftId: draft.id,
+        chiefComplaint: draft.chiefComplaint,
+        audioStoragePath: draft.audioStoragePath,
+        audioMimeType: mimeType,
+        consultationComments: draft.originalComments,
+        patientContext,
+        userSpecialty: specialty,
+        templateContent: activeTemplateContent ?? undefined,
+      };
+      const first = await supabase.functions.invoke('transcribe-consultation', { body: transcribeBody });
+      if (first.error) {
+        if (await handleQuotaError(first.error)) throw new HandledError();
+        if (functionErrorStatus(first.error) === 413) throw new AudioTooLargeError();
+        throw first.error;
       }
+      let data = first.data;
+      // Long audio: the server saved the transcript and ran out of time for the note. It asks for
+      // the note in a second call, built from the saved transcript; the audio is not sent again.
+      // If that call fails the transcript is still shown, as in any other failed draft.
+      if (data?.noteDeferred === true) {
+        const second = await supabase.functions.invoke('transcribe-consultation', { body: { ...transcribeBody, noteOnly: true } });
+        if (second.error) await handleQuotaError(second.error);
+        else if (second.data) data = second.data;
+      }
+      // An actionable reason for a missing note comes first among the points to check.
+      const draftNotice = typeof data.draftNotice === 'string' && data.draftNotice.trim() ? [data.draftNotice.trim()] : [];
       let ready: ConsultationDraft = {
         ...draft,
         status: 'review',
         transcription: data.transcription ?? '',
         soapDraft: data.soapNote ?? '',
         whatsappDraft: data.whatsappMessage ?? '',
-        clarifications: Array.isArray(data.clarifications) ? data.clarifications : [],
+        clarifications: [...draftNotice, ...(Array.isArray(data.clarifications) ? data.clarifications : [])],
         transcriptionQuality: data.transcriptionQuality ?? 'poor',
         differentialDiagnoses: Array.isArray(data.differentialDiagnoses) ? data.differentialDiagnoses : [],
         drugInteractionAlerts: Array.isArray(data.drugInteractionAlerts) ? data.drugInteractionAlerts : [],
@@ -2687,7 +2701,7 @@ export function ChatPanel({
             <input
               ref={attachInputRef}
               type="file"
-              accept="image/*,application/pdf,.pdf,.png,.jpg,.jpeg,.webp,.heic"
+              accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,.pdf,.png,.jpg,.jpeg,.webp,.heic,.heif"
               className="hidden"
               onChange={handleAttachSelected}
             />
