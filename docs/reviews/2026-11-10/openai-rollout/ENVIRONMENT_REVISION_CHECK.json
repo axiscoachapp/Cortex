@@ -1,0 +1,476 @@
+{
+  "changedFunctions": [
+    {
+      "slug": "sync-google-calendar",
+      "version": 14,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "generate-prebriefing",
+      "version": 22,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "google-oauth-callback",
+      "version": 14,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "process-clinical-notes",
+      "version": 15,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "send-appointment-reminder",
+      "version": 14,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "chat-assistant",
+      "version": 18,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "delete-user-data",
+      "version": 12,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "finalize-consultation",
+      "version": 16,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "generate-document",
+      "version": 13,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "process-comment",
+      "version": 14,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "transcribe-consultation",
+      "version": 15,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "live-copilot",
+      "version": 12,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "suggest-questions",
+      "version": 12,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "analyze-document",
+      "version": 12,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "generate-prescription",
+      "version": 13,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "validate-prescription",
+      "version": 14,
+      "verifyJwt": false,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "refresh-medication-catalog",
+      "version": 13,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "create-template-ai",
+      "version": 12,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "ingest-knowledge",
+      "version": 13,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "discard-consultation",
+      "version": 8,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "delete-patient",
+      "version": 8,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "export-user-data",
+      "version": 8,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "google-oauth-start",
+      "version": 8,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "shared-patient-file",
+      "version": 8,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "create-clinic-doctor",
+      "version": 6,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "signature-session",
+      "version": 5,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "refresh-reference-catalogs",
+      "version": 5,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "create-clinic-receptionist",
+      "version": 5,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "sign-document",
+      "version": 5,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "whatsapp-webhook",
+      "version": 4,
+      "verifyJwt": false,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "signature-maintenance",
+      "version": 4,
+      "verifyJwt": false,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "intake-api",
+      "version": 4,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "whatsapp-api",
+      "version": 4,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "billing-api",
+      "version": 4,
+      "verifyJwt": true,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "whatsapp-automations",
+      "version": 4,
+      "verifyJwt": false,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "intake-public",
+      "version": 4,
+      "verifyJwt": false,
+      "status": "ACTIVE",
+      "updatedAt": 1794076564255
+    }
+  ],
+  "protectedEndpoints": [
+    {
+      "slug": "sync-google-calendar",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "generate-prebriefing",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "google-oauth-callback",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "process-clinical-notes",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "send-appointment-reminder",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "chat-assistant",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "delete-user-data",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "finalize-consultation",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "generate-document",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "process-comment",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "transcribe-consultation",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "live-copilot",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "suggest-questions",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "analyze-document",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "generate-prescription",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "validate-prescription",
+      "unauthenticatedPost": 400,
+      "preflight": 200,
+      "allowOrigin": "*"
+    },
+    {
+      "slug": "refresh-medication-catalog",
+      "unauthenticatedPost": 401,
+      "preflight": 401,
+      "allowOrigin": null
+    },
+    {
+      "slug": "create-template-ai",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "ingest-knowledge",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "discard-consultation",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "delete-patient",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "export-user-data",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "google-oauth-start",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "shared-patient-file",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "create-clinic-doctor",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "signature-session",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "refresh-reference-catalogs",
+      "unauthenticatedPost": 401,
+      "preflight": 401,
+      "allowOrigin": null
+    },
+    {
+      "slug": "create-clinic-receptionist",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "sign-document",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "whatsapp-webhook",
+      "unauthenticatedPost": 503,
+      "preflight": 503,
+      "allowOrigin": null
+    },
+    {
+      "slug": "signature-maintenance",
+      "unauthenticatedPost": 401,
+      "preflight": 401,
+      "allowOrigin": null
+    },
+    {
+      "slug": "intake-api",
+      "unauthenticatedPost": 401,
+      "preflight": 204,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "whatsapp-api",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "billing-api",
+      "unauthenticatedPost": 401,
+      "preflight": 204,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "whatsapp-automations",
+      "unauthenticatedPost": 401,
+      "preflight": 401,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "intake-public",
+      "unauthenticatedPost": 404,
+      "preflight": 204,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    }
+  ],
+  "allAuthenticated": false,
+  "unrelatedFunctionVersionsChanged": true
+}

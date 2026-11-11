@@ -1,0 +1,180 @@
+{
+  "explicitDeploymentCount": 12,
+  "functions": [
+    {
+      "slug": "generate-prebriefing",
+      "version": 22,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "process-clinical-notes",
+      "version": 15,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "chat-assistant",
+      "version": 18,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "finalize-consultation",
+      "version": 16,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "generate-document",
+      "version": 13,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "process-comment",
+      "version": 14,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "transcribe-consultation",
+      "version": 15,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "live-copilot",
+      "version": 12,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "suggest-questions",
+      "version": 12,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "analyze-document",
+      "version": 12,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "create-template-ai",
+      "version": 12,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    },
+    {
+      "slug": "ingest-knowledge",
+      "version": 13,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "sourceTimestampAdvanced": true,
+      "updatedAt": 1794358888098
+    }
+  ],
+  "protectedEndpoints": [
+    {
+      "slug": "generate-prebriefing",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "process-clinical-notes",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "chat-assistant",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "finalize-consultation",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "generate-document",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "process-comment",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "transcribe-consultation",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "live-copilot",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "suggest-questions",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "analyze-document",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "create-template-ai",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    },
+    {
+      "slug": "ingest-knowledge",
+      "unauthenticatedPost": 401,
+      "preflight": 200,
+      "allowOrigin": "https://cortex-ebon-tau.vercel.app"
+    }
+  ],
+  "allAuthenticated": true,
+  "allTargetGatewayChecksPass": true,
+  "unrelatedSourceTimestampsChanged": [],
+  "temporaryProbeFunctionsRemaining": [],
+  "environmentRevisionNote": "Secret selection advanced version counters of other functions without changing their source timestamps. The first audit used version alone and was corrected; retained in ENVIRONMENT_REVISION_CHECK.json."
+}

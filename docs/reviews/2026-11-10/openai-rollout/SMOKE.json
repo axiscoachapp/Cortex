@@ -1,0 +1,58 @@
+{
+  "slug": "cortex-openai-probe-6bbf879ea717",
+  "synthetic": true,
+  "audioBytes": 70835,
+  "adapterSourceCommit": "d48508d04cf2cfda05a7f51fa50f61af3f855099",
+  "sourceSha256": "807e33602be93b0bc9c33019801a9996d4b2b0d30f7468875ee38e1ce064d024",
+  "unauthorizedStatus": 401,
+  "httpStatus": 200,
+  "response": {
+    "synthetic": true,
+    "configured": true,
+    "originalFlags": {
+      "aiEnabled": true,
+      "openAiSelected": true
+    },
+    "smokeFlavor": "application_adapters",
+    "transcription": {
+      "ok": true,
+      "text": "Este é um teste sintático do sistema. Pessoa fictícia com 42 anos relata dor de cabeça há três dias. Nega febre e alergias. Nenhum medicamento foi prescrito.",
+      "metadata": {
+        "provider": "openai",
+        "requestedModel": "gpt-transcribe",
+        "effectiveModel": null,
+        "adapterVersion": "openai-initial-2026-11-10",
+        "usageStatus": "reported",
+        "diarization": "unavailable"
+      },
+      "usage": {
+        "provider": "openai",
+        "model": "gpt-transcribe",
+        "durationSeconds": 23
+      },
+      "durationMs": 1198
+    },
+    "text": {
+      "ok": true,
+      "output": {
+        "idioma": "pt-BR",
+        "resumo": "Pessoa fictícia de 42 anos relata dor de cabeça há três dias. Nega febre e alergias. Nenhum medicamento foi prescrito."
+      },
+      "metadata": {
+        "provider": "openai",
+        "requestedModel": "gpt-6.1-terra",
+        "effectiveModel": "gpt-6.1-terra",
+        "adapterVersion": "openai-initial-2026-11-10",
+        "usageStatus": "reported"
+      },
+      "usage": {
+        "provider": "openai",
+        "model": "gpt-6.1-terra",
+        "inputTokens": 148,
+        "outputTokens": 50
+      },
+      "durationMs": 2050
+    }
+  },
+  "cleanupDeleted": true
+}

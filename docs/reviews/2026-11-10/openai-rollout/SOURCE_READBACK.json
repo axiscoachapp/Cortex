@@ -1,0 +1,35 @@
+{
+  "functionsDeploymentCommit": "d48508d04cf2cfda05a7f51fa50f61af3f855099",
+  "files": [
+    {
+      "file": "transcribe-consultation/index.ts",
+      "readbackAvailable": true,
+      "matchesNormalizedSource": true
+    },
+    {
+      "file": "_shared/clinicalAi.ts",
+      "readbackAvailable": true,
+      "matchesNormalizedSource": true
+    },
+    {
+      "file": "_shared/http.ts",
+      "readbackAvailable": true,
+      "matchesNormalizedSource": true
+    },
+    {
+      "file": "_shared/operationControls.ts",
+      "readbackAvailable": true,
+      "matchesNormalizedSource": true
+    },
+    {
+      "file": "_shared/quota.ts",
+      "readbackAvailable": true,
+      "matchesNormalizedSource": true
+    },
+    {
+      "file": "_shared/specialty_prompts.ts",
+      "readbackAvailable": true,
+      "matchesNormalizedSource": true
+    }
+  ]
+}

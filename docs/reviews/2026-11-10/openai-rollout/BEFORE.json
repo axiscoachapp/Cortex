@@ -1,0 +1,256 @@
+{
+  "functions": [
+    {
+      "slug": "sync-google-calendar",
+      "version": 13,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "generate-prebriefing",
+      "version": 20,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "google-oauth-callback",
+      "version": 13,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "process-clinical-notes",
+      "version": 13,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "send-appointment-reminder",
+      "version": 13,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "chat-assistant",
+      "version": 16,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "delete-user-data",
+      "version": 11,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "finalize-consultation",
+      "version": 14,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "generate-document",
+      "version": 11,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "process-comment",
+      "version": 12,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "transcribe-consultation",
+      "version": 13,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "live-copilot",
+      "version": 10,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "suggest-questions",
+      "version": 10,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "analyze-document",
+      "version": 10,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "generate-prescription",
+      "version": 12,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "validate-prescription",
+      "version": 13,
+      "status": "ACTIVE",
+      "verifyJwt": false,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "refresh-medication-catalog",
+      "version": 12,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "create-template-ai",
+      "version": 10,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "ingest-knowledge",
+      "version": 11,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "discard-consultation",
+      "version": 7,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "delete-patient",
+      "version": 7,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "export-user-data",
+      "version": 7,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "google-oauth-start",
+      "version": 7,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "shared-patient-file",
+      "version": 7,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "create-clinic-doctor",
+      "version": 5,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "signature-session",
+      "version": 4,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "refresh-reference-catalogs",
+      "version": 4,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "create-clinic-receptionist",
+      "version": 4,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "sign-document",
+      "version": 4,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "whatsapp-webhook",
+      "version": 3,
+      "status": "ACTIVE",
+      "verifyJwt": false,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "signature-maintenance",
+      "version": 3,
+      "status": "ACTIVE",
+      "verifyJwt": false,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "intake-api",
+      "version": 3,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "whatsapp-api",
+      "version": 3,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "billing-api",
+      "version": 3,
+      "status": "ACTIVE",
+      "verifyJwt": true,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "whatsapp-automations",
+      "version": 3,
+      "status": "ACTIVE",
+      "verifyJwt": false,
+      "updatedAt": 1794076564255
+    },
+    {
+      "slug": "intake-public",
+      "version": 3,
+      "status": "ACTIVE",
+      "verifyJwt": false,
+      "updatedAt": 1794076564255
+    }
+  ]
+}

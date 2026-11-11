@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "cases": [
+    {
+      "name": "connectivity",
+      "durationSeconds": 23,
+      "inputTokens": 148,
+      "outputTokens": 50,
+      "estimatedUsd": 0.002123,
+      "transcript": "Este é um teste sintático do sistema. Pessoa fictícia com 42 anos relata dor de cabeça há três dias. Nega febre e alergias. Nenhum medicamento foi prescrito.",
+      "summary": "Pessoa fictícia de 42 anos relata dor de cabeça há três dias. Nega febre e alergias. Nenhum medicamento foi prescrito."
+    },
+    {
+      "name": "application_adapters",
+      "durationSeconds": 23,
+      "inputTokens": 148,
+      "outputTokens": 50,
+      "estimatedUsd": 0.002123,
+      "transcript": "Este é um teste sintático do sistema. Pessoa fictícia com 42 anos relata dor de cabeça há três dias. Nega febre e alergias. Nenhum medicamento foi prescrito.",
+      "summary": "Pessoa fictícia de 42 anos relata dor de cabeça há três dias. Nega febre e alergias. Nenhum medicamento foi prescrito."
+    }
+  ],
+  "totalEstimatedUsd": 0.004246,
+  "pricingBasis": "Standard list prices, 2026-11-10; not an invoice",
+  "languageChecks": {
+    "fixtureVoice": "Portuguese (Brazil), pt-br, offline eSpeak NG",
+    "speechApiDetected": "pt",
+    "summaryReturned": "pt-BR",
+    "clinicalFactPreservation": "42 years; headache 3 days; denies fever and allergies; no medication prescribed",
+    "minorTranscriptionError": "sintético recognized as sintático in the opening test disclaimer"
+  },
+  "limitation": "One robot-voiced synthetic clip is not a clinical accuracy evaluation."
+}

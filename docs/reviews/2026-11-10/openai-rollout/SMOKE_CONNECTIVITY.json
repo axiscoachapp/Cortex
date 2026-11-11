@@ -1,0 +1,66 @@
+{
+  "slug": "cortex-openai-probe-4f30283d41f0",
+  "synthetic": true,
+  "audioBytes": 70835,
+  "adapterSourceCommit": "d48508d04cf2cfda05a7f51fa50f61af3f855099",
+  "sourceSha256": "a6a0abfcaaae0c65cbc58dff37c3f96f8a84579c40e3eff1b50ff3028203ae26",
+  "unauthorizedStatus": 401,
+  "httpStatus": 200,
+  "response": {
+    "synthetic": true,
+    "configured": true,
+    "originalFlags": {
+      "aiEnabled": true,
+      "openAiSelected": false
+    },
+    "upstream": [
+      {
+        "endpoint": "audio/transcriptions",
+        "status": 200
+      },
+      {
+        "endpoint": "responses",
+        "status": 200
+      }
+    ],
+    "transcription": {
+      "ok": true,
+      "text": "Este é um teste sintático do sistema. Pessoa fictícia com 42 anos relata dor de cabeça há três dias. Nega febre e alergias. Nenhum medicamento foi prescrito.",
+      "modelRequested": "gpt-transcribe",
+      "languages": [
+        {
+          "code": "pt"
+        }
+      ],
+      "usage": {
+        "type": "duration",
+        "seconds": 23
+      },
+      "durationMs": 1878
+    },
+    "text": {
+      "ok": true,
+      "output": {
+        "idioma": "pt-BR",
+        "resumo": "Pessoa fictícia de 42 anos relata dor de cabeça há três dias. Nega febre e alergias. Nenhum medicamento foi prescrito."
+      },
+      "modelRequested": "gpt-6.1-terra",
+      "modelEffective": "gpt-6.1-terra",
+      "usage": {
+        "input_tokens": 148,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 0
+        },
+        "output_tokens": 50,
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "total_tokens": 198
+      },
+      "durationMs": 2970
+    }
+  },
+  "cleanupDeleted": true,
+  "smokeFlavor": "native_wire_connectivity"
+}

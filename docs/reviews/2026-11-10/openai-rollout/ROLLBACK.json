@@ -1,0 +1,54 @@
+{
+  "functions": [
+    {
+      "slug": "analyze-document",
+      "downloaded": true
+    },
+    {
+      "slug": "chat-assistant",
+      "downloaded": true
+    },
+    {
+      "slug": "create-template-ai",
+      "downloaded": true
+    },
+    {
+      "slug": "finalize-consultation",
+      "downloaded": true
+    },
+    {
+      "slug": "generate-document",
+      "downloaded": true
+    },
+    {
+      "slug": "generate-prebriefing",
+      "downloaded": true
+    },
+    {
+      "slug": "ingest-knowledge",
+      "downloaded": true
+    },
+    {
+      "slug": "live-copilot",
+      "downloaded": true
+    },
+    {
+      "slug": "process-clinical-notes",
+      "downloaded": true
+    },
+    {
+      "slug": "process-comment",
+      "downloaded": true
+    },
+    {
+      "slug": "suggest-questions",
+      "downloaded": true
+    },
+    {
+      "slug": "transcribe-consultation",
+      "downloaded": true
+    }
+  ],
+  "complete": true,
+  "localCopiesOutsideRepository": true
+}
