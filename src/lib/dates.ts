@@ -27,3 +27,27 @@ export function ageAtDate(birthDate: string, onDate = clinicDate()): number | nu
   const years=Number(onDate.slice(0,4))-Number(birthDate.slice(0,4))-(onDate.slice(5)<birthDate.slice(5)?1:0);
   return years>=0&&years<=150?years:null;
 }
+
+/** "há 29 dias" for a SQL DATE, counted in clinic days. One wording for the whole app. */
+export function relativeDayLabel(value: string, now = new Date()): string {
+  const days = daysSinceDateOnly(value, now);
+  if (days < 0) return days === -1 ? 'amanhã' : `em ${-days} dias`;
+  if (days === 0) return 'hoje';
+  if (days === 1) return 'ontem';
+  if (days < 60) return `há ${days} dias`;
+  if (days < 365) return `há ${Math.floor(days / 30)} meses`;
+  const years = Math.floor(days / 365);
+  return `há ${years} ${years === 1 ? 'ano' : 'anos'}`;
+}
+
+/**
+ * The last consultation, the same way everywhere: "12/10/2026 · há 29 dias".
+ * Accepts a SQL DATE or a timestamp (read on the clinic's calendar).
+ */
+export function lastConsultationLabel(value: string | null | undefined, now = new Date()): string {
+  if (!value) return 'Sem consulta registrada';
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : Number.isFinite(Date.parse(value)) ? clinicDate(new Date(value)) : '';
+  const formatted = day ? formatDateOnly(day) : 'Data inválida';
+  if (formatted === 'Data inválida') return 'Sem consulta registrada';
+  return `${formatted} · ${relativeDayLabel(day, now)}`;
+}
