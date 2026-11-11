@@ -18,7 +18,7 @@ export function billingDeps(): BillingDeps {
   const url = Deno.env.get('SUPABASE_URL') ?? '';
   const service = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { global: { fetch: fetchWithDeadline } });
   const cors = {
-    'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
+    ...allowOriginHeader(),
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     Vary: 'Origin',
   };
@@ -296,4 +296,11 @@ export function billingDeps(): BillingDeps {
       },
     },
   };
+}
+
+// No ALLOWED_ORIGIN secret means no Access-Control-Allow-Origin: browsers refuse the call instead
+// of the function answering any origin (same rule as _shared/cors.ts).
+function allowOriginHeader(): Record<string, string> {
+  const origin = (Deno.env.get('ALLOWED_ORIGIN') ?? '').trim();
+  return origin && origin !== '*' ? { 'Access-Control-Allow-Origin': origin } : {};
 }

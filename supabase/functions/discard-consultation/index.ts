@@ -4,7 +4,7 @@ import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 import { readJsonObject, RequestError, fetchWithDeadline } from '../_shared/http.ts';
 import { assertAudioPath } from '../_shared/storage.ts';
 const headers = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
+  ...allowOriginHeader(),
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Content-Type': 'application/json',
   'Cache-Control': 'no-store',
@@ -46,3 +46,10 @@ serve(async (req) => {
     );
   }
 });
+
+// No ALLOWED_ORIGIN secret means no Access-Control-Allow-Origin: browsers refuse the call instead
+// of the function answering any origin (same rule as _shared/cors.ts).
+function allowOriginHeader(): Record<string, string> {
+  const origin = (Deno.env.get('ALLOWED_ORIGIN') ?? '').trim();
+  return origin && origin !== '*' ? { 'Access-Control-Allow-Origin': origin } : {};
+}

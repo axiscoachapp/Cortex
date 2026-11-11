@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
+  ...allowOriginHeader(),
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   Vary: 'Origin',
 };
@@ -25,3 +25,10 @@ serve(async (req) => {
     });
   }
 });
+
+// No ALLOWED_ORIGIN secret means no Access-Control-Allow-Origin: browsers refuse the call instead
+// of the function answering any origin (same rule as _shared/cors.ts).
+function allowOriginHeader(): Record<string, string> {
+  const origin = (Deno.env.get('ALLOWED_ORIGIN') ?? '').trim();
+  return origin && origin !== '*' ? { 'Access-Control-Allow-Origin': origin } : {};
+}

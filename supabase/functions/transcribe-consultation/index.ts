@@ -22,10 +22,8 @@ import { isRecord } from '../_shared/modelInput.ts';
 import { getSpecialtyPrompt, buildCustomTemplatePrompt } from '../_shared/specialty_prompts.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 
-// Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
-// secret to your app's origin to lock cross-origin access down to it.
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
+  ...allowOriginHeader(),
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   Vary: 'Origin',
 };
@@ -426,3 +424,10 @@ serve(async (req) => {
     });
   }
 });
+
+// No ALLOWED_ORIGIN secret means no Access-Control-Allow-Origin: browsers refuse the call instead
+// of the function answering any origin (same rule as _shared/cors.ts).
+function allowOriginHeader(): Record<string, string> {
+  const origin = (Deno.env.get('ALLOWED_ORIGIN') ?? '').trim();
+  return origin && origin !== '*' ? { 'Access-Control-Allow-Origin': origin } : {};
+}

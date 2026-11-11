@@ -196,16 +196,31 @@ describe('clinical request boundaries before quota reservation', () => {
     expect((await handler.run({ patientId: patient, notes: 'Synthetic note' })).status).toBe(404);
     expect(handler.reserve).not.toHaveBeenCalled();
   });
-  for (const name of ['generate-prebriefing', 'process-clinical-notes']) {
-    it(`${name} rejects an oversized accumulated clinical prompt before reserving`, async () => {
-      const handler = loadHandler(
-        name,
-        database({ patients: [{ ...patientRow, clinical_notes: 'x'.repeat(131072) }], consultations: [visit] }),
-      );
-      expect((await handler.run({ patientId: patient, notes: 'New note' })).status).toBe(413);
-      expect(handler.reserve).not.toHaveBeenCalled();
+  it('generate-prebriefing rejects an oversized accumulated clinical prompt before reserving', async () => {
+    const handler = loadHandler(
+      'generate-prebriefing',
+      database({ patients: [{ ...patientRow, clinical_notes: 'x'.repeat(131072) }], consultations: [visit] }),
+    );
+    expect((await handler.run({ patientId: patient, notes: 'New note' })).status).toBe(413);
+    expect(handler.reserve).not.toHaveBeenCalled();
+  });
+  // Since the insights became a proposal (round 2), the doctor's note is saved first whatever
+  // happens to the AI step: an oversized history skips the paid step instead of refusing the note.
+  it('process-clinical-notes saves the note and skips the paid step when the accumulated notes are oversized', async () => {
+    const handler = loadHandler(
+      'process-clinical-notes',
+      database({ patients: [{ ...patientRow, clinical_notes: 'x'.repeat(131072) }], consultations: [visit] }),
+    );
+    const response = await handler.run({ patientId: patient, notes: 'New note' });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      saved: true,
+      insights: null,
+      message: expect.stringContaining('longas demais'),
     });
-  }
+    expect(handler.reserve).not.toHaveBeenCalled();
+    expect(handler.network).not.toHaveBeenCalled();
+  });
   for (const name of ['chat-assistant', 'suggest-questions', 'generate-document']) {
     it(`${name} bounds the complete prompt before its first paid operation`, async () => {
       const handler = loadHandler(name);

@@ -10,10 +10,8 @@ import { assessmentAndPlan, parseModelObject } from '../_shared/gemini.ts';
 import { assertPromptSize, isRecord, readPatientContext } from '../_shared/modelInput.ts';
 import { clinicDate } from '../_shared/clinicDate.ts';
 
-// Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
-// secret to your app's origin to lock cross-origin access down to it.
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
+  ...allowOriginHeader(),
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Vary': 'Origin',
 };
@@ -208,3 +206,10 @@ ${apSection}${earlier ? `\n\nConsultas anteriores (mais recente primeiro; só av
     );
   }
 });
+
+// No ALLOWED_ORIGIN secret means no Access-Control-Allow-Origin: browsers refuse the call instead
+// of the function answering any origin (same rule as _shared/cors.ts).
+function allowOriginHeader(): Record<string, string> {
+  const origin = (Deno.env.get('ALLOWED_ORIGIN') ?? '').trim();
+  return origin && origin !== '*' ? { 'Access-Control-Allow-Origin': origin } : {};
+}
