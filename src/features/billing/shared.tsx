@@ -5,22 +5,27 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { STATUS_LABELS, type ChargeStatus } from './billingApi';
+import { LoadErrorNotice, LoadingNotice, NoAccessNotice } from '@/features/shared/StatusNotice';
+import { BillingApiError, STATUS_LABELS, type ChargeStatus } from './billingApi';
 
-/** Loading, error with retry, or the content. */
-export function QueryState({ query, children, empty }: {
-  query: { isLoading: boolean; isError: boolean; error: unknown; refetch: () => unknown };
+/**
+ * Loading, a failed read (one sentence and "Tentar novamente", never the server text), a missing
+ * permission, or the content. The shared notices keep this the same as reception and team.
+ */
+export function QueryState({ query, children, empty, subject = 'o financeiro', forbiddenMessage = 'Sua conta não tem acesso a esta parte do financeiro.' }: {
+  query: { isLoading: boolean; isError: boolean; isFetching?: boolean; error: unknown; refetch: () => unknown };
   children: ReactNode;
   empty?: ReactNode;
+  /** What did not load, as it reads after "carregar". */
+  subject?: string;
+  forbiddenMessage?: string;
 }) {
-  if (query.isLoading) return <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p>;
+  if (query.isLoading) return <LoadingNotice className="p-0" />;
   if (query.isError) {
-    return (
-      <p role="alert" className="text-sm text-destructive">
-        {(query.error as Error)?.message ?? 'Não foi possível carregar.'}{' '}
-        <button type="button" className="underline" onClick={() => query.refetch()}>Tentar novamente</button>
-      </p>
-    );
+    if (query.error instanceof BillingApiError && query.error.code === 'forbidden') {
+      return <NoAccessNotice message={forbiddenMessage} backTo={null} />;
+    }
+    return <LoadErrorNotice subject={subject} retrying={!!query.isFetching} onRetry={() => void query.refetch()} />;
   }
   return <>{empty ?? children}</>;
 }
@@ -57,7 +62,11 @@ export function Stat({ label, value, tone }: { label: string; value: string; ton
   );
 }
 
-export const DIALOG_CLASS = 'w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] grid-cols-1 overflow-y-auto rounded-2xl p-5 md:p-6 [&>*]:min-w-0 [&>div:first-child]:text-left [&>div:first-child]:pr-8 [&_input]:min-h-11 [&_button[role=combobox]]:min-h-11 [&_form]:space-y-4 [&>button:last-child]:h-11 [&>button:last-child]:w-11 [&>button:last-child]:right-1 [&>button:last-child]:top-1 [&>button:last-child]:grid [&>button:last-child]:place-items-center';
+/**
+ * Added to `dialogLayout.content` on finance dialogs: a gutter on the phone and 44 px fields.
+ * The frame itself (header, scrolling body, fixed footer) is the shared `dialogLayout`.
+ */
+export const FINANCE_DIALOG = 'w-[calc(100vw-2rem)] rounded-2xl text-left [&_input]:min-h-11 [&_button[role=combobox]]:min-h-11';
 
 /** Grid of Stat cards: one per row on a narrow phone, so a value never breaks mid-number. */
 export const STAT_GRID = 'grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 lg:grid-cols-4';

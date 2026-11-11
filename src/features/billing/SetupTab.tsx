@@ -45,7 +45,7 @@ export function SetupTab({ state, prices }: { scope: string[]; state: BillingSta
           <dl className="grid gap-2 text-sm sm:grid-cols-3">
             <Item label="Registro ANS">{p.ansRegistry || MISSING}</Item>
             <Item label="Código da clínica no convênio">{p.providerCode || MISSING}</Item>
-            <Item label="Versão TISS">{p.tissVersion}</Item>
+            <Item label="Versão TISS">{p.tissVersion || MISSING}</Item>
             <Item label="Prazo de envio">{days(p.submissionDays)}</Item>
             <Item label="Prazo de pagamento">{days(p.paymentDays)}</Item>
             <Item label="Arquivo">{p.zipRequired ? 'XML compactado (ZIP)' : 'XML'}</Item>
@@ -84,8 +84,8 @@ export function SetupTab({ state, prices }: { scope: string[]; state: BillingSta
           return <li key={d.id} className="space-y-2 p-4 text-sm">
             <h3 className="break-words font-medium">{d.name}</h3>
             {p ? <dl className="grid gap-2 sm:grid-cols-3">
-              <Item label="Nome na guia">{p.tissName}</Item>
-              <Item label="Registro">{`${councilLabel(p.council, p.councilUf)} ${p.councilNumber} · CBO ${p.cbo}`}</Item>
+              <Item label="Nome na guia">{p.tissName || MISSING}</Item>
+              <Item label="Registro">{!p.councilNumber && !p.cbo ? MISSING : `${p.councilNumber ? `${councilLabel(p.council, p.councilUf)} ${p.councilNumber}` : `Registro ${MISSING.toLowerCase()}`} · CBO ${p.cbo || MISSING.toLowerCase()}`}</Item>
               <Item label="Repasse">{p.sharePercent === null ? MISSING : `${p.sharePercent}% do recebido`}</Item>
             </dl> : <p className="text-muted-foreground">Dados de faturamento: {MISSING.toLowerCase()}. Sem eles, o XML dos lotes deste médico não é gerado.</p>}
           </li>;

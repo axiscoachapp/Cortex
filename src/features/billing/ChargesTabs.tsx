@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { dialogLayout } from '@/lib/dialogLayout';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
@@ -17,7 +18,7 @@ import {
   type BillingState, type Charge, type ChargeStatus, type PaymentMethod, type Price, type ToBillAnswer,
 } from './billingApi';
 import { ChargeDialog, type ChargeSeed } from './ChargeDialog';
-import { DIALOG_CLASS, DialogError, Field, QueryState, StatusBadge } from './shared';
+import { DialogError, FINANCE_DIALOG, Field, QueryState, StatusBadge } from './shared';
 import { seedFrom } from './billingLogic';
 
 interface TabProps { scope: string[]; state: BillingState; range: { from: string; to: string }; prices: Price[] }
@@ -81,7 +82,7 @@ export function ToBillTab({ scope, state, range, prices, onGoToMonth }: TabProps
                   </p>
                   <p className="text-xs text-muted-foreground">{s.payerId ? `${payerName(state, s.payerId)} · carteirinha ${s.cardNumber || '—'}` : 'Particular ou convênio a definir'}</p>
                 </div>
-                <Button size="sm" onClick={() => start(s)} aria-label={`Cobrar o atendimento de ${i.patientName || 'paciente'}`}>Cobrar</Button>
+                <Button size="sm" onClick={() => start(s)} aria-label={`Cobrar atendimento de ${i.patientName || 'paciente'}`}>Cobrar atendimento</Button>
               </li>
             );
           })}
@@ -154,13 +155,13 @@ function PaymentDialog({ charge, onOpenChange, onPaid, onRefresh }: {
   };
   return (
     <Dialog open={!!charge} onOpenChange={changeOpen}>
-      <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
-        <DialogHeader>
+      <DialogContent className={`max-w-2xl ${dialogLayout.content} ${FINANCE_DIALOG}`}>
+        <DialogHeader className={dialogLayout.header}>
           <DialogTitle>Receber pagamento</DialogTitle>
           <DialogDescription>{charge ? `${charge.patientName} · ${charge.description} · falta ${brl(remaining)}` : ''}</DialogDescription>
         </DialogHeader>
-        <form noValidate onSubmit={submit} className="space-y-3">
-          <fieldset disabled={pay.isPending} className="min-w-0 space-y-3">
+        <form noValidate onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+          <div className={dialogLayout.body}><fieldset disabled={pay.isPending} className="min-w-0 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="pay-amount" label="Valor (R$)"><Input id="pay-amount" inputMode="decimal" value={amount} onChange={(e) => { setAmount(e.target.value); setError({ message: '' }); }} /></Field>
             <Field id="pay-method" label="Forma de pagamento">
@@ -170,14 +171,16 @@ function PaymentDialog({ charge, onOpenChange, onPaid, onRefresh }: {
               </Select>
             </Field>
             <Field id="pay-date" label="Recebido em"><Input id="pay-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
-            <Field id="pay-notes" label="Observação"><Input id="pay-notes" maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
+            <Field id="pay-notes" label="Observação (opcional)"><Input id="pay-notes" maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
           </div>
-          <DialogError message={error.message} stale={error.stale} onRetry={() => void retry()} retrying={retrying} />
-          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={() => changeOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={pay.isPending}>{pay.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Registrar pagamento</Button>
-          </DialogFooter>
-          </fieldset>
+          </fieldset></div>
+          <div className={dialogLayout.footer}>
+            <DialogError message={error.message} stale={error.stale} onRetry={() => void retry()} retrying={retrying} />
+            <div className={dialogLayout.actions}>
+              <Button type="button" variant="outline" className={dialogLayout.button} disabled={pay.isPending} onClick={() => changeOpen(false)}>Cancelar</Button>
+              <Button type="submit" className={dialogLayout.button} disabled={pay.isPending}>{pay.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Registrar pagamento</Button>
+            </div>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
@@ -288,10 +291,10 @@ export function ChargesTab({ scope, state, range, prices }: TabProps) {
                 <div><StatusBadge status={c.status} /></div>
                 <div className="flex flex-wrap items-center gap-2 sm:col-span-3 sm:justify-end xl:col-span-1">
                   {canAct && c.guideType === 'particular' && (c.status === 'open' || c.status === 'partial') && (
-                    <Button size="sm" onClick={() => setPaying(c)} aria-label={`Receber de ${c.patientName}`}>Receber</Button>
+                    <Button size="sm" onClick={() => setPaying(c)} aria-label={`Receber pagamento de ${c.patientName}`}>Receber pagamento</Button>
                   )}
-                  {editable && <Button size="sm" variant="outline" onClick={() => setEditing(c)} aria-label={`Corrigir a cobrança de ${c.patientName}`}>Corrigir</Button>}
-                  {editable && <Button size="sm" variant="ghost" onClick={() => setCancelling(c)} aria-label={`Cancelar a cobrança de ${c.patientName}`}>Cancelar</Button>}
+                  {editable && <Button size="sm" variant="outline" onClick={() => setEditing(c)} aria-label={`Corrigir cobrança de ${c.patientName}`}>Corrigir cobrança</Button>}
+                  {editable && <Button size="sm" variant="ghost" onClick={() => setCancelling(c)} aria-label={`Cancelar cobrança de ${c.patientName}`}>Cancelar cobrança</Button>}
                   {denied && <Button size="sm" variant="outline" onClick={() => setRepresenting(c)} aria-label={`Reapresentar a guia ${c.guideNumber} de ${c.patientName}`}>Reapresentar</Button>}
                   {denied && <Button size="sm" variant="ghost" onClick={() => setWritingOff({ charge: c, note: '' })} aria-label={`Dar baixa na glosa da guia ${c.guideNumber} de ${c.patientName}`}>Dar baixa</Button>}
                 </div>
@@ -308,11 +311,11 @@ export function ChargesTab({ scope, state, range, prices }: TabProps) {
       <AlertDialog open={!!cancelling} onOpenChange={(o) => !o && setCancelling(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar esta cobrança?</AlertDialogTitle>
+            <AlertDialogTitle>Cancelar cobrança?</AlertDialogTitle>
             <AlertDialogDescription>{cancelling ? `${cancelling.patientName} · ${cancelling.description} · ${brl(cancelling.amount)}. O atendimento volta para "A faturar".` : ''}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogCancel>Manter cobrança</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); if (cancelling) cancel.mutate(cancelling); }} disabled={cancel.isPending}>Cancelar cobrança</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -327,7 +330,7 @@ export function ChargesTab({ scope, state, range, prices }: TabProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); if (representing) represent.mutate(representing); }} disabled={represent.isPending}>Reapresentar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -345,7 +348,7 @@ export function ChargesTab({ scope, state, range, prices }: TabProps) {
             <Input id="write-off-note" maxLength={300} value={writingOff?.note ?? ''} onChange={(e) => setWritingOff((v) => (v ? { ...v, note: e.target.value } : v))} />
           </Field>
           <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); if (writingOff) writeOff.mutate(writingOff); }} disabled={writeOff.isPending}>Dar baixa</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

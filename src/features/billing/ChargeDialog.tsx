@@ -4,7 +4,8 @@ import { useMemo, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { dialogLayout } from '@/lib/dialogLayout';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -14,7 +15,7 @@ import {
   CONSULTATION_TYPES, PRIVATE_CODE, billingCall, brl, isStale, moneyInput, parseMoney, today, type BillingState, type Charge, type GuideType, type Price,
 } from './billingApi';
 import { consultationPrice } from './billingLogic';
-import { DIALOG_CLASS, DialogError, Field } from './shared';
+import { DialogError, FINANCE_DIALOG, Field } from './shared';
 
 export interface ChargeSeed {
   appointmentId?: string;
@@ -186,21 +187,22 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved,
     save.mutate(null);
   };
 
-  const title = editing ? 'Corrigir cobrança' : 'Nova cobrança';
+  // The title repeats the button that opened the dialog.
+  const title = editing ? 'Corrigir cobrança' : seed?.appointmentId ? 'Cobrar atendimento' : 'Nova cobrança avulsa';
   // Without a private price list the field is hidden: description and value are all a private charge needs.
   const priceHint = priceList.length > 0 ? undefined : 'Sem tabela de preços para este convênio: informe o código em "Detalhes da guia", a descrição e o valor.';
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
-      <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
-        <DialogHeader>
+      <DialogContent className={`max-w-2xl ${dialogLayout.content} ${FINANCE_DIALOG}`}>
+        <DialogHeader className={dialogLayout.header}>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {editing ? 'Corrija o que estiver errado. A correção fica registrada com seu nome.'
               : seed?.appointmentId ? 'Do atendimento da agenda. O convênio e a carteirinha ficam guardados para a próxima vez.' : 'Cobrança avulsa, sem agendamento.'}
           </DialogDescription>
         </DialogHeader>
-        <form noValidate onSubmit={submit} className="space-y-4">
-          <fieldset disabled={save.isPending} className="min-w-0 space-y-4">
+        <form noValidate onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+          <div className={dialogLayout.body}><fieldset disabled={save.isPending} className="min-w-0 space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="charge-patient" label="Paciente">
               <Input id="charge-patient" value={form.patientName} maxLength={200} onChange={(e) => set({ patientName: e.target.value })} />
@@ -322,15 +324,17 @@ export function ChargeDialog({ open, onOpenChange, state, prices, seed, onSaved,
               </Field>
             </fieldset>
           )}
-          <Field id="charge-notes" label="Observações">
+          <Field id="charge-notes" label="Observações (opcional)">
             <Textarea id="charge-notes" rows={2} maxLength={500} value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
           </Field>
-          <DialogError message={error.message} stale={error.stale} onRetry={editing && onRefreshEditing ? () => void retryStale() : undefined} retrying={retrying} />
-          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={() => changeOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={save.isPending}>{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editing ? 'Salvar correção' : 'Salvar cobrança'}</Button>
-          </DialogFooter>
-          </fieldset>
+          </fieldset></div>
+          <div className={dialogLayout.footer}>
+            <DialogError message={error.message} stale={error.stale} onRetry={editing && onRefreshEditing ? () => void retryStale() : undefined} retrying={retrying} />
+            <div className={dialogLayout.actions}>
+              <Button type="button" variant="outline" className={dialogLayout.button} disabled={save.isPending} onClick={() => changeOpen(false)}>Cancelar</Button>
+              <Button type="submit" className={dialogLayout.button} disabled={save.isPending}>{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editing ? 'Salvar correção' : 'Salvar cobrança'}</Button>
+            </div>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

@@ -14,6 +14,7 @@ import { CashTab } from './CashTab';
 import { ChargesTab, ToBillTab } from './ChargesTabs';
 import { ReportsTab } from './ReportsTab';
 import { SetupTab } from './SetupTab';
+import { NoAccessNotice } from '@/features/shared/StatusNotice';
 import { QueryState } from './shared';
 
 type TabId = 'faturar' | 'cobrancas' | 'lotes' | 'caixa' | 'relatorios' | 'cadastros';
@@ -64,7 +65,7 @@ export default function BillingPage({ embedded = false }: { embedded?: boolean }
   const description = current?.id === 'cobrancas' && role === 'doctor'
     ? 'Consulte suas cobranças, os pagamentos registrados e os saldos em aberto.'
     : current?.id === 'caixa'
-      ? role === 'admin' ? 'Recebimentos pela data de pagamento; despesas em aberto pelo vencimento e despesas pagas pela data do pagamento.' : 'Confira os recebimentos do período pela data de pagamento.'
+      ? role === 'admin' ? 'Entradas e saídas do mês.' : 'Confira os recebimentos do período pela data de pagamento.'
       : current?.description;
   const content = <div className="finance-workspace min-w-0 space-y-6">
       <PageHeading title="Financeiro" description={intro} actions={
@@ -73,7 +74,7 @@ export default function BillingPage({ embedded = false }: { embedded?: boolean }
           <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1"><Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Mês anterior" onClick={() => setOffset(value => value - 1)}><ChevronLeft className="h-4 w-4" /></Button><span className="min-w-0 text-center text-xs font-semibold" aria-live="polite">{range.label}</span><Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Próximo mês" onClick={() => setOffset(value => value + 1)}><ChevronRight className="h-4 w-4" /></Button>{offset !== 0 && <Button variant="outline" className="col-span-3 h-auto min-h-11 justify-self-center text-xs" onClick={() => setOffset(0)}>Mês atual</Button>}</div>
         </div>
       } />
-      <QueryState query={state}>
+      <QueryState query={state} forbiddenMessage="Sua conta não tem acesso ao financeiro desta clínica.">
         {fresh && state.data && current && <Tabs value={current.id} onValueChange={value => { if (value !== current.id && confirmSessionExit()) setTab(value as TabId); }} className="space-y-6">
           <TabsList aria-label="Seções do financeiro" className={`flex h-auto w-full flex-wrap items-stretch gap-1.5 rounded-xl bg-muted/50 p-1.5 ${tabs.length <= 3 ? 'max-w-3xl' : ''}`}>
             {[...flow, ...reference].map(({ id, label, icon: Icon }, index) => <Fragment key={id}>
@@ -84,6 +85,10 @@ export default function BillingPage({ embedded = false }: { embedded?: boolean }
             </Fragment>)}
           </TabsList>
           <div className="space-y-1"><h2 className="text-lg font-semibold">{current.title}</h2><p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+            {current.id === 'caixa' && role === 'admin' && <details className="text-sm text-muted-foreground">
+              <summary className="inline-flex min-h-11 cursor-pointer items-center underline-offset-4 hover:underline">Como o mês é contado</summary>
+              <p className="pb-1">Recebimentos entram pela data do pagamento. Despesas pagas, pela data em que foram pagas; despesas em aberto, pelo vencimento.</p>
+            </details>}
             {nextStep[current.id] && <p className="text-sm font-medium text-foreground">{nextStep[current.id]}</p>}</div>
           <div className="min-w-0 rounded-2xl border bg-card p-4 md:p-6">
             <TabsContent value="faturar" className="mt-0"><ToBillTab scope={scope} state={state.data} range={range} prices={prices.data?.prices ?? []} onGoToMonth={setOffset} /></TabsContent>
@@ -91,10 +96,10 @@ export default function BillingPage({ embedded = false }: { embedded?: boolean }
             <TabsContent value="lotes" className="mt-0"><BatchesTab scope={scope} state={state.data} /></TabsContent>
             <TabsContent value="caixa" className="mt-0"><CashTab scope={scope} state={state.data} range={range} /></TabsContent>
             <TabsContent value="relatorios" className="mt-0"><ReportsTab scope={scope} state={state.data} range={range} /></TabsContent>
-            <TabsContent value="cadastros" className="mt-0"><QueryState query={prices}><SetupTab scope={scope} state={state.data} prices={prices.data?.prices ?? []} /></QueryState></TabsContent>
+            <TabsContent value="cadastros" className="mt-0"><QueryState query={prices} subject="os cadastros"><SetupTab scope={scope} state={state.data} prices={prices.data?.prices ?? []} /></QueryState></TabsContent>
           </div>
         </Tabs>}
-        {state.data && state.isFetchedAfterMount && !current && <p className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Sem acesso ao financeiro.</p>}
+        {state.data && state.isFetchedAfterMount && !current && <NoAccessNotice message="Sua conta não tem acesso ao financeiro desta clínica." backTo={null} />}
       </QueryState>
   </div>;
   return embedded ? content : <WorkspaceShell section="Financeiro">{content}</WorkspaceShell>;

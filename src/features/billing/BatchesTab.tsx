@@ -1,5 +1,5 @@
 // "Lotes": batches of plan guides (TISS XML), sending and the plan's statement (paid and denied).
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { dialogLayout } from '@/lib/dialogLayout';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SupportRequest } from '@/components/SupportRequest';
@@ -18,10 +19,23 @@ import {
   BATCH_STATUS_LABELS, GUIDE_LABELS, billingCall, billingKey, brl, dateBr, dateTimeBr, downloadBase64, isStale, moneyInput, parseMoney, plural, today,
   type Batch, type BatchFile, type BillingState, type Charge, type GuideType,
 } from './billingApi';
-import { DIALOG_CLASS, DialogError, Field, QueryState } from './shared';
+import { DialogError, FINANCE_DIALOG, Field, QueryState } from './shared';
 import { settleLinesFrom, settleProblems, type SettleLine } from './billingLogic';
 
 type Refresh = (id: string) => Promise<Batch | null>;
+/** The NFS-e button and the title of its dialog: register the first number, then correct it. */
+const nfseAction = (b: Batch) => (b.nfseNumber ? 'Corrigir NFS-e' : 'Registrar NFS-e');
+
+/** The problems of a statement, right above the footer, focused when they appear. */
+function SettleErrors({ errors }: { errors: string[] }) {
+  const ref = useRef<HTMLUListElement>(null);
+  useEffect(() => { ref.current?.focus(); }, [errors]);
+  return (
+    <ul ref={ref} role="alert" tabIndex={-1} className="max-h-40 list-disc overflow-y-auto rounded-lg border border-destructive/40 bg-destructive/5 p-3 pl-7 text-sm text-destructive outline-none">
+      {errors.slice(0, 8).map((e) => <li key={e}>{e}</li>)}
+    </ul>
+  );
+}
 const STALE_BATCH = 'Outra pessoa alterou este lote. A lista foi atualizada; confira e tente de novo.';
 
 function SettleDialog({ batch, onOpenChange, scope, onDone, prefill, onRefresh }: {
@@ -85,16 +99,16 @@ function SettleDialog({ batch, onOpenChange, scope, onDone, prefill, onRefresh }
   const paidTotal = charges.reduce((a, c) => a + (parseMoney(line(c).paid) || 0), 0);
   return (
     <Dialog open={!!batch} onOpenChange={changeOpen}>
-      <DialogContent className={`${DIALOG_CLASS} max-w-3xl`}>
-        <DialogHeader>
+      <DialogContent className={`max-w-3xl ${dialogLayout.content} ${FINANCE_DIALOG}`}>
+        <DialogHeader className={dialogLayout.header}>
           <DialogTitle>Lançar retorno</DialogTitle>
           <DialogDescription>
             Lote {batch?.number}: informe quanto o convênio pagou em cada guia. Quando pagar menos, informe o código da glosa (tabela 38 da TUSS, no demonstrativo).
             {prefill ? ' Os valores lançados antes foram mantidos: corrija só o que estiver errado.' : ''}
           </DialogDescription>
         </DialogHeader>
-        <QueryState query={q}>
-          <form noValidate onSubmit={submit} className="space-y-3">
+        <form noValidate onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+          <div className={dialogLayout.body}><QueryState query={q} subject="as guias do lote">
             <fieldset disabled={settle.isPending} className="min-w-0 space-y-3">
             <ul className="divide-y rounded-lg border">
               {charges.map((c) => {
@@ -126,18 +140,16 @@ function SettleDialog({ batch, onOpenChange, scope, onDone, prefill, onRefresh }
               <Field id="settle-date" label="Data do pagamento"><Input id="settle-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
               <p className="text-sm sm:pb-2" aria-live="polite">Total pago: <strong className="tabular-nums">{brl(paidTotal)}</strong></p>
             </div>
-            {stale ? <DialogError message={errors[0] ?? ''} stale onRetry={() => void retry()} retrying={retrying} /> : errors.length > 0 && (
-              <ul role="alert" className="list-disc rounded-lg border border-destructive/40 bg-destructive/5 p-3 pl-7 text-sm text-destructive">
-                {errors.slice(0, 8).map((e) => <li key={e}>{e}</li>)}
-              </ul>
-            )}
-            <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-              <Button type="button" variant="outline" onClick={() => changeOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={settle.isPending || q.isFetching || charges.length === 0}>{settle.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar retorno e fechar lote</Button>
-            </DialogFooter>
             </fieldset>
-          </form>
-        </QueryState>
+          </QueryState></div>
+          <div className={dialogLayout.footer}>
+            {stale ? <DialogError message={errors[0] ?? ''} stale onRetry={() => void retry()} retrying={retrying} /> : errors.length > 0 && <SettleErrors errors={errors} />}
+            <div className={dialogLayout.actions}>
+              <Button type="button" variant="outline" className={dialogLayout.button} disabled={settle.isPending} onClick={() => changeOpen(false)}>Cancelar</Button>
+              <Button type="submit" className={dialogLayout.button} disabled={settle.isPending || q.isFetching || q.isError || charges.length === 0}>{settle.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar retorno e fechar lote</Button>
+            </div>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
@@ -174,21 +186,23 @@ function SentDialog({ batch, onOpenChange, onDone, onRefresh }: { batch: Batch |
   const changeOpen = (next: boolean) => { if (guard(next)) onOpenChange(next); };
   return (
     <Dialog open={!!batch} onOpenChange={changeOpen}>
-      <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
-        <DialogHeader>
-          <DialogTitle>Marcar o lote {batch?.number} como enviado</DialogTitle>
-          <DialogDescription>Depois de subir o XML no portal do convênio. As guias passam a "Enviada".</DialogDescription>
+      <DialogContent className={`max-w-2xl ${dialogLayout.content} ${FINANCE_DIALOG}`}>
+        <DialogHeader className={dialogLayout.header}>
+          <DialogTitle>Marcar como enviado</DialogTitle>
+          <DialogDescription>Lote {batch?.number}, depois de subir o XML no portal do convênio. As guias passam a "Enviada".</DialogDescription>
         </DialogHeader>
-        <form noValidate onSubmit={(e) => { e.preventDefault(); if (submitting.current || !batch) return; if (!date) { setError({ message: 'Informe a data.' }); return; } submitting.current = true; sent.mutate(batch.revision); }} className="space-y-3">
-          <fieldset disabled={sent.isPending} className="min-w-0 space-y-3">
+        <form noValidate onSubmit={(e) => { e.preventDefault(); if (submitting.current || !batch) return; if (!date) { setError({ message: 'Informe a data.' }); return; } submitting.current = true; sent.mutate(batch.revision); }} className="flex min-h-0 flex-1 flex-col">
+          <div className={dialogLayout.body}><fieldset disabled={sent.isPending} className="min-w-0 space-y-3">
           <Field id="sent-date" label="Enviado em"><Input id="sent-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
           <Field id="sent-protocol" label="Protocolo do portal (opcional)"><Input id="sent-protocol" maxLength={40} value={protocol} onChange={(e) => setProtocol(e.target.value)} /></Field>
-          <DialogError message={error.message} stale={error.stale} onRetry={() => void retry()} retrying={retrying} />
-          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={() => changeOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={sent.isPending}>{sent.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Marcar como enviado</Button>
-          </DialogFooter>
-          </fieldset>
+          </fieldset></div>
+          <div className={dialogLayout.footer}>
+            <DialogError message={error.message} stale={error.stale} onRetry={() => void retry()} retrying={retrying} />
+            <div className={dialogLayout.actions}>
+              <Button type="button" variant="outline" className={dialogLayout.button} disabled={sent.isPending} onClick={() => changeOpen(false)}>Cancelar</Button>
+              <Button type="submit" className={dialogLayout.button} disabled={sent.isPending}>{sent.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Marcar como enviado</Button>
+            </div>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
@@ -207,7 +221,7 @@ function Confirm({ open, title, children, action, pending, onCancel, onConfirm }
           <AlertDialogDescription>{children}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Voltar</AlertDialogCancel>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction onClick={(e) => { e.preventDefault(); onConfirm(); }} disabled={pending}>{pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{action}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -399,8 +413,8 @@ export function BatchesTab({ scope, state }: { scope: string[]; state: BillingSt
                     {b.status === 'sent' && !b.answered && <Button size="sm" variant="ghost" onClick={() => setUnsending(b)} aria-label={`Desfazer o envio do lote ${b.number}`}>Desfazer envio</Button>}
                     {b.status === 'closed' && <Button size="sm" variant="ghost" onClick={() => setReopening(b)} aria-label={`Corrigir o retorno do lote ${b.number}`}>Corrigir retorno</Button>}
                     {b.status !== 'draft' && (
-                      <Button size="sm" variant="ghost" onClick={() => { setNfseError({ message: '' }); setNfse({ batch: b, value: b.nfseNumber ?? '' }); }} aria-label={`Nota fiscal do lote ${b.number}`}>
-                        {b.nfseNumber ? 'NFS-e' : 'Registrar NFS-e'}
+                      <Button size="sm" variant="ghost" onClick={() => { setNfseError({ message: '' }); setNfse({ batch: b, value: b.nfseNumber ?? '' }); }} aria-label={`${nfseAction(b)} do lote ${b.number}`}>
+                        {nfseAction(b)}
                       </Button>
                     )}
                   </div>
@@ -459,22 +473,24 @@ export function BatchesTab({ scope, state }: { scope: string[]; state: BillingSt
         Use se o XML ainda não foi enviado ao convênio. As guias voltam para "Em aberto" e mantêm os números; o número deste lote não é usado de novo.
       </Confirm>
       <Dialog open={!!nfse} onOpenChange={changeNfseOpen}>
-        <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
-          <DialogHeader>
-            <DialogTitle>Nota fiscal do lote {nfse?.batch.number}</DialogTitle>
-            <DialogDescription>Número da NFS-e emitida para este lote no Emissor Nacional. Deixe vazio para apagar.</DialogDescription>
+        <DialogContent className={`max-w-2xl ${dialogLayout.content} ${FINANCE_DIALOG}`}>
+          <DialogHeader className={dialogLayout.header}>
+            <DialogTitle>{nfse ? nfseAction(nfse.batch) : 'Registrar NFS-e'}</DialogTitle>
+            <DialogDescription>Lote {nfse?.batch.number}: número da NFS-e emitida no Emissor Nacional. Deixe vazio para apagar.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); if (nfse && !savingNfse.current) { savingNfse.current = true; saveNfse.mutate(nfse); } }} className="space-y-4">
-            <fieldset disabled={saveNfse.isPending} className="min-w-0 space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); if (nfse && !savingNfse.current) { savingNfse.current = true; saveNfse.mutate(nfse); } }} className="flex min-h-0 flex-1 flex-col">
+            <div className={dialogLayout.body}><fieldset disabled={saveNfse.isPending} className="min-w-0 space-y-4">
             <Field id="nfse-number" label="Número da NFS-e">
               <Input id="nfse-number" value={nfse?.value ?? ''} maxLength={30} onChange={(e) => { setNfseError({ message: '' }); setNfse((v) => (v ? { ...v, value: e.target.value } : v)); }} />
             </Field>
-            <DialogError message={nfseError.message} stale={nfseError.stale} onRetry={() => void retryNfse()} />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => changeNfseOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saveNfse.isPending}>{saveNfse.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
-            </DialogFooter>
-            </fieldset>
+            </fieldset></div>
+            <div className={dialogLayout.footer}>
+              <DialogError message={nfseError.message} stale={nfseError.stale} onRetry={() => void retryNfse()} />
+              <div className={dialogLayout.actions}>
+                <Button type="button" variant="outline" className={dialogLayout.button} disabled={saveNfse.isPending} onClick={() => changeNfseOpen(false)}>Cancelar</Button>
+                <Button type="submit" className={dialogLayout.button} disabled={saveNfse.isPending}>{saveNfse.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar NFS-e</Button>
+              </div>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

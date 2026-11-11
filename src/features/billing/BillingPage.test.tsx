@@ -92,7 +92,11 @@ describe('finance page', () => {
     invoke.mockImplementation(answer('admin'));
     renderPage('admin');
     await userEvent.click(await screen.findByRole('tab', { name: /Caixa/ }));
-    expect(screen.getByText('Recebimentos pela data de pagamento; despesas em aberto pelo vencimento e despesas pagas pela data do pagamento.')).toBeVisible();
+    // R 31: one short sentence; the counting rule sits behind a disclosure.
+    expect(screen.getByText('Entradas e saídas do mês.')).toBeVisible();
+    expect(screen.queryByText(/^Recebimentos pela data de pagamento;/)).toBeNull();
+    await userEvent.click(screen.getByText('Como o mês é contado'));
+    expect(screen.getByText(/Despesas pagas, pela data em que foram pagas; despesas em aberto, pelo vencimento\./)).toBeVisible();
   });
 
   it('shows the tabs of each role', async () => {
@@ -113,7 +117,7 @@ describe('finance page', () => {
     invoke.mockImplementation(answer('reception'));
     const user = userEvent.setup();
     renderPage('reception');
-    await user.click(await screen.findByRole('button', { name: 'Cobrar o atendimento de Paciente Exemplo' }));
+    await user.click(await screen.findByRole('button', { name: 'Cobrar atendimento de Paciente Exemplo' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByLabelText('Paciente')).toHaveValue('Paciente Exemplo');
     expect(within(dialog).getByLabelText('Número da carteirinha')).toHaveValue('0001 2345');

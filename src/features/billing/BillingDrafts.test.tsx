@@ -65,7 +65,7 @@ function mount() {
 }
 async function openPayment() {
   await userEvent.click(await screen.findByRole('tab', { name: /Cobranças/ }));
-  fireEvent.click(await screen.findByRole('button', { name: 'Receber de Paciente Sintético' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Receber pagamento de Paciente Sintético' }));
   return screen.findByRole('dialog');
 }
 
@@ -124,7 +124,7 @@ describe('financial draft protection', () => {
     vi.mocked(window.confirm).mockReturnValue(true);
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    fireEvent.click(screen.getByRole('button', { name: 'Receber de Paciente Sintético' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Receber pagamento de Paciente Sintético' }));
     expect(await screen.findByLabelText('Valor (R$)')).toHaveValue('100,00');
     expect(confirmSessionExit()).toBe(true);
   });
@@ -185,7 +185,7 @@ describe('financial draft protection', () => {
   it.each([
     ['Lançar o retorno do lote 4', 'Data do pagamento'],
     ['Marcar o lote 5 como enviado', 'Enviado em'],
-    ['Nota fiscal do lote 4', 'Número da NFS-e'],
+    ['Registrar NFS-e do lote 4', 'Número da NFS-e'],
   ])('protects and resets batch draft: %s', async (action, label) => {
     mount();
     await userEvent.click(await screen.findByRole('tab', { name: /Lotes/ }));
@@ -243,7 +243,7 @@ describe('financial draft protection', () => {
         fireEvent.change(screen.getByLabelText('Valor (R$)'), { target: { value: '120,00' } });
       } else {
         await userEvent.click(await screen.findByRole('tab', { name: /Lotes/ }));
-        const button = action === 'settle' ? 'Lançar o retorno do lote 4' : action === 'markSent' ? 'Marcar o lote 5 como enviado' : 'Nota fiscal do lote 4';
+        const button = action === 'settle' ? 'Lançar o retorno do lote 4' : action === 'markSent' ? 'Marcar o lote 5 como enviado' : 'Registrar NFS-e do lote 4';
         fireEvent.click(await screen.findByRole('button', { name: button }));
         if (action === 'settle') await screen.findByLabelText('Pago (R$)');
         if (action === 'markSent') fireEvent.change(screen.getByLabelText('Protocolo do portal (opcional)'), { target: { value: 'PROTOCOLO-SINTETICO' } });
@@ -290,8 +290,8 @@ describe('financial draft protection', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar pagamento' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(invoke.mock.calls.filter(([, options]) => options.body.action === 'pay')).toHaveLength(2);
-    fireEvent.click(screen.getByRole('button', { name: 'Receber de Paciente Sintético' }));
-    fireEvent.change(await screen.findByLabelText('Observação'), { target: { value: 'Descartar rascunho sintético' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Receber pagamento de Paciente Sintético' }));
+    fireEvent.change(await screen.findByLabelText('Observação (opcional)'), { target: { value: 'Descartar rascunho sintético' } });
     await act(async () => { await router.navigate('/outside'); });
     fireEvent.click(within(await screen.findByRole('alertdialog', { name: 'Descartar alterações?' })).getByRole('button', { name: 'Descartar alterações' }));
     expect(await screen.findByText('Destino externo ao financeiro')).toBeVisible();
@@ -317,7 +317,9 @@ describe('financial draft protection', () => {
     invoke.mockImplementation((fn, options) => options.body.action === 'prices' && fail ? Promise.reject(new Error('Falha sintética da tabela de preços.')) : normal(fn, options));
     mount();
     await userEvent.click(await screen.findByRole('tab', { name: /Cadastros/ }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Falha sintética da tabela de preços.');
+    // R 26: the shared notice names what did not load; the server text is not shown.
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar os cadastros. Verifique a conexão e tente de novo.');
+    expect(screen.queryByText(/Falha sintética/)).toBeNull();
     expect(screen.queryByText(/Nenhum preço cadastrado/)).toBeNull();
     fail = false;
     fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));

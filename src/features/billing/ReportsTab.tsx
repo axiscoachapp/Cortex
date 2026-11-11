@@ -11,7 +11,7 @@ const COLUMNS = 'sm:grid-cols-[minmax(0,2fr)_repeat(4,minmax(7.5rem,1fr))]';
 function Row({ name, t, extra }: { name: string; t: Totals; extra?: string }) {
   const cell = (label: string, value: number, tone?: string) => (
     <span className={cn('flex justify-between gap-2 tabular-nums sm:block sm:text-right', tone)}>
-      <span className="text-muted-foreground sm:hidden">{label}</span>{brl(value)}
+      <span className="text-muted-foreground sm:hidden">{label}</span><span className="whitespace-nowrap">{brl(value)}</span>
     </span>
   );
   return (

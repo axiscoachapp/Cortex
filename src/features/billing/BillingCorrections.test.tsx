@@ -86,7 +86,7 @@ describe('recovering from a stale revision', () => {
     });
     mount();
     await userEvent.click(await tab(/Cobranças/));
-    fireEvent.click(await screen.findByRole('button', { name: 'Receber de Paciente Sintético' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Receber pagamento de Paciente Sintético' }));
     const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText('Valor (R$)'), { target: { value: '40,00' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar pagamento' }));
@@ -183,7 +183,7 @@ describe('charges', () => {
     });
     mount();
     await userEvent.click(await tab(/Cobranças/));
-    fireEvent.click(await screen.findByRole('button', { name: 'Corrigir a cobrança de Paciente Convênio' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Corrigir cobrança de Paciente Convênio' }));
     const dialog = await screen.findByRole('dialog', { name: 'Corrigir cobrança' });
     fireEvent.change(within(dialog).getByLabelText('Número da carteirinha'), { target: { value: '0009 8888' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Salvar correção' }));
@@ -320,6 +320,78 @@ describe('reports and registrations', () => {
     const label = await screen.findByText(monthRange(0).label);
     expect(label).not.toHaveClass('capitalize');
     expect(monthRange(0).label).toMatch(/^[A-ZÇ][a-zç]+ de \d{4}$/);
+  });
+});
+
+describe('round 3: one way to show dialogs, failed reads and missing access', () => {
+  const footerOrder = (dialog: HTMLElement, primary: string) => {
+    const cancel = within(dialog).getByRole('button', { name: 'Cancelar' });
+    const main = within(dialog).getByRole('button', { name: primary });
+    // "Cancelar" comes first, then the primary action on the right.
+    expect(cancel.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cancel.parentElement).toBe(main.parentElement);
+  };
+
+  it('titles each dialog with the words of the button that opened it, with Cancelar before the primary', async () => {
+    respond({ batches: { batches: [batch()] } });
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Nova cobrança avulsa' }));
+    let dialog = await screen.findByRole('dialog', { name: 'Nova cobrança avulsa' });
+    footerOrder(dialog, 'Salvar cobrança');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    await userEvent.click(await tab(/Cobranças/));
+    fireEvent.click(await screen.findByRole('button', { name: 'Receber pagamento de Paciente Sintético' }));
+    dialog = await screen.findByRole('dialog', { name: 'Receber pagamento' });
+    footerOrder(dialog, 'Registrar pagamento');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    await userEvent.click(await tab(/Lotes/));
+    fireEvent.click(await screen.findByRole('button', { name: 'Registrar NFS-e do lote 4' }));
+    dialog = await screen.findByRole('dialog', { name: 'Registrar NFS-e' });
+    footerOrder(dialog, 'Salvar NFS-e');
+  });
+
+  it('shows a dialog error right above the buttons and moves focus to it', async () => {
+    respond();
+    mount();
+    await userEvent.click(await tab(/Caixa/));
+    fireEvent.click(await screen.findByRole('button', { name: 'Nova despesa' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nova despesa' });
+    footerOrder(dialog, 'Salvar despesa');
+    fireEvent.submit(dialog.querySelector('form')!);
+    const alert = await within(dialog).findByRole('alert');
+    expect(alert).toHaveTextContent('Descreva a despesa.');
+    expect(alert).toHaveFocus();
+    expect(alert.nextElementSibling).toBe(within(dialog).getByRole('button', { name: 'Cancelar' }).parentElement);
+  });
+
+  it('a failed read says what did not load and offers a retry, never the server text', async () => {
+    respond({ charges: (_b: unknown, n: number) => (n === 1 ? httpError({ error: 'relation "billing_charges" does not exist', code: 'internal' }) : { charges: [charge] }) });
+    mount();
+    await userEvent.click(await tab(/Cobranças/));
+    expect(await screen.findByText('Não foi possível carregar o financeiro. Verifique a conexão e tente de novo.')).toBeVisible();
+    expect(screen.queryByText(/relation/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(await screen.findByText('Paciente Sintético')).toBeVisible();
+  });
+
+  it('a missing permission says what the person cannot use and who can grant it', async () => {
+    respond({ state: httpError({ error: 'Sem acesso ao financeiro desta clínica.', code: 'forbidden' }) });
+    mount();
+    expect(await screen.findByText('Sua conta não tem acesso ao financeiro desta clínica.')).toBeVisible();
+    expect(screen.getByText('Quem pode liberar: o administrador da clínica.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).toBeNull();
+  });
+
+  it('writes "Não informado" for every empty registration value', async () => {
+    respond({ state: { ...structuredClone(state), professionals: [{ ...state.professionals[0], tissName: '', councilNumber: '', cbo: '' }] } });
+    mount();
+    await userEvent.click(await tab(/Cadastros/));
+    const doctor = (await screen.findByText('Nome na guia')).closest('dl')!;
+    expect(within(doctor).getAllByText('Não informado')).toHaveLength(2);
   });
 });
 

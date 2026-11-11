@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { dialogLayout } from '@/lib/dialogLayout';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
@@ -16,7 +17,7 @@ import {
   EXPENSE_CATEGORIES, METHOD_LABELS, PAYMENT_METHODS, billingCall, billingKey, brl, dateBr, isStale, moneyInput, parseMoney, today,
   type BillingState, type Expense, type Payment, type PaymentMethod,
 } from './billingApi';
-import { DIALOG_CLASS, DialogError, Field, QueryState, STAT_GRID, Stat } from './shared';
+import { DialogError, FINANCE_DIALOG, Field, QueryState, STAT_GRID, Stat } from './shared';
 
 const NOT_PAID = '__open__';
 
@@ -66,13 +67,13 @@ function ExpenseDialog({ open, expense, onOpenChange, onSaved, onRefresh }: {
   };
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
-      <DialogContent className={`${DIALOG_CLASS} max-w-2xl`}>
-        <DialogHeader>
+      <DialogContent className={`max-w-2xl ${dialogLayout.content} ${FINANCE_DIALOG}`}>
+        <DialogHeader className={dialogLayout.header}>
           <DialogTitle>{expense ? 'Editar despesa' : 'Nova despesa'}</DialogTitle>
           <DialogDescription>Contas a pagar da clínica. Marque a forma de pagamento quando pagar.</DialogDescription>
         </DialogHeader>
-        <form noValidate onSubmit={submit} className="space-y-3">
-          <fieldset disabled={save.isPending} className="min-w-0 space-y-3">
+        <form noValidate onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+          <div className={dialogLayout.body}><fieldset disabled={save.isPending} className="min-w-0 space-y-3">
           <Field id="exp-description" label="Descrição"><Input id="exp-description" maxLength={150} value={form.description} onChange={(e) => set({ description: e.target.value })} /></Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="exp-category" label="Categoria">
@@ -96,13 +97,15 @@ function ExpenseDialog({ open, expense, onOpenChange, onSaved, onRefresh }: {
               <Field id="exp-paid" label="Paga em"><Input id="exp-paid" type="date" value={form.paidOn} onChange={(e) => set({ paidOn: e.target.value })} /></Field>
             )}
           </div>
-          <Field id="exp-notes" label="Observações"><Input id="exp-notes" maxLength={300} value={form.notes} onChange={(e) => set({ notes: e.target.value })} /></Field>
-          <DialogError message={error.message} stale={error.stale} onRetry={() => void retry()} />
-          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={() => changeOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={save.isPending}>{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
-          </DialogFooter>
-          </fieldset>
+          <Field id="exp-notes" label="Observações (opcional)"><Input id="exp-notes" maxLength={300} value={form.notes} onChange={(e) => set({ notes: e.target.value })} /></Field>
+          </fieldset></div>
+          <div className={dialogLayout.footer}>
+            <DialogError message={error.message} stale={error.stale} onRetry={() => void retry()} />
+            <div className={dialogLayout.actions}>
+              <Button type="button" variant="outline" className={dialogLayout.button} disabled={save.isPending} onClick={() => changeOpen(false)}>Cancelar</Button>
+              <Button type="submit" className={dialogLayout.button} disabled={save.isPending}>{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar despesa</Button>
+            </div>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
@@ -203,8 +206,8 @@ export function CashTab({ scope, state, range }: { scope: string[]; state: Billi
                       <span className="whitespace-nowrap font-medium tabular-nums sm:w-28 sm:text-right">{brl(e.amount)}</span>
                       <Badge className="whitespace-nowrap" variant={e.paidOn ? 'secondary' : 'outline'}>{e.paidOn ? 'Paga' : 'A pagar'}</Badge>
                       <span className="ml-auto flex">
-                        <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={`Editar ${e.description}`} onClick={() => setEditing({ open: true, expense: e })}><Pencil className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={`Excluir ${e.description}`} onClick={() => setDeleting(e)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={`Editar despesa ${e.description}`} onClick={() => setEditing({ open: true, expense: e })}><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={`Excluir despesa ${e.description}`} onClick={() => setDeleting(e)}><Trash2 className="h-4 w-4" /></Button>
                       </span>
                     </div>
                   </li>
@@ -224,15 +227,15 @@ export function CashTab({ scope, state, range }: { scope: string[]; state: Billi
         <AlertDialog open={!!reversing} onOpenChange={(o) => !o && setReversing(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Estornar este pagamento?</AlertDialogTitle>
+              <AlertDialogTitle>Estornar pagamento?</AlertDialogTitle>
               <AlertDialogDescription>
                 {reversing ? `${reversing.patientName ?? 'Particular'} · ${brl(reversing.amount)} em ${dateBr(reversing.receivedOn)}. O valor volta a ficar em aberto na cobrança; o registro do pagamento fica marcado como estornado.` : ''}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Voltar</AlertDialogCancel>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction onClick={(e) => { e.preventDefault(); if (reversing) reverse.mutate(reversing); }} disabled={reverse.isPending}>
-                {reverse.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Estornar
+                {reverse.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Estornar pagamento
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -240,12 +243,12 @@ export function CashTab({ scope, state, range }: { scope: string[]; state: Billi
         <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Excluir esta despesa?</AlertDialogTitle>
+              <AlertDialogTitle>Excluir despesa?</AlertDialogTitle>
               <AlertDialogDescription>{deleting ? `${deleting.description} · ${brl(deleting.amount)}. Não dá para desfazer.` : ''}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Voltar</AlertDialogCancel>
-              <AlertDialogAction onClick={(ev) => { ev.preventDefault(); if (deleting) remove.mutate(deleting); }} disabled={remove.isPending}>Excluir</AlertDialogAction>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={(ev) => { ev.preventDefault(); if (deleting) remove.mutate(deleting); }} disabled={remove.isPending}>Excluir despesa</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
