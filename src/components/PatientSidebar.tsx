@@ -1,20 +1,17 @@
-import { useNavigate } from 'react-router-dom';
-import { WorkspaceMenu } from './WorkspaceMenu';
-import { useClinicAccess } from '@/features/reception/accessContext';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Plus, ChevronRight, CalendarX, ClipboardCheck } from 'lucide-react';
+import { useClinicAccess } from '@/features/reception/accessContext';
 import { IntakeAnswersDialog } from '@/features/intake/IntakePage';
 import { intakeCall, type IntakeListItem } from '@/features/intake/intakeApi';
-import { useQuery } from '@tanstack/react-query';
-import {
-  Plus, Home, CalendarDays, Sparkles, FileStack, BookOpen, Users, ChevronRight, CalendarX, Settings2, ClipboardCheck,
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Patient } from '@/types/patient';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { fetchAllRows } from '@/lib/pagination';
-import { BrandLockup } from '@/components/BrandLockup';
 import { mapPatientRow } from '@/lib/patientMapper';
+import { statusLook, typeLabel } from '@/lib/appointmentStatus';
 
 interface Appointment {
   patient?:Parameters<typeof mapPatientRow>[0] | null;
@@ -32,35 +29,20 @@ interface PatientSidebarProps {
   onSelectPatient: (patient: Patient, appointmentId?:string) => void;
   onNewConsultation?: () => void;
   userId: string;
-  onHome?: () => void;
-  onNavigate?: (path: string) => void;
-  homeActive?: boolean;
-  /** A consultation open but not on screen, with the way back to it. */
-  openConsultation?: { name: string; onReturn: () => void };
 }
-
-const typeLabels: Record<string, string> = {
-  novo: 'Novo', retorno: 'Retorno', seguimento: 'Seguimento', urgencia: 'Urgência',
-};
-const statusDot: Record<string, string> = {
-  agendado: 'bg-blue-500', confirmado: 'bg-green-500',
-  cancelado: 'bg-slate-300', realizado: 'bg-slate-400',
-};
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-const NAV_ITEMS = [
-  { to: '/assistente',           icon: Sparkles,    label: 'Assistente' },
-  { to: '/modelos',              icon: FileStack,   label: 'Modelos' },
-  { to: '/conhecimento',         icon: BookOpen,    label: 'Conhecimento' },
-];
-
-export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId, onHome, onNavigate, homeActive = false, openConsultation }: PatientSidebarProps) {
+/**
+ * Today's agenda inside the app sidebar while a consultation is on screen, to move
+ * between today's patients. Not a navigation of its own; on the dashboard it is
+ * hidden because the dashboard already shows the day.
+ */
+export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onNewConsultation, userId }: PatientSidebarProps) {
   const clinicAccess=useClinicAccess();
   const navigate = useNavigate();
-  const go = onNavigate ?? navigate;
 
   const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(); dayEnd.setHours(23, 59, 59, 999);
@@ -91,132 +73,70 @@ export function PatientSidebar({ patients, selectedPatient, onSelectPatient, onN
   });
 
   return (
-    <aside className="w-full h-full flex flex-col overflow-y-auto scrollbar-thin bg-sidebar border-r border-border/60 [&>div]:shrink-0 [&>nav]:shrink-0">
-
-      {/* Logo + Nova Consulta */}
-      <div className="px-4 pt-5 pb-4 space-y-4">
-        <button onClick={onHome ?? (() => go('/'))} aria-label={`${clinicAccess?.clinic?.name ?? 'Cortex'} — Início`} className="flex items-center gap-2.5 mb-5 w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-medical-blue">
-          <BrandLockup compact className="shell:[&_p]:hidden xl:[&_p]:block" />
-        </button>
-
-        <WorkspaceMenu className="w-full" onNavigate={go} />
-        <nav aria-label="Consultório" className="space-y-1">
-          <p className="px-3 pb-2 text-[0.625rem] font-medium uppercase tracking-widest text-muted-foreground">Consultório</p>
-          <button type="button" onClick={onHome ?? (() => go('/'))} aria-current={homeActive ? 'page' : undefined} className={cn('workspace-nav-item w-full text-left', homeActive && 'workspace-nav-item-active')}><Home className="h-4 w-4" />Início</button>
-          {[{ to: '/agenda', label: 'Agenda', icon: CalendarDays }, { to: '/gerenciar-pacientes', label: 'Pacientes', icon: Users }].map(({ to, label, icon: Icon }) => <button type="button" key={to} onClick={() => go(to)} className="workspace-nav-item w-full text-left"><Icon className="h-4 w-4" />{label}</button>)}
-        </nav>
-        {openConsultation && (
-          <Button variant="outline" className="w-full min-h-11 h-auto py-2 gap-2 text-sm font-medium whitespace-normal text-left justify-start" onClick={openConsultation.onReturn}>
-            <ChevronRight className="w-4 h-4 shrink-0 rotate-180" />
-            Voltar à consulta de {openConsultation.name}
-          </Button>
-        )}
-        {!homeActive && <Button
-          variant="default"
-          className="w-full min-h-11 h-auto py-2 gap-2 text-sm font-medium"
-          onClick={onNewConsultation}
-        >
-          <Plus className="w-4 h-4" />
-          Nova Consulta
-        </Button>}
+    <section aria-labelledby="sidebar-today" className="mt-4 space-y-2 border-t pt-4">
+      {onNewConsultation && <Button variant="default" className="w-full min-h-11 h-auto py-2 gap-2 text-xs font-medium whitespace-normal" onClick={onNewConsultation}>
+        <Plus className="w-4 h-4 shrink-0" aria-hidden="true" />Iniciar atendimento
+      </Button>}
+      <div className="flex items-center justify-between px-1 pt-1">
+        <h2 id="sidebar-today" className="text-[0.625rem] font-semibold uppercase tracking-widest text-muted-foreground">Agenda de hoje</h2>
+        {todayApts.length > 0 && <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[0.625rem] font-medium text-primary">{todayApts.length}</span>}
       </div>
-
-      {/* Today's agenda */}
-      <div className="px-4 pb-1.5 flex items-center justify-between">
-        <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-widest">
-          Agenda de hoje
-        </span>
-        {todayApts.length > 0 && (
-          <span className="text-[0.625rem] font-medium text-medical-blue bg-medical-blue-light rounded-full px-1.5 py-0.5">
-            {todayApts.length}
-          </span>
-        )}
-      </div>
-
-      <div className="flex-1 px-2 pb-2">
-        {isLoading ? (
-          <div className="space-y-1.5 px-1 pt-1">
-            {[0, 1, 2].map(i => <div key={i} className="h-12 rounded-xl bg-white/60 animate-pulse" />)}
-          </div>
-        ) : isError ? (
-          <div role="alert" className="py-6 px-3 text-center space-y-2">
-            <p className="text-xs">Não foi possível carregar a agenda.</p>
-            <Button size="sm" variant="outline" onClick={() => refetch()}>Tentar novamente</Button>
-          </div>
-        ) : todayApts.length === 0 ? (
-          <div className="py-8 px-3 text-center">
-            <CalendarX className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
-            <p className="text-xs text-muted-foreground">Nenhuma consulta hoje</p>
-            <button onClick={() => go('/agenda')} className="mt-2 text-[0.6875rem] font-medium text-medical-blue hover:underline">
-              Agendar consulta
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-0.5">
-            {todayApts.map(apt => {
-              const patient = (apt.patient ? mapPatientRow(apt.patient) : patients.find(p => p.id === apt.patient_id));
-              const isSelected = !!patient && selectedPatient?.id === patient.id;
-              const label = patient?.name ?? apt.title;
-              const initials = label.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-              return (
-                <div key={apt.id} className="flex items-center gap-0.5">
+      {isLoading ? (
+        <div role="status" className="space-y-1.5"><span className="sr-only">Carregando agenda…</span>{[0, 1, 2].map(i => <div key={i} className="h-12 rounded-xl bg-card/60 animate-pulse" />)}</div>
+      ) : isError ? (
+        <div role="alert" className="space-y-2 px-1 py-3">
+          <p className="text-xs">Não foi possível carregar a agenda.</p>
+          <Button size="sm" variant="outline" className="min-h-11" onClick={() => refetch()}>Tentar novamente</Button>
+        </div>
+      ) : todayApts.length === 0 ? (
+        <div className="px-1 py-4 text-center">
+          <CalendarX className="mx-auto mb-2 h-6 w-6 text-muted-foreground" aria-hidden="true" />
+          <p className="text-xs text-muted-foreground">Nenhuma consulta hoje</p>
+          <button type="button" onClick={() => navigate('/agenda')} className="mt-1 min-h-11 text-xs font-medium text-primary hover:underline">Novo agendamento</button>
+        </div>
+      ) : (
+        <ul className="space-y-0.5">
+          {todayApts.map(apt => {
+            const patient = (apt.patient ? mapPatientRow(apt.patient) : patients.find(p => p.id === apt.patient_id));
+            const isSelected = !!patient && selectedPatient?.id === patient.id;
+            const label = patient?.name ?? apt.title;
+            const look = statusLook(apt.status);
+            return (
+              <li key={apt.id} className="flex items-center gap-0.5">
                 <button
+                  type="button"
                   onClick={() => patient && onSelectPatient(patient,apt.id)}
                   disabled={!patient}
+                  aria-current={isSelected ? 'true' : undefined}
                   title={!patient ? 'Consulta sem paciente vinculado' : undefined}
                   className={cn(
-                    'w-full min-w-0 flex-1 px-2.5 py-2 rounded-xl text-left transition-all duration-150',
-                    'hover:bg-white/80 hover:shadow-sm',
-                    isSelected ? 'bg-white shadow-sm border border-medical-blue/20 ring-1 ring-medical-blue/10' : 'bg-transparent',
-                    !patient && 'opacity-60 cursor-default hover:bg-transparent hover:shadow-none',
+                    'min-h-11 w-full min-w-0 flex-1 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-card',
+                    isSelected && 'bg-card shadow-sm ring-1 ring-primary/20',
+                    !patient && 'cursor-default opacity-60 hover:bg-transparent',
                   )}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="text-center shrink-0 w-9">
-                      <p className={cn('text-[0.6875rem] font-bold', isSelected ? 'text-medical-blue' : 'text-foreground/80')}>
-                        {formatTime(apt.start_time)}
-                      </p>
-                    </div>
-                    <div className={cn('w-1 h-8 rounded-full shrink-0', statusDot[apt.status] ?? 'bg-slate-300')} />
-                    <div className="flex-1 min-w-0">
-                      <p className={cn('text-sm font-medium truncate leading-tight', isSelected ? 'text-medical-blue' : 'text-foreground')}>
-                        {label}
-                      </p>
-                      <p className="text-[0.625rem] text-muted-foreground leading-tight mt-0.5">
-                        {typeLabels[apt.type] ?? apt.type} · {({agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelado',realizado:'Realizado'} as Record<string,string>)[apt.status] ?? apt.status}
-                      </p>
-                    </div>
-                    {patient && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
-                  </div>
+                  <span className="flex items-center gap-2">
+                    <span className={cn('w-9 shrink-0 text-center text-[0.6875rem] font-bold tabular-nums', isSelected ? 'text-primary' : 'text-foreground/80')}>{formatTime(apt.start_time)}</span>
+                    <span aria-hidden="true" className={cn('h-2 w-2 shrink-0 rounded-full', look.dot)} />
+                    <span className="min-w-0 flex-1">
+                      <span className={cn('block truncate text-xs font-medium leading-tight', isSelected ? 'text-primary' : 'text-foreground')}>{label}</span>
+                      <span className={cn('mt-0.5 block text-[0.625rem] leading-tight text-muted-foreground', apt.status === 'cancelado' && 'line-through')}>{typeLabel(apt.type)} · {look.label}</span>
+                    </span>
+                    {patient && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />}
+                  </span>
                 </button>
                 {answered.has(apt.id) && (
                   <button type="button" onClick={() => setIntakeFor(apt.id)} aria-label={`Ver a pré-consulta de ${label}`} title="Pré-consulta respondida"
-                    className="shrink-0 rounded-lg p-1.5 text-medical-blue hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <ClipboardCheck className="w-4 h-4" />
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-primary hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <ClipboardCheck className="h-4 w-4" />
                   </button>
                 )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Navigation rail */}
-      <nav aria-label="Ferramentas do consultório" className="px-3 py-3 border-t border-border/50 space-y-1">
-        <p className="px-3 py-1 text-[0.625rem] font-medium uppercase tracking-widest text-muted-foreground">Ferramentas</p>
-        {[...NAV_ITEMS, ...(clinicAccess?.active && clinicAccess.kind === 'clinical' && clinicAccess.clinic ? [{ to: '/pre-consultas', icon: ClipboardCheck, label: 'Pré-consultas' }] : []), { to: '/configuracoes', icon: Settings2, label: 'Configurações' }].map(({ to, icon: Icon, label }) => (
-          <button
-            key={to}
-            onClick={() => go(to)}
-            className="workspace-nav-item w-full text-left"
-          >
-            <Icon className="w-4 h-4 shrink-0" />
-            {label}
-          </button>
-        ))}
-      </nav>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <IntakeAnswersDialog appointmentId={intakeFor} open={!!intakeFor} onOpenChange={(o) => !o && setIntakeFor(null)} />
-    </aside>
+    </section>
   );
 }

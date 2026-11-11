@@ -42,34 +42,57 @@ describe('workspace shell without private readers', () => {
     expect(screen.queryByRole('button', { name: 'Alternar área de trabalho' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Pacientes' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Segurança da conta' })).toHaveAttribute('href', '/seguranca');
+    // M 19: the way back is always there, through the clinic gates.
+    expect(screen.getByRole('link', { name: 'Voltar ao início' })).toHaveAttribute('href', '/');
   });
   it('does not advertise reception operations to an inactive member', () => {
     mount({ ...clinical, kind: 'reception', active: false });
     expect(screen.queryByRole('link', { name: 'Atendimentos' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Alternar área de trabalho' })).toBeNull();
   });
-  it('keeps registered drafts when navigation is declined', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  it('keeps registered drafts when navigation is declined, in the app dialog', async () => {
+    const confirm = vi.spyOn(window, 'confirm');
     const router = mount(clinical, true);
-    await userEvent.click(screen.getByRole('link', { name: 'Agenda' }));
-    await waitFor(() => expect(confirm).toHaveBeenCalledWith('Rascunho sintético'));
+    await userEvent.click(within(screen.getByRole('navigation', { name: 'Consultório' })).getByRole('link', { name: 'Agenda' }));
+    const ask = await screen.findByRole('alertdialog', { name: 'Descartar alterações?' });
+    expect(ask).toHaveTextContent('Rascunho sintético');
+    await userEvent.click(within(ask).getByRole('button', { name: 'Continuar editando' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     expect(router.state.location.pathname).toBe('/configuracoes');
-    confirm.mockReturnValue(true);
-    await userEvent.click(screen.getByRole('link', { name: 'Agenda' }));
+    await userEvent.click(within(screen.getByRole('navigation', { name: 'Consultório' })).getByRole('link', { name: 'Agenda' }));
+    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Descartar alterações' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/agenda'));
+    expect(confirm).not.toHaveBeenCalled();
   });
-  it('guards sign out through the same pending-operation policy', async () => {
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('always asks "Sair da conta?" and signs out only from the dialog', async () => {
+    mount();
+    await userEvent.click(within(screen.getByRole('navigation', { name: 'Conta e preferências' })).getByRole('button', { name: 'Sair' }));
+    const ask = await screen.findByRole('alertdialog', { name: 'Sair da conta?' });
+    await userEvent.click(within(ask).getByRole('button', { name: 'Cancelar' }));
+    expect(signOut).not.toHaveBeenCalled();
+    await userEvent.click(within(screen.getByRole('navigation', { name: 'Conta e preferências' })).getByRole('button', { name: 'Sair' }));
+    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Sair' }));
+    await waitFor(() => expect(signOut).toHaveBeenCalledOnce());
+  });
+  it('keeps "Sair" disabled while an operation must finish, and says why', async () => {
     mount(clinical, true, true);
-    await userEvent.click(screen.getAllByRole('button', { name: 'Sair' })[0]);
-    expect(window.alert).toHaveBeenCalledWith('Rascunho sintético');
+    await userEvent.click(within(screen.getByRole('navigation', { name: 'Conta e preferências' })).getByRole('button', { name: 'Sair' }));
+    const ask = await screen.findByRole('alertdialog', { name: 'Sair da conta?' });
+    expect(ask).toHaveTextContent('Rascunho sintético');
+    expect(within(ask).getByRole('button', { name: 'Sair' })).toBeDisabled();
     expect(signOut).not.toHaveBeenCalled();
   });
-  it('allows sign out after explicit draft discard', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('names unsaved edits before signing out discards them', async () => {
     mount(clinical, true);
-    await userEvent.click(screen.getAllByRole('button', { name: 'Sair' })[0]);
-    expect(signOut).toHaveBeenCalledOnce();
+    await userEvent.click(within(screen.getByRole('navigation', { name: 'Conta e preferências' })).getByRole('button', { name: 'Sair' }));
+    const ask = await screen.findByRole('alertdialog', { name: 'Sair da conta?' });
+    expect(ask).toHaveTextContent('Há alterações não salvas nesta tela. Se sair agora, elas serão descartadas.');
+    await userEvent.click(within(ask).getByRole('button', { name: 'Sair' }));
+    await waitFor(() => expect(signOut).toHaveBeenCalledOnce());
+  });
+  it('has no bare sign-out icon in the page header', () => {
+    mount();
+    expect(within(document.querySelector('header')!).queryByRole('button', { name: /Sair/ })).toBeNull();
   });
   it('marks the effective reception workspace on account pages', async () => {
     mount({ ...clinical, kind: 'reception' });

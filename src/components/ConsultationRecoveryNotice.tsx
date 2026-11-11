@@ -43,19 +43,19 @@ export function ConsultationRecoveryNotice({ userId, onResume }: {
       return z.array(recoveryRow).max(51).parse(data);
     },
   });
-  if (!userId || !drafts.isPending && !drafts.isFetching && !drafts.isError && !drafts.data?.length) return null;
+  // Rendered only with something to resume or an error, so Home does not jump on
+  // every load: the first check runs out of sight.
+  if (!userId || !drafts.isError && !drafts.data?.length) return null;
   return <section aria-label="Consultas para retomar" className="min-w-0 rounded-xl border border-amber-300/70 bg-amber-50/50 p-4 space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h2 className="text-base font-semibold">Consultas para retomar</h2>
-      <Button variant="outline" size="sm" aria-label="Atualizar consultas para retomar" disabled={drafts.isFetching}
-        onClick={() => void drafts.refetch()} className="min-h-10 gap-2">
-        <RefreshCw className="w-4 h-4" />Atualizar
+      <Button variant="outline" size="sm" aria-label={drafts.isError ? 'Tentar novamente' : 'Atualizar consultas para retomar'} disabled={drafts.isFetching}
+        onClick={() => void drafts.refetch()} className="min-h-11 gap-2">
+        <RefreshCw className="w-4 h-4" aria-hidden="true" />{drafts.isError ? 'Tentar novamente' : 'Atualizar'}
       </Button>
     </div>
-    {drafts.isError ? <p role="alert" className="text-sm">
-      Não foi possível verificar as consultas para retomar.{' '}
-      <button className="underline min-h-10" onClick={() => void drafts.refetch()} disabled={drafts.isFetching}>Tentar verificar consultas</button>
-    </p> : drafts.isPending || drafts.isFetching ? <p role="status" className="text-sm">Verificando consultas…</p> : <>
+    {drafts.isError ? <p role="alert" className="text-sm">Não foi possível verificar as consultas para retomar.</p>
+      : drafts.isFetching ? <p role="status" className="text-sm">Verificando consultas…</p> : <>
       <p className="text-sm text-muted-foreground">Abra o paciente para revisar a consulta ou recuperar o áudio. Nenhum processamento é iniciado aqui.</p>
       <ul className="max-h-72 overflow-y-auto space-y-2 pr-1">
         {drafts.data?.slice(0,50).map(draft => <li key={draft.id}>

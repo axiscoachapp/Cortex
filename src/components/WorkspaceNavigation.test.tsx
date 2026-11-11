@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -39,8 +39,11 @@ describe('workspace navigation by verified profile', () => {
     expect(screen.getAllByRole('link')).toHaveLength(3);
     expect(screen.getByRole('link', { name: 'Agenda' })).toHaveAttribute('href', '/recepcao/agenda');
     await userEvent.click(screen.getByRole('button', { name: 'Mais páginas' }));
-    expect(screen.getByRole('menuitem', { name: 'Financeiro' })).toHaveAttribute('href', '/recepcao/financeiro');
-    expect(screen.queryByRole('menuitem', { name: /Equipe|consultório/i })).toBeNull();
-    expect(screen.getByRole('menuitem', { name: 'Segurança da conta' })).toBeVisible();
+    const more = await screen.findByRole('dialog', { name: 'Mais' });
+    expect(within(more).getByRole('link', { name: 'Financeiro' })).toHaveAttribute('href', '/recepcao/financeiro');
+    expect(within(more).queryByRole('link', { name: /Equipe|consultório/i })).toBeNull();
+    expect(within(more).queryByRole('button', { name: /Consultório/ })).toBeNull();
+    expect(within(more).getByRole('link', { name: 'Segurança da conta' })).toBeVisible();
+    expect(within(more).getByRole('button', { name: 'Sair' })).toBeVisible();
   });
 });

@@ -102,14 +102,23 @@ describe('dashboard date labels', () => {
   });
   afterEach(() => vi.useRealTimers());
 
+  // M 25: one format and one term for the last visit, from src/lib/dates.ts.
   it.each([
-    ['2026-10-06', 'há 1 mês'],
-    ['2026-09-07', 'há 1 mês'],
-    ['2026-09-06', 'há 2 meses'],
-    ['2026-10-07', 'há 4 sem.'],
+    ['2026-10-06', 'Última consulta: 06/10/2026 · há 30 dias'],
+    ['2026-09-06', 'Última consulta: 06/09/2026 · há 2 meses'],
+    [null, 'Sem consulta registrada'],
   ])('labels a visit on %s as %s', (lastVisit, expected) => {
     renderDashboard({ ...patient, status: 'novo', phone: undefined, lastVisit });
     expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
+  it('keeps the phone header to one line: greeting · short date, then "Iniciar atendimento"', () => {
+    renderDashboard();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^Boa (tarde|noite)|^Bom dia/);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('· qui, 5 nov');
+    expect(screen.getByRole('button', { name: 'Iniciar atendimento' })).toHaveClass('w-full');
+    expect(screen.queryByRole('button', { name: /Sair/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Alternar área de trabalho' })).toBeNull();
   });
 
   it('capitalizes only the start of the date sentence', () => {
@@ -148,7 +157,8 @@ describe('open consultation behind Início', () => {
     expect(screen.queryByText('Primeiros passos no consultório')).not.toBeInTheDocument();
     rerender(dashboard('error'));
     expect(within(counters).getAllByText('—')).toHaveLength(3);
-    expect(screen.getByText('Não foi possível carregar seus pacientes agora.')).toBeInTheDocument();
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar seus dados.');
     rerender(dashboard('ready'));
     expect(screen.getByText('Primeiros passos no consultório')).toBeInTheDocument();
     // Every step done: the card renders nothing, so neither does its disclosure.
@@ -159,5 +169,21 @@ describe('open consultation behind Início', () => {
   it('shows nothing about a consultation when none is open', () => {
     renderDashboard();
     expect(screen.queryByRole('button', { name: /Voltar à consulta/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('one banner when the page data fails', () => {
+  it('retries the patients from the single banner', async () => {
+    const retry = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <WelcomeDashboard patients={[]} userId="doctor" onSelectPatient={vi.fn()} onNewConsultation={vi.fn()} patientsState="error" onRetryPatients={retry} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const banner = screen.getByRole('alert');
+    await userEvent.click(within(banner).getByRole('button', { name: 'Tentar novamente' }));
+    expect(retry).toHaveBeenCalledOnce();
   });
 });

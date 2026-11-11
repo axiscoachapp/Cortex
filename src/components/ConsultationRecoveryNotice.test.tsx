@@ -50,7 +50,9 @@ describe('consultation recovery on Home', () => {
     await screen.findByRole('alert');
     expect(screen.queryByRole('button', {name:/Retomar consulta de/})).not.toBeInTheDocument();
     fixture.fail = false; fixture.rows = [row('D')];
-    fireEvent.click(screen.getByRole('button', {name:'Tentar verificar consultas'}));
+    // One retry control in the error state.
+    expect(screen.getAllByRole('button', {name:'Tentar novamente'})).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', {name:'Tentar novamente'}));
     expect(await screen.findByRole('button', {name:'Retomar consulta de Patient D'})).toBeVisible();
     expect(screen.queryByText('Patient A')).not.toBeInTheDocument();
   });
@@ -84,6 +86,16 @@ describe('consultation recovery on Home', () => {
     setup(); await screen.findAllByRole('button',{name:/Retomar consulta de/});
     expect(screen.getAllByRole('button',{name:/Retomar consulta de/})).toHaveLength(50);
     expect(screen.getByText(/50 consultas mais recentes/)).toBeVisible();
+  });
+  it('renders nothing during the first check, so Home does not jump on every load', async () => {
+    let finish: (value: unknown) => void;
+    fixture.pending = new Promise(resolve => {finish=resolve;});
+    setup();
+    await waitFor(() => expect(fixture.requests).toHaveLength(1));
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(screen.queryByText('Verificando consultas…')).not.toBeInTheDocument();
+    await act(async () => finish({data:[row('A')],error:null}));
+    expect(await screen.findByRole('button', {name:'Retomar consulta de Patient A'})).toBeVisible();
   });
   it('keeps Home uncluttered for an empty result and makes no request without an actor', async () => {
     fixture.rows=[]; const {rerender,view}=setup();

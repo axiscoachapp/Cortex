@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider, Navigate, Outlet, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { Brain } from "lucide-react";
+import { FullScreenLoader } from '@/components/FullScreenLoader';
 import { AppErrorBoundary, RecoveryScreen } from '@/components/AppErrorBoundary';
 import { UnsavedChangesRouteGuard } from '@/hooks/useUnsavedChanges';
 import { SessionAssurance } from '@/components/SessionAssurance';
@@ -54,19 +54,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const RouteFallback = () => (
-  <div className="h-screen flex items-center justify-center bg-background">
-    <div className="flex flex-col items-center gap-3">
-      <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center animate-pulse"
-        style={{ background: 'hsl(var(--primary))' }}
-      >
-        <Brain className="w-4 h-4 text-white" />
-      </div>
-      <p className="text-sm text-muted-foreground">Carregando...</p>
-    </div>
-  </div>
-);
+const RouteFallback = FullScreenLoader;
 
 function ProtectedRoute() {
   const { user, loading } = useAuth();

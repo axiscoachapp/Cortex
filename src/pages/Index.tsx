@@ -10,8 +10,9 @@ import { ChatPanel, PreBriefing } from '@/components/ChatPanel';
 import { PatientSnapshot } from '@/components/PatientSnapshot';
 import { NewConsultationModal } from '@/components/NewConsultationModal';
 import { WelcomeDashboard } from '@/components/WelcomeDashboard';
-import { Button } from '@/components/ui/button';
-import { LogOut, Home, PanelLeft, Mic, User, CalendarDays, Users } from 'lucide-react';
+import { AppSidebar, MobileBottomBar } from '@/components/AppNavigation';
+import { DiscardChangesDialog } from '@/components/DiscardChangesDialog';
+import { FullScreenLoader } from '@/components/FullScreenLoader';
 import { cn } from '@/lib/utils';
 import { Patient, ChatMessage } from '@/types/patient';
 import { useToast } from '@/hooks/use-toast';
@@ -20,16 +21,17 @@ import { mapPatientRow } from '@/lib/patientMapper';
 import { clinicDate } from '@/lib/dates';
 import { functionErrorBody } from '@/lib/functionErrors';
 import { SHELL_BREAKPOINT } from '@/lib/interfaceScale';
-import { useUnsavedChanges, afterConfirmedSaveOrDiscard } from '@/hooks/useUnsavedChanges';
+import { useUnsavedChanges, useExitGuard, afterConfirmedSaveOrDiscard } from '@/hooks/useUnsavedChanges';
 
 // Three-column consultation = Tailwind `shell` (real pixels, not scaled).
 const DESKTOP_LAYOUT_QUERY = `(min-width: ${SHELL_BREAKPOINT}px)`;
+const PATIENT_CHANGE_MESSAGE = 'Há trabalho não concluído neste paciente. Os rascunhos salvos continuam com ele; textos ainda não enviados serão descartados.';
 const PatientWorkspaceDialog = lazy(() => import('@/components/PatientWorkspaceDialog').then(module => ({ default: module.PatientWorkspaceDialog })));
 
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut, loading } = useAuth();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -71,7 +73,9 @@ const Index = () => {
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [briefingError, setBriefingError] = useState(false);
   const [briefingRequested, setBriefingRequested] = useState(false);
-  const [mobileView, setMobileView] = useState<'home' | 'list' | 'chat' | 'info'>('home');
+  // Phone/tablet: the dashboard, or the consultation with its Consulta/Perfil switch.
+  const [mobileView, setMobileView] = useState<'home' | 'chat' | 'info'>('home');
+  const [discardAsk, setDiscardAsk] = useState<{ proceed: () => void; cancel?: () => void } | null>(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && !window.matchMedia(DESKTOP_LAYOUT_QUERY).matches);
   const preBriefingCache = useRef<Map<string, PreBriefing | null>>(new Map());
   const briefingInFlight = useRef(new Set<string>());
@@ -85,12 +89,17 @@ const Index = () => {
     blocking:captureBusy,
     onBlocked:useCallback(()=>toast({title:'Gravação ainda não salva',description:'Pare a gravação e aguarde o salvamento antes de sair desta tela.',variant:'destructive'}),[toast]),
   });
-  const confirmPatientChange = useCallback((nextId: string | null) => {
-    if(nextId===selectedPatientIdRef.current)return true;
-    if (patientWork && !patientWorkExit.current()) return false;
-    if(captureBusy){toast({title:'Gravação ainda não salva',description:'Pare a gravação e aguarde o salvamento antes de mudar de paciente.',variant:'destructive'});return false;}
-    return !hasWork || window.confirm('Há trabalho não concluído. Mudar de paciente? Os rascunhos permanecem vinculados ao paciente original.');
+  // Runs `go` when the patient may change now, or after "Descartar alterações" in
+  // the app's dialog; `cancel` when the change is refused or the doctor keeps editing.
+  const whenPatientChangeAllowed = useCallback((nextId: string | null, go: () => void, cancel?: () => void) => {
+    if(nextId===selectedPatientIdRef.current){go();return;}
+    if (patientWork && !patientWorkExit.current()) {cancel?.();return;}
+    if(captureBusy){toast({title:'Gravação ainda não salva',description:'Pare a gravação e aguarde o salvamento antes de mudar de paciente.',variant:'destructive'});cancel?.();return;}
+    if(!hasWork){go();return;}
+    setDiscardAsk({proceed:go,cancel});
   }, [hasWork,captureBusy,toast,patientWork]);
+  // Sign out (sidebar or "Mais") also asks an open patient editor first.
+  useExitGuard(useCallback(() => !patientWork || patientWorkExit.current(), [patientWork]));
 
   useEffect(() => {
     const mq = window.matchMedia(DESKTOP_LAYOUT_QUERY);
@@ -124,14 +133,6 @@ const Index = () => {
   useEffect(() => {
     if (!loading && !user) navigate('/auth');
   }, [user, loading, navigate]);
-
-  const handleSignOut = async () => {
-    if (patientWork && !patientWorkExit.current()) return;
-    if (captureBusy) { toast({title:'Gravação ainda não salva',description:'Pare a gravação e aguarde o salvamento antes de sair da conta.',variant:'destructive'}); return; }
-    if (hasWork && !window.confirm('Sair da conta com trabalho não concluído? Textos ainda não enviados serão descartados.')) return;
-    try { await signOut(); navigate('/auth'); }
-    catch { toast({title:'Não foi possível sair da conta',description:'A sessão continua aberta. Verifique sua conexão e tente novamente.',variant:'destructive'}); }
-  };
 
   const activatePatient = async (patient: Pick<Patient, 'id'>, complaint?: string, followUrl = false) => {
     const requestedId = patient.id;
@@ -258,20 +259,21 @@ const Index = () => {
 
   const handleSelectPatient = (patient: Patient, appointmentId?:string) => {
     if(captureBusy && patient.id===selectedPatientIdRef.current){setMobileView('chat');return;}
-    if (!confirmPatientChange(patient.id)) return;
-    setSelectedAppointmentId(appointmentId ?? null);
-    void activatePatient(patient);
+    whenPatientChangeAllowed(patient.id, () => {
+      setSelectedAppointmentId(appointmentId ?? null);
+      void activatePatient(patient);
+    });
   };
   const linkedPatientId = new URLSearchParams(location.search).get('patient');
   useEffect(() => {
     if (!linkedPatientId || linkedPatientId === selectedPatientIdRef.current) return;
     const linked = patients.find(patient => patient.id === linkedPatientId);
-    if (confirmPatientChange(linkedPatientId)) {
+    whenPatientChangeAllowed(linkedPatientId, () => {
       // A URL-driven switch has no appointment context; never carry the
       // previous patient's appointment into the new patient's draft.
       setSelectedAppointmentId(null);
       void activatePatient(linked ?? {id:linkedPatientId} as Patient, undefined, true);
-    }
+    });
     // Activation only follows the URL/patient-list change, not briefing responses.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkedPatientId, patients]);
@@ -297,7 +299,7 @@ const Index = () => {
       toast({ title:'Conclua o trabalho atual',description:'Salve ou encerre o trabalho deste paciente antes de iniciar outra consulta.',variant:'destructive' });
       throw new Error('Consulta atual ainda não concluída.');
     }
-    if (!user || !confirmPatientChange(newPatientData ? null : patientId)) throw new Error('Consulta não iniciada.');
+    if (!user || !await new Promise<boolean>(resolve => whenPatientChangeAllowed(newPatientData ? null : patientId, () => resolve(true), () => resolve(false)))) throw new Error('Consulta não iniciada.');
     let patient: Patient;
 
     if (newPatientData) {
@@ -350,51 +352,41 @@ const Index = () => {
     toast({ title: 'Consulta iniciada', description: `Consulta com ${patient.name} iniciada.` });
   };
 
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center animate-pulse"
-            style={{ background: 'hsl(var(--primary))' }}>
-            <span className="text-white text-sm font-bold">C</span>
-          </div>
-          <p className="text-sm text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <FullScreenLoader />;
 
-  const navItems = [
-    { id: 'home' as const, icon: Home, label: 'Início', disabled: false },
-    { id: 'list' as const, icon: PanelLeft, label: 'Menu', disabled: false },
-    { id: 'chat' as const, icon: Mic, label: 'Consulta', disabled: !selectedPatient },
-    { id: 'info' as const, icon: User, label: 'Perfil', disabled: !selectedPatient },
-  ];
+  const homeActive = mobileView === 'home' || !selectedPatient;
+  const showHome = () => setMobileView('home');
 
   return (
-    <div className={cn('flex flex-col h-[100dvh] bg-background',captureBusy && 'pt-14')}>
-      {patientsError && <div role="alert" className="p-3 text-sm text-destructive">Pacientes indisponíveis. <button className="underline" onClick={() => retryPatients()}>Tentar novamente</button></div>}
-      {/* Three-panel row — takes all space above the bottom nav */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-
-        {/* Sidebar */}
-        <div className={cn(
-          'h-full flex flex-col',
-          'shell:flex shell:w-[13rem] shell:shrink-0 xl:w-[20%] xl:min-w-[260px] xl:max-w-[300px]',
-          mobileView === 'list' ? 'flex-1' : 'hidden shell:flex',
-        )}>
+    <div className={cn('flex h-[100dvh] bg-background',captureBusy && 'pt-14')}>
+      {/* The app's one sidebar. While a consultation is on screen it also holds
+          today's agenda; on the dashboard the agenda is in the page already. */}
+      <AppSidebar className="h-full" onHome={showHome} homeActive={homeActive}>
+        {selectedPatient && mobileView !== 'home' && (
           <PatientSidebar
             patients={patients}
             selectedPatient={selectedPatient}
             onSelectPatient={handleSelectPatient}
             onNewConsultation={() => setShowNewConsultationModal(true)}
-            onHome={() => setMobileView('home')}
-            onNavigate={path => navigate(path)}
             userId={user?.id ?? ''}
-            homeActive={mobileView === 'home' || !selectedPatient}
-            openConsultation={selectedPatient && (isMobile ? mobileView !== 'chat' : mobileView === 'home') ? { name: selectedPatient.name, onReturn: () => setMobileView('chat') } : undefined}
           />
+        )}
+      </AppSidebar>
+      <div className="flex min-w-0 flex-1 flex-col">
+      {selectedPatient && mobileView !== 'home' && (
+        <div role="group" aria-label="Consulta ou perfil do paciente" className="shrink-0 border-b bg-background px-3 py-2 shell:hidden">
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+            {([['chat', 'Consulta'], ['info', 'Perfil']] as const).map(([id, label]) => (
+              <button key={id} type="button" aria-pressed={mobileView === id} onClick={() => setMobileView(id)}
+                className={cn('min-h-11 rounded-lg text-sm font-medium transition-colors', mobileView === id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
+      )}
+      {/* Consultation row: chat and patient panel */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
 
         {/* Center panel — dashboard or active consultation */}
         <div className={cn(
@@ -447,11 +439,10 @@ const Index = () => {
               counts={directory?.counts}
               onSelectPatient={handleSelectPatient}
               onNewConsultation={() => setShowNewConsultationModal(true)}
-              onSignOut={handleSignOut}
+              onRetryPatients={() => void retryPatients()}
               openConsultation={selectedPatient ? { name: selectedPatient.name, onReturn: () => setMobileView('chat') } : undefined}
               patientsState={patientsError ? 'error' : directory ? 'ready' : 'loading'}
-              onResumeConsultation={patientId => {
-                if (!confirmPatientChange(patientId)) return;
+              onResumeConsultation={patientId => whenPatientChangeAllowed(patientId, () => {
                 if (patientId === selectedPatientIdRef.current && selectedPatient?.id === patientId) {
                   setMobileView('chat');
                   setRecoveryRequest(value => value + 1);
@@ -459,7 +450,7 @@ const Index = () => {
                 }
                 if (patientId !== selectedPatientIdRef.current) setSelectedAppointmentId(null);
                 void activatePatient({id:patientId});
-              }}
+              })}
               userId={user?.id ?? ''}
             />
           )}
@@ -479,62 +470,12 @@ const Index = () => {
               if (selectedPatient) setMobileView('chat');
             }}
           />
-          {user && (
-            <div className="absolute top-3 right-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSignOut}
-                className="h-7 w-7 text-muted-foreground hover:text-muted-foreground hover:bg-muted/50"
-                title="Sair"
-                aria-label="Sair"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
         </div>
 
       </div>
 
-      {/* Mobile bottom navigation */}
-      <nav aria-label="Navegação do consultório" className="shell:hidden shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-sm">
-        <div className="flex items-stretch h-16 px-1">
-          {(mobileView === 'home' ? [
-            { label: 'Início', icon: Home, action: () => setMobileView('home'), active: true },
-            { label: 'Agenda', icon: CalendarDays, action: () => navigate('/agenda'), active: false },
-            { label: 'Pacientes', icon: Users, action: () => navigate('/gerenciar-pacientes'), active: false },
-            { label: 'Menu', icon: PanelLeft, action: () => setMobileView('list'), active: false },
-          ] : []).map(({ label, icon: Icon, action, active }) => <button key={label} onClick={action} aria-current={active ? 'page' : undefined} className={cn('flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl text-xs', active ? 'bg-primary/10 text-primary' : 'text-muted-foreground')}><Icon className="h-5 w-5" />{label}</button>)}
-          {mobileView !== 'home' && navItems.map(({ id, icon: Icon, label, disabled }) => (
-            <button
-              key={id}
-              onClick={() => { if(!disabled) setMobileView(id); }}
-              disabled={disabled}
-              aria-current={mobileView === id ? 'page' : undefined}
-              className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-1 rounded-xl mx-0.5 transition-all min-h-[44px]',
-                mobileView === id
-                  ? 'text-medical-blue bg-medical-blue-light/60'
-                  : disabled
-                  ? 'text-muted-foreground cursor-not-allowed'
-                  : 'text-muted-foreground hover:text-muted-foreground hover:bg-muted/40',
-              )}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-xs font-medium">{label}</span>
-            </button>
-          ))}
-          {mobileView !== 'home' && <button
-            onClick={handleSignOut}
-            className="flex-1 flex flex-col items-center justify-center gap-1 rounded-xl mx-0.5 transition-all min-h-[44px] text-muted-foreground hover:text-muted-foreground hover:bg-muted/30"
-            title="Sair"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="text-xs font-medium">Sair</span>
-          </button>}
-        </div>
-      </nav>
+      <MobileBottomBar placement="inline" onHome={showHome} homeActive={homeActive} />
+      </div>
 
       {patientWork && patientWork.actor === user?.id && patientWork.patientId === selectedPatient?.id && (
         <Suspense fallback={<p role="status">Carregando acompanhamento…</p>}>
@@ -550,6 +491,9 @@ const Index = () => {
         patients={patients}
         onStartConsultation={handleStartConsultation}
       />
+      <DiscardChangesDialog open={!!discardAsk} message={PATIENT_CHANGE_MESSAGE}
+        onKeep={() => { const ask = discardAsk; setDiscardAsk(null); ask?.cancel?.(); }}
+        onDiscard={() => { const ask = discardAsk; setDiscardAsk(null); ask?.proceed(); }} />
     </div>
   );
 };

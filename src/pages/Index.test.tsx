@@ -7,6 +7,17 @@ import Index from './Index';
 import { UnsavedChangesRouteGuard } from '@/hooks/useUnsavedChanges';
 import { useEffect } from 'react';
 import { SHELL_BREAKPOINT } from '@/lib/interfaceScale';
+import { ClinicAccessContext } from '@/features/reception/accessContext';
+import type { ClinicAccess } from '@/features/reception/contracts';
+
+const access: ClinicAccess = { kind: 'clinical', active: true, admin: false, actorId: 'doctor', clinic: { id: 'clinic', name: 'Clínica sintética' }, doctors: [], staff: [] };
+const sidebar = () => screen.getByRole('complementary', { name: 'Navegação do ambiente' });
+const bar = () => screen.getByRole('navigation', { name: 'Navegação principal' });
+const goHome = () => userEvent.click(within(sidebar()).getByRole('button', { name: 'Início' }));
+const openSignOut = async () => {
+  await userEvent.click(within(sidebar()).getByRole('button', { name: 'Sair' }));
+  return screen.findByRole('alertdialog', { name: 'Sair da conta?' });
+};
 
 const originalInnerWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth');
 afterEach(() => { if (originalInnerWidth) Object.defineProperty(window, 'innerWidth', originalInnerWidth); });
@@ -92,24 +103,23 @@ vi.mock('@/integrations/supabase/client', () => ({
     },
   },
 }));
+// Today's agenda inside the sidebar (only while a consultation is on screen).
 vi.mock('@/components/PatientSidebar', () => ({
-  PatientSidebar: ({ patients, onSelectPatient, onHome, onNavigate }) => (
-    <aside>
+  PatientSidebar: ({ patients, onSelectPatient }) => (
+    <section>
       {patients.map((p) => (
         <button key={p.id} onClick={() => onSelectPatient(p)}>
-          Select {p.id}
+          Today {p.id}
         </button>
       ))}
-      <button onClick={onHome}>Home</button>
-      <button onClick={() => onNavigate('/agenda')}>Agenda</button>
       <button onClick={() => onSelectPatient(patients[0], 'appointment-A')}>Appointment A</button>
-    </aside>
+    </section>
   ),
 }));
-vi.mock('@/components/WelcomeDashboard', () => ({ WelcomeDashboard: ({onResumeConsultation,onSignOut,openConsultation}) => <div><h1>Dashboard</h1><button onClick={onSignOut}>Sair da conta</button><button onClick={()=>onResumeConsultation('A')}>Resume A</button><button onClick={()=>onResumeConsultation('outside')}>Resume outside</button>{openConsultation && <button onClick={openConsultation.onReturn}>Voltar à consulta de {openConsultation.name}</button>}</div> }));
+vi.mock('@/components/WelcomeDashboard', () => ({ WelcomeDashboard: ({patients,onSelectPatient,onResumeConsultation,openConsultation}) => <div><h1>Dashboard</h1>{patients.map(p => <button key={p.id} onClick={() => onSelectPatient(p)}>Select {p.id}</button>)}<button onClick={()=>onResumeConsultation('A')}>Resume A</button><button onClick={()=>onResumeConsultation('outside')}>Resume outside</button>{openConsultation && <button onClick={openConsultation.onReturn}>Voltar à consulta de {openConsultation.name}</button>}</div> }));
 vi.mock('@/components/PatientSnapshot', () => ({ PatientSnapshot: ({ profileRequest }) => <p>profile-request:{String(profileRequest ?? 0)}</p> }));
 vi.mock('@/components/ChatPanel', () => ({
-  ChatPanel: ({ patient, preBriefing, briefingError, onCaptureStateChange, onRetryBriefing, onOpenPatientWork, onOpenPatientPanel }) => {
+  ChatPanel: ({ patient, preBriefing, briefingError, onCaptureStateChange, onRetryBriefing, onOpenPatientWork, onOpenPatientPanel, onWorkStateChange }) => {
     useEffect(() => {
       fixture.chatMount();
     }, []);
@@ -123,6 +133,7 @@ vi.mock('@/components/ChatPanel', () => ({
         <button onClick={() => onOpenPatientWork(true)}>Manual fixture</button>
         <button onClick={() => onOpenPatientWork(false)}>Work fixture</button>
         <button onClick={onOpenPatientPanel}>Safety row fixture</button>
+        <button onClick={() => onWorkStateChange(true)}>Unsaved text fixture</button>
       </div>
     );
   },
@@ -179,7 +190,9 @@ function setup(entry = '/') {
   return {
     ...render(
       <QueryClientProvider client={client}>
-        <RouterProvider router={router} />
+        <ClinicAccessContext.Provider value={access}>
+          <RouterProvider router={router} />
+        </ClinicAccessContext.Provider>
       </QueryClientProvider>,
     ),
     client,
@@ -202,7 +215,7 @@ describe('patient activation', () => {
     const {router}=setup('/?patient=A');
     await screen.findByRole('heading',{name:'Patient A'});
     await userEvent.click(screen.getByRole('button',{name:'Appointment A'}));
-    await userEvent.click(screen.getByRole('button',{name:'Home'}));
+    await goHome();
     await screen.findByRole('heading',{name:'Dashboard'});
     await userEvent.click(screen.getByRole('button',{name:'Resume A'}));
     expect(screen.queryByRole('heading',{name:'Dashboard'})).not.toBeInTheDocument();
@@ -214,7 +227,7 @@ describe('patient activation', () => {
     const {router}=setup('/?patient=A');
     await screen.findByRole('heading',{name:'Patient A'});
     await userEvent.click(screen.getByRole('button',{name:'Appointment A'}));
-    await userEvent.click(screen.getByRole('button',{name:'Home'}));
+    await goHome();
     await userEvent.click(screen.getByRole('button',{name:'Resume outside'}));
     await screen.findByRole('heading',{name:'Patient outside'});
     expect(router.state.location.search).toBe('?patient=outside');
@@ -240,12 +253,13 @@ describe('patient activation', () => {
     await screen.findByRole('heading', { name: 'Patient A' });
     await userEvent.click(screen.getByRole('button', { name: 'Manual fixture' }));
     await screen.findByRole('dialog'); fixture.workspaceExit = false;
-    await userEvent.click(screen.getByRole('button', { name: 'Select B' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Today B' }));
     expect(router.state.location.search).toBe('?patient=A');
-    await userEvent.click(screen.getAllByRole('button', { name: 'Sair' })[0]);
+    const ask = await openSignOut();
+    await userEvent.click(within(ask).getByRole('button', { name: 'Sair' }));
     expect(fixture.signOut).not.toHaveBeenCalled();
     fixture.workspaceExit = true;
-    await userEvent.click(screen.getByRole('button', { name: 'Select B' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Today B' }));
     await screen.findByRole('heading', { name: 'Patient B' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -271,14 +285,14 @@ describe('patient activation', () => {
     await user.click(await screen.findByRole('button', { name: 'Gerar resumo com IA' }));
     await screen.findByText('Briefing A');
     await user.click(screen.getByRole('button', { name: 'Capture fixture' }));
-    await user.click(screen.getByRole('button', { name: 'Select A' }));
+    await user.click(screen.getByRole('button', { name: 'Today A' }));
     expect(fixture.chatMount).toHaveBeenCalledTimes(1);
     expect(fixture.invoke).toHaveBeenCalledTimes(1);
   });
   it('keeps the selected patient and URL aligned after a directory refresh', async () => {
     const { client, router } = setup('/?patient=A');
     await screen.findByRole('heading', { name: 'Patient A' });
-    await userEvent.click(screen.getByRole('button', { name: 'Select B' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Today B' }));
     await screen.findByRole('heading', { name: 'Patient B' });
     fixture.rows[0].revision++;
     await act(() => client.invalidateQueries({ queryKey: ['patients'] }));
@@ -290,10 +304,12 @@ describe('patient activation', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Select A' }));
     await user.click(screen.getByRole('button', { name: 'Capture fixture' }));
-    await user.click(screen.getByRole('button', { name: 'Agenda' }));
+    await user.click(within(sidebar()).getByRole('link', { name: 'Agenda' }));
     expect(screen.queryByRole('heading', { name: 'Agenda page' })).not.toBeInTheDocument();
     expect(fixture.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Gravação ainda não salva' }));
-    await user.click(screen.getAllByRole('button', { name: 'Sair' })[0]);
+    const ask = await openSignOut();
+    expect(ask).toHaveTextContent('Pare a gravação e aguarde o salvamento antes de sair.');
+    expect(within(ask).getByRole('button', { name: 'Sair' })).toBeDisabled();
     expect(fixture.signOut).not.toHaveBeenCalled();
   });
   it('keeps capture mounted and guarded when using the homepage agenda shortcut', async () => {
@@ -301,11 +317,14 @@ describe('patient activation', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Select A' }));
     await user.click(screen.getByRole('button', { name: 'Capture fixture' }));
-    await user.click(screen.getByRole('button', { name: 'Home' }));
-    await user.click(within(screen.getByRole('navigation', { name: 'Navegação do consultório' })).getByRole('button', { name: 'Agenda' }));
+    await user.click(within(sidebar()).getByRole('button', { name: 'Início' }));
+    await user.click(within(bar()).getByRole('link', { name: 'Agenda' }));
     expect(router.state.location.pathname).toBe('/');
     expect(fixture.chatMount).toHaveBeenCalledTimes(1);
-    await user.click(screen.getByRole('button', { name: 'Sair da conta' }));
+    await user.click(within(bar()).getByRole('button', { name: 'Mais páginas' }));
+    await user.click(within(await screen.findByRole('dialog', { name: 'Mais' })).getByRole('button', { name: 'Sair' }));
+    const ask = await screen.findByRole('alertdialog', { name: 'Sair da conta?' });
+    expect(within(ask).getByRole('button', { name: 'Sair' })).toBeDisabled();
     expect(fixture.signOut).not.toHaveBeenCalled();
   });
   it('invalidates an outdated briefing without automatically spending again', async () => {
@@ -325,10 +344,10 @@ describe('patient activation', () => {
     fixture.signOut.mockRejectedValueOnce(new Error('offline'));
     setup();
     await screen.findByRole('heading', { name: 'Dashboard' });
-    await userEvent.click(screen.getByRole('button', { name: 'Sair da conta' }));
-    await waitFor(() =>
-      expect(fixture.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Não foi possível sair da conta' })),
-    );
+    const ask = await openSignOut();
+    await userEvent.click(within(ask).getByRole('button', { name: 'Sair' }));
+    expect(await within(ask).findByRole('alert')).toHaveTextContent('Não foi possível sair da conta. A sessão continua aberta');
+    expect(within(ask).getByRole('button', { name: 'Sair' })).toBeEnabled();
   });
   it('passes an explicit error state when a briefing response fails', async () => {
     fixture.invoke.mockResolvedValueOnce({ data: null, error: new Error('offline') });
@@ -356,7 +375,7 @@ describe('patient activation', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Select A' }));
     await screen.findByRole('heading', { name: 'Patient A' });
-    await user.click(screen.getByRole('button', { name: 'Home' }));
+    await user.click(within(sidebar()).getByRole('button', { name: 'Início' }));
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
   });
 });
@@ -372,7 +391,7 @@ describe('desktop layout at the desktop-frame breakpoint, including fractional w
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
     resize(SHELL_BREAKPOINT + 192);
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Perfil' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Perfil' })).toHaveAttribute('aria-pressed', 'true');
     expect(new URLSearchParams(router.state.location.search).get('patient')).toBe('A');
     expect(fixture.chatMount).toHaveBeenCalledTimes(1);
     expect(fixture.invoke).not.toHaveBeenCalled();
@@ -400,7 +419,7 @@ describe('patient panel and the way back to the consultation (phone and tablet)'
     setup('/?patient=A');
     await screen.findByRole('heading', { name: 'Patient A' });
     await userEvent.click(screen.getByRole('button', { name: 'Perfil' }));
-    expect(screen.getByRole('button', { name: 'Perfil' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Perfil' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('profile-request:0')).toBeInTheDocument();
   });
 
@@ -408,16 +427,59 @@ describe('patient panel and the way back to the consultation (phone and tablet)'
     setup('/?patient=A');
     await screen.findByRole('heading', { name: 'Patient A' });
     await userEvent.click(screen.getByRole('button', { name: 'Safety row fixture' }));
-    expect(screen.getByRole('button', { name: 'Perfil' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Perfil' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('Início keeps a "Voltar à consulta" while a patient is open', async () => {
     setup('/?patient=A');
     await screen.findByRole('heading', { name: 'Patient A' });
-    await userEvent.click(screen.getByRole('button', { name: 'Início' }));
+    await userEvent.click(within(bar()).getByRole('button', { name: 'Início' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Voltar à consulta de Patient A' }));
-    expect(screen.getByRole('button', { name: 'Consulta' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Consulta' })).toHaveAttribute('aria-pressed', 'true');
     expect(fixture.chatMount).toHaveBeenCalledTimes(1);
   });
 });
 
+describe('one navigation and a guarded sign-out on home', () => {
+  it('asks in the app dialog before a patient change discards unsaved text', async () => {
+    const confirm = vi.spyOn(window, 'confirm');
+    const { router } = setup('/?patient=A');
+    await screen.findByRole('heading', { name: 'Patient A' });
+    await userEvent.click(screen.getByRole('button', { name: 'Unsaved text fixture' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Today B' }));
+    const ask = await screen.findByRole('alertdialog', { name: 'Descartar alterações?' });
+    await userEvent.click(within(ask).getByRole('button', { name: 'Continuar editando' }));
+    expect(screen.getByRole('heading', { name: 'Patient A' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?patient=A');
+    await userEvent.click(screen.getByRole('button', { name: 'Today B' }));
+    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Descartar alterações' }));
+    expect(await screen.findByRole('heading', { name: 'Patient B' })).toBeInTheDocument();
+    expect(confirm).not.toHaveBeenCalled();
+    confirm.mockRestore();
+  });
+
+  it('has no bare sign-out control: "Sair" only in the sidebar footer (and in "Mais")', async () => {
+    setup('/?patient=A');
+    await screen.findByRole('heading', { name: 'Patient A' });
+    expect(screen.getAllByRole('button', { name: /^Sair/ })).toHaveLength(1);
+    expect(within(sidebar()).getByRole('button', { name: 'Sair' })).toBeInTheDocument();
+  });
+
+  it('switches Consulta/Perfil at the top of the consultation without remounting it', async () => {
+    setup('/?patient=A');
+    await screen.findByRole('heading', { name: 'Patient A' });
+    const switcher = screen.getByRole('group', { name: 'Consulta ou perfil do paciente' });
+    await userEvent.click(within(switcher).getByRole('button', { name: 'Perfil' }));
+    await userEvent.click(within(switcher).getByRole('button', { name: 'Consulta' }));
+    expect(within(switcher).getByRole('button', { name: 'Consulta' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(bar()).queryByRole('button', { name: /Consulta|Perfil/ })).toBeNull();
+    expect(fixture.chatMount).toHaveBeenCalledTimes(1);
+  });
+
+  it('reaches Financeiro and the account pages from home like any subpage', async () => {
+    setup();
+    await screen.findByRole('heading', { name: 'Dashboard' });
+    for (const [label, href] of [['Financeiro', '/financeiro'], ['Configurações', '/configuracoes'], ['Segurança da conta', '/seguranca']])
+      expect(within(sidebar()).getByRole('link', { name: label })).toHaveAttribute('href', href);
+  });
+});
