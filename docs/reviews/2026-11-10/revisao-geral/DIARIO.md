@@ -93,3 +93,17 @@ Sessão autônoma do Claude, iniciada em 10/11/2026 às 22:18 (horário de São 
 - Envio real pelo WhatsApp (não há número conectado).
 - Gravação com microfone e navegador reais (salvamento a cada 5 s, bloqueio de tela, queda do microfone).
 
+## Quarta sessão (11/11): ondas 1, 2 e 3
+
+**Pedido do usuário:** "pode seguir com a onda 1, 2 e 3".
+
+| O que | Detalhe |
+|---|---|
+| Peças compartilhadas (commit `5bc047e`) | Componente "Falar com a equipe Cortex" (`SupportRequest`): link de WhatsApp ou e-mail quando a implantação define `VITE_SUPPORT_WHATSAPP` / `VITE_SUPPORT_EMAIL`, e sempre um botão que copia o pedido pronto. Caixa de seleção quadrada (era redonda e parecia escolha única). |
+| **Decisão:** canal de suporte por configuração | Você ainda não definiu o contato comercial (D22). O componente funciona sem ele (copia o pedido) e passa a mostrar o link quando as duas variáveis forem preenchidas na Vercel. |
+| Instruções dos agentes | [AGENTES.md](AGENTES.md): regras, padrão de qualidade e quem é dono de cada arquivo, para não haver dois agentes no mesmo arquivo. |
+| Primeira rodada: oito agentes Opus | Consulta; documentos e pacientes; agenda da recepção; fila, contatos, equipe e indicadores; financeiro; pré-consulta, configurações e conta; IA no servidor; segurança. Cobrem o que falta das ondas 1 e 2 e parte da 3. |
+| Migrations reservadas | `20261111120000` agenda (horários ocupados do médico), `…130000` financeiro, `…140000` pré-consulta e exportação LGPD, `…150000` segurança, `…160000` IA. |
+| **Decisão:** cadastro público de conta (C17) | Sai da tela e fica fixado como desligado na configuração do repositório. A configuração do projeto hospedado eu confiro antes de mexer. |
+| Segunda rodada (depois da junção) | Navegação única, padrão de diálogos e formulários, agenda do médico e textos: mexem em arquivos de todas as áreas, por isso ficam para depois. |
+
