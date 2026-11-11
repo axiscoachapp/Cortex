@@ -9,6 +9,7 @@ import * as dates from '../../supabase/functions/_shared/clinicDate';
 import * as patientAge from '../../supabase/functions/_shared/patientAge';
 import * as layout from '../../supabase/functions/_shared/documentLayout';
 import * as regulated from '../../supabase/functions/_shared/regulatedMedications';
+import * as modelInput from '../../supabase/functions/_shared/modelInput';
 
 type Row = Record<string, unknown>;
 const user = '11111111-1111-4111-8111-111111111111';
@@ -108,9 +109,21 @@ function handler(name: string, db: ReturnType<typeof database>, generation = vi.
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const dependencies: Record<string, unknown> = {
+    '../_shared/modelInput.ts': modelInput,
     '../_shared/regulatedMedications.ts': regulated,
     '../_shared/documentLayout.ts': layout,
     '../_shared/patientAge.ts': patientAge,
+    '../_shared/clinicalAi.ts': {
+      assertOpenAiEnabled: () => {},
+      callClinicalText: name === 'process-comment'
+        ? async (...args: unknown[]) => {
+            const response = await network(...args);
+            const json = await response.json();
+            return { text: gemini.requireCompleteModelText(json), usage: json.usageMetadata };
+          }
+        : generation,
+      transcribeClinicalAudio: generation,
+    },
     '../_shared/gemini.ts': {
       ...gemini,
       callGemini: generation,

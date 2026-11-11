@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as http from '../../supabase/functions/_shared/http';
 
 const documentId = '82000000-0000-4000-8000-000000000001';
-function ingestion(options: { unreviewed?: boolean; malformedEmbedding?: boolean; retiredDuringIndex?: boolean } = {}) {
+function ingestion(options: { unreviewed?: boolean; malformedEmbedding?: boolean; retiredDuringIndex?: boolean; provider?: string } = {}) {
   let run!: (req: Request) => Promise<Response>;
   const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
     if (name === 'begin_knowledge_index')
@@ -48,7 +48,7 @@ function ingestion(options: { unreviewed?: boolean; malformedEmbedding?: boolean
     if (id in modules) return modules[id];
     throw new Error(`Unexpected dependency ${id}`);
   };
-  new Function('require', 'exports', 'Deno', compiled)(require, {}, { env: { get: () => 'synthetic' } });
+  new Function('require', 'exports', 'Deno', compiled)(require, {}, { env: { get: (key: string) => key === 'AI_PROVIDER' ? options.provider : 'synthetic' } });
   return {
     rpc,
     reserve,
@@ -59,6 +59,16 @@ function ingestion(options: { unreviewed?: boolean; malformedEmbedding?: boolean
   };
 }
 describe('reviewed knowledge ingestion', () => {
+  it('does not claim, reserve, embed or modify an index during the OpenAI-only test', async () => {
+    const handler = ingestion({ provider: 'openai' });
+    const response = await handler.run({ documentId });
+    expect(response.status).toBe(503);
+    expect(await response.text()).toContain('original permanece salvo');
+    expect(handler.rpc).not.toHaveBeenCalled();
+    expect(handler.reserve).not.toHaveBeenCalled();
+    expect(handler.embed).not.toHaveBeenCalled();
+    expect(handler.settle).not.toHaveBeenCalled();
+  });
   it('rejects patient attachments and ad hoc request text before quota or embedding', async () => {
     for (const body of [
       { documentId, fileId: 'patient-file' },

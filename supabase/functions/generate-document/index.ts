@@ -1,10 +1,11 @@
-import { fetchWithDeadline, readJsonObject, RequestError } from "../_shared/http.ts";
+import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
+import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini, buildPatientSummary } from "../_shared/gemini.ts";
+import { buildPatientSummary } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 import { assertPromptSize, optionalText, readPatientContext } from '../_shared/modelInput.ts';
 
@@ -103,8 +104,8 @@ serve(async (req) => {
       );
     }
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -121,20 +122,20 @@ serve(async (req) => {
     assertPromptSize(prompt, systemInstruction);
     let reservationId: string;
     try {
+      assertOpenAiEnabled();
+
       ({ reservationId } = await checkQuota(supabase, userId, 100));
     } catch (err) {
       if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
       throw err;
     }
 
-    const { text: document, usage } = await callGemini(
-      GEMINI_API_KEY,
+    const { text: document, usage } = await callClinicalText(
+      OPENAI_API_KEY,
       [{ text: prompt }],
       {
         systemInstruction,
-        temperature: 0.3,
         maxOutputTokens: 1000,
-        thinkingBudget: 0,
       },
     );
 

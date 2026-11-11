@@ -1,11 +1,15 @@
-/* Shared per-user daily Gemini-usage quota.
+/* Shared per-user daily inference quota.
  *
- * 1 credit = $0.001 of real Gemini API cost.
+ * 1 credit = $0.001 of estimated list-price usage, not a provider invoice.
  *
  * Conversion (Gemini 2.5 Flash, billed by Google AI Studio):
  *   text input  $0.30 / 1M tokens  →  0.0003 credits / token
  *   text output $2.50 / 1M tokens  →  0.0025 credits / token
  *   audio input $1.00 / 1M tokens  →  0.0010 credits / token
+ * OpenAI initial test (2026-11-10): Terra $1/$5 per 1M input/output;
+ * gpt-transcribe $0.0045/min. No cached-token discount is assumed. Missing
+ * usage retains the original reservation. Quotas are admission estimates,
+ * not a guarantee of a monetary ceiling for a single in-flight operation.
  *
  * Default daily limit 1500 credits = ~$1.50/day = ~$45/month worst case.
  */
@@ -40,6 +44,18 @@ export class OperationRateError extends QuotaExceededError {
 export function creditsFromUsage(value: unknown): number {
   if (!value || typeof value !== 'object') return 0;
   const usage = value as Record<string, unknown>;
+  // Initial OpenAI list-price estimate (2026-11-10), not an invoice. Missing
+  // metering leaves the reservation charged in recordUsage; never reuse Gemini
+  // token prices for a new provider or count reasoning output twice.
+  if (usage.provider === 'openai') {
+    const valid = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0;
+    if (usage.model === 'gpt-6.1-terra' && valid(usage.inputTokens) && valid(usage.outputTokens)) {
+      const longContext = usage.inputTokens > 272_000;
+      return usage.inputTokens * (longContext ? 0.002 : 0.001) + usage.outputTokens * (longContext ? 0.0075 : 0.005);
+    }
+    if (usage.model === 'gpt-transcribe' && valid(usage.durationSeconds)) return usage.durationSeconds * (4.5 / 60);
+    return 0;
+  }
   // Gemini returns:
   //   promptTokenCount       (all input incl. audio when present)
   // candidatesTokenCount and thoughtsTokenCount are separate billed output.

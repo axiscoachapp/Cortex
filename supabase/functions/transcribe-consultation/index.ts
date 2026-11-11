@@ -1,11 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
+import { assertOpenAiEnabled, callClinicalText, transcribeClinicalAudio } from '../_shared/clinicalAi.ts';
 import {
-  callGemini,
-  uploadToGeminiFiles,
-  trackGeminiFile,
-  cleanupGeminiFile,
   buildPatientSummary,
   parseModelObject,
   assertGeminiTextBudget,
@@ -13,6 +10,7 @@ import {
 } from '../_shared/gemini.ts';
 import { assertAudioPath } from '../_shared/storage.ts';
 import { readJsonObject, RequestError } from '../_shared/http.ts';
+import { isRecord } from '../_shared/modelInput.ts';
 import { getSpecialtyPrompt, buildCustomTemplatePrompt } from '../_shared/specialty_prompts.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
 
@@ -26,27 +24,7 @@ const corsHeaders = {
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
 
-const TRANSCRIPTION_PROMPT = `Transcreva LITERALMENTE o áudio em português, identificando os falantes.
-
-REGRA ABSOLUTA — FIDELIDADE:
-- Transcreva APENAS o que foi realmente dito no áudio. Palavra por palavra.
-- NUNCA invente, complete, deduza ou imagine falas. Se o áudio tem 10 segundos, a transcrição tem ~10 segundos de conteúdo.
-- É TERMINANTEMENTE PROIBIDO produzir um diálogo de consulta que não está no áudio.
-- Trechos inaudíveis ou incompreensíveis: marque como [inaudível]. Não adivinhe o conteúdo.
-
-FORMATO (quando for uma consulta médica):
-[MÉDICO] <fala>
-[PACIENTE] <fala>
-- Nova linha a cada mudança de falante.
-- Preserve terminologia médica e nomes de medicamentos exatamente como pronunciados.
-- Se não distinguir o falante, use [FALANTE NÃO IDENTIFICADO] (nunca atribua ao médico uma fala de origem incerta).
-
-QUANDO O ÁUDIO NÃO É UMA CONSULTA MÉDICA:
-- Transcreva mesmo assim o que foi realmente dito, usando [FALANTE] como rótulo.
-- Se quase nada for inteligível ou não houver fala relevante, retorne EXATAMENTE: [SEM_CONSULTA]
-- NÃO transforme isso em uma consulta fictícia.
-
-Ignore ruídos de fundo, tosses e sons não-verbais. Retorne apenas a transcrição, sem comentários ou cabeçalhos.`;
+const SPEAKER_NOTICE = 'A transcrição não identifica os falantes. Confira quem disse cada informação antes de registrar a evolução.';
 
 // SOAP_SYSTEM is now specialty-aware — resolved per request via getSpecialtyPrompt().
 
@@ -84,6 +62,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  if (req.method !== 'POST') return new Response(null, { status: 405, headers: corsHeaders });
 
   try {
     const { userId } = await requireUser(req);
@@ -123,8 +102,10 @@ serve(async (req) => {
       });
     }
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
+    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    assertOpenAiEnabled();
+    if (!apiKey)
+      throw new RequestError('IA temporariamente indisponível. Você pode registrar a consulta manualmente.', 503);
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
@@ -144,12 +125,12 @@ serve(async (req) => {
 
     const { data: draft } = await supabase
       .from('consultation_drafts')
-      .select('id,audio_storage_path')
+      .select('id,audio_storage_path,content,updated_at,chief_complaint')
       .eq('id', draftId)
       .eq('patient_id', patientId)
       .eq('user_id', userId)
       .maybeSingle();
-    if (!draft) throw new Error('Rascunho não encontrado. Salve o áudio antes de processar.');
+    if (!draft) throw new RequestError('Rascunho não encontrado. Salve o áudio antes de processar.', 404);
     if (draft.audio_storage_path !== audioStoragePath)
       throw new RequestError('O áudio não pertence a este rascunho.', 403);
     // Download from Storage
@@ -158,12 +139,11 @@ serve(async (req) => {
       .download(audioStoragePath);
 
     if (downloadError || !audioBlob) {
-      throw new Error(`Erro ao baixar áudio: ${downloadError?.message}`);
+      throw new RequestError('Não foi possível recuperar o áudio. Tente novamente.', 503);
     }
-    if (audioBlob.size > 25 * 1024 * 1024)
-      throw new RequestError('Áudio acima de 25 MB. Divida a gravação antes de processar.', 413);
+    if (!audioBlob.size || audioBlob.size > 25 * 1024 * 1024)
+      throw new RequestError('Áudio vazio ou acima de 25 MB. Divida a gravação antes de processar.', 413);
 
-    const audioBuffer = await audioBlob.arrayBuffer();
     const mimeType = typeof audioMimeType === 'string' ? audioMimeType.split(';')[0] : 'audio/webm';
     if (!['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/mpeg'].includes(mimeType))
       throw new RequestError('Formato de áudio não suportado.');
@@ -175,139 +155,133 @@ serve(async (req) => {
       if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
       throw err;
     }
-    // Admission precedes external upload; owned source audio is retained.
-    const geminiFileUri = await uploadToGeminiFiles(GEMINI_API_KEY, audioBuffer, mimeType, {
-      db: supabase,
-      userId,
-      patientId,
-    });
+    // The direct transcription request creates no remote Files API resource.
+    // Source audio stays owned in Storage until the reviewed visit is saved.
+    const transcribed = await transcribeClinicalAudio(apiKey, audioBlob, mimeType);
+    const freshTranscription = transcribed.text.trim();
+    const priorContent = isRecord(draft.content) ? draft.content : {};
+    const priorMetadata = isRecord(priorContent.aiMetadata) ? priorContent.aiMetadata : {};
+    const originalComments = Array.isArray(priorContent.originalComments)
+      ? priorContent.originalComments.filter((comment): comment is string => typeof comment === 'string')
+      : consultationComments ?? [];
+    const currentComplaint = typeof draft.chief_complaint === 'string' ? draft.chief_complaint : chiefComplaint;
+    const priorTranscription = typeof priorContent.transcription === 'string' && priorContent.transcription.trim()
+      ? priorContent.transcription
+      : '';
+    const preservingPriorTranscript = !freshTranscription && !!priorTranscription;
+    const transcription = freshTranscription || priorTranscription;
+    let draftRevision: string | null = typeof draft.updated_at === 'string' ? draft.updated_at : null;
+    const recovery = {
+      ...priorContent,
+      transcription,
+      soapDraft: typeof priorContent.soapDraft === 'string' ? priorContent.soapDraft : '',
+      whatsappDraft: typeof priorContent.whatsappDraft === 'string' ? priorContent.whatsappDraft : '',
+      clarifications: [
+        preservingPriorTranscript
+          ? 'A nova tentativa não forneceu identificação de falantes. A transcrição anterior permanece sem nova validação; confira quem disse cada informação.'
+          : SPEAKER_NOTICE,
+        preservingPriorTranscript
+          ? 'A nova tentativa não reconheceu fala. A transcrição anterior foi mantida. Confira a gravação e revise o texto antes de usá-lo; nenhuma nova evolução foi gerada.'
+          : freshTranscription
+            ? 'A transcrição foi preservada. Revise o conteúdo e escreva a evolução ou gere novamente com suas observações.'
+            : 'Não foi reconhecida fala nesta gravação. Ouça o áudio preservado e registre a consulta manualmente ou grave novamente.',
+      ],
+      transcriptionQuality: transcription ? 'partial' as const : 'poor' as const,
+      differentialDiagnoses: [] as string[],
+      drugInteractionAlerts: [] as string[],
+      originalComments,
+      audioMimeType: mimeType,
+      aiMetadata: {
+        ...priorMetadata,
+        // An empty retry is not the source of the previously stored words.
+        ...(preservingPriorTranscript ? {} : { transcription: transcribed.metadata }),
+        latestTranscriptionAttempt: { ...transcribed.metadata, outcome: freshTranscription ? 'transcribed' : 'empty' },
+      },
+    };
+    const saveDraft = async (content: Record<string, unknown>) => {
+      if (!draftRevision) throw new RequestError('Versão do rascunho indisponível. O áudio foi preservado.', 503);
+      const revisionMs = Date.parse(draftRevision);
+      if (!Number.isFinite(revisionMs)) throw new RequestError('Versão do rascunho inválida. O áudio foi preservado.', 503);
+      // Even two fast writes in the same millisecond must advance the token.
+      const nextRevision = new Date(Math.max(Date.now(), revisionMs + 1)).toISOString();
+      const { data, error } = await supabase
+        .from('consultation_drafts')
+        .update({ content, status: 'review', updated_at: nextRevision })
+        .eq('id', draftId)
+        .eq('patient_id', patientId)
+        .eq('user_id', userId)
+        .eq('audio_storage_path', audioStoragePath)
+        .eq('updated_at', draftRevision)
+        .select('id,updated_at')
+        .maybeSingle();
+      if (error || !data || typeof data.updated_at !== 'string')
+        throw new RequestError('Não foi possível salvar o rascunho. O áudio foi preservado.', 503);
+      draftRevision = data.updated_at;
+    };
+    const recoveryResponse = (persistenceFailed = false) => new Response(JSON.stringify({
+      transcription,
+      soapNote: recovery.soapDraft,
+      whatsappMessage: recovery.whatsappDraft,
+      clarifications: persistenceFailed
+        ? [...recovery.clarifications, 'Não foi possível confirmar o salvamento desta versão da transcrição. Copie o texto antes de sair e confira o rascunho atual antes de salvar novamente. O áudio original permanece salvo.']
+        : recovery.clarifications,
+      transcriptionQuality: recovery.transcriptionQuality,
+      differentialDiagnoses: [],
+      drugInteractionAlerts: [],
+      draftFailed: true,
+      draftPersisted: !persistenceFailed,
+      draftUpdatedAt: persistenceFailed ? null : draftRevision,
+      aiMetadata: recovery.aiMetadata,
+      ...(persistenceFailed ? { draftPersistenceFailed: true } : {}),
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+    // Checkpoint before settlement, quota, prompt validation or second inference.
+    // An interrupted or failed SOAP request can never erase the literal text.
+    try { await saveDraft(recovery); }
+    catch { return recoveryResponse(true); }
     try {
-      await trackGeminiFile(GEMINI_API_KEY, geminiFileUri, supabase, userId, patientId);
+      await recordUsage(supabase, userId, creditsFromUsage(transcribed.usage), transcriptionReservation.reservationId);
+    } catch {
+      return recoveryResponse();
+    }
+    // A retained transcript is recovery data, not a successful new STT result.
+    if (!freshTranscription) return recoveryResponse();
 
-      // Keep the owned source audio until the reviewed consultation is saved.
-
-      // Transcribe
-      const { text: transcription, usage: transUsage } = await callGemini(
-        GEMINI_API_KEY,
-        [{ fileData: { mimeType, fileUri: geminiFileUri } }, { text: TRANSCRIPTION_PROMPT }],
-        {
-          systemInstruction:
-            'Você é um transcritor de áudio de máxima fidelidade. Você transcreve EXCLUSIVAMENTE o que foi realmente dito, palavra por palavra. Você NUNCA inventa, completa ou imagina falas. Quando o áudio não é uma consulta médica, você transcreve o conteúdo real como ele é.',
-          temperature: 0.1,
-          // ~150-250 tokens per minute of dialogue: 32k covers 2h+ consultations
-          // (8k truncated anything longer than ~40 min, failing every retry).
-          maxOutputTokens: 32768,
-          thinkingBudget: 0,
-        },
-      );
-      await recordUsage(supabase, userId, creditsFromUsage(transUsage), transcriptionReservation.reservationId);
-
-      // Short-circuit: no consultation in this recording
-      if (transcription.trim().toUpperCase().includes('[SEM_CONSULTA]')) {
-        return new Response(
-          JSON.stringify({
-            transcription: '',
-            soapNote: 'Gravação não corresponde a uma consulta médica — revise ou descarte.',
-            whatsappMessage: '',
-            clarifications: [
-              'Esta gravação não parece ser uma consulta médica (parece uma conversa aleatória, teste, ou gravação acidental). Deseja descartar e usar o chat de Pergunta, ou houve mesmo uma consulta? Descreva os detalhes da consulta abaixo se quiser prosseguir.',
-            ],
-            transcriptionQuality: 'poor',
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      }
-
-      // Generate draft SOAP
-      const patientSummary = buildPatientSummary(ownedPatient, chiefComplaint);
+    try {
+      const patientSummary = buildPatientSummary(ownedPatient, currentComplaint);
       const commentsText =
-        Array.isArray(consultationComments) && consultationComments.length > 0
-          ? `\n\nObservações do médico durante a consulta:\n${consultationComments.join('\n')}`
+        originalComments.length > 0
+          ? `\n\nObservações do médico durante a consulta:\n${originalComments.join('\n')}`
           : '';
 
       const draftParts = [
         {
-          text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${chiefComplaint || 'acompanhamento de rotina'}${commentsText}`,
+          text: `${patientSummary}\n\nTranscrição da consulta:\n${transcription}\n\nQueixa principal: ${currentComplaint || 'acompanhamento de rotina'}${commentsText}`,
         },
       ];
-      const instruction =
+      const specialtyInstruction =
         typeof templateContent === 'string' && templateContent.trim()
           ? buildCustomTemplatePrompt(templateContent)
           : getSpecialtyPrompt(userSpecialty);
+      const instruction = `${specialtyInstruction}\n\nA transcrição fornecida não contém diarização nem identidade confirmada dos falantes. Não atribua falas ao médico ou ao paciente por inferência. Não invente diálogo, exame, diagnóstico, conduta ou consentimento. Quando a origem de uma informação importar, peça esclarecimento ao médico. Se o conteúdo não sustentar uma evolução clínica, deixe soap_note vazio e explique em clarifications.`;
       assertGeminiTextBudget(draftParts, instruction);
-      // The transcription is already paid for. If drafting fails (quota, provider
-      // error, truncated JSON), return the transcript so the doctor can still
-      // review, write or regenerate the note, instead of losing it.
-      let draftRaw: string;
-      try {
-        const draftReservation = await checkQuota(supabase, userId, 100);
-        const drafted = await callGemini(GEMINI_API_KEY, draftParts, {
-          systemInstruction: instruction,
-          temperature: 0.3,
-          maxOutputTokens: 6000,
-          thinkingBudget: 512,
-          responseMimeType: 'application/json',
-          responseSchema: DRAFT_SCHEMA,
-        });
-        draftRaw = drafted.text;
-        await recordUsage(supabase, userId, creditsFromUsage(drafted.usage), draftReservation.reservationId);
-      } catch (draftFailure) {
-        const reason =
-          draftFailure instanceof QuotaExceededError
-            ? 'Limite diário de IA atingido: o rascunho não foi gerado.'
-            : 'Não foi possível gerar o rascunho automaticamente.';
-        const fallback = {
-          transcription,
-          soapDraft: '',
-          whatsappDraft: '',
-          clarifications: [
-            `${reason} A transcrição foi preservada: escreva a evolução no campo acima ou adicione uma observação e use "Gerar com observações".`,
-          ],
-          transcriptionQuality: 'partial' as const,
-          differentialDiagnoses: [],
-          drugInteractionAlerts: [],
-          originalComments: consultationComments ?? [],
-          audioMimeType: mimeType,
-        };
-        await supabase
-          .from('consultation_drafts')
-          .update({ content: fallback, status: 'review', updated_at: new Date().toISOString() })
-          .eq('id', draftId)
-          .eq('user_id', userId);
-        return new Response(
-          JSON.stringify({
-            transcription,
-            soapNote: '',
-            whatsappMessage: '',
-            clarifications: fallback.clarifications,
-            transcriptionQuality: 'partial',
-            differentialDiagnoses: [],
-            drugInteractionAlerts: [],
-            draftFailed: true,
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      }
-
-      let soapNote = '';
-      let whatsappMessage = '';
-      let clarifications: string[] = [];
-      let transcriptionQuality: 'good' | 'partial' | 'poor' = 'good';
-      let differentialDiagnoses: string[] = [];
-      let drugInteractionAlerts: string[] = [];
-      const parsed = parseModelObject<DraftGeneration>(draftRaw, DRAFT_SCHEMA);
-      {
-        soapNote = parsed.soap_note ?? '';
-        whatsappMessage = parsed.whatsapp_message ?? '';
-        clarifications = Array.isArray(parsed.clarifications) ? parsed.clarifications : [];
-        transcriptionQuality = parsed.transcription_quality ?? 'good';
-        differentialDiagnoses = Array.isArray(parsed.differential_diagnoses) ? parsed.differential_diagnoses : [];
-        drugInteractionAlerts = Array.isArray(parsed.drug_interaction_alerts) ? parsed.drug_interaction_alerts : [];
-      }
-      soapNote = collapseBlankLines(soapNote);
-      whatsappMessage = collapseBlankLines(whatsappMessage);
-      if (!soapNote) throw new Error('Evolução vazia. O áudio foi preservado.');
+      const draftReservation = await checkQuota(supabase, userId, 100);
+      const drafted = await callClinicalText(apiKey, draftParts, {
+        systemInstruction: instruction,
+        maxOutputTokens: 6000,
+        responseSchema: DRAFT_SCHEMA,
+      });
+      const parsed = parseModelObject<DraftGeneration>(drafted.text, DRAFT_SCHEMA);
+      await recordUsage(supabase, userId, creditsFromUsage(drafted.usage), draftReservation.reservationId);
+      const soapNote = collapseBlankLines(parsed.soap_note);
+      const whatsappMessage = collapseBlankLines(parsed.whatsapp_message);
+      const clarifications = [SPEAKER_NOTICE, ...parsed.clarifications];
+      const transcriptionQuality = parsed.transcription_quality;
+      const differentialDiagnoses = parsed.differential_diagnoses;
+      const drugInteractionAlerts = parsed.drug_interaction_alerts;
+      if (!soapNote.trim()) return recoveryResponse();
       const result = {
+        ...recovery,
         transcription,
         soapDraft: soapNote,
         whatsappDraft: whatsappMessage,
@@ -315,15 +289,10 @@ serve(async (req) => {
         transcriptionQuality,
         differentialDiagnoses,
         drugInteractionAlerts,
-        originalComments: consultationComments ?? [],
-        audioMimeType: mimeType,
+        aiMetadata: { transcription: transcribed.metadata, draft: drafted.metadata },
       };
-      const { error: draftError } = await supabase
-        .from('consultation_drafts')
-        .update({ content: result, status: 'review', updated_at: new Date().toISOString() })
-        .eq('id', draftId)
-        .eq('user_id', userId);
-      if (draftError) throw draftError;
+      try { await saveDraft(result); }
+      catch { return recoveryResponse(true); }
 
       return new Response(
         JSON.stringify({
@@ -334,11 +303,14 @@ serve(async (req) => {
           transcriptionQuality,
           differentialDiagnoses,
           drugInteractionAlerts,
+          draftPersisted: true,
+          draftUpdatedAt: draftRevision,
+          aiMetadata: result.aiMetadata,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
-    } finally {
-      await cleanupGeminiFile(GEMINI_API_KEY, geminiFileUri, supabase, userId);
+    } catch {
+      return recoveryResponse();
     }
   } catch (error) {
     if (error instanceof RequestError)

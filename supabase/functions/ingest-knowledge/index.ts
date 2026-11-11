@@ -36,6 +36,8 @@ serve(async (req) => {
         400,
       );
     }
+    if (Deno.env.get('AI_PROVIDER') === 'openai')
+      throw new RequestError('Indexação indisponível durante a migração do índice. O texto original permanece salvo.', 503);
     const apiKey = Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) throw new RequestError('Indexação indisponível. O texto original permanece salvo.', 503);
     const { data: claim, error } = await db.rpc('begin_knowledge_index', {

@@ -1,10 +1,11 @@
+import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
-import { requireCompleteModelText, parseModelObject, assertGeminiTextBudget } from '../_shared/gemini.ts';
+import { parseModelObject, assertGeminiTextBudget } from '../_shared/gemini.ts';
 import { clinicDayBounds } from '../_shared/clinicDate.ts';
-import { readJsonObject, RequestError, fetchWithDeadline } from '../_shared/http.ts';
+import { readJsonObject, RequestError } from '../_shared/http.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
 // secret to your app's origin to lock cross-origin access down to it.
@@ -14,7 +15,6 @@ const corsHeaders = {
   Vary: 'Origin',
 };
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 type StoredMedication = string | { name: string; dosage?: string; instructions?: string; startedAt?: string };
 type StoredDiagnosis = string | { code?: string; description: string };
 interface CommentExtraction {
@@ -381,7 +381,7 @@ serve(async (req) => {
       return await saveVerbatim('Comentário salvo como anotação. Atualize a página para revisar sugestões da IA.');
 
     // ── Step 1: extract a PROPOSAL. Nothing is written to the chart here. ────
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     const existingAllergies: string[] = Array.isArray(patient?.allergies) ? patient!.allergies : [];
     const existingMeds: StoredMedication[] = Array.isArray(patient?.medications) ? patient!.medications : [];
     const existingDiag: StoredDiagnosis[] = Array.isArray(patient?.diagnoses) ? patient!.diagnoses : [];
@@ -403,7 +403,8 @@ Comentário do médico:
     assertGeminiTextBudget([{ text: prompt }], SYSTEM);
     let reservation: { reservationId: string };
     try {
-      if (!GEMINI_API_KEY) throw new RequestError('IA indisponível', 503);
+      assertOpenAiEnabled();
+      if (!OPENAI_API_KEY) throw new RequestError('IA indisponível', 503);
       reservation = await checkQuota(supabase, userId, 100);
     } catch (err) {
       if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
@@ -413,29 +414,12 @@ Comentário do médico:
       throw err;
     }
 
-    const res = await fetchWithDeadline(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 1024,
-          thinkingConfig: { thinkingBudget: 0 },
-          responseMimeType: 'application/json',
-          responseSchema: COMMENT_SCHEMA,
-        },
-      }),
+    const { text: rawText, usage } = await callClinicalText(OPENAI_API_KEY, [{ text: prompt }], {
+      systemInstruction: SYSTEM,
+      maxOutputTokens: 1024,
+      responseSchema: COMMENT_SCHEMA,
     });
-
-    if (!res.ok) {
-      throw new Error(`Falha no provedor de IA (${res.status}). Tente novamente.`);
-    }
-
-    const modelJson = await res.json();
-    const rawText = requireCompleteModelText(modelJson);
-    await recordUsage(supabase, userId, creditsFromUsage(modelJson.usageMetadata), reservation.reservationId);
+    await recordUsage(supabase, userId, creditsFromUsage(usage), reservation.reservationId);
     const parsed = parseModelObject<CommentExtraction>(rawText, COMMENT_SCHEMA);
 
     // Only propose genuinely new items (dedupe against the current chart).

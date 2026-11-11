@@ -35,7 +35,9 @@ Gravações e trabalho em andamento permanecem vinculados ao paciente de origem.
 
 ## IA e integrações
 
-**IA (`AI_ENABLED`).** Em produção a IA está **ligada** por decisão do responsável, para a fase de testes (`AI_ENABLED=true`). Os termos da API Gemini restringem uso clínico: antes do lançamento definitivo, defina o provedor (ex.: Vertex com contrato adequado, sem uso dos dados para treino) e use uma chave com faturamento habilitado. Com `AI_ENABLED=false` tudo que é manual continua funcionando e comentários são salvos como anotação. Toda saída de IA que altera o prontuário passa por revisão do médico. Nenhum teste automatizado deve usar dados reais ou chaves de provedor.
+**IA.** A integração local usa OpenAI: `gpt-transcribe` para áudio gravado e `gpt-6.1-terra` para texto/imagens/PDF. A chave `OPENAI_API_KEY` pertence somente aos segredos das Edge Functions. Salvar a chave não ativa o serviço: são necessários `AI_ENABLED=true` e `AI_PROVIDER=openai` em uma publicação autorizada. Esta implementação não altera a configuração hospedada. [.env.edge.example](.env.edge.example) mantém IA desativada por padrão.
+
+O [contrato do teste inicial](docs/product/clinic-crm/OPENAI_INITIAL_MIGRATION.md) descreve limites, testes e ativação separada. Azure está adiado, copiloto ao vivo desativado e busca por protocolos temporariamente indisponível até migrar os índices Gemini com proveniência. Áudio/transcrição/registro manual permanecem recuperáveis; toda proposta clínica exige revisão médica. Testes automatizados usam dados sintéticos e provedores simulados, sem chaves reais.
 
 Os nomes das Edge Functions seguem as pastas em `supabase/functions/`. O fluxo atual usa `transcribe-consultation` e `finalize-consultation`, não o antigo `process-consultation`. Verifique todos os handlers com `npm run typecheck:edge`.
 

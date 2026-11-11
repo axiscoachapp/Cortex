@@ -39,6 +39,12 @@ function setup() {
   return client;
 }
 describe('cached protocol-derived answers', () => {
+  it('shows protocol search unavailability alongside a response using only clinical context', () => {
+    render(<QueryClientProvider client={new QueryClient()}><ClinicalAnswer userId="doctor" message={{ ...message, sources: [], coverage: { knowledge: 'unavailable' } }} /></QueryClientProvider>);
+    expect(screen.getByRole('status')).toHaveTextContent('Nenhum protocolo');
+    expect(screen.getByText(message.content)).toBeVisible();
+    expect(mock.rpc).not.toHaveBeenCalled();
+  });
   it('renders clinical Markdown and source excerpts without executing HTML or loading images', () => {
     const { container } = render(<QueryClientProvider client={new QueryClient()}>
       <ClinicalAnswer userId="doctor" message={{ ...message, content: '**Revisão:**\n\n- Texto clínico\n\n<img src="https://example.invalid/track" onerror="alert(1)">', sources: [{id:'visit',type:'consultation',label:'Consulta',date:'2026-11-03',excerpt:'**S (Subjetivo):** relato'}] }} />

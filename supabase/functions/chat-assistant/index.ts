@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { reserveAdmittedCredits, admitOperation, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
 import { requiresMedicationVerification, MEDICATION_VERIFICATION_REPLY } from '../_shared/clinicalQuestionSafety.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
-import { embedText, callGemini } from '../_shared/gemini.ts';
+import { callClinicalText, assertOpenAiEnabled } from '../_shared/clinicalAi.ts';
 import {
   assertPromptSize,
   isRecord,
@@ -54,36 +54,6 @@ interface AttachedDocument {
   file_name: string;
   ai_summary: string | null;
 }
-interface KnowledgeMatch {
-  similarity: number;
-  content: string;
-  document_id: string;
-  source_title: string;
-  source_reference: string;
-  source_version: string;
-  source_author: string;
-  source_owner_user_id: string;
-  reviewed_at: string;
-  authorization_revision: number;
-  source_review_revision: number;
-}
-interface KnowledgeSource {
-  id: string;
-  type: 'knowledge';
-  label: string;
-  date: string;
-  excerpt: string;
-  truncated: boolean;
-  sourceVersion: string;
-  sourceReference: string;
-  reviewedBy: string;
-  reviewedAt: string;
-  ownerUserId: string;
-  shared: boolean;
-  authorizationRevision: number;
-  sourceReviewRevision: number;
-}
-
 // Strip SOAP markdown bold to keep tokens lean
 function condense(text: string, max = 600): string {
   const t = (text ?? '')
@@ -159,8 +129,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new RequestError('IA indisponível: conexão do servidor não configurada.', 503);
 
     // ── Pull patient row + recent consultations + attached docs when patientId ──
     let patientRow: PatientContext | null = null;
@@ -303,10 +273,11 @@ Alergias: ${allergies}`;
 
     const conversationBlock = historyLines.length > 0 ? historyLines.join('\n') + '\n' : '';
 
-    // Retrieval is paid too. Bound the final prompt including the maximum five
-    // 700-character knowledge excerpts and their full citation metadata before reserving or embedding anything.
+    // Gemini vectors cannot be queried using a different embedding model.
+    // Protocol search is explicitly unavailable until a versioned reindex.
     const basePrompt = `${patientSummary}${historySummary}${docsSummary}${conversationBlock}Médico: ${userMessage}`;
-    assertPromptSize(basePrompt, CHAT_SYSTEM, 24000);
+    assertPromptSize(basePrompt, CHAT_SYSTEM, 1000);
+    assertOpenAiEnabled();
     let reservationId: string;
     // Reservation transport failures are ambiguous; do not charge a new
     // reservation automatically for the same logical question.
@@ -318,118 +289,16 @@ Alergias: ${allergies}`;
       throw err;
     }
 
-    // ── Knowledge base retrieval (RAG) ───────────────────────────────────────
-    // Embed the question, pull the doctor's most relevant knowledge chunks.
-    let knowledgeBlock = '';
-    let knowledgeSources: KnowledgeSource[] = [];
-    let authorizationSources: Array<{
-      document_id: string;
-      authorization_revision: number;
-      source_review_revision: number;
-    }> = [];
-    const authorizeSources = async () => {
-      if (!authorizationSources.length) return;
-      try {
-        const { data, error } = await supabase.rpc('authorize_protocol_sources', {
-          p_actor_user_id: userId,
-          p_sources: authorizationSources,
-        });
-        if (error || data !== true) throw new Error('Source authorization changed');
-      } catch {
-        throw new RequestError(
-          'Uma fonte foi alterada, retirada ou teve o acesso revogado. Atualize as fontes e tente novamente.',
-          409,
-        );
-      }
-    };
-    try {
-      // Embedding is best-effort: a provider timeout (rethrown as RequestError
-      // by observeProviderOperation) must not fail the whole answer.
-      let queryEmbedding: number[] = [];
-      try {
-        queryEmbedding = await embedText(GEMINI_API_KEY, userMessage, 'RETRIEVAL_QUERY');
-      } catch {
-        queryEmbedding = [];
-      }
-      if (queryEmbedding.length > 0) {
-        const { data: matches, error: knowledgeError } = await supabase.rpc('match_knowledge', {
-          p_user_id: userId,
-          query_embedding: queryEmbedding,
-          match_count: 5,
-        });
-        if (knowledgeError)
-          throw new RequestError('Não foi possível consultar a base de conhecimento. Tente novamente.', 503);
-        if (!Array.isArray(matches)) throw new RequestError('Resposta da base de conhecimento indisponível.', 503);
-        const relevant = (matches as KnowledgeMatch[])
-          .filter((m) => Number.isFinite(m.similarity) && m.similarity > 0.5)
-          .slice(0, 5);
-        if (
-          relevant.some(
-            (m) =>
-              typeof m.document_id !== 'string' ||
-              typeof m.content !== 'string' ||
-              !Number.isInteger(m.authorization_revision) ||
-              !Number.isInteger(m.source_review_revision),
-          )
-        )
-          throw new RequestError('Referências da fonte incompletas. Atualize e tente novamente.', 503);
-        authorizationSources = relevant.map((m) => ({
-          document_id: m.document_id,
-          authorization_revision: m.authorization_revision,
-          source_review_revision: m.source_review_revision,
-        }));
-        // A retrieved excerpt is not a continuing grant. Recheck before it can
-        // leave the service and again after generation before returning text.
-        await authorizeSources();
-        if (relevant.length > 0) {
-          knowledgeSources = relevant.map((m) => ({
-            id: m.document_id,
-            type: 'knowledge',
-            label: m.source_title,
-            date: m.reviewed_at,
-            excerpt: condense(m.content, 700),
-            truncated: m.content.length > 700,
-            sourceVersion: m.source_version,
-            sourceReference: m.source_reference,
-            reviewedBy: m.source_author,
-            reviewedAt: m.reviewed_at,
-            ownerUserId: m.source_owner_user_id,
-            shared: m.source_owner_user_id !== userId,
-            authorizationRevision: m.authorization_revision,
-            sourceReviewRevision: m.source_review_revision,
-          }));
-          knowledgeBlock =
-            '--- Base de Conhecimento do Médico (fontes e versões revisadas) ---\n' +
-            knowledgeSources
-              .map(
-                (source) =>
-                  `[knowledge:${source.id}] ${source.label}\nVersão: ${source.sourceVersion}\nReferência: ${source.sourceReference}\nRevisado/compartilhado por: ${source.reviewedBy}\nRevisão: ${source.reviewedAt}\nTrecho: ${source.excerpt}`,
-              )
-              .join('\n---\n') +
-            '\n----------------------------\n\n';
-        }
-      }
-    } catch (error) {
-      if (error instanceof RequestError) throw error;
-      knowledgeSources = [];
-      knowledgeBlock = '';
-      authorizationSources = [];
-      // Embedding availability is best-effort; authorization failures are not.
-    }
-
+    const knowledgeBlock = 'Busca na Base de Conhecimento indisponível durante a migração do índice. Não foram recuperados protocolos. Não invente citações de protocolos nem atribua ao modelo uma busca que não ocorreu.\n\n';
+    coverage = { ...coverage, limited: true, knowledge: 'unavailable' };
     const promptText = `${patientSummary}${historySummary}${docsSummary}${knowledgeBlock}${conversationBlock}Médico: ${userMessage}`;
     assertPromptSize(promptText, CHAT_SYSTEM);
-
-    const { text: reply, usage } = await callGemini(GEMINI_API_KEY, [{ text: promptText }], {
+    const { text: reply, usage } = await callClinicalText(OPENAI_API_KEY, [{ text: promptText }], {
       systemInstruction: CHAT_SYSTEM,
-      temperature: 0.3,
       maxOutputTokens: 600,
-      thinkingBudget: 0,
     });
 
     const credits = creditsFromUsage(usage);
-    try { await authorizeSources(); }
-    catch (error) { await recordUsage(supabase,userId,credits,reservationId); throw error; }
 
     const response = {
         message: reply,
@@ -454,7 +323,6 @@ Alergias: ${allergies}`;
             truncated: !!d.truncated,
             reviewStatus: d.ai_review_status ?? 'pending',
           })),
-          ...knowledgeSources,
         ],
       };
     try { await preserveReply(response,{reservationId,credits}); }

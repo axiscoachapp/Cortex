@@ -1036,19 +1036,24 @@ export function ChatPanel({
     // A previous draft with a storage path and no tab-local copy came from the
     // server, so its audio is already uploaded.
     let audioOnServer = !!draft.audioStoragePath && !localAudioRef.current.has(draft.id);
+    let processingRequested = false;
     try {
-      await saveConsultationDraft(userId, { ...draft, status: 'processing' });
+      if (!draft.audioStoragePath) await saveConsultationDraft(userId, { ...draft, status: 'processing' });
       void queryClient.invalidateQueries({queryKey:['consultation-recovery',userId]});
       if (!audioOnServer) {
         const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('ogg') ? 'ogg' : 'webm';
-        const path = `consultations/${userId}/${draft.id}.${ext}`;
+        const path = draft.audioStoragePath ?? `consultations/${userId}/${draft.id}.${ext}`;
         // The path is saved first so a discard can always clean up a partial upload.
-        draft.audioStoragePath = path;
-        await saveConsultationDraft(userId, draft);
+        if (!draft.audioStoragePath) {
+          await saveConsultationDraft(userId, { ...draft, audioStoragePath: path });
+          // Only a confirmed registration may skip this write on retry.
+          draft.audioStoragePath = path;
+        }
         await uploadAudioWithRetry(audioBlob, path, mimeType);
         audioOnServer = true;
         localAudioRef.current.delete(draft.id);
       }
+      processingRequested = true;
       const { data, error } = await supabase.functions.invoke('transcribe-consultation', {
         body: {
           patientId: draft.patientId,
@@ -1066,7 +1071,7 @@ export function ChatPanel({
         if (await handleQuotaError(error)) throw new HandledError();
         throw error;
       }
-      const ready: ConsultationDraft = {
+      let ready: ConsultationDraft = {
         ...draft,
         status: 'review',
         transcription: data.transcription ?? '',
@@ -1076,8 +1081,14 @@ export function ChatPanel({
         transcriptionQuality: data.transcriptionQuality ?? 'poor',
         differentialDiagnoses: Array.isArray(data.differentialDiagnoses) ? data.differentialDiagnoses : [],
         drugInteractionAlerts: Array.isArray(data.drugInteractionAlerts) ? data.drugInteractionAlerts : [],
+        aiMetadata: data.aiMetadata ?? draft.aiMetadata,
       };
-      await saveConsultationDraft(userId, ready);
+      // The server owns its transcript checkpoint and CAS. A stale tab must
+      // never upsert over it, including when persistence lost a concurrent edit.
+      if (data.draftPersisted === true) {
+        const latest = await loadConsultationDraft(userId, draft.patientId).catch(() => null);
+        if (latest?.id === draft.id) ready = latest;
+      }
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
       if (isCurrentPatient(draft.patientId)) {
         setRecoveryDraft(null);
@@ -1089,8 +1100,13 @@ export function ChatPanel({
       // tab so the doctor can resend it or explicitly download a copy.
       const failed = { ...draft, status: 'error' as const };
       if (!audioOnServer) localAudioRef.current.set(draft.id, { blob: audioBlob, mimeType });
-      await saveConsultationDraft(userId, failed).catch(() => {});
-      if (isCurrentPatient(draft.patientId)) setRecoveryDraft(failed);
+      // An interrupted response may have already preserved a transcript. Read
+      // its current version instead of writing the pre-request snapshot back.
+      const latest = processingRequested
+        ? await loadConsultationDraft(userId, draft.patientId).catch(() => null)
+        : null;
+      if (!processingRequested && !draft.audioStoragePath) await saveConsultationDraft(userId, failed).catch(() => {});
+      if (isCurrentPatient(draft.patientId)) setRecoveryDraft(latest?.id === draft.id ? latest : failed);
       if (!(error instanceof HandledError)) {
         const reason = await functionErrorMessage(error, 'Não foi possível processar a consulta.');
         toast({

@@ -1,8 +1,8 @@
+import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
 import {
-  callGemini,
   buildPatientSummary,
   parseModelObject,
   assertGeminiTextBudget,
@@ -215,13 +215,13 @@ serve(async (req) => {
 
     if (body.saveDirect) {
       if (body.reviewed !== true) throw new Error('Revise e confirme a evolução antes de salvar.');
-      // ── Path A: draft was already approved — save without a Gemini call ──
+      // ── Path A: draft was already approved — save without paid generation ─
       soapNote = body.soapNote ?? '';
       whatsappMessage = body.whatsappMessage ?? '';
     } else {
       // ── Path B: incorporate doctor comments → re-generate final SOAP ──────
-      const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-      if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
+      const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+      if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
 
       const doctorComments: string = body.doctorComments ?? '';
       const patientSummary = buildPatientSummary(ownedPatient, chiefComplaint);
@@ -248,18 +248,16 @@ serve(async (req) => {
       assertGeminiTextBudget(finalParts, instruction);
       let finalReservation: { reservationId: string };
       try {
+        assertOpenAiEnabled();
         finalReservation = await checkQuota(supabase, userId, 100);
       } catch (err) {
         if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
         throw err;
       }
 
-      const { text: finalRaw, usage: finalUsage } = await callGemini(GEMINI_API_KEY, finalParts, {
+      const { text: finalRaw, usage: finalUsage } = await callClinicalText(OPENAI_API_KEY, finalParts, {
         systemInstruction: instruction,
-        temperature: 0.3,
         maxOutputTokens: 3000, // headroom for custom templates
-        thinkingBudget: 1024,
-        responseMimeType: 'application/json',
         responseSchema: FINAL_SCHEMA,
       });
       await recordUsage(supabase, userId, creditsFromUsage(finalUsage), finalReservation.reservationId);
@@ -325,20 +323,18 @@ serve(async (req) => {
     } = { diagnoses: [], medications: [], allergies: [] };
 
     try {
-      const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-      if (GEMINI_API_KEY && soapNote.trim()) {
+      const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+      if (OPENAI_API_KEY && soapNote.trim()) {
         assertGeminiTextBudget([{ text: soapNote }], EXTRACT_SYSTEM);
         // Gate the extraction on remaining budget too — a QuotaExceededError
         // here is caught below and simply skips extraction (the consultation
         // itself is already saved). Closes the saveDirect path where the main
         // quota check is skipped.
+        assertOpenAiEnabled();
         const extractReservation = await checkQuota(supabase, userId, 8);
-        const { text: extractRaw, usage: extractUsage } = await callGemini(GEMINI_API_KEY, [{ text: soapNote }], {
+        const { text: extractRaw, usage: extractUsage } = await callClinicalText(OPENAI_API_KEY, [{ text: soapNote }], {
           systemInstruction: EXTRACT_SYSTEM,
-          temperature: 0,
           maxOutputTokens: 512,
-          thinkingBudget: 0,
-          responseMimeType: 'application/json',
           responseSchema: EXTRACT_SCHEMA,
         });
         await recordUsage(supabase, userId, creditsFromUsage(extractUsage), extractReservation.reservationId);
@@ -364,8 +360,8 @@ serve(async (req) => {
     };
     if (isFirstVisit) {
       try {
-        const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-        if (GEMINI_API_KEY && soapNote.trim()) {
+        const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+        if (OPENAI_API_KEY && soapNote.trim()) {
           const { data: existing } = await supabase
             .from('patients')
             .select('medical_history, social_anamnesis,revision')
@@ -379,13 +375,11 @@ serve(async (req) => {
           if (needMedical || needSocial) {
             const historyParts = [{ text: `Evolução SOAP:\n${soapNote}\n\nTranscrição:\n${transcription}` }];
             assertGeminiTextBudget(historyParts, HISTORY_SYSTEM);
+            assertOpenAiEnabled();
             const historyReservation = await checkQuota(supabase, userId, 10);
-            const { text: histRaw, usage: histUsage } = await callGemini(GEMINI_API_KEY, historyParts, {
+            const { text: histRaw, usage: histUsage } = await callClinicalText(OPENAI_API_KEY, historyParts, {
               systemInstruction: HISTORY_SYSTEM,
-              temperature: 0,
               maxOutputTokens: 700,
-              thinkingBudget: 0,
-              responseMimeType: 'application/json',
               responseSchema: HISTORY_SCHEMA,
             });
             await recordUsage(supabase, userId, creditsFromUsage(histUsage), historyReservation.reservationId);

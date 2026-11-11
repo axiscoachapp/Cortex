@@ -7,8 +7,9 @@ export function assertAiEnabled(): void {
     throw new RequestError('IA temporariamente indisponível. Você pode registrar a consulta manualmente.', 503);
 }
 interface ProviderOperation {
-  operation: 'generate' | 'embed' | 'embed_batch' | 'file_upload';
+  operation: 'generate' | 'transcribe' | 'embed' | 'embed_batch' | 'file_upload';
   model: string;
+  provider?: 'gemini' | 'openai';
 }
 export function providerOperation(input: RequestInfo | URL, init: RequestInit): ProviderOperation | null {
   const raw = input instanceof Request ? input.url : String(input);
@@ -17,6 +18,10 @@ export function providerOperation(input: RequestInfo | URL, init: RequestInit): 
     url = new URL(raw);
   } catch {
     return null;
+  }
+  if (url.origin === 'https://api.openai.com' && (init.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase() === 'POST') {
+    if (url.pathname === '/v1/responses') return { operation: 'generate', model: 'gpt-6.1-terra', provider: 'openai' };
+    if (url.pathname === '/v1/audio/transcriptions') return { operation: 'transcribe', model: 'gpt-transcribe', provider: 'openai' };
   }
   if (
     url.origin !== 'https://generativelanguage.googleapis.com' ||
@@ -49,7 +54,7 @@ export async function observeProviderOperation(
         event: 'provider_operation',
         operation_id: operationId,
         operation: meta.operation,
-        provider: 'gemini',
+        provider: meta.provider ?? 'gemini',
         model: meta.model,
         duration_ms: Math.round(performance.now() - start),
         status: response.ok ? 'success' : 'failed',
@@ -66,7 +71,7 @@ export async function observeProviderOperation(
         event: 'provider_operation',
         operation_id: operationId,
         operation: meta.operation,
-        provider: 'gemini',
+        provider: meta.provider ?? 'gemini',
         model: meta.model,
         duration_ms: Math.round(performance.now() - start),
         status: 'failed',

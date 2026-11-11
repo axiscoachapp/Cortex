@@ -31,6 +31,10 @@ export async function fetchWithDeadline(input: RequestInfo | URL, init: RequestI
   const operation = providerOperation(input, init);
   if (operation) {
     assertAiEnabled();
+    const runtime = globalThis as typeof globalThis & { Deno?: { env: { get(name: string): string | undefined } } };
+    const provider = runtime.Deno?.env.get('AI_PROVIDER');
+    if (operation.provider === 'openai' && provider !== 'openai') throw new RequestError('IA indisponível: integração OpenAI ainda não ativada.', 503);
+    if (operation.provider !== 'openai' && provider === 'openai') throw new RequestError('Operação legada de IA indisponível durante o teste OpenAI.', 503);
     return observeProviderOperation(operation, () => boundedFetch(input, init, timeoutMs, maxResponseBytes));
   }
   return boundedFetch(input, init, timeoutMs, maxResponseBytes);

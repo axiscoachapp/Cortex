@@ -1,9 +1,10 @@
-import { fetchWithDeadline, readJsonObject, RequestError } from '../_shared/http.ts';
+import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
+import { readJsonObject, RequestError } from '../_shared/http.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError } from '../_shared/quota.ts';
 import { requireUser, AuthError, authResponse } from '../_shared/auth.ts';
-import { requireCompleteModelText, parseModelObject } from '../_shared/gemini.ts';
+import { parseModelObject } from '../_shared/gemini.ts';
 import { assertPromptSize } from '../_shared/modelInput.ts';
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
@@ -13,8 +14,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   Vary: 'Origin',
 };
-
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 const INSIGHTS_SCHEMA = {
   type: 'object',
@@ -56,8 +55,8 @@ serve(async (req) => {
       });
     }
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -88,41 +87,20 @@ ${patient?.clinical_notes || 'Nenhuma nota anterior'}`;
 
     let reservationId: string;
     try {
+      assertOpenAiEnabled();
       ({ reservationId } = await checkQuota(supabaseClient, userId, 100));
     } catch (err) {
       if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
       throw err;
     }
 
-    const res = await fetchWithDeadline(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 1024,
-          thinkingConfig: { thinkingBudget: 0 },
-          responseMimeType: 'application/json',
-          responseSchema: INSIGHTS_SCHEMA,
-        },
-      }),
+    const { text: rawText, usage } = await callClinicalText(OPENAI_API_KEY, [{ text: prompt }], {
+      systemInstruction: SYSTEM,
+      maxOutputTokens: 1024,
+      responseSchema: INSIGHTS_SCHEMA,
     });
-
-    if (!res.ok) {
-      if (res.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Limite de requisições excedido, tente novamente em alguns segundos.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      }
-      throw new Error(`Gemini indisponível (${res.status})`);
-    }
-
-    const json = await res.json();
-    await recordUsage(supabaseClient, userId, creditsFromUsage(json.usageMetadata), reservationId);
-    const insights = parseModelObject(requireCompleteModelText(json), INSIGHTS_SCHEMA);
+    await recordUsage(supabaseClient, userId, creditsFromUsage(usage), reservationId);
+    const insights = parseModelObject(rawText, INSIGHTS_SCHEMA);
 
     const stamp = `[${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}]`;
     const updatedNotes = patient?.clinical_notes

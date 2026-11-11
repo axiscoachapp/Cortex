@@ -1,11 +1,12 @@
-import { fetchWithDeadline, readJsonObject, RequestError } from "../_shared/http.ts";
+import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
+import { readJsonObject, RequestError } from "../_shared/http.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
-import { requireCompleteModelText, parseModelObject } from '../_shared/gemini.ts';
+import { parseModelObject } from '../_shared/gemini.ts';
 import { assertPromptSize, isRecord, readPatientContext } from '../_shared/modelInput.ts';
 import { clinicDate } from '../_shared/clinicDate.ts';
 
@@ -16,8 +17,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Vary': 'Origin',
 };
-
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 const BRIEFING_SCHEMA = {
   type: 'object',
@@ -62,8 +61,8 @@ serve(async (req) => {
       );
     }
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -105,7 +104,7 @@ serve(async (req) => {
       clinicDate: clinicDate(),
     };
 
-    // ── Cache hit: return stored briefing without calling Gemini ─────────────
+    // ── Cache hit: return stored briefing without paid inference ────────────
     const cacheSource: unknown = isRecord(last.pre_briefing) ? last.pre_briefing._source : null;
     if (isRecord(cacheSource) && cacheSource.patientRevision === source.patientRevision &&
       cacheSource.consultationRevision === source.consultationRevision && cacheSource.clinicDate === source.clinicDate) {
@@ -148,41 +147,19 @@ ${apSection}${recentNotes ? `\n\nAnotações recentes do médico (entre consulta
 
     let reservationId: string;
     try {
+      assertOpenAiEnabled();
       ({ reservationId } = await checkQuota(supabase, userId, 100));
     } catch (err) {
       if (err instanceof QuotaExceededError) return quotaResponse(err, corsHeaders);
       throw err;
     }
 
-    const res = await fetchWithDeadline(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: SYSTEM }],
-        },
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1024,
-          thinkingConfig: { thinkingBudget: 512 },
-          responseMimeType: 'application/json',
-          responseSchema: BRIEFING_SCHEMA,
-        },
-      }),
+    const { text: rawText, usage } = await callClinicalText(OPENAI_API_KEY, [{ text: prompt }], {
+      systemInstruction: SYSTEM,
+      maxOutputTokens: 1024,
+      responseSchema: BRIEFING_SCHEMA,
     });
-
-    if (!res.ok) {
-      throw new Error(`Gemini indisponível (${res.status})`);
-    }
-
-    const geminiData = await res.json();
-
-    await recordUsage(supabase, userId, creditsFromUsage(geminiData.usageMetadata), reservationId);
-
-    // When thinkingBudget > 0, thinking tokens appear first (thought: true); find the actual response part.
-    // Never log part contents — they contain patient clinical data.
-    const rawText = requireCompleteModelText(geminiData);
+    await recordUsage(supabase, userId, creditsFromUsage(usage), reservationId);
 
     const briefing = parseModelObject<Briefing>(rawText, BRIEFING_SCHEMA);
     if (!briefing.returnInfo.trim()) throw new Error('Resumo pré-consulta incompleto. Tente novamente.');

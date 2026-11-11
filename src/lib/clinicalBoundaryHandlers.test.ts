@@ -118,6 +118,17 @@ function loadHandler(name: string, db = database(), environment: (key: string) =
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const dependencies: Record<string, unknown> = {
+    '../_shared/clinicalAi.ts': {
+      assertOpenAiEnabled: () => {},
+      callClinicalText: ['generate-prebriefing', 'process-clinical-notes', 'process-comment'].includes(name)
+        ? async (...args: unknown[]) => {
+            const response = await network(...args as []);
+            if (!response.ok) throw new http.RequestError('IA indisponível', 503);
+            const json = await response.json();
+            return { text: gemini.requireCompleteModelText(json), usage: json.usageMetadata };
+          }
+        : generate,
+    },
     '../_shared/gemini.ts': { ...gemini, callGemini: generate, embedText: embed },
     '../_shared/http.ts': { ...http, fetchWithDeadline: network },
     '../_shared/modelInput.ts': modelInput,
@@ -194,7 +205,7 @@ describe('clinical request boundaries before quota reservation', () => {
       expect(handler.reserve).not.toHaveBeenCalled();
     });
   }
-  for (const name of ['chat-assistant', 'live-copilot', 'suggest-questions', 'generate-document']) {
+  for (const name of ['chat-assistant', 'suggest-questions', 'generate-document']) {
     it(`${name} bounds the complete prompt before its first paid operation`, async () => {
       const handler = loadHandler(name);
       const context = { name: 'x'.repeat(130900), age: 30, diagnoses: [], medications: [], allergies: [] };
@@ -233,7 +244,7 @@ describe('clinical request boundaries before quota reservation', () => {
 });
 
 describe('clinical result failures remain failures', () => {
-  for (const name of ['live-copilot', 'suggest-questions']) {
+  for (const name of ['suggest-questions']) {
     it(`${name} rejects an incomplete model object instead of blanking a successful result`, async () => {
       const handler = loadHandler(name);
       const response = await handler.run({
@@ -260,9 +271,9 @@ describe('clinical result failures remain failures', () => {
     expect(handler.settle).toHaveBeenCalledOnce();
   });
   it('retains a reservation when a started provider call fails', async () => {
-    const handler = loadHandler('live-copilot');
+    const handler = loadHandler('suggest-questions');
     handler.generate.mockRejectedValue(new Error('Provider interrupted'));
-    expect((await handler.run({ audioChunks: [{ data: 'YXVkaW8=' }] })).status).toBe(500);
+    expect((await handler.run({ chiefComplaint: 'Synthetic complaint' })).status).toBe(500);
     expect(handler.reserve).toHaveBeenCalledOnce();
     expect(handler.settle).not.toHaveBeenCalled();
   });
@@ -490,7 +501,7 @@ describe('prebriefing source fingerprint', () => {
 });
 
 describe('clinical catch logs exclude provider payloads', () => {
-  for (const name of ['create-template-ai', 'live-copilot', 'suggest-questions']) {
+  for (const name of ['create-template-ai', 'suggest-questions']) {
     it(`${name} logs a static label`, async () => {
       const log = vi.spyOn(console, 'error').mockImplementation(() => {});
       const handler = loadHandler(name);
@@ -508,87 +519,17 @@ describe('clinical catch logs exclude provider payloads', () => {
   }
 });
 
-describe('authorized shared protocol citations and delayed revocation', () => {
-  const source = {
-    document_id: '66666666-6666-4666-8666-666666666666',
-    content: 'SYNTHETIC_SHARED_PROTOCOL_EXCERPT',
-    similarity: 0.9,
-    source_title: 'Protocolo da clínica',
-    source_reference: 'https://example.invalid/publicacao',
-    source_version: 'v3',
-    source_author: 'Dra Revisora Sintética',
-    source_owner_user_id: '77777777-7777-4777-8777-777777777777',
-    reviewed_at: '2026-10-28T12:00:00Z',
-    authorization_revision: 4,
-    source_review_revision: 2,
-  };
-  it('uses RPC-authorized source version and reviewer metadata without an owner-only second lookup', async () => {
+describe('protocol search during OpenAI migration', () => {
+  it('keeps clinical assistance available without embedding or sending incompatible protocols', async () => {
     const db = database();
-    db.rpc.mockImplementation(async (name) => ({ data: name === 'match_knowledge' ? [source] : true, error: null }));
     const handler = loadHandler('chat-assistant', db);
-    handler.embed.mockResolvedValue([0.1]);
-    handler.generate.mockResolvedValue({ text: 'Resposta com fonte autorizada', usage: { promptTokenCount: 10 } });
+    handler.generate.mockResolvedValue({ text: 'Resposta apenas com contexto clínico', usage: undefined });
     const response = await handler.run({ userMessage: 'Consultar protocolo' });
     expect(response.status).toBe(200);
-    expect((await response.json()).sources).toEqual([
-      expect.objectContaining({
-        id: source.document_id,
-        label: source.source_title,
-        sourceVersion: 'v3',
-        sourceReference: source.source_reference,
-        reviewedBy: source.source_author,
-        reviewedAt: source.reviewed_at,
-        shared: true,
-      }),
-    ]);
-    expect(JSON.stringify(handler.generate.mock.calls[0][1])).toContain(
-      'Revisado/compartilhado por: Dra Revisora Sintética',
-    );
-    expect(db.reads).not.toContain('knowledge_documents');
-    expect(db.rpc).toHaveBeenCalledWith('authorize_protocol_sources', {
-      p_actor_user_id: user,
-      p_sources: [{ document_id: source.document_id, authorization_revision: 4, source_review_revision: 2 }],
-    });
-  });
-  it('does not send a revoked source to the model after retrieval', async () => {
-    const db = database();
-    db.rpc.mockImplementation(async (name) => ({ data: name === 'match_knowledge' ? [source] : false, error: null }));
-    const handler = loadHandler('chat-assistant', db);
-    handler.embed.mockResolvedValue([0.1]);
-    const response = await handler.run({ userMessage: 'Consultar protocolo' });
-    expect(response.status).toBe(409);
-    expect(handler.generate).not.toHaveBeenCalled();
-    expect(await response.text()).not.toContain(source.content);
-  });
-  it('suppresses derived text after a source is revoked during generation while settling used quota', async () => {
-    let active = true;
-    const db = database();
-    db.rpc.mockImplementation(async (name) => ({ data: name === 'match_knowledge' ? [source] : active, error: null }));
-    const handler = loadHandler('chat-assistant', db);
-    handler.embed.mockResolvedValue([0.1]);
-    handler.generate.mockImplementation(async () => {
-      active = false;
-      return { text: 'SYNTHETIC_DERIVED_SHARED_TEXT', usage: { promptTokenCount: 10 } };
-    });
-    const response = await handler.run({ userMessage: 'Consultar protocolo' });
-    expect(response.status).toBe(409);
-    expect(handler.settle).toHaveBeenCalledOnce();
-    expect(await response.text()).not.toContain('SYNTHETIC_DERIVED_SHARED_TEXT');
-  });
-  it('fails closed on a post-generation authorization outage after settling used quota', async () => {
-    let checks = 0;
-    const db = database();
-    db.rpc.mockImplementation(async (name) => {
-      if (name === 'match_knowledge') return { data: [source], error: null };
-      if (++checks > 1) throw new Error('Synthetic authorization outage');
-      return { data: true, error: null };
-    });
-    const handler = loadHandler('chat-assistant', db);
-    handler.embed.mockResolvedValue([0.1]);
-    handler.generate.mockResolvedValue({ text: 'SYNTHETIC_PRIVATE_REPLY', usage: { promptTokenCount: 10 } });
-    const response = await handler.run({ userMessage: 'Consultar protocolo' });
-    expect(response.status).toBe(409);
-    expect(handler.settle).toHaveBeenCalledOnce();
-    expect(await response.text()).not.toContain('SYNTHETIC_PRIVATE_REPLY');
+    expect(await response.json()).toMatchObject({ coverage: { limited: true, knowledge: 'unavailable' }, sources: [] });
+    expect(handler.embed).not.toHaveBeenCalled();
+    expect(db.rpc).not.toHaveBeenCalledWith('match_knowledge', expect.anything());
+    expect(db.rpc).not.toHaveBeenCalledWith('authorize_protocol_sources', expect.anything());
+    expect(JSON.stringify(handler.generate.mock.calls[0][1])).toContain('Não foram recuperados protocolos');
   });
 });

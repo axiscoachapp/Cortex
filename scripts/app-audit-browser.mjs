@@ -117,6 +117,8 @@ async function supabase(route) {
   if (path === '/functions/v1/intake-api') return respond(route, intakeAnswer(request.postDataJSON?.() ?? {}));
   if (path === '/functions/v1/intake-public') return respond(route, intakePublicAnswer(request.postDataJSON?.() ?? {}));
   if (path === '/functions/v1/billing-api') return respond(route, billingAnswer(request.postDataJSON?.() ?? {}));
+  if (process.env.AUDIT_OPENAI_MIGRATION === '1' && path === '/functions/v1/chat-assistant')
+    return respond(route, { message: 'Resposta sintética para revisão médica.', safety: { status: 'not_assessed' }, coverage: { limited: true, knowledge: 'unavailable' }, sources: [] });
   if (path.startsWith('/functions/')) return respond(route, { error: 'Operação externa bloqueada no ensaio' }, 503);
   if (path.startsWith('/storage/')) return respond(route, []);
   const single = (request.headers()['accept'] ?? '').includes('vnd.pgrst.object');
@@ -435,6 +437,14 @@ try {
       await page.waitForTimeout(1500);
       await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: true });
       report.routes[`${label} ${path}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+      if (process.env.AUDIT_OPENAI_MIGRATION === '1' && path === '/assistente') {
+        await page.getByRole('textbox', { name: 'Escreva sua pergunta' }).fill('Pergunta sintética sobre o contexto disponível');
+        await page.getByRole('button', { name: 'Enviar pergunta', exact: true }).click();
+        await expect(page.getByText('Resposta sintética para revisão médica.', { exact: true })).toBeVisible();
+        await expect(page.getByText(/Nenhum protocolo da Base de Conhecimento foi consultado/)).toBeVisible();
+        await page.screenshot({ path: resolve(artifacts, `${label}-openai-coverage.png`), fullPage: true });
+        report.routes[`${label} OpenAI coverage`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+      }
       if (process.env.AUDIT_UI_CONSISTENCY === '1' && /^\/(configuracoes|agenda|gerenciar-pacientes|modelos|conhecimento|assistente|compartilhamento|seguranca|privacidade|permissoes-recepcao|pre-consultas|financeiro|recepcao)(?:[/?]|$)/.test(path)) {
         await expect(page.getByRole('main')).toHaveCount(1);
         await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);

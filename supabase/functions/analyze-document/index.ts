@@ -1,7 +1,8 @@
-import { readJsonObject, RequestError, fetchWithDeadline } from "../_shared/http.ts";
+import { assertOpenAiEnabled, callClinicalText } from '../_shared/clinicalAi.ts';
+import { readJsonObject, RequestError } from "../_shared/http.ts";
 /**
  * AI review of an attached patient document (exam PDF, imaging photo, external
- * prescription...). Reads the file from storage, has Gemini produce a short
+ * prescription...). Reads the file from storage, has the model produce a short
  * clinical review, then:
  *   - stores the review on the patient_files row (ai_summary)
  *   - stores a pending proposal for separate physician review.
@@ -14,7 +15,7 @@ import { assertPatientFilePath } from "../_shared/storage.ts";
 import {
   checkQuota, recordUsage, creditsFromUsage, quotaResponse, QuotaExceededError,
 } from "../_shared/quota.ts";
-import { callGemini, uploadToGeminiFiles, parseModelObject, trackGeminiFile, cleanupGeminiFile } from "../_shared/gemini.ts";
+import { parseModelObject } from "../_shared/gemini.ts";
 import { requireUser, AuthError, authResponse } from "../_shared/auth.ts";
 
 // Allow-Origin is '*' by default (unchanged). Set the ALLOWED_ORIGIN function
@@ -25,9 +26,8 @@ const corsHeaders = {
   'Vary': 'Origin',
 };
 
-const MAX_ANALYZE_BYTES = 15 * 1024 * 1024; // Gemini Files handles more, but keep costs sane
-const SUPPORTED_PREFIXES = ['image/'];
-const SUPPORTED_EXACT = ['application/pdf'];
+const MAX_ANALYZE_BYTES = 15 * 1024 * 1024;
+const SUPPORTED_EXACT = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
 const SYSTEM = `Você é um assistente médico revisando um documento anexado ao prontuário de um paciente
 (exame laboratorial, laudo de imagem, receita externa, relatório, foto clínica etc.).
@@ -74,8 +74,8 @@ serve(async (req) => {
       );
     }
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -103,7 +103,7 @@ serve(async (req) => {
       .select('id').eq('id', fileRow.patient_id).eq('user_id', userId).is('deletion_requested_at', null).maybeSingle();
     if (patientError || !ownedPatient) throw new Error('Paciente indisponível');
     const mime = fileRow.mime_type ?? '';
-    const supported = SUPPORTED_PREFIXES.some(p => mime.startsWith(p)) || SUPPORTED_EXACT.includes(mime);
+    const supported = SUPPORTED_EXACT.includes(mime);
     if (!supported) {
       return new Response(
         JSON.stringify({ error: 'Tipo de arquivo não suportado para análise (use imagens ou PDF)' }),
@@ -122,25 +122,20 @@ serve(async (req) => {
       .download(storagePath);
     if (dlErr || !blob) throw new Error(`Erro ao baixar arquivo: ${dlErr?.message}`);
 
-    if (blob.size > MAX_ANALYZE_BYTES) throw new Error('Arquivo muito grande para análise');
+    if (!blob.size || blob.size > MAX_ANALYZE_BYTES) throw new RequestError('Arquivo vazio ou muito grande para análise.', 413);
     const buffer = await blob.arrayBuffer();
-    const {reservationId} = await checkQuota(supabase,userId,400);
-    const fileUri = await uploadToGeminiFiles(GEMINI_API_KEY, buffer, mime, { db: supabase, userId, patientId: fileRow.patient_id });
-    try {
-    await trackGeminiFile(GEMINI_API_KEY, fileUri, supabase, userId, fileRow.patient_id);
+    assertOpenAiEnabled();
 
-    const { text: raw, usage } = await callGemini(
-      GEMINI_API_KEY,
+    const {reservationId} = await checkQuota(supabase,userId,400);
+    const { text: raw, usage } = await callClinicalText(
+      OPENAI_API_KEY,
       [
-        { fileData: { mimeType: mime, fileUri } },
+        { document: { data: new Uint8Array(buffer), mimeType: mime } },
         { text: `Nome do arquivo: ${fileRow.file_name}\nAnalise o documento acima.` },
       ],
       {
         systemInstruction: SYSTEM,
-        temperature: 0.1,
         maxOutputTokens: 800,
-        thinkingBudget: 0,
-        responseMimeType: 'application/json',
         responseSchema: SCHEMA,
       },
     );
@@ -168,11 +163,6 @@ serve(async (req) => {
       JSON.stringify({ documentType, summary, keyFindings, profileNote, reviewStatus: 'pending', sourceFileId: fileRow.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
-
-    } finally {
-      await cleanupGeminiFile(GEMINI_API_KEY, fileUri, supabase, userId);
-    }
-
   } catch (error) {
     if (error instanceof RequestError) return new Response(JSON.stringify({error:error.message}),{status:error.status,headers:{...corsHeaders,'Content-Type':'application/json'}});
     if (error instanceof AuthError) return authResponse(error, corsHeaders);

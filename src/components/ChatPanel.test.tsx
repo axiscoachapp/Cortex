@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   loadDraft: vi.fn(),
   saveDraft: vi.fn(),
   upload: vi.fn(),
+  download: vi.fn(),
   from: vi.fn(),
   profileUpdate: vi.fn(),
   rescued: vi.fn(),
@@ -28,7 +29,7 @@ vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: mocks.from,
     functions: { invoke: mocks.invoke },
-    storage: { from: () => ({ upload: mocks.upload }) },
+    storage: { from: () => ({ upload: mocks.upload, download: mocks.download }) },
   },
 }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
@@ -108,6 +109,7 @@ beforeEach(() => {
   mocks.rescued.mockResolvedValue([]);
   mocks.saveDraft.mockResolvedValue(undefined);
   mocks.upload.mockResolvedValue({ error: null });
+  mocks.download.mockResolvedValue({ data: new Blob(['audio']), error: null });
   Object.assign(mocks.capture, { isRecording: false, isStarting: false, isStopping: false });
   mocks.invoke.mockResolvedValue({ data: { questions: [] }, error: null });
   HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -368,6 +370,35 @@ describe('patient-scoped asynchronous clinical work', () => {
 });
 
 describe('recoverable clinical review', () => {
+  it('registers the source path again after its first save failed before uploading', async () => {
+    let failPath = true;
+    let registeredPath: string | null = null;
+    mocks.saveDraft.mockImplementation(async (_user: string, draft: { audioStoragePath: string | null }) => {
+      if (draft.audioStoragePath && failPath) { failPath = false; throw new Error('Synthetic path save failure'); }
+      registeredPath = draft.audioStoragePath;
+    });
+    mocks.invoke.mockImplementation(async (name: string, args: { body: { audioStoragePath: string } }) => {
+      if (name !== 'transcribe-consultation') return { error: null, data: { questions: [] } };
+      expect(args.body.audioStoragePath).toBe(registeredPath);
+      return { error: null, data: { transcription: 'Transcrição recuperada', soapNote: 'Revisão após reenviar', draftPersisted: true } };
+    });
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ChatPanel patient={patient('A')} messages={[]} onMessagesChange={vi.fn()} chiefComplaint="Dor" preBriefing={null} briefingLoading={false} userId="doctor" /></QueryClientProvider>);
+    await act(async () => { await mocks.recording.onStop!(new Blob(['audio']), 'audio/webm', []); });
+    expect(mocks.upload).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Reenviar áudio' }));
+    await screen.findByText('Revisão após reenviar');
+    expect(mocks.upload).toHaveBeenCalledOnce();
+    expect(registeredPath).toBeTruthy();
+  });
+  it('does not upsert an old recovery snapshot before processing stored audio', async () => {
+    mocks.loadDraft.mockResolvedValue({ id: 'draft-A', patientId: 'A', chiefComplaint: 'Dor', status: 'error', audioStoragePath: 'consultations/doctor/draft-A.webm', audioMimeType: 'audio/webm', originalComments: ['Comentário antigo'] });
+    mocks.invoke.mockImplementation(async (name: string) => ({ error: null, data: name === 'transcribe-consultation' ? { transcription: 'Nova transcrição', soapNote: '', draftPersisted: false, draftPersistenceFailed: true } : { questions: [] } }));
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ChatPanel patient={patient('A')} messages={[]} onMessagesChange={vi.fn()} chiefComplaint="Dor" preBriefing={null} briefingLoading={false} userId="doctor" /></QueryClientProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Recuperar consulta' }));
+    await waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith('transcribe-consultation', expect.anything()));
+    expect(mocks.saveDraft).not.toHaveBeenCalled();
+    expect(mocks.upload).not.toHaveBeenCalled();
+  });
   it('reports capture busy while permission, recording, or a native stop event is pending', async () => {
     const onCaptureStateChange = vi.fn();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -431,6 +462,24 @@ describe('recoverable clinical review', () => {
       await processing;
     });
     await waitFor(() => expect(onCaptureStateChange).toHaveBeenLastCalledWith(false));
+  });
+  it.each([true, false])('does not overwrite a server checkpoint after processing (persisted=%s)', async (persisted) => {
+    mocks.invoke.mockImplementation(async (name: string) => ({ error: null, data: name === 'transcribe-consultation'
+      ? { transcription: 'Transcrição preservada', soapNote: 'Texto para revisão', whatsappMessage: '', clarifications: [], draftPersisted: persisted, draftPersistenceFailed: !persisted, aiMetadata: { transcription: { provider: 'openai', requestedModel: 'gpt-transcribe' } } }
+      : { questions: [] } }));
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ChatPanel patient={patient('A')} messages={[]} onMessagesChange={vi.fn()} chiefComplaint="Dor" preBriefing={null} briefingLoading={false} userId="doctor" /></QueryClientProvider>);
+    await act(async () => { await mocks.recording.onStop!(new Blob(['audio']), 'audio/webm', []); });
+    expect(screen.getByText('Texto para revisão')).toBeInTheDocument();
+    expect(mocks.saveDraft.mock.calls.every(([, draft]) => draft.status === 'processing')).toBe(true);
+  });
+  it('never overwrites a server transcript when the processing response is interrupted', async () => {
+    mocks.invoke.mockImplementation(async (name: string) => {
+      if (name === 'transcribe-consultation') throw new Error('Synthetic interrupted response');
+      return { error: null, data: { questions: [] } };
+    });
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ChatPanel patient={patient('A')} messages={[]} onMessagesChange={vi.fn()} chiefComplaint="Dor" preBriefing={null} briefingLoading={false} userId="doctor" /></QueryClientProvider>);
+    await act(async () => { await mocks.recording.onStop!(new Blob(['audio']), 'audio/webm', []); });
+    expect(mocks.saveDraft.mock.calls.every(([, draft]) => draft.status === 'processing')).toBe(true);
   });
   it('never autosaves a good draft; keeps physician comments when regenerating and saves only the reviewed revision', async () => {
     mocks.invoke.mockImplementation((name: string, { body }: { body: { saveDirect?: boolean } }) =>

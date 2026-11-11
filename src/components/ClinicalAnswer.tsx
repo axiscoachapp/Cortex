@@ -70,6 +70,11 @@ export function ClinicalAnswer({ message, userId }: { message: ChatMessage; user
     <>
       {message.safety?.status === 'verification_required' && <p role="status" className="mb-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950">Verificação farmacológica necessária · sem consumo de IA</p>}
       <ClinicalMarkdown text={message.content} />
+      {message.coverage?.knowledge === 'unavailable' && (
+        <p className="text-xs text-muted-foreground mt-3" role="status">
+          Busca de protocolos temporariamente indisponível. Nenhum protocolo da Base de Conhecimento foi consultado nesta resposta.
+        </p>
+      )}
       {message.coverage && (
         <p className="text-xs text-muted-foreground mt-3 border-t pt-2">
           Contexto recuperado: {message.coverage.consultationsRetrieved ?? 0} consultas{message.coverage.consultationsTotal == null ? ' (total não informado)' : ` de ${message.coverage.consultationsTotal}`} e {message.coverage.documentsRetrieved ?? 0} documentos{message.coverage.documentsTotal == null ? ' (total não informado)' : ` de ${message.coverage.documentsTotal}`}. A busca usa trechos selecionados; ausência neste contexto

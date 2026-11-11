@@ -98,6 +98,7 @@ export interface ChatMessage {
     reviewStatus?: string;
   }>;
   coverage?: {
+    knowledge?: 'unavailable';
     consultationsTotal?: number;
     documentsTotal?: number;
     consultationsRetrieved?: number;

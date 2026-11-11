@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface ConsultationDraft {
   id: string;
@@ -19,6 +20,7 @@ export interface ConsultationDraft {
   drugInteractionAlerts: string[];
   originalComments: string[];
   pendingComments?: string;
+  aiMetadata?: Json;
 }
 
 export async function saveConsultationDraft(userId: string, draft: ConsultationDraft): Promise<void> {

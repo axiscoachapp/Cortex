@@ -167,12 +167,14 @@ function loadHandler(
     '../_shared/http.ts': { ...http, fetchWithDeadline: fetchStub },
     '../_shared/deletion.ts': deletion,
     '../_shared/providerFiles.ts': providerFiles,
+    '../_shared/clinicalAi.ts': { callClinicalText: fetchStub, assertOpenAiEnabled: () => {} },
     '../_shared/gemini.ts': { uploadToGeminiFiles: fetchStub, callGemini: fetchStub, parseModelObject: fetchStub },
   };
   const env: Record<string, string> = {
     SUPABASE_URL: 'https://example.invalid',
     SUPABASE_SERVICE_ROLE_KEY: 'synthetic',
     GEMINI_API_KEY: 'synthetic',
+    OPENAI_API_KEY: 'synthetic',
     GOOGLE_CLIENT_ID: 'client',
     GOOGLE_CLIENT_SECRET: 'synthetic',
     ALLOWED_ORIGIN: 'https://cortex.example',

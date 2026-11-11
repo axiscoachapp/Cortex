@@ -5,6 +5,12 @@
  */
 
 const BASE_RULES = `
+ATRIBUIÇÃO DOS FALANTES:
+A transcrição pode não conter diarização nem identidade confirmada dos falantes.
+Não atribua falas ao médico ou ao paciente por inferência. Rótulos legados de IA não confirmam identidade.
+Use somente atribuições explicitadas pelo médico em suas observações. Quando a origem importar,
+peça esclarecimento antes de transformar a fala em achado, negativa, diagnóstico ou conduta médica.
+
 REGRA FUNDAMENTAL — FONTE DOS DADOS:
 O SOAP deve ser gerado EXCLUSIVAMENTE a partir do que foi dito na transcrição desta consulta.
 O histórico do paciente é fornecido apenas como contexto de fundo — NUNCA use-o para preencher
@@ -29,7 +35,7 @@ Retorne [] se não há novos medicamentos ou se não há interações relevantes
 
 AVALIAÇÃO DE QUALIDADE (transcription_quality):
    a) INTELIGIBILIDADE — sem partes marcadas como [inaudível]
-   b) TROCA ENTRE FALANTES — ambos [MÉDICO] e [PACIENTE] com ≥ 2 turnos cada
+   b) ORIGEM DAS FALAS — atribuição necessária explicitamente confirmada pelo médico; sem confirmação, no máximo "partial"
    c) SUBSTÂNCIA CLÍNICA — pelo menos um de: queixa, achado, diagnóstico, conduta, prescrição
    d) DURAÇÃO PLAUSÍVEL — pelo menos ~30 palavras de conteúdo clínico real
    - "good": 4 critérios satisfeitos
@@ -51,8 +57,7 @@ Se uma seção não tiver dados da transcrição, escreva "Não relatado na cons
 
 const GERAL = `Você é um médico especialista gerando documentação clínica em português brasileiro.
 
-A transcrição usa os rótulos [MÉDICO] e [PACIENTE] para identificar os falantes.
-Use esses rótulos para preencher corretamente cada seção do SOAP.
+Respeite os limites de atribuição dos falantes definidos nas regras abaixo.
 
 ESTRUTURA DO SOAP — CLÍNICA GERAL:
 **S (Subjetivo):** Queixas e relato do paciente nesta consulta: motivo da visita, sintomas, duração,
@@ -67,7 +72,7 @@ ${BASE_RULES}`;
 
 const PSIQUIATRIA = `Você é um médico psiquiatra gerando documentação clínica em português brasileiro.
 
-A transcrição usa os rótulos [MÉDICO] e [PACIENTE].
+Respeite os limites de atribuição dos falantes definidos nas regras abaixo.
 
 ESTRUTURA DO SOAP — PSIQUIATRIA:
 **S (Subjetivo):** Queixa principal, humor autorrelatado, sintomas psíquicos relatados (insônia, apetite,
@@ -284,8 +289,7 @@ export function buildCustomTemplatePrompt(templateContent: string): string {
   const template = templateContent.slice(0, 6000);
   return `Você é um médico especialista gerando documentação clínica em português brasileiro.
 
-A transcrição usa os rótulos [MÉDICO] e [PACIENTE] para identificar os falantes.
-Use esses rótulos para atribuir corretamente cada informação.
+Respeite os limites de atribuição dos falantes definidos nas regras abaixo.
 
 O documento (campo soap_note) deve seguir EXATAMENTE o modelo personalizado abaixo:
 - Reproduza a estrutura de títulos (#, ##, ###), listas e tabelas do modelo.
