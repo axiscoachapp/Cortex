@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { dialogLayout } from '@/lib/dialogLayout';
 import { validateCertificateDays } from '../../supabase/functions/_shared/documentLayout';
 import { currentPatientAge } from '../../supabase/functions/_shared/patientAge';
 import { Patient, Medication } from '@/types/patient';
@@ -90,6 +91,8 @@ interface DocumentComposerModalProps {
   isGenerating: boolean;
   /** Digital signature available here (configured); null hides "Gerar e assinar". */
   signing?: { active: boolean } | null;
+  /** Why the last "Gerar documento" failed, shown above the buttons. */
+  error?: string;
 }
 
 // `shown` adds a soft hyphen where a long word may break on a phone; the
@@ -121,8 +124,10 @@ function catalogTerm(name: string): string {
 }
 
 export function DocumentComposerModal({
-  open, onOpenChange, patient, onGenerate, isGenerating, signing = null,
+  open, onOpenChange, patient, onGenerate, isGenerating, signing = null, error = '',
 }: DocumentComposerModalProps) {
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   const [docType, setDocType] = useState<RxDocType>('receita_simples');
   const [meds, setMeds] = useState<ComposerMed[]>([]);
   const [query, setQuery] = useState('');
@@ -375,7 +380,7 @@ export function DocumentComposerModal({
   );
   const controlledError = controlledCheck && 'error' in controlledCheck ? managedDocumentMessage(controlledCheck.error) : null;
   const antimicrobialGaps = docType !== 'receita_antimicrobiano' ? [] : [
-    ...(!settingsLoading && !prescriber.professionalPhone.trim() ? ['o telefone profissional no cadastro do prescritor (solicite à equipe de implantação)'] : []),
+    ...(!settingsLoading && !prescriber.professionalPhone.trim() ? ['o telefone profissional no cadastro do prescritor (peça à equipe Cortex)'] : []),
     ...(currentPatientAge(patient) === null ? ['a idade ou data de nascimento do paciente'] : []),
     ...(PRINTABLE_SEX.has(patient.sex ?? '') ? [] : ['o sexo do paciente']),
   ];
@@ -788,7 +793,8 @@ export function DocumentComposerModal({
                       </p>
                     )}
                     {m.checked && (
-                      <div className="grid grid-cols-[minmax(9rem,2fr)_3fr] gap-1.5 pl-5">
+                      // Phones: dose on its own row so "1 comprimido" fits; side by side from sm up.
+                      <div className="grid grid-cols-1 sm:grid-cols-[minmax(10rem,2fr)_3fr] gap-1.5 pl-5">
                         <Input
                           aria-label={`Dose de ${m.name}`}
                           className="h-7 text-xs"
@@ -921,6 +927,11 @@ export function DocumentComposerModal({
         {catalogError && <p role="alert" className="px-5 text-xs text-destructive">Não foi possível consultar o catálogo. Edite a busca para tentar novamente ou preencha o medicamento manualmente.</p>}
         {canSign && !signing?.active && (
           <p className="px-5 text-[0.6875rem] text-muted-foreground">Para gerar e assinar, abra a sessão de assinatura (com o segundo fator ativo) na lista de documentos do paciente.</p>
+        )}
+        {error && (
+          <p ref={errorRef} role="alert" tabIndex={-1} className={cn('mx-5 mb-3', dialogLayout.error)}>
+            {error}
+          </p>
         )}
         {/* Stacked on phones (primary action on top), side by side from sm up. */}
         <div className="px-5 py-3 border-t border-border/50 shrink-0 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

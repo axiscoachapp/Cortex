@@ -72,16 +72,15 @@ describe('rescued recording', () => {
     mocks.saveDraft.mockRejectedValueOnce(new Error('Failed to fetch'));
     render(tree());
     fireEvent.click(await screen.findByRole('button', { name: 'Processar gravação' }));
-    await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Consulta preservada para nova tentativa',
-      description: expect.stringContaining('continua guardado neste navegador'),
-    })));
+    // Said above the composer (not a toast), with where the audio is.
+    expect(await screen.findByText(/^Sem conexão com o servidor\. .*O áudio ainda não foi enviado e continua guardado neste navegador/)).toBeInTheDocument();
+    expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
     expect(mocks.deleteRescued).not.toHaveBeenCalled();
     expect(mocks.upload).not.toHaveBeenCalled();
     // No phantom draft: the parked recording is still the one offered.
     expect(screen.queryByText(/guardado apenas nesta aba/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reenviar áudio' })).not.toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível enviar esta gravação. Ela continua guardada neste navegador');
+    expect(screen.getAllByRole('alert').some((alert) => alert.textContent?.includes('Não foi possível enviar esta gravação. Ela continua guardada neste navegador'))).toBe(true);
     expect(mocks.order).toContain('park:rescue-1');
 
     mocks.order.length = 0;
@@ -197,7 +196,7 @@ describe('"Recuperar consulta"', () => {
     mocks.exists.mockResolvedValue({ data: false, error: new Error('Object not found') });
     render(tree());
     fireEvent.click(await screen.findByRole('button', { name: 'Recuperar consulta' }));
-    await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Áudio não encontrado no servidor' })));
+    expect(await screen.findByText(/^Áudio não encontrado no servidor/)).toBeInTheDocument();
     expect(mocks.invoke).not.toHaveBeenCalledWith('transcribe-consultation', expect.anything());
     expect(mocks.download).not.toHaveBeenCalled();
   });

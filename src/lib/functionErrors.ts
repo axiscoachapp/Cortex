@@ -44,6 +44,65 @@ const TECHNICAL_MESSAGES = [
   /duplicate key/i,
 ];
 
+/** What the doctor was doing when a call failed; each has one fixed sentence. */
+export type FailedAction =
+  | 'document'
+  | 'aiDocument'
+  | 'question'
+  | 'comment'
+  | 'attachment'
+  | 'consultation'
+  | 'draft'
+  | 'discard'
+  | 'note'
+  | 'profile';
+
+/** Fixed sentences: what happened, that nothing was lost, and what to do. */
+export const FAILURE_SENTENCES: Record<FailedAction, string> = {
+  document: 'Não foi possível gerar o documento. Nada foi perdido. Tente de novo.',
+  aiDocument: 'Não foi possível gerar o texto com a IA. Nada foi perdido. Tente de novo.',
+  question: 'Não foi possível enviar a pergunta. Nada foi perdido. Toque em "Tentar novamente" na pergunta.',
+  comment: 'Não foi possível salvar o comentário. O texto voltou para o campo. Tente de novo.',
+  attachment: 'Não foi possível anexar o documento. Nada foi salvo pela metade. Tente de novo.',
+  consultation: 'Não foi possível processar a consulta.',
+  draft: 'Não foi possível salvar as observações da revisão. Retome a revisão e tente de novo antes de sair.',
+  discard: 'Não foi possível excluir o rascunho. Ele continua salvo. Tente de novo.',
+  note: 'Não foi possível salvar a evolução. Seu texto continua na tela. Tente de novo.',
+  profile: 'Não foi possível atualizar o perfil. Nada foi alterado. Tente de novo.',
+};
+
+export const CONNECTION_FAILURE = 'Sem conexão com o servidor. Nada foi perdido. Verifique a internet e tente de novo.';
+export const UNAVAILABLE_FAILURE = 'O serviço está indisponível agora. Nada foi perdido. Tente de novo em alguns minutos.';
+export const SESSION_FAILURE = 'Sua sessão terminou. Entre de novo para continuar. Nada foi perdido.';
+export const BUSY_FAILURE = 'Muitas solicitações seguidas. Aguarde um minuto e tente de novo. Nada foi perdido.';
+export const PRESCRIBER_FAILURE =
+  'O cadastro do prescritor está incompleto (nome, CRM ou endereço). Peça à equipe Cortex para conferir antes de emitir o documento.';
+
+/**
+ * A fixed pt-BR sentence for a failed call, never the server's own text.
+ * Known signals map to their sentence: no connection, session ended, service
+ * unavailable (503, not configured), rate limit, missing prescriber data.
+ * The one exception is a 422: our functions answer it with a written
+ * instruction for the doctor (e.g. "complete o CPF do paciente"), which is
+ * what the doctor has to fix, so it is kept when it is Portuguese prose.
+ */
+export async function plainFailureMessage(error: unknown, action: FailedAction): Promise<string> {
+  const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  const name = error && typeof error === 'object' && 'name' in error ? String((error as { name: unknown }).name) : '';
+  if (name === 'FunctionsFetchError' || /Failed to send a request|Failed to fetch|NetworkError|Load failed/i.test(raw))
+    return CONNECTION_FAILURE;
+  const status = functionErrorStatus(error);
+  const body = await functionErrorBody(error);
+  if (body?.missingPrescriber) return PRESCRIBER_FAILURE;
+  if (status === 401) return SESSION_FAILURE;
+  if (status === 503 || body?.code === 'not_configured') return UNAVAILABLE_FAILURE;
+  if (status === 429 && !body?.quotaExceeded) return BUSY_FAILURE;
+  const text = typeof body?.error === 'string' ? body.error.trim() : '';
+  if (status === 422 && text && !TECHNICAL_MESSAGES.some((re) => re.test(text)) && /[ãáéíóúçõâêô]|\b(não|informe|complete|paciente)\b/i.test(text))
+    return text;
+  return FAILURE_SENTENCES[action];
+}
+
 /**
  * A user-facing pt-BR message for a failed Edge Function call or Supabase
  * request: the server's own `error` text when it sent one, a connection

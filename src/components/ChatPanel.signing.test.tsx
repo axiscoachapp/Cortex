@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
   toast: vi.fn(),
   open: vi.fn(),
-  composer: {} as { onGenerate?: (payload: Record<string, unknown>) => Promise<void>; signing?: unknown },
+  composer: {} as { onGenerate?: (payload: Record<string, unknown>) => Promise<void>; signing?: unknown; error?: string },
   generated: { prescriptionId: '', pdfSha256: '' },
   sign: [] as Array<{ data: unknown; error: unknown }>,
   state: { active: true, configured: true } as Record<string, unknown>,
@@ -47,9 +47,10 @@ vi.mock('@/components/DocumentPreviewModal', () => ({ DocumentPreviewModal: () =
 vi.mock('@/components/RecordingModeDialog', () => ({ RecordingModeDialog: () => null }));
 // The composer is replaced by its contract: the props ChatPanel passes.
 vi.mock('@/components/DocumentComposerModal', () => ({
-  DocumentComposerModal: (props: { onGenerate: (payload: Record<string, unknown>) => Promise<void>; signing?: unknown }) => {
+  DocumentComposerModal: (props: { onGenerate: (payload: Record<string, unknown>) => Promise<void>; signing?: unknown; error?: string }) => {
     mocks.composer.onGenerate = props.onGenerate;
     mocks.composer.signing = props.signing;
+    mocks.composer.error = props.error;
     return null;
   },
 }));
@@ -99,7 +100,7 @@ describe('Gerar e assinar from the consultation', () => {
     const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
     render(<QueryClientProvider client={client}><ChatPanel messages={['older','latest'].map(id=>({id,type:'soap' as const,title:'Evolução '+id,content:'SOAP '+id,timestamp:new Date(),consultationId:id}))} onMessagesChange={vi.fn()} chiefComplaint="" preBriefing={null} briefingLoading={false} userId="doctor" patient={patient}/></QueryClientProvider>);
     const panel=await screen.findByRole('region',{name:'Pós-consulta'});expect(screen.getAllByRole('region',{name:'Pós-consulta'})).toHaveLength(1);
-    fireEvent.click(within(panel).getByRole('button',{name:'Receita / Atestado'}));
+    fireEvent.click(within(panel).getByRole('button',{name:'Receita / atestado'}));
     await waitFor(()=>expect(mocks.composer.signing).toEqual({active:true}));
     await act(async()=>{await mocks.composer.onGenerate!(sickNote(false));});
     expect(calls('generate-prescription')[0][1].body).toMatchObject({patientId:patient.id,consultationId:'latest'});
@@ -255,4 +256,43 @@ describe('late answers after the context changed', () => {
       expect(localStorage.length).toBe(0); // the operation itself still ended normally
     });
   }
+});
+
+// Round 3 (M 11): a failed generation is said inside the composer, above its
+// buttons, in a fixed sentence; never a toast with the server's text.
+describe('a failed generation', () => {
+  const failWith = (status: number, body: Record<string, unknown>) => {
+    const base = mocks.invoke.getMockImplementation()!;
+    mocks.invoke.mockImplementation(async (name: string, options: unknown) => name === 'generate-prescription'
+      ? { data: null, error: Object.assign(new Error('non-2xx'), { context: new Response(JSON.stringify(body), { status }) }) }
+      : base(name, options));
+  };
+
+  it('stays in the composer with a plain sentence', async () => {
+    failWith(500, { error: 'TypeError: undefined is not an object' });
+    await openComposer();
+    await act(async () => { await mocks.composer.onGenerate!(sickNote(false)); });
+    expect(mocks.composer.error).toBe('Não foi possível gerar o documento. Nada foi perdido. Tente de novo.');
+    expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+  });
+
+  it('names the missing prescriber data and who fixes it', async () => {
+    failWith(400, { error: 'Dados do prescritor incompletos', missingPrescriber: true });
+    await openComposer();
+    await act(async () => { await mocks.composer.onGenerate!(sickNote(false)); });
+    expect(mocks.composer.error).toMatch(/cadastro do prescritor está incompleto.*equipe Cortex/);
+    expect(mocks.composer.error).not.toMatch(/implantação/);
+  });
+
+  it('keeps what the doctor must fix from a 422, and clears it on the next attempt', async () => {
+    failWith(422, { error: 'Para a receita de antimicrobiano, complete no cadastro do paciente: CPF.' });
+    await openComposer();
+    await act(async () => { await mocks.composer.onGenerate!(sickNote(false)); });
+    expect(mocks.composer.error).toBe('Para a receita de antimicrobiano, complete no cadastro do paciente: CPF.');
+    mocks.invoke.mockImplementation(async (name: string) => name === 'generate-prescription'
+      ? { data: { ...mocks.generated, accessCode: 'ABC123', status: 'generated' }, error: null }
+      : name === 'signature-session/state' ? { data: mocks.state, error: null } : { data: { questions: [] }, error: null });
+    await act(async () => { await mocks.composer.onGenerate!(sickNote(false)); });
+    expect(mocks.composer.error).toBe('');
+  });
 });

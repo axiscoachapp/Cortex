@@ -25,7 +25,15 @@ import {
   Share2,
   MonitorSpeaker,
   FileSignature,
+  ChevronDown,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { lastConsultationLabel } from '@/lib/dates';
 import { useRecording, ConsultationMode } from '@/hooks/useRecording';
 import { AUDIO_UPLOAD_LIMIT_BYTES, RECORDING_STOP_BYTES, RECORDING_WARN_BYTES } from '@/lib/recordingLimits';
 import { RecordingModeDialog } from '@/components/RecordingModeDialog';
@@ -53,7 +61,7 @@ import { ProfileUpdates } from '@/types/patient';
 import { printSoap } from '@/lib/printDoc';
 import { UsageMeter, UsageOverBanner } from '@/components/UsageMeter';
 import { ConsultationDraft, loadConsultationDraft, saveConsultationDraft } from '@/lib/consultationDrafts';
-import { functionErrorBody, functionErrorMessage, functionErrorStatus } from '@/lib/functionErrors';
+import { functionErrorBody, functionErrorMessage, functionErrorStatus, plainFailureMessage, PRESCRIBER_FAILURE } from '@/lib/functionErrors';
 import { ToastAction } from '@/components/ui/toast';
 import {
   saveRescuedRecording,
@@ -74,14 +82,6 @@ class HandledError extends Error {}
 class AudioTooLargeError extends Error {}
 
 const audioSizeMb = (bytes: number) => Math.max(1, Math.round(bytes / (1024 * 1024)));
-
-/** "YYYY-MM-DD" stays a calendar date (no time-zone shift); timestamps use the local date. */
-function formatVisitDate(value: string): string {
-  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (day) return `${day[3]}/${day[2]}/${day[1]}`;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('pt-BR');
-}
 
 /**
  * Allergies, medications and main diagnoses under the patient's name, for
@@ -306,6 +306,17 @@ export function ChatPanel({
     };
   }, []);
   const isCurrentPatient = (id: string) => mountedRef.current && activePatientIdRef.current === id;
+  // A failed action is shown right above the composer, where the doctor is
+  // looking, and only for the patient it belongs to (not as a toast).
+  const [failure, setFailure] = useState<{ patientId: string; text: string } | null>(null);
+  // Work that finishes after the doctor moved to another patient still says
+  // so, as a toast, since its own composer is no longer on screen.
+  const showFailure = (forPatientId: string | undefined, text: string) => {
+    if (forPatientId && isCurrentPatient(forPatientId)) setFailure({ patientId: forPatientId, text });
+    else if (mountedRef.current) toast({ title: 'Ação não concluída', description: text, variant: 'destructive' });
+  };
+  // Failures of "Gerar documento" stay inside the composer, above its buttons.
+  const [composerError, setComposerError] = useState('');
 
   // ── Live-copilot plumbing (refs avoid stale closures inside recorder cbs) ────
   const copilotPendingRef = useRef<Array<{ mimeType: string; data: string }>>([]);
@@ -650,11 +661,7 @@ export function ChatPanel({
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      toast({
-        title: 'Não foi possível copiar',
-        description: 'Selecione o texto e copie manualmente, ou permita o acesso à área de transferência.',
-        variant: 'destructive',
-      });
+      showFailure(patient?.id, 'Não foi possível copiar. Selecione o texto e copie manualmente, ou permita o acesso à área de transferência.');
       return;
     }
     setCopiedId(messageId);
@@ -729,11 +736,7 @@ export function ChatPanel({
       if (isCurrentPatient(patient.id)) toast({ title: 'Comentário processado', description: summary });
     } catch (err: unknown) {
       if (isCurrentPatient(patient.id)) setInputValue((current) => current || text);
-      toast({
-        title: 'Erro ao processar comentário',
-        description: managedDocumentMessage(await functionErrorMessage(err, 'Tente novamente.')),
-        variant: 'destructive',
-      });
+      showFailure(patient.id, await plainFailureMessage(err, 'comment'));
     } finally {
       if (isCurrentPatient(patient.id)) setSavingNote(false);
     }
@@ -910,7 +913,7 @@ export function ChatPanel({
     e.target.value = '';
     if (!file || !patient) return;
     if (file.size > 15 * 1024 * 1024) {
-      toast({ title: 'Arquivo muito grande', description: 'Máximo de 15 MB para análise.', variant: 'destructive' });
+      showFailure(patient.id, 'O arquivo passa de 15 MB e não foi anexado. Escolha um arquivo menor.');
       return;
     }
     setAttachingFile(true);
@@ -983,11 +986,7 @@ export function ChatPanel({
         description: 'Confira a proposta antes de adicionar informações ao prontuário.',
       });
     } catch (err: unknown) {
-      toast({
-        title: 'Erro ao anexar documento',
-        description: managedDocumentMessage(await functionErrorMessage(err, 'Tente novamente.')),
-        variant: 'destructive',
-      });
+      showFailure(forPatientId, await plainFailureMessage(err, 'attachment'));
     } finally {
       if (isCurrentPatient(forPatientId)) setAttachingFile(false);
     }
@@ -997,6 +996,7 @@ export function ChatPanel({
   const handleOpenComposer = (consultationId?: string) => {
     composerPatientIdRef.current = patient?.id ?? null;
     composerConsultationIdRef.current = consultationId ?? currentConsultationId ?? undefined;
+    setComposerError('');
     setComposerOpen(true);
   };
 
@@ -1009,6 +1009,7 @@ export function ChatPanel({
     if (!patient || generatingRx || composerPatientIdRef.current !== patient.id) return;
     const actor = userId;
     setGeneratingRx(true);
+    setComposerError('');
     try {
       const { data, error } = await supabase.functions.invoke('generate-prescription', {
         body: {
@@ -1022,12 +1023,7 @@ export function ChatPanel({
       if (error) {
         const body = await functionErrorBody(error);
         if (body?.missingPrescriber) {
-          toast({
-            title: 'Cadastro do prescritor pendente',
-            description:
-              'Solicite à equipe de implantação a conferência de nome, CRM e endereço antes de emitir o documento.',
-            variant: 'destructive',
-          });
+          if (isCurrentPatient(patient.id)) setComposerError(PRESCRIBER_FAILURE);
           return;
         }
         throw error;
@@ -1077,7 +1073,7 @@ export function ChatPanel({
       const previewUrl = typeof data?.previewUrl === 'string' && /^https:\/\//.test(data.previewUrl) ? data.previewUrl : '';
       toast({
         title: docLabel,
-        description: `Imprima, assine e carimbe (ainda sem assinatura digital ICP-Brasil). Código de acesso do paciente: ${data?.accessCode}.`,
+        description: `Imprima, assine e carimbe: este documento não tem assinatura digital. Código de acesso do paciente: ${data?.accessCode}.`,
         duration: previewUrl ? 120_000 : undefined,
         action: previewUrl ? (
           <ToastAction altText="Abrir PDF do documento" onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}>
@@ -1087,26 +1083,22 @@ export function ChatPanel({
       });
       queryClient.invalidateQueries({ queryKey: ['patient-prescriptions', patient.id] });
     } catch (err: unknown) {
-      toast({
-        title: 'Erro ao gerar documento',
-        description: managedDocumentMessage(await functionErrorMessage(err, 'Tente novamente.')),
-        variant: 'destructive',
-      });
+      const message = managedDocumentMessage(await plainFailureMessage(err, 'document'));
+      if (isCurrentPatient(patient.id)) setComposerError(message);
     } finally {
       if (isCurrentPatient(patient.id)) setGeneratingRx(false);
     }
   };
 
   /** supabase-js wraps non-2xx as FunctionsHttpError with the JSON body on
-   *  err.context. Returns true when the error was a quota 429 (and toasts). */
+   *  err.context. Returns true when the error was a quota 429 (and says so above the composer). */
   const handleQuotaError = async (error: unknown): Promise<boolean> => {
     const body = await functionErrorBody(error);
     if (body?.quotaExceeded) {
-      toast({
-        title: 'Limite diário atingido',
-        description: typeof body.error === 'string' ? body.error : 'Aguarde o reset diário ou solicite aumento.',
-        variant: 'destructive',
-      });
+      showFailure(
+        patient?.id,
+        'O limite diário de uso da IA foi atingido. Nada foi perdido. O uso renova à meia-noite (horário de Brasília); até lá, registre manualmente.',
+      );
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
       return true;
     }
@@ -1353,22 +1345,20 @@ export function ChatPanel({
       }
       if (error instanceof AudioTooLargeError) {
         if (mountedRef.current) setTooLarge((list) => ({ ...list, [draft.id]: audioBlob.size }));
-        toast({
-          title: 'Gravação grande demais para a IA',
-          description: 'Esta gravação passa de 25 MB e não pode ser processada. Baixe uma cópia do áudio se quiser guardá-lo e escreva a evolução manualmente.',
-          variant: 'destructive',
-        });
+        showFailure(
+          draft.patientId,
+          'Esta gravação passa de 25 MB e não pode ser processada pela IA. Nada foi perdido: baixe uma cópia do áudio se quiser guardá-lo e escreva a evolução manualmente.',
+        );
       } else if (!(error instanceof HandledError)) {
-        const reason = await functionErrorMessage(error, 'Não foi possível processar a consulta.');
-        toast({
-          title: 'Consulta preservada para nova tentativa',
-          description: audioOnServer
+        const reason = await plainFailureMessage(error, 'consultation');
+        showFailure(
+          draft.patientId,
+          audioOnServer
             ? `${reason} O áudio está salvo no rascunho; use "Recuperar consulta" para tentar de novo.`
             : parkedHere
               ? `${reason} O áudio ainda não foi enviado e continua guardado neste navegador. Tente de novo quando a conexão voltar.`
               : `${reason} O áudio ainda não foi enviado e está guardado apenas nesta aba: reenvie ou baixe uma cópia antes de fechá-la.`,
-          variant: 'destructive',
-        });
+        );
       }
     } finally {
       releaseCapture(draft.id);
@@ -1394,7 +1384,7 @@ export function ChatPanel({
     if (!draft.audioStoragePath) return;
     const { data, error } = await supabase.storage.from('audio-recordings').download(draft.audioStoragePath);
     if (error || !data) {
-      toast({ title: 'Não foi possível baixar o áudio', description: 'Verifique a conexão e tente de novo.', variant: 'destructive' });
+      showFailure(draft.patientId, 'Não foi possível baixar o áudio. Ele continua salvo no servidor. Verifique a conexão e tente de novo.');
       return;
     }
     downloadLocalAudio(data, draft.audioMimeType);
@@ -1421,22 +1411,17 @@ export function ChatPanel({
     setIsProcessing(true);
     try {
       if (await storedAudioMissing(draft.audioStoragePath)) {
-        toast({
-          title: 'Áudio não encontrado no servidor',
-          description: 'O envio desta gravação não terminou e o áudio não está no servidor nem neste navegador. Se você tem o arquivo, use "Enviar áudio salvo"; se não, exclua este rascunho.',
-          variant: 'destructive',
-        });
+        showFailure(
+          draft.patientId,
+          'Áudio não encontrado no servidor: o envio desta gravação não terminou e o áudio não está no servidor nem neste navegador. Se você tem o arquivo, use "Enviar áudio salvo"; se não, exclua este rascunho.',
+        );
         return;
       }
       // The audio is already in Storage and the server reads it by path:
       // nothing needs to be downloaded here.
       await processConsultation(new Blob([], { type: draft.audioMimeType }), draft.audioMimeType, draft.originalComments, draft);
     } catch {
-      toast({
-        title: 'Não foi possível recuperar o áudio',
-        description: 'Seu rascunho continua salvo. Verifique a conexão.',
-        variant: 'destructive',
-      });
+      showFailure(draft.patientId, 'Não foi possível recuperar o áudio. Seu rascunho continua salvo. Verifique a conexão e tente de novo.');
     } finally {
       if (isCurrentPatient(draft.patientId)) setIsProcessing(false);
     }
@@ -1448,11 +1433,7 @@ export function ChatPanel({
     try {
       const { error } = await supabase.functions.invoke('discard-consultation', { body: { draftId: draft.id } });
       if (error) {
-        toast({
-          title: 'Não foi possível excluir o rascunho',
-          description: await functionErrorMessage(error, 'Tente novamente.'),
-          variant: 'destructive',
-        });
+        showFailure(draft.patientId, await plainFailureMessage(error, 'discard'));
         return;
       }
       localAudioRef.current.delete(draft.id);
@@ -1481,6 +1462,7 @@ export function ChatPanel({
 
   const sendQuestion = async (text: string, failedMessageId?: string) => {
     if (!patient || isChatLoading) return;
+    setFailure(null);
     const prior = retryTurn.current;
     const turn = prior?.patientId === patient.id && prior.text === text ? prior : {patientId:patient.id,text,id:crypto.randomUUID(),timestamp:new Date()};
     retryTurn.current = turn;
@@ -1560,11 +1542,7 @@ export function ChatPanel({
     } catch (err: unknown) {
       queryClient.invalidateQueries({queryKey:['patient-conversation',userId,turn.patientId]});
       if (isCurrentPatient(turn.patientId)) setFailedQuestions((list) => ({ ...list, [userMsg.id]: text }));
-      toast({
-        title: 'Pergunta não enviada',
-        description: await functionErrorMessage(err, 'Não foi possível consultar a IA. Use "Tentar novamente" na pergunta.'),
-        variant: 'destructive',
-      });
+      showFailure(turn.patientId, await plainFailureMessage(err, 'question'));
     } finally {
       if (isCurrentPatient(patient.id)) setIsChatLoading(false);
     }
@@ -1581,6 +1559,7 @@ export function ChatPanel({
 
     // comment mode — guard against Enter re-submitting while a note is saving
     if (savingNote) return;
+    setFailure(null);
     setInputValue('');
     if (isRecording) {
       addTranscriptionComment(text);
@@ -1621,11 +1600,10 @@ export function ChatPanel({
         .select('id')
         .maybeSingle();
       if (error || !data) {
-        toast({
-          title: 'Erro ao salvar alterações',
-          description: 'O registro pode ter sido alterado em outra janela. Reabra a edição antes de tentar novamente.',
-          variant: 'destructive',
-        });
+        showFailure(
+          patient.id,
+          'Não foi possível salvar as alterações. Seu texto continua na tela. A evolução pode ter sido alterada em outra janela: copie o texto, reabra a edição e tente de novo.',
+        );
         return;
       }
       queryClient.invalidateQueries({ queryKey: ['patient-consultations'] });
@@ -1648,7 +1626,7 @@ export function ChatPanel({
       .maybeSingle();
     if (!isCurrentPatient(patient.id)) return;
     if (error || !data) {
-      toast({ title: 'Não foi possível abrir a edição', variant: 'destructive' });
+      showFailure(patient.id, 'Não foi possível abrir a edição da evolução. Nada foi alterado. Tente de novo.');
       return;
     }
     editRevisionRef.current = data.revision;
@@ -1725,12 +1703,8 @@ export function ChatPanel({
     setReviewData(null);
     try {
       await saveConsultationDraft(userId, preserved);
-    } catch {
-      toast({
-        title: 'Observações ainda não foram salvas',
-        description: 'Retome a revisão e tente novamente antes de sair.',
-        variant: 'destructive',
-      });
+    } catch (err) {
+      showFailure(preserved.patientId, await plainFailureMessage(err, 'draft'));
     } finally {
       setDraftMutations(count => count - 1);
       void queryClient.invalidateQueries({queryKey:['consultation-recovery',userId]});
@@ -1740,11 +1714,7 @@ export function ChatPanel({
   const handleSendWhatsapp = (message: string) => {
     const raw = patient?.phone?.replace(/\D/g, '') ?? '';
     if (!raw) {
-      toast({
-        title: 'Telefone não cadastrado',
-        description: 'Adicione o telefone do paciente no perfil para enviar via WhatsApp.',
-        variant: 'destructive',
-      });
+      showFailure(patient?.id, 'O telefone do paciente não está cadastrado. Adicione o telefone no perfil para enviar pelo WhatsApp.');
       return;
     }
     const number = raw.startsWith('55') ? raw : `55${raw}`;
@@ -1772,11 +1742,7 @@ export function ChatPanel({
       .single();
     if (readError || !current || current.revision !== expectedRevision) {
       queryClient.invalidateQueries({ queryKey: ['patients', userId] });
-      toast({
-        title: 'O perfil foi alterado',
-        description: 'Confira os dados atualizados antes de aceitar novamente.',
-        variant: 'destructive',
-      });
+      showFailure(patient.id, 'O perfil foi alterado em outra tela. Nada foi salvo. Confira os dados atualizados e aceite de novo.');
       throw new Error('Perfil alterado');
     }
     const { data, error } = await supabase
@@ -1791,11 +1757,7 @@ export function ChatPanel({
       .select('id')
       .maybeSingle();
     if (error || !data) {
-      toast({
-        title: 'Erro ao atualizar perfil',
-        description: 'As alterações não foram salvas. Tente novamente.',
-        variant: 'destructive',
-      });
+      showFailure(patient.id, await plainFailureMessage(error, 'profile'));
       throw error;
     }
     queryClient.invalidateQueries({ queryKey: ['patients', userId] });
@@ -1808,7 +1770,7 @@ export function ChatPanel({
     if (!patient) return [];
     const missing: string[] = [];
     if (!patient.phone) missing.push('Telefone');
-    if (!patient.email) missing.push('Email');
+    if (!patient.email) missing.push('E-mail');
     return missing;
   };
 
@@ -1832,11 +1794,7 @@ export function ChatPanel({
       queryClient.invalidateQueries({ queryKey: ['usage-daily', userId] });
     } catch (err: unknown) {
       if (isCurrentPatient(patient.id)) setDocumentModal(null);
-      toast({
-        title: 'Erro ao gerar documento',
-        description: managedDocumentMessage(await functionErrorMessage(err, 'Tente novamente.')),
-        variant: 'destructive',
-      });
+      showFailure(origin.patientId, await plainFailureMessage(err, 'aiDocument'));
     }
   };
 
@@ -1900,12 +1858,12 @@ export function ChatPanel({
           document.body,
         )}
       {/* Header */}
-      <header className="sticky top-0 z-10 px-4 md:px-6 py-3 md:py-4 border-b border-border/50 bg-card/95 backdrop-blur-sm">
-        <div className="flex flex-wrap items-center gap-3">
+      <header className="sticky top-0 z-10 px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 border-b border-border/50 bg-card/95 backdrop-blur-sm">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:gap-3">
           {patient.photoUrl ? (
-            <img src={patient.photoUrl} alt={patient.name} className="w-10 h-10 rounded-full object-cover" />
+            <img src={patient.photoUrl} alt={patient.name} className="hidden sm:block w-10 h-10 rounded-full object-cover" />
           ) : (
-            <div className="w-10 h-10 shrink-0 rounded-full bg-medical-blue-light flex items-center justify-center">
+            <div className="hidden sm:flex w-10 h-10 shrink-0 rounded-full bg-medical-blue-light items-center justify-center">
               <span className="text-medical-blue font-semibold text-sm">
                 {patient.name
                   .split(' ')
@@ -1916,28 +1874,55 @@ export function ChatPanel({
             </div>
           )}
           <div className="min-w-0 flex-1 basis-48">
-            <h1 className="text-sm sm:text-base font-semibold text-foreground break-words">{patient.name}</h1>
-            <Badge variant={patient.status} className="mt-1">
-              {({retorno:'Retorno',seguimento:'Seguimento',novo:'Novo',atendimento:'Em atendimento'})[patient.status]}
-            </Badge>
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1 sm:block flex flex-wrap items-center gap-x-2">
+                <h1 className="text-sm sm:text-base font-semibold text-foreground break-words">{patient.name}</h1>
+                <Badge variant={patient.status} className="sm:mt-1">
+                  {({retorno:'Retorno',seguimento:'Seguimento',novo:'Novo',atendimento:'Em atendimento'})[patient.status]}
+                </Badge>
+              </div>
+              {/* Phone: one menu instead of three wrapped buttons. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="sm:hidden h-9 shrink-0 gap-1 px-3 text-xs">
+                    Ações
+                    <ChevronDown className="w-3.5 h-3.5" aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[14rem]">
+                  <DropdownMenuItem className="min-h-11" disabled={!onOpenPatientWork} onSelect={() => onOpenPatientWork?.(true)}>
+                    Escrever evolução
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="min-h-11" disabled={!onOpenPatientWork} onSelect={() => onOpenPatientWork?.(false)}>
+                    Pendências e retornos
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="min-h-11" onSelect={() => handleOpenComposer()}>
+                    Receita / atestado
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="min-h-11" disabled={attachingFile} onSelect={() => attachInputRef.current?.click()}>
+                    Anexar documento
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <ClinicalSafetyRow patient={patient} onOpen={onOpenPatientPanel} />
           </div>
-          <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto sm:ml-auto">
+          <div className="hidden sm:flex gap-2 sm:ml-auto">
           <Button variant="outline" size="sm" className="text-xs whitespace-normal h-auto min-h-8 py-1.5 px-2" onClick={() => onOpenPatientWork?.(true)} disabled={!onOpenPatientWork}>
-              Consulta manual
+            Escrever evolução
           </Button>
           <Button variant="outline" size="sm" className="text-xs whitespace-normal h-auto min-h-8 py-1.5 px-2" onClick={() => onOpenPatientWork?.(false)} disabled={!onOpenPatientWork}>
-            Acompanhamento
+            Pendências e retornos
           </Button>
           <Button variant="outline" size="sm" onClick={() => handleOpenComposer()} className="text-xs whitespace-normal h-auto min-h-8 py-1.5 px-2 gap-1.5">
-            <FileSignature className="hidden sm:block w-4 h-4 shrink-0" />Receita / atestado
+            <FileSignature className="w-4 h-4 shrink-0" />Receita / atestado
           </Button>
           </div>
         </div>
       </header>
 
       {/* Chat Content */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 md:px-6 py-4 md:py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 space-y-4">
         <ClinicalProposals patient={patient} userId={userId} />
 
         {draftLoadError && (
@@ -2099,7 +2084,7 @@ export function ChatPanel({
               <div className="min-w-0 flex-1 space-y-2">
                 <h3 className="text-sm font-semibold text-foreground [overflow-wrap:anywhere]">
                   {lastVisitDate
-                    ? `Última consulta: ${formatVisitDate(lastVisitDate)}${lastConsultation?.chief_complaint?.trim() ? ` — ${lastConsultation.chief_complaint.trim()}` : ''}`
+                    ? `Última consulta: ${lastConsultationLabel(lastVisitDate)}${lastConsultation?.chief_complaint?.trim() ? ` — ${lastConsultation.chief_complaint.trim()}` : ''}`
                     : 'Nenhuma consulta anterior registrada'}
                 </h3>
                 {(lastConsultation?.soap_note || (!briefingRequested && onRetryBriefing && lastVisitDate)) && (
@@ -2411,7 +2396,7 @@ export function ChatPanel({
                               onClick={() => handleGenerateDocument('patient_summary', message.content)}
                             >
                               <ClipboardList className="w-3.5 h-3.5" />
-                              Resumo para Paciente
+                              Resumo para o paciente
                             </Button>
                             <Button
                               variant="outline"
@@ -2420,7 +2405,7 @@ export function ChatPanel({
                               onClick={() => handleGenerateDocument('referral', message.content)}
                             >
                               <Share2 className="w-3.5 h-3.5" />
-                              Gerar Encaminhamento
+                              Encaminhamento médico
                             </Button>
                             <Button
                               variant="outline"
@@ -2430,7 +2415,7 @@ export function ChatPanel({
                               onClick={() => handleOpenComposer(message.consultationId)}
                             >
                               <FileSignature className="w-3.5 h-3.5" />
-                              Receita / Atestado
+                              Receita / atestado
                             </Button>
                             <Button variant="outline" size="sm" className="gap-1.5 text-xs h-auto min-h-11 max-w-full whitespace-normal" disabled={!onOpenPatientWork} onClick={()=>onOpenPatientWork?.(false,'instruction')}>Registrar orientações</Button>
                             <Button variant="outline" size="sm" className="gap-1.5 text-xs h-auto min-h-11 max-w-full whitespace-normal" disabled={!onOpenPatientWork} onClick={()=>onOpenPatientWork?.(false,'followup')}>Planejar retorno</Button>
@@ -2531,7 +2516,7 @@ export function ChatPanel({
       </div>
 
       {/* Input Area */}
-      <div className="px-3 md:px-4 py-3 space-y-2 md:space-y-3 border-t border-border/30">
+      <div className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 space-y-2 md:space-y-3 border-t border-border/30">
         <UsageOverBanner />
 
         {/* Live copilot — glanceable summary + suggestions while recording */}
@@ -2657,9 +2642,28 @@ export function ChatPanel({
           </div>
         )}
 
-        <div className="input-command-center p-3">
-          {/* Mode toggle */}
-          <div className="flex flex-wrap items-center gap-2 mb-2.5">
+        {failure && failure.patientId === patient.id && (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          >
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden />
+            <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">{failure.text}</p>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Fechar aviso"
+              className="-my-1 h-9 w-9 shrink-0 text-destructive hover:text-destructive"
+              onClick={() => setFailure(null)}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
+        <div className="input-command-center p-2 sm:p-3">
+          {/* Mode toggle; on the phone the composer is a single row (no usage chip, no hint). */}
+          <div className="hidden sm:flex flex-wrap items-center gap-2 mb-2.5">
             <div className="inline-flex min-w-0 p-0.5 rounded-lg bg-muted/60 border border-border/40">
               <button
                 type="button"
@@ -2700,7 +2704,7 @@ export function ChatPanel({
             <UsageMeter variant="inline" className="ml-auto shrink-0" />
           </div>
 
-          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] sm:flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <input
               ref={attachInputRef}
               type="file"
@@ -2708,10 +2712,25 @@ export function ChatPanel({
               className="hidden"
               onChange={handleAttachSelected}
             />
+            {/* Phone: one button switches between question and comment (the field's placeholder names the mode). */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={inputMode === 'question' ? 'Modo pergunta. Trocar para comentário' : 'Modo comentário. Trocar para pergunta'}
+              title={inputMode === 'question' ? 'Trocar para comentário' : 'Trocar para pergunta'}
+              onClick={() => setInputMode(inputMode === 'question' ? 'comment' : 'question')}
+              className={cn(
+                'sm:hidden h-10 w-10 shrink-0 rounded-xl',
+                inputMode === 'question' ? 'bg-medical-blue/10 text-medical-blue' : 'bg-amber-100 text-amber-800',
+              )}
+            >
+              {inputMode === 'question' ? <HelpCircle className="w-5 h-5" /> : <StickyNote className="w-5 h-5" />}
+            </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:text-foreground h-9 w-9"
+              className="hidden sm:inline-flex text-muted-foreground hover:text-foreground h-9 w-9"
               title="Anexar documento ou imagem do paciente"
               aria-label="Anexar documento ou imagem do paciente"
               onClick={() => attachInputRef.current?.click()}
@@ -2719,7 +2738,7 @@ export function ChatPanel({
             >
               {attachingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
             </Button>
-            <div className="col-span-3 order-first sm:order-none flex-1 min-w-0 relative">
+            <div className="flex-1 min-w-0 relative flex items-center gap-2">
               <input
                 type="text"
                 aria-label={
@@ -2739,18 +2758,18 @@ export function ChatPanel({
                       : 'Comentário — ex: "alérgico a penicilina", "iniciar Losartana 50mg", "solicitar hemograma"'
                 }
                 className={cn(
-                  'w-full h-10 px-4 rounded-xl border-0 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-muted-foreground',
+                  'w-full min-w-0 h-10 pl-3 pr-11 sm:px-4 rounded-xl border-0 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-muted-foreground',
                   inputMode === 'question'
                     ? 'bg-muted/50 focus:ring-medical-blue/30'
                     : 'bg-amber-50 dark:bg-amber-950/20 focus:ring-amber-500/30',
                 )}
               />
-            </div>
             <Button
               variant="ghost"
               size="icon"
               className={cn(
-                'h-9 w-9 justify-self-end',
+                // Phone: inside the field, so field and microphone share one row.
+                'absolute right-0.5 top-1/2 -translate-y-1/2 sm:static sm:translate-y-0 h-9 w-9 shrink-0',
                 inputMode === 'question'
                   ? 'text-muted-foreground hover:text-medical-blue'
                   : 'text-muted-foreground hover:text-amber-600',
@@ -2762,10 +2781,11 @@ export function ChatPanel({
             >
               {savingNote ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
+            </div>
             <Button
               variant={isRecording ? 'destructive' : 'record'}
               size="icon-lg"
-              className="rounded-full h-10 w-10 gap-2 sm:h-12 sm:w-auto sm:px-5"
+              className="rounded-full h-10 w-10 shrink-0 gap-2 sm:h-12 sm:w-auto sm:px-5"
               onClick={isRecording ? handleStopRecording : handleStartRecording}
               aria-label={isRecording ? 'Finalizar gravação' : 'Gravar consulta'}
               disabled={
@@ -2785,7 +2805,7 @@ export function ChatPanel({
           </div>
         </div>
         {(isProcessing || isChatLoading) && (
-          <p className="text-[0.625rem] sm:text-xs text-muted-foreground text-center">
+          <p className="hidden sm:block text-xs text-muted-foreground text-center">
             {isProcessing ? 'Processando consulta, aguarde...' : 'Assistente clínico pensando...'}
           </p>
         )}
@@ -2815,6 +2835,7 @@ export function ChatPanel({
           patient={patient}
           onGenerate={handleComposerGenerate}
           isGenerating={generatingRx}
+          error={composerError}
           signing={signatureSession?.available && signatureSession.configured ? { active: signatureSession.active } : null}
         />
       )}

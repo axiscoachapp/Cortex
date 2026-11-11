@@ -131,7 +131,7 @@ describe('patient-scoped asynchronous clinical work', () => {
     const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
     render(<QueryClientProvider client={client}><ChatPanel patient={patient('A')} userId="doctor" messages={[{id:'soap',type:'soap',title:'Evolução salva',content:'SOAP da consulta escolhida',timestamp:new Date(),consultationId:'consultation-A'}]} onMessagesChange={vi.fn()} chiefComplaint="" preBriefing={null} briefingLoading={false}/></QueryClientProvider>);
     const panel=await screen.findByRole('region',{name:'Pós-consulta'});expect(mocks.invoke).not.toHaveBeenCalled();
-    fireEvent.click(within(panel).getByRole('button',{name:'Resumo para Paciente'}));
+    fireEvent.click(within(panel).getByRole('button',{name:'Resumo para o paciente'}));
     await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledWith('generate-document',expect.objectContaining({body:expect.objectContaining({type:'patient_summary',soapNote:'SOAP da consulta escolhida'})})));
   });
   it.each(['preserve','discard'])('does not reload while a %s draft mutation is pending', async mode => {

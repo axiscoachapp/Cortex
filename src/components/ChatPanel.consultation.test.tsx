@@ -2,10 +2,13 @@
 // safety row below the desktop frame, long recordings, comment proposals,
 // failed questions, saved-note edits and the first card. Synthetic data only.
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ChatMessage, Patient } from '@/types/patient';
 import { ChatPanel } from './ChatPanel';
+import { lastConsultationLabel } from '@/lib/dates';
+import { FAILURE_SENTENCES } from '@/lib/functionErrors';
 
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -139,11 +142,14 @@ describe('long recordings', () => {
     await act(async () => { await mocks.recording.onStop!(huge, 'audio/webm', [], { captureId: 'capture-1', startedAt: '2026-11-11T09:00:00.000Z' }); });
     expect(mocks.upload).not.toHaveBeenCalled();
     expect(mocks.invoke).not.toHaveBeenCalledWith('transcribe-consultation', expect.anything());
-    expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Gravação grande demais para a IA' }));
+    // Said above the composer, not in a toast.
+    expect(await screen.findByText(/passa de 25 MB e não pode ser processada pela IA/)).toBeInTheDocument();
+    expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
     expect(await screen.findByText(/passa do limite de 25 MB/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Tentar enviar de novo|Processar gravação|Reenviar áudio/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Baixar cópia do áudio' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Escrever evolução' }));
+    // The header has its own "Escrever evolução"; the card's is the last one.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Escrever evolução' }).at(-1)!);
     expect(onOpenPatientWork).toHaveBeenCalledWith(true);
   });
 
@@ -219,14 +225,19 @@ describe('failed questions and server messages', () => {
     rerenderWith({ messages, onMessagesChange: (value) => { messages = typeof value === 'function' ? value(messages) : value; } });
     expect(screen.getByText('Qual a conduta?')).toBeInTheDocument();
     expect(screen.getByText(/Não enviada/)).toBeInTheDocument();
-    expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Pergunta não enviada', description: 'Esta pergunta já está em processamento.' }));
+    // A fixed sentence above the composer, never the server's own text, and no toast.
+    expect(await screen.findByRole('alert')).toHaveTextContent(FAILURE_SENTENCES.question);
+    expect(screen.queryByText('Esta pergunta já está em processamento.')).not.toBeInTheDocument();
+    expect(mocks.toast).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Pergunta ao assistente clínico')).toHaveValue('');
     const firstTurn = mocks.invoke.mock.calls[0][1].body.conversationId;
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' })); });
     expect(mocks.invoke.mock.calls[1][1].body).toMatchObject({ conversationId: firstTurn, userMessage: 'Qual a conduta?' });
     rerenderWith({ messages, onMessagesChange: (value) => { messages = typeof value === 'function' ? value(messages) : value; } });
     expect(screen.queryByText(/Não enviada/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(messages.filter((message) => message.type === 'user')).toHaveLength(1);
+    expect(mocks.invoke.mock.calls.filter(([name]) => name === 'chat-assistant')).toHaveLength(2);
   });
 
   it('shows the server message when the reviewed note cannot be saved', async () => {
@@ -278,7 +289,9 @@ describe('first card of the chart', () => {
     const onRetryBriefing = vi.fn();
     renderPanel({ onRetryBriefing });
     const card = await screen.findByRole('region', { name: 'Antes da consulta' });
-    expect(await within(card).findByRole('heading', { name: 'Última consulta: 12/10/2026 — Retorno com exames' })).toBeInTheDocument();
+    const label = lastConsultationLabel('2026-10-12T13:00:00.000Z');
+    expect(label).toMatch(/^12\/10\/2026 · /);
+    expect(await within(card).findByRole('heading', { name: `Última consulta: ${label} — Retorno com exames` })).toBeInTheDocument();
     expect(card.className).not.toContain('alert-briefing');
     expect(within(card).queryByText(/Prontuário aberto para visualização/)).not.toBeInTheDocument();
     fireEvent.click(within(card).getByRole('button', { name: 'Ver evolução' }));
@@ -293,5 +306,112 @@ describe('first card of the chart', () => {
     const record = await screen.findByRole('button', { name: 'Gravar consulta' });
     expect(within(record).getByText('Gravar consulta')).toBeInTheDocument();
     expect(screen.queryByText(/Grave com o botão vermelho/)).not.toBeInTheDocument();
+  });
+});
+
+// Round 3 (2026-11-11): calm on a phone, errors where the doctor is looking.
+describe('consultation header and composer on a phone (M 3, M 13)', () => {
+  it('puts the actions in one "Ações" menu below sm, with the agreed names, and keeps the buttons from sm up', async () => {
+    const onOpenPatientWork = vi.fn();
+    renderPanel({ onOpenPatientWork });
+    const menu = await screen.findByRole('button', { name: 'Ações' });
+    expect(menu.className).toContain('sm:hidden');
+    const desktop = screen.getByRole('button', { name: 'Pendências e retornos' }).parentElement!;
+    expect(desktop.className).toContain('hidden sm:flex');
+    expect(within(desktop).getByRole('button', { name: 'Escrever evolução' })).toBeInTheDocument();
+    expect(within(desktop).getByRole('button', { name: /Receita \/ atestado/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Consulta manual' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Acompanhamento' })).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(menu);
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Escrever evolução', 'Pendências e retornos', 'Receita / atestado', 'Anexar documento',
+    ]);
+    await user.click(screen.getByRole('menuitem', { name: 'Pendências e retornos' }));
+    expect(onOpenPatientWork).toHaveBeenCalledWith(false);
+  });
+
+  it('keeps the safety chips under the name next to the menu', async () => {
+    renderPanel({ onOpenPatientPanel: vi.fn(), patient: { ...base, allergies: ['Dipirona'] } });
+    const row = await screen.findByRole('button', { name: /Abrir painel do paciente/ });
+    expect(within(row).getByText('Alergia: Dipirona')).toBeInTheDocument();
+    expect(row.className.split(' ')).not.toContain('hidden');
+  });
+
+  it('is one row on the phone: mode switch, field (with send inside) and microphone; no usage chip or hint row', async () => {
+    renderPanel();
+    const field = await screen.findByLabelText('Pergunta ao assistente clínico');
+    const toggle = screen.getByRole('button', { name: 'Modo pergunta. Trocar para comentário' });
+    expect(toggle.className).toContain('sm:hidden');
+    const row = toggle.parentElement!;
+    expect(within(row).getByLabelText('Pergunta ao assistente clínico')).toBe(field);
+    expect(within(row).getByRole('button', { name: 'Gravar consulta' })).toBeInTheDocument();
+    expect(field.parentElement).toContainElement(screen.getByRole('button', { name: 'Enviar pergunta' }));
+    // The Pergunta/Comentário segments, the hint and the usage chip share a row hidden below sm.
+    const segments = screen.getByRole('button', { name: 'Pergunta', pressed: true }).parentElement!.parentElement!;
+    expect(segments.className).toContain('hidden sm:flex');
+    fireEvent.click(toggle);
+    expect(screen.getByLabelText('Comentário clínico para este paciente')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Modo comentário. Trocar para pergunta' })).toBeInTheDocument();
+  });
+});
+
+describe('failures above the composer (M 11)', () => {
+  const comment = async (text: string) => {
+    fireEvent.click(await screen.findByRole('button', { name: 'Comentário', pressed: false }));
+    fireEvent.change(screen.getByLabelText('Comentário clínico para este paciente'), { target: { value: text } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Adicionar comentário' })); });
+  };
+
+  it('shows a failed comment as a plain alert right above the composer, puts the text back, and can be closed', async () => {
+    mocks.invoke.mockImplementation(async (name: string) =>
+      name === 'process-comment'
+        ? { data: null, error: httpError(500, { error: 'TypeError: Cannot read properties of undefined' }) }
+        : { data: { questions: [] }, error: null });
+    renderPanel();
+    await comment('alergia a dipirona');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(FAILURE_SENTENCES.comment);
+    expect(alert).not.toHaveTextContent(/TypeError/);
+    expect(mocks.toast).not.toHaveBeenCalled();
+    const field = screen.getByLabelText('Comentário clínico para este paciente');
+    // Right above the composer: the next element is the box holding the field.
+    expect(alert.nextElementSibling).toContainElement(field);
+    expect(field).toHaveValue('alergia a dipirona');
+    fireEvent.click(within(alert).getByRole('button', { name: 'Fechar aviso' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('keeps a written 422 instruction from our function, since it says what to fix', async () => {
+    mocks.invoke.mockImplementation(async (name: string) =>
+      name === 'process-comment'
+        ? { data: null, error: httpError(422, { error: 'Informe qual medicamento deve ser suspenso.' }) }
+        : { data: { questions: [] }, error: null });
+    renderPanel();
+    await comment('suspender');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Informe qual medicamento deve ser suspenso.');
+  });
+
+  it("does not carry one patient's failure to the next patient", async () => {
+    mocks.invoke.mockImplementation(async (name: string) =>
+      name === 'process-comment' ? { data: null, error: httpError(500, {}) } : { data: { questions: [] }, error: null });
+    const { rerenderWith } = renderPanel();
+    await comment('nota');
+    expect(await screen.findByRole('alert')).toHaveTextContent(FAILURE_SENTENCES.comment);
+    rerenderWith({ patient: { ...base, id: 'B', name: 'Outra paciente sintética' } });
+    expect(screen.queryByText(FAILURE_SENTENCES.comment)).not.toBeInTheDocument();
+  });
+
+  it('says a full AI quota above the composer with what to do', async () => {
+    mocks.invoke.mockImplementation(async (name: string) =>
+      name === 'chat-assistant'
+        ? { data: null, error: httpError(429, { error: 'quota', quotaExceeded: true }) }
+        : { data: { questions: [] }, error: null });
+    renderPanel();
+    fireEvent.change(await screen.findByLabelText('Pergunta ao assistente clínico'), { target: { value: 'Qual a conduta?' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Enviar pergunta' })); });
+    expect(await screen.findByRole('alert')).toHaveTextContent(/limite diário de uso da IA foi atingido.*registre manualmente/);
+    expect(screen.getByLabelText('Pergunta ao assistente clínico')).toHaveValue('Qual a conduta?');
   });
 });

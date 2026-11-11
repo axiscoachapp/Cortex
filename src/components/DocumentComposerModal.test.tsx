@@ -71,7 +71,7 @@ describe('Antimicrobial prescription requirements (RDC 471/2021)', { timeout: 20
     settings.value = { prescriber: { professionalPhone: '' }, isLoading: false };
     await openAntimicrobial(person({ dateOfBirth: undefined, sex: 'nao_informado' }));
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'A receita de antimicrobiano exige o telefone profissional no cadastro do prescritor (solicite à equipe de implantação), a idade ou data de nascimento do paciente e o sexo do paciente. Complete antes de gerar (RDC 471/2021).',
+      'A receita de antimicrobiano exige o telefone profissional no cadastro do prescritor (peça à equipe Cortex), a idade ou data de nascimento do paciente e o sexo do paciente. Complete antes de gerar (RDC 471/2021).',
     );
   });
 
@@ -458,5 +458,40 @@ describe('Choosing what goes on the prescription', { timeout: 20000 }, () => {
     setup({ medications: [] }, { active: false });
     expect(screen.getByText(/Use "Gerar e assinar" para assinar digitalmente/)).toBeInTheDocument();
     expect(screen.queryByText(/acoplada/)).toBeNull();
+  });
+});
+
+// Round 3 (M 11, M 32, M 34): a failed generation is said inside the dialog,
+// right above its buttons; the dose field fits "1 comprimido" on a phone.
+describe('Composer failure, wording and dose field', { timeout: 20000 }, () => {
+  const open = (extra: { error?: string } = {}) => {
+    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000', prescriberCpf: '' }, isLoading: false };
+    const view = (more: { error?: string }) => <DocumentComposerModal open onOpenChange={() => {}} patient={person({ sex: 'feminino' })} onGenerate={async () => {}} isGenerating={false} {...extra} {...more} />;
+    const { rerender } = render(view({}));
+    return { fail: (error: string) => rerender(view({ error })) };
+  };
+
+  it('shows the failure right above the footer, focused', () => {
+    const message = 'Não foi possível gerar o documento. Nada foi perdido. Tente de novo.';
+    open().fail(message);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(message);
+    expect(alert).toHaveFocus();
+    expect(alert.nextElementSibling).toContainElement(screen.getByRole('button', { name: 'Gerar documento' }));
+    expect(alert.nextElementSibling).toContainElement(screen.getByRole('button', { name: 'Cancelar' }));
+  });
+
+  it('gives the dose its own row on a phone and a wider column from sm up', () => {
+    open();
+    checkProfileMedications();
+    const row = screen.getByLabelText('Dose de Amoxicilina 500 mg').parentElement!;
+    expect(row.className).toContain('grid-cols-1');
+    expect(row.className).toContain('sm:grid-cols-[minmax(10rem,2fr)_3fr]');
+  });
+
+  it('says how the document comes out, without the ICP-Brasil sentence', () => {
+    open();
+    expect(screen.getByText('O documento sai em PDF com QR Code de validação.')).toBeInTheDocument();
+    expect(screen.queryByText(/ICP-Brasil/)).toBeNull();
   });
 });
