@@ -51,7 +51,7 @@ export function WorkspaceShell({ children, section, contentClassName, shellClass
     { label: 'Gestão', items: [
       { to: '/recepcao/financeiro', label: 'Financeiro', icon: Wallet },
       { to: '/recepcao/painel', label: 'Indicadores', icon: BarChart3 },
-      ...(access.admin ? [{ to: '/recepcao/equipe', label: 'Equipe e permissões', icon: UsersRound }] : []),
+      ...(access.admin ? [{ to: '/recepcao/equipe', label: 'Equipe da recepção', icon: UsersRound }] : []),
     ] },
   ] : access?.kind === 'clinical' ? [
     { label: 'Consultório', items: clinicalRoutine },

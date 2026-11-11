@@ -74,7 +74,7 @@ async function rpc<T>(name: RpcName, args: Record<string, unknown>, schema: z.Zo
       legacyGrantDenied
         ? 'Novos acessos dependem da aprovação do médico. A lista antiga não pode criar nem restaurar permissões.'
         : approvedDelegation
-        ? 'A lista está desatualizada: ela não pode retirar uma delegação aprovada pelo médico. Atualize a página para conferir os acessos.'
+        ? 'Uma das agendas foi aprovada pelo médico e não sai por esta lista. Use Revogar aprovação ao lado do nome do médico.'
         : unavailableAppointment
         ? 'Agendamento indisponível. Atualize a agenda antes de tentar novamente.'
         : error.code === '40001'

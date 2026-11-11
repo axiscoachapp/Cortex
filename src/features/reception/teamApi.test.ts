@@ -30,7 +30,7 @@ describe('legacy team array conflict',()=>{
  it('explains a physician approval conflict without automatically retrying the stale list',async()=>{
   mocks.reply.mockResolvedValue({data:null,error:{code:'40001',message:'Approved delegation requires explicit withdrawal'}});
   await expect(receptionApi.updateStaff(doctor.id,[],true)).rejects.toMatchObject({
-   code:'40001',message:'A lista está desatualizada: ela não pode retirar uma delegação aprovada pelo médico. Atualize a página para conferir os acessos.',
+   code:'40001',message:'Uma das agendas foi aprovada pelo médico e não sai por esta lista. Use Revogar aprovação ao lado do nome do médico.',
   });
   expect(mocks.rpc).toHaveBeenCalledTimes(1);
  });

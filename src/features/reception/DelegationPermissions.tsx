@@ -14,6 +14,8 @@ import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
 import { ReceptionNotice } from './ReceptionNotice';
 import { useRequestId } from './useRequestId';
+import { DisabledHint, selectClass } from './ReceptionControls';
+import { OWN_AGENDA_TITLE, TEAM_TITLE } from './teamNames';
 
 const labels: Record<DelegationRequest['state'], string> = { pending: 'Aguardando médico', approved: 'Aprovado', denied: 'Recusado', cancelled: 'Cancelado', revoked: 'Revogado' };
 export default function DelegationPermissions({ embedded = false }: { embedded?: boolean }) {
@@ -23,7 +25,7 @@ export default function DelegationPermissions({ embedded = false }: { embedded?:
   if (clinicId !== null && !z.string().uuid().safeParse(clinicId).success) return <p role="alert" className="p-6">Clínica inválida. Confira o endereço da página.</p>;
   if (!user) return null;
   const content = <Permissions key={`${user.id}:${clinicId ?? 'mine'}`} actorId={user.id} clinicId={clinicId} embedded={embedded} />;
-  return embedded ? content : <WorkspaceShell section="Permissões da recepção">{content}</WorkspaceShell>;
+  return embedded ? content : <WorkspaceShell section={clinicId ? TEAM_TITLE : OWN_AGENDA_TITLE}>{content}</WorkspaceShell>;
 }
 
 function Permissions({ actorId, clinicId, embedded }: { actorId: string; clinicId: string | null; embedded: boolean }) {
@@ -92,7 +94,7 @@ function Permissions({ actorId, clinicId, embedded }: { actorId: string; clinicI
 
   return <Container aria-labelledby={embedded ? titleId : undefined} className="space-y-6 min-w-0">
     {!embedded && clinicId && <Link to="/recepcao/equipe" className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Voltar à equipe</Link>}
-    <PageHeading id={titleId} headingLevel={embedded ? 2 : 1} title="Permissões da recepção" description={clinicId ? 'Pedidos da clínica para contas já cadastradas.' : 'Você decide quem pode operar sua agenda na clínica.'} actions={
+    <PageHeading id={titleId} headingLevel={embedded ? 2 : 1} title={clinicId ? TEAM_TITLE : OWN_AGENDA_TITLE} description={clinicId ? 'Pedidos de acesso às agendas. Cada acesso só vale depois da aprovação do médico.' : 'Você decide quem da recepção pode usar sua agenda na clínica.'} actions={
       <Button className="min-h-11" variant="outline" disabled={busy || requests.isFetching} onClick={() => void requests.refetch()}>Atualizar lista</Button>
     } />
     <p className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed">A aprovação permite atender contatos, operar a fila e gerenciar agendamentos da clínica. Os prontuários, evoluções e documentos clínicos continuam privados. Você pode revogar o acesso a qualquer momento.</p>
@@ -101,20 +103,20 @@ function Permissions({ actorId, clinicId, embedded }: { actorId: string; clinicI
     {notice && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">{notice}</p>}
     {canManage && <section className="space-y-4 rounded-xl border bg-card p-4 sm:p-5" aria-labelledby="request-title">
       <SectionHeading id="request-title" className="font-semibold">Solicitar acesso para uma conta existente</SectionHeading>
-      {!currentClinic ? <p role="alert" className="text-sm">Abra este fluxo pela equipe da clínica selecionada para escolher as contas corretas.</p> : <>
+      {!currentClinic ? <p role="alert" className="text-sm">Para pedir acesso para uma secretária, abra <Link to="/recepcao/equipe" className="underline underline-offset-4">{TEAM_TITLE}</Link>.</p> : <>
         <ReceptionNotice loading={directory.isPending} error={directory.error} onRetry={() => void directory.refetch()} />
         <form className="space-y-4" onSubmit={event => { event.preventDefault(); if (formReady && staff.some(s => s.id === staffId) && directory.data?.some(d => d.id === doctorId)) void mutate({ kind: 'request', staffId, doctorId }); }}>
           <fieldset disabled={!formReady} className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2"><Label htmlFor="delegation-staff">Conta de recepção</Label><select id="delegation-staff" className="flex min-h-11 w-full min-w-0 rounded-md border bg-background px-3 text-sm" required value={staffId} onChange={event => setStaffId(event.target.value)}><option value="">Selecione uma conta ativa</option>{staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-            <div className="space-y-2"><Label htmlFor="delegation-doctor">Médico responsável</Label><select id="delegation-doctor" className="flex min-h-11 w-full min-w-0 rounded-md border bg-background px-3 text-sm" required value={doctorId} onChange={event => setDoctorId(event.target.value)}><option value="">Selecione um médico</option>{directory.isSuccess && directory.data.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></div>
+            <div className="space-y-2"><Label htmlFor="delegation-staff">Conta de recepção</Label><select id="delegation-staff" className={selectClass} required value={staffId} onChange={event => setStaffId(event.target.value)}><option value="">Selecione uma conta ativa</option>{staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+            <div className="space-y-2"><Label htmlFor="delegation-doctor">Médico responsável</Label><select id="delegation-doctor" className={selectClass} required value={doctorId} onChange={event => setDoctorId(event.target.value)}><option value="">Selecione um médico</option>{directory.isSuccess && directory.data.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></div>
           </fieldset>
-          <Button type="submit" className="h-auto min-h-11 whitespace-normal" disabled={!formReady || !staffId || !doctorId}>Enviar pedido ao médico</Button>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1"><Button type="submit" className="h-auto min-h-11 whitespace-normal" disabled={!formReady || !staffId || !doctorId}>Enviar pedido ao médico</Button>{formReady && (!staffId || !doctorId) && <DisabledHint>Escolha a conta e o médico.</DisabledHint>}</div>
         </form>
       </>}
     </section>}
     {verified && <section className="space-y-3" aria-labelledby="requests-title">
       <SectionHeading id="requests-title" className="text-lg font-semibold">{clinicId ? 'Pedidos e aprovações da clínica' : 'Meus pedidos e aprovações'}</SectionHeading>
-      <p className="text-sm text-muted-foreground">Esta lista acompanha os pedidos feitos por este fluxo. A gestão dos acessos anteriores continua na página da equipe.</p>
+      {clinicId && <p className="text-sm text-muted-foreground">Acessos dados antes dos pedidos aparecem em {TEAM_TITLE}, em Ver quem autorizou.</p>}
       {!rows.length && <p className="rounded-xl border p-5 text-sm text-muted-foreground">Nenhum pedido encontrado.</p>}
       {rows.map(row => <article key={row.id} className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0 break-words"><RowHeading className="font-semibold">{row.staffName}</RowHeading><p className="mt-1 text-sm text-muted-foreground">{row.clinicName} · {row.doctorName}</p></div><span className="w-fit shrink-0 rounded-full bg-muted px-3 py-1 text-xs font-medium">{labels[row.state]}</span></div>

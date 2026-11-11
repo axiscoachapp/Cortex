@@ -2,27 +2,38 @@ import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { PageHeading } from '@/components/PageHeading';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { functionErrorMessage } from '@/lib/functionErrors';
 import { useClinicAccess } from './accessContext';
 import { receptionApi } from './api';
-import { ReceptionNotice } from './ReceptionNotice';
+import { delegationApi } from './delegationApi';
+import { ReceptionAccessNotice, ReceptionNotice } from './ReceptionNotice';
 import { StaffAccessProvenance } from './StaffAccessProvenance';
+import { WithdrawDelegation } from './WithdrawDelegation';
+import { DisabledHint } from './ReceptionControls';
+import { TEAM_TITLE } from './teamNames';
 import type { ClinicAccess } from './contracts';
+
 
 export default function TeamSettings({ embedded = false }: { embedded?: boolean }) {
   const access = useClinicAccess();
-  if (!access?.admin) return <p role="alert">Somente o administrador pode gerenciar a equipe.</p>;
+  if (!access?.admin) return <ReceptionAccessNotice title={TEAM_TITLE} headingLevel={embedded ? 2 : 1} message="Esta página é só para o administrador da clínica." />;
   return <TeamSection key={`${access.actorId}:${access.clinic?.id ?? 'none'}`} access={access} embedded={embedded} />;
 }
 
 function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boolean }) {
-  const titleId = useId();
+  const titleId = useId(), createHint = useId();
   const Container = embedded ? 'section' : 'div', SectionHeading = embedded ? 'h3' : 'h2';
   const client = useQueryClient();
   const [name, setName] = useState('');
@@ -39,6 +50,7 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
     staleTime: 30_000,
   });
   const teamDoctors = directory.isSuccess ? directory.data : [];
+  const requestLink = access.clinic ? `/permissoes-recepcao?clinica=${access.clinic.id}` : null;
   async function create(event: React.FormEvent) {
     event.preventDefault();
     if (busy || !directory.isSuccess || !doctors.length) return;
@@ -55,7 +67,7 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
         .strict()
         .safeParse(data);
       if (!result.success)
-        throw new Error('A criação retornou uma resposta inesperada. Atualize a equipe antes de tentar novamente.');
+        throw new Error('Não foi possível confirmar a criação. Atualize a lista antes de tentar de novo.');
       const parsed = result.data;
       setCredentials({ email: parsed.email, temporaryPassword: parsed.temporaryPassword });
       setName('');
@@ -96,8 +108,9 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
     setNotice('');
     try {
       const confirmed = await receptionApi.updateStaff(id, doctorIds, active);
-      if (confirmed !== true) throw new Error('Não foi possível confirmar a atualização da conta. Atualize a equipe antes de tentar novamente.');
-      if (active && doctorIds.length === 0) setNotice('Conta reativada, sem agendas. Envie um novo pedido de acesso para aprovação do médico.');
+      if (confirmed !== true) throw new Error('Não foi possível confirmar a atualização da conta. Atualize a lista antes de tentar de novo.');
+      if (active && doctorIds.length === 0) setNotice('Conta reativada, sem agendas. Use Pedir acesso a uma agenda para enviar o pedido ao médico.');
+      if (!active) setNotice('Acesso desativado.');
       await client.invalidateQueries({ queryKey: ['clinic-access'] });
       await client.invalidateQueries({ queryKey: ['reception'] });
     } catch (err) {
@@ -106,69 +119,55 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
       setBusy(false);
     }
   }
+  const missing = !name.trim() || !email.trim() ? 'Preencha nome, e-mail e ao menos uma agenda.'
+    : !doctors.length ? 'Escolha ao menos uma agenda.' : null;
   return (
     <Container aria-labelledby={embedded ? titleId : undefined} className="space-y-6 min-w-0">
-      <PageHeading id={titleId} headingLevel={embedded ? 2 : 1} title="Equipe e permissões" description="Configure as agendas das secretárias. Seu acesso às agendas e aos prontuários é independente da gestão da equipe." actions={
+      <PageHeading id={titleId} headingLevel={embedded ? 2 : 1} title={TEAM_TITLE} description="Contas das secretárias e as agendas que cada uma pode usar. Os prontuários continuam só com os médicos." actions={
         <div className="flex flex-wrap gap-2">
-        {access.clinic && <Button asChild variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal"><Link to={`/permissoes-recepcao?clinica=${access.clinic.id}`}>Pedidos de acesso e aprovações médicas</Link></Button>}
-        {!directory.isError && (
-          <Button className="min-h-11" size="sm" variant="outline" disabled={busy || directory.isFetching} onClick={() => void directory.refetch()}>
-            Atualizar profissionais
-          </Button>
-        )}
+          {requestLink && <Button asChild variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal"><Link to={requestLink}>Pedir acesso a uma agenda</Link></Button>}
+          {!directory.isError && (
+            <Button className="min-h-11 gap-2" variant="outline" disabled={busy || directory.isFetching} onClick={() => void directory.refetch()}>
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              Atualizar lista
+            </Button>
+          )}
         </div>
       } />
       <ReceptionNotice error={error} />
       {notice && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">{notice}</p>}
       <ReceptionNotice error={directory.error} loading={directory.isPending} onRetry={() => void directory.refetch()} />
       <section className="rounded-xl border bg-card p-4 space-y-4">
-        <SectionHeading className="font-semibold text-base">Criar conta de recepção</SectionHeading>
+        <SectionHeading className="font-semibold text-base">Nova conta</SectionHeading>
         <form onSubmit={create} className="space-y-4">
           <fieldset disabled={busy} className="grid md:grid-cols-2 gap-4">
             <div className="min-w-0 space-y-2">
-              <Label htmlFor="staff-name">Nome da secretária</Label>
-              <Input
-                id="staff-name"
-                autoComplete="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                minLength={2}
-                maxLength={120}
-                required
-              />
+              <Label htmlFor="staff-name">Nome</Label>
+              <Input id="staff-name" className="h-11" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} minLength={2} maxLength={120} required />
             </div>
             <div className="min-w-0 space-y-2">
-              <Label htmlFor="staff-email">E-mail exclusivo da conta</Label>
-              <Input
-                id="staff-email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                maxLength={254}
-                required
-              />
+              <Label htmlFor="staff-email">E-mail de acesso</Label>
+              <Input id="staff-email" className="h-11" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={254} required />
+              <p className="text-xs text-muted-foreground">Um e-mail só desta pessoa; é com ele que ela entra no Cortex.</p>
             </div>
           </fieldset>
-          <fieldset disabled={busy || !directory.isSuccess} className="space-y-2">
-            <legend className="text-sm font-medium mb-2">Agendas permitidas</legend>
+          <fieldset disabled={busy || !directory.isSuccess} className="space-y-1">
+            <legend className="text-sm font-medium mb-1">Agendas</legend>
             {teamDoctors.map((d) => (
-              <label key={d.id} className="flex items-start gap-2 text-sm">
-                <input
-                  className="mt-1 accent-primary"
-                  type="checkbox"
-                  checked={doctors.includes(d.id)}
-                  onChange={(e) =>
-                    setDoctors((old) => (e.target.checked ? [...old, d.id] : old.filter((id) => id !== d.id)))
-                  }
-                />
-                {d.name}
-              </label>
+              <div key={d.id} className="flex min-h-11 items-center gap-3 text-sm">
+                <Checkbox id={`new-staff-${d.id}`} checked={doctors.includes(d.id)} disabled={busy || !directory.isSuccess}
+                  onCheckedChange={(checked) => setDoctors((old) => (checked === true ? [...old, d.id] : old.filter((id) => id !== d.id)))} />
+                <Label htmlFor={`new-staff-${d.id}`} className="font-normal">{d.name}</Label>
+              </div>
             ))}
           </fieldset>
-          <Button className="h-auto min-h-10 max-w-full whitespace-normal" type="submit" disabled={busy || !directory.isSuccess || !doctors.length}>
-            {busy ? 'Salvando…' : 'Criar conta com acesso restrito'}
-          </Button>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Button className="min-h-11" type="submit" aria-describedby={missing ? createHint : undefined} disabled={busy || !directory.isSuccess || !doctors.length}>
+              {busy ? 'Salvando…' : 'Criar conta'}
+            </Button>
+            {!busy && (directory.isSuccess ? missing && <DisabledHint id={createHint}>{missing}</DisabledHint>
+              : <DisabledHint id={createHint}>Atualize a lista de médicos para escolher as agendas.</DisabledHint>)}
+          </div>
         </form>
       </section>
       <section className="space-y-3">
@@ -177,6 +176,8 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
         {access.staff.map((staff) => (
           <StaffCard
             key={staff.id + JSON.stringify(staff.doctorIds) + staff.active}
+            actorId={access.actorId}
+            clinicId={access.clinic?.id ?? null}
             staff={staff}
             embedded={embedded}
             provenance={access.clinic ? <StaffAccessProvenance actorId={access.actorId} clinicId={access.clinic.id} staffId={staff.id} staffName={staff.name} /> : null}
@@ -222,17 +223,10 @@ function TeamSection({ access, embedded }: { access: ClinicAccess; embedded: boo
 }
 
 function StaffCard({
-  staff,
-  embedded,
-  provenance,
-  doctors,
-  busy,
-  scopesReady,
-  onSave,
-  onReactivate,
-  onDeactivate,
-  onReissue,
+  actorId, clinicId, staff, embedded, provenance, doctors, busy, scopesReady, onSave, onReactivate, onDeactivate, onReissue,
 }: {
+  actorId: string;
+  clinicId: string | null;
   staff: { id: string; name: string; active: boolean; doctorIds: string[] };
   embedded: boolean;
   provenance: React.ReactNode;
@@ -245,42 +239,97 @@ function StaffCard({
   onReissue: () => void;
 }) {
   const Heading = embedded ? 'h4' : 'h3';
+  const client = useQueryClient();
+  const hintPrefix = useId();
   const [selected, setSelected] = useState(staff.doctorIds);
+  // Who authorized each current agenda. An agenda the doctor approved is not a checkbox: the old
+  // list cannot remove it (the server refuses), so it shows the doctor's approval and its revoke.
+  const originKey = ['reception', 'staff-card-origin', actorId, clinicId, staff.id];
+  const origin = useQuery({
+    queryKey: originKey,
+    queryFn: () => delegationApi.permissions({ clinicId: clinicId!, staffId: staff.id, limit: 100 }),
+    enabled: staff.active && !!clinicId && staff.doctorIds.length > 0,
+    retry: false, staleTime: 0,
+  });
+  const originReady = staff.doctorIds.length === 0 || origin.isSuccess;
+  const approved = new Map((origin.data?.items ?? []).flatMap(row => row.source === 'physician_approval' && staff.doctorIds.includes(row.doctorId) ? [[row.doctorId, row.requestId] as const] : []));
+  const editable = staff.doctorIds.filter(id => !approved.has(id));
+  const refresh = () => Promise.all([
+    client.invalidateQueries({ queryKey: originKey }),
+    client.invalidateQueries({ queryKey: ['clinic-access'] }),
+    client.invalidateQueries({ queryKey: ['reception', 'staff-permission-origin'] }),
+  ]);
+  const locked = busy || !scopesReady || !originReady;
   return (
     <article className="rounded-xl border bg-card p-4 space-y-3">
       <div className="flex flex-wrap gap-2 justify-between">
         <Heading className="font-medium">{staff.name}</Heading>
         <span className="text-xs text-muted-foreground">{staff.active ? 'Ativa' : 'Desativada'}</span>
       </div>
-      {staff.active ? <fieldset disabled={busy || !scopesReady} className="flex flex-wrap gap-3">
-        <legend className="sr-only">Agendas de {staff.name}</legend>
-        {doctors.map((d) => (
-          <label key={d.id} className="flex gap-2 items-start text-xs">
-            <input
-              type="checkbox"
-              className="mt-1 accent-primary"
-              disabled={!staff.doctorIds.includes(d.id)}
-              checked={selected.includes(d.id)}
-              onChange={(e) =>
-                setSelected((old) => (e.target.checked ? [...old, d.id] : old.filter((id) => id !== d.id)))
-              }
-            />
-            {d.name}
-          </label>
-        ))}
-      </fieldset> : <p className="text-sm text-muted-foreground">As agendas anteriores não serão restauradas. Reative a conta e envie um novo pedido para aprovação do médico.</p>}
-      {staff.active && !staff.doctorIds.length && <p className="text-sm text-muted-foreground">Conta ativa, sem agendas. Use Pedidos de acesso e aprovações médicas para solicitar permissão.</p>}
+      {staff.active ? <>
+        {origin.isPending && origin.fetchStatus !== 'idle' && <ReceptionNotice loading />}
+        {origin.isError && <ReceptionNotice error={new Error('Não foi possível conferir quem autorizou as agendas desta conta.')} onRetry={() => void origin.refetch()} />}
+        <fieldset disabled={locked} className="space-y-1">
+          <legend className="sr-only">Agendas de {staff.name}</legend>
+          {doctors.map((d) => {
+            const requestId = approved.get(d.id);
+            if (requestId && clinicId) return <div key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-b py-2 text-sm last:border-b-0">
+              <div className="min-w-0">
+                <p>{d.name}</p>
+                <p className="text-xs text-muted-foreground">Aprovado pelo médico</p>
+              </div>
+              <WithdrawDelegation key={requestId} actorId={actorId} clinicId={clinicId} staffId={staff.id} doctorId={d.id} requestId={requestId} doctorName={d.name} disabled={busy || origin.isFetching} onRevoked={refresh} />
+            </div>;
+            const current = staff.doctorIds.includes(d.id);
+            const hint = `${hintPrefix}-${d.id}`;
+            return <div key={d.id} className="py-1">
+              <div className="flex min-h-11 items-center gap-3 text-sm">
+                <Checkbox id={`${hintPrefix}-box-${d.id}`} disabled={locked || !current} aria-describedby={current ? undefined : hint}
+                  checked={selected.includes(d.id)}
+                  onCheckedChange={(checked) => setSelected((old) => (checked === true ? [...old, d.id] : old.filter((id) => id !== d.id)))} />
+                <Label htmlFor={`${hintPrefix}-box-${d.id}`} className="font-normal">{d.name}</Label>
+              </div>
+              {!current && <p id={hint} className="pl-8 text-xs text-muted-foreground">Depende da aprovação de {d.name}. Use Pedir acesso a uma agenda.</p>}
+            </div>;
+          })}
+        </fieldset>
+        {!staff.doctorIds.length && <p className="text-sm text-muted-foreground">Conta ativa, sem agendas. Use Pedir acesso a uma agenda para enviar o pedido ao médico.</p>}
+      </> : <p className="text-sm text-muted-foreground">As agendas anteriores não serão restauradas. Reative a conta e peça de novo o acesso a cada agenda.</p>}
       <div className="flex flex-wrap gap-2">
-        <Button className="h-auto min-h-9 max-w-full whitespace-normal" size="sm" variant="outline" disabled={busy || !scopesReady || (staff.active && !selected.length)} onClick={() => staff.active ? onSave(selected) : onReactivate()}>
-          {staff.active ? 'Salvar permissões' : 'Reativar conta'}
-        </Button>
-        {staff.active && (
-          <Button size="sm" variant="ghost" disabled={busy} onClick={onDeactivate}>
-            Desativar acesso
+        {staff.active ? editable.length > 0 && (
+          <Button className="h-auto min-h-11 max-w-full whitespace-normal" variant="outline" disabled={locked}
+            onClick={() => onSave(staff.doctorIds.filter(id => approved.has(id) || selected.includes(id)))}>
+            Salvar agendas
+          </Button>
+        ) : (
+          <Button className="h-auto min-h-11 max-w-full whitespace-normal" variant="outline" disabled={busy || !scopesReady} onClick={onReactivate}>
+            Reativar conta
           </Button>
         )}
         {staff.active && (
-          <Button size="sm" variant="ghost" disabled={busy} onClick={onReissue}>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button className="min-h-11" variant="ghost" disabled={busy}>Desativar acesso</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl">
+              <AlertDialogHeader className="text-left">
+                <AlertDialogTitle>Desativar acesso</AlertDialogTitle>
+                <AlertDialogDescription>O que acontece com a conta de {staff.name}:</AlertDialogDescription>
+              </AlertDialogHeader>
+              <ul className="list-disc space-y-1 pl-5 text-sm">
+                <li>Ela deixa de entrar no Cortex.</li>
+                <li>Perde o acesso a todas as agendas. Para voltar, cada médico precisa aprovar de novo.</li>
+                <li>Os atendimentos com ela voltam para a fila, sem responsável.</li>
+              </ul>
+              <AlertDialogFooter className="gap-2 sm:space-x-0">
+                <AlertDialogCancel className="mt-0 min-h-11">Cancelar</AlertDialogCancel>
+                <AlertDialogAction className="min-h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={busy} onClick={() => { if (!busy) onDeactivate(); }}>Desativar acesso</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+        {staff.active && (
+          <Button className="min-h-11" variant="ghost" disabled={busy} onClick={onReissue}>
             Nova senha temporária
           </Button>
         )}

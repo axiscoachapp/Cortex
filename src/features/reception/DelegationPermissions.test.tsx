@@ -22,8 +22,8 @@ describe('physician reception permissions', () => {
     mount(false, true);
     const approve = await screen.findByRole('button', { name: 'Aprovar acesso' });
     expect(screen.getAllByRole('main')).toHaveLength(1);
-    expect(screen.getByRole('region', { name: 'Permissões da recepção' })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Permissões da recepção', level: 2 })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Acesso à minha agenda' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Acesso à minha agenda', level: 2 })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Meus pedidos e aprovações', level: 3 })).toBeVisible();
     expect(screen.getByRole('heading', { name: row.staffName, level: 4 })).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Voltar ao início' })).not.toBeInTheDocument();

@@ -8,7 +8,7 @@ const sections = [
   { path: '/recepcao/pre-consultas', id: 'Pré-consultas' },
   { path: '/recepcao/financeiro', id: 'Financeiro' },
   { path: '/recepcao/painel', id: 'Indicadores' },
-  { path: '/recepcao/equipe', id: 'Equipe e permissões' },
+  { path: '/recepcao/equipe', id: 'Equipe da recepção' },
 ];
 
 export default function ReceptionLayout() {

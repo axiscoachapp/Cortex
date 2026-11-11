@@ -12,29 +12,29 @@ describe('administrative access provenance',()=>{
  beforeEach(()=>{vi.resetAllMocks();mocks.permissions.mockResolvedValue({items:[row],nextCursor:null});});
  it('loads only on demand and separates active legacy access from proven physician approval',async()=>{
   mount();expect(mocks.permissions).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button',{name:'Conferir origem dos acessos de Recepção sintética'}));
-  expect(await screen.findByText('Legado: anuência não comprovada')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Ver quem autorizou as agendas de Recepção sintética'}));
+  expect(await screen.findByText('Acesso antigo, sem aprovação registrada')).toBeInTheDocument();
   expect(screen.getByText('Acesso ativo')).toBeInTheDocument();
-  expect(screen.queryByText('Aprovação médica vinculada')).not.toBeInTheDocument();
+  expect(screen.queryByText('Aprovado pelo médico')).not.toBeInTheDocument();
   expect(mocks.permissions).toHaveBeenCalledWith({clinicId:clinic,staffId:staff,after:null});
  });
  it('shows proven approval with a link to the separate request/withdrawal workflow',async()=>{
   mocks.permissions.mockResolvedValue({items:[{...row,source:'physician_approval',requestId:doctor}],nextCursor:null});
-  mount();fireEvent.click(screen.getByRole('button',{name:/Conferir origem/}));
-  await screen.findByText('Aprovação médica vinculada');
-  expect(screen.getByRole('link',{name:'Ver pedidos e revogações da clínica'})).toHaveAttribute('href',`/permissoes-recepcao?clinica=${clinic}`);
+  mount();fireEvent.click(screen.getByRole('button',{name:/Ver quem autorizou/}));
+  await screen.findByText('Aprovado pelo médico');
+  expect(screen.getByRole('link',{name:'Ver pedidos de acesso da clínica'})).toHaveAttribute('href',`/permissoes-recepcao?clinica=${clinic}`);
  });
  it('does not keep cached rows after a denied refresh',async()=>{
-  mount();fireEvent.click(screen.getByRole('button',{name:/Conferir origem/}));await screen.findByText('Médico sintético');
+  mount();fireEvent.click(screen.getByRole('button',{name:/Ver quem autorizou/}));await screen.findByText('Médico sintético');
   mocks.permissions.mockRejectedValue(new Error('Permissão indisponível.'));
-  fireEvent.click(screen.getByRole('button',{name:'Atualizar origem dos acessos'}));
+  fireEvent.click(screen.getByRole('button',{name:'Atualizar'}));
   await screen.findByText('Permissão indisponível.');expect(screen.queryByText('Médico sintético')).not.toBeInTheDocument();
  });
  it('uses the server cursor and does not label an unverified reference as an approval',async()=>{
   mocks.permissions.mockResolvedValueOnce({items:[row],nextCursor:doctor}).mockResolvedValue({items:[{...row,doctorId:staff,doctorName:'Outro médico sintético',source:'unverified',effective:false}],nextCursor:null});
-  mount();fireEvent.click(screen.getByRole('button',{name:/Conferir origem/}));fireEvent.click(await screen.findByRole('button',{name:'Carregar mais acessos'}));
+  mount();fireEvent.click(screen.getByRole('button',{name:/Ver quem autorizou/}));fireEvent.click(await screen.findByRole('button',{name:'Carregar mais'}));
   await waitFor(()=>expect(mocks.permissions).toHaveBeenLastCalledWith({clinicId:clinic,staffId:staff,after:doctor}));
-  expect(await screen.findByText('Referência de aprovação não validada')).toBeInTheDocument();
+  expect(await screen.findByText('Aprovação não confirmada')).toBeInTheDocument();
   expect(screen.getByText('Sem acesso ativo')).toBeInTheDocument();
  });
 });

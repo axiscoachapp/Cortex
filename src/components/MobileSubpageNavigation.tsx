@@ -17,7 +17,7 @@ export function MobileSubpageNavigation() {
     { to: '/recepcao/pre-consultas', label: 'Pré-consultas', icon: ClipboardCheck },
     { to: '/recepcao/financeiro', label: 'Financeiro', icon: Wallet },
     { to: '/recepcao/painel', label: 'Indicadores', icon: BarChart3 },
-    ...(access?.admin ? [{ to: '/recepcao/equipe', label: 'Equipe e permissões', icon: Users }] : []),
+    ...(access?.admin ? [{ to: '/recepcao/equipe', label: 'Equipe da recepção', icon: Users }] : []),
   ] : [...(access?.active && access.clinic ? [{ to: '/pre-consultas', label: 'Pré-consultas', icon: ClipboardCheck }, { to: '/financeiro', label: 'Financeiro', icon: Wallet }, ...(access.admin ? [{ to: '/recepcao', label: 'Recepção', icon: Users }] : [])] : []), ...resources];
   return <nav aria-label="Navegação principal" className="shell:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-background/95 backdrop-blur-sm" style={{ height: 'calc(4rem + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)' }}>
     <div className="flex h-16 items-stretch gap-1 px-1">
