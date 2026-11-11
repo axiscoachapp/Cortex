@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { User, Stethoscope, Pill, AlertTriangle, FolderOpen, Printer, FileText, Sparkles, StickyNote } from 'lucide-react';
+import { User, Stethoscope, Pill, AlertTriangle, FolderOpen, Printer, FileText, Sparkles, StickyNote, Pencil } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Patient } from '@/types/patient';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { PatientProfileDrawer } from './PatientProfileDrawer';
+import { ClinicalListEditor, type ClinicalListKind } from './ClinicalListEditor';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,6 +35,20 @@ function formatMedicationDuration(startedAt: string): string {
   return rem === 0 ? `${years} ${years === 1 ? 'ano' : 'anos'}` : `${years}a ${rem}m`;
 }
 
+function EditListButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="flex items-center gap-1 min-h-8 px-1 text-[0.6875rem] text-medical-blue hover:text-medical-blue-dark transition-colors font-medium"
+    >
+      <Pencil className="w-3 h-3" />
+      Editar
+    </button>
+  );
+}
+
 function SectionHeader({ icon: Icon, label, action }: {
   icon: React.ElementType;
   label: string;
@@ -54,6 +69,7 @@ function SectionHeader({ icon: Icon, label, action }: {
 
 export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRequest = 0 }: PatientSnapshotProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingList, setEditingList] = useState<ClinicalListKind | null>(null);
   useEffect(()=>{if(profileRequest>0)setDrawerOpen(true);},[profileRequest]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState<Record<string, boolean>>({});
@@ -196,7 +212,11 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
 
         {/* Diagnoses */}
         <section className="p-4">
-          <SectionHeader icon={Stethoscope} label="Diagnósticos" />
+          <SectionHeader
+            icon={Stethoscope}
+            label="Diagnósticos"
+            action={<EditListButton label="Editar diagnósticos" onClick={() => setEditingList('diagnoses')} />}
+          />
           {patient.diagnoses.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">Nenhum diagnóstico registrado</p>
           ) : (
@@ -217,13 +237,16 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
             icon={Pill}
             label="Medicações"
             action={
-              <button
-                onClick={handleGeneratePrescription}
-                className="flex items-center gap-1 text-[0.625rem] text-medical-blue hover:text-medical-blue-dark transition-colors font-medium"
-              >
-                <Printer className="w-3 h-3" />
-                Imprimir lista
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleGeneratePrescription}
+                  className="flex items-center gap-1 min-h-8 px-1 text-[0.6875rem] text-medical-blue hover:text-medical-blue-dark transition-colors font-medium"
+                >
+                  <Printer className="w-3 h-3" />
+                  Imprimir lista
+                </button>
+                <EditListButton label="Editar medicações" onClick={() => setEditingList('medications')} />
+              </div>
             }
           />
           {patient.medications.length === 0 ? (
@@ -256,6 +279,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
           <SectionHeader
             icon={AlertTriangle}
             label="Alertas / Alergias"
+            action={<EditListButton label="Editar alergias" onClick={() => setEditingList('allergies')} />}
           />
           {patient.allergies.length === 0 ? (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/80 border border-border/40">
@@ -349,6 +373,18 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange, profileRe
           Perfil Completo & Arquivos
         </button>
       </div>
+
+      {editingList && (
+        <ClinicalListEditor
+          kind={editingList}
+          patient={patient}
+          userId={userId}
+          open
+          onOpenChange={(next) => {
+            if (!next) setEditingList(null);
+          }}
+        />
+      )}
 
       <PatientProfileDrawer
         patient={patient}

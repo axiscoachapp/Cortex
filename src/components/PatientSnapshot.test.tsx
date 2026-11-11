@@ -66,4 +66,18 @@ describe('patient note ownership', () => {
     complete!({ data: { message: 'Saved A' }, error: null });
     await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue('Notes for B'));
   });
+  it('opens an editor for allergies, diagnoses and medications without the AI', async () => {
+    const user = userEvent.setup();
+    setup();
+    for (const [button, title] of [
+      ['Editar alergias', 'Editar alergias'],
+      ['Editar diagnósticos', 'Editar diagnósticos'],
+      ['Editar medicações', 'Editar medicações'],
+    ]) {
+      await user.click(screen.getByRole('button', { name: button }));
+      expect(await screen.findByRole('dialog', { name: title })).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    }
+  });
 });
