@@ -32,11 +32,15 @@ export interface ChargeRow {
   authorization_number: string | null; authorization_password: string | null; authorization_date: string | null; authorization_valid_until: string | null;
   status: string; guide_number: number | null; batch_id: string | null; paid_amount: number; denied_amount: number; denial_code: string | null;
   denial_note: string | null; notes: string; revision: number; created_at: string;
+  /** Set when a denied guide was written off (the loss was accepted). */
+  written_off_at?: string | null;
 }
 export interface BatchRow {
   id: string; clinic_id: string; payer_id: string; number: number; guide_type: GuideType; status: 'draft' | 'sent' | 'closed'; total_amount: number;
   paid_amount: number; denied_amount: number; xml_hash: string | null; xml_payload: string | null; generated_at: string | null; sent_at: string | null;
   protocol: string | null; payment_date: string | null; nfse_number: string | null; notes: string; revision: number; created_at: string;
+  /** When the plan's statement was first recorded; kept after a reopen. */
+  first_settled_at?: string | null;
 }
 export interface PaymentRow {
   id: string; charge_id: string | null; batch_id: string | null; method: string; amount: number; received_on: string; notes: string;
@@ -72,8 +76,13 @@ export interface BillingStore {
   charges(clinic: string, doctors: string[] | null, filter: { from: string; to: string; status?: string; payerId?: string }): Promise<ChargeRow[]>;
   charge(clinic: string, id: string): Promise<ChargeRow | null>;
   chargesByIds(clinic: string, ids: string[]): Promise<ChargeRow[]>;
+  /** The charge created by a given client request id (createCharge replay). */
+  chargeByRequest(clinic: string, requestId: string): Promise<ChargeRow | null>;
+  /** Charges of an appointment that are not cancelled. */
+  appointmentCharges(clinic: string, appointmentId: string): Promise<ChargeRow[]>;
   openCharges(clinic: string, payerId: string, guideType: GuideType): Promise<ChargeRow[]>;
-  insertCharge(row: Omit<ChargeRow, 'id' | 'status' | 'guide_number' | 'batch_id' | 'paid_amount' | 'denied_amount' | 'denial_code' | 'denial_note' | 'revision' | 'created_at'> & { created_by: string }): Promise<ChargeRow>;
+  insertCharge(row: Omit<ChargeRow, 'id' | 'status' | 'guide_number' | 'batch_id' | 'paid_amount' | 'denied_amount' | 'denial_code' | 'denial_note' | 'revision' | 'created_at' | 'written_off_at'>
+    & { created_by: string; client_request_id: string | null }): Promise<ChargeRow>;
   updateCharge(clinic: string, id: string, revision: number, patch: Partial<ChargeRow>): Promise<ChargeRow | null>;
   batches(clinic: string): Promise<BatchRow[]>;
   batch(clinic: string, id: string): Promise<BatchRow | null>;
@@ -102,6 +111,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const METHODS = ['pix', 'dinheiro', 'debito', 'credito', 'boleto', 'transferencia'] as const;
 const TABLES = ['00', '18', '19', '20', '22', '90', '98'];
+/** Table and code of a private charge typed without a procedure (the clinic's own table). */
+export const PRIVATE_TABLE = '00';
+export const PRIVATE_CODE = 'PARTICULAR';
+const STATUS_TEXT: Record<string, string> = {
+  open: 'em aberto', batched: 'em lote', sent: 'enviada', paid: 'paga', partial: 'paga em parte', denied: 'glosada', cancelled: 'cancelada',
+};
 
 const json = (deps: BillingDeps, status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...deps.corsHeaders, 'Content-Type': 'application/json' } });
@@ -161,12 +176,13 @@ const chargeDto = (c: ChargeRow) => ({
   quantity: c.quantity, unitAmount: Number(c.unit_amount), amount: Number(c.amount), serviceDate: c.service_date, consultationType: c.consultation_type,
   authorization: { number: c.authorization_number, password: c.authorization_password ? '••••' : null, date: c.authorization_date, validUntil: c.authorization_valid_until },
   status: c.status, guideNumber: c.guide_number, batchId: c.batch_id, paidAmount: Number(c.paid_amount), deniedAmount: Number(c.denied_amount),
-  denialCode: c.denial_code, denialNote: c.denial_note, notes: c.notes, revision: c.revision,
+  denialCode: c.denial_code, denialNote: c.denial_note, notes: c.notes, revision: c.revision, writtenOffAt: c.written_off_at ?? null,
 });
 const batchDto = (b: BatchRow) => ({
   id: b.id, payerId: b.payer_id, number: b.number, guideType: b.guide_type, status: b.status, totalAmount: Number(b.total_amount),
   paidAmount: Number(b.paid_amount), deniedAmount: Number(b.denied_amount), xmlHash: b.xml_hash, generatedAt: b.generated_at, sentAt: b.sent_at,
   protocol: b.protocol, paymentDate: b.payment_date, nfseNumber: b.nfse_number, notes: b.notes, revision: b.revision, createdAt: b.created_at,
+  answered: !!b.first_settled_at,
 });
 const payerDto = (p: PayerRow) => ({
   id: p.id, name: p.name, ansRegistry: p.ans_registry, providerCode: p.provider_code, tissVersion: p.tiss_version, hashEncoding: p.hash_encoding,
@@ -322,7 +338,20 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
       const pending = list.filter((a) => !billed.has(a.id));
       const coverages = await s.coverages(clinic, [...new Set(pending.map((a) => a.contact_id).filter((x): x is string => !!x))]);
       const intake = await s.intakeInsurance(clinic, pending.map((a) => a.id));
+      // Visits of the three months before the period that are still unbilled: they leave "A faturar"
+      // when the month turns, so the screen points to them instead of hiding them.
+      const earlierFrom = monthStart(from, -3);
+      const earlierTo = new Date(Date.parse(`${from}T12:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+      const before = await s.appointmentsToBill(clinic, doctors, earlierFrom, earlierTo);
+      const beforeBilled = new Set(await s.billedAppointments(clinic, before.map((a) => a.id)));
+      const months = new Map<string, number>();
+      for (const a of before) {
+        const month = saoPaulo(new Date(a.start_time)).date.slice(0, 7);
+        if (beforeBilled.has(a.id) || month >= from.slice(0, 7)) continue;
+        months.set(month, (months.get(month) ?? 0) + 1);
+      }
       return {
+        earlier: [...months].sort(([a], [b]) => b.localeCompare(a)).map(([month, count]) => ({ month, count })),
         items: pending.map((a) => ({
           appointmentId: a.id, doctorId: a.doctor_id, start: a.start_time, type: a.type, contactId: a.contact_id, patientName: a.contact_name ?? '',
           consultationType: consultationTypeOf(a.type),
@@ -343,6 +372,16 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
     }
     case 'createCharge': {
       staff();
+      const requestId = body.requestId ? uuid(body.requestId, 'Pedido') : null;
+      // A retry of a request that already created its charge (the reply was lost) gets that charge back.
+      const replay = async () => {
+        const done = requestId ? await s.chargeByRequest(clinic, requestId) : null;
+        if (!done) return null;
+        await doctorOk(done.doctor_id);
+        return { ...chargeDto(done), replayed: true };
+      };
+      const earlier = await replay();
+      if (earlier) return earlier;
       const appointmentId = body.appointmentId ? uuid(body.appointmentId, 'Agendamento') : null;
       let doctorId = body.doctorId ? uuid(body.doctorId, 'Médico') : null;
       // The contact comes only from the appointment (a manual charge has none), never from the request.
@@ -357,37 +396,76 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
       await doctorOk(doctorId);
       if (!appointmentId && !(await s.doctors(clinic)).some((d) => d.id === doctorId))
         throw new HttpError(404, 'Médico não encontrado entre os ativos da clínica.', 'not_found');
-      const payerId = body.payerId ? uuid(body.payerId, 'Convênio') : null;
-      const payer = payerId ? (await s.payers(clinic)).find((p) => p.id === payerId && p.active) : null;
-      if (payerId && !payer) throw new HttpError(404, 'Convênio não encontrado ou inativo.', 'not_found');
-      const guideType = payer ? (body.guideType === 'sadt' ? 'sadt' : 'consulta') : 'particular';
-      const quantity = int(body.quantity ?? 1, 'Quantidade', 1, 99)!;
-      const unit = money(body.unitAmount, 'Valor');
-      if (guideType === 'consulta' && quantity !== 1) throw new HttpError(400, 'A guia de consulta tem um procedimento.', 'invalid');
-      const card = payer ? str(body.cardNumber, 'Carteirinha', 30, { re: /^[0-9A-Za-z .-]+$/ }) : null;
-      const authDate = date(body.authorizationDate, 'Data da autorização', true);
-      const row = {
-        clinic_id: clinic, appointment_id: appointmentId, doctor_id: doctorId, contact_id: contactId,
-        patient_name: str(body.patientName, 'Paciente', 200)!, payer_id: payerId, card_number: card, newborn: body.newborn === true,
-        guide_type: guideType as ChargeRow['guide_type'], table_code: str(body.tableCode ?? '22', 'Tabela', 2, { re: /^[0-9]{2}$/ })!,
-        procedure_code: str(body.procedureCode, 'Código', 10, { re: /^[0-9A-Za-z]+$/ })!, description: str(body.description, 'Descrição', 150, { min: 2 })!,
-        quantity, unit_amount: unit, amount: Math.round(unit * quantity * 100) / 100, service_date: date(body.serviceDate, 'Data do atendimento')!,
-        consultation_type: guideType === 'consulta' ? (['1', '2', '3', '4'].includes(String(body.consultationType)) ? String(body.consultationType) as '1' : '1') : null,
-        authorization_number: str(body.authorizationNumber, 'Número da autorização', 20, { re: /^[0-9A-Za-z-]+$/, optional: true }),
-        authorization_password: str(body.authorizationPassword, 'Senha', 20, { re: /^[0-9A-Za-z-]+$/, optional: true }),
-        authorization_date: authDate, authorization_valid_until: date(body.authorizationValidUntil, 'Validade da senha', true),
-        notes: str(body.notes ?? '', 'Observações', 500, { min: 0 })!, created_by: caller.userId,
+      // Every field is parsed before anything is written: a refusal never leaves a charge behind.
+      const { payer, fields, cardValidUntil } = await chargeFields(s, clinic, body);
+      const duplicate = async () => {
+        if (!appointmentId) return null;
+        const same = (await s.appointmentCharges(clinic, appointmentId))
+          .find((c) => c.table_code === fields.table_code && c.procedure_code === fields.procedure_code);
+        return same ? duplicateError(same) : null;
       };
-      if (!TABLES.includes(row.table_code)) throw new HttpError(400, 'Tabela TUSS inválida.', 'invalid');
-      if (guideType === 'sadt' && (row.authorization_password || row.authorization_number) && !authDate)
-        throw new HttpError(400, 'Informe a data da autorização junto com a senha.', 'invalid');
+      const dup = await duplicate();
+      if (dup) throw dup;
       let saved: ChargeRow;
-      try { saved = await s.insertCharge(row); } catch (e) { throw sqlError(e); }
+      try {
+        saved = await s.insertCharge({ clinic_id: clinic, appointment_id: appointmentId, doctor_id: doctorId, contact_id: contactId, ...fields,
+          created_by: caller.userId, client_request_id: requestId });
+      } catch (e) {
+        // Lost the race with the same request or with someone charging the same visit.
+        if ((e as { code?: string })?.code === '23505') {
+          const again = await replay();
+          if (again) return again;
+          const taken = await duplicate();
+          if (taken) throw taken;
+        }
+        throw sqlError(e);
+      }
       if (payer && contactId && body.saveCoverage !== false) {
-        await s.saveCoverage(clinic, { contact_id: contactId, payer_id: payer.id, card_number: card!, card_valid_until: date(body.cardValidUntil, 'Validade', true), plan: '' })
+        await s.saveCoverage(clinic, { contact_id: contactId, payer_id: payer.id, card_number: fields.card_number!, card_valid_until: cardValidUntil, plan: '' })
           .catch(() => null);
       }
       return chargeDto(saved);
+    }
+    case 'updateCharge': {
+      staff();
+      const c = await s.charge(clinic, uuid(body.id, 'Cobrança'));
+      if (!c) throw new HttpError(404, 'Cobrança não encontrada.', 'not_found');
+      await doctorOk(c.doctor_id);
+      if (c.status !== 'open' || Number(c.paid_amount) > 0) throw new HttpError(409, 'Só uma cobrança em aberto e sem pagamento pode ser corrigida.', 'unavailable');
+      const revision = int(body.revision, 'Revisão', 1, 1_000_000)!;
+      const { payer, fields, cardValidUntil } = await chargeFields(s, clinic, body);
+      // The screen never sees the stored authorization password: it changes only when one is typed.
+      const { authorization_password: password, ...rest } = fields;
+      const row = password !== null || !payer ? fields : rest;
+      let saved: ChargeRow;
+      try {
+        saved = await call<ChargeRow>(deps, 'billing_charge_edit', { p_clinic: clinic, p_actor: caller.userId, p_charge: c.id, p_revision: revision, p_row: row });
+      } catch (e) {
+        if (e instanceof HttpError && e.code === 'duplicate' && c.appointment_id) {
+          const same = (await s.appointmentCharges(clinic, c.appointment_id))
+            .find((x) => x.id !== c.id && x.table_code === fields.table_code && x.procedure_code === fields.procedure_code);
+          if (same) throw duplicateError(same);
+        }
+        throw e;
+      }
+      if (payer && c.contact_id) {
+        await s.saveCoverage(clinic, { contact_id: c.contact_id, payer_id: payer.id, card_number: fields.card_number!, card_valid_until: cardValidUntil, plan: '' })
+          .catch(() => null);
+      }
+      return chargeDto(saved);
+    }
+    case 'representCharge': {
+      admin();
+      return chargeDto(await call<ChargeRow>(deps, 'billing_charge_represent', {
+        p_clinic: clinic, p_actor: caller.userId, p_charge: uuid(body.id, 'Cobrança'), p_revision: int(body.revision, 'Revisão', 1, 1_000_000),
+      }));
+    }
+    case 'writeOffCharge': {
+      admin();
+      return chargeDto(await call<ChargeRow>(deps, 'billing_charge_write_off', {
+        p_clinic: clinic, p_actor: caller.userId, p_charge: uuid(body.id, 'Cobrança'), p_revision: int(body.revision, 'Revisão', 1, 1_000_000),
+        p_note: str(body.note ?? '', 'Observação', 300, { min: 0 }),
+      }));
     }
     case 'cancelCharge': {
       staff();
@@ -442,6 +520,18 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
     case 'batchXml': {
       admin();
       return batchFile(deps, clinic, caller.userId, uuid(body.batchId, 'Lote'));
+    }
+    case 'clearBatchXml': {
+      admin();
+      return batchDto(await call<BatchRow>(deps, 'billing_batch_clear_xml', {
+        p_clinic: clinic, p_actor: caller.userId, p_batch: uuid(body.batchId, 'Lote'), p_revision: int(body.revision, 'Revisão', 1, 1_000_000),
+      }));
+    }
+    case 'unsendBatch': {
+      admin();
+      return batchDto(await call<BatchRow>(deps, 'billing_batch_unsend', {
+        p_clinic: clinic, p_actor: caller.userId, p_batch: uuid(body.batchId, 'Lote'), p_revision: int(body.revision, 'Revisão', 1, 1_000_000),
+      }));
     }
     case 'markSent': {
       admin();
@@ -525,6 +615,54 @@ async function route(deps: BillingDeps, caller: BillingCaller, role: BillingRole
   }
 }
 
+/** First day of the month `offset` months from the month of `date` (YYYY-MM-DD). */
+function monthStart(date: string, offset: number) {
+  const d = new Date(Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1 + offset, 1, 12));
+  return d.toISOString().slice(0, 10);
+}
+
+const duplicateError = (c: ChargeRow) => new HttpError(409,
+  `Este atendimento já tem uma cobrança de "${c.description}" (${STATUS_TEXT[c.status] ?? c.status}). Confira em Cobranças antes de cobrar de novo.`,
+  'duplicate', { chargeId: c.id });
+
+/**
+ * The billable fields of a charge (create and correct), all parsed and checked before any write.
+ * A private charge needs only patient, description and value: without a procedure it goes to the
+ * clinic's own table with a fixed code.
+ */
+async function chargeFields(s: BillingStore, clinic: string, body: Record<string, unknown>) {
+  const payerId = body.payerId ? uuid(body.payerId, 'Convênio') : null;
+  const payer = payerId ? (await s.payers(clinic)).find((p) => p.id === payerId && p.active) ?? null : null;
+  if (payerId && !payer) throw new HttpError(404, 'Convênio não encontrado ou inativo.', 'not_found');
+  const guideType: ChargeRow['guide_type'] = payer ? (body.guideType === 'sadt' ? 'sadt' : 'consulta') : 'particular';
+  const quantity = int(body.quantity ?? 1, 'Quantidade', 1, 99)!;
+  const unit = money(body.unitAmount, 'Valor');
+  if (guideType === 'consulta' && quantity !== 1) throw new HttpError(400, 'A guia de consulta tem um procedimento.', 'invalid');
+  const card = payer ? str(body.cardNumber, 'Carteirinha', 30, { re: /^[0-9A-Za-z .-]+$/ }) : null;
+  const cardValidUntil = payer ? date(body.cardValidUntil, 'Validade da carteirinha', true) : null;
+  const authDate = payer ? date(body.authorizationDate, 'Data da autorização', true) : null;
+  const typedCode = typeof body.procedureCode === 'string' && body.procedureCode.trim() !== '';
+  const privateDefault = guideType === 'particular' && !typedCode;
+  const fields = {
+    patient_name: str(body.patientName, 'Paciente', 200)!, payer_id: payer?.id ?? null, card_number: card, newborn: !!payer && body.newborn === true,
+    guide_type: guideType,
+    table_code: privateDefault ? PRIVATE_TABLE : str(body.tableCode ?? '22', 'Tabela', 2, { re: /^[0-9]{2}$/ })!,
+    procedure_code: privateDefault ? PRIVATE_CODE : str(body.procedureCode, 'Código', 10, { re: /^[0-9A-Za-z]+$/ })!,
+    description: str(body.description, 'Descrição', 150, { min: 2 })!,
+    quantity, unit_amount: unit, amount: Math.round(unit * quantity * 100) / 100, service_date: date(body.serviceDate, 'Data do atendimento')!,
+    consultation_type: guideType === 'consulta' ? (['1', '2', '3', '4'].includes(String(body.consultationType)) ? String(body.consultationType) as '1' : '1') : null,
+    authorization_number: payer ? str(body.authorizationNumber, 'Número da autorização', 20, { re: /^[0-9A-Za-z-]+$/, optional: true }) : null,
+    authorization_password: payer ? str(body.authorizationPassword, 'Senha', 20, { re: /^[0-9A-Za-z-]+$/, optional: true }) : null,
+    authorization_date: authDate,
+    authorization_valid_until: payer ? date(body.authorizationValidUntil, 'Validade da senha', true) : null,
+    notes: str(body.notes ?? '', 'Observações', 500, { min: 0 })!,
+  };
+  if (!TABLES.includes(fields.table_code)) throw new HttpError(400, 'Tabela TUSS inválida.', 'invalid');
+  if (guideType === 'sadt' && (fields.authorization_password || fields.authorization_number) && !authDate)
+    throw new HttpError(400, 'Informe a data da autorização junto com a senha.', 'invalid');
+  return { payer, fields, cardValidUntil };
+}
+
 /** Production by doctor and by payer for charges of the period (service date), and the payout. */
 export function productionReport(charges: ChargeRow[], professionals: ProfessionalRow[], payers: PayerRow[]) {
   const share = new Map(professionals.map((p) => [p.user_id, p.share_percent === null ? null : Number(p.share_percent)]));
@@ -548,7 +686,14 @@ export function productionReport(charges: ChargeRow[], professionals: Profession
   const payerName = new Map(payers.map((p) => [p.id, p.name]));
   const byPayer = [...by((c) => c.payer_id ?? 'particular')].map(([key, list]) => ({ payerId: key === 'particular' ? null : key,
     name: key === 'particular' ? 'Particular' : payerName.get(key) ?? 'Convênio', ...sum(list) }));
-  const denials = [...by((c) => c.denial_code ?? '')].filter(([code]) => code).map(([code, list]) => ({ code, count: list.length, amount: sum(list).denied }));
+  // The description of a code is what the clinic typed from the statement (most frequent text).
+  const noteOf = (list: ChargeRow[]) => {
+    const counts = new Map<string, number>();
+    for (const c of list) { const t = c.denial_note?.trim(); if (t) counts.set(t, (counts.get(t) ?? 0) + 1); }
+    return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
+  };
+  const denials = [...by((c) => c.denial_code ?? '')].filter(([code]) => code)
+    .map(([code, list]) => ({ code, count: list.length, amount: sum(list).denied, note: noteOf(list) }));
   return { totals: sum(charges), doctors, payers: byPayer, denials };
 }
 

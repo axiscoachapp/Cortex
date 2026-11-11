@@ -9,9 +9,9 @@ import type {
 
 const CHARGE_COLUMNS = 'id, clinic_id, appointment_id, doctor_id, contact_id, patient_name, payer_id, card_number, newborn, guide_type, table_code, procedure_code, '
   + 'description, quantity, unit_amount, amount, service_date, consultation_type, authorization_number, authorization_password, authorization_date, '
-  + 'authorization_valid_until, status, guide_number, batch_id, paid_amount, denied_amount, denial_code, denial_note, notes, revision, created_at';
+  + 'authorization_valid_until, status, guide_number, batch_id, paid_amount, denied_amount, denial_code, denial_note, notes, revision, created_at, written_off_at';
 const BATCH_COLUMNS = 'id, clinic_id, payer_id, number, guide_type, status, total_amount, paid_amount, denied_amount, xml_hash, generated_at, sent_at, '
-  + 'protocol, payment_date, nfse_number, notes, revision, created_at';
+  + 'protocol, payment_date, nfse_number, notes, revision, created_at, first_settled_at';
 const STATUSES = new Set(['open', 'batched', 'sent', 'paid', 'partial', 'denied', 'cancelled']);
 
 export function billingDeps(): BillingDeps {
@@ -226,6 +226,17 @@ export function billingDeps(): BillingDeps {
           out.push(...((data ?? []) as unknown as ChargeRow[]));
         }
         return out;
+      },
+      async chargeByRequest(clinic, requestId) {
+        const { data, error } = await service.from('billing_charges').select(CHARGE_COLUMNS).eq('clinic_id', clinic).eq('client_request_id', requestId).maybeSingle();
+        if (error) fail('cobrança', error);
+        return (data as unknown as ChargeRow | null) ?? null;
+      },
+      async appointmentCharges(clinic, appointmentId) {
+        const { data, error } = await service.from('billing_charges').select(CHARGE_COLUMNS).eq('clinic_id', clinic).eq('appointment_id', appointmentId)
+          .neq('status', 'cancelled').limit(100);
+        if (error) fail('cobranças', error);
+        return (data ?? []) as unknown as ChargeRow[];
       },
       async openCharges(clinic, payerId, guideType) {
         const { data, error } = await service.from('billing_charges').select(CHARGE_COLUMNS).eq('clinic_id', clinic).eq('payer_id', payerId).eq('guide_type', guideType)

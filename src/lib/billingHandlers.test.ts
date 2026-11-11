@@ -29,7 +29,8 @@ const batch = (over: Partial<BatchRow> = {}): BatchRow => ({
   xml_payload: null, generated_at: null, sent_at: null, protocol: null, payment_date: null, nfse_number: null, notes: '', revision: 1, created_at: '2026-11-07T10:00:00Z', ...over,
 });
 
-function harness(opts: { role?: BillingRole | null; caller?: string; payer?: Partial<PayerRow>; professionals?: ProfessionalRow[]; batch?: Partial<BatchRow>; charges?: ChargeRow[] } = {}) {
+function harness(opts: { role?: BillingRole | null; caller?: string; payer?: Partial<PayerRow>; professionals?: ProfessionalRow[]; batch?: Partial<BatchRow>; charges?: ChargeRow[];
+  byRequest?: (id: string) => ChargeRow | null; appointmentCharges?: ChargeRow[]; charge?: ChargeRow | null } = {}) {
   const calls: Array<[string, Record<string, unknown>]> = [];
   const inserted: unknown[] = [];
   const coverages: unknown[] = [];
@@ -51,6 +52,9 @@ function harness(opts: { role?: BillingRole | null; caller?: string; payer?: Par
     insertCharge: async (row: Record<string, unknown>) => { inserted.push(row); return charge({ ...(row as Partial<ChargeRow>), id: 'e9400000-0000-4000-8000-000000000009', status: 'open', batch_id: null, guide_number: null, revision: 1 }); },
     saveCoverage: async (_c: string, row: unknown) => { coverages.push(row); },
     charges: async () => [],
+    charge: async () => (opts.charge === undefined ? charge({ status: 'open', batch_id: null, guide_number: null }) : opts.charge),
+    chargeByRequest: async (_c: string, id: string) => opts.byRequest?.(id) ?? null,
+    appointmentCharges: async () => opts.appointmentCharges ?? [],
     payments: async () => [
       { id: 'p1', charge_id: 'e9400000-0000-4000-8000-000000000001', batch_id: null, method: 'pix', amount: 100, received_on: '2026-11-06', notes: '', cancelled_at: null, created_at: 'x' },
       { id: 'p2', charge_id: 'e9400000-0000-4000-8000-000000000002', batch_id: null, method: 'pix', amount: 50, received_on: '2026-11-06', notes: '', cancelled_at: null, created_at: 'x' },
@@ -67,6 +71,9 @@ function harness(opts: { role?: BillingRole | null; caller?: string; payer?: Par
     if (name === 'billing_doctor_ok') return (opts.role === undefined || opts.role === 'admin') ? true : args.p_doctor === DOCTOR;
     if (name === 'billing_visible_doctors') return [DOCTOR];
     if (name === 'billing_batch_update') return { ...batch(), revision: 2, xml_hash: (args.p_patch as { xmlHash: string }).xmlHash };
+    if (name === 'billing_charge_edit') return { ...charge({ status: 'open', batch_id: null }), ...(args.p_row as object), revision: 3 };
+    if (name === 'billing_charge_represent' || name === 'billing_charge_write_off') return charge({ status: name === 'billing_charge_represent' ? 'open' : 'denied', revision: 4 });
+    if (name === 'billing_batch_clear_xml' || name === 'billing_batch_unsend') return batch({ revision: 5 });
     return null;
   });
   const deps: BillingDeps = {
@@ -164,7 +171,7 @@ describe('production report', () => {
     expect(r.totals).toEqual({ count: 3, charged: 550, paid: 250, denied: 50, open: 250 });
     expect(r.doctors).toEqual([expect.objectContaining({ doctorId: DOCTOR, paid: 250, sharePercent: 60, payout: 150 })]);
     expect(r.payers.map((p) => [p.name, p.charged])).toEqual([['Operadora Exemplo', 300], ['Particular', 250]]);
-    expect(r.denials).toEqual([{ code: '1705', count: 1, amount: 50 }]);
+    expect(r.denials).toEqual([{ code: '1705', count: 1, amount: 50, note: null }]);
   });
 
   it('formats São Paulo time for the transaction header', () => {
@@ -213,5 +220,124 @@ describe('billing-api after the self-review (07/11)', () => {
     expect(h.calls.at(-1)).toEqual(['billing_batch_update', expect.objectContaining({ p_patch: { nfseNumber: '123' } })]);
     await h.api({ action: 'reopenBatch', batchId: BATCH, revision: 4 });
     expect(h.calls.at(-1)).toEqual(['billing_batch_reopen', { p_clinic: CLINIC, p_actor: ADMIN, p_batch: BATCH, p_revision: 4 }]);
+  });
+});
+
+describe('billing-api corrections (improvement plan, round 2)', () => {
+  const REQ = 'e9a00000-0000-4000-8000-000000000001';
+  const planCharge = { action: 'createCharge', appointmentId: APPT, patientName: 'Paciente Exemplo', payerId: PAYER, cardNumber: '0001', guideType: 'consulta',
+    tableCode: '22', procedureCode: '10101012', description: 'Consulta em consultório', quantity: 1, unitAmount: 150, serviceDate: '2026-11-06', consultationType: '1' };
+
+  it('refuses a card validity that is not a date before writing anything, so a retry cannot duplicate the charge', async () => {
+    const h = harness();
+    for (let i = 0; i < 2; i++) {
+      const res = await h.api({ ...planCharge, cardValidUntil: '12/2027' });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toMatch(/Validade da carteirinha/);
+    }
+    expect(h.inserted).toHaveLength(0);
+    expect(h.coverages).toHaveLength(0);
+    expect((await h.api({ ...planCharge, cardValidUntil: '2027-12-31' })).status).toBe(200);
+    expect(h.inserted).toHaveLength(1);
+    expect(h.coverages).toEqual([expect.objectContaining({ card_valid_until: '2027-12-31' })]);
+  });
+
+  it('returns the first charge when the same request comes again (lost reply), without inserting', async () => {
+    let stored: ChargeRow | null = null;
+    const h = harness({ byRequest: (id) => (id === REQ ? stored : null) });
+    const first = await (await h.api({ ...planCharge, requestId: REQ })).json();
+    expect(h.inserted[0]).toMatchObject({ client_request_id: REQ });
+    stored = charge({ id: first.id, status: 'open', batch_id: null });
+    const again = await h.api({ ...planCharge, requestId: REQ });
+    expect(again.status).toBe(200);
+    expect(await again.json()).toMatchObject({ id: first.id, replayed: true });
+    expect(h.inserted).toHaveLength(1);
+    // The replay is still checked against the caller's scope.
+    stored = charge({ id: first.id, doctor_id: ADMIN });
+    expect((await harness({ role: 'reception', caller: RECEPTION, byRequest: () => stored }).api({ ...planCharge, requestId: REQ })).status).toBe(403);
+  });
+
+  it('refuses a second charge of the same procedure for one visit with a clear message, also when it loses the race', async () => {
+    const existing = charge({ appointment_id: APPT, status: 'open', batch_id: null, description: 'Consulta em consultório' });
+    const h = harness({ appointmentCharges: [existing] });
+    const res = await h.api(planCharge);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: 'duplicate', chargeId: existing.id, error: expect.stringMatching(/já tem uma cobrança de "Consulta em consultório" \(em aberto\)/) });
+    expect(h.inserted).toHaveLength(0);
+    // Another procedure of the same visit is fine.
+    expect((await h.api({ ...planCharge, procedureCode: '41301102', description: 'Colposcopia', guideType: 'sadt' })).status).toBe(200);
+    // The unique index answers 23505 when two people save at once: the loser gets the same message.
+    const race = harness();
+    let reads = 0;
+    race.deps.store.appointmentCharges = async () => (reads++ === 0 ? [] : [existing]);
+    race.deps.store.insertCharge = async () => { throw Object.assign(new Error('duplicate key'), { code: '23505' }); };
+    const lost = await race.api(planCharge);
+    expect([lost.status, (await lost.json()).code]).toEqual([409, 'duplicate']);
+  });
+
+  it('charges a private patient with patient, description and value only', async () => {
+    const h = harness();
+    const res = await h.api({ action: 'createCharge', doctorId: DOCTOR, patientName: 'Paciente Particular', description: 'Consulta particular', unitAmount: '350,00', serviceDate: '2026-11-06' });
+    expect(res.status).toBe(200);
+    expect(h.inserted[0]).toMatchObject({ guide_type: 'particular', table_code: '00', procedure_code: 'PARTICULAR', amount: 350, payer_id: null, card_number: null });
+    // A plan charge still needs its procedure code.
+    expect((await h.api({ ...planCharge, procedureCode: '' })).status).toBe(400);
+  });
+
+  it('corrects an open unpaid charge through the audited SQL function, keeping the stored password unless one is typed', async () => {
+    const h = harness({ role: 'reception', caller: RECEPTION });
+    const edit = { ...planCharge, action: 'updateCharge', id: 'e9400000-0000-4000-8000-000000000001' };
+    const res = await h.api({ ...edit, revision: 2, unitAmount: '120,00', guideType: 'sadt', procedureCode: '41301102', description: 'Colposcopia',
+      authorizationNumber: 'A1', authorizationDate: '2026-11-05' });
+    expect(res.status).toBe(200);
+    const sent = h.calls.find(([n]) => n === 'billing_charge_edit')![1];
+    expect(sent).toMatchObject({ p_actor: RECEPTION, p_revision: 2, p_row: { unit_amount: 120, amount: 120, guide_type: 'sadt', procedure_code: '41301102', authorization_number: 'A1' } });
+    expect(sent.p_row).not.toHaveProperty('authorization_password');
+    expect(sent.p_row).not.toHaveProperty('doctor_id');
+    await h.api({ ...edit, revision: 3, guideType: 'sadt', authorizationPassword: 'S1', authorizationDate: '2026-11-05' });
+    expect(h.calls.filter(([n]) => n === 'billing_charge_edit').at(-1)![1].p_row).toMatchObject({ authorization_password: 'S1' });
+    // Charges with a payment are not corrected; a doctor never corrects.
+    const paid = await harness({ charge: charge({ status: 'partial', paid_amount: 10, batch_id: null }) }).api({ ...edit, revision: 2 });
+    expect([paid.status, (await paid.json()).code]).toEqual([409, 'unavailable']);
+    expect((await harness({ role: 'doctor', caller: DOCTOR }).api({ ...edit, revision: 2 })).status).toBe(403);
+  });
+
+  it('keeps re-presenting, writing off, regenerating the XML and taking back a send with the admin', async () => {
+    const rec = harness({ role: 'reception', caller: RECEPTION });
+    for (const action of ['representCharge', 'writeOffCharge']) expect((await rec.api({ action, id: 'e9400000-0000-4000-8000-000000000001', revision: 2 })).status).toBe(403);
+    for (const action of ['clearBatchXml', 'unsendBatch']) expect((await rec.api({ action, batchId: BATCH, revision: 2 })).status).toBe(403);
+    const h = harness();
+    expect(await (await h.api({ action: 'representCharge', id: 'e9400000-0000-4000-8000-000000000001', revision: 2 })).json()).toMatchObject({ status: 'open', revision: 4 });
+    await h.api({ action: 'writeOffCharge', id: 'e9400000-0000-4000-8000-000000000001', revision: 4, note: 'Sem recurso' });
+    expect(h.calls.at(-1)).toEqual(['billing_charge_write_off', expect.objectContaining({ p_revision: 4, p_note: 'Sem recurso' })]);
+    expect(await (await h.api({ action: 'clearBatchXml', batchId: BATCH, revision: 2 })).json()).toMatchObject({ id: BATCH, revision: 5 });
+    await h.api({ action: 'unsendBatch', batchId: BATCH, revision: 5 });
+    expect(h.calls.at(-1)).toEqual(['billing_batch_unsend', { p_clinic: CLINIC, p_actor: ADMIN, p_batch: BATCH, p_revision: 5 }]);
+  });
+
+  it('counts unbilled visits of the three previous months by month, outside the period list', async () => {
+    const h = harness();
+    const seen: Array<[string, string]> = [];
+    const visit = (id: string, start: string) => ({ id, doctor_id: DOCTOR, start_time: start, type: 'novo', status: 'realizado', contact_id: null, contact_name: null });
+    h.deps.store.appointmentsToBill = async (_c, _d, from, to) => {
+      seen.push([from, to]);
+      if (from === '2026-11-01') return [];
+      return [visit('e9600000-0000-4000-8000-000000000003', '2026-10-31T23:30:00Z'), visit('e9600000-0000-4000-8000-000000000004', '2026-10-10T13:00:00Z'),
+        visit('e9600000-0000-4000-8000-000000000005', '2026-08-10T13:00:00Z'), visit('e9600000-0000-4000-8000-000000000002', '2026-09-10T13:00:00Z')];
+    };
+    const r = await (await h.api({ action: 'toBill', from: '2026-11-01', to: '2026-11-30' })).json();
+    expect(seen).toEqual([['2026-11-01', '2026-11-30'], ['2026-08-01', '2026-10-31']]);
+    // 31/10 23:30 UTC is still October in São Paulo; the billed September visit is left out.
+    expect(r).toMatchObject({ items: [], earlier: [{ month: '2026-10', count: 2 }, { month: '2026-08', count: 1 }] });
+  });
+
+  it('describes each denial code with the reason typed from the statement', () => {
+    const r = productionReport([
+      charge({ id: 'a', status: 'denied', denied_amount: 150, denial_code: '1705', denial_note: 'Valor acima da tabela' }),
+      charge({ id: 'b', status: 'denied', denied_amount: 150, denial_code: '1705', denial_note: 'Valor acima da tabela' }),
+      charge({ id: 'c', status: 'denied', denied_amount: 150, denial_code: '1705', denial_note: 'outro' }),
+      charge({ id: 'd', status: 'denied', denied_amount: 150, denial_code: '1423', denial_note: null }),
+    ], [professional], [payer]);
+    expect(r.denials).toEqual([{ code: '1705', count: 3, amount: 450, note: 'Valor acima da tabela' }, { code: '1423', count: 1, amount: 150, note: null }]);
   });
 });
