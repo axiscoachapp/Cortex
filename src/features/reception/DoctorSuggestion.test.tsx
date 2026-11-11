@@ -7,7 +7,7 @@ const beneficiary=(doctorId:string)=>({id:'patient-'+doctorId,name:'Beneficiári
 const request={doctorId:null,beneficiaries:[beneficiary('a'),beneficiary('b')]} as ReceptionCase;
 describe('human doctor routing suggestions',()=>{
  it('offers linked choices without preselecting or submitting and reports the selected identity only on click',()=>{
-  const select=vi.fn();render(<DoctorSuggestion doctors={doctors} receptionCase={request} onSelect={select}/>);expect(select).not.toHaveBeenCalled();expect(screen.getAllByRole('button')).toHaveLength(2);expect(screen.getByText(/somente preenche o campo/)).toBeVisible();
+  const select=vi.fn();render(<DoctorSuggestion doctors={doctors} receptionCase={request} onSelect={select}/>);expect(select).not.toHaveBeenCalled();expect(screen.getAllByRole('button')).toHaveLength(2);
   fireEvent.click(screen.getByRole('button',{name:'Selecionar Médico sintético B'}));expect(select).toHaveBeenCalledOnce();expect(select).toHaveBeenCalledWith('b');
  });
  it('shows no replacement suggestion when the indicated doctor is unavailable',()=>{
@@ -20,6 +20,11 @@ describe('human doctor routing suggestions',()=>{
   const select=vi.fn(),view=render(<DoctorSuggestion doctors={doctors} receptionCase={request} onSelect={select}/>);view.rerender(<DoctorSuggestion doctors={[doctors[0]]} receptionCase={request} onSelect={select}/>);expect(screen.queryByRole('button',{name:'Selecionar Médico sintético B'})).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Selecionar Médico sintético A'})).toBeEnabled();expect(select).not.toHaveBeenCalled();
  });
  it('does not guess a doctor for a new person without confirmed links',()=>{
-  render(<DoctorSuggestion doctors={doctors} receptionCase={{...request,beneficiaries:[]}} onSelect={vi.fn()}/>);expect(screen.queryByRole('button')).not.toBeInTheDocument();expect(screen.getByText(/Pergunte qual profissional/)).toBeVisible();
+  render(<DoctorSuggestion doctors={doctors} receptionCase={{...request,beneficiaries:[]}} onSelect={vi.fn()}/>);expect(screen.queryByRole('button')).not.toBeInTheDocument();expect(screen.getByText(/Pergunte qual médico/)).toBeVisible();
+ });
+ it('is hidden when the case already has the doctor it would suggest',()=>{
+  const view=render(<DoctorSuggestion doctors={doctors} receptionCase={{...request,doctorId:'a'}} onSelect={vi.fn()}/>);expect(view.container).toBeEmptyDOMElement();
+  // A single linked doctor that differs from the case's (none set) is still offered.
+  view.rerender(<DoctorSuggestion doctors={doctors} receptionCase={{...request,beneficiaries:[beneficiary('b')]}} onSelect={vi.fn()}/>);expect(screen.getByRole('button',{name:'Selecionar Médico sintético B'})).toBeVisible();
  });
 });

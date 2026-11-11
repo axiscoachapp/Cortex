@@ -7,7 +7,7 @@ export function suggestDoctor(
   if (request.doctorId) {
     if (!doctors.some((d) => d.id === request.doctorId)) return {
       doctorId: null, candidateIds: [],
-      reason: 'O médico indicado está indisponível entre as suas agendas autorizadas. Confirme com o contato antes de escolher outro profissional.',
+      reason: 'O médico indicado está indisponível entre as suas agendas. Confirme com o contato antes de escolher outro médico.',
     };
     return {
       doctorId: request.doctorId,
@@ -20,21 +20,20 @@ export function suggestDoctor(
     return {
       doctorId: linked[0].id,
       candidateIds: [linked[0].id],
-      reason:
-        'Há um vínculo administrativo confirmado com este médico. Confirme quem será atendido e se o pedido é de continuidade.',
+      reason: 'Este contato já tem paciente atendido por este médico. Confirme quem será atendido.',
     };
   }
   if (linked.length > 1) {
     return {
       doctorId: null,
       candidateIds: linked.map(doctor => doctor.id),
-      reason: 'O contato possui vínculos com mais de um médico. Confirme o beneficiário e o profissional solicitado.',
+      reason: 'Este contato tem pacientes com mais de um médico. Confirme quem será atendido e com qual médico.',
     };
   }
   return {
     doctorId: null,
     candidateIds: [],
     reason:
-      doctors.length ? 'Sem vínculo confirmado com uma agenda permitida. Pergunte qual profissional o contato procura; a equipe decide o encaminhamento.' : 'Nenhuma agenda autorizada disponível para você. Confira suas permissões com a administração antes de encaminhar.',
+      doctors.length ? 'Nenhum paciente deste contato com os seus médicos ainda. Pergunte qual médico o contato procura.' : 'Nenhuma agenda autorizada disponível para você. Peça acesso ao administrador da clínica antes de encaminhar.',
   };
 }

@@ -67,10 +67,10 @@ describe('case workspace survives a failed background refetch', () => {
 
   it('C2: keeps the follow-up draft mounted and saves the text typed before the failure', async () => {
     const { client } = mount();
-    const field = await screen.findByLabelText('Seu rascunho de acompanhamento');
+    const field = await screen.findByLabelText('Anotação');
     fireEvent.change(field, { target: { value: 'Paciente prefere sexta à tarde' } });
     await failOnce(client);
-    expect(screen.getByLabelText('Seu rascunho de acompanhamento')).toBe(field);
+    expect(screen.getByLabelText('Anotação')).toBe(field);
     await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalledWith(caseId, 'Paciente prefere sexta à tarde', 0));
     expect(field).toHaveValue('Paciente prefere sexta à tarde');
   });
@@ -78,14 +78,14 @@ describe('case workspace survives a failed background refetch', () => {
   it('disables actions on the stale case until a fresh read succeeds', async () => {
     const { client } = mount();
     expect(await screen.findByRole('button', { name: 'Agendar consulta' })).toBeEnabled();
-    fireEvent.change(screen.getByLabelText('Seu rascunho de acompanhamento'), { target: { value: 'Nota sintética' } });
+    fireEvent.change(screen.getByLabelText('Anotação'), { target: { value: 'Nota sintética' } });
     await failOnce(client);
     expect(await screen.findByText(stale)).toBeInTheDocument();
-    for (const name of ['Agendar consulta', 'Concluir atendimento', 'Cancelar demanda', 'Registrar anotação']) expect(screen.getByRole('button', { name })).toBeDisabled();
-    expect(screen.getByLabelText('Seu rascunho de acompanhamento')).toBeEnabled();
+    for (const name of ['Agendar consulta', 'Concluir atendimento', 'Cancelar atendimento', 'Registrar anotação']) expect(screen.getByRole('button', { name })).toBeDisabled();
+    expect(screen.getByLabelText('Anotação')).toBeEnabled();
     await refetchCase(client);
     await waitFor(() => expect(screen.queryByText(stale)).toBeNull());
-    for (const name of ['Agendar consulta', 'Concluir atendimento', 'Cancelar demanda', 'Registrar anotação']) expect(screen.getByRole('button', { name })).toBeEnabled();
+    for (const name of ['Agendar consulta', 'Concluir atendimento', 'Cancelar atendimento', 'Registrar anotação']) expect(screen.getByRole('button', { name })).toBeEnabled();
   });
 
   it('removes the case at once when the server definitively refuses it', async () => {
@@ -94,13 +94,13 @@ describe('case workspace survives a failed background refetch', () => {
     await screen.findByRole('dialog', { name: 'Confirmar agendamento' });
     await failOnce(client, Object.assign(new Error('Você não tem mais permissão para esta ação. Atualize a página.'), { code: '42501' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Confirmar agendamento' })).toBeNull());
-    expect(screen.queryByLabelText('Seu rascunho de acompanhamento')).toBeNull();
+    expect(screen.queryByLabelText('Anotação')).toBeNull();
     expect(screen.queryByText('Contato sintético')).toBeNull();
   });
 
   it('flushes text not yet autosaved when the workspace unmounts', async () => {
     const { view } = mount();
-    fireEvent.change(await screen.findByLabelText('Seu rascunho de acompanhamento'), { target: { value: 'Texto antes de sair' } });
+    fireEvent.change(await screen.findByLabelText('Anotação'), { target: { value: 'Texto antes de sair' } });
     view.unmount();
     await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalledWith(caseId, 'Texto antes de sair', 0));
     expect(mocks.saveDraft).toHaveBeenCalledTimes(1);

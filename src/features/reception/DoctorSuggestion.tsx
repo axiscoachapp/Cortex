@@ -14,14 +14,15 @@ export function DoctorSuggestion({
   disabled?: boolean;
 }) {
   const suggestion = suggestDoctor(doctors, receptionCase);
+  // The case already has the doctor this box would suggest: nothing to add.
+  if (receptionCase.doctorId && suggestion.doctorId === receptionCase.doctorId) return null;
   const candidates = doctors.filter(doctor => suggestion.candidateIds.includes(doctor.id));
   return (
     <aside className="rounded-lg border bg-primary/5 p-3 space-y-2">
-      <h3 className="text-xs font-semibold">Orientação para encaminhamento</h3>
+      <h3 className="text-xs font-semibold">Sugestão de médico</h3>
       <p className="text-xs text-muted-foreground">{suggestion.reason}</p>
-      <p className="text-xs text-muted-foreground">Selecionar somente preenche o campo abaixo. Confira o profissional e use Encaminhar para confirmar.</p>
-      {candidates.length > 1 && <p className="text-xs font-medium">Opções com vínculo, sem ordem de preferência:</p>}
-      <div className="flex flex-wrap gap-2">{candidates.map(doctor => (
+      {candidates.length > 1 && <p className="text-xs font-medium">Médicos que já atendem este contato (sem ordem de preferência):</p>}
+      {candidates.length > 0 && <div className="flex flex-wrap gap-2">{candidates.map(doctor => (
         <Button
           key={doctor.id}
           type="button"
@@ -33,7 +34,7 @@ export function DoctorSuggestion({
         >
           Selecionar {doctor.name}
         </Button>
-      ))}</div>
+      ))}</div>}
     </aside>
   );
 }

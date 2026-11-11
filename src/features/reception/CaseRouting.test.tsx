@@ -15,7 +15,10 @@ const receptionCase:ReceptionCase={id:'99999999-9999-4999-8999-999999999999',cli
 function mount(data=receptionCase){
  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
  const tree=(value=access,current=data)=><MemoryRouter><QueryClientProvider client={client}><ClinicAccessContext.Provider value={value}><CaseWorkspace data={current}/></ClinicAccessContext.Provider></QueryClientProvider></MemoryRouter>;
- return {...render(tree()),tree};
+ const view={...render(tree()),tree};
+ // Routing and transfer live under "Mais ações".
+ const more=screen.queryByRole('button',{name:'Mais ações'});if(more)fireEvent.click(more);
+ return view;
 }
 describe('routing from a human-owned administrative case',()=>{
  beforeEach(()=>{vi.resetAllMocks();mocks.update.mockResolvedValue(4);});
@@ -24,7 +27,7 @@ describe('routing from a human-owned administrative case',()=>{
   expect(screen.getByLabelText('Encaminhar para médico')).toHaveValue(doctor);expect(mocks.update).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Encaminhar'}));await waitFor(()=>expect(mocks.update).toHaveBeenCalledWith(receptionCase.id,3,'route',{doctorId:doctor}));
  });
  it('refuses to route a draft choice that is no longer in the authorized agendas',async()=>{
-  const view=mount();fireEvent.click(screen.getByRole('button',{name:'Selecionar Médico sintético'}));view.rerender(view.tree({...access,doctors:[]}));expect(screen.getByRole('button',{name:'Encaminhar'})).toBeDisabled();expect(screen.getByText(/agenda selecionada deixou/)).toBeVisible();fireEvent.click(screen.getByRole('button',{name:'Encaminhar'}));expect(mocks.update).not.toHaveBeenCalled();
+  const view=mount();fireEvent.click(screen.getByRole('button',{name:'Selecionar Médico sintético'}));view.rerender(view.tree({...access,doctors:[]}));expect(screen.getByRole('button',{name:'Encaminhar'})).toBeDisabled();expect(screen.getByText(/médico deixou de estar disponível/)).toBeVisible();fireEvent.click(screen.getByRole('button',{name:'Encaminhar'}));expect(mocks.update).not.toHaveBeenCalled();
  });
  it('keeps both the draft selector and suggestion locked while the explicit route is pending',async()=>{
   let finish!:(value:number)=>void;mocks.update.mockReturnValue(new Promise(resolve=>{finish=resolve;}));mount();fireEvent.click(screen.getByRole('button',{name:'Selecionar Médico sintético'}));fireEvent.click(screen.getByRole('button',{name:'Encaminhar'}));
