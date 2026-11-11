@@ -49,6 +49,7 @@ insert into reviewed_definer_api values
  ('public.reception_appointments(uuid,timestamptz,timestamptz,uuid)', 'reception'),
  ('public.reception_block_time(uuid,uuid,timestamptz,timestamptz,text,uuid)', 'reception'),
  ('public.reception_book_appointment(uuid,jsonb,uuid)', 'reception'),
+ ('public.reception_busy_intervals(uuid,timestamptz,timestamptz,uuid)', 'reception'),
  ('public.reception_case(uuid,uuid)', 'reception'),
  ('public.reception_change_appointment(uuid,uuid,integer,text,timestamptz,timestamptz)', 'reception'),
  ('public.reception_contact_edit(uuid)', 'reception'),

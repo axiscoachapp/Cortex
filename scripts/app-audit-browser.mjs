@@ -555,7 +555,8 @@ try {
     const consoleErrors = [];
     page.on('pageerror', (e) => pageErrors.push(e.message.slice(0, 200)));
     page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 200)); });
-    page.on('dialog', (d) => d.dismiss());
+    // Leaving a page with unsaved input is fine in the audit; other dialogs are declined.
+    page.on('dialog', (d) => (d.type() === 'beforeunload' ? d.accept() : d.dismiss()));
     // Logged out first: the sign-in page itself.
     await page.goto(origin + '/auth');
     await page.waitForTimeout(800);
@@ -832,14 +833,16 @@ try {
         await dialog.waitFor();
         await snap('agendamento-vazio');
         await dialog.getByLabel('Buscar contato por nome ou telefone').fill('Contato');
-        await dialog.getByRole('button', { name: /^Selecionar contato Contato Sintético 1/ }).click();
-        await dialog.getByRole('button', { name: 'Paciente Sintética 1' }).click();
+        const failed = async (error) => { await page.screenshot({ path: resolve(artifacts, `${label}-agenda-falha.png`) }); throw error; };
+        await dialog.getByRole('button', { name: /^Selecionar contato Contato Sintético 1/ }).click({ timeout: 10000 }).catch(failed);
+        await dialog.getByRole('button', { name: 'Paciente Sintética 1', exact: true }).click({ timeout: 10000 }).catch(failed);
         await dialog.getByRole('group', { name: 'Horários livres' }).waitFor({ timeout: 10000 }).catch(() => {});
         await snap('agendamento-horarios');
         await dialog.getByRole('button', { name: /^Agendar / }).click();
         await dialog.getByRole('alert').first().waitFor({ timeout: 10000 }).catch(() => {});
         await snap('agendamento-conflito');
-        await page.goto(origin + path);
+        // An open dialog may abort the first navigation; retry once.
+        await page.goto(origin + path).catch(async () => { await page.waitForTimeout(800); await page.goto(origin + path); });
         await page.getByRole('button', { name: 'Novo agendamento' }).click();
         await dialog.waitFor();
         await dialog.getByLabel('Buscar contato por nome ou telefone').fill('Pessoa Nova');
@@ -850,7 +853,8 @@ try {
         await dialog.getByRole('button', { name: 'Cadastrar contato' }).click();
         await dialog.getByRole('group', { name: 'Horários livres' }).waitFor({ timeout: 10000 }).catch(() => {});
         await snap('agendamento-novo-contato-horarios');
-        await page.goto(origin + path);
+        // An open dialog may abort the first navigation; retry once.
+        await page.goto(origin + path).catch(async () => { await page.waitForTimeout(800); await page.goto(origin + path); });
       }
       // Menu bot: the editor and a local simulated conversation (nothing is sent).
       if (CLINIC_ADMIN && path === '/configuracoes?secao=whatsapp') {

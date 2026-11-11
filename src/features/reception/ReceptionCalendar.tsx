@@ -100,18 +100,18 @@ export default function ReceptionCalendar() {
       <div className="grid items-end gap-3 rounded-xl border bg-card p-3 md:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
         <div className="min-w-0 space-y-2">
           <Label htmlFor="reception-calendar-date">Data da agenda</Label>
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-2">
+          <div className="grid min-w-0 grid-cols-3 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
             <Input
               id="reception-calendar-date"
               type="date"
               value={day}
               onChange={(e) => chooseDay(e.target.value)}
-              className="h-11 min-w-0"
+              className="col-span-3 h-11 min-w-0 sm:col-span-1"
             />
             <Button
               size="icon"
               variant="outline"
-              className="h-11 w-11"
+              className="h-11 w-full sm:w-11"
               aria-label="Período anterior"
               disabled={!day}
               onClick={() => chooseDay(nextClinicDay(day, view === 'day' ? -1 : -7))}
@@ -121,7 +121,7 @@ export default function ReceptionCalendar() {
             <Button
               size="icon"
               variant="outline"
-              className="h-11 w-11"
+              className="h-11 w-full sm:w-11"
               aria-label="Próximo período"
               disabled={!day}
               onClick={() => chooseDay(nextClinicDay(day, view === 'day' ? 1 : 7))}
@@ -272,7 +272,7 @@ function RescheduleDialog({ appointment, doctorName, onClose }: { appointment: R
             if (!validationError && !mutation.isPending) mutation.mutate();
           }}
         >
-          <fieldset disabled={mutation.isPending} className={dialogLayout.body}>
+          <div className={dialogLayout.body}><fieldset disabled={mutation.isPending} className="min-w-0 space-y-4">
             <div>
               <Label htmlFor="reschedule-date">Nova data</Label>
               <Input id="reschedule-date" type="date" required value={day} onChange={(e) => setDay(e.target.value)} />
@@ -296,7 +296,7 @@ function RescheduleDialog({ appointment, doctorName, onClose }: { appointment: R
                 {validationError && <p id="reschedule-interval-error" role="alert" className="mt-1 text-sm text-destructive">{validationError}</p>}
               </div>
             </div>
-          </fieldset>
+          </fieldset></div>
           <div className={dialogLayout.footer}>
             <FormError error={mutation.error} />
             <div className={dialogLayout.actions}>
@@ -358,7 +358,7 @@ function BlockDialog({ day: initialDay, onClose }: { day: string; onClose: () =>
           }}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <fieldset disabled={mutation.isPending} className={dialogLayout.body}>
+          <div className={dialogLayout.body}><fieldset disabled={mutation.isPending} className="min-w-0 space-y-4">
             <div>
               <Label htmlFor="block-doctor">Médico do bloqueio</Label>
               <select
@@ -402,7 +402,7 @@ function BlockDialog({ day: initialDay, onClose }: { day: string; onClose: () =>
                 onChange={(e) => setReason(e.target.value)}
               />
             </div>
-          </fieldset>
+          </fieldset></div>
           <div className={dialogLayout.footer}>
             <FormError error={mutation.error} />
             <div className={dialogLayout.actions}>

@@ -284,7 +284,7 @@ export function BookingDialog({
           <DialogDescription>Escolha o paciente e o horário.</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-          <fieldset disabled={working} className={dialogLayout.body}>
+          <div className={dialogLayout.body}><fieldset disabled={working} className="min-w-0 space-y-4">
             {!contact ? (
               <ContactSearch
                 allowCreate={!receptionCase}
@@ -351,6 +351,98 @@ export function BookingDialog({
                 />
               </div>
             </div>
+            <div className="max-w-xs">
+              <Label htmlFor={field + 'type'}>Tipo</Label>
+              <select
+                id={field + 'type'}
+                value={type}
+                onChange={(e) => {
+                  const next = e.target.value as typeof type;
+                  setType(next);
+                  setTypeChosen(true);
+                  if (timeSource === 'chip') setEnd(addMinutes(start, typeMinutes[next]) ?? end);
+                  edited();
+                }}
+                className="block min-h-11 w-full rounded-md border bg-background p-2 text-sm"
+              >
+                <option value="novo">Primeira consulta</option>
+                <option value="retorno">Retorno</option>
+                <option value="seguimento">Seguimento</option>
+                <option value="urgencia">Encaixe avaliado pela equipe</option>
+              </select>
+            </div>
+            <section aria-label="Horário" className="space-y-3">
+              <h3 className="text-sm font-medium">Horário</h3>
+              {!doctor ? <p className="text-sm text-muted-foreground">Escolha o médico para ver os horários livres.</p>
+                : !range ? <p className="text-sm text-muted-foreground">Informe uma data válida.</p>
+                : agenda.isError ? <ReceptionNotice error={agenda.error} onRetry={() => void agenda.refetch()} />
+                : !dayReady ? <ReceptionNotice loading />
+                : <>
+                  <p className="text-xs text-muted-foreground">{dayHeading(day)} · {doctorName} · horários livres para {duration} min</p>
+                  {slots.length ? (
+                    <div role="group" aria-label="Horários livres" className="flex flex-wrap gap-2">
+                      {slots.map(slot => (
+                        <Button key={slot} type="button" size="sm" className="min-h-11 min-w-[4.5rem] tabular-nums"
+                          variant={timeSource !== 'manual' && start === slot ? 'default' : 'outline'}
+                          aria-pressed={timeSource !== 'manual' && start === slot}
+                          onClick={() => chooseSlot(slot)}>{slot}</Button>
+                      ))}
+                    </div>
+                  ) : <p className="text-sm">Nenhum horário livre neste dia. Escolha outra data ou use outro horário.</p>}
+                  {busyDay.isError && <p className="text-xs text-muted-foreground">Não foi possível conferir os compromissos particulares do médico. O horário é conferido ao agendar.</p>}
+                  <details className="rounded-lg border p-2" open={agenda.data!.items.length + agenda.data!.blocks.length + (busyDay.data?.length ?? 0) <= 6 || undefined}>
+                    <summary className="cursor-pointer select-none py-1 text-sm">O dia de {doctorName}</summary>
+                    <div className="pt-2">
+                      <DayAgenda day={day} doctor={doctor} items={agenda.data!.items} blocks={agenda.data!.blocks} busy={busyDay.data ?? []} emptyText="Nenhum compromisso neste dia." />
+                    </div>
+                  </details>
+                </>}
+              <div>
+                <Button type="button" variant="ghost" size="sm" className="min-h-11 px-2" aria-expanded={manualOpen} onClick={() => setManualOpen(open => !open)}>
+                  Outro horário
+                </Button>
+                {manualOpen && (
+                  <div className="mt-2 grid max-w-md grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor={field + 'start'}>Início</Label>
+                      <Input
+                        id={field + 'start'}
+                        type="time"
+                        required
+                        className="h-11"
+                        value={start}
+                        onChange={(e) => {
+                          const length = minutesBetween(start, end);
+                          setStart(e.target.value);
+                          const next = addMinutes(e.target.value, length > 0 ? length : duration);
+                          if (next) setEnd(next);
+                          setTimeSource('manual');
+                          edited();
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={field + 'end'}>Término</Label>
+                      <Input
+                        id={field + 'end'}
+                        type="time"
+                        required
+                        className="h-11"
+                        value={end}
+                        aria-invalid={!interval}
+                        onChange={(e) => {
+                          setEnd(e.target.value);
+                          setTimeSource('manual');
+                          edited();
+                        }}
+                      />
+                    </div>
+                    {!interval && <p role="alert" className="col-span-2 text-sm text-destructive">O término deve ser depois do início, no mesmo dia.</p>}
+                  </div>
+                )}
+                {clash && <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">Este horário cruza um compromisso já marcado. Confira antes de agendar.</p>}
+              </div>
+            </section>
             {contact && doctor && (
               <>
                 <ReceptionNotice
@@ -510,99 +602,7 @@ export function BookingDialog({
                 </div>
               </>
             )}
-            <div className="max-w-xs">
-              <Label htmlFor={field + 'type'}>Tipo</Label>
-              <select
-                id={field + 'type'}
-                value={type}
-                onChange={(e) => {
-                  const next = e.target.value as typeof type;
-                  setType(next);
-                  setTypeChosen(true);
-                  if (timeSource === 'chip') setEnd(addMinutes(start, typeMinutes[next]) ?? end);
-                  edited();
-                }}
-                className="block min-h-11 w-full rounded-md border bg-background p-2 text-sm"
-              >
-                <option value="novo">Primeira consulta</option>
-                <option value="retorno">Retorno</option>
-                <option value="seguimento">Seguimento</option>
-                <option value="urgencia">Encaixe avaliado pela equipe</option>
-              </select>
-            </div>
-            <section aria-label="Horário" className="space-y-3">
-              <h3 className="text-sm font-medium">Horário</h3>
-              {!doctor ? <p className="text-sm text-muted-foreground">Escolha o médico para ver os horários livres.</p>
-                : !range ? <p className="text-sm text-muted-foreground">Informe uma data válida.</p>
-                : agenda.isError ? <ReceptionNotice error={agenda.error} onRetry={() => void agenda.refetch()} />
-                : !dayReady ? <ReceptionNotice loading />
-                : <>
-                  <p className="text-xs text-muted-foreground">{dayHeading(day)} · {doctorName} · horários livres para {duration} min</p>
-                  {slots.length ? (
-                    <div role="group" aria-label="Horários livres" className="flex flex-wrap gap-2">
-                      {slots.map(slot => (
-                        <Button key={slot} type="button" size="sm" className="min-h-11 min-w-[4.5rem] tabular-nums"
-                          variant={timeSource !== 'manual' && start === slot ? 'default' : 'outline'}
-                          aria-pressed={timeSource !== 'manual' && start === slot}
-                          onClick={() => chooseSlot(slot)}>{slot}</Button>
-                      ))}
-                    </div>
-                  ) : <p className="text-sm">Nenhum horário livre neste dia. Escolha outra data ou use outro horário.</p>}
-                  {busyDay.isError && <p className="text-xs text-muted-foreground">Não foi possível conferir os compromissos particulares do médico. O horário é conferido ao agendar.</p>}
-                  <details className="rounded-lg border p-2" open={agenda.data!.items.length + agenda.data!.blocks.length + (busyDay.data?.length ?? 0) <= 6 || undefined}>
-                    <summary className="cursor-pointer select-none py-1 text-sm">O dia de {doctorName}</summary>
-                    <div className="pt-2">
-                      <DayAgenda day={day} doctor={doctor} items={agenda.data!.items} blocks={agenda.data!.blocks} busy={busyDay.data ?? []} emptyText="Nenhum compromisso neste dia." />
-                    </div>
-                  </details>
-                </>}
-              <div>
-                <Button type="button" variant="ghost" size="sm" className="min-h-11 px-2" aria-expanded={manualOpen} onClick={() => setManualOpen(open => !open)}>
-                  Outro horário
-                </Button>
-                {manualOpen && (
-                  <div className="mt-2 grid max-w-md grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor={field + 'start'}>Início</Label>
-                      <Input
-                        id={field + 'start'}
-                        type="time"
-                        required
-                        className="h-11"
-                        value={start}
-                        onChange={(e) => {
-                          const length = minutesBetween(start, end);
-                          setStart(e.target.value);
-                          const next = addMinutes(e.target.value, length > 0 ? length : duration);
-                          if (next) setEnd(next);
-                          setTimeSource('manual');
-                          edited();
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={field + 'end'}>Término</Label>
-                      <Input
-                        id={field + 'end'}
-                        type="time"
-                        required
-                        className="h-11"
-                        value={end}
-                        aria-invalid={!interval}
-                        onChange={(e) => {
-                          setEnd(e.target.value);
-                          setTimeSource('manual');
-                          edited();
-                        }}
-                      />
-                    </div>
-                    {!interval && <p role="alert" className="col-span-2 text-sm text-destructive">O término deve ser depois do início, no mesmo dia.</p>}
-                  </div>
-                )}
-                {clash && <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">Este horário cruza um compromisso já marcado. Confira antes de agendar.</p>}
-              </div>
-            </section>
-          </fieldset>
+          </fieldset></div>
           <div className={dialogLayout.footer}>
             <FormError error={error} message={errorText} />
             {paused && <p role="status" className="text-right text-xs text-muted-foreground">Verificando acesso… O preenchimento continua preservado.</p>}

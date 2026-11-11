@@ -140,7 +140,7 @@ export function NewCaseDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-          <fieldset disabled={busy} className={dialogLayout.body}>
+          <div className={dialogLayout.body}><fieldset disabled={busy} className="min-w-0 space-y-4">
             {selected ? (
               <div className="rounded-lg border bg-muted/40 p-3 text-sm">
                 <p className="font-medium">{selected.name}</p>
@@ -222,7 +222,7 @@ export function NewCaseDialog({
                 </select>
               </div>
             </div>
-          </fieldset>
+          </fieldset></div>
           <div className={dialogLayout.footer}>
             <FormError error={error} />
             {paused && <p role="status" className="text-right text-xs text-muted-foreground">Verificando acesso… O preenchimento continua preservado.</p>}
