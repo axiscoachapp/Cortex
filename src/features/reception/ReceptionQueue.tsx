@@ -13,13 +13,16 @@ import { ReceptionNotice } from './ReceptionNotice';
 import { CaseWorkspace } from './CaseWorkspace';
 import { isBelowMobileBreakpoint } from '@/hooks/use-mobile';
 import WhatsAppInbox from './WhatsAppInbox';
+import { conversationsLabel, useWhatsAppUnread } from './useWhatsAppUnread';
 
 export default function ReceptionQueue() {
   const [params, setParams] = useSearchParams();
   const conversations = params.get('view') === 'conversations';
+  // Unread WhatsApp conversations, read lightly while the person works on the case queue.
+  const unread = useWhatsAppUnread(!conversations);
   return <div className="reception-area space-y-4">
     <nav aria-label="Área de atendimento" className="inline-flex max-w-full flex-wrap gap-1 rounded-xl bg-muted/60 p-1">
-      {[{ label: 'Atendimentos', value: false }, { label: 'Conversas', value: true }].map(item => <Button key={item.label} variant={conversations === item.value ? 'default' : 'outline'} aria-pressed={conversations === item.value} onClick={() => setParams(old => {
+      {[{ label: 'Atendimentos', value: false }, { label: conversationsLabel(unread), value: true }].map(item => <Button key={String(item.value)} variant={conversations === item.value ? 'default' : 'outline'} aria-pressed={conversations === item.value} onClick={() => setParams(old => {
         const next = new URLSearchParams(old);
         if (item.value) next.set('view', 'conversations'); else next.delete('view');
         return next;

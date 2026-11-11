@@ -124,19 +124,23 @@ describe('transfer integration with command reconciliation', () => {
     mount(); await openInbox(); const modal = await select(); submit(modal); await screen.findByText(done);
     expect(mocks.transfer).toHaveBeenCalledExactlyOnceWith({ conversationId: id, revision: 7, status: 'open', assignedTo: access.actorId, targetUserId: target }, access.actorId, expect.any(AbortSignal));
     expect(mocks.messages.mock.calls.length).toBeGreaterThanOrEqual(3); expect(mocks.conversations).toHaveBeenCalledTimes(2); expect(mocks.roster).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText('Outra pessoa')).toBeVisible(); expect(screen.queryByRole('button', { name: 'Transferir conversa' })).not.toBeInTheDocument();
+    expect(await screen.findByText('Com outra pessoa')).toBeVisible(); expect(screen.queryByRole('button', { name: 'Transferir conversa' })).not.toBeInTheDocument();
   });
   it('adopts authoritative ownership instead of a divergent valid receipt', async () => {
     mocks.transfer.mockImplementation(async()=>{const authoritative={...detail,conversation:{...conversation,revision:9}};mocks.messages.mockResolvedValue(authoritative);mocks.conversations.mockResolvedValue({conversations:[authoritative.conversation],nextBefore:null});return {revision:8,status:'open',assignedTo:target};});
-    mount();await openInbox();submit(await select());await screen.findByText(done);expect(await screen.findByText('Você')).toBeVisible();
+    mount();await openInbox();submit(await select());await screen.findByText(done);expect(await screen.findByText('Com você')).toBeVisible();
     const next=await openDialog();await within(next).findByRole('button',{name:'Selecionar Atendente sintético'});expect(within(next).queryByRole('button',{name:'Confirmar transferência'})).not.toBeInTheDocument();expect(mocks.transfer).toHaveBeenCalledTimes(1);
   });
   it.each([{ assignedTo: null }, { assignedTo: target }, { status: 'closed' as const }, { revision: 2147483647 }])('does not offer transfer for ineligible detail %j', async patch => {
-    mocks.messages.mockResolvedValue({ ...detail, conversation: { ...conversation, ...patch } }); mount(); await openInbox(); expect(screen.queryByRole('button', { name: 'Transferir conversa' })).not.toBeInTheDocument(); expect(mocks.roster).not.toHaveBeenCalled();
+    mocks.messages.mockResolvedValue({ ...detail, conversation: { ...conversation, ...patch } }); mount(); await openInbox(); expect(screen.queryByRole('button', { name: 'Transferir conversa' })).not.toBeInTheDocument();
+    // The header may read one page of names to show another owner; the transfer picker (10 per page) never opens.
+    expect(mocks.roster).not.toHaveBeenCalledWith(expect.objectContaining({ limit: 10 }), expect.anything());
   });
   it.each(['messages', 'conversations', 'state'])('rejects captured confirmation after parent read starts (%s)', async kind => {
     const view = mount(); await openInbox(); const modal = await select(), button = within(modal).getByRole('button', { name: 'Confirmar transferência' });
-    mocks[kind].mockReturnValue(new Promise(() => {})); void view.client.invalidateQueries({ predicate: q => q.queryKey.includes(kind) }); fireEvent.click(button); expect(mocks.transfer).not.toHaveBeenCalled();
+    mocks[kind].mockReturnValue(new Promise(() => {})); void view.client.invalidateQueries({ predicate: q => q.queryKey.includes(kind) }); fireEvent.click(button);
+    // The open conversation keeps its own read: a list refresh does not invalidate a confirmation built on it.
+    if (kind === 'conversations') await waitFor(() => expect(mocks.transfer).toHaveBeenCalledTimes(1)); else expect(mocks.transfer).not.toHaveBeenCalled();
   });
   it('rejects a captured submit after a newer channel snapshot before React rerenders', async () => {
     const view=mount();await openInbox();const modal=await select(),button=within(modal).getByRole('button',{name:'Confirmar transferência'});

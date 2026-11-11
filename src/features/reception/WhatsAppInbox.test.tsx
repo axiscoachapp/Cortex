@@ -96,7 +96,7 @@ describe('WhatsApp reception inbox read view', () => {
     mount();await select();const button=await screen.findByRole('button',{name:'Assumir conversa'});let release!:(value:typeof detail)=>void;
     const mine={...detail,conversation:{...conversation,revision:2,assignedTo:mocks.actor}},other={...detail,conversation:{...conversation,revision:3,assignedTo:'77777777-7777-4777-8777-777777777777'}};
     mocks.messages.mockReturnValueOnce(new Promise(resolve=>{release=resolve;})).mockResolvedValue(other);mocks.conversations.mockResolvedValue({conversations:[other.conversation],nextBefore:null});fireEvent.click(button);await screen.findByText('Conferindo o responsável e atualizando a lista…');await act(async()=>release(mine));
-    await screen.findByText('Dados atualizados. Confira o responsável atual na conversa.');expect(screen.queryByText('Conversa assumida por você.')).not.toBeInTheDocument();expect(await within(screen.getByRole('region',{name:'Conversa selecionada'})).findByText('Outra pessoa',{exact:true})).toBeVisible();expect(screen.queryByRole('button',{name:'Assumir conversa'})).not.toBeInTheDocument();
+    await screen.findByText('Dados atualizados. Confira o responsável atual na conversa.');expect(screen.queryByText('Conversa assumida por você.')).not.toBeInTheDocument();expect(await within(screen.getByRole('region',{name:'Conversa selecionada'})).findByText('Com outra pessoa',{exact:true})).toBeVisible();expect(screen.queryByRole('button',{name:'Assumir conversa'})).not.toBeInTheDocument();
   });
   it('opens the explicit conversation, shows messages and returns focus to the list', async () => {
     mount(); await select(); expect(await screen.findByText('Mensagem sintética recebida')).toBeVisible();
@@ -210,11 +210,13 @@ describe('WhatsApp reception inbox read view', () => {
     fireEvent.change(screen.getByLabelText('Filtrar conversas'), { target: { value: 'mine' } });
     await waitFor(() => expect(mocks.conversations).toHaveBeenLastCalledWith({ filter: 'mine', search: 'sintético', limit: 50 }, expect.any(AbortSignal)));
   });
-  it('hides old list and messages on refused refresh and restores only after a fresh retry', async () => {
+  it('hides the old list on a refused refresh, keeps the conversation from its own read and restores the list after a retry', async () => {
     mount(); await select(); await screen.findByText('Mensagem sintética recebida');
     mocks.conversations.mockRejectedValueOnce(new Error('SYNTHETIC INTERNAL ERROR'));
     fireEvent.click(screen.getByRole('button', { name: 'Atualizar conversas' })); await screen.findByRole('alert');
-    expect(screen.queryByText(conversation.profileName)).not.toBeInTheDocument(); expect(screen.queryByText('Mensagem sintética recebida')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Abrir conversa com Contato sintético A/ })).not.toBeInTheDocument();
+    // The open conversation has its own read, refreshed successfully: it stays.
+    expect(await screen.findByText('Mensagem sintética recebida')).toBeVisible();
     expect(screen.queryByText('SYNTHETIC INTERNAL ERROR')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Tentar carregar conversas' })); await screen.findByRole('button', { name: /Abrir conversa com Contato sintético A/ });
   });

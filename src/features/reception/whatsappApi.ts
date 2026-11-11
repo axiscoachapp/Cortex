@@ -1,4 +1,5 @@
-// K1 read-only boundary. No connection, send or mutation methods are exposed here.
+// K1 read boundary. No connection or mutation methods are exposed here; sending and mark_read
+// live in whatsappSend.ts, and each conversation command has its own adapter.
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { functionErrorBody } from '@/lib/functionErrors';

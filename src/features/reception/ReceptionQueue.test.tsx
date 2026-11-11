@@ -7,6 +7,7 @@ import { ClinicAccessContext } from './accessContext';
 const mocks = vi.hoisted(() => ({ queue: vi.fn(), detail: vi.fn() }));
 vi.mock('./api', () => ({ receptionApi: { queue: mocks.queue, case: mocks.detail } }));
 vi.mock('./WhatsAppInbox', () => ({ default: () => <p>Caixa sintética montada</p> }));
+vi.mock('./whatsappApi', () => ({ whatsappApi: { conversations: async () => ({ conversations: [], nextBefore: null }) } }));
 vi.mock('./CaseWorkspace', () => ({ CaseWorkspace: () => <p>Caso sintético montado</p> }));
 vi.mock('./NewCaseDialog', () => ({ NewCaseDialog: () => null }));
 vi.mock('@/hooks/use-mobile', () => ({ isBelowMobileBreakpoint: () => false }));
