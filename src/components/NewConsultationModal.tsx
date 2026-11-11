@@ -174,7 +174,7 @@ export function NewConsultationModal({ open, onOpenChange, patients, onStartCons
   return (
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className={`max-w-2xl ${dialogLayout.content}`}>
-        <DialogHeader className={dialogLayout.header}>
+        <DialogHeader className={cn(dialogLayout.header, 'text-left')}>
           <DialogTitle className="text-foreground">Iniciar atendimento</DialogTitle>
           <DialogDescription className="sr-only">Escolha ou cadastre o paciente e informe a queixa principal para começar.</DialogDescription>
         </DialogHeader>

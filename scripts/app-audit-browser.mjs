@@ -30,6 +30,9 @@
 //   AUDIT_CONSULTATION_ERRORS=1             consultation (round 3, consulta-tela): the phone
 //                                           "Ações" menu, a failed AI question, a failed
 //                                           "Gerar documento", the issued-document "⋯" menu
+//   AUDIT_FORM_DIALOGS=1                    on / and /gerenciar-pacientes: the start-visit and
+//                                           patient dialogs empty, invalid and with "Mais dados";
+//                                           a toast after archiving a patient
 import { chromium, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
@@ -698,7 +701,7 @@ try {
           await page.getByRole('button', { name: 'Iniciar atendimento', exact: true }).first().click();
           await expect(page.getByRole('dialog')).toBeVisible();
           await snapshot('inicio-consulta-existente');
-          await page.getByRole('button', { name: 'Novo Paciente', exact: true }).click();
+          await page.getByRole('button', { name: /^Novo paciente$/i }).click();
           await snapshot('inicio-consulta-novo');
           await page.keyboard.press('Escape');
           await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -940,6 +943,70 @@ try {
         await page.goto(origin + '/agenda?queue=scheduling');
         await page.waitForTimeout(1200);
         await snap('agenda-medico-lista-espera');
+      }
+      // Form dialogs (AUDIT_FORM_DIALOGS=1, round 3 "formularios"): start-visit and patient
+      // dialogs empty and after an invalid send, with the dialog box measured against the
+      // viewport; then the toast shown after archiving a patient.
+      if (process.env.AUDIT_FORM_DIALOGS === '1' && ['/', '/gerenciar-pacientes', '/agenda'].includes(path) && WORKSPACE_ROLE !== 'reception') {
+        const formSnap = async (name) => {
+          await page.waitForTimeout(500);
+          await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: false });
+          const box = (await page.getByRole('dialog').count()) ? await page.getByRole('dialog').first().boundingBox() : null;
+          report.routes[`${label} ${name}`] = { ...(await inspect(page, viewport.width)),
+            ...(box ? { dialog: { left: Math.round(box.x), right: Math.round(box.x + box.width), top: Math.round(box.y), bottom: Math.round(box.y + box.height), viewport } } : {}),
+            focused: await page.evaluate(() => document.activeElement?.id || document.activeElement?.getAttribute('aria-label') || document.activeElement?.tagName),
+            pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        };
+        const dialog = page.getByRole('dialog');
+        const leave = async () => {
+          await page.goto(origin + path).catch(async () => { await page.waitForTimeout(800); await page.goto(origin + path); });
+          await page.waitForTimeout(1200);
+        };
+        if (path === '/') {
+          await page.getByRole('button', { name: /^(Nova Consulta|Iniciar atendimento)$/ }).first().click();
+          await dialog.waitFor();
+          await formSnap('form-atendimento-vazio');
+          await dialog.getByRole('button', { name: 'Iniciar atendimento', exact: true }).click();
+          await formSnap('form-atendimento-existente-invalido');
+          await dialog.getByRole('button', { name: 'Novo paciente', exact: true }).click();
+          await formSnap('form-atendimento-novo');
+          await dialog.getByRole('button', { name: 'Iniciar atendimento', exact: true }).click();
+          await formSnap('form-atendimento-novo-invalido');
+          await dialog.getByRole('button', { name: /^Mais dados/ }).click();
+          await dialog.getByLabel('E-mail (opcional)').fill('sem-arroba');
+          await dialog.getByLabel('Nome', { exact: true }).fill('Paciente Sintética Nova');
+          await dialog.getByLabel('Queixa principal').fill('Rotina (texto sintético).');
+          await dialog.getByRole('button', { name: 'Iniciar atendimento', exact: true }).click();
+          await formSnap('form-atendimento-mais-dados-invalido');
+          await leave();
+        }
+        if (path === '/gerenciar-pacientes') {
+          await page.getByRole('button', { name: 'Novo paciente', exact: true }).first().click();
+          await dialog.waitFor();
+          await formSnap('form-paciente-vazio');
+          await dialog.getByRole('button', { name: 'Adicionar', exact: true }).click();
+          await formSnap('form-paciente-invalido');
+          await dialog.getByLabel('Nome', { exact: true }).fill('Paciente Sintética Nova');
+          await dialog.getByLabel('CPF (opcional)').fill('111.111.111-11');
+          await dialog.getByRole('button', { name: 'Adicionar', exact: true }).click();
+          await formSnap('form-paciente-cpf-invalido');
+          await leave();
+          await page.getByRole('button', { name: /^Ações para / }).first().click();
+          await page.getByRole('menuitem', { name: 'Arquivar…' }).click();
+          await page.getByRole('alertdialog').waitFor();
+          await formSnap('form-arquivar-confirmacao');
+          await page.getByRole('alertdialog').getByRole('button', { name: 'Arquivar', exact: true }).click();
+          await page.getByText('Paciente arquivado').first().waitFor({ timeout: 5000 }).catch(() => {});
+          await formSnap('form-toast');
+          await leave();
+        }
+        // The doctor's appointment dialog (its own file belongs to the agenda): only to see the shared frame.
+        if (path === '/agenda') {
+          await page.getByRole('button', { name: /^Novo agendamento$/i }).first().click();
+          await dialog.waitFor();
+          await formSnap('form-agenda-dialogo');
+          await leave();
+        }
       }
       // Menu bot: the editor and a local simulated conversation (nothing is sent).
       if (CLINIC_ADMIN && path === '/configuracoes?secao=whatsapp') {

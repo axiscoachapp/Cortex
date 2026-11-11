@@ -44,6 +44,7 @@ import { ageFromBirthdate } from '@/lib/patientImport';
 import { clinicDate, lastConsultationLabel } from '@/lib/dates';
 import { fetchAllRows } from '@/lib/pagination';
 import { dialogLayout } from '@/lib/dialogLayout';
+import { cn } from '@/lib/utils';
 import { focusField } from '@/lib/focusField';
 import { PatientAdministrativeFields } from '@/components/PatientAdministrativeFields';
 import { SupportRequest } from '@/components/SupportRequest';
@@ -412,7 +413,7 @@ const PatientManagement = () => {
                   </Button>
                 </DialogTrigger>
                 <DialogContent className={`max-w-2xl ${dialogLayout.content}`}>
-                  <DialogHeader className={dialogLayout.header}>
+                  <DialogHeader className={cn(dialogLayout.header, 'text-left')}>
                     <DialogTitle>{editingPatient ? 'Editar cadastro' : 'Novo paciente'}</DialogTitle>
                     <DialogDescription className="sr-only">
                       Revise os dados do paciente antes de salvar.
@@ -596,7 +597,7 @@ const PatientManagement = () => {
                 {/* Column labels for the desktop rows; each row also names its fields for screen readers. */}
                 <div
                   aria-hidden="true"
-                  className="hidden md:grid md:grid-cols-[minmax(0,2.2fr)_minmax(0,0.7fr)_minmax(0,1.2fr)_minmax(0,1.7fr)_minmax(0,1fr)_2.25rem] md:gap-3 px-3 pb-2 text-xs font-medium text-muted-foreground border-b"
+                  className="hidden md:grid md:grid-cols-[minmax(0,1.9fr)_minmax(0,0.65fr)_minmax(0,1.35fr)_minmax(0,1.9fr)_minmax(0,0.9fr)_2.25rem] md:gap-3 px-3 pb-2 text-xs font-medium text-muted-foreground border-b"
                 >
                   <span>Nome</span>
                   <span>Idade</span>
@@ -609,7 +610,7 @@ const PatientManagement = () => {
                   {visiblePatients.map((patient) => (
                     <li
                       key={patient.id}
-                      className="flex items-center gap-2 px-1 py-2 md:grid md:min-h-[60px] md:grid-cols-[minmax(0,2.2fr)_minmax(0,0.7fr)_minmax(0,1.2fr)_minmax(0,1.7fr)_minmax(0,1fr)_2.25rem] md:gap-3 md:px-3 md:py-1.5"
+                      className="flex items-center gap-2 px-1 py-2 md:grid md:min-h-[60px] md:grid-cols-[minmax(0,1.9fr)_minmax(0,0.65fr)_minmax(0,1.35fr)_minmax(0,1.9fr)_minmax(0,0.9fr)_2.25rem] md:gap-3 md:px-3 md:py-1.5"
                     >
                       <div className="min-w-0 flex-1">
                         <Link
@@ -619,16 +620,18 @@ const PatientManagement = () => {
                         >
                           {patient.name}
                         </Link>
-                        {/* Phone: the details share one line under the name. */}
+                        {/* Phone: the details sit in two short lines under the name. */}
                         <p className="md:hidden text-xs text-muted-foreground break-words">
                           {[
                             patient.age === null ? null : `${patient.age} anos`,
                             patient.phone,
-                            patient.lastVisit ? `Última consulta: ${lastConsultationLabel(patient.lastVisit)}` : lastConsultationLabel(null),
                             STATUS_LABEL[patient.status] ?? patient.status,
                           ]
                             .filter(Boolean)
                             .join(' · ')}
+                        </p>
+                        <p className="md:hidden text-xs text-muted-foreground break-words">
+                          {patient.lastVisit ? `Última consulta ${lastConsultationLabel(patient.lastVisit)}` : lastConsultationLabel(null)}
                         </p>
                       </div>
                       <span className="hidden md:block text-sm">
