@@ -3,14 +3,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { receptionApi } from './api';
 import { useClinicAccess } from './accessContext';
 import { kinds } from './contracts';
 import { useRequestId } from './useRequestId';
-import { ReceptionNotice } from './ReceptionNotice';
 import { ContactSearch } from './ContactSearch';
+import { NewContactFields } from './NewContactFields';
+import { FormError } from './FormError';
+import { dialogLayout } from './dialogLayout';
+import { phoneProblem } from './contactPhone';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSessionHidden, useSessionPaused } from '@/contexts/SessionVisibility';
 
@@ -79,6 +82,7 @@ export function NewCaseDialog({
       let target = snapshot.selected;
       if (!target) {
         if (snapshot.mode !== 'new') throw new Error('Selecione um contato antes de continuar.');
+        if (phoneProblem(snapshot.phone)) throw new Error('Confira o telefone antes de continuar.');
         const payload = { name: snapshot.name, phone: snapshot.phone };
         if (!mayContinue()) return;
         started.current = true;
@@ -128,17 +132,15 @@ export function NewCaseDialog({
         if (!open && !busy && guard(false)) onClose();
       }}
     >
-      <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className={`max-w-2xl ${dialogLayout.content}`}>
+        <DialogHeader className={dialogLayout.header}>
           <DialogTitle>Novo atendimento</DialogTitle>
+          <DialogDescription>
+            Identifique quem entrou em contato. Um número pode ser de uma família; o paciente é escolhido ao agendar.
+          </DialogDescription>
         </DialogHeader>
-        <p className="text-xs text-muted-foreground">
-          Identifique quem entrou em contato. Um número pode pertencer a uma família; o paciente será confirmado antes
-          de agendar.
-        </p>
-        <ReceptionNotice error={error} />
-        <form onSubmit={submit} className="space-y-4">
-          <fieldset disabled={busy} className="space-y-4">
+        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+          <fieldset disabled={busy} className={dialogLayout.body}>
             {selected ? (
               <div className="rounded-lg border bg-muted/40 p-3 text-sm">
                 <p className="font-medium">{selected.name}</p>
@@ -170,37 +172,13 @@ export function NewCaseDialog({
                 {mode === 'existing' ? (
                   <ContactSearch onSelect={setSelected} />
                 ) : (
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor={field + 'name'}>Nome de quem entrou em contato</Label>
-                      <Input
-                        id={field + 'name'}
-                        required
-                        minLength={2}
-                        maxLength={200}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={field + 'phone'}>Telefone com DDD (opcional)</Label>
-                      <Input
-                        id={field + 'phone'}
-                        type="tel"
-                        maxLength={40}
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Número brasileiro com DDD; para outro país, informe + e o código.
-                      </p>
-                    </div>
-                  </div>
+                  <NewContactFields actor={access!.actorId} clinic={access!.clinic!.id} name={name} phone={phone}
+                    onName={setName} onPhone={setPhone} onUseExisting={value => { setSelected(value); setMode('existing'); }} />
                 )}
               </>
             )}
             <div>
-              <Label htmlFor={field + 'subject'}>Assunto administrativo</Label>
+              <Label htmlFor={field + 'subject'}>Assunto</Label>
               <Input
                 id={field + 'subject'}
                 required
@@ -213,7 +191,7 @@ export function NewCaseDialog({
             </div>
             <div className="grid md:grid-cols-2 gap-3">
               <div>
-                <Label htmlFor={field + 'kind'}>Tipo de demanda</Label>
+                <Label htmlFor={field + 'kind'}>Tipo</Label>
                 <select
                   id={field + 'kind'}
                   className="w-full rounded-md border bg-background p-2 text-sm"
@@ -245,21 +223,25 @@ export function NewCaseDialog({
               </div>
             </div>
           </fieldset>
-          <div className="flex flex-wrap gap-2 justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy}
-              onClick={() => {
-                if (guard(false)) onClose();
-              }}
-            >
-              Cancelar
-            </Button>
-            {paused && <p role="status" className="basis-full text-right text-xs text-muted-foreground">Verificando acesso… O preenchimento continua preservado.</p>}
-            <Button type="submit" disabled={busy || paused || (!selected && mode === 'existing')}>
-              {busy ? 'Registrando…' : 'Adicionar à fila'}
-            </Button>
+          <div className={dialogLayout.footer}>
+            <FormError error={error} />
+            {paused && <p role="status" className="text-right text-xs text-muted-foreground">Verificando acesso… O preenchimento continua preservado.</p>}
+            <div className={dialogLayout.actions}>
+              <Button
+                type="button"
+                variant="outline"
+                className={dialogLayout.button}
+                disabled={busy}
+                onClick={() => {
+                  if (guard(false)) onClose();
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" className={dialogLayout.button} disabled={busy || paused || (!selected && mode === 'existing') || (!selected && mode === 'new' && !!phoneProblem(phone))}>
+                {busy ? 'Registrando…' : 'Adicionar à fila'}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

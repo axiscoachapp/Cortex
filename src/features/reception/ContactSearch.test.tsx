@@ -28,4 +28,34 @@ describe('fresh administrative contact selection',()=>{
  it.each([{active:false},{actorId:other},{kind:'clinical' as const}])('does not query outside current reception access (%#)',async patch=>{mount({...access,...patch});const input=screen.queryByLabelText('Buscar contato por nome ou telefone');if(input)fireEvent.change(input,{target:{value:'Co'}});await act(async()=>{});expect(mocks.contacts).not.toHaveBeenCalled();expect(screen.queryByRole('button',{name:/Contato sintético.*Telefone sintético/})).not.toBeInTheDocument();});
  it('shows empty results only after a successful fresh read',async()=>{mocks.contacts.mockResolvedValue({items:[],nextCursor:null});mount();search();expect(await screen.findByText('Nenhum contato encontrado. Cadastre um atendimento na recepção primeiro.')).toBeVisible();search('C');expect(screen.queryByText(/Nenhum contato encontrado/)).not.toBeInTheDocument();});
  it('uses the same protected picker in new cases without creating records on selection',async()=>{const view=mount(access,true);search();const button=await result();expect(mocks.contacts).toHaveBeenCalledExactlyOnceWith(clinic,'Co',null,expect.any(AbortSignal));fireEvent.click(button);expect(screen.getByText(row.name,{exact:true})).toBeVisible();expect(mocks.createContact).not.toHaveBeenCalled();expect(mocks.createCase).not.toHaveBeenCalled();expect(view.created).not.toHaveBeenCalled();});
+ it('trims and waits for typing to settle before reading',async()=>{mount();search('Co');search('Con');search('Cont  ');await result();expect(mocks.contacts).toHaveBeenCalledExactlyOnceWith(clinic,'Cont',null,expect.any(AbortSignal));});
+});
+// B13: a first-time caller is registered inline from the booking search.
+describe('new contact from the booking search',()=>{
+ function mountCreate(){const client=new QueryClient({defaultOptions:{queries:{retry:false}}}),selected=vi.fn();render(<QueryClientProvider client={client}><ClinicAccessContext.Provider value={access}><ContactSearch allowCreate onSelect={selected}/></ClinicAccessContext.Provider></QueryClientProvider>);return {selected};}
+ const empty={items:[],nextCursor:null};
+ it('offers "Cadastrar … como novo contato" when nothing matches, then creates and selects it',async()=>{
+  mocks.contacts.mockResolvedValue(empty);mocks.createContact.mockResolvedValue(row.id);const view=mountCreate();search('Maria Nova');
+  fireEvent.click(await screen.findByRole('button',{name:'Cadastrar “Maria Nova” como novo contato'},{timeout:1500}));
+  expect(screen.getByLabelText('Nome de quem entrou em contato')).toHaveValue('Maria Nova');
+  const phone=screen.getByLabelText('Telefone com DDD'),create=screen.getByRole('button',{name:'Cadastrar contato'});
+  fireEvent.change(phone,{target:{value:'4199'}});expect(screen.getByText(/Faltam números/)).toBeVisible();expect(phone).toHaveAttribute('aria-invalid','true');expect(create).toBeDisabled();
+  fireEvent.change(phone,{target:{value:'(41) 99999-0001'}});expect(create).toBeEnabled();fireEvent.click(create);
+  await waitFor(()=>expect(view.selected).toHaveBeenCalledExactlyOnceWith({id:row.id,name:'Maria Nova',phone:'(41) 99999-0001'}));
+  expect(mocks.createContact).toHaveBeenCalledExactlyOnceWith(clinic,'Maria Nova','(41) 99999-0001',expect.any(String));
+ });
+ it('prefills the phone when the search was a number, and warns when the number already exists',async()=>{
+  const existing={id:'44444444-4444-4444-8444-444444444444',name:'Contato já cadastrado',phone:'+55 (41) 99999-0001',createdAt:'2026-11-07T12:00:00Z'};
+  mocks.contacts.mockImplementation(async(_clinic:string,term:string)=>term==='5541999990001'?{items:[existing],nextCursor:null}:empty);
+  const view=mountCreate();search('41 99999-0001');
+  fireEvent.click(await screen.findByRole('button',{name:/^Cadastrar “41 99999-0001”/},{timeout:1500}));
+  expect(screen.getByLabelText('Telefone com DDD')).toHaveValue('41 99999-0001');expect(screen.getByLabelText('Nome de quem entrou em contato')).toHaveValue('');
+  expect(await screen.findByText('Este telefone já está cadastrado para Contato já cadastrado.')).toBeVisible();
+  fireEvent.click(screen.getByRole('button',{name:'Usar Contato já cadastrado'}));expect(view.selected).toHaveBeenCalledExactlyOnceWith(existing);expect(mocks.createContact).not.toHaveBeenCalled();
+ });
+ it('keeps what was typed when creating fails',async()=>{
+  mocks.contacts.mockResolvedValue(empty);mocks.createContact.mockRejectedValue(new Error('Informe telefone com DDD ou internacional com +'));const view=mountCreate();search('Maria Nova');
+  fireEvent.click(await screen.findByRole('button',{name:/^Cadastrar “Maria Nova”/},{timeout:1500}));fireEvent.click(screen.getByRole('button',{name:'Cadastrar contato'}));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Informe telefone');expect(screen.getByLabelText('Nome de quem entrou em contato')).toHaveValue('Maria Nova');expect(view.selected).not.toHaveBeenCalled();
+ });
 });
