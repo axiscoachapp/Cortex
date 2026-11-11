@@ -114,7 +114,9 @@ describe('financial draft protection', () => {
     const dialog = await openPayment();
     fireEvent.change(within(dialog).getByLabelText('Valor (R$)'), { target: { value: '40,00' } });
     await act(async () => { await router.navigate('/outside'); });
-    await waitFor(() => expect(window.confirm).toHaveBeenCalled());
+    // Route exits ask in the app's dialog (round 3, M 33).
+    fireEvent.click(within(await screen.findByRole('alertdialog', { name: 'Descartar alterações?' })).getByRole('button', { name: 'Continuar editando' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     expect(router.state.location.pathname).toBe('/');
     expect(within(dialog).getByLabelText('Valor (R$)')).toHaveValue('40,00');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
@@ -290,8 +292,8 @@ describe('financial draft protection', () => {
     expect(invoke.mock.calls.filter(([, options]) => options.body.action === 'pay')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'Receber de Paciente Sintético' }));
     fireEvent.change(await screen.findByLabelText('Observação'), { target: { value: 'Descartar rascunho sintético' } });
-    vi.mocked(window.confirm).mockReturnValue(true);
     await act(async () => { await router.navigate('/outside'); });
+    fireEvent.click(within(await screen.findByRole('alertdialog', { name: 'Descartar alterações?' })).getByRole('button', { name: 'Descartar alterações' }));
     expect(await screen.findByText('Destino externo ao financeiro')).toBeVisible();
     expect(confirmSessionExit()).toBe(true);
   });
