@@ -41,7 +41,7 @@ describe('NewConsultationModal patient selection', () => {
     await user.type(screen.getByLabelText('Buscar paciente'), 'Maria');
     await user.click(await screen.findByRole('option', { name: /Maria Silva/ }));
     await user.type(screen.getByLabelText(/queixa principal/i), 'Dor pélvica');
-    await user.click(screen.getByRole('button', { name: 'Iniciar Consulta' }));
+    await user.click(screen.getByRole('button', { name: 'Iniciar atendimento' }));
     await waitFor(() => expect(onStart).toHaveBeenCalledWith('maria-id', undefined, 'Dor pélvica'));
   });
 
@@ -57,14 +57,16 @@ describe('NewConsultationModal patient selection', () => {
     await waitFor(() => expect(screen.queryByRole('option', { name: /Maria Silva/ })).not.toBeInTheDocument());
     expect(screen.getByRole('option', { name: /Ana Paula/ })).toHaveAttribute('aria-selected', 'false');
     await user.type(screen.getByLabelText(/queixa principal/i), 'Dor pélvica');
-    const submit = screen.getByRole('button', { name: 'Iniciar Consulta' });
-    expect(submit).toBeDisabled();
+    // The button stays enabled; trying to start says what is missing next to the search.
+    const submit = screen.getByRole('button', { name: 'Iniciar atendimento' });
     await user.click(submit);
     expect(onStart).not.toHaveBeenCalled();
+    expect(search).toHaveFocus();
+    expect(search).toHaveAccessibleDescription('Selecione um paciente na lista.');
 
-    // Choosing the visible patient enables the start for that patient only.
+    // Choosing the visible patient starts for that patient only.
     await user.click(screen.getByRole('option', { name: /Ana Paula/ }));
-    expect(submit).toBeEnabled();
+    expect(search).not.toHaveAttribute('aria-invalid');
     await user.click(submit);
     await waitFor(() => expect(onStart).toHaveBeenCalledWith('ana-id', undefined, 'Dor pélvica'));
     expect(onStart).toHaveBeenCalledTimes(1);
