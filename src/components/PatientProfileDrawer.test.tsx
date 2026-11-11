@@ -116,6 +116,14 @@ describe('Concurrent clinical history editing', () => {
   });
 });
 
+describe('Profile header', () => {
+  it('summarises visits in one line and does not show the AI usage meter', async () => {
+    renderProfile({ ...patient, medications: [{ name: 'Medicamento sintético', dosage: '1', instructions: '' }] });
+    expect(await screen.findByText('0 consultas · 1 medicação ativa')).toBeInTheDocument();
+    expect(screen.queryByText(/limite diário/i)).not.toBeInTheDocument();
+  });
+});
+
 describe('AI insights proposal', () => {
   const proposal = { insights: { summary: 'Resumo sugerido sintético', family_history: ['Mãe com HAS'] }, createdAt: '2026-11-11T12:00:00Z' };
   function renderWithProposal() {

@@ -12,10 +12,7 @@ import {
   X,
   MessageCircle,
   Printer,
-  Stethoscope,
-  Clock,
   StickyNote,
-  Activity,
   Phone,
   Mail,
   MessagesSquare,
@@ -37,7 +34,6 @@ import { useClinicAccess } from '@/features/reception/accessContext';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { PatientFiles } from '@/components/PatientFiles';
 import { PrescriptionList } from '@/components/PrescriptionList';
-import { UsageMeter } from '@/components/UsageMeter';
 import { fetchAllRows } from '@/lib/pagination';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { hasInsights, useInsightsProposal, type AIInsights } from '@/hooks/useInsightsProposal';
@@ -445,33 +441,19 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
             </div>
           )}
 
-          {/* Quick stats strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-            <Stat
-              icon={Stethoscope}
-              label="Consultas"
-              value={String(stats.total)}
-              loading={!consultationsReady}
-            />
-            <Stat
-              icon={Clock}
-              label="Última visita"
-              value={stats.lastVisit}
-              loading={!consultationsReady}
-            />
-            <Stat
-              icon={Calendar}
-              label="Primeira"
-              value={stats.firstVisit}
-              loading={!consultationsReady}
-            />
-            <Stat icon={Activity} label="Med. ativas" value={String(stats.activeMeds)} />
-          </div>
-
-          {/* Usage meter */}
-          <div className="mt-3">
-            <UsageMeter variant="pill" />
-          </div>
+          {/* Visit summary in one line, so the tabs start near the top. */}
+          <p className="mt-3 text-sm text-muted-foreground" aria-live="polite">
+            {consultationsReady
+              ? [
+                  stats.total === 1 ? '1 consulta' : `${stats.total} consultas`,
+                  stats.total > 0 ? `última ${stats.lastVisit}` : null,
+                  stats.total > 1 ? `primeira ${stats.firstVisit}` : null,
+                  stats.activeMeds === 1 ? '1 medicação ativa' : `${stats.activeMeds} medicações ativas`,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : 'Carregando consultas…'}
+          </p>
         </SheetHeader>
         {(detailLoading || detailFetchStatus !== 'idle') && (
           <p role="status" className="py-4 text-sm text-muted-foreground">
@@ -873,28 +855,6 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
 }
 
 /* ─── helpers ────────────────────────────────────────────────────────── */
-
-function Stat({
-  icon: Icon,
-  label,
-  value,
-  loading,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  loading?: boolean;
-}) {
-  return (
-    <div className="px-3 py-2 rounded-lg bg-secondary/40 border border-border/40">
-      <div className="flex items-center gap-1.5 text-[0.625rem] text-muted-foreground uppercase tracking-wider font-medium">
-        <Icon className="w-3 h-3" />
-        {label}
-      </div>
-      <div className="text-sm font-semibold text-foreground mt-0.5 truncate">{loading ? '—' : value}</div>
-    </div>
-  );
-}
 
 interface EditableSectionProps {
   disabled?: boolean;
