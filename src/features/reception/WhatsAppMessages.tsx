@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { whatsappApi, type WhatsAppConversation, type WhatsAppMessage } from './whatsappApi';
 import { readWhatsAppAssignees } from './whatsappAssignees';
 import { markWhatsAppConversationRead } from './whatsappSend';
-import { clinicDateLabel, clinicTime } from './dates';
+import { messageTimeLabel } from './queueTime';
+import { downloadWhatsAppMedia, mediaFileName, previewKind } from './whatsappMedia';
+import { WhatsAppConversationLinks } from './WhatsAppConversationLinks';
 import { WhatsAppBotSession } from './WhatsAppBotSession';
 import {WhatsAppCloseAction} from './WhatsAppCloseAction';
 import {WhatsAppReopenAction} from './WhatsAppReopenAction';
@@ -27,9 +29,11 @@ type Props = { actor: string; clinic: string; conversation: WhatsAppConversation
   onSendingChange?: (sending: boolean) => void;
   /** mark_read succeeded: the list can refresh its unread badges. */
   onRead?: () => void;
+  /** Queues seen in this inbox (and the bot's default), offered by "Mudar fila". */
+  queues?: readonly string[];
 };
 
-export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,onRelease,onCloseConversation,onReopenConversation,onSetQueue,onRevokeConsent,onTransfer,commandKind,commandBusy=false,commandBlocked=false,onNavigate,generation=0,drafts,requestId,onSendingChange,onRead }: Props) {
+export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,onRelease,onCloseConversation,onReopenConversation,onSetQueue,onRevokeConsent,onTransfer,commandKind,commandBusy=false,commandBlocked=false,onNavigate,generation=0,drafts,requestId,onSendingChange,onRead,queues=[] }: Props) {
   const region = useRef<HTMLElement>(null);
   const pageHeading=useRef<HTMLHeadingElement>(null);
   const [before,setBefore]=useState<string|null>(null);
@@ -129,10 +133,11 @@ export function WhatsAppMessages({ actor, clinic, conversation, onClose,onClaim,
         {onRelease&&own&&<Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal" disabled={locked} onClick={()=>onRelease(live)}>{commandBusy&&commandKind==='unassign'?'Devolvendo…':'Devolver à fila'}</Button>}
         {onCloseConversation&&own&&<WhatsAppCloseAction key={'Close:'+snapshot} conversation={live} disabled={locked} busy={commandBusy&&commandKind==='close'} onConfirm={onCloseConversation}/>}
         {onReopenConversation&&live.status==='closed'&&(live.assignedTo===null||live.assignedTo===actor)&&live.revision<2147483647&&<WhatsAppReopenAction key={'Reopen:'+snapshot} conversation={live} disabled={locked} busy={commandBusy&&commandKind==='reopen'} onConfirm={onReopenConversation}/>}
-        {onSetQueue&&own&&<WhatsAppQueueAction key={'Queue:'+snapshot} conversation={live} disabled={locked} busy={commandBusy&&commandKind==='queue'} onConfirm={onSetQueue}/>}
+        {onSetQueue&&own&&<WhatsAppQueueAction key={'Queue:'+snapshot} conversation={live} queues={queues} disabled={locked} busy={commandBusy&&commandKind==='queue'} onConfirm={onSetQueue}/>}
         {onRevokeConsent&&hasPhone&&own&&live.consented&&<WhatsAppRevokeConsentAction key={'RevokeConsent:'+snapshot} conversation={live} disabled={locked} busy={commandBusy&&commandKind==='revoke_consent'} onConfirm={onRevokeConsent}/>}
         {onTransfer&&own&&<WhatsAppTransferAction key={'Transfer:'+snapshot} actor={actor} clinic={clinic} conversation={live} disabled={locked} busy={commandBusy&&commandKind==='transfer'} onConfirm={(confirmed,targetUserId)=>{const latest=client.getQueryState(messageKey);if(mounted.current&&latest?.status==='success'&&latest.data===messages.data&&(latest.fetchStatus==='idle'||poll.background))onTransfer(confirmed,targetUserId);}}/>}
       </div>}
+      {(live.contactId||live.caseId)&&<WhatsAppConversationLinks actor={actor} contactId={live.contactId} caseId={live.caseId} />}
       <WhatsAppBotSession key={botReadGeneration} generation={botReadGeneration} actor={actor} clinic={clinic} conversationId={live.id} />
     </>}
     <h3 ref={pageHeading} tabIndex={-1} className="font-semibold outline-none">Mensagens da conversa</h3>
@@ -163,17 +168,60 @@ function MessageBubble({ message }: { message: WhatsAppMessage }) {
   const out = message.direction === 'out';
   const status = out ? outboundLabels[message.status] : undefined;
   const failed = out && message.status === 'failed', unknown = out && message.status === 'unknown';
-  return <li className={`min-w-0 max-w-[85%] rounded-lg border p-3 space-y-2 ${out ? 'self-end bg-primary/10' : 'self-start bg-muted/40'} ${failed ? 'border-destructive/50' : unknown ? 'border-amber-500/50' : ''}`}>
-    <p className="text-xs font-medium">{out ? 'Enviada' : 'Recebida'}{message.template ? ' · modelo' : ''}</p>
-    <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{message.body || (message.template ? 'Modelo ' + message.template.name : kindLabels[message.kind] || 'Mensagem sem texto')}</p>
-    {message.media?.filename && <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{message.media.filename}</p>}
-    <p className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-      <time dateTime={message.at}>{clinicDateLabel(message.at)} · {clinicTime(message.at)}</time>
+  const text = message.body || (message.template ? 'Modelo ' + message.template.name : message.media ? '' : kindLabels[message.kind] || 'Mensagem sem texto');
+  return <li className={`min-w-0 max-w-[85%] rounded-2xl px-3 py-2 space-y-1 ${out ? 'self-end rounded-br-sm bg-primary/15' : 'self-start rounded-bl-sm border bg-card'} ${failed ? 'border border-destructive/50' : unknown ? 'border border-amber-500/50' : ''}`}>
+    <span className="sr-only">{out ? 'Enviada' : 'Recebida'}{message.template ? ', modelo' : ''}: </span>
+    {message.template && <p aria-hidden="true" className="text-xs text-muted-foreground">Modelo</p>}
+    {text && <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{text}</p>}
+    {message.media && <MediaAttachment message={message} />}
+    <p className="flex flex-wrap justify-end gap-x-2 text-xs text-muted-foreground">
+      <time dateTime={message.at}>{messageTimeLabel(message.at)}</time>
       {status && <span className={failed ? 'font-medium text-destructive' : unknown ? 'font-medium' : undefined}>{status}</span>}
     </p>
     {failed && <p className="text-xs text-destructive">Esta mensagem não foi entregue ao paciente.</p>}
     {unknown && <p className="text-xs">O WhatsApp não confirmou o envio. Confira com o paciente antes de mandar de novo.</p>}
   </li>;
+}
+
+/** A received photo, audio, video or document: shown in place when the browser can, always downloadable. */
+function MediaAttachment({ message }: { message: WhatsAppMessage }) {
+  const media = message.media!;
+  const [state, setState] = useState<{ phase: 'idle' | 'loading' | 'error'; error?: string } | { phase: 'ready'; url: string; mime: string }>({ phase: 'idle' });
+  const urlRef = useRef<string | null>(null), controller = useRef<AbortController | null>(null), pendingDownload = useRef(false);
+  useEffect(() => () => { controller.current?.abort(); if (urlRef.current) URL.revokeObjectURL(urlRef.current); }, []);
+  const kind = previewKind(media.mime);
+  const name = mediaFileName(media.filename, media.mime, message.kind);
+  const save = (url: string) => { const link = document.createElement('a'); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); };
+  async function load(download: boolean) {
+    if (state.phase === 'ready') { if (download) save(state.url); return; }
+    if (state.phase === 'loading') return;
+    pendingDownload.current = download;
+    controller.current = new AbortController();
+    setState({ phase: 'loading' });
+    try {
+      const file = await downloadWhatsAppMedia(message.id, controller.current.signal);
+      const url = URL.createObjectURL(file.blob);
+      urlRef.current = url;
+      setState({ phase: 'ready', url, mime: file.mime });
+      if (pendingDownload.current || !previewKind(file.mime)) save(url);
+    } catch (error) {
+      if (controller.current?.signal.aborted) return;
+      setState({ phase: 'error', error: error instanceof Error ? error.message : 'Não foi possível baixar o arquivo.' });
+    }
+  }
+  const shown = state.phase === 'ready' ? previewKind(state.mime) : null;
+  const viewLabel = kind === 'image' ? 'Ver imagem' : kind === 'audio' ? 'Ouvir áudio' : kind === 'video' ? 'Ver vídeo' : null;
+  return <div className="space-y-2">
+    <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{kindLabels[message.kind] ?? 'Arquivo'}{media.filename ? ' · ' + media.filename : ''}</p>
+    {state.phase === 'ready' && shown === 'image' && <img src={state.url} alt={media.filename || 'Imagem recebida'} className="max-h-72 max-w-full rounded-lg" />}
+    {state.phase === 'ready' && shown === 'audio' && <audio controls src={state.url} className="max-w-full"><track kind="captions" /></audio>}
+    {state.phase === 'ready' && shown === 'video' && <video controls src={state.url} className="max-h-72 max-w-full rounded-lg"><track kind="captions" /></video>}
+    <div className="flex flex-wrap gap-2">
+      {viewLabel && !shown && <Button type="button" size="sm" variant="outline" className="min-h-11" disabled={state.phase === 'loading'} onClick={() => void load(false)}>{state.phase === 'loading' && !pendingDownload.current ? 'Abrindo…' : viewLabel}</Button>}
+      <Button type="button" size="sm" variant="outline" className="min-h-11" disabled={state.phase === 'loading'} onClick={() => void load(true)}>{state.phase === 'loading' && pendingDownload.current ? 'Baixando…' : 'Baixar arquivo'}</Button>
+    </div>
+    {state.phase === 'error' && <p role="alert" className="text-xs text-destructive">{state.error}</p>}
+  </div>;
 }
 
 /** Name of another person who owns the conversation, from the assignee catalogue; null when unknown. */

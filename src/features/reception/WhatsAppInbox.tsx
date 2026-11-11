@@ -16,11 +16,16 @@ import {reopenWhatsAppConversation} from './whatsappReopen';
 import {setWhatsAppConversationQueue} from './whatsappQueue';
 import {revokeWhatsAppConsent} from './whatsappRevokeConsent';
 import { WhatsAppMessages } from './WhatsAppMessages';
+import { messageTimeLabel } from './queueTime';
 import WhatsAppTemplateCatalog from './WhatsAppTemplateCatalog';
 import { emptyDraft, type ComposerDraft, type ComposerDrafts } from './WhatsAppComposer';
 import { useBackgroundRefresh } from './useBackgroundRefresh';
 import { useRequestId } from './useRequestId';
-import { clinicDateLabel, clinicTime } from './dates';
+
+import { selectClass } from './ReceptionControls';
+
+/** The server's default for whatsapp_flows.default_queue: where the bot hands a conversation off. */
+export const BOT_DEFAULT_QUEUE = 'geral';
 
 export default function WhatsAppInbox() {
   const access = useClinicAccess(), { user } = useAuth();
@@ -100,6 +105,10 @@ function ConversationList({ actor, clinic, channelVersion, drafts, requestId }: 
   const shown=list.data!==undefined&&list.isFetchedAfterMount&&(list.fetchStatus==='idle'?list.isSuccess||poll.background:poll.background);
   const fresh = list.isSuccess && list.isFetchedAfterMount && list.fetchStatus === 'idle';
   const rows=shown?list.data.conversations:[];
+  // "Mudar fila" offers the queues this inbox has seen, plus the bot's default one ("geral" unless
+  // the Cortex team changed it). There is no server list of queues to read.
+  const knownQueues=useRef(new Set<string>([BOT_DEFAULT_QUEUE]));
+  for(const row of rows)knownQueues.current.add(row.queue);
   const nextCursor = fresh ? list.data.nextBefore : null;
   const selectedId=selected?.id??null;
   const goTo=(cursor:string|null)=>{resetOperation();setSelected(null);poll.explicit();setBefore(cursor);heading.current?.focus();};
@@ -158,7 +167,7 @@ function ConversationList({ actor, clinic, channelVersion, drafts, requestId }: 
     <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]">
       <div className="space-y-2 min-w-0">
         <Label htmlFor="wa-filter">Filtrar conversas</Label>
-        <select id="wa-filter" className="block h-11 w-full rounded-md border bg-card px-3 text-sm" value={filter} onChange={event => { resetOperation();setSelected(null); poll.explicit(); setBefore(null); setFilter(event.target.value as WhatsAppInboxFilter); }}>
+        <select id="wa-filter" className={selectClass} value={filter} onChange={event => { resetOperation();setSelected(null); poll.explicit(); setBefore(null); setFilter(event.target.value as WhatsAppInboxFilter); }}>
           <option value="open">Em aberto</option><option value="unassigned">Sem responsável</option><option value="mine">Minhas conversas</option><option value="closed">Encerradas</option>
         </select>
       </div>
@@ -187,13 +196,13 @@ function ConversationList({ actor, clinic, channelVersion, drafts, requestId }: 
               <span className="flex flex-wrap items-start justify-between gap-2"><span className="min-w-0 font-semibold text-sm [overflow-wrap:anywhere]">{item.profileName || 'Contato sem nome'}</span>{item.unreadCount > 0 && <span className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground">{item.unreadCount} não lidas</span>}</span>
               <span className="line-clamp-2 text-sm [overflow-wrap:anywhere]">{item.lastMessagePreview || 'Sem prévia de mensagem'}</span>
               <span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">{item.status === 'closed' ? 'Encerrada' : 'Em aberto'} · Fila {item.queue}{item.assignedTo === actor ? ' · Com você' : item.assignedTo === null ? ' · Sem responsável' : ''}</span>
-              <time dateTime={item.lastMessageAt} className="block text-xs text-muted-foreground">{clinicDateLabel(item.lastMessageAt)} · {clinicTime(item.lastMessageAt)}</time>
+              <time dateTime={item.lastMessageAt} className="block text-xs text-muted-foreground">{messageTimeLabel(item.lastMessageAt)}</time>
             </button>
           </li>)}</ul>
         </>}
       </section>
       {selected&&feedback?.phase!=='checking'&&feedback?.phase!=='unresolved' ? <WhatsAppMessages key={selected.id+':'+detailGeneration} generation={detailGeneration} actor={actor} clinic={clinic} conversation={selected} commandBusy={commandBusy} commandBlocked={commandBlocked} onClaim={detail=>void runCommand(detail,'assign')} onRelease={detail=>void runCommand(detail,'unassign')} onCloseConversation={detail=>void runCommand(detail,'close')} onReopenConversation={detail=>void runCommand(detail,'reopen')} onSetQueue={(detail,queue)=>void runCommand(detail,'queue',{queue})} onTransfer={(detail,targetUserId)=>void runCommand(detail,'transfer',{targetUserId})} onRevokeConsent={detail=>void runCommand(detail,'revoke_consent')} commandKind={operation.current?.kind} onNavigate={resetOperation} onClose={close}
-          drafts={drafts} requestId={requestId} onSendingChange={setSending} onRead={onRead} />
+          drafts={drafts} requestId={requestId} onSendingChange={setSending} onRead={onRead} queues={Array.from(knownQueues.current)} />
         : selected&&(feedback?.phase==='checking'||feedback?.phase==='unresolved')?<div className="rounded-lg border bg-card p-6 space-y-3 text-sm"><p>{(operation.current?.kind==='close'||operation.current?.kind==='reopen'||operation.current?.kind==='queue'||operation.current?.kind==='revoke_consent')?'O detalhe será exibido após a conferência da conversa.':'O detalhe será exibido após a conferência do responsável.'}</p><Button variant="outline" onClick={close}>Voltar à lista</Button></div>
         : <p className="rounded-lg border border-dashed bg-card p-6 text-sm text-muted-foreground">Selecione uma conversa para ler as mensagens.</p>}
     </div>
