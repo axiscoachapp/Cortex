@@ -6,18 +6,45 @@
  *   text input  $0.30 / 1M tokens  →  0.0003 credits / token
  *   text output $2.50 / 1M tokens  →  0.0025 credits / token
  *   audio input $1.00 / 1M tokens  →  0.0010 credits / token
- * OpenAI initial test (2026-11-10): Terra $1/$5 per 1M input/output;
- * gpt-transcribe $0.0045/min. No cached-token discount is assumed. Missing
- * usage retains the original reservation. Quotas are admission estimates,
- * not a guarantee of a monetary ceiling for a single in-flight operation.
+ * OpenAI initial test (2026-11-10): Terra $1/$5 per 1M input/output
+ *   →  0.001 / 0.005 credits per token ($2/$7.50 above 272k input tokens);
+ * gpt-transcribe $0.0045/min  →  4.5 credits per minute.
+ * No cached-token discount is assumed. Missing usage retains the original
+ * reservation. Quotas are admission estimates, not a guarantee of a monetary
+ * ceiling for a single in-flight operation.
  *
- * Default daily limit 1500 credits = ~$1.50/day = ~$45/month worst case.
+ * A clinic day at these prices (reviewed 2026-11-11), per 20-minute consultation:
+ *   transcription 20 min × 4.5                              90
+ *   SOAP draft (~12k tokens in, ~2k out)                    22
+ *   one regeneration in two visits                          11
+ *   profile extraction + first-visit history (average)       5
+ *   pre-consultation summary + question checklist           12
+ *   two assistant questions (~20k tokens in each)           44
+ *   ≈ 185 credits per consultation; 25 consultations ≈ 4,600 credits.
+ * Default daily limit 8,000 credits (~$8/day ceiling) leaves ~70% margin for
+ * longer visits, retries and the in-flight reservation of a long recording.
+ * The day is the clinic's day (America/Sao_Paulo), as in reserve_usage.
  */
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { assertAiEnabled } from './operationControls.ts';
+import { clinicDayBounds } from './clinicDate.ts';
 
-export const DEFAULT_DAILY_LIMIT = 1500;
+export const DEFAULT_DAILY_LIMIT = 8000;
+
+/** Reservation for one transcription, from the audio size. The recorder sets no bitrate, so the
+ * duration is estimated at a low 32 kbps (4,000 bytes/s): the reservation is never below the real
+ * cost of a normal recording, and the settlement then charges the reported duration. */
+export function transcriptionReservationCredits(bytes: number): number {
+  if (!Number.isFinite(bytes) || bytes <= 0) return 25;
+  const minutes = bytes / 4000 / 60;
+  return Math.max(25, Math.ceil(minutes * 4.5 * 1.1));
+}
+
+function renewalText(now = new Date()): string {
+  const hours = Math.max(1, Math.round((Date.parse(clinicDayBounds(now).end) - now.getTime()) / 3_600_000));
+  return `Renova à meia-noite, horário de Brasília (em cerca de ${hours} h).`;
+}
 
 export const CREDITS_PER_TOKEN = {
   text_input:  0.0003,
@@ -28,7 +55,7 @@ export const CREDITS_PER_TOKEN = {
 export class QuotaExceededError extends Error {
   status = 429;
   constructor(public used: number, public limit: number) {
-    super(`Limite diário atingido (${Math.round(used)}/${limit} créditos). Reseta em 24h.`);
+    super(`Limite diário de IA atingido (${Math.round(used)} de ${limit} créditos). ${renewalText()}`);
     this.name = "QuotaExceededError";
   }
 }
@@ -152,6 +179,28 @@ export async function recordUsage(
   if (error || data !== true) throw new Error('Não foi possível registrar o consumo');
 }
 
+/** Release a reservation at zero cost. Only for work the provider certainly did not bill. */
+export async function releaseReservation(supabase: SupabaseClient, userId: string, reservationId: string): Promise<void> {
+  if (!userId || !reservationId) throw new Error('Registro de consumo inválido');
+  const { data, error } = await supabase.rpc('settle_usage', { p_user_id: userId, p_reservation_id: reservationId, p_credits: 0 });
+  if (error || data !== true) throw new Error('Não foi possível liberar a reserva de consumo');
+}
+
+/**
+ * Settle the reservation of a paid call that failed, so failures do not lock the doctor out:
+ * - not sent, or answered non-2xx (`billing: 'none'` on the adapter error): released at zero;
+ * - answered 2xx with unusable output (`billing: 'reserved'`): the reservation is charged;
+ * - transport failure or timeout (cost unknown): left to the stale-reservation release.
+ * Never throws: the caller is already reporting the original failure.
+ */
+export async function settleFailedCall(supabase: SupabaseClient, userId: string, reservationId: string, failure: unknown): Promise<void> {
+  const billing = failure && typeof failure === 'object' ? (failure as { billing?: unknown }).billing : undefined;
+  try {
+    if (billing === 'none') await releaseReservation(supabase, userId, reservationId);
+    else if (billing === 'reserved') await recordUsage(supabase, userId, 0, reservationId);
+  } catch { /* The reservation stays pending; the stale-reservation job frees it later. */ }
+}
+
 /** Build a 429 Response body the frontend can render verbatim. */
 export function quotaResponse(err: QuotaExceededError, corsHeaders: Record<string, string>): Response {
   return new Response(
@@ -161,6 +210,7 @@ export function quotaResponse(err: QuotaExceededError, corsHeaders: Record<strin
       rateLimited: err instanceof OperationRateError,
       used: err.used,
       limit: err.limit,
+      ...(err instanceof OperationRateError ? {} : { resetsAt: clinicDayBounds().end }),
     }),
     { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", ...(err instanceof OperationRateError ? {'Retry-After':String(err.retryAfterSeconds)} : {}) } },
   );

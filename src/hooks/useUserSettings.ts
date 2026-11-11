@@ -37,7 +37,7 @@ interface UserSettings {
 
 const DEFAULTS: UserSettings = {
   specialty: 'geral',
-  daily_credit_limit: 1500,
+  daily_credit_limit: 8000,
   live_copilot_enabled: false,
   doctor_name: '',
   crm_number: '',

@@ -44,7 +44,7 @@ export function UsageMeter({ variant = 'pill', className }: UsageMeterProps) {
     <div className="space-y-1 text-xs">
       <p className="font-semibold">{levelLabel[level]}</p>
       <p className="text-muted-foreground">
-        {Math.round(used)} de {limit} créditos de IA usados hoje. Renova em cerca de {resetsInHours} h.
+        {Math.round(used)} de {limit} créditos de IA usados hoje. Renova à meia-noite (horário de Brasília), em cerca de {resetsInHours} h.
       </p>
     </div>
   );

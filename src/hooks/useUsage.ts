@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { clinicDate } from '@/lib/dates';
 
-const DEFAULT_LIMIT = 1500;
+// Same default as reserve_usage (migration 20261111160000).
+const DEFAULT_LIMIT = 8000;
 
 export interface UsageSummary {
   used: number;
@@ -9,16 +11,14 @@ export interface UsageSummary {
   calls: number;
   percent: number;          // 0–100
   remaining: number;        // limit - used (never negative)
-  resetsInHours: number;    // hours until UTC midnight
+  resetsInHours: number;    // hours until midnight of the clinic's day (São Paulo)
   level: 'safe' | 'warn' | 'critical' | 'over';
 }
 
-function hoursToUtcMidnight(): number {
-  const now = new Date();
-  const tomorrow = new Date(Date.UTC(
-    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0,
-  ));
-  return Math.max(0, Math.round((tomorrow.getTime() - now.getTime()) / 3_600_000));
+/** The quota day is the clinic's day (America/Sao_Paulo, UTC-3 with no daylight saving since 2019). */
+function hoursToClinicMidnight(now = new Date()): number {
+  const today = Date.parse(`${clinicDate(now)}T00:00:00-03:00`);
+  return Math.max(0, Math.round((today + 86_400_000 - now.getTime()) / 3_600_000));
 }
 
 function classify(percent: number): UsageSummary['level'] {
@@ -34,7 +34,7 @@ export function useUsage(userId: string | undefined) {
     enabled: !!userId,
     staleTime: 15_000,
     queryFn: async () => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = clinicDate();
 
       // Both reads are RLS-scoped to auth.uid() — safe.
       const [usageResult, settingsResult] = await Promise.all([
@@ -65,7 +65,7 @@ export function useUsage(userId: string | undefined) {
         calls,
         percent,
         remaining: Math.max(0, limit - used),
-        resetsInHours: hoursToUtcMidnight(),
+        resetsInHours: hoursToClinicMidnight(),
         level: classify(percent),
       };
     },
