@@ -16,7 +16,8 @@ import { cn } from '@/lib/utils';
 export function SignOutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
-  const [state, setState] = useState(pendingExit);
+  // Read only when the dialog opens: what is pending can change at any time.
+  const [state, setState] = useState<{ locked?: string; unsaved: boolean }>({ unsaved: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const errorRef = useRef<HTMLParagraphElement>(null);
