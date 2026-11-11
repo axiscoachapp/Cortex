@@ -145,16 +145,23 @@ export function DocumentComposerModal({
   const emptyFormula = { name: '', components: [{ substance: '', amount: '' }], vehicle: '', form: '', quantity: '' };
   const [formulaDraft, setFormulaDraft] = useState<typeof emptyFormula | null>(null);
   const [formulaProblem, setFormulaProblem] = useState('');
+  // Free-text medication (missing from the Anvisa table, or catalog unavailable).
+  const emptyManual = { name: '', dosage: '', instructions: '' };
+  const [manualDraft, setManualDraft] = useState<typeof emptyManual | null>(null);
+  const [manualProblem, setManualProblem] = useState('');
+  // The query whose catalog search has finished (drives "Nenhum medicamento encontrado").
+  const [searchedQuery, setSearchedQuery] = useState('');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestMedications = useRef(patient.medications);
   const initialMedicationSelection = useRef<ComposerMed[]>([]);
   useEffect(() => { latestMedications.current = patient.medications; }, [patient.medications]);
 
-  // Reset to the patient's current medications whenever the modal opens.
+  // Reset to the patient's current medications whenever the modal opens. They
+  // start unchecked: the doctor picks what goes on this prescription.
   useEffect(() => {
     if (!open) return;
     setDocType('receita_simples');
-    initialMedicationSelection.current = (latestMedications.current ?? []).map(m => ({ ...m, checked: true }));
+    initialMedicationSelection.current = (latestMedications.current ?? []).map(m => ({ ...m, checked: false }));
     setMeds(initialMedicationSelection.current);
     setQuery(''); setHits([]);
     setDays('1'); setCid(''); setNote('');
@@ -162,6 +169,7 @@ export function DocumentComposerModal({
     setPatientAddress(''); setDocumentKind(''); setDocumentValue('');
     setRceCid(''); setJustification('');
     setFormulaDraft(null); setFormulaProblem('');
+    setManualDraft(null); setManualProblem(''); setSearchedQuery('');
   }, [open, patient.id]);
 
   // Ground profile meds in the catalog (best-effort name match) so the
@@ -214,6 +222,7 @@ export function DocumentComposerModal({
       if (cancelled) return;
       setCatalogError(!!error);
       setHits((data as CatalogHit[]) ?? []);
+      setSearchedQuery(q);
       setSearching(false);
     }, 300);
     return () => { cancelled = true; if (searchTimer.current) clearTimeout(searchTimer.current); };
@@ -296,6 +305,30 @@ export function DocumentComposerModal({
     }]);
     setFormulaDraft(null);
     setFormulaProblem('');
+  };
+
+  const openManual = (name = '') => {
+    setManualDraft({ ...emptyManual, name });
+    setManualProblem('');
+    setQuery(''); setHits([]); setSearchedQuery('');
+  };
+
+  const addManual = () => {
+    if (!manualDraft) return;
+    const name = normalizeFormulaText(manualDraft.name).trim();
+    if (!name) { setManualProblem('Informe o nome do medicamento.'); return; }
+    const antimicrobial = antimicrobialsIn(name).length > 0;
+    setMeds(prev => [...prev, {
+      name,
+      dosage: manualDraft.dosage.trim(),
+      instructions: manualDraft.instructions.trim(),
+      checked: true,
+      fromCatalog: true, // removable from the list like a catalog item
+      antimicrobial,
+    }]);
+    setManualDraft(null);
+    setManualProblem('');
+    if (antimicrobial && docType === 'receita_simples') setDocType('receita_antimicrobiano');
   };
 
   const selectedMeds = useMemo(() => meds.filter(m => m.checked), [meds]);
@@ -396,7 +429,7 @@ export function DocumentComposerModal({
   };
 
   const selection = (values: ComposerMed[]) => values.map(({ name, dosage, instructions, checked, concentration, quantity, unit, formula }) => ({ name, dosage, instructions, checked, concentration, quantity, unit, formula }));
-  const dirty = docType !== 'receita_simples' || !!query.trim() || days !== '1' || !!cid.trim() || !!note.trim() || !!examsText.trim() || !!indication.trim()
+  const dirty = docType !== 'receita_simples' || !!query.trim() || !!manualDraft || days !== '1' || !!cid.trim() || !!note.trim() || !!examsText.trim() || !!indication.trim()
     || !!patientAddress.trim() || !!documentKind || !!documentValue.trim() || !!rceCid.trim() || !!justification.trim()
     || JSON.stringify(selection(meds)) !== JSON.stringify(selection(initialMedicationSelection.current));
   const canClose = useUnsavedChanges(open && dirty);
@@ -411,7 +444,9 @@ export function DocumentComposerModal({
         <DialogHeader className="px-5 py-4 border-b border-border/50 shrink-0">
           <DialogTitle className="text-base font-semibold">Documento para {patient.name}</DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-            Gera o PDF com QR de validação. Assinatura ICP-Brasil será acoplada quando o provedor estiver conectado.
+            {signing
+              ? 'O documento sai em PDF com QR Code de validação. Use "Gerar e assinar" para assinar digitalmente.'
+              : 'O documento sai em PDF com QR Code de validação.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -574,6 +609,14 @@ export function DocumentComposerModal({
                   onChange={e => setQuery(e.target.value)}
                   placeholder="Digite 3+ letras — nome comercial ou princípio ativo"
                 />
+                {!searching && !catalogError && hits.length === 0 && query.trim().length >= 3 && searchedQuery === query.trim() && (
+                  <div role="status" className="absolute z-20 left-0 right-0 top-full mt-1 rounded-lg border border-border bg-white shadow-lg px-3 py-2 space-y-1.5">
+                    <p className="text-xs text-muted-foreground">Nenhum medicamento encontrado para “{query.trim()}”.</p>
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => openManual(query.trim())}>
+                      Adicionar “{query.trim()}” manualmente
+                    </Button>
+                  </div>
+                )}
                 {(hits.length > 0 || searching) && (
                   <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-lg border border-border bg-white shadow-lg max-h-56 overflow-y-auto scrollbar-thin">
                     {searching && hits.length === 0 ? (
@@ -601,6 +644,39 @@ export function DocumentComposerModal({
                   </div>
                 )}
               </div>
+
+              {/* Free-text medication */}
+              {manualDraft ? (
+                <fieldset className="rounded-lg border border-border/70 bg-white p-3 space-y-2 m-0 min-w-0">
+                  <legend className="text-xs font-semibold text-foreground px-1">Medicamento digitado</legend>
+                  <div className="space-y-1">
+                    <label htmlFor="rx-manual-name" className="text-xs font-medium text-foreground/80">Nome e concentração</label>
+                    <Input id="rx-manual-name" className="h-9 text-xs" value={manualDraft.name} maxLength={200}
+                      onChange={e => setManualDraft({ ...manualDraft, name: e.target.value })} placeholder="Ex.: Ibuprofeno 600 mg" />
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-[minmax(9rem,2fr)_3fr]">
+                    <div className="space-y-1">
+                      <label htmlFor="rx-manual-dosage" className="text-xs font-medium text-foreground/80">Dose</label>
+                      <Input id="rx-manual-dosage" className="h-9 text-xs" value={manualDraft.dosage} maxLength={120}
+                        onChange={e => setManualDraft({ ...manualDraft, dosage: e.target.value })} placeholder="1 comprimido" />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="rx-manual-instructions" className="text-xs font-medium text-foreground/80">Posologia e instruções</label>
+                      <Input id="rx-manual-instructions" className="h-9 text-xs" value={manualDraft.instructions} maxLength={300}
+                        onChange={e => setManualDraft({ ...manualDraft, instructions: e.target.value })} placeholder="De 8 em 8 horas, por 5 dias" />
+                    </div>
+                  </div>
+                  {manualProblem && <p role="alert" className="text-[0.6875rem] text-destructive">{manualProblem}</p>}
+                  <div className="flex flex-col-reverse gap-1.5 sm:flex-row sm:justify-end">
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => { setManualDraft(null); setManualProblem(''); }}>Cancelar</Button>
+                    <Button type="button" size="sm" className="h-8 text-xs" onClick={addManual}>Adicionar à receita</Button>
+                  </div>
+                </fieldset>
+              ) : (
+                <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => openManual()}>
+                  Adicionar medicamento manualmente
+                </Button>
+              )}
 
               {/* Compounded formula (manipulado) */}
               {formulaDraft ? (
@@ -650,9 +726,13 @@ export function DocumentComposerModal({
 
               {/* Medication list */}
               <div className="space-y-1.5">
-                {meds.length === 0 && (
+                {meds.length === 0 ? (
                   <p className="text-xs text-muted-foreground italic py-2">
-                    Sem medicamentos no perfil — adicione pela busca acima.
+                    Sem medicamentos no perfil. Adicione pela busca ou manualmente.
+                  </p>
+                ) : selectedMeds.length === 0 && (
+                  <p className="text-xs text-muted-foreground py-1">
+                    Marque os medicamentos que entram nesta receita.
                   </p>
                 )}
                 {meds.map((m, i) => (
@@ -708,7 +788,7 @@ export function DocumentComposerModal({
                       </p>
                     )}
                     {m.checked && (
-                      <div className="grid grid-cols-[110px_1fr] gap-1.5 pl-5">
+                      <div className="grid grid-cols-[minmax(9rem,2fr)_3fr] gap-1.5 pl-5">
                         <Input
                           aria-label={`Dose de ${m.name}`}
                           className="h-7 text-xs"

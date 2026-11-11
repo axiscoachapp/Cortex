@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DocumentComposerModal } from './DocumentComposerModal';
 import type { Patient } from '@/types/patient';
@@ -56,6 +56,11 @@ const person = (extra: Partial<Patient> = {}): Patient => ({
   ...extra,
 });
 
+// Profile medications start unchecked: the doctor picks what goes on each prescription.
+function checkProfileMedications() {
+  for (const box of screen.queryAllByRole('checkbox')) if (!(box as HTMLInputElement).checked) fireEvent.click(box);
+}
+
 async function openAntimicrobial(patient: Patient) {
   render(<DocumentComposerModal open onOpenChange={() => {}} patient={patient} onGenerate={async () => {}} isGenerating={false} />);
   await userEvent.setup().click(screen.getByRole('button', { name: /Antimicrobiano/ }));
@@ -95,6 +100,7 @@ describe('Prescription templates in the composer', { timeout: 20000 }, () => {
     render(
       <DocumentComposerModal open onOpenChange={() => {}} patient={person({ sex: 'feminino', medications: [A] })} onGenerate={onGenerate} isGenerating={false} />,
     );
+    checkProfileMedications();
     const user = userEvent.setup();
     const choose = (id: string) => user.selectOptions(screen.getByLabelText('Modelos de receita'), id);
     const generate = async () => {
@@ -149,6 +155,7 @@ describe('Composer while generating (R3)', { timeout: 20000 }, () => {
     );
     const user = userEvent.setup();
     const view = render(composer(false));
+    checkProfileMedications();
     await user.selectOptions(screen.getByLabelText('Modelos de receita'), 'snippet-uti');
 
     // Generation starts (e.g. from a second click elsewhere): nothing in the form can change.
@@ -187,6 +194,7 @@ describe('Regulated drug warnings before generating', { timeout: 20000 }, () => 
         isGenerating={false}
       />,
     );
+    checkProfileMedications();
     expect(screen.getByRole('alert')).toHaveTextContent('Medicamento sujeito a controle especial (clonazepam)');
   });
 
@@ -201,6 +209,7 @@ describe('Regulated drug warnings before generating', { timeout: 20000 }, () => 
         isGenerating={false}
       />,
     );
+    checkProfileMedications();
     expect(screen.getByText(/Há antimicrobiano selecionado/)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -212,6 +221,7 @@ describe('Receita de Controle Especial (D8)', { timeout: 20000 }, () => {
     settings.value = { prescriber: { professionalPhone: '(41) 3000-0000', prescriberCpf: '11144477735' }, isLoading: false };
     const onGenerate = vi.fn();
     render(<DocumentComposerModal open onOpenChange={() => {}} patient={person({ cpf: '11144477735', sex: 'masculino', medications: [{ name: 'Testosterona', dosage: 'Uso sintético', instructions: 'Orientação sintética' }] })} onGenerate={onGenerate} isGenerating={false} />);
+    checkProfileMedications();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Usar controle especial' }));
     await user.type(screen.getByLabelText('Concentração de Testosterona'), '1%');
@@ -230,6 +240,7 @@ describe('Receita de Controle Especial (D8)', { timeout: 20000 }, () => {
     settings.value = { prescriber, isLoading: false };
     const onGenerate = vi.fn();
     render(<DocumentComposerModal open onOpenChange={() => {}} patient={person({ cpf: '11144477735', sex: 'masculino', medications: [{ name: 'Testosterona', dosage: 'Uso sintético', instructions: 'Orientação sintética' }] })} onGenerate={onGenerate} isGenerating={false} />);
+    checkProfileMedications();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Usar controle especial' }));
     await user.type(screen.getByLabelText('Concentração de Testosterona'), '1%');
@@ -247,6 +258,7 @@ describe('Receita de Controle Especial (D8)', { timeout: 20000 }, () => {
     render(
       <DocumentComposerModal open onOpenChange={() => {}} patient={person({ sex: 'feminino', medications: [SERTRALINE], ...patient })} onGenerate={onGenerate} isGenerating={false} />,
     );
+    checkProfileMedications();
     return { user: userEvent.setup(), onGenerate };
   }
 
@@ -396,4 +408,55 @@ describe('Exam request with the TUSS catalog', { timeout: 20000 }, () => {
       content: { exams: ['Exame digitado à mão', 'Exame laboratorial sintético (TUSS 40304361)'] },
     });
   }, 20000);
+});
+
+describe('Choosing what goes on the prescription', { timeout: 20000 }, () => {
+  function setup(extra: Partial<Patient> = {}, signing: { active: boolean } | null = null) {
+    settings.value = { prescriber: { professionalPhone: '(41) 3000-0000', prescriberCpf: '' }, isLoading: false };
+    const onGenerate = vi.fn<(payload: unknown) => Promise<void>>(async () => {});
+    render(<DocumentComposerModal open onOpenChange={() => {}} patient={person({ sex: 'feminino', ...extra })} onGenerate={onGenerate} isGenerating={false} signing={signing} />);
+    return { user: userEvent.setup(), onGenerate };
+  }
+
+  it('does not pre-check the profile medications', async () => {
+    const { user, onGenerate } = setup({ medications: [{ name: 'Medicamento sintético A', dosage: '1', instructions: 'x' }] });
+    expect(screen.getByRole('checkbox', { name: 'Medicamento sintético A' })).not.toBeChecked();
+    expect(screen.getByText('Marque os medicamentos que entram nesta receita.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Gerar documento' })).toBeDisabled();
+    await user.click(screen.getByRole('checkbox', { name: 'Medicamento sintético A' }));
+    await user.click(screen.getByRole('button', { name: 'Gerar documento' }));
+    expect(onGenerate.mock.calls.at(-1)?.[0]).toMatchObject({ medications: [{ name: 'Medicamento sintético A' }] });
+  });
+
+  it('adds a medication typed by hand with dose and instructions', async () => {
+    const { user, onGenerate } = setup({ medications: [] });
+    await user.click(screen.getByRole('button', { name: 'Adicionar medicamento manualmente' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar à receita' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Informe o nome do medicamento.');
+    await user.type(screen.getByLabelText('Nome e concentração'), 'Produto sintético 10 mg');
+    await user.type(screen.getByLabelText('Dose'), '1 comprimido');
+    await user.type(screen.getByLabelText('Posologia e instruções'), 'à noite');
+    await user.click(screen.getByRole('button', { name: 'Adicionar à receita' }));
+    expect(screen.getByLabelText('Dose de Produto sintético 10 mg')).toHaveValue('1 comprimido');
+    await user.click(screen.getByRole('button', { name: 'Gerar documento' }));
+    expect(onGenerate.mock.calls.at(-1)?.[0]).toEqual({
+      docType: 'receita_simples',
+      medications: [{ name: 'Produto sintético 10 mg', dosage: '1 comprimido', instructions: 'à noite' }],
+      content: undefined,
+    });
+  });
+
+  it('says when the catalog has no match and offers to add the typed name by hand', async () => {
+    const { user } = setup({ medications: [] });
+    await user.type(screen.getByLabelText('Buscar medicamento na base Anvisa'), 'Inexistente');
+    expect(await screen.findByText('Nenhum medicamento encontrado para “Inexistente”.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Adicionar “Inexistente” manualmente' }));
+    expect(screen.getByLabelText('Nome e concentração')).toHaveValue('Inexistente');
+  });
+
+  it('describes the signature plainly', () => {
+    setup({ medications: [] }, { active: false });
+    expect(screen.getByText(/Use "Gerar e assinar" para assinar digitalmente/)).toBeInTheDocument();
+    expect(screen.queryByText(/acoplada/)).toBeNull();
+  });
 });
