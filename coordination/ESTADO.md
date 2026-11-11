@@ -1,5 +1,7 @@
 # Estado da coordenação
 
+**Correções 2–6 concluídas e publicadas no Supabase (Claude, 11/11 11:50):** layout de computador a partir de 1200 px, caixa do WhatsApp com resposta/atualização/não lidas, proteções que pausam em vez de descartar, gravação preservada até o servidor, troca de senha temporária cobrada no servidor. Migrations 85 = 85, 38 funções. Push pendente do login do usuário. [Passagem1118](mensagens/2026-11-11-1118_claude-para-codex_revisao-geral-correcoes-2-a-6.md) lista contratos e testes do Codex alterados. Próximo número livre do Claude: 20261111120000.
+
 **Correções 2–6 da revisão geral em andamento (Claude, 11/11):** pedido direto do usuário, com cinco agentes Opus em worktrees isoladas: layout no notebook, WhatsApp da recepção (responder e atualizar), proteções de sessão/acesso que descartavam formulários, gravação interrompida, troca obrigatória de senha cobrada no servidor. Migration **20261111110000 reservada** (Claude). O usuário decidiu que os cadastros técnicos só leitura são por desenho: a equipe Cortex configura cada clínica. [Plano](../docs/reviews/2026-11-10/revisao-geral/PLANO_DE_MELHORIA.md).
 
 **Migration 20261111100000 (Claude) aplicada em 11/11:** `patient_context_retrieval` reescreve `retrieve_patient_context` (mesma assinatura e grants). Próximo número livre do Claude: 20261111110000. Testes de banco agora rodam no projeto Supabase em transação desfeita: `scripts/supabase-rollout/sqltest.mjs`.

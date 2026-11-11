@@ -78,3 +78,18 @@ Sessão autônoma do Claude, iniciada em 10/11/2026 às 22:18 (horário de São 
 | **Decisão:** senha temporária continua, mas com cobrança no servidor | Não há e-mail configurado para convite. A marca de "trocar a senha" vai para um campo que só o servidor grava, vale por 72 horas, e o servidor recusa tudo até a troca. |
 | **Decisão:** tolerância de 45 s para falha de rede nas verificações de acesso | Uma falha isolada não esconde mais a tela nem descarta formulários. Recusa definitiva continua bloqueando na hora, e a página de Configurações continua estrita. |
 | Migration reservada | `20261111110000` para a cobrança da troca de senha. |
+| Cinco agentes terminaram | Todos entregaram commit com testes. Um detalhe: as cópias de trabalho nasceram de um ramo antigo (`TesteCortex`); os cinco perceberam e partiram do `main`. |
+| Junção no `main` | Cinco commits trazidos em ordem (senha, proteções, layout, gravação, WhatsApp). Um conflito, no arquivo da fila da recepção, resolvido à mão. |
+| Verificação da combinação | Tipos e tipos das funções: ok. Suíte completa do app: 2.807 testes passam; um arquivo novo de teste precisava de um simulador a mais depois da junção (corrigido; recepção: 1.425 de 1.425). Testes de banco da migration nova no Supabase, em transação desfeita: 6 suítes passam. |
+| Conferência visual | Auditoria nas telas principais em 1366×768 e demais larguras, sem achados. Montei uma caixa de WhatsApp fictícia no roteiro de auditoria para ver a resposta. |
+| **Decisão:** dois ajustes meus na caixa do WhatsApp | A conversa passa a abrir ao lado da lista já no notebook, e a lista de mensagens rola sozinha mantendo a mais recente junto da caixa de resposta. |
+| Revisão da parte de segurança | Li a migration e o código da troca de senha antes de aplicar. As quatro funções centrais de proteção mantêm a lógica anterior e só acrescentam a recusa enquanto a senha temporária está pendente. As duas contas existentes não têm essa marca e não são afetadas. |
+| Publicação no Supabase | 38 funções publicadas (duas novas: `change-initial-password`, `reissue-temporary-password`). Backup cifrado `conhcwuwtrkerpbblzgu-2026-11-11-pre-password`, ensaio com rollback, migration `20261111110000` aplicada em 1,5 s. 78 tabelas idênticas antes e depois. Verificador sem pendências. As duas contas continuam entrando (conferido em transação desfeita). |
+| Limpeza | Cópias de trabalho dos agentes removidas; os cinco ramos ficaram como reserva (`worktree-agent-*`). |
+| **Pendente: `git push`** | O GitHub pede o seu login. Enquanto o push não sai, o site continua na versão antiga. **Atenção:** conta nova criada com senha temporária antes do push fica travada no primeiro acesso, porque a tela antiga não sabe fazer a troca nova. As duas contas atuais não são afetadas. |
+
+**Não verificado com serviço real:**
+- Troca da senha temporária contra o Auth de verdade (só com simulador). Para conferir depois do push: criar uma secretária de teste em Equipe, entrar com a senha temporária e trocar.
+- Envio real pelo WhatsApp (não há número conectado).
+- Gravação com microfone e navegador reais (salvamento a cada 5 s, bloqueio de tela, queda do microfone).
+

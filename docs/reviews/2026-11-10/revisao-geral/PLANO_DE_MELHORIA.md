@@ -2,7 +2,7 @@
 
 11/11/2026. Resultado da revisão geral pedida pelo usuário: sete revisores independentes (um por área), mais o teste real da IA. Os relatórios completos estão em [`relatorios/`](relatorios/), o teste da IA em [AVALIACAO_IA_PACIENTE_ANTIGO.md](AVALIACAO_IA_PACIENTE_ANTIGO.md) e o registro de decisões em [DIARIO.md](DIARIO.md).
 
-**Situação de cada item:** ✅ feito e publicado · 🟡 feito, falta publicar · ⏳ a fazer · 🔶 depende de decisão sua.
+**Situação de cada item:** ✅ feito e publicado · 🟡 feito, chega ao site com o `git push` · ⏳ a fazer · 🔶 depende de decisão sua.
 
 ## O quadro geral
 
@@ -30,15 +30,15 @@
 | # | Item | Origem | Tamanho | Situação |
 |---|---|---|---|---|
 | B1 | Convênios, preços, dados TISS, dados do prescritor e conexão do WhatsApp não têm tela que grave. **Decisão do usuário (11/11): é por desenho.** A equipe Cortex faz a configuração completa de cada clínica; não haverá formulário para a clínica. Fica só o item C13 (dizer na tela como pedir um ajuste) | Financeiro 1–3 | — | Fora do escopo |
-| B2 | Gravação interrompida é apagada do navegador antes de estar salva no servidor; pode perder a consulta | Clínico 1 | P | Em andamento (agente) |
-| B3 | Renovação de sessão (a cada hora) e uma falha de rede descartam o formulário aberto na recepção e escondem a tela inteira | Recepção 3–5 | M | Em andamento (agente) |
-| B4 | **Notebook recebe o layout de celular** (o layout de computador só começa em 1728 px) | UX médico 1, UX recepção 3 | G | Em andamento (agente) |
+| B2 | Gravação interrompida é apagada do navegador antes de estar salva no servidor; pode perder a consulta | Clínico 1 | P | 🟡 Gravação fica guardada até estar no servidor; salva a cada 5 s durante a captura; bloqueio de tela desligado enquanto grava; aviso se o microfone cair |
+| B3 | Renovação de sessão (a cada hora) e uma falha de rede descartam o formulário aberto na recepção e escondem a tela inteira | Recepção 3–5 | M | 🟡 Renovação de sessão não esconde nem descarta nada; falha de rede tolerada por 45 s com aviso; atendimento aberto não some |
+| B4 | **Notebook recebe o layout de celular** (o layout de computador só começa em 1728 px) | UX médico 1, UX recepção 3 | G | 🟡 Layout de computador a partir de 1200 px de largura, com a letra ampliada mantida |
 | B5 | Login: o botão "Entrar" fica abaixo da dobra; diálogo de gravação não cabe no celular | UX médico 4, 6 | P | ⏳ |
-| B6 | **WhatsApp:** recepção não consegue responder; caixa não atualiza sozinha; sem contador de não lidas | Recepção 1–2 | G | Em andamento (agente) |
-| B7 | Quem cria uma conta fica com uma senha válida dela; a troca obrigatória só é cobrada pelo navegador | Segurança 1–2 | M | Em andamento (agente) |
+| B6 | **WhatsApp:** recepção não consegue responder; caixa não atualiza sozinha; sem contador de não lidas | Recepção 1–2 | G | 🟡 Recepção responde pelo Cortex (texto na janela de 24 h, modelo fora dela); caixa atualiza a cada 15 s; contador de não lidas |
+| B7 | Quem cria uma conta fica com uma senha válida dela; a troca obrigatória só é cobrada pelo navegador | Segurança 1–2 | M | ✅ servidor · 🟡 tela. Troca cobrada pelo servidor, senha temporária vale 72 h, nova senha temporária só enquanto a pessoa não definiu a própria |
 | B8 | Cobrança é gravada e depois recusada (erro 400); cada nova tentativa duplica | Financeiro 4 | P | ⏳ |
 | B9 | Gravação acima de 25 MB (cerca de 30 a 60 min) não é processada por nenhum caminho | IA 2 | M | ⏳ |
-| B10 | "Nova consulta" pode começar para um paciente que saiu da tela ao mudar a busca | Clínico 3 | P | Em andamento (junto com B2) |
+| B10 | "Nova consulta" pode começar para um paciente que saiu da tela ao mudar a busca | Clínico 3 | P | 🟡 Mudar a busca limpa a seleção |
 | B11 | Alergias, medicações e diagnósticos ficam escondidos durante a consulta no notebook e no celular | UX médico 2 | M | ⏳ |
 | B12 | Agendamento às cegas: o diálogo não mostra a agenda do médico nem horários livres; o erro aparece fora da vista | Recepção 6–7, UX recepção 5–6 | M | ⏳ |
 | B13 | Quem liga pela primeira vez não pode ser agendado direto da agenda (cerca de 12 passos) | Recepção 8 | M | ⏳ |

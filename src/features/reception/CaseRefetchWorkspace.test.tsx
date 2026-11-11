@@ -13,6 +13,8 @@ const actor = '11111111-1111-4111-8111-111111111111', clinic = '22222222-2222-42
 const mocks = vi.hoisted(() => ({ queue: vi.fn(), detail: vi.fn(), contact: vi.fn(), saveDraft: vi.fn(), patients: vi.fn(), book: vi.fn(), sessionActor: vi.fn() }));
 vi.mock('./api', () => ({ receptionApi: { queue: mocks.queue, case: mocks.detail, contact: mocks.contact, saveDraft: mocks.saveDraft, patients: mocks.patients, book: mocks.book, sessionActor: mocks.sessionActor } }));
 vi.mock('./WhatsAppInbox', () => ({ default: () => null }));
+// The queue page also reads the unread WhatsApp count; it is not what this test is about.
+vi.mock('./whatsappApi', () => ({ whatsappApi: { conversations: async () => ({ conversations: [], nextBefore: null }) } }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: '11111111-1111-4111-8111-111111111111' } }) }));
 vi.mock('@/hooks/use-mobile', () => ({ isBelowMobileBreakpoint: () => false }));
 
