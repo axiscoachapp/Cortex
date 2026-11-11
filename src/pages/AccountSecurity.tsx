@@ -7,8 +7,14 @@ import { Input } from '@/components/ui/input';
 import { WorkspaceShell } from '@/components/WorkspaceShell';
 import { PageHeading } from '@/components/PageHeading';
 import { mfaErrorMessage, newFactorName } from '@/lib/mfa';
+import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { useClinicAccess } from '@/features/reception/accessContext';
+import { ChangePasswordCard } from '@/features/settings/ChangePasswordCard';
 export default function AccountSecurity() {
   const { user } = useAuth();
+  // /seguranca renders outside the clinic gate: with access unknown the side menu is empty, so the page keeps its own way back.
+  const access = useClinicAccess();
   const client = useQueryClient();
   const [setup, setSetup] = useState<{ id: string; qr: string; secret: string } | null>(null);
   const [code, setCode] = useState('');
@@ -93,9 +99,15 @@ export default function AccountSecurity() {
     <WorkspaceShell section="Segurança da conta">
       <PageHeading
         title="Segurança da conta"
-        description="Proteja seu acesso com um aplicativo autenticador. Cada pessoa deve manter sua própria conta."
+        description="Sua senha e o aplicativo autenticador protegem seu acesso. Cada pessoa mantém a própria conta."
       />
       <div className="max-w-4xl space-y-6">
+        {!access && (
+          <Link to="/" className="inline-flex min-h-11 items-center gap-2 text-sm text-primary underline underline-offset-4">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />Voltar ao início
+          </Link>
+        )}
+        <ChangePasswordCard />
         {error && (
           <p ref={errorRef} tabIndex={-1} role="alert" className="text-destructive text-sm">
             {error.message}

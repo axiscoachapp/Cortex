@@ -132,6 +132,60 @@ export async function changeInitialPasswordHandler(req: Request, deps: ChangeIni
   }
 }
 
+// ---------------------------------------------------------------- change-password (round two, C24)
+
+/**
+ * A signed-in owner changes their own password, proving the current one. Same rule as every
+ * owner-chosen password (passwordPolicy.ts). A pending temporary password goes through
+ * change-initial-password instead. Other sessions are ended after the change (a password is
+ * usually changed because it may be known to someone else); the caller's session stays.
+ */
+export type ChangeOwnPasswordDeps = Omit<ChangeInitialPasswordDeps, 'passwordIsCurrent'> & {
+  /** 'ok' when the password signs in to the account, 'wrong' when it does not. */
+  checkPassword(email: string, password: string): Promise<'ok' | 'wrong'>;
+};
+
+export async function changeOwnPasswordHandler(req: Request, deps: ChangeOwnPasswordDeps): Promise<Response> {
+  const cors = deps.corsHeaders;
+  const early = preflight(req, cors);
+  if (early) return early;
+  let caller: PendingPasswordCaller;
+  try {
+    caller = await deps.authenticate(req);
+  } catch (error) {
+    const failure = deps.authFailure(error);
+    if (failure) return failure;
+    return json({ error: 'Não foi possível verificar sua sessão. Tente novamente.' }, 503, cors);
+  }
+  try {
+    const body = await readJsonObject(req, 4096);
+    const account = { app_metadata: caller.appMetadata, user_metadata: caller.userMetadata, created_at: caller.createdAt };
+    if (passwordChangePending(account))
+      return json({ error: 'Troque primeiro a senha temporária.', code: 'password_change_required' }, 409, cors);
+    if (typeof body.currentPassword !== 'string' || !body.currentPassword)
+      return json({ error: 'Informe a senha atual.', code: 'current_required' }, 422, cors);
+    const problem = passwordProblem(body.password, caller.email);
+    if (problem) return json({ error: problem, code: 'weak_password' }, 422, cors);
+    const password = body.password as string;
+    if (password === body.currentPassword)
+      return json({ error: 'Escolha uma senha diferente da atual.', code: 'same_as_current' }, 422, cors);
+    if (await deps.checkPassword(caller.email, body.currentPassword) !== 'ok')
+      return json({ error: 'A senha atual não confere.', code: 'wrong_password' }, 403, cors);
+    await deps.updateUser(caller.userId, { password, app_metadata: { password_set_by_owner_at: deps.now().toISOString() } });
+    try {
+      await deps.revokeOtherSessions(caller.accessToken);
+    } catch {
+      deps.log('password_change_revoke_failed', { userId: caller.userId });
+    }
+    deps.log('password_changed', { userId: caller.userId });
+    return json({ success: true }, 200, cors);
+  } catch (error) {
+    if (error instanceof RequestError) return json({ error: error.message }, error.status, cors);
+    deps.log('password_change_failed', { userId: caller.userId, error: error instanceof Error ? error.name : 'unknown' });
+    return json({ error: 'Não foi possível trocar a senha agora. Tente novamente.' }, 503, cors);
+  }
+}
+
 /** Pending accounts only: never one whose owner already chose a password. */
 function reissuable(account: ManagedAccount): boolean {
   if (account.appMetadata.must_change_password === true) return true;

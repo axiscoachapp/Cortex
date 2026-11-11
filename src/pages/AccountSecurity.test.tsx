@@ -25,6 +25,12 @@ describe('TOTP metadata including abandoned setups', () => {
     mocks.challengeAndVerify.mockResolvedValue({ error: null });
     mocks.enroll.mockResolvedValue({ data: { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', totp: { qr_code: '<svg xmlns="http://www.w3.org/2000/svg"/>', secret: 'SYNTHETIC-NOT-A-REAL-SECRET' } }, error: null });
   });
+  it('offers "Alterar senha" and a way back to the app when clinic access is unknown', async () => {
+    mount();
+    expect(await screen.findByRole('heading', { name: 'Alterar senha' })).toBeVisible();
+    expect(screen.getByLabelText('Senha atual')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Voltar ao início' })).toHaveAttribute('href', '/');
+  });
   it('lists pending TOTP setups while keeping them out of the verified selector', async () => {
     mount();
     await screen.findByText('Pendente sintético · Configuração pendente');

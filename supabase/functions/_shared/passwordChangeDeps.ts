@@ -5,7 +5,7 @@ import { AuthError, authResponse, requirePendingPasswordCaller, requireUser } fr
 import { fetchWithDeadline } from './http.ts';
 import { corsHeadersFor } from './cors.ts';
 import { generateTemporaryPassword } from './passwordPolicy.ts';
-import type { ChangeInitialPasswordDeps, ReissueTemporaryPasswordDeps } from './passwordChange.ts';
+import type { ChangeInitialPasswordDeps, ChangeOwnPasswordDeps, ReissueTemporaryPasswordDeps } from './passwordChange.ts';
 
 const cors = () => corsHeadersFor(Deno.env.get('ALLOWED_ORIGIN'));
 const noSession = { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false };
@@ -38,6 +38,37 @@ export function changeInitialPasswordDeps(): ChangeInitialPasswordDeps {
         return true;
       }
       if (error && (error.code === 'invalid_credentials' || error.status === 400)) return false;
+      throw new Error('Password probe unavailable');
+    },
+    async revokeOtherSessions(accessToken) {
+      const { error } = await db.auth.admin.signOut(accessToken, 'others');
+      if (error) throw new Error('Session revocation failed');
+    },
+    updateUser: (userId, update) => updateUser(db, userId, update),
+    log,
+  };
+}
+
+export function changeOwnPasswordDeps(): ChangeOwnPasswordDeps {
+  const db = service();
+  return {
+    corsHeaders: cors(),
+    // Same verification as change-initial-password (Auth, claims, MFA); the handler refuses a
+    // pending temporary password itself.
+    authenticate: requirePendingPasswordCaller,
+    authFailure,
+    now: () => new Date(),
+    async checkPassword(email, password) {
+      const probe = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
+        auth: noSession, global: { fetch: fetchWithDeadline },
+      });
+      const { data, error } = await probe.auth.signInWithPassword({ email, password });
+      if (data?.session) {
+        // The probe session only proved the password: end it at once.
+        await db.auth.admin.signOut(data.session.access_token, 'local');
+        return 'ok';
+      }
+      if (error && (error.code === 'invalid_credentials' || error.status === 400)) return 'wrong';
       throw new Error('Password probe unavailable');
     },
     async revokeOtherSessions(accessToken) {
