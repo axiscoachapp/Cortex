@@ -16,6 +16,7 @@ import {
   type BookingDetails,
   type LinkEdit,
 } from './contracts';
+import { busyIntervalsSchema } from './busyIntervals';
 
 export class ReceptionError extends Error {
   constructor(
@@ -50,7 +51,8 @@ type RpcName =
   | 'reception_book_appointment'
   | 'reception_change_appointment'
   | 'reception_block_time'
-  | 'reception_unblock_time';
+  | 'reception_unblock_time'
+  | 'reception_busy_intervals';
 
 function checkCancellation(signal?: AbortSignal) {
   if (signal?.aborted) throw new ReceptionError('A consulta foi cancelada.', 'cancelled');
@@ -182,4 +184,6 @@ export const receptionApi = {
     ),
   unblock: (id: string, expected: number) =>
     rpc('reception_unblock_time', { p_block: id, p_revision: expected }, z.boolean()),
+  busyIntervals: (clinic: string, start: string, end: string, doctor: string | null) =>
+    rpc('reception_busy_intervals', { p_clinic: clinic, p_start: start, p_end: end, p_doctor: doctor }, busyIntervalsSchema),
 };
