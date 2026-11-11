@@ -165,11 +165,11 @@ export function CashTab({ scope, state, range }: { scope: string[]; state: Billi
           {payments.length === 0 ? <p className="rounded-xl border bg-white p-6 text-center text-sm text-muted-foreground">Nenhum recebimento neste mês.</p> : (
             <ul className="divide-y rounded-xl border bg-white">
               {payments.map((p) => (
-                <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-0.5 p-3 text-sm sm:grid-cols-[6.5rem_minmax(0,1fr)_7rem_8.5rem_auto]">
-                  <span className="col-span-3 min-w-0 break-words sm:order-2 sm:col-span-1">
+                <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 p-3 text-sm sm:grid sm:grid-cols-[6.5rem_minmax(0,1fr)_7rem_8.5rem_auto]">
+                  <span className="w-full min-w-0 break-words sm:order-2 sm:w-auto">
                     {p.batchId ? 'Recebimento de lote de convênio' : `${p.patientName ?? 'Particular'}${p.description ? ` · ${p.description}` : ''}`}{p.notes ? ` · ${p.notes}` : ''}
                   </span>
-                  <span className="text-xs text-muted-foreground tabular-nums sm:order-1 sm:text-sm sm:text-foreground">{dateBr(p.receivedOn)}<span className="sm:hidden"> · {METHOD_LABELS[p.method]}</span></span>
+                  <span className="flex-1 whitespace-nowrap text-xs text-muted-foreground tabular-nums sm:order-1 sm:text-sm sm:text-foreground">{dateBr(p.receivedOn)}<span className="sm:hidden"> · {METHOD_LABELS[p.method]}</span></span>
                   <span className="hidden text-muted-foreground sm:order-3 sm:inline">{METHOD_LABELS[p.method]}</span>
                   <span className="whitespace-nowrap text-right font-medium tabular-nums sm:order-4">{brl(p.amount)}</span>
                   {admin && p.chargeId && (
@@ -199,9 +199,9 @@ export function CashTab({ scope, state, range }: { scope: string[]; state: Billi
                         {EXPENSE_CATEGORIES[e.category] ?? e.category} · vence {dateBr(e.dueOn)}{e.paidOn ? ` · paga em ${dateBr(e.paidOn)} (${METHOD_LABELS[e.method!]})` : ''}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="whitespace-nowrap font-medium tabular-nums sm:w-28 sm:text-right">{brl(e.amount)}</span>
-                      <Badge variant={e.paidOn ? 'secondary' : 'outline'}>{e.paidOn ? 'Paga' : 'A pagar'}</Badge>
+                      <Badge className="whitespace-nowrap" variant={e.paidOn ? 'secondary' : 'outline'}>{e.paidOn ? 'Paga' : 'A pagar'}</Badge>
                       <span className="ml-auto flex">
                         <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={`Editar ${e.description}`} onClick={() => setEditing({ open: true, expense: e })}><Pencil className="h-4 w-4" /></Button>
                         <Button size="icon" variant="ghost" className="h-11 w-11" aria-label={`Excluir ${e.description}`} onClick={() => setDeleting(e)}><Trash2 className="h-4 w-4" /></Button>

@@ -78,7 +78,7 @@ export default function BillingPage({ embedded = false }: { embedded?: boolean }
           <TabsList aria-label="Seções do financeiro" className={`flex h-auto w-full flex-wrap items-stretch gap-1.5 rounded-xl bg-muted/50 p-1.5 ${tabs.length <= 3 ? 'max-w-3xl' : ''}`}>
             {[...flow, ...reference].map(({ id, label, icon: Icon }, index) => <Fragment key={id}>
               {index === flow.length && flow.length > 0 && <span role="none" className="basis-full border-t border-border/70 sm:mx-1 sm:basis-auto sm:border-l sm:border-t-0" />}
-              <TabsTrigger value={id} className={`min-h-12 min-w-0 grow basis-[calc(50%-0.375rem)] gap-2 whitespace-normal rounded-lg px-2 py-3 text-xs data-[state=active]:bg-card data-[state=active]:text-primary sm:basis-0 ${flow.length && index >= flow.length ? 'sm:grow-0 sm:px-4' : ''}`}>
+              <TabsTrigger value={id} className={`min-h-12 min-w-0 grow basis-[calc(50%-0.375rem)] gap-2 whitespace-normal rounded-lg px-2 py-3 text-xs data-[state=active]:bg-card data-[state=active]:text-primary ${flow.length && index >= flow.length ? 'sm:grow-0 sm:basis-auto sm:px-4' : 'sm:basis-0'}`}>
                 <Icon className="hidden h-4 w-4 shrink-0 sm:block" aria-hidden="true" />{tabLabel(id, label)}
               </TabsTrigger>
             </Fragment>)}

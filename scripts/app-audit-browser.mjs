@@ -349,14 +349,17 @@ function billingAnswer(body) {
       { appointmentId: 'd5150000-0000-4000-8000-000000000011', doctorId, start: day(-1, 9), type: 'novo', contactId: 'd51b0000-0000-4000-8000-000000000001',
         patientName: 'Paciente Sintético 1', consultationType: '1', attendance: 'checked_in', coverages: [{ payerId: BILL_PAYER, cardNumber: '0000 1111 2222', cardValidUntil: null, plan: '' }], intake: null },
       { appointmentId: 'd5150000-0000-4000-8000-000000000012', doctorId, start: day(-1, 10), type: 'retorno', contactId: null,
-        patientName: 'Paciente com nome bem comprido para conferir o corte em telas estreitas', consultationType: '2', attendance: 'done', coverages: [], intake: null }] };
+        patientName: 'Paciente com nome bem comprido para conferir o corte em telas estreitas', consultationType: '2', attendance: 'done', coverages: [], intake: null }],
+      earlier: [{ month: billDate(-40).slice(0, 7), count: 2 }] };
     case 'charges': return { charges: [
       billCharge(1, {}), billCharge(2, { status: 'sent', guideNumber: 5, batchId: sentBatch.id }),
       billCharge(3, { status: 'partial', guideNumber: 4, paidAmount: 100, deniedAmount: 50, denialCode: '1705', denialNote: 'Valor acima da tabela' }),
-      billCharge(4, { payerId: null, cardNumber: null, guideType: 'particular', tableCode: '00', unitAmount: 350, amount: 350, description: 'Consulta particular', status: 'partial', paidAmount: 100 })] };
+      billCharge(4, { payerId: null, cardNumber: null, guideType: 'particular', tableCode: '00', procedureCode: 'PARTICULAR', unitAmount: 350, amount: 350, description: 'Consulta particular', status: 'partial', paidAmount: 100 }),
+      billCharge(7, { status: 'denied', guideNumber: 3, deniedAmount: 150, denialCode: '1423', denialNote: 'Carteirinha vencida' })] };
     case 'openForBatch': return { charges: [billCharge(1, {}), billCharge(5, {})] };
-    case 'batches': return { batches: [sentBatch, { ...sentBatch, id: 'd5190000-0000-4000-8000-000000000002', number: 4, status: 'draft', xmlHash: null, sentAt: null, protocol: null, totalAmount: 150 },
-      { ...sentBatch, id: 'd5190000-0000-4000-8000-000000000003', number: 2, status: 'closed', paidAmount: 250, deniedAmount: 50, paymentDate: billDate(-3) }] };
+    case 'batches': return { batches: [sentBatch, { ...sentBatch, id: 'd5190000-0000-4000-8000-000000000002', number: 4, status: 'draft', xmlHash: null, generatedAt: null, sentAt: null, protocol: null, totalAmount: 150 },
+      { ...sentBatch, id: 'd5190000-0000-4000-8000-000000000004', number: 5, status: 'draft', sentAt: null, protocol: null, totalAmount: 150 },
+      { ...sentBatch, id: 'd5190000-0000-4000-8000-000000000003', number: 2, status: 'closed', paidAmount: 250, deniedAmount: 50, paymentDate: billDate(-3), answered: true }] };
     case 'batchCharges': return { charges: [billCharge(2, { status: 'sent', guideNumber: 5 }), billCharge(6, { status: 'sent', guideNumber: 6 })] };
     case 'cash': return {
       payments: [{ id: 'd51c0000-0000-4000-8000-000000000001', chargeId: 'd5180000-0000-4000-8000-000000000004', batchId: null, method: 'pix', amount: 100, receivedOn: billDate(0), notes: 'sinal', patientName: 'Paciente Sintético com nome comprido para conferir o corte', description: 'Consulta particular' },
@@ -367,7 +370,7 @@ function billingAnswer(body) {
       doctors: [{ doctorId, count: 4, charged: 800, paid: 450, denied: 50, open: 300, sharePercent: 60, payout: 270 }],
       payers: [{ payerId: BILL_PAYER, name: 'Operadora Sintética de Saúde', count: 3, charged: 450, paid: 350, denied: 50, open: 50 },
         { payerId: null, name: 'Particular', count: 1, charged: 350, paid: 100, denied: 0, open: 250 }],
-      denials: [{ code: '1705', count: 1, amount: 50 }] };
+      denials: [{ code: '1705', count: 1, amount: 50, note: 'Valor acima da tabela' }, { code: '1423', count: 1, amount: 150, note: null }] };
     default: return { error: 'Operação externa bloqueada no ensaio', code: 'server' };
   }
 }
@@ -607,7 +610,9 @@ try {
       if (WORKSPACE_ROLE && ['/financeiro', '/recepcao/financeiro'].includes(path)) {
         const tabs = await page.getByRole('tab').allTextContents();
         const expected = WORKSPACE_ROLE === 'doctor' ? ['Cobranças', 'Relatórios'] : WORKSPACE_ROLE === 'reception' ? ['A faturar', 'Cobranças', 'Caixa'] : ['A faturar', 'Cobranças', 'Lotes', 'Caixa', 'Relatórios', 'Cadastros'];
-        if (JSON.stringify(tabs) !== JSON.stringify(expected)) throw new Error('Financial tabs differ from synthetic server role');
+        // Flow tabs read "1 A faturar (2)": compare the section names only.
+        const names = tabs.map((t) => t.replace(/^\d+\s+/, '').replace(/\s+\(.*\)$/, ''));
+        if (JSON.stringify(names) !== JSON.stringify(expected)) throw new Error('Financial tabs differ from synthetic server role');
       }
       if (process.env.AUDIT_WORKSPACE_INTERACTIONS === '1' && ['/', '/recepcao', '/recepcao/financeiro'].includes(path)) {
         const snapshot = async name => {
@@ -712,6 +717,7 @@ try {
         const snap = async (name) => {
           await page.waitForTimeout(700);
           await page.screenshot({ path: resolve(artifacts, `${label}-financeiro-${name}.png`), fullPage: FULL_PAGE });
+          if (FULL_PAGE && viewport.width < SHELL_BREAKPOINT && !(await page.getByRole('dialog').count())) await fullCapture(page, resolve(artifacts, `${label}-financeiro-${name}-full.png`));
           const dialog = page.getByRole('dialog');
           const box = (await dialog.count()) ? await dialog.first().boundingBox() : null;
           report.routes[`${label} financeiro ${name}`] = { ...(await inspect(page, viewport.width)),
@@ -725,7 +731,7 @@ try {
           await page.waitForTimeout(300);
         };
         const tab = async (name) => {
-          const t = page.getByRole('tab', { name, exact: true });
+          const t = page.getByRole('tab', { name: new RegExp(`^(\\d+ )?${name}( \\(.*\\))?$`) });
           if (!(await t.count())) { report.routes[`${label} financeiro ${name}`] = { missing: 'tab not found' }; return false; }
           await t.click();
           return true;
