@@ -9,7 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +25,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, LifeBuoy, Archive, RotateCcw } from 'lucide-react';
+import { Plus, Pencil, Trash2, LifeBuoy, Archive, RotateCcw, MoreHorizontal, Search, X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +46,28 @@ import { PatientAdministrativeFields } from '@/components/PatientAdministrativeF
 import { validatePatientRegistration, validatePatientChanges, normalizeCpf, administrativeValues } from '@/lib/patientRegistration';
 import { WorkspaceShell } from '@/components/WorkspaceShell';
 import { PageHeading } from '@/components/PageHeading';
+
+const STATUS_LABEL: Record<Patient['status'], string> = {
+  novo: 'Novo',
+  retorno: 'Retorno',
+  seguimento: 'Seguimento',
+  atendimento: 'Em atendimento',
+};
+
+/** Lower case without accents, so "joao" finds "João". */
+function folded(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+}
+
+/** Name, CPF or phone; digits in the query also match formatted CPF and phone. */
+function patientMatches(patient: Patient, query: string): boolean {
+  const text = folded(query.trim());
+  if (!text) return true;
+  if (folded(patient.name).includes(text)) return true;
+  const digits = text.replace(/\D/g, '');
+  if (digits.length < 3 || digits.length !== text.replace(/[\s().\-/+]/g, '').length) return false;
+  return [patient.cpf, patient.phone].some((value) => (value ?? '').replace(/\D/g, '').includes(digits));
+}
 
 const PatientManagement = () => {
   const { user, loading: authLoading } = useAuth();
@@ -141,11 +169,7 @@ const PatientManagement = () => {
           .select('id')
           .maybeSingle();
         if (!updated && !error) {
-          toast({
-            title: 'Paciente alterado em outra sessão',
-            description: 'Seus dados continuam no formulário. Reabra o paciente para comparar antes de salvar.',
-            variant: 'destructive',
-          });
+          await refreshAfterConflict(editingPatient.id);
           return;
         }
 
@@ -200,17 +224,49 @@ const PatientManagement = () => {
     }
   };
 
+  // Another session changed this patient: load the current version, keep only
+  // the fields the doctor changed here, and let them save against it.
+  const refreshAfterConflict = async (patientId: string) => {
+    queryClient.invalidateQueries({ queryKey: ['patients', user?.id] });
+    const { data: row } = await supabase.from('patients').select('*').eq('id', patientId).maybeSingle();
+    if (!row) {
+      toast({
+        title: 'Paciente alterado em outra sessão',
+        description: 'Não foi possível carregar a versão atual. Seus dados continuam no formulário; tente salvar de novo.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const fresh = mapPatientRow(row);
+    const freshValues = formValues(fresh);
+    setFormData((current) => {
+      const merged = { ...freshValues };
+      for (const key of Object.keys(current) as (keyof typeof current)[]) {
+        if (current[key] !== baseline[key]) Object.assign(merged, { [key]: current[key] });
+      }
+      return merged;
+    });
+    setEditingPatient(fresh);
+    toast({
+      title: 'Paciente alterado em outra sessão',
+      description: 'O formulário foi atualizado com a versão atual e manteve o que você mudou. Confira e salve de novo.',
+      variant: 'destructive',
+    });
+  };
+
+  const formValues = (patient: Patient) => ({
+    name: patient.name,
+    age: patient.age?.toString() ?? '',
+    date_of_birth: patient.dateOfBirth ?? '',
+    profession: patient.profession,
+    last_visit: patient.lastVisit ?? '',
+    status: patient.status,
+    ...administrativeValues(patient),
+  });
+
   const handleEdit = (patient: Patient) => {
     setEditingPatient(patient);
-    setFormData({
-      name: patient.name,
-      age: patient.age?.toString() ?? '',
-      date_of_birth: patient.dateOfBirth ?? '',
-      profession: patient.profession,
-      last_visit: patient.lastVisit ?? '',
-      status: patient.status,
-      ...administrativeValues(patient),
-    });
+    setFormData(formValues(patient));
     setDialogOpen(true);
   };
 
@@ -228,16 +284,8 @@ const PatientManagement = () => {
   };
 
   const baseline = editingPatient
-    ? {
-        name: editingPatient.name,
-        age: editingPatient.age?.toString() ?? '',
-        date_of_birth: editingPatient.dateOfBirth ?? '',
-        profession: editingPatient.profession,
-        last_visit: editingPatient.lastVisit ?? '',
-        status: editingPatient.status,
-        ...administrativeValues(editingPatient),
-      }
-    : { name: '', age: '', date_of_birth: '', profession: '', last_visit: '', status: 'novo', ...administrativeValues() };
+    ? formValues(editingPatient)
+    : { name: '', age: '', date_of_birth: '', profession: '', last_visit: '', status: 'novo' as Patient['status'], ...administrativeValues() };
   const dirty = JSON.stringify(formData) !== JSON.stringify(baseline);
   const canClose = useUnsavedChanges(dialogOpen && dirty);
   const setDialog = (open: boolean) => {
@@ -245,10 +293,49 @@ const PatientManagement = () => {
     setDialogOpen(open);
     if (!open) resetForm();
   };
-  const filtered = patients.filter((patient) =>
-    `${patient.name} ${patient.profession}`
-      .toLocaleLowerCase('pt-BR')
-      .includes(search.trim().toLocaleLowerCase('pt-BR')),
+  const filtered = patients.filter((patient) => patientMatches(patient, search));
+  const openNewPatient = () => {
+    resetForm();
+    // A searched name that found nobody becomes the new patient's name.
+    const typed = search.trim();
+    if (typed && !/\d/.test(typed)) setFormData((current) => ({ ...current, name: typed }));
+    setDialogOpen(true);
+  };
+  const rowActions = (patient: Patient) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-11 w-11 md:h-9 md:w-9 shrink-0" aria-label={`Ações para ${patient.name}`}>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => handleEdit(patient)}>
+          <Pencil className="mr-2 h-4 w-4" />
+          Editar cadastro
+        </DropdownMenuItem>
+        {showArchived ? (
+          <>
+            <DropdownMenuItem onSelect={() => setPendingAction({ patient, kind: 'restore' })}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Restaurar
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onSelect={() => setPendingAction({ patient, kind: 'delete' })}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir definitivamente…
+            </DropdownMenuItem>
+          </>
+        ) : (
+          <DropdownMenuItem onSelect={() => setPendingAction({ patient, kind: 'archive' })}>
+            <Archive className="mr-2 h-4 w-4" />
+            Arquivar…
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
   const pageCount = Math.ceil(filtered.length / 50);
   const currentPage = Math.min(page, Math.max(0, pageCount - 1));
@@ -270,20 +357,38 @@ const PatientManagement = () => {
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0 p-4 pb-3 md:p-6 md:pb-3">
             <h2 className="text-base font-semibold md:text-lg">Seus cadastros</h2>
             <div className="flex flex-wrap items-center gap-2">
-              <Button className="min-h-11 gap-2" variant="outline" aria-label="Migração de pacientes" onClick={() => setMigrationInfoOpen(true)}>
-                <LifeBuoy className="h-4 w-4" />
-                Migração
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-11 w-11" aria-label="Mais opções de pacientes">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setShowArchived((value) => !value);
+                      setPage(0);
+                    }}
+                  >
+                    <Archive className="mr-2 h-4 w-4" />
+                    {showArchived ? 'Voltar aos pacientes ativos' : 'Ver pacientes arquivados'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setMigrationInfoOpen(true)}>
+                    <LifeBuoy className="mr-2 h-4 w-4" />
+                    Migração de pacientes
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Dialog open={dialogOpen} onOpenChange={setDialog}>
                 <DialogTrigger asChild>
-                  <Button className="min-h-11 gap-2" aria-label="Novo Paciente">
+                  <Button className="min-h-11 gap-2" onClick={openNewPatient}>
                     <Plus className="h-4 w-4" />
                     Novo paciente
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-h-[90dvh] overflow-y-auto max-w-[calc(100vw-16px)] sm:max-w-lg">
                   <DialogHeader>
-                    <DialogTitle>{editingPatient ? 'Editar Paciente' : 'Novo Paciente'}</DialogTitle>
+                    <DialogTitle>{editingPatient ? 'Editar cadastro' : 'Novo paciente'}</DialogTitle>
                     <DialogDescription className="sr-only">
                       Revise os dados do paciente antes de salvar.
                     </DialogDescription>
@@ -365,32 +470,43 @@ const PatientManagement = () => {
             </div>
           </CardHeader>
           <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
-            <Input
-              type="search"
-              aria-label="Buscar pacientes"
-              placeholder="Nome ou profissão…"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(0);
-              }}
-              className="mb-3"
-            />
-            <div className="flex justify-end mb-3">
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0 text-xs"
-                onClick={() => {
-                  setShowArchived((value) => !value);
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                aria-label="Buscar pacientes"
+                placeholder="Nome, CPF ou telefone"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
                   setPage(0);
                 }}
-              >
-                {showArchived ? 'Voltar aos pacientes ativos' : 'Ver pacientes arquivados'}
-              </Button>
+                className="pl-9"
+              />
             </div>
+            {showArchived && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                <span>Pacientes arquivados</span>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0"
+                  onClick={() => {
+                    setShowArchived(false);
+                    setPage(0);
+                  }}
+                >
+                  Voltar aos pacientes ativos
+                </Button>
+              </div>
+            )}
             {loading ? (
-              <p className="text-center py-8 text-muted-foreground">Carregando...</p>
+              <div className="space-y-1.5">
+                <p role="status" className="sr-only">Carregando pacientes…</p>
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} aria-hidden="true" className="h-[60px] rounded-lg bg-muted/40 animate-pulse" />
+                ))}
+              </div>
             ) : isError ? (
               <div role="alert" className="text-center py-8 space-y-3">
                 <p>Não foi possível carregar os pacientes.</p>
@@ -399,182 +515,90 @@ const PatientManagement = () => {
                 </Button>
               </div>
             ) : filtered.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">
-                {search
-                  ? 'Nenhum paciente corresponde à busca'
-                  : showArchived
-                    ? 'Nenhum paciente arquivado'
-                    : 'Nenhum paciente cadastrado'}
-              </p>
+              search.trim() ? (
+                <div role="status" className="py-8 text-center space-y-3">
+                  <p className="text-sm break-words">Nenhum paciente com “{search.trim()}”.</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Button variant="outline" className="min-h-11 gap-2" onClick={() => setSearch('')}>
+                      <X className="h-4 w-4" />
+                      Limpar busca
+                    </Button>
+                    {!showArchived && (
+                      <Button className="min-h-11 gap-2" onClick={openNewPatient}>
+                        <Plus className="h-4 w-4" />
+                        Cadastrar paciente
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center py-8 text-muted-foreground">
+                  {showArchived ? 'Nenhum paciente arquivado' : 'Nenhum paciente cadastrado'}
+                </p>
+              )
             ) : (
-              <>
-                {/* Mobile cards */}
-                <div className="md:hidden space-y-2">
+              <div>
+                {/* Column labels for the desktop rows; each row also names its fields for screen readers. */}
+                <div
+                  aria-hidden="true"
+                  className="hidden md:grid md:grid-cols-[minmax(0,2.4fr)_minmax(0,0.7fr)_minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1.1fr)_2.25rem] md:gap-3 px-3 pb-2 text-xs font-medium text-muted-foreground border-b"
+                >
+                  <span>Nome</span>
+                  <span>Idade</span>
+                  <span>Telefone</span>
+                  <span>Última consulta</span>
+                  <span>Status</span>
+                  <span />
+                </div>
+                <ul aria-label="Pacientes" className="divide-y">
                   {visiblePatients.map((patient) => (
-                    // Name on its own line, full width; status, last visit and
-                    // actions below it, so a long name is never cut on a phone.
-                    <div key={patient.id} className="p-3 rounded-xl border border-border bg-background space-y-2">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold bg-medical-blue/10 text-medical-blue">
-                          {patient.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')
-                            .slice(0, 2)
-                            .toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <Link
-                            to={`/?patient=${encodeURIComponent(patient.id)}`}
-                            aria-label={`Abrir prontuário de ${patient.name}`}
-                            className="font-medium text-sm text-medical-blue hover:underline break-words block"
-                          >
-                            {patient.name}
-                          </Link>
-                          <p className="text-xs text-muted-foreground mt-0.5 break-words">
-                            {patient.age === null ? 'Idade não informada' : `${patient.age} anos`}
-                            {patient.profession ? ` · ${patient.profession}` : ''}
-                          </p>
-                        </div>
+                    <li
+                      key={patient.id}
+                      className="flex items-center gap-2 px-1 py-2 md:grid md:min-h-[56px] md:grid-cols-[minmax(0,2.4fr)_minmax(0,0.7fr)_minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1.1fr)_2.25rem] md:gap-3 md:px-3 md:py-1.5"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          to={`/?patient=${encodeURIComponent(patient.id)}`}
+                          aria-label={`Abrir prontuário de ${patient.name}`}
+                          className="block font-medium text-sm text-medical-blue hover:underline break-words md:truncate"
+                        >
+                          {patient.name}
+                        </Link>
+                        {/* Phone: the details share one line under the name. */}
+                        <p className="md:hidden text-xs text-muted-foreground break-words">
+                          {[
+                            patient.age === null ? null : `${patient.age} anos`,
+                            patient.phone,
+                            patient.lastVisit ? `Última: ${formatDateOnly(patient.lastVisit)}` : 'Sem consulta concluída',
+                            STATUS_LABEL[patient.status] ?? patient.status,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex flex-1 min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="text-[0.625rem] capitalize font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                            {patient.status}
-                          </span>
-                          <span className="text-[0.625rem] text-muted-foreground">
-                            {patient.lastVisit ? formatDateOnly(patient.lastVisit) : 'Sem consulta concluída'}
-                          </span>
-                        </div>
-                        <div className="flex gap-1 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-10 w-10"
-                            aria-label="Editar paciente"
-                            onClick={() => handleEdit(patient)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          {showArchived ? (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                aria-label={`Restaurar ${patient.name}`}
-                                onClick={() => setPendingAction({ patient, kind: 'restore' })}
-                              >
-                                <RotateCcw className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10"
-                                aria-label={`Excluir definitivamente ${patient.name}`}
-                                onClick={() => setPendingAction({ patient, kind: 'delete' })}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-10 w-10"
-                              aria-label={`Arquivar ${patient.name}`}
-                              onClick={() => setPendingAction({ patient, kind: 'archive' })}
-                            >
-                              <Archive className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                      <span className="hidden md:block text-sm">
+                        <span className="sr-only">Idade: </span>
+                        {patient.age === null ? '—' : `${patient.age} anos`}
+                      </span>
+                      <span className="hidden md:block text-sm truncate">
+                        <span className="sr-only">Telefone: </span>
+                        {patient.phone ?? '—'}
+                      </span>
+                      <span className="hidden md:block text-sm">
+                        <span className="sr-only">Última consulta: </span>
+                        {patient.lastVisit ? formatDateOnly(patient.lastVisit) : 'Nenhuma'}
+                      </span>
+                      <span className="hidden md:block">
+                        <span className="sr-only">Status: </span>
+                        <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                          {STATUS_LABEL[patient.status] ?? patient.status}
+                        </span>
+                      </span>
+                      {rowActions(patient)}
+                    </li>
                   ))}
-                </div>
-
-                {/* Desktop table */}
-                <div className="hidden md:block">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Idade</TableHead>
-                        <TableHead>Profissão</TableHead>
-                        <TableHead>Última Visita</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {visiblePatients.map((patient) => (
-                        <TableRow key={patient.id}>
-                          <TableCell className="font-medium">
-                            <Link
-                              to={`/?patient=${encodeURIComponent(patient.id)}`}
-                              aria-label={`Abrir prontuário de ${patient.name}`}
-                              className="text-medical-blue hover:underline"
-                            >
-                              {patient.name}
-                            </Link>
-                          </TableCell>
-                          <TableCell>{patient.age ?? 'Não informada'}</TableCell>
-                          <TableCell>{patient.profession}</TableCell>
-                          <TableCell>
-                            {patient.lastVisit ? formatDateOnly(patient.lastVisit) : 'Sem consulta concluída'}
-                          </TableCell>
-                          <TableCell>
-                            <span className="capitalize">{patient.status}</span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label="Editar paciente"
-                              onClick={() => handleEdit(patient)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {showArchived ? (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-9 w-9"
-                                  aria-label={`Restaurar ${patient.name}`}
-                                  onClick={() => setPendingAction({ patient, kind: 'restore' })}
-                                >
-                                  <RotateCcw className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-9 w-9"
-                                  aria-label={`Excluir definitivamente ${patient.name}`}
-                                  onClick={() => setPendingAction({ patient, kind: 'delete' })}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9"
-                                aria-label={`Arquivar ${patient.name}`}
-                                onClick={() => setPendingAction({ patient, kind: 'archive' })}
-                              >
-                                <Archive className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </>
+                </ul>
+              </div>
             )}
             {pageCount > 1 && (
               <nav aria-label="Paginação de pacientes" className="flex items-center justify-center gap-3 pt-4">
