@@ -78,18 +78,29 @@
 
 | # | Item | Origem | Situação |
 |---|---|---|---|
-| D1 | Uma navegação só; "Sair" com confirmação e fora da barra | UX médico 7–8 | 🔧 terceira rodada |
-| D2 | Um padrão de diálogo; erros junto do botão | UX médico 9–11, UX recepção 30 | 🟡 nos diálogos da agenda da recepção · 🔧 no restante |
-| D3 | Agenda do médico com compromissos na primeira tela; agenda da recepção como grade | UX médico 5, UX recepção 4 | 🟡 recepção (dia cronológico denso, com ocupados) · 🔧 médico |
+| D1 | Uma navegação só; "Sair" com confirmação e fora da barra | UX médico 7–8 | 🟡 O mesmo menu lateral no início e nas subpáginas; no celular, a mesma barra (Início · Agenda · Pacientes · Mais) em todas as telas; "Sair" só no rodapé do menu e em "Mais", sempre perguntando "Sair da conta?" |
+| D2 | Um padrão de diálogo; erros junto do botão | UX médico 9–11, UX recepção 30 | 🟡 Todos os diálogos de formulário usam a mesma moldura (corpo que rola, rodapé fixo, "Cancelar" e ação principal); o aviso aparece embaixo do campo que falta; erro do servidor logo acima dos botões; avisos flutuantes no topo, sem cobrir os botões |
+| D3 | Agenda do médico com compromissos na primeira tela; agenda da recepção como grade | UX médico 5, UX recepção 4 | 🟡 Médico: uma barra só, grade das 7h às 21h, semana começando na segunda, lista de espera como visão. Recepção: dia cronológico denso, com os períodos ocupados |
 | D4 | Caixas de seleção redondas | UX médico 16 | 🟡 |
-| D5 | Textos: jargão interno, maiúsculas, nomes diferentes para a mesma coisa | UX médico 13, 31–32, UX recepção 31 | 🟡 configurações, pré-consulta, fila · 🔧 no restante |
+| D5 | Textos: jargão interno, maiúsculas, nomes diferentes para a mesma coisa | UX médico 13, 31–32, UX recepção 31 | 🟡 "Iniciar atendimento", "Novo agendamento", "Escrever evolução", "Pendências e retornos", "Última consulta", "Sugestões da IA"; "(opcional)" como única marca; "E-mail"; título da página igual ao nome do menu; "vínculo" virou "ligação" |
 | D6 | Financeiro ensina a sequência; valores alinhados; relatórios | UX recepção 14–16 | 🟡 Abas numeradas com contagem, exportação CSV |
 | D7 | Pré-consulta do paciente: erros que somem ao corrigir, mensagens claras, tela final útil | UX médico 17–18 | 🟡 |
 | D8 | Lista de pacientes compacta; busca por CPF e telefone | UX médico 14 | 🟡 |
 | D9 | Indicadores: predefinições de período, rótulos simples | UX recepção 22 | 🟡 |
 | D10 | Fila da recepção: tempo de espera, telefone, busca; próximo passo no atendimento | UX recepção 9–10 | 🟡 |
-| D11 | Status e datas com um formato só | UX médico 24–25 | 🟡 peças únicas criadas (`appointmentStatus.ts`, `lastConsultationLabel`) · 🔧 uso em todas as telas |
+| D11 | Status e datas com um formato só | UX médico 24–25 | 🟡 Um arquivo único dá o nome e a cor de cada status e tipo de consulta em todas as telas; a última consulta aparece sempre como "12/10/2026 · há 29 dias" |
 | D12 | Nome da clínica piloto fixo no código | Clínico 28 | 🟡 Impressos e menu usam o nome da clínica |
+
+## O que ficou de fora (resíduos conhecidos, nenhum impede o uso)
+
+| Item | Por que ficou |
+|---|---|
+| Cerca de 30 confirmações ainda usam a caixa do próprio navegador (excluir arquivo, revogar documento, descartar rascunho, cancelar agendamento) | Funcionam; só não têm a aparência do app. Sair de uma página com edição pendente e sair da conta já usam o diálogo do app |
+| No notebook (1366×768) o menu lateral da administração da clínica ainda rola | Tem mais itens que os outros perfis; o item atual fica sempre à vista |
+| Financeiro sem navegação própria no menu lateral (continua em abas numeradas) | Escolha de desenho a confirmar |
+| Contatos: próximo compromisso de cada contato na lista | Precisa de um dado novo no servidor |
+| `deno.lock`; link da pré-consulta fora do caminho da URL | Sem risco imediato |
+| 6 avisos de lint em 3 arquivos antigos (catálogos de referência e medicamentos controlados) | Já existiam antes desta revisão; são caracteres de controle usados de propósito em expressões de busca |
 
 ## Endurecimento (segurança, itens menores)
 
