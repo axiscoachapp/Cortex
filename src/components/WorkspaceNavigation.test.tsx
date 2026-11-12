@@ -40,7 +40,9 @@ describe('workspace navigation by verified profile', () => {
     expect(screen.getByRole('link', { name: 'Agenda' })).toHaveAttribute('href', '/recepcao/agenda');
     await userEvent.click(screen.getByRole('button', { name: 'Mais páginas' }));
     const more = await screen.findByRole('dialog', { name: 'Mais' });
-    expect(within(more).getByRole('link', { name: 'Financeiro' })).toHaveAttribute('href', '/recepcao/financeiro');
+    // Finance is one of the reception's two areas: listed once, as an area, not again as a page.
+    expect(within(within(more).getByRole('region', { name: 'Área de trabalho' })).getByRole('button', { name: 'Financeiro' })).toBeVisible();
+    expect(within(more).queryByRole('link', { name: 'Financeiro' })).toBeNull();
     expect(within(more).queryByRole('link', { name: /Equipe|consultório/i })).toBeNull();
     expect(within(more).queryByRole('button', { name: /Consultório/ })).toBeNull();
     expect(within(more).getByRole('link', { name: 'Segurança da conta' })).toBeVisible();

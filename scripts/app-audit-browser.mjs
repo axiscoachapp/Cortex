@@ -439,7 +439,10 @@ async function inspect(page, width) {
       return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none';
     };
     const name = (el) => (el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent || '').trim()
-      || (el.getAttribute('aria-labelledby') ? (document.getElementById(el.getAttribute('aria-labelledby'))?.textContent || '').trim() : '');
+      || (el.getAttribute('aria-labelledby') ? (document.getElementById(el.getAttribute('aria-labelledby'))?.textContent || '').trim() : '')
+      // A <label for> names a button too (the shared checkbox is a button with a linked label).
+      || (el.id ? ([...document.querySelectorAll('label')].find((l) => l.htmlFor === el.id)?.textContent || '').trim() : '')
+      || (el.closest('label')?.textContent || '').trim();
     const short = (el) => `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.split(' ').filter(Boolean).slice(0, 2).join('.') : ''}`;
     const out = { overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth, brokenText: [], unnamedControls: [], unlabelledFields: [], imagesWithoutAlt: [], pastViewport: [] };
     const text = document.body.innerText;
@@ -668,12 +671,16 @@ try {
           report.routes[`${label} configurações navegação`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
         }
       }
-      if (WORKSPACE_ROLE && ['/financeiro', '/recepcao/financeiro'].includes(path)) {
-        const tabs = await page.getByRole('tab').allTextContents();
-        const expected = WORKSPACE_ROLE === 'doctor' ? ['Cobranças', 'Relatórios'] : WORKSPACE_ROLE === 'reception' ? ['A faturar', 'Cobranças', 'Caixa'] : ['A faturar', 'Cobranças', 'Lotes', 'Caixa', 'Relatórios', 'Cadastros'];
-        // Flow tabs read "1 A faturar (2)": compare the section names only.
-        const names = tabs.map((t) => t.replace(/^\d+\s+/, '').replace(/\s+\(.*\)$/, ''));
-        if (JSON.stringify(names) !== JSON.stringify(expected)) throw new Error('Financial tabs differ from synthetic server role');
+      // Finance lives at /financeiro for the doctor and at /recepcao/financeiro for the reception;
+      // the other address answers with the access notice or a redirect, so nothing is checked there.
+      const financeHere = ['/financeiro', '/recepcao/financeiro'].includes(path) && (!WORKSPACE_ROLE || WORKSPACE_ROLE === 'admin'
+        || (WORKSPACE_ROLE === 'doctor' && path === '/financeiro') || (WORKSPACE_ROLE === 'reception' && path === '/recepcao/financeiro'));
+      if (WORKSPACE_ROLE && financeHere) {
+        const expected =WORKSPACE_ROLE === 'doctor' ? ['Cobranças', 'Relatórios'] : WORKSPACE_ROLE === 'reception' ? ['A faturar', 'Cobranças', 'Caixa'] : ['A faturar', 'Cobranças', 'Lotes', 'Caixa', 'Relatórios', 'Cadastros'];
+        // Flow tabs read "1 A faturar (2)": compare the section names only. The tabs appear after
+        // the role is read, so wait for them instead of reading once (the single read was racy).
+        const names = async () => (await page.getByRole('tab').allTextContents()).map((t) => t.replace(/^\d+\s+/, '').replace(/\s+\(.*\)$/, ''));
+        await expect.poll(async () => JSON.stringify(await names()), { timeout: 15_000, message: 'Financial tabs differ from synthetic server role' }).toBe(JSON.stringify(expected));
       }
       if (process.env.AUDIT_WORKSPACE_INTERACTIONS === '1' && ['/', '/recepcao', '/recepcao/financeiro'].includes(path)) {
         const snapshot = async name => {
@@ -706,7 +713,8 @@ try {
           await page.keyboard.press('Escape');
           await expect(page.getByRole('dialog')).toHaveCount(0);
         }
-        if (path === '/recepcao') {
+        // A doctor without reception access gets the access notice there, with no menu to check.
+        if (path === '/recepcao' && WORKSPACE_ROLE !== 'doctor') {
           // "Sair" lives in the sidebar footer on desktop and in "Mais" on the phone.
           if (viewport.width >= SHELL_BREAKPOINT) await expect(page.getByRole('button', { name: 'Sair', exact: true }).first()).toBeVisible();
           if (viewport.width < SHELL_BREAKPOINT) {
@@ -717,7 +725,7 @@ try {
         }
       }
       // Doctor's documents: composer, clinical-list editor, profile, patient search, templates.
-      if (process.env.AUDIT_DOCTOR_DOCUMENTS === '1' && [`/?patient=${pid(1)}`, '/gerenciar-pacientes', '/modelos'].includes(path)) {
+      if (process.env.AUDIT_DOCTOR_DOCUMENTS === '1' && WORKSPACE_ROLE !== 'reception' && [`/?patient=${pid(1)}`, '/gerenciar-pacientes', '/modelos'].includes(path)) {
         const snap = async (name) => {
           await page.waitForTimeout(600);
           await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: FULL_PAGE });
@@ -773,15 +781,15 @@ try {
         }
       }
       // Finance: every tab, and the dialogs that carry forms.
-      if (['/financeiro', '/recepcao/financeiro'].includes(path) && WORKSPACE_ROLE === 'doctor') {
+      if (financeHere && WORKSPACE_ROLE === 'doctor') {
         for (const [tab, name] of [['Cobranças', 'cobrancas'], ['Relatórios', 'relatorios']]) {
           await page.getByRole('tab', { name: tab, exact: true }).click();
-          await expect(page.getByRole('button', { name: /^(Receber de|Nova cobrança avulsa)/ })).toHaveCount(0);
+          await expect(page.getByRole('button', { name: /^(Receber pagamento de|Receber de|Nova cobrança avulsa)/ })).toHaveCount(0);
           await page.screenshot({ path: resolve(artifacts, `${label}-financeiro-${name}.png`), fullPage: FULL_PAGE });
           report.routes[`${label} financeiro ${name}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
         }
       }
-      if (['/financeiro', '/recepcao/financeiro'].includes(path) && WORKSPACE_ROLE !== 'doctor') {
+      if (financeHere && WORKSPACE_ROLE !== 'doctor') {
         const snap = async (name) => {
           await page.waitForTimeout(700);
           await page.screenshot({ path: resolve(artifacts, `${label}-financeiro-${name}.png`), fullPage: FULL_PAGE });
@@ -1136,7 +1144,10 @@ try {
   await writeFile(resolve(artifacts, 'audit.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(report, null, 2));
 } catch (error) {
-  console.error(JSON.stringify({ failure: String(error?.message ?? error).split('\n')[0], unknown: Object.fromEntries(unknown), logs: logs.slice(-1500) }, null, 2));
+  // `detail` and `where` say which step stopped the run (the locator and the script line).
+  const detail = String(error?.message ?? error).split('\n').slice(0, 8).join(' | ').replace(/\u001b\[[0-9;]*m/g, '');
+  const where = String(error?.stack ?? '').split('\n').filter((line) => line.includes('app-audit-browser')).slice(0, 3).map((line) => line.trim());
+  console.error(JSON.stringify({ failure: String(error?.message ?? error).split('\n')[0], detail, where, unknown: Object.fromEntries(unknown), logs: logs.slice(-1500) }, null, 2));
   process.exitCode = 1;
 } finally {
   await browser?.close();

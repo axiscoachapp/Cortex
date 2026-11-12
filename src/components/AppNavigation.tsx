@@ -145,6 +145,9 @@ export function MobileBottomBar({ onHome, homeActive, placement = 'fixed' }: Hom
   const [signOut, setSignOut] = useState(false);
   const items = primary.length ? primary : [{ to: home, label: 'Início', icon: Home }];
   const go = (to: string) => { setSheet(false); navigate(to); };
+  // The sheet lists the areas in full, so a page that is itself an area ("Financeiro",
+  // "Recepção") is not repeated under the other pages.
+  const pages = workspaces.length > 1 ? more.filter(item => !workspaces.some(area => area.to === item.to)) : more;
   return <>
     <nav aria-label="Navegação principal" className={cn('shell:hidden border-t bg-background/95 backdrop-blur-sm', placement === 'fixed' ? 'fixed inset-x-0 bottom-0 z-30' : 'shrink-0')}
       style={placement === 'fixed' ? { height: 'calc(4rem + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)' } : { paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -165,8 +168,8 @@ export function MobileBottomBar({ onHome, homeActive, placement = 'fixed' }: Hom
               <Icon className="h-4 w-4 shrink-0" aria-hidden="true" /><span className="flex-1">{area.label}</span>{current && <Check className="h-4 w-4" aria-label="Área atual" />}
             </button>; })}
         </section>}
-        {more.length > 0 && <nav aria-label="Outras páginas" className="mt-3 space-y-0.5 border-b pb-3">
-          {more.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end onClick={() => setSheet(false)} className={state => cn(itemClass(state), 'text-sm')}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" />{label}</NavLink>)}
+        {pages.length > 0 && <nav aria-label="Outras páginas" className="mt-3 space-y-0.5 border-b pb-3">
+          {pages.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end onClick={() => setSheet(false)} className={state => cn(itemClass(state), 'text-sm')}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" />{label}</NavLink>)}
         </nav>}
         <nav aria-label="Conta e preferências" className="mt-3 space-y-0.5">
           {account.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} onClick={() => setSheet(false)} className={state => cn(itemClass(state), 'text-sm')}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" />{label}</NavLink>)}

@@ -72,7 +72,12 @@ describe('one phone bar on every route', () => {
     const more = await screen.findByRole('dialog', { name: 'Mais' });
     const areas = within(more).getByRole('region', { name: 'Área de trabalho' });
     expect(within(areas).getAllByRole('button').map(button => button.textContent)).toEqual(['Consultório', 'Recepção', 'Financeiro']);
-    for (const label of ['Assistente', 'Modelos', 'Conhecimento', 'Pré-consultas', 'Financeiro', 'Recepção', 'Configurações', 'Segurança da conta']) expect(within(more).getByRole('link', { name: label })).toBeInTheDocument();
+    for (const label of ['Assistente', 'Modelos', 'Conhecimento', 'Pré-consultas', 'Configurações', 'Segurança da conta']) expect(within(more).getByRole('link', { name: label })).toBeInTheDocument();
+    // An area is listed once, as an area: not again as a page.
+    for (const label of ['Financeiro', 'Recepção']) {
+      expect(within(more).queryByRole('link', { name: label })).toBeNull();
+      expect(within(more).getAllByText(label)).toHaveLength(1);
+    }
     await userEvent.click(within(areas).getByRole('button', { name: 'Recepção' }));
     await waitFor(() => expect(screen.getByLabelText('Destino')).toHaveTextContent('/recepcao'));
   });
