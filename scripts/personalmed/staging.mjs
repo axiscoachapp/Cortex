@@ -30,12 +30,26 @@ import {
   parseTemplateItems,
   registrationPhones,
   SHARED_LOGINS,
+  sourceRecordId,
   splitHistory,
   templateKind,
   wallClockToUtc,
 } from './transforms.mjs';
 
 const text = (v) => (typeof v === 'string' ? v.trim() : v == null ? '' : String(v).trim());
+
+const CIVIL_STATUS = { C: 'Casado(a)', S: 'Solteiro(a)', D: 'Divorciado(a)', V: 'Viúvo(a)', O: 'Outro' };
+/** Clini_01.CivilStatus: C, S, D, V and O are the usual codes; any other code is kept out and flagged. */
+export function mapCivilStatus(raw) {
+  const code = text(raw).toUpperCase();
+  if (!code) return { label: null, issues: [] };
+  return CIVIL_STATUS[code] ? { label: CIVIL_STATUS[code], issues: [] } : { label: null, issues: ['civil_status_unknown_code'] };
+}
+/** Only the eight ABO/Rh types; anything else is not a blood type. */
+export function mapBloodType(raw) {
+  const v = text(raw).toUpperCase().replace(/\s+/g, '');
+  return /^(A|B|AB|O)[+-]$/.test(v) ? v : null;
+}
 
 /**
  * One legacy person (Clini_01 row) -> `person` (staging only, legal identity),
@@ -67,6 +81,9 @@ export function buildPerson(ctx, p, charts, plans = [], flags = {}) {
   const bestPhone = phones.find((x) => x.normalized) ?? null;
   const phoneIssues = phones.flatMap((x) => x.issues);
   const street = text(p.Address);
+  const civil = mapCivilStatus(p.CivilStatus);
+  const bloodType = mapBloodType(p.BloodType);
+  const registrationNote = text(p.ObservationText) || null;
   const addressIssues = [...cep.issues, ...uf.issues, ...city.issues, ...(street ? (hasHouseNumber(street) ? [] : ['address_without_number']) : ['address_missing'])];
 
   const person = envelope({
@@ -86,9 +103,12 @@ export function buildPerson(ctx, p, charts, plans = [], flags = {}) {
       phones: phones.map(({ raw, normalized, kind }) => ({ raw, normalized, kind })),
       email: email.email,
       healthPlan: plan ? { carrier: plan.carrier, card: plan.card || null, accommodation: email.accommodation } : null,
+      civilStatus: civil.label,
+      bloodType,
+      registrationNote,
       cohort,
     },
-    issues: [...name.issues, ...birth.issues, ...sex.issues, ...cpf.issues, ...email.issues, ...addressIssues, ...phoneIssues],
+    issues: [...name.issues, ...birth.issues, ...sex.issues, ...cpf.issues, ...email.issues, ...addressIssues, ...phoneIssues, ...civil.issues],
   });
 
   const contact = envelope({
@@ -119,6 +139,10 @@ export function buildPerson(ctx, p, charts, plans = [], flags = {}) {
         email: email.email,
         health_insurance: healthInsurance,
         profession: text(p.Occupation) || null,
+        // No column for these in `patients`: the loader writes them as the first
+        // lines of social_anamnesis and medical_history.
+        civil_status: civil.label,
+        blood_type: bloodType,
         status: c.hasConsultations ? 'retorno' : 'novo',
         last_visit: legacyDate(c.lastVisit, { max: ctx.exportDate }).date,
       },
@@ -145,12 +169,15 @@ export function buildPerson(ctx, p, charts, plans = [], flags = {}) {
  * rows: [{ user, date, startMinutes, duration, slotType, estado, pcod, preCadastro: { name, phone } | null, typeLabel }]
  * chartIds: Map(`${pcod}|${user}`) -> chart targetId
  */
+const clock = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+
 export function buildAgenda(ctx, rows, chartIds) {
   const base = { sourceInstance: ctx.sourceInstance, batchId: ctx.batchId };
   const out = [];
   const appointments = [];
   for (const r of rows) {
-    const key = { user: r.user, date: r.date, start: r.startMinutes };
+    // The walk-in queue (Age09) has its own key: it can share a time with a booked slot.
+    const key = r.walkIn != null ? { walkin: r.walkIn } : { user: r.user, date: r.date, start: r.startMinutes };
     const start = wallClockToUtc(r.date, r.startMinutes);
     const end = wallClockToUtc(r.date, r.startMinutes + (r.duration > 0 ? r.duration : 15));
     // B (long block) and P (short block: never booked, 15 min at 7-8h and 17h;
@@ -221,6 +248,9 @@ export function buildAgenda(ctx, rows, chartIds) {
       payload: {
         ownerLegacyDoctor: r.user,
         patientTargetId,
+        // The person, by the legacy key: an appointment with a doctor who has no chart
+        // of the patient still belongs to the single registration (D14, D20).
+        personRef: r.pcod != null ? sourceRecordId({ pcod: r.pcod }) : null,
         contactTargetId,
         start_time: start,
         end_time: end,
@@ -229,7 +259,9 @@ export function buildAgenda(ctx, rows, chartIds) {
         title: r.pcod == null ? (cleanName(r.preCadastro?.name).name ?? 'Pré-cadastro (PersonalMed)') : null,
         status: mapped.status,
         type: r.typeLabel ?? null,
-        notes: mapped.note,
+        notes: [mapped.note, r.walkIn != null ? 'Pronto atendimento (fila do PersonalMed)' : null, r.carrier ? `Convênio no agendamento: ${r.carrier}` : null, r.careStartMinutes != null ? `Início do atendimento: ${clock(r.careStartMinutes)}` : null].filter(Boolean).join(' · ') || null,
+        // Arrival time typed by the reception, on the day of the visit.
+        checked_in_at: r.arrivalMinutes != null ? wallClockToUtc(r.date, r.arrivalMinutes) : null,
         google_sync_status: 'idle',
       },
       issues,
@@ -283,7 +315,11 @@ function prenatalText(p) {
   if (num(p.au) != null) out.push(`AU: ${p.au} cm`);
   if (text(p.bcf)) out.push(`BCF: ${text(p.bcf)} bpm`);
   if (num(p.mf) != null) out.push(`MF: ${p.mf}`);
-  if (p.edema != null) out.push(`Edema: ${p.edema ? `${p.edema}+` : 'ausente'}`);
+  // Edema is a code: 1 on 99% of the visits (inferred: no edema), 2 and 3 on the rest
+  // (inferred: + and ++). 0 is "not filled". To be confirmed with the clinic.
+  if (p.edema === 1) out.push('Edema: ausente');
+  else if (p.edema === 2 || p.edema === 3) out.push(`Edema: ${'+'.repeat(p.edema - 1)}`);
+  if (text(p.touch)) out.push(`Toque: ${text(p.touch)}`);
   return out.join(' · ');
 }
 
@@ -405,7 +441,11 @@ export function buildChartClinical(ctx, chart, input) {
       }),
     );
   }
-  const historySections = (input.pages ?? []).filter((pg) => pg.kind === 'history' && text(pg.text)).map((pg) => `## ${pg.title}\n\n${text(pg.text)}`);
+  const historySections = [
+    ...(input.pages ?? []).filter((pg) => pg.kind === 'history' && text(pg.text)).map((pg) => `## ${pg.title}\n\n${text(pg.text)}`),
+    obstetricHistory(input.pregnancies ?? [], ctx.exportDate),
+    ...(input.sheets ?? []).map(sheetSection),
+  ].filter(Boolean);
   if (historySections.length) {
     out.push(envelope({ ...base, sourceEntity: 'medical_history', key: { pcod, user }, doctor: user, targetTable: 'patients.medical_history', payload: { patientTargetId, text: `${stamp}\n\n${historySections.join('\n\n')}` } }));
   }
@@ -432,6 +472,113 @@ export function buildChartClinical(ctx, chart, input) {
       e.issues = [...new Set([...e.issues, 'chart_missing'])].sort();
       e.mappingStatus = 'rejected';
     }
+  }
+  return out;
+}
+
+const br = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : null);
+
+/**
+ * Every pregnancy recorded for the chart (Co49_1), as text for the medical
+ * history. The child's name is a third party's data and is not carried.
+ */
+export function obstetricHistory(pregnancies, exportDate) {
+  const lines = [];
+  for (const g of [...pregnancies].sort((a, b) => (a.number ?? 0) - (b.number ?? 0))) {
+    const dum = legacyDate(g.dum).date;
+    const dpp = legacyDate(g.dpp).date;
+    const dppEcho = legacyDate(g.dppEcho).date;
+    const birth = legacyDate(g.parturition, { max: exportDate }).date;
+    const parts = [
+      dum ? `DUM ${br(dum)}` : null,
+      dpp ? `DPP ${br(dpp)}${g.dppSource === 'USG' ? ' (pela USG)' : ' (pela DUM)'}` : null,
+      dppEcho && dppEcho !== dpp ? `DPP pela USG ${br(dppEcho)}` : null,
+      num(g.igFirst) != null ? `IG na abertura: ${g.igFirst} semanas` : null,
+      num(g.weight) != null ? `peso inicial ${g.weight} kg` : null,
+      num(g.height) != null ? `altura ${g.height}` : null,
+      mapBloodType(g.bloodType) ? `tipo sanguíneo ${mapBloodType(g.bloodType)}` : null,
+      birth ? `parto em ${br(birth)}` : null,
+      text(g.deliveryType) ? `tipo de parto: ${text(g.deliveryType)}` : null,
+      text(g.childSex) ? `sexo do recém-nascido: ${text(g.childSex)}` : null,
+      dpp && dpp >= exportDate ? 'em curso na data da exportação' : null,
+    ].filter(Boolean);
+    if (!parts.length && !text(g.notes)) continue;
+    lines.push(`- Gestação ${g.number ?? '?'}: ${parts.join(' · ')}${text(g.notes) ? `\n  Observações: ${text(g.notes)}` : ''}`);
+  }
+  return lines.length ? `## Histórico obstétrico (fichas de gestação)\n\n${lines.join('\n')}` : null;
+}
+
+/** A specialty sheet of the legacy chart, as the extractor read it: { title, date, lines }. */
+function sheetSection(sheet) {
+  const lines = (sheet.lines ?? []).map((l) => text(l)).filter(Boolean);
+  if (!lines.length) return null;
+  const date = legacyDate(sheet.date).date;
+  return `## ${sheet.title}${date ? ` (${br(date)})` : ''}\n\n${lines.map((l) => `- ${l}`).join('\n')}`;
+}
+
+/**
+ * Field name of a legacy sheet as a readable label ("IdadeMenopausa" ->
+ * "Idade menopausa"). The legacy screens' own labels are not in the export.
+ */
+export function sheetLabel(field) {
+  const words = String(field).replace(/_/g, ' ').replace(/([a-zà-ú])([A-ZÀ-Ú0-9])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2').trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
+ * Lines of one sheet row: only fields that hold something. A true flag is
+ * "sim"; false, zero, empty and the Delphi zero date say nothing and are left out.
+ * values: [[fieldName, value]] with dates already as ISO strings.
+ */
+export function sheetLines(values) {
+  const out = [];
+  for (const [field, value] of values) {
+    if (value == null || value === false || value === 0 || value === '') continue;
+    if (value === true) out.push(`${sheetLabel(field)}: sim`);
+    else if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      if (legacyDate(value).date) out.push(`${sheetLabel(field)}: ${br(value)}`);
+    } else if (text(value)) out.push(`${sheetLabel(field)}: ${text(value)}`);
+  }
+  return out;
+}
+
+/**
+ * Images kept inside the legacy chart -> `file` envelopes (patient_files).
+ * The bytes travel in the encrypted staging as base64; BMP is converted to PNG
+ * by the extractor before it gets here.
+ *
+ * images: [{ source: 'CO52', key: {...}, date, description, mime, bytes: Buffer }]
+ */
+export function buildFiles(ctx, chart, images) {
+  const out = [];
+  for (const image of images) {
+    const ext = { 'image/png': 'png', 'image/jpeg': 'jpg' }[image.mime];
+    const date = legacyDate(image.date, { max: ctx.exportDate }).date;
+    const issues = [];
+    if (!ext) issues.push('file_format_unsupported');
+    if (image.bytes.length > 25 * 1024 * 1024) issues.push('file_too_large');
+    out.push(
+      envelope({
+        sourceInstance: ctx.sourceInstance,
+        batchId: ctx.batchId,
+        sourceEntity: 'file',
+        key: { pcod: chart.pcod, user: chart.user, ...image.key },
+        doctor: chart.user,
+        targetTable: 'patient_files',
+        payload: {
+          patientTargetId: chart.patientTargetId,
+          file_name: `personalmed-${image.source.toLowerCase()}-${Object.values(image.key).join('-')}.${ext ?? 'bin'}`,
+          mime_type: image.mime,
+          size_bytes: image.bytes.length,
+          tag: 'importado-personalmed',
+          description: text(image.description) || null,
+          date,
+          contentBase64: image.bytes.toString('base64'),
+        },
+        issues,
+        status: issues.length || !chart.patientTargetId ? 'rejected' : undefined,
+      }),
+    );
   }
   return out;
 }

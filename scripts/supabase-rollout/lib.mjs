@@ -72,3 +72,9 @@ async function api(path, init = {}) {
 export const query = (ref, sql) => api(`/projects/${ref}/database/query`, { method: 'POST', body: JSON.stringify({ query: sql }) });
 export const listFunctions = (ref) => api(`/projects/${ref}/functions`);
 export const listSecretNames = async (ref) => ((await api(`/projects/${ref}/secrets`)) ?? []).map((s) => s.name);
+/** The project's service key, for Storage calls made by an operator script. Kept in memory by the caller; never print it. */
+export const serviceKey = async (ref) => {
+  const key = ((await api(`/projects/${ref}/api-keys?reveal=true`)) ?? []).find((k) => k.name === 'service_role')?.api_key;
+  if (!key) throw new Error('service key not found');
+  return key;
+};

@@ -30,12 +30,19 @@
 //   AUDIT_CONSULTATION_ERRORS=1             consultation (round 3, consulta-tela): the phone
 //                                           "Ações" menu, a failed AI question, a failed
 //                                           "Gerar documento", the issued-document "⋯" menu
+//   AUDIT_FIXTURE=<file.json>               the tables of a JSON file OUTSIDE the repository replace
+//                                           the synthetic patients, consultations, appointments,
+//                                           work items and files ({ tables: { patients: [...] } }),
+//                                           e.g. the anonymised migration sample. Routes become home,
+//                                           patient list, agenda and one chart per patient, each
+//                                           with the full profile and its history opened.
 //   AUDIT_FORM_DIALOGS=1                    on / and /gerenciar-pacientes: the start-visit and
 //                                           patient dialogs empty, invalid and with "Mais dados";
 //                                           a toast after archiving a patient
 import { chromium, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
+import { readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { SHELL_BREAKPOINT } from '../src/lib/interfaceScale.ts';
@@ -105,6 +112,11 @@ const state = {
     { id: 'd5110000-0000-4000-8000-0000000000b2', user_id: doctorId, title: 'Protocolo sintético de climatério', source_type: 'text', status: 'ready', review_status: 'approved', review_revision: 1, index_revision: 1, char_count: 1200, created_at: day(-20), indexed_at: day(-20), reviewed_at: day(-20), reviewed_by: doctorId, reviewer_name: 'Dra. Médica Sintética', source_reference: null, source_text: 'Texto sintético.', source_version: null, embedding_model: null, index_started_at: null, supersedes_document_id: null },
   ],
 };
+// Fixture (AUDIT_FIXTURE): rows from a file take the place of the synthetic ones and belong to the synthetic doctor.
+const FIXTURE = process.env.AUDIT_FIXTURE ? JSON.parse(readFileSync(process.env.AUDIT_FIXTURE, 'utf8')) : null;
+if (FIXTURE) {
+  for (const table of ['patients', 'consultations', 'appointments', 'clinical_work_items', 'patient_files', 'prescriptions']) state[table] = (FIXTURE.tables?.[table] ?? []).map((row) => ({ ...row, user_id: doctorId }));
+}
 // Doctor agenda (AUDIT_DOCTOR_AGENDA=1, agenda-medico): more appointment states on the doctor's own agenda.
 if (process.env.AUDIT_DOCTOR_AGENDA === '1') {
   const base = state.appointments[0];
@@ -542,6 +554,7 @@ async function fullCapture(page, path) {
     if (shell) { shell.setAttribute('style', shell.dataset.auditStyle ?? ''); delete shell.dataset.auditStyle; }
   });
 }
+if (FIXTURE) ROUTES.splice(0, ROUTES.length, ['inicio', '/'], ['pacientes', '/gerenciar-pacientes'], ['agenda', '/agenda'], ...state.patients.map((p, i) => [`paciente-${i + 1}`, `/?patient=${p.id}`]));
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null;
 
 const probe = http.createServer();
@@ -613,6 +626,38 @@ try {
       await page.screenshot({ path: resolve(artifacts, `${label}-${name}.png`), fullPage: FULL_PAGE });
       if (FULL_PAGE && viewport.width < SHELL_BREAKPOINT) await fullCapture(page, resolve(artifacts, `${label}-${name}-full.png`));
       report.routes[`${label} ${path}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+      // Fixture charts: the consultation screen is already captured; then the full profile,
+      // its history list, and the first notes opened (how an imported chart reads).
+      if (FIXTURE && path.startsWith('/?patient=')) {
+        const shot = async (suffix) => {
+          await page.waitForTimeout(700);
+          await page.screenshot({ path: resolve(artifacts, `${label}-${name}-${suffix}.png`), fullPage: FULL_PAGE });
+          report.routes[`${label} ${name} ${suffix}`] = { ...(await inspect(page, viewport.width)), pageErrors: pageErrors.splice(0), consoleErrors: consoleErrors.splice(0) };
+        };
+        if (viewport.width < SHELL_BREAKPOINT) await page.getByRole('button', { name: 'Perfil', exact: true }).last().click().catch(() => {});
+        await shot('painel');
+        const full = page.getByRole('button', { name: /Perfil completo/i }).first();
+        if (await full.isVisible().catch(() => false)) {
+          await full.click();
+          const drawer = page.getByRole('dialog');
+          await expect(drawer).toBeVisible();
+          await shot('perfil');
+          // The profile scrolls inside the drawer: capture its lower part too.
+          await drawer.evaluate((el) => { const box = [...el.querySelectorAll('*')].find((x) => x.scrollHeight > x.clientHeight + 40 && getComputedStyle(x).overflowY !== 'visible') ?? el; box.scrollTop = box.scrollHeight / 2; });
+          await shot('perfil-meio');
+          await drawer.getByRole('tab', { name: /Histórico/ }).click();
+          await shot('historico');
+          const details = drawer.getByRole('button', { name: 'Detalhes', exact: true });
+          const count = await details.count();
+          for (const [k, index] of [0, Math.min(3, count - 1)].filter((v, i, a) => v >= 0 && a.indexOf(v) === i).entries()) {
+            await details.nth(index).scrollIntoViewIfNeeded();
+            await details.nth(index).click();
+            await shot(`nota-${k + 1}`);
+            await drawer.getByRole('button', { name: 'Ocultar', exact: true }).first().click().catch(() => {});
+          }
+          await page.keyboard.press('Escape');
+        }
+      }
       if (process.env.AUDIT_OPENAI_MIGRATION === '1' && path === '/assistente') {
         await page.getByRole('textbox', { name: 'Escreva sua pergunta' }).fill('Pergunta sintética sobre o contexto disponível');
         await page.getByRole('button', { name: 'Enviar pergunta', exact: true }).click();
