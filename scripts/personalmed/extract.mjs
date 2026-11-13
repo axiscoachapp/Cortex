@@ -254,7 +254,8 @@ for (const [name, title] of SHEETS) {
   const userField = f(/^usernumber$/i);
   const dateField = table.fields.find((x) => ['date', 'timestamp'].includes(x.typeName) && /^(data|date|dateinsert|datainsert)$/i.test(x.name));
   const textFields = table.fields.filter((x) => !BINARY.has(x.typeName) && x.typeName !== 'time');
-  const imageFields = table.fields.filter((x) => x.typeName === 'graphic' || x.typeName === 'blob');
+  // Images sit in three field types: `graphic` (CO52), `ole` (Clini_04, Co31_1) and plain `blob`.
+  const imageFields = table.fields.filter((x) => ['graphic', 'ole', 'blob'].includes(x.typeName));
   const keyFields = table.fields.filter((x) => /^(codigo|codexame|imagecod|numbergestation)$/i.test(x.name));
   const value = (x, v) => (['date', 'timestamp'].includes(x.typeName) ? iso(v) : typeof v === 'string' ? plain(v) : v);
   let n = 0;

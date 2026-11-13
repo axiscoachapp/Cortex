@@ -48,6 +48,14 @@ Também entram, quando existem: `Co51_1`, `Co53_1`, `Co53_3`, `CO54*` (parto e p
 
 **Prova de cobertura** (`sample-coverage.mjs`): cada linha de texto das tabelas acima é procurada no registro convertido da mesma pessoa. Resultado: 2.806 linhas, 0 ausentes.
 
+**O conversor ampliado na base inteira** (ensaio só de contagens, nada gravado, 82 segundos): as contagens de conferência continuam iguais às esperadas (32.882 pessoas, 34.796 prontuários, 192.199 consultas, 5.277 alertas, 29.518 carteirinhas, 1.123 modelos; diferença zero). O que mudou com as novas leituras:
+
+| Entidade | Antes | Agora | Por quê |
+|---|---|---|---|
+| Agendamentos | 273.794 | 277.573 | Entram as 3.779 visitas da fila de pronto atendimento que têm paciente |
+| Históricos por prontuário | 4.571 páginas e 668 fichas, em texto | 5.743 prontuários com histórico | Gestações anteriores e fichas de especialidade passam a compor o histórico |
+| Arquivos (imagens embutidas) | 48 contadas, nenhuma convertida | 67 convertidas | Os campos de imagem dos laudos (`Co31_1`, quatro por exame) e das fotos (`Clini_04`) são do tipo OLE; os laudos usam bitmap de 16 bits. As 152 referências a arquivos externos continuam dependendo da pasta da clínica (D10) |
+
 **Inferências a confirmar com a clínica:**
 - Código de edema do pré-natal: 1 em 99% das consultas (lido como "ausente"), 2 e 3 no resto (lidos como "+" e "++").
 - Estado civil: C, S, D, V e O têm leitura óbvia; o código P (178 cadastros na base) ficou sem rótulo.

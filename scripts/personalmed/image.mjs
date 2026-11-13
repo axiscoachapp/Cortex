@@ -56,7 +56,8 @@ export function encodePng(width, height, rgb) {
 }
 
 /**
- * Uncompressed Windows BMP (1, 4, 8, 24 or 32 bits per pixel) -> PNG.
+ * Uncompressed Windows BMP (1, 4, 8, 16, 24 or 32 bits per pixel) -> PNG.
+ * 16-bit is the default 5-5-5 layout (the exam images of Co31_1 use it).
  * Compressed BMP (RLE, bitfields other than plain 32-bit) is not converted: null.
  */
 export function bmpToPng(bmp) {
@@ -70,7 +71,7 @@ export function bmpToPng(bmp) {
   const compression = bmp.readUInt32LE(30);
   const height = Math.abs(rawHeight);
   if (width <= 0 || height <= 0 || width > 20000 || height > 20000) return null;
-  if (!(compression === 0 || (compression === 3 && bpp === 32)) || ![1, 4, 8, 24, 32].includes(bpp)) return null;
+  if (!(compression === 0 || (compression === 3 && bpp === 32)) || ![1, 4, 8, 16, 24, 32].includes(bpp)) return null;
   const rowSize = Math.floor((bpp * width + 31) / 32) * 4;
   if (dataOffset + rowSize * height > bmp.length) return null;
   const paletteAt = 14 + headerSize;
@@ -85,6 +86,13 @@ export function bmpToPng(bmp) {
         rgb[o] = bmp[p + 2];
         rgb[o + 1] = bmp[p + 1];
         rgb[o + 2] = bmp[p];
+      } else if (bpp === 16) {
+        // X1 R5 G5 B5, little-endian; five bits spread over eight.
+        const v = bmp.readUInt16LE(src + x * 2);
+        const wide = (c) => (c << 3) | (c >> 2);
+        rgb[o] = wide((v >> 10) & 31);
+        rgb[o + 1] = wide((v >> 5) & 31);
+        rgb[o + 2] = wide(v & 31);
       } else {
         const index = bpp === 8 ? bmp[src + x] : bpp === 4 ? (bmp[src + (x >> 1)] >> (x & 1 ? 0 : 4)) & 0x0f : (bmp[src + (x >> 3)] >> (7 - (x & 7))) & 1;
         const p = paletteAt + Math.min(index, colours - 1) * 4;

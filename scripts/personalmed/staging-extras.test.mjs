@@ -108,6 +108,23 @@ describe('images', () => {
     expect(storableImage(Buffer.concat([Buffer.alloc(8), bmp]))?.mime).toBe('image/png');
     expect(bmpToPng(Buffer.from('BM-not-a-bitmap'))).toBeNull();
   });
+  it('converts a 16-bit (5-5-5) BMP', () => {
+    // 2x1: pure red (0x7C00) and pure blue (0x001F), row padded to four bytes.
+    const b = Buffer.alloc(54 + 4);
+    b.write('BM', 0, 'latin1');
+    b.writeUInt32LE(b.length, 2);
+    b.writeUInt32LE(54, 10);
+    b.writeUInt32LE(40, 14);
+    b.writeInt32LE(2, 18);
+    b.writeInt32LE(1, 22);
+    b.writeUInt16LE(1, 26);
+    b.writeUInt16LE(16, 28);
+    b.writeUInt16LE(0x7c00, 54);
+    b.writeUInt16LE(0x001f, 56);
+    const png = bmpToPng(b);
+    const idat = png.subarray(png.indexOf('IDAT') + 4, png.indexOf('IEND') - 8);
+    expect([...inflateSync(idat)]).toEqual([0, 255, 0, 0, 0, 0, 255]);
+  });
   it('builds a file envelope and refuses a format Cortex does not store', () => {
     const chart = { pcod: 7, user: 2, patientTargetId: 'p' };
     const [ok, bad] = buildFiles(ctx, chart, [
