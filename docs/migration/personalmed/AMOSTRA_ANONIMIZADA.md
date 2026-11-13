@@ -127,7 +127,7 @@ As duas notas ficam logo antes do último registro real, para que a última cons
 
 ## 5. Limites e riscos
 
-1. **O site publicado ainda é o antigo** (o `git push` está pendente). As telas que mostram bem estas notas (seções fora de S/O/A/P preservadas, perfil em linhas, pendências) estão na versão nova. Sem o push, a demonstração no site fica diferente do que conferi no app local.
+1. **Conferi no app local, não no site.** O site publicado já tem a versão nova das telas (o push das ondas 1 a 3 foi feito; os commits de hoje são só ferramentas e documentos e não mudam o site), então o que se vê lá deve ser o mesmo. Não abri o site com a conta do usuário para confirmar.
 2. **Dado de saúde pseudonimizado num projeto nos EUA.** A decisão D11 dizia que o projeto de teste em us-west-2 não receberia dados reais. Com a anonimização pedida, tratei como permitido para esta demonstração; a decisão de manter, apagar ou mover é do usuário.
 3. **A IA pode errar no sentido** mesmo sem inventar número ou trecho: classificar como "em acompanhamento" algo já encerrado, ou resumir de forma pobre uma anotação telegráfica. Por isso o original fica sempre junto e o perfil diz que foi organizado por IA.
 4. **Não entrei na conta do usuário.** A conferência foi por leitura no banco com as regras da conta e pelo app local com as mesmas linhas.
