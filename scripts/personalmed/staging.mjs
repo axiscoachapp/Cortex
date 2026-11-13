@@ -413,6 +413,8 @@ export function buildChartClinical(ctx, chart, input) {
       }),
     );
   }
+  // Undated text is kept on the day of the last visit, at 00:00: the visit of that day stays the
+  // most recent record, so the app and the pre-consultation summary read it as the last consultation.
   const anchor = legacyDate(input.lastVisit, { max: ctx.exportDate }).date ?? legacyDate(input.firstVisit, { max: ctx.exportDate }).date ?? ctx.exportDate;
   if (undated) {
     out.push(
@@ -422,7 +424,7 @@ export function buildChartClinical(ctx, chart, input) {
         key: { pcod, user, day: 'historico' },
         doctor: user,
         targetTable: 'consultations',
-        payload: { patientTargetId, ownerLegacyDoctor: user, created_at: wallClockToUtc(anchor, 12 * 60), chief_complaint: 'Histórico PersonalMed (texto corrido)', soap_note: `${stamp}\n\n${undated}`, appointmentSourceRecordId: null },
+        payload: { patientTargetId, ownerLegacyDoctor: user, created_at: wallClockToUtc(anchor, 0), chief_complaint: 'Histórico PersonalMed (texto corrido)', soap_note: `${stamp}\n\n${undated}`, appointmentSourceRecordId: null },
         issues: ['history_no_dates'],
       }),
     );
@@ -436,7 +438,7 @@ export function buildChartClinical(ctx, chart, input) {
         key: { pcod, user, page: 'qp-hda' },
         doctor: user,
         targetTable: 'consultations',
-        payload: { patientTargetId, ownerLegacyDoctor: user, created_at: wallClockToUtc(anchor, 12 * 60), chief_complaint: 'Primeira consulta: QP/HDA (PersonalMed)', soap_note: `${stamp}\n\n### QP/HDA\n\n${qpNoDay}`, appointmentSourceRecordId: null },
+        payload: { patientTargetId, ownerLegacyDoctor: user, created_at: wallClockToUtc(anchor, 0), chief_complaint: 'Primeira consulta: QP/HDA (PersonalMed)', soap_note: `${stamp}\n\n### QP/HDA\n\n${qpNoDay}`, appointmentSourceRecordId: null },
         issues: ['qp_hda_no_first_visit'],
       }),
     );

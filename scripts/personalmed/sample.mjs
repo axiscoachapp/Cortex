@@ -136,7 +136,7 @@ if (command === 'extract') {
         Object.assign(p, { name: label, phone: '', phone_normalized: null });
         break;
       case 'chart':
-        Object.assign(p, { name: label, date_of_birth: coarseBirthDate(p.date_of_birth), cpf: null, phone: null, email: null, profession: scrub(p.profession) });
+        Object.assign(p, { name: label, date_of_birth: coarseBirthDate(p.date_of_birth), cpf: null, phone: null, email: null, profession: null }); // the occupation as typed can point to one person (the owner of a named business)
         break;
       case 'consultation':
         p.soap_note = scrub(p.soap_note);

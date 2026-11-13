@@ -110,7 +110,7 @@ Campos:
 - "problemas": diagnósticos e condições registrados; "cid" só se o código estiver escrito (senão ""). "situacao": "ativo" quando os registros mais recentes mostram acompanhamento ou tratamento; "resolvido" quando o histórico diz que resolveu ou é um evento encerrado (gestação concluída, infecção tratada); "historico" quando não dá para saber. "desde": mês/ano do primeiro registro, como "05/2019", ou "".
 - "medicacoes_em_uso": só o que os registros dos 12 meses anteriores à data de referência mostram como uso contínuo ou tratamento em curso. "dose": só a dose escrita (ex.: "100 mg"), sem comentário; "uso": o modo de uso como escrito. "ultima_prescricao": data do último registro, "AAAA-MM-DD". Tratamento curto já encerrado não entra aqui.
 - "medicacoes_anteriores": outras medicações relevantes prescritas antes; "periodo" como "2019 a 2021" ou "".
-- "alergias": só alergia ou intolerância escrita no histórico e com a substância ou o produto identificado ("substancia" é o nome dele; "reacao" é a reação escrita, ou ""). Alergia sem causa identificada não entra aqui: vai em "problemas". Se o histórico registra que ela nega alergias e não há alergia escrita, devolva lista vazia e "alergias_negadas": true. Sem registro nenhum: lista vazia e false.
+- "alergias": só alergia ou intolerância escrita no histórico e com a substância ou o produto identificado ("substancia" é o nome dele; "reacao" é a reação escrita, ou ""). Alergia sem causa identificada não entra aqui: vai em "problemas". Efeito colateral comum de um remédio (enjoo, diarreia, obstipação, sonolência) só entra se o registro disser alergia, intolerância, "não tolera" ou que o remédio foi suspenso por causa dele. Se o histórico registra que ela nega alergias e não há alergia escrita, devolva lista vazia e "alergias_negadas": true. Sem registro nenhum: lista vazia e false.
 - "obstetrico": gestações, partos (com tipo), abortos e intercorrências, um item por evento; "data" como escrita ou "".
 - "cirurgias", "antecedentes_familiares", "habitos_sociais": como escritos.
 - "exames": rastreamentos e exames com resultado registrado (citologia, mamografia, ultrassonografias, densitometria, laboratório relevante): um item por exame e data; "resultado" resumido com os valores como escritos.
@@ -242,7 +242,9 @@ export function renderProfile(profile, { organizedOn, civilStatus = null, bloodT
   const source = `organizado por IA em ${br(organizedOn)} a partir do histórico importado do PersonalMed`;
   // One fact per line: the app shows each line as an item.
   const historyLines = [
-    `Perfil ${source}. Os itens e as origens estão na nota "Resumo do histórico importado", no histórico. Confira na primeira consulta.`,
+    // Stated as a fact about the record, not as a task: the product's own AI reads this field
+    // and would otherwise report "check the profile" as the patient's pending item.
+    `Perfil ${source}; os itens e as origens estão na nota "Resumo do histórico importado", no histórico.`,
     bloodType ? `Tipo sanguíneo: ${bloodType} (cadastro do PersonalMed)` : null,
     ...profile.obstetrico.map((e) => `Obstétrico: ${oneLine(e.evento)}${e.data ? ` (${oneLine(e.data)})` : ''}`),
     ...profile.cirurgias.map((e) => `Cirurgia: ${oneLine(e.nome)}${e.data ? ` (${oneLine(e.data)})` : ''}`),
@@ -271,7 +273,8 @@ export function renderProfile(profile, { organizedOn, civilStatus = null, bloodT
 
   return {
     diagnoses: profile.problemas.filter((p) => p.situacao === 'ativo').map((p) => ({ code: p.cid ?? '', description: oneLine(p.nome) })),
-    medications: profile.medicacoes_em_uso.map((m) => ({ name: oneLine(m.nome), dosage: oneLine(m.dose), instructions: oneLine(m.uso), ...(/^\d{4}-\d{2}-\d{2}$/.test(m.ultima_prescricao ?? '') ? { startedAt: m.ultima_prescricao } : {}) })),
+    // The chart says when the medicine was last recorded, not when it was started: no start date is invented.
+    medications: profile.medicacoes_em_uso.map((m) => ({ name: oneLine(m.nome), dosage: oneLine(m.dose), instructions: [oneLine(m.uso), /^\d{4}-\d{2}-\d{2}$/.test(m.ultima_prescricao ?? '') ? `último registro em ${br(m.ultima_prescricao)}` : null].filter(Boolean).join(' · ') })),
     allergies: profile.alergias.map((a) => `${oneLine(a.substancia)}${a.reacao ? ` (${oneLine(a.reacao)})` : ''}`),
     medical_history: historyLines.join('\n'),
     social_anamnesis: socialLines.join('\n') || null,

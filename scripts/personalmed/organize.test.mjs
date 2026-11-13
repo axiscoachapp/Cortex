@@ -76,7 +76,7 @@ describe('what is written to the chart', () => {
       pendencias: [{ texto: 'Citologia coletada sem resultado registrado', origem: o }],
     }, { organizedOn: '2026-11-13', civilStatus: 'Casado(a)', bloodType: 'B+' });
     expect(out.diagnoses).toEqual([{ code: 'N95.1', description: 'Condição sintética' }]);
-    expect(out.medications).toEqual([{ name: 'Medicamento sintético', dosage: '500 mg', instructions: '1 cp ao dia', startedAt: '2026-06-19' }]);
+    expect(out.medications).toEqual([{ name: 'Medicamento sintético', dosage: '500 mg', instructions: '1 cp ao dia · último registro em 19/06/2026' }]);
     expect(out.allergies).toEqual([]);
     // One fact per line, no markdown: the app shows each line as an item.
     expect(out.medical_history.split('\n')).toEqual(expect.arrayContaining(['Tipo sanguíneo: B+ (cadastro do PersonalMed)', 'Obstétrico: Cesárea (09/07/21)', 'Problema anterior: Evento antigo', 'Alergias: nega, segundo o histórico']));

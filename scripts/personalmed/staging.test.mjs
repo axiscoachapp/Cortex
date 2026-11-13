@@ -141,7 +141,7 @@ describe('synthetic staging batch', () => {
   it('keeps an undated QP/HDA page without a valid first visit at the anchor, flagged', () => {
     const e = find('consultation', 'pcod:105|user:5|page:qp-hda');
     expect(e).toMatchObject({ mappingStatus: 'ready', issues: ['qp_hda_no_first_visit'] });
-    expect(e.payload).toMatchObject({ chief_complaint: 'Primeira consulta: QP/HDA (PersonalMed)', created_at: '2024-09-09T15:00:00.000Z' });
+    expect(e.payload).toMatchObject({ chief_complaint: 'Primeira consulta: QP/HDA (PersonalMed)', created_at: '2024-09-09T03:00:00.000Z' });
     expect(e.payload.soap_note).toContain('### QP/HDA\n\nQueixa sintética sem data.');
     // Only this case keeps the page key; every other QP/HDA goes to a day.
     expect(of('consultation').filter((c) => c.sourceRecordId.endsWith('|page:qp-hda'))).toHaveLength(1);
@@ -169,7 +169,7 @@ describe('synthetic staging batch', () => {
   });
 
   it('keeps an undated history as one consultation at the last visit', () => {
-    expect(find('consultation', 'pcod:101|user:5|day:historico').payload).toMatchObject({ chief_complaint: 'Histórico PersonalMed (texto corrido)', created_at: '2026-05-04T15:00:00.000Z' });
+    expect(find('consultation', 'pcod:101|user:5|day:historico').payload).toMatchObject({ chief_complaint: 'Histórico PersonalMed (texto corrido)', created_at: '2026-05-04T03:00:00.000Z' });
   });
 
   it('imports only non-Z diagnoses, history pages and pregnancies still in course', () => {

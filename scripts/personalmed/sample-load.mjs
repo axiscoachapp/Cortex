@@ -89,12 +89,14 @@ function build(userId) {
       out.consultations.push({ id: e.targetId, user_id: userId, patient_id: patientId, chief_complaint: title, soap_note: renderDayNote({ stamp, note: organized?.note ?? {}, original, checked: asSoap }), created_at: e.payload.created_at });
     }
 
-    // Two notes that are not visits, placed right after the last record so that they open the
-    // history: the converted pages and sheets of the old chart, and the organised summary on top.
+    // Two notes that are not visits: the organised summary and the converted pages and sheets of
+    // the old chart. They sit just BEFORE the last record, so that the last real visit stays the
+    // "last consultation" for the app and for the pre-consultation summary, and they come right
+    // after it in the history (and among the recent notes the assistant reads).
     const lastRecord = es.filter((x) => x.sourceEntity === 'consultation').map((x) => x.payload.created_at).sort().at(-1) ?? `${today}T12:00:00.000Z`;
     const after = (minutes) => new Date(Date.parse(lastRecord) + minutes * 60_000).toISOString();
-    if (org && history) out.consultations.push({ id: uuidv5(`pm-sample-pages|${patientId}`), user_id: userId, patient_id: patientId, chief_complaint: 'Páginas e fichas do prontuário antigo (PersonalMed)', soap_note: `[Importado do PersonalMed em ${today} · texto original das páginas sem data, das fichas e dos CIDs. Não é uma consulta.]\n\n${history}`, created_at: after(1) });
-    if (profile.summaryNote) out.consultations.push({ id: uuidv5(`pm-sample-summary|${patientId}`), user_id: userId, patient_id: patientId, chief_complaint: 'Resumo do histórico importado (PersonalMed)', soap_note: profile.summaryNote, created_at: after(2) });
+    if (org && history) out.consultations.push({ id: uuidv5(`pm-sample-pages|${patientId}`), user_id: userId, patient_id: patientId, chief_complaint: 'Páginas e fichas do prontuário antigo (PersonalMed)', soap_note: `[Importado do PersonalMed em ${today} · texto original das páginas sem data, das fichas e dos CIDs. Não é uma consulta.]\n\n${history}`, created_at: after(-2) });
+    if (profile.summaryNote) out.consultations.push({ id: uuidv5(`pm-sample-summary|${patientId}`), user_id: userId, patient_id: patientId, chief_complaint: 'Resumo do histórico importado (PersonalMed)', soap_note: profile.summaryNote, created_at: after(-1) });
     profile.tasks.forEach((task, i) => out.workItems.push({ id: uuidv5(`pm-sample-task|${patientId}|${i}`), user_id: userId, patient_id: patientId, kind: 'task', status: 'open', title: task.title, content: task.content, details: {} }));
 
     const first = es.filter((x) => x.sourceEntity === 'appointment').map((x) => x.payload.start_time).sort()[0];
