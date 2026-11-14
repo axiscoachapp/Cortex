@@ -95,6 +95,8 @@ export function createScrubber(person) {
         const tokens = significant(nameTokens(name));
         for (const run of runs(tokens, 2)) t = replaceFolded(t, word(`(?:(?:dr|dra|doutor|doutora)\\.?\\s+)?${sequencePattern(run)}`), doctor.label, counter, 'doctor');
         if (tokens[0]) t = replaceFolded(t, word(`(?:dr|dra|doutor|doutora)\\.?\\s+${escape(tokens[0])}`), doctor.label, counter, 'doctor');
+        // The stamp under a prescription: initials and the surname ("R.C.Sobrenome CRM 12345").
+        if (tokens.length > 1) t = replaceFolded(t, word(`(?:[a-z]\\.\\s*){1,4}${escape(tokens.at(-1))}`), doctor.label, counter, 'doctor');
       }
     }
     // 4. Single tokens of the person's own name: the first name, and surnames that
@@ -123,6 +125,11 @@ export function createScrubber(person) {
     t = replaceFolded(t, /(?<![\d/.-])(\d{4})-(\d{4})(?![\d-])/g, (m) => (/^(19|20)\d\d$/.test(m[1]) && /^(19|20)\d\d$/.test(m[2]) ? m[0] : '[telefone]'), counter, 'phone_shape');
     // A second number written after a slash: "[telefone]/3018-0000".
     t = replaceFolded(t, /(?<=\[telefone\]\s?\/\s?)9?\d{4}-?\d{4}(?!\d)/g, '[telefone]', counter, 'phone_shape');
+    // A mobile typed without any separator ("991839523"), a number with spaces around the dash
+    // ("3242 - 4749", never two years), and a professional licence ("CRM 12345", "CRM-PR 12.345").
+    t = replaceFolded(t, /(?<![\d/.,-])9[6-9]\d{7}(?![\d/.,-]\d)(?!\d)/g, '[telefone]', counter, 'phone_shape');
+    t = replaceFolded(t, /(?<![\d/.-])(\d{4}) ?- ?(\d{4})(?![\d-])/g, (m) => (/^(19|20)\d\d$/.test(m[1]) && /^(19|20)\d\d$/.test(m[2]) ? m[0] : '[telefone]'), counter, 'phone_shape');
+    t = replaceFolded(t, /(?<![a-z])(crm|coren|crefito|crp|cro|crn)\s*[-/:]?\s*(?:[a-z]{2}\s*[-/:]?\s*)?\d[\d.]{2,7}(?!\d)/g, (m) => `${m[1].toUpperCase()} [documento]`, counter, 'licence_shape');
     // A street with its number, whoever lives there ("Rua Tal, 270 casa 10").
     t = replaceFolded(t, /(?<![a-z])(?:rua|r\.|av\.|avenida|alameda|al\.|travessa|trav\.|tv\.|rodovia|rod\.|estrada|praca)\s+[^\n;:]{2,60}?\d{1,5}(?:\s*,?\s*(?:casa|ap\.?|apto\.?|apartamento|bloco|bl\.?|sala|cj\.?|conj\.?|sobrado|fundos)\s*[a-z0-9]{0,6})*/g,
       // In running prose ("dor na rua ao caminhar 2 quadras") the word is lower case and no name follows it.
@@ -133,6 +140,9 @@ export function createScrubber(person) {
     // 7. Other people named in the text. After a kinship word or a title, a first
     //    name of the registration is a person; elsewhere, two or more names in a row.
     t = scrubThirdParties(t, dictionary, clinical, counter);
+    // 8. Where the person works or studies, when it is named ("trabalha na Empresa Tal",
+    //    "faz administração na FAE"): the kind of work stays, the name of the place goes.
+    t = scrubWorkplace(t, counter);
     return t;
   }
   return { scrub, tokens: own, leaks: (text) => leaks(text, { own, guard, idDigits, phoneTails, emails, relativeRuns }) };
@@ -149,7 +159,39 @@ const NAME_STOP = new Set([
   'janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro', 'domingo',
   'natal', 'neonatal', 'parto', 'mama', 'colo', 'alto', 'baixa', 'baixo', 'normal', 'regular',
   'douglas', 'leopold', 'bishop', 'tanner', 'kegel', 'hegar', 'cooper', 'gram', 'burch', 'kelly', 'marshall', 'bartholin', 'naboth', 'schiller', 'doppler', 'apgar',
+  // Words the registration holds as if they were names (typed in the name field, or kinship used as a name).
+  'marido', 'esposo', 'esposa', 'irma', 'irmao', 'filho', 'filha', 'plano', 'acomodacao', 'essa', 'esse', 'particular', 'cortesia', 'retorno', 'teste',
+  // Health plans and places that are also given names.
+  'america', 'bradesco', 'cassi', 'copel', 'sanepar', 'italia', 'franca', 'india', 'china', 'israel', 'florida', 'vitoria',
 ]);
+
+// Surnames of the registration that, in lower case, are almost always an ordinary word of the
+// note ("julia leite materno", "com a bruna pontos ok"). They end a lower-case name; in capitals
+// after a first name they are still taken for a surname.
+const COMMON_SURNAME_WORDS = new Set([
+  'leite', 'pinto', 'costa', 'lima', 'rocha', 'campos', 'campo', 'salgado', 'coelho', 'cordeiro', 'carneiro', 'lobo', 'pena', 'rios', 'serra', 'pedra', 'barros', 'matos',
+  'ferro', 'prata', 'guerra', 'sol', 'lua', 'mar', 'monte', 'vale', 'prado', 'fontes', 'lago', 'porto', 'ponte', 'torres', 'castelo', 'vila', 'casa', 'casas', 'jardim',
+  'leal', 'bravo', 'negro', 'preto', 'pardo', 'ruivo', 'louro', 'moreno', 'calvo', 'magro', 'velho', 'novo', 'neto', 'sobrinho', 'primo', 'junior', 'segundo', 'maior',
+  'menor', 'grande', 'pequeno', 'doce', 'amaro', 'dias', 'nascimento', 'guia', 'sala', 'canal', 'quadro', 'parada', 'paredes', 'pontos', 'tome', 'sera', 'partir', 'dedo',
+  'cima', 'verde', 'vermelho', 'seguro', 'pessoa', 'pais', 'maes', 'mora', 'marcar', 'deixou', 'coleto', 'nora', 'endo', 'gest', 'mass', 'doca', 'forte', 'fortes',
+  'portugal', 'franca', 'parana', 'unimed', 'amil', 'medica', 'medico',
+]);
+
+/** After an exam, the name of who did it: "eco tv arildo", "mamog joana". */
+const EXAM_CUE = new Set(['eco', 'tv', 'usg', 'ultrassom', 'mamog', 'mamografia', 'laudo', 'rx', 'rm', 'tc']);
+/** What follows "dr"/"dra" in a note without being a name: the specialty, a verb, a connective. */
+const TITLE_FOLLOWERS = new Set([
+  'cardio', 'cardiologista', 'gastro', 'gastroenterologista', 'endocrino', 'endocrinologista', 'endocrinologia', 'neuro', 'neurologista', 'orto', 'ortopedista', 'uro', 'urologista',
+  'gineco', 'ginecologista', 'derma', 'dermatologista', 'psiq', 'psiquiatra', 'oftalmo', 'oftalmologista', 'otorrino', 'otorrinolaringologista', 'reumato', 'reumatologista',
+  'pneumo', 'pneumologista', 'nefro', 'nefrologista', 'hemato', 'hematologista', 'onco', 'oncologista', 'masto', 'mastologista', 'procto', 'proctologista', 'angio', 'angiologista',
+  'vascular', 'geriatra', 'pediatra', 'clinico', 'clinica', 'cirurgiao', 'cirurgia', 'anestesista', 'radiologista', 'plastico', 'plastica', 'obstetra', 'infectologista', 'nutrologo',
+  'pediu', 'solicitou', 'disse', 'orientou', 'falou', 'acha', 'quer', 'indicou', 'prescreveu', 'recomendou', 'mandou', 'encaminhou', 'operou', 'avaliou', 'liberou', 'suspendeu',
+  'para', 'pela', 'pelo', 'como', 'quando', 'onde', 'tambem', 'ainda', 'esta', 'este', 'essa', 'esse', 'dele', 'dela', 'nosso', 'nossa', 'outro', 'outra', 'mesmo', 'mesma',
+  'particular', 'convenio', 'plantao', 'plantonista', 'assistente', 'responsavel', 'cirurgico', 'hoje', 'ontem', 'amanha', 'semana', 'retorno', 'consulta', 'exame', 'exames',
+]);
+
+/** Words after which a first name, even typed in lower case, is a person ("eco com giovana", "enc para dulce"). */
+const PERSON_CUE = new Set(['com', 'para', 'pra', 'pelo', 'pela', 'falar', 'falei', 'ligar', 'ligou', 'avisar', 'avisei']);
 
 function scrubThirdParties(text, dictionary, clinical, counter) {
   if (!dictionary.first.size) return text;
@@ -168,13 +210,50 @@ function scrubThirdParties(text, dictionary, clinical, counter) {
   const mixedCase = (tk) => /^[A-ZÀ-Ý][a-zà-ÿ']+$/.test(tk.raw);
   const allCaps = (tk) => tk.raw.length > 1 && tk.raw === tk.raw.toUpperCase();
   const ordinary = (tk) => NAME_STOP.has(tk.folded) || clinical.has(tk.folded) || tk.folded.length < 3;
+  // Old notes are often typed all in lower case: "dr eduardo paiva", "eco com giovana",
+  // "ok. marcia". Without the capital letter, a word is a person only when it is a first
+  // name of the registration AND something around it says so.
+  const lowerPerson = (tk) => !capital(tk) && isFirst(tk) && tk.folded.length >= 4;
+  const lowerSurname = (tk) => isNameLike(tk) && !COMMON_SURNAME_WORDS.has(tk.folded);
+  const between = (a, b) => text.slice(a.end, b.at);
+  const afterCue = (i) => i > 0 && PERSON_CUE.has(tokens[i - 1].folded) && /^\s+(?:[oa]s?\s+)?$/.test(between(tokens[i - 1], tokens[i]));
+  // The last word of a line, after punctuation: who wrote or took the note ("exames ok. marcia").
+  const signs = (tk) => /[.,;:!?–-]\s*$/.test(text.slice(Math.max(0, tk.at - 4), tk.at)) && /^\s*[.!]?\s*(?:\n|$)/.test(text.slice(tk.end, tk.end + 8));
+  // Two first names side by side with a slash, a comma or "e" ("era milton / willian").
+  const listedWith = (a, b) => a && b && lowerPerson(a) && lowerPerson(b) && /^\s*(?:\/|,|\be\b)\s*$/.test(between(a, b));
+  // After a title the next word is a person far more often than not, whatever a catalogue of
+  // medicines says of it ("DR. ANTÔNIO"): only an ordinary word we know stops it.
+  const plainWord = (tk) => NAME_STOP.has(tk.folded) || COMMON_SURNAME_WORDS.has(tk.folded) || tk.folded.length < 4;
+  // Not a name: a listed follower, a specialty by its ending ("dentista", "pediatra", "psicólogo")
+  // or a verb by its ending ("explicou", "pediu", "operando").
+  const unknownAfterTitle = (tk) => !plainWord(tk) && !clinical.has(tk.folded) && !TITLE_FOLLOWERS.has(tk.folded) && !/(?:ista|iatra|logo|loga|logia|peuta|ou|iu|aram|eram|ando|endo|indo)$/.test(tk.folded);
+  // "mulher do rached", "paciente da bruna", "indicada pelo antunes".
+  const afterWhose = (tk) => /(?:mulher|esposa|marido|filh[oa]|mae|pai|irmao?|irma|amig[oa]|secretaria|pacientes?|pcte|indicad[oa]|indicacao)\s+(?:d[oa]s?|pel[oa])\s+$/.test(folded.slice(Math.max(0, tk.at - 32), tk.at));
+  // "o marcelo prescreve", "a bruna ligou": the article before a first name of the registration.
+  const afterArticle = (tk) => tk.folded.length >= 5 && /(?:^|[\s(,;:])[oa]\s+$/.test(folded.slice(Math.max(0, tk.at - 4), tk.at));
+  const kinAfter = /^(?:esposo|esposa|marido|filho|filha|mae|pai|irma|irmao|sogra|sogro)$/;
   const spans = [];
   for (let i = 0; i < tokens.length; i += 1) {
     const tk = tokens[i];
     const afterKinship = i > 0 && kinship.test(tokens[i - 1].folded) && adjacent(tokens[i - 1], tk);
     const afterTitle = i > 0 && title.test(tokens[i - 1].folded) && adjacent(tokens[i - 1], tk);
+    const next1 = tokens[i + 1];
+    const beforeKin = next1 && adjacent(tk, next1) && kinAfter.test(next1.folded);
+    const lowerStart = !capital(tk) && (
+      // "dr regis", "dra raquel", "dr paiva", and a name the registration never saw ("dr lucar").
+      (afterTitle && ((isNameLike(tk) && tk.folded.length >= 4) || unknownAfterTitle(tk)))
+      || (lowerPerson(tk) && (afterKinship || afterCue(i) || signs(tk) || listedWith(tokens[i - 1], tk) || listedWith(tk, next1) || afterArticle(tk)
+        || (i > 0 && EXAM_CUE.has(tokens[i - 1].folded) && adjacent(tokens[i - 1], tk))
+        // "eduardo paiva", "luiz marcelo": a first name followed by another name of the registration.
+        || (next1 && adjacent(tk, next1) && lowerSurname(next1) && next1.folded.length >= 4)))
+      // A surname alone, said to be someone's: "mulher do rached", "bittencourt esposo".
+      || (lowerSurname(tk) && tk.folded.length >= 5 && (afterWhose(tk) || beforeKin))
+    );
+    // "repetiu eco com a Cris": after "com a", "para o", a capitalised word that is nothing we know.
+    // The article is required: "Retorno com Exames" is a title, not a person.
+    const namedAfterCue = capital(tk) && mixedCase(tk) && afterCue(i) && /\s[oa]\s+$/.test(text.slice(Math.max(0, tk.at - 4), tk.at)) && !plainWord(tk) && !clinical.has(tk.folded);
     // After "Dr.", "Dra.", "Enfermeira": a capitalised word is a person even when the registration never saw that name.
-    const startsName = capital(tk) && (isFirst(tk) || (afterTitle && !ordinary(tk)));
+    const startsName = (capital(tk) && (isFirst(tk) || (afterTitle && !plainWord(tk)) || (afterTitle && !ordinary(tk)))) || lowerStart || namedAfterCue;
     if (!startsName) continue;
     let j = i;
     // What follows a name: more names of the registration (connectors allowed, "Maria de Souza"),
@@ -184,17 +263,30 @@ function scrubThirdParties(text, dictionary, clinical, counter) {
       let next = j + 1;
       if (tokens[next] && CONNECTORS.has(tokens[next].folded) && adjacent(tokens[j], tokens[next])) next += 1;
       const candidate = tokens[next];
-      if (!candidate || next - i > 5 || !adjacent(tokens[next - 1], candidate) || !capital(candidate)) break;
+      if (!candidate || next - i > 5 || !adjacent(tokens[next - 1], candidate)) break;
+      if (!capital(candidate)) {
+        // In lower case only names the registration knows, and never a word that is usually not a name.
+        if (!lowerSurname(candidate) || candidate.folded.length < 4) break;
+        j = next;
+        continue;
+      }
       const surnameShape = !ordinary(candidate) && ((mixedCase(candidate) && mixedCase(tk)) || (afterTitle && allCaps(candidate)));
-      if (!isNameLike(candidate) && !surnameShape) break;
+      // A name that is also an ordinary word ("CESAR", "ROSA", "CRUZ") is part of the run when
+      // another name follows it: "Sr João CESAR CORREA".
+      let after = tokens[next + 1];
+      if (after && CONNECTORS.has(after.folded) && adjacent(candidate, after)) after = tokens[next + 2];
+      // Never a title or a kinship word: "DRA. JOANA LEMOS DRA. MARTA" is two people.
+      const namedBetween = NAME_STOP.has(candidate.folded) && candidate.folded.length >= 4 && !title.test(candidate.folded) && !kinship.test(candidate.folded)
+        && !clinical.has(candidate.folded) && (dictionary.first.has(candidate.folded) || dictionary.surname.has(candidate.folded))
+        && after && /^[\s.]{1,3}(?:(?:de|da|do|dos|das|e)[\s.]{1,3})?$/i.test(text.slice(candidate.end, after.at)) && capital(after) && isNameLike(after);
+      if (!isNameLike(candidate) && !surnameShape && !namedBetween) break;
       j = next;
     }
-    if (j > i || afterKinship || afterTitle || aloneIsPerson(tk)) {
+    if (j > i || afterKinship || afterTitle || aloneIsPerson(tk) || lowerStart || namedAfterCue) {
       spans.push([tk.at, tokens[j].end]);
       i = j;
     }
   }
-  if (!spans.length) return text;
   let out = '';
   let last = 0;
   for (const [a, b] of spans) {
@@ -202,7 +294,40 @@ function scrubThirdParties(text, dictionary, clinical, counter) {
     last = b;
     counter.third_party = (counter.third_party ?? 0) + 1;
   }
+  out += text.slice(last);
+  // A list of contacts: whoever is written in capitals right before a telephone is a person,
+  // known to the registration or not ("FULANA DE TAL : [telefone]").
+  return out.replace(/(?<![A-Za-zÀ-ÿ\]])(?:[A-ZÀ-Ý][A-Za-zÀ-ÿ'.]+ +(?:(?:de|da|do|dos|das|e) +)?){1,4}[A-ZÀ-Ý][A-Za-zÀ-ÿ'.]+(?= *:? *\[telefone\])/g, () => {
+    counter.third_party = (counter.third_party ?? 0) + 1;
+    return '[nome]';
+  });
+}
+
+/** The name of an employer or a school after "trabalha na", "estuda no", "faz … na": capitalised words only. */
+function scrubWorkplace(text, counter = {}) {
+  const cue = /(?<![a-z])((?:trabalh[a-z]+|estud[a-z]+|estagi[a-z]+|funcionari[ao]|leciona|formad[ao]|formou-se|faz\s+[a-z]+(?:\s+[a-z]+)?)\s+(?:n[ao]s?|d[ao]s?|em|pel[ao])\s+)(?=(\S+(?:\s+\S+){0,2}))/g;
+  const folded = foldSameLength(text);
+  let out = '';
+  let last = 0;
+  for (const m of folded.matchAll(cue)) {
+    const at = m.index + m[1].length;
+    // Capitalised words in a row, as typed: "Bleymed", "FAE", "Colégio Tal". A lower-case word ends the name.
+    const named = /^(?:[A-ZÀ-Ý][A-Za-zÀ-ÿ0-9&'-]*)(?:\s+(?:(?:de|da|do|dos|das|e)\s+)?[A-ZÀ-Ý][A-Za-zÀ-ÿ0-9&'-]*){0,2}/.exec(text.slice(at, at + m[2].length));
+    if (!named || at < last) continue;
+    out += `${text.slice(last, at)}[local]`;
+    last = at + named[0].length;
+    counter.workplace = (counter.workplace ?? 0) + 1;
+  }
   return out + text.slice(last);
+}
+
+/**
+ * Only the rules about OTHER people (no patient identifiers needed): for text that was written
+ * from already anonymised notes, such as an AI summary, when the rules have since improved.
+ */
+export function scrubOtherPeople(text, { dictionary, clinicalTokens = new Set() }, counter = {}) {
+  if (typeof text !== 'string' || !text) return text;
+  return scrubWorkplace(scrubThirdParties(text, dictionary, clinicalTokens, counter), counter);
 }
 
 /** What is still in a text after scrubbing: counts per kind, never the value. */

@@ -11,6 +11,9 @@
 //        [--out <dir outside the repo>]   # writes the ENCRYPTED staging; needs PM_STAGING_KEY
 //        [--pcods 12,34]                  # only these people (sample runs): their whole record,
 //                                         # no schedule blocks, no templates, no pre-registrations
+//        [--urology-users 9]              # legacy accounts of the clinic's urologists: a
+//                                         # registration marked "M" with no chart of theirs is
+//                                         # not taken for a man (sex left empty, with an issue)
 
 import { readdirSync, writeFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
@@ -35,6 +38,11 @@ const EXPORT = opt('--export-date') ?? '2026-08-24';
 const ONLY = opt('--pcods') ? new Set(opt('--pcods').split(',').map((v) => Number(v.trim())).filter(Number.isFinite)) : null;
 const keep = (pcod) => !ONLY || ONLY.has(pcod);
 const ctx = { sourceInstance: `pm2005-${EXPORT}`, batchId: `pm-dryrun-${EXPORT}`, exportDate: EXPORT, importDate: opt('--import-date') ?? new Date().toISOString().slice(0, 10) };
+// The legacy accounts of the clinic's urologists (--urology-users 9): a registration marked "M"
+// with no chart of theirs is not taken for a man (staging.mjs, resolveSex).
+if (opt('--urology-users')) ctx.urologyUsers = new Set(opt('--urology-users').split(',').map((v) => Number(v.trim())).filter(Number.isFinite));
+/** Sheets that only a woman's chart has. */
+const WOMAN_ONLY_SHEET = /climat|mama|parto|obst|ginecol|uroginec|gesta/i;
 const mdf = new Mdf(readdirSync(dir).filter((f) => extname(f).toLowerCase() === '.mdf').map((f) => join(dir, f))[0]);
 const hasTable = (name) => readdirSync(dir).some((x) => extname(x).toLowerCase() === '.db' && basename(x, extname(x)).toLowerCase() === name.toLowerCase());
 const px = (name) => new ParadoxTable(join(dir, readdirSync(dir).find((x) => extname(x).toLowerCase() === '.db' && basename(x, extname(x)).toLowerCase() === name.toLowerCase())));
@@ -345,7 +353,15 @@ for (const p of rows(mdf.table('Clini_01'), ['PCod', 'Name', 'BirthDate', 'Sex',
       return { ...h, hasConsultations: Boolean(c && (c.encounters.size || c.history || c.pages.some((pg) => pg.kind === 'qp_hda'))) };
     }),
     plans.get(p.PCod) ?? [],
-    { active: (lastActivity.get(p.PCod) ?? '') >= '2025-01-01' || future.has(p.PCod), futureAppointment: future.has(p.PCod) },
+    {
+      active: (lastActivity.get(p.PCod) ?? '') >= '2025-01-01' || future.has(p.PCod),
+      futureAppointment: future.has(p.PCod),
+      // Prenatal visits, pregnancy sheets or gynaecology and obstetrics sheets in any of the person's charts.
+      womanOnlyRecords: headers.some((h) => {
+        const c = charts.get(`${p.PCod}|${h.user}`);
+        return Boolean(c && (c.pregnancies.length || [...c.encounters.values()].some((e) => e.prenatal.length) || c.sheets.some((s) => WOMAN_ONLY_SHEET.test(s.title))));
+      }),
+    },
   );
   for (const e of list) {
     if (e.sourceEntity === 'chart') chartIds.set(`${p.PCod}|${e.payload.ownerLegacyDoctor}`, e.targetId);

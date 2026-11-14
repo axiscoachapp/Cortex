@@ -1,7 +1,7 @@
 import { inflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { bmpToPng, findImage, storableImage } from './image.mjs';
-import { buildAgenda, buildChartClinical, buildFiles, buildPerson, legacyFileName, mapBloodType, mapCivilStatus, obstetricHistory, sheetLabel, sheetLines } from './staging.mjs';
+import { buildAgenda, buildChartClinical, buildFiles, buildPerson, legacyFileName, mapBloodType, mapCivilStatus, obstetricHistory, resolveSex, sheetLabel, sheetLines } from './staging.mjs';
 
 // Invented data only.
 const ctx = { sourceInstance: 'pm-test', batchId: 'test', exportDate: '2026-08-24', importDate: '2026-11-13' };
@@ -22,6 +22,33 @@ describe('registration extras', () => {
     const out = buildPerson(ctx, { PCod: 7, Name: 'Paciente Sintética Exemplo', BirthDate: '1990-01-31', Sex: 'feminino', CivilStatus: 'C', BloodType: 'B+', ObservationText: 'Prefere contato à tarde' }, [{ user: 2, firstVisit: '2020-01-10', lastVisit: '2026-05-10', hasConsultations: true }]);
     expect(out.find((e) => e.sourceEntity === 'person').payload).toMatchObject({ civilStatus: 'Casado(a)', bloodType: 'B+', registrationNote: 'Prefere contato à tarde' });
     expect(out.find((e) => e.sourceEntity === 'chart').payload).toMatchObject({ civil_status: 'Casado(a)', blood_type: 'B+' });
+  });
+});
+
+describe('a registration marked "M"', () => {
+  const man = { sex: 'masculino', issues: [] };
+  it('is believed when nothing contradicts it', () => {
+    expect(resolveSex(man, [{ user: 9 }], { urologyUsers: new Set([9]) })).toEqual(man);
+    expect(resolveSex(man, [{ user: 2 }, { user: 9 }], { urologyUsers: new Set([9]) })).toEqual(man);
+    // Without knowing who the urologists are, only the records can contradict it.
+    expect(resolveSex(man, [{ user: 2 }])).toEqual(man);
+  });
+  it('becomes unknown, with an issue, when the chart has records only a woman has', () => {
+    expect(resolveSex(man, [{ user: 9 }], { womanOnlyRecords: true, urologyUsers: new Set([9]) })).toEqual({ sex: null, issues: ['sex_conflicts_with_records'] });
+  });
+  it('becomes unknown, with an issue, when no chart is a urologist\'s', () => {
+    expect(resolveSex(man, [{ user: 2 }, { user: 5 }], { urologyUsers: new Set([9]) })).toEqual({ sex: null, issues: ['sex_male_without_urology_chart'] });
+  });
+  it('leaves a woman and an empty field as they are', () => {
+    expect(resolveSex({ sex: 'feminino', issues: [] }, [{ user: 9 }], { urologyUsers: new Set([9]) })).toEqual({ sex: 'feminino', issues: [] });
+    expect(resolveSex({ sex: null, issues: ['sex_missing'] }, [], { womanOnlyRecords: true })).toEqual({ sex: null, issues: ['sex_missing'] });
+  });
+  it('reaches the person and the chart', () => {
+    const out = buildPerson({ ...ctx, urologyUsers: new Set([9]) }, { PCod: 8, Name: 'Paciente Sintética Outra', BirthDate: '1990-01-31', Sex: 'M' }, [{ user: 2, firstVisit: '2020-01-10', lastVisit: '2026-05-10', hasConsultations: true }]);
+    const person = out.find((e) => e.sourceEntity === 'person');
+    expect(person.payload.sex).toBeNull();
+    expect(person.issues).toContain('sex_male_without_urology_chart');
+    expect(out.find((e) => e.sourceEntity === 'chart').payload.sex).toBeNull();
   });
 });
 

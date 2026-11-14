@@ -68,7 +68,7 @@ export function buildPerson(ctx, p, charts, plans = [], flags = {}) {
   const base = { sourceInstance: ctx.sourceInstance, batchId: ctx.batchId };
   const name = cleanName(p.Name);
   const birth = legacyDate(p.BirthDate, { max: ctx.exportDate });
-  const sex = mapSex(p.Sex);
+  const sex = resolveSex(mapSex(p.Sex), charts, { womanOnlyRecords: Boolean(flags.womanOnlyRecords), urologyUsers: ctx.urologyUsers ?? null });
   const cpf = findCpf({ fax: p.FAX, rg: p.ID, email: p.EMail, phone: p.Phone });
   const email = normalizeEmail(p.EMail);
   const cep = normalizeCep(p.Zip);
@@ -551,6 +551,22 @@ export function sheetLines(values) {
  *
  * images: [{ source: 'CO52', key: {...}, date, description, mime, bytes: Buffer }]
  */
+/**
+ * "M" in the registration is not always a man: in a sample of this clinic's export, every "M"
+ * seen only by gynaecologists was a woman (an intrauterine device, a cervical smear in the chart).
+ * A wrong "masculino" misleads every screen and every AI prompt, so the registration is believed
+ * only when nothing contradicts it:
+ * - records that only a woman has (prenatal visits, pregnancy or gynaecology sheets) -> unknown;
+ * - when the clinic's urology accounts are known and none of the person's charts is theirs -> unknown.
+ * "Unknown" comes with an issue, so that the clinic gets the list to confirm.
+ */
+export function resolveSex(mapped, charts, { womanOnlyRecords = false, urologyUsers = null } = {}) {
+  if (mapped.sex !== 'masculino') return mapped;
+  if (womanOnlyRecords) return { sex: null, issues: [...mapped.issues, 'sex_conflicts_with_records'] };
+  if (urologyUsers?.size && charts.length && !charts.some((c) => urologyUsers.has(Number(c.user)))) return { sex: null, issues: [...mapped.issues, 'sex_male_without_urology_chart'] };
+  return mapped;
+}
+
 /** What a legacy image is, by the table it came from: the start of the name the doctor reads. */
 const FILE_LABEL = { co52: 'Imagem de exame', co31_1: 'Imagem de exame ginecológico', clini_04: 'Imagem do paciente' };
 

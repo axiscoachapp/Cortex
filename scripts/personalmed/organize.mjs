@@ -265,8 +265,17 @@ const oneLine = (text) => String(text ?? '').replace(/\s+/g, ' ').trim();
  * that date is what keeps a current problem from looking undated.
  */
 export function quoteDay(origin) {
-  if (ISO_DAY.test(origin?.data ?? '')) return origin.data;
-  const text = String(origin?.trecho ?? '');
+  const lead = leadingDate(origin?.trecho);
+  if (!ISO_DAY.test(origin?.data ?? '')) return lead;
+  // A running page keeps the day it was opened; a line written into it later starts with its
+  // own, later date ("25/01/2025 eco tv normal" inside a page of 2023). An earlier date at the
+  // start of a line is an exam being reported, and the record's day stands.
+  const later = lead && ISO_DAY.test(lead) && lead > origin.data && Number(lead.slice(0, 4)) - Number(origin.data.slice(0, 4)) <= 15;
+  return later ? lead : origin.data;
+}
+/** The date a line starts with: a day ("2026-08-14"), a month ("2022-06") or null. */
+function leadingDate(quote) {
+  const text = String(quote ?? '');
   const full = /^\s*(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})(?!\d)/.exec(text);
   if (full) {
     const [day, month] = [Number(full[1]), Number(full[2])];
@@ -375,6 +384,8 @@ export function cleanProfile(profile) {
   };
 }
 
+/** Done in the office, not in an operating room: listed apart from the surgeries. */
+const OFFICE_PROCEDURE = /^(?:fiv\b|fertiliza[cç][aã]o|insemina[cç][aã]o|transfer[eê]ncia de embri|indu[cç][aã]o d[ae] ovula|reposicionamento|laser|sess[aã]o|sess[oõ]es|inser[cç][aã]o|coloca[cç][aã]o|retirada de (?:diu|implante|pontos|pess[aá]rio)|troca de (?:diu|implante|pess[aá]rio)|coleta|infiltra|curativo|aplica[cç][aã]o|cauteriza|criocauteriza|eletrocauteriza|bi[oó]psia|pun[cç][aã]o|drenagem|toxina|botox|preenchimento|peeling|microagulhamento|radiofrequ[eê]ncia|colposcopia|vulvoscopia)/i;
 const KIND_ORDER = { condicao: 0, achado: 1, queixa: 2 };
 const KIND_NOTE = { achado: 'achado de exame', queixa: 'queixa' };
 const OUTCOME_LABEL = { 'parto vaginal': 'parto vaginal', cesarea: 'cesárea', 'parto sem tipo registrado': 'parto (tipo não registrado)', aborto: 'aborto', ectopica: 'gestação ectópica', 'em curso': 'em curso no último registro', 'sem registro do desfecho': 'desfecho não registrado' };
@@ -393,6 +404,17 @@ const years = (entry) => {
 };
 const lastDay = (entry) => recordSpan(entry)?.last ?? '';
 /** "MIRENA" and "cerazette" as a name reads: "Mirena", "Cerazette". Anything in mixed case, or in several capital words ("DIU T CU"), stays as written. */
+/**
+ * Text typed all in capitals, as a sentence: "CANCER DE MAMA" -> "Cancer de mama". A word of up
+ * to three letters that is not a connective is taken for an abbreviation and stays ("DM", "CA", "AVC").
+ */
+export function sentenceCase(text) {
+  const t = oneLine(text);
+  if (!/[A-ZÀ-Ý]{4}/.test(t) || t !== t.toUpperCase()) return t;
+  const connective = /^(?:de|da|do|dos|das|e|em|com|na|no|ou|a|o)$/i;
+  const out = t.split(' ').map((w) => (w.replace(/[^A-Za-zÀ-ÿ]/g, '').length > 3 || connective.test(w) ? w.toLowerCase() : w)).join(' ');
+  return out[0].toUpperCase() + out.slice(1);
+}
 export const tidyName = (text) => {
   const t = oneLine(text);
   if (/^[a-zà-ú]/.test(t) && t === t.toLowerCase()) return t[0].toUpperCase() + t.slice(1);
@@ -405,7 +427,19 @@ export const ACTIVE_WINDOW_MONTHS = 24;
 /** A problem seen in one record only counts as under follow-up when that record is this recent. */
 export const SINGLE_RECORD_MONTHS = 12;
 const problemName = (p) => `${oneLine(p.nome)}${p.cid ? ` (${p.cid})` : ''}`;
-const medicationText = (m) => [tidyName(m.nome), oneLine(m.dose), oneLine(m.uso ?? m.periodo)].filter(Boolean).join(' · ');
+/** The way of use as written, unless it only says that the medicine is in use ("EM USO DE ENDOFOLIN"). */
+const usageText = (m) => {
+  const text = oneLine(m.uso ?? m.periodo);
+  return /^(?:em\s+)?uso(?:\s+de)?\b/i.test(text) && squash(text).includes(squash(m.nome)) && text.length <= oneLine(m.nome).length + 14 ? '' : text;
+};
+const medicationText = (m) => [tidyName(m.nome), oneLine(m.dose), usageText(m)].filter(Boolean).join(' · ');
+/** "PAI", "Mae", "irma" as the chart should read: "Pai", "Mãe", "Irmã". */
+const RELATIVE = { mae: 'Mãe', pai: 'Pai', irma: 'Irmã', irmao: 'Irmão', avo: 'Avó ou avô', tia: 'Tia', tio: 'Tio', prima: 'Prima', primo: 'Primo', filha: 'Filha', filho: 'Filho' };
+const tidyRelative = (text) => RELATIVE[squash(text)] ?? tidyName(sentenceCase(text));
+/** Months without a record after which a medicine is not "in use" at the patient's last visit. */
+export const MEDICATION_IDLE_MONTHS = 12;
+/** Months between the patient's last record and the export after which nothing becomes a pending item. */
+export const PENDING_STALE_MONTHS = 24;
 /** "Sem intercorrências" after a semicolon reads as part of the line; an acronym ("RN 3085 g") stays. */
 const lowerFirst = (text) => (/^[A-ZÀ-Ú][a-zà-ú]/.test(text) ? text[0].toLowerCase() + text.slice(1) : text);
 const ordinal = (text, index) => `${/^\d+$/.test(oneLine(text)) ? oneLine(text) : index + 1}ª gestação`;
@@ -413,13 +447,19 @@ const ordinal = (text, index) => `${/^\d+$/.test(oneLine(text)) ? oneLine(text) 
 const pregnancyLine = (g, index) => `${ordinal(g.ordem, index)}: ${OUTCOME_LABEL[g.desfecho] ?? 'desfecho não registrado'}${g.data ? ` em ${tidyDate(g.data)}` : recordSpan(g) ? ` (registro de ${br(recordSpan(g).last)})` : ''}${oneLine(g.detalhes) ? `; ${lowerFirst(oneLine(g.detalhes).replace(/[.;]+$/, ''))}` : ''}`;
 /** The day an exam happened, for ordering: its written date when readable, else the day of the record. */
 const examDay = (e) => dateKey(e.data) ?? recordSpan(e)?.last ?? '';
-const examLine = (e) => `${e.data ? tidyDate(e.data) : recordSpan(e) ? `registro de ${br(recordSpan(e).last)}` : 'sem data'}: ${oneLine(e.resultado)}`;
+// A date written without the year ("30/04") is kept as written, with the record that gives it a year.
+const examWhen = (e) => {
+  const record = recordSpan(e) ? `registro de ${br(recordSpan(e).last)}` : null;
+  if (e.data && dateKey(e.data)) return tidyDate(e.data);
+  return [oneLine(e.data) || null, record].filter(Boolean).join(', ') || 'sem data';
+};
+const examLine = (e) => `${examWhen(e)}: ${oneLine(e.resultado)}`;
 const surgeryDay = (c) => dateKey(c.data) ?? recordSpan(c)?.last ?? '';
 /** The written date when it places the item in time; "mês de maio" does not: then the record does, and the words stay beside the name. */
 const writtenDay = (c) => (c.data && dateKey(c.data) ? tidyDate(c.data) : null);
 const surgeryLine = (c) => {
   const record = recordSpan(c) ? `registro de ${br(recordSpan(c).last)}` : 'sem data';
-  return writtenDay(c) ? `${writtenDay(c)}: ${oneLine(c.nome)}` : `${record}: ${oneLine(c.nome)}${oneLine(c.data) ? ` (${oneLine(c.data).toLowerCase()})` : ''}`;
+  return writtenDay(c) ? `${writtenDay(c)}: ${tidyName(c.nome)}` : `${record}: ${tidyName(c.nome)}${oneLine(c.data) ? ` (${oneLine(c.data).toLowerCase()})` : ''}`;
 };
 /**
  * A procedure done several times ("Laser vaginal", six sessions) is one line
@@ -450,7 +490,7 @@ const byDayDesc = (day) => (a, b) => (day(a) < day(b) ? 1 : day(a) > day(b) ? -1
  * @param options.exportDate last day covered by the export (ISO)
  * @returns {{ diagnoses, medications, allergies, medical_history, social_anamnesis, summaryNote, tasks }}
  */
-export function renderProfile(profile, { organizedOn, civilStatus = null, bloodType = null, lastRecord = null, exportDate = null }) {
+export function renderProfile(profile, { organizedOn, civilStatus = null, bloodType = null, lastRecord = null, exportDate = null, sex = null }) {
   const source = `organizado por IA em ${br(organizedOn)} a partir do prontuário antigo (PersonalMed)`;
   const group = (title, lines) => (lines.filter(Boolean).length ? [`${title}:`, ...lines.filter(Boolean).map((l) => `- ${l}`)] : []);
   const get = (key) => profile[key] ?? [];
@@ -466,7 +506,9 @@ export function renderProfile(profile, { organizedOn, civilStatus = null, bloodT
     // finding or complaint does not.
     if (!span) return p.tipo === 'condicao' && (p.origem ?? []).length > 0;
     const idle = monthsBetween(span.last, reference);
-    return idle <= ACTIVE_WINDOW_MONTHS && (span.first !== span.last || idle <= SINGLE_RECORD_MONTHS);
+    // A finding or a complaint seen once is only "under follow-up" while recent; a condition
+    // (adenomyosis, osteopenia) named once inside the window is still the patient's.
+    return idle <= ACTIVE_WINDOW_MONTHS && (p.tipo === 'condicao' || span.first !== span.last || idle <= SINGLE_RECORD_MONTHS);
   };
   const active = get('problemas').filter(followed).sort((a, b) => (KIND_ORDER[a.tipo] ?? 0) - (KIND_ORDER[b.tipo] ?? 0) || byDayDesc(lastDay)(a, b));
   const past = get('problemas').filter((p) => !followed(p)).sort(byDayDesc(lastDay));
@@ -474,27 +516,57 @@ export function renderProfile(profile, { organizedOn, civilStatus = null, bloodT
   const formerMethods = get('contracepcao').filter((c) => c.situacao !== 'em uso').sort((a, b) => ((recordSpan(a)?.first ?? '') < (recordSpan(b)?.first ?? '') ? -1 : 1));
   // A patient last seen long before the export: her last medicines are history, not "in use".
   const staleMedication = monthsBetween(lastRecord, exportDate) > MEDICATION_STALE_MONTHS;
-  const medicines = get('medicacoes_em_uso');
+  // "In use" is held to the records too: a medicine last recorded more than a year before the
+  // patient's own last record was not in use then, whatever the model says.
+  const stillRecorded = (m) => !lastDay(m) || monthsBetween(lastDay(m), reference) <= MEDICATION_IDLE_MONTHS;
+  const medicines = get('medicacoes_em_uso').filter(stillRecorded);
+  const lapsedMedicines = get('medicacoes_em_uso').filter((m) => !stillRecorded(m));
+  // A patient not seen for years: what her last records left open is history, not today's to-do
+  // list. At the scale of a whole clinic, anything else buries the real pending items.
+  const stalePatient = monthsBetween(lastRecord, exportDate) > PENDING_STALE_MONTHS;
+  const openItems = get('pendencias').filter((e) => !recordSpan(e) || monthsBetween(recordSpan(e).last, reference) <= SINGLE_RECORD_MONTHS);
   const pregnancies = get('gestacoes');
-  const surgeries = groupProcedures(get('cirurgias'));
+  // "Em curso" years ago is a pregnancy whose outcome the old chart never recorded.
+  const pregnancyText = (g, index) => {
+    const seen = recordSpan(g)?.last ?? lastRecord;
+    const longAgo = g.desfecho === 'em curso' && monthsBetween(seen, exportDate) > 10;
+    return longAgo ? `${ordinal(g.ordem, index)}: em curso em ${br(seen)}; desfecho não registrado no prontuário antigo${oneLine(g.detalhes) ? `; ${lowerFirst(oneLine(g.detalhes).replace(/[.;]+$/, ''))}` : ''}` : pregnancyLine(g, index);
+  };
+  // What is done in the office (laser sessions, an implant, a biopsy) apart from the operations.
+  const surgeries = groupProcedures(get('cirurgias').filter((c) => !OFFICE_PROCEDURE.test(oneLine(c.nome))));
+  const procedures = groupProcedures(get('cirurgias').filter((c) => OFFICE_PROCEDURE.test(oneLine(c.nome))));
+  // A medicine recorded as in use and also as an allergy or an intolerance: the chart contradicts itself.
+  const reactions = get('alergias').map((a) => squash(a.substancia)).filter((name) => name.length >= 4);
+  const contradicted = medicines.filter((m) => reactions.some((name) => squash(m.nome).includes(name) || name.includes(squash(m.nome))) && squash(m.nome).length >= 4);
   const latestScreening = SCREENING.map((kind) => [kind, get('exames').filter((e) => e.tipo === kind).sort(byDayDesc(examDay))[0]]).filter(([, e]) => e);
-  const milestones = get('marcos_ginecologicos').map((m) => oneLine(m.texto)).filter(Boolean);
+  // "12" says nothing without its label: "Menarca: 12".
+  const milestoneLine = (m) => {
+    const text = oneLine(m.texto);
+    const label = { menarca: 'Menarca', menopausa: 'Menopausa' }[m.marco];
+    return !text ? '' : label && !new RegExp(label, 'i').test(text) ? `${label}: ${text}` : text;
+  };
+  const milestones = get('marcos_ginecologicos').map(milestoneLine).filter(Boolean);
+  const relative = (e) => [tidyRelative(e.parente), sentenceCase(e.condicao ?? e.texto)].filter(Boolean).join(': ');
 
   // Grouped plain text: a heading line that ends with ":" and its facts as dashed lines.
   const historyLines = [
     bloodType ? `Tipo sanguíneo: ${bloodType} (cadastro do PersonalMed)` : null,
     profile.alergias_negadas && !get('alergias').length ? 'Alergias: nega, segundo o histórico' : null,
-    ...group('Ginecológico', [
+    ...group(sex === 'masculino' ? 'Contracepção' : 'Ginecológico', [
       ...inUse.map((c) => `Contracepção em uso: ${contraceptionLine(c)}`),
       ...milestones,
       formerMethods.length ? `Métodos anteriores: ${formerMethods.map(formerMethod).join('; ')}` : null,
     ]),
-    ...group(`Obstétrico (${pregnancies.length === 1 ? '1 gestação registrada' : `${pregnancies.length} gestações registradas`} no prontuário antigo)`, pregnancies.map(pregnancyLine)),
-    ...group('Cirurgias e procedimentos', surgeries.map((g) => g.line)),
+    ...group(`Obstétrico (${pregnancies.length === 1 ? '1 gestação registrada' : `${pregnancies.length} gestações registradas`} no prontuário antigo)`, pregnancies.map(pregnancyText)),
+    ...group('Cirurgias', surgeries.map((g) => g.line)),
+    ...group('Procedimentos', procedures.map((g) => g.line)),
     ...group('Últimos exames de rastreamento', latestScreening.map(([kind, e]) => `${EXAM_LABEL[kind]}, ${examLine(e)}`)),
-    ...group('Antecedentes familiares', get('antecedentes_familiares').map((e) => [tidyName(e.parente), oneLine(e.condicao ?? e.texto)].filter(Boolean).join(': '))),
+    ...group('Antecedentes familiares', get('antecedentes_familiares').map(relative)),
     ...(staleMedication ? group(`Medicações no último acompanhamento (${br(lastRecord)})`, medicines.map(medicationText)) : []),
-    ...group('Problemas anteriores ou sem registro recente', past.map((p) => `${years(p)}: ${problemName(p)}`)),
+    // Diseases apart from findings and complaints: a past stroke must not sit between a
+    // headache and a functional cyst.
+    ...group('Doenças e condições anteriores ou sem registro recente', past.filter((p) => p.tipo === 'condicao').map((p) => `${years(p)}: ${problemName(p)}`)),
+    ...group('Achados e queixas anteriores', past.filter((p) => p.tipo !== 'condicao').map((p) => `${years(p)}: ${problemName(p)}`)),
     // Stated as a fact about the record, not as a task: the product's own AI reads this field
     // and would otherwise report "check the profile" as the patient's pending item.
     `Origem: perfil ${source}; os itens e os trechos de origem estão na nota "Resumo do histórico importado", no histórico.`,
@@ -510,19 +582,21 @@ export function renderProfile(profile, { organizedOn, civilStatus = null, bloodT
     section(staleMedication ? `Medicações no último acompanhamento (${br(lastRecord)})` : 'Medicações em uso', medicines.map((m) => `${medicationText(m)}${m.duracao === 'prazo definido' ? ' [tratamento com prazo]' : ''}${cite(m)}`)),
     section('Contracepção e dispositivos', get('contracepcao').map((c) => `${c.situacao === 'em uso' ? 'Em uso' : c.situacao === 'encerrado' ? 'Encerrado' : 'Sem informação atual'}: ${tidyName(c.metodo)}${c.inicio ? `, início ou troca em ${tidyDate(c.inicio)}` : ''}${cite(c)}`)),
     get('alergias').length ? section('Alergias e intolerâncias', get('alergias').map((a) => `${tidyName(a.substancia)}${a.tipo === 'intolerancia' ? ' (intolerância)' : ''}${a.reacao ? `: ${oneLine(a.reacao)}` : ''}${cite(a)}`)) : profile.alergias_negadas ? '### Alergias e intolerâncias\n\nNega alergias, segundo o histórico.' : null,
-    section('Em aberto nos últimos registros', get('pendencias').map((e) => `${oneLine(e.texto)}${cite(e)}`)),
-    section('Gestações', pregnancies.map((g, i) => `${pregnancyLine(g, i)}${cite(g, { lineDates: false })}`)),
-    section('Marcos ginecológicos', get('marcos_ginecologicos').map((m) => `${oneLine(m.texto)}${cite(m)}`)),
-    section('Cirurgias e procedimentos', surgeries.map((g) => `${g.line}${cite({ origem: g.items.flatMap((c) => c.origem ?? []) }, { lineDates: false })}`)),
-    section('Antecedentes familiares', get('antecedentes_familiares').map((e) => `${[tidyName(e.parente), oneLine(e.condicao ?? e.texto)].filter(Boolean).join(': ')}${cite(e)}`)),
+    section(stalePatient ? `Em aberto no último acompanhamento (${br(lastRecord)})` : 'Em aberto nos últimos registros', get('pendencias').map((e) => `${oneLine(e.texto)}${cite(e)}`)),
+    section('Gestações', pregnancies.map((g, i) => `${pregnancyText(g, i)}${cite(g, { lineDates: false })}`)),
+    section('Marcos ginecológicos', get('marcos_ginecologicos').map((m) => `${milestoneLine(m)}${cite(m)}`)),
+    section('Cirurgias', surgeries.map((g) => `${g.line}${cite({ origem: g.items.flatMap((c) => c.origem ?? []) }, { lineDates: false })}`)),
+    section('Procedimentos', procedures.map((g) => `${g.line}${cite({ origem: g.items.flatMap((c) => c.origem ?? []) }, { lineDates: false })}`)),
+    section('Antecedentes familiares', get('antecedentes_familiares').map((e) => `${relative(e)}${cite(e)}`)),
     section('Hábitos e contexto social', get('habitos_sociais').map((e) => `${oneLine(e.texto)}${cite(e)}`)),
     ...examKinds.map(([kind, list2]) => section(`Exames: ${EXAM_LABEL[kind]}`, list2.map((e) => `${kind.startsWith('outro') || kind === 'laboratorio' ? `${oneLine(e.exame)}, ` : ''}${examLine(e)}${cite(e, { lineDates: false })}`))),
-    section('Medicações anteriores', get('medicacoes_anteriores').map((m) => `${medicationText(m)}${cite(m)}`)),
-    section('Problemas anteriores ou sem registro recente', past.map((p) => `${years(p)}: ${problemName(p)}${cite(p)}`)),
+    section('Medicações anteriores', [...lapsedMedicines, ...get('medicacoes_anteriores')].map((m) => `${medicationText(m)}${cite(m)}`)),
+    section('Doenças e condições anteriores ou sem registro recente', past.filter((p) => p.tipo === 'condicao').map((p) => `${years(p)}: ${problemName(p)}${cite(p)}`)),
+    section('Achados e queixas anteriores', past.filter((p) => p.tipo !== 'condicao').map((p) => `${years(p)}: ${problemName(p)}${cite(p)}`)),
   ].filter(Boolean).join('\n\n');
 
   const medicationRows = staleMedication ? [] : medicines.map((m) => ({
-    name: tidyName(m.nome), dosage: oneLine(m.dose), instructions: oneLine(m.uso),
+    name: tidyName(m.nome), dosage: oneLine(m.dose), instructions: usageText(m),
     // The chart says when the medicine was last recorded, not when it was started: no start date is invented.
     note: [m.duracao === 'prazo definido' ? 'tratamento com prazo' : null, lastDay(m) ? `último registro em ${br(lastDay(m))}` : null].filter(Boolean).join(' · '),
   }));
@@ -543,6 +617,9 @@ export function renderProfile(profile, { organizedOn, civilStatus = null, bloodT
     social_anamnesis: socialLines.join('\n') || null,
     summaryNote,
     // The day of the record goes in the title: an item left open years ago must not read as today's.
-    tasks: get('pendencias').map((e) => ({ title: `${oneLine(e.texto).replace(/[.;]+$/, '').slice(0, 170)}${recordSpan(e) ? ` (registro de ${br(recordSpan(e).last)})` : ''}`, content: `Sugerido pela IA a partir do histórico importado do PersonalMed${cite(e)}. Confira antes de agir.` })),
+    tasks: [
+      ...(staleMedication ? [] : contradicted).map((m) => ({ title: `Conferir ${tidyName(m.nome)}: consta em uso e também em alergias ou intolerâncias`, content: `O histórico importado do PersonalMed registra ${tidyName(m.nome)} em uso${cite(m)} e também uma reação a ele. Confira antes de prescrever.` })),
+      ...(stalePatient ? [] : openItems).map((e) => ({ title: `${oneLine(e.texto).replace(/[.;]+$/, '').slice(0, 170)}${recordSpan(e) ? ` (registro de ${br(recordSpan(e).last)})` : ''}`, content: `Sugerido pela IA a partir do histórico importado do PersonalMed${cite(e)}. Confira antes de agir.` })),
+    ],
   };
 }

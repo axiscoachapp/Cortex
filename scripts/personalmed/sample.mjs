@@ -36,6 +36,8 @@ const DIR = sampleDir(opt('--dir'));
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 /** Labels for the legacy accounts. Doctors keep a stable letter; other staff is "Equipe". */
+/** The legacy accounts of this clinic's urologists (the only doctors who see men). */
+export const UROLOGY_USERS = [9];
 export const DOCTOR_LABEL = { 2: 'Médica A', 3: 'Médica B', 4: 'Médico C', 5: 'Médica D', 9: 'Médico E (urologia)', 11: 'Login compartilhado', 13: 'Médico F' };
 
 function* rows(table, fields, blobs = 'none') {
@@ -79,7 +81,7 @@ if (command === 'extract') {
   const samePeople = Boolean(previous) && previous.pcods.length === pcods.length && previous.pcods.every((p, i) => p === pcods[i]);
   const salt = samePeople && !rest.includes('--new-ids') ? previous.salt : randomBytes(16).toString('hex');
   writeFileSync(secretFile, encryptBuffer(Buffer.from(JSON.stringify({ pcods, salt })), key));
-  const out = execFileSync(process.execPath, ['--max-old-space-size=6144', join(HERE, 'extract.mjs'), exportDir, '--pcods', pcods.join(','), '--out', join(DIR, 'identified')], {
+  const out = execFileSync(process.execPath, ['--max-old-space-size=6144', join(HERE, 'extract.mjs'), exportDir, '--pcods', pcods.join(','), '--urology-users', UROLOGY_USERS.join(','), '--out', join(DIR, 'identified')], {
     env: { ...process.env, PM_STAGING_KEY: key.toString('hex') }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024,
   });
   const j = JSON.parse(out);
@@ -100,6 +102,9 @@ if (command === 'extract') {
     if (pcods.includes(p.PCod)) registration.set(p.PCod, p);
   }
   const dictionary = buildNameDictionary(allNames.filter(Boolean));
+  // Kept (encrypted) beside the sample: the loader scrubs the text the AI wrote with the same
+  // dictionary, so that a rule added later also reaches summaries made before it.
+  writeFileSync(join(DIR, 'name-dictionary.enc'), encryptBuffer(Buffer.from(JSON.stringify({ first: [...dictionary.first], surname: [...dictionary.surname] })), key));
   // Medicine words (public catalogue, exported beside the sample): never taken for a person's name.
   const drugFile = join(DIR, 'drug-tokens.json');
   const clinicalTokens = new Set(existsSync(drugFile) ? JSON.parse(readFileSync(drugFile, 'utf8')) : []);

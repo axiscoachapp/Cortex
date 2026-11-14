@@ -44,7 +44,8 @@ describe('the person, relatives and doctors', () => {
     expect(scrubber.scrub('Encaminho ao Dr. Exemplo')).toBe('Encaminho ao Dr. [nome]');
   });
   it('turns a clinic doctor into the doctor label, title included', () => {
-    expect(scrubber.scrub('Dra. Helena Fictícia Exemplo CRM 0000')).toBe('Médica A CRM 0000');
+    // The licence number points at the doctor as surely as the name: it goes too.
+    expect(scrubber.scrub('Dra. Helena Fictícia Exemplo CRM 0000')).toBe('Médica A CRM [documento]');
     expect(scrubber.scrub('conforme Dra Helena')).toBe('conforme Médica A');
   });
   it('replaces relatives by full or partial name', () => {
@@ -81,6 +82,71 @@ describe('other people in the text', () => {
     expect(scrubber.scrub('REUMATOLOGIA DR. ZEFERINO CHIUCHETA: 3222-0000/3018-8072')).toBe('REUMATOLOGIA DR. [nome]: [telefone]/[telefone]');
     expect(scrubber.scrub('DRA. JOANA BECKHAUSER DE CAMPOS atende às terças')).toBe('DRA. [nome] atende às terças');
     expect(scrubber.scrub('Dra. solicitou exames e Dr. orientou repouso')).toBe('Dra. solicitou exames e Dr. orientou repouso');
+  });
+  describe('names typed in lower case, as old notes often are', () => {
+    const clean = (text) => scrubber.scrub(text);
+    it('takes a name of the registration after a title, with the names that follow', () => {
+      expect(clean('colonoscopia : dr carlos, 2016')).toBe('colonoscopia : dr [nome], 2016');
+      expect(clean('pre op com dra joana lemos no cardio')).toBe('pre op com dra [nome] no cardio');
+      expect(clean('foi no dr antunes : cardio, com oscilações')).toBe('foi no dr [nome] : cardio, com oscilações');
+      // A specialty or a verb after the title is not a name.
+      expect(clean('enc dr cardio e dra pediu exames')).toBe('enc dr cardio e dra pediu exames');
+    });
+    it('takes a first name after "com", "para" or a kinship word, and a signature at the end of a line', () => {
+      expect(clean('repetir eco tv com joana, em 15/7')).toBe('repetir eco tv com [nome], em 15/7');
+      expect(clean('HTC com o carlos AP = leiomioma')).toBe('HTC com o [nome] AP = leiomioma');
+      expect(clean('ex de imagem enc para marta')).toBe('ex de imagem enc para [nome]');
+      expect(clean('O POSITIVO!!! pai carlos 62000')).toBe('O POSITIVO!!! pai [nome] 62000');
+      expect(clean('exs lab para dst : ok. marta\nretorno em 6 meses')).toBe('exs lab para dst : ok. [nome]\nretorno em 6 meses');
+      expect(clean('cvo : neg malignidade, joana')).toBe('cvo : neg malignidade, [nome]');
+    });
+    it('takes a first name with a surname, and first names listed together', () => {
+      expect(clean('massa óssea - joana antunes : fibromialgia')).toBe('massa óssea - [nome] : fibromialgia');
+      expect(clean('era carlos / marta O POSITIVO')).toBe('era [nome] / [nome] O POSITIVO');
+    });
+    it('leaves a lower-case word alone when nothing says it is a person', () => {
+      // "joana" with no cue, a surname that is an ordinary word, a medicine, a word after "com".
+      expect(clean('utero joana vf')).toBe('utero joana vf');
+      expect(clean('julia leite materno exclusivo')).toBe('julia leite materno exclusivo');
+      expect(clean('anticoncepção com yasmin há 2 anos')).toBe('anticoncepção com yasmin há 2 anos');
+      expect(clean('com dores e com pontos ok')).toBe('com dores e com pontos ok');
+      expect(clean('usa flora intestinal, rosa mosqueta')).toBe('usa flora intestinal, rosa mosqueta');
+    });
+    it('takes a name the registration never saw after a title, but not a specialty or a verb', () => {
+      expect(clean('trissomia 21, dr lucar cardio exame')).toBe('trissomia 21, dr [nome] cardio exame');
+      expect(clean('DR. YASMIN ROSA DE LEMOS : cardio')).toBe('DR. [nome] : cardio');
+      expect(clean('dra explicou o exame; dr pediatra liberou; dra dentista')).toBe('dra explicou o exame; dr pediatra liberou; dra dentista');
+    });
+    it('takes whoever is said to be someone\'s, or is followed by the kinship', () => {
+      expect(clean('veio com mulher do antunes')).toBe('veio com mulher do [nome]');
+      expect(clean('espermograma para o pereira esposo')).toBe('espermograma para o [nome] esposo');
+      expect(clean('disse que o carlos prescreve manipulada')).toBe('disse que o [nome] prescreve manipulada');
+      expect(clean('repetiu eco com a Cris e ela só escreveu')).toBe('repetiu eco com a [nome] e ela só escreveu');
+      expect(clean('hidrossalpinge =eco tv carlos=ovarios')).toBe('hidrossalpinge =eco tv [nome]=ovarios');
+      // A title in Title Case is not a person; neither is a common word after the article.
+      expect(clean('Retorno com Exames e para Controle')).toBe('Retorno com Exames e para Controle');
+      expect(clean('encaminho para o hospital e para a rotina')).toBe('encaminho para o hospital e para a rotina');
+    });
+    it('removes a licence number, a stamp with initials, a mobile without separators and names beside a telephone', () => {
+      expect(clean('H.F.Exemplo CRM 16544')).toBe('Médica A CRM [documento]');
+      expect(clean('CRM-PR 12.345 e CRM: 9876')).toBe('CRM [documento] e CRM [documento]');
+      expect(clean('IVANA HUBBE : 991839523 SYLVIA BRANDT : 3242 - 4749 ( BAIRRO )')).toBe('[nome] : [telefone] [nome] : [telefone] ( BAIRRO )');
+      // Not a telephone: two years, an exam number with nine digits that does not start like a mobile.
+      expect(clean('de 2019 - 2021; protocolo 223344556')).toBe('de 2019 - 2021; protocolo 223344556');
+    });
+    it('removes the name of the place where someone works or studies, and keeps the kind of work', () => {
+      expect(clean('Trabalha na Empresa Inventada. Faz administração na FAE.')).toBe('Trabalha na [local]. Faz administração na [local].');
+      expect(clean('estuda no Colégio Inventado de Curitiba, 2º ano')).toBe('estuda no [local] de Curitiba, 2º ano');
+      expect(clean('trabalha na área da saúde e estuda em casa')).toBe('trabalha na área da saúde e estuda em casa');
+    });
+    it('keeps two people apart when a title stands between them', () => {
+      expect(clean('DRA. JOANA LEMOS DRA. MARTA ANTUNES 3222 - 9999')).toBe('DRA. [nome] DRA. [nome] [telefone]');
+    });
+    it('keeps a name that is also an ordinary word inside a run of names', () => {
+      expect(clean('o Sr Carlos ROSA ANTUNES está neste dia')).toBe('o Sr [nome] está neste dia');
+      // Alone after a name, the ordinary word stays.
+      expect(clean('Joana ROSA mosqueta')).toBe('[nome] ROSA mosqueta');
+    });
   });
   it('removes a street with its number, whoever lives there', () => {
     const out = scrubber.scrub('Receita\nPaciente 1\nRUA SOLDADO FULANO DE TAL 270 CASA 10\nUso interno');

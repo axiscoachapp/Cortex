@@ -10,6 +10,9 @@
 //   profiles rewrites what the organised layer wrote (profile lists and texts, the summary note,
 //           the AI's pending items), leaving alone anything changed in the app since; --rehearse
 //           runs it in a transaction that is rolled back
+//   notes   rewrites the notes whose text or title changed in the staging or in the organised
+//           layer (for instance after the anonymiser improved), with the same protection and
+//           the same --rehearse
 //   files   puts the sample's imported files again (object and row), as the staging has them now;
 //           --rehearse runs the database half in a transaction that is rolled back
 //   verify  reads the sample back as the demo account, through row level security
@@ -17,10 +20,12 @@
 //
 // Usage: node scripts/personalmed/sample-load.mjs <plan|wipe|load|profiles|files|verify|fixture> --project <ref> [--dir <folder>] [--yes-delete-all-patients] [--rehearse]
 
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { lit, query, serviceKey } from '../supabase-rollout/lib.mjs';
 import { loadOrCreateKey } from './local-key.mjs';
+import { scrubOtherPeople } from './anonymize.mjs';
 import { originalBody, renderDayNote, renderProfile } from './organize.mjs';
 import { DOCTOR_LABEL, readAll, sampleDir } from './sample.mjs';
 import { decryptBuffer } from './secure-staging.mjs';
@@ -45,7 +50,32 @@ const IMPORT_TAGS = [FILE_TAG, 'importado-personalmed'];
 const SUMMARY_TITLE = 'Resumo do histórico importado (PersonalMed)';
 /** How every pending item suggested by the organised layer starts (organize.mjs, renderProfile). */
 const AI_TASK_PREFIX = 'Sugerido pela IA a partir do histórico importado do PersonalMed';
-const today = new Date().toISOString().slice(0, 10);
+// The day written on every imported note is the day of the first load, kept beside the sample:
+// rewriting a note later (a better anonymiser, a corrected rendering) must not change its stamp.
+const importDateFile = join(DIR, 'imported-on.txt');
+const today = existsSync(importDateFile) ? readFileSync(importDateFile, 'utf8').trim() : new Date().toISOString().slice(0, 10);
+
+const dictionaryFile = join(DIR, 'name-dictionary.enc');
+const drugFile = join(DIR, 'drug-tokens.json');
+const others = existsSync(dictionaryFile)
+  ? (() => {
+    const d = JSON.parse(decryptBuffer(readFileSync(dictionaryFile), key).toString('utf8'));
+    return { dictionary: { first: new Set(d.first), surname: new Set(d.surname) }, clinicalTokens: new Set(existsSync(drugFile) ? JSON.parse(readFileSync(drugFile, 'utf8')) : []) };
+  })()
+  : null;
+const scrubbedAgain = { strings: 0 };
+/** Every string of a value through the rules about other people (ids, dates and enums have no names to lose). */
+function scrubDeep(value) {
+  if (!others) return value;
+  if (typeof value === 'string') {
+    const out = scrubOtherPeople(value, others);
+    if (out !== value) scrubbedAgain.strings += 1;
+    return out;
+  }
+  if (Array.isArray(value)) return value.map(scrubDeep);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, scrubDeep(v)]));
+  return value;
+}
 
 /** The demo account: the first clinical account that administers a clinic. */
 async function demoAccount() {
@@ -67,7 +97,9 @@ function build(userId) {
     const patientId = person.targetId;
     const label = `Paciente ${n}`;
     const orgFile = join(DIR, 'organized', `patient-${n}.enc`);
-    const org = existsSync(orgFile) ? JSON.parse(decryptBuffer(readFileSync(orgFile), key).toString('utf8')) : null;
+    // What the AI wrote goes through the rules about other people once more: a summary made
+    // before a rule existed may still carry a referring doctor's name copied from the note.
+    const org = existsSync(orgFile) ? scrubDeep(JSON.parse(decryptBuffer(readFileSync(orgFile), key).toString('utf8'))) : null;
     const chart = charts[0]?.payload ?? {};
     const legacyHistory = es.filter((e) => e.sourceEntity === 'medical_history').map((e) => `### Páginas de ${doctorOf(e)}\n\n${originalBody(e.payload.text)}`).join('\n\n');
     const cids = [...new Map(es.filter((e) => e.sourceEntity === 'diagnosis_set').flatMap((e) => e.payload.diagnoses).map((d) => [d.code, d])).values()];
@@ -75,7 +107,7 @@ function build(userId) {
     const history = [legacyHistory, cidSection].filter(Boolean).join('\n\n');
     // Without the organised layer the profile keeps the converted pages as they are.
     const profile = org
-      ? renderProfile(org.profile, { organizedOn: org.organizedOn, civilStatus: chart.civil_status ?? null, bloodType: chart.blood_type ?? null, lastRecord: org.lastRecord ?? null, exportDate: org.exportDate ?? null })
+      ? renderProfile(org.profile, { organizedOn: org.organizedOn, civilStatus: chart.civil_status ?? null, bloodType: chart.blood_type ?? null, lastRecord: org.lastRecord ?? null, exportDate: org.exportDate ?? null, sex: chart.sex ?? null })
       : { diagnoses: cids, medications: [], allergies: [], medical_history: [chart.blood_type ? `Tipo sanguíneo: ${chart.blood_type} (cadastro do PersonalMed)` : null, history].filter(Boolean).join('\n\n'), social_anamnesis: chart.civil_status ? `Estado civil: ${chart.civil_status} (cadastro do PersonalMed)` : null, summaryNote: null, tasks: [] };
     if (org) out.ai.profiles += 1;
     out.patients.push({
@@ -189,6 +221,7 @@ if (command === 'plan') {
 } else if (command === 'load') {
   const userId = await demoAccount();
   const rows = build(userId);
+  if (!existsSync(importDateFile)) writeFileSync(importDateFile, `${today}\n`);
   for (const batch of chunks(rows.patients, 5)) {
     await asService(`insert into public.patients (id,user_id,name,date_of_birth,sex,health_insurance,profession,status,last_visit,diagnoses,medications,allergies,medical_history,social_anamnesis)
       select x.id,x.user_id,x.name,x.date_of_birth,x.sex,x.health_insurance,x.profession,x.status,x.last_visit,x.diagnoses,x.medications,coalesce((select array_agg(v) from jsonb_array_elements_text(x.allergies) v),'{}'),x.medical_history,x.social_anamnesis
@@ -266,6 +299,50 @@ if (command === 'plan') {
     writeFileSync(stateFile, JSON.stringify(state));
     const [seen] = await q(counts);
     console.log(JSON.stringify({ written: { patients: patients.length, summaries: notes.length, tasks: tasks.filter((t) => free.has(t.patient_id)).length }, skipped, now: seen }));
+  }
+} else if (command === 'notes') {
+  // Rewrites the notes whose text or title is no longer what the staging and the organised layer
+  // give (a better anonymiser, a corrected rendering). Same protection as `profiles`: a note
+  // changed in the app since this tool wrote it is left alone and counted.
+  const userId = await demoAccount();
+  const rows = build(userId);
+  const stateFile = join(DIR, 'profile-state.json');
+  const state = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : {};
+  const md5 = (text) => createHash('md5').update(text ?? '', 'utf8').digest('hex');
+  const local = new Map(rows.consultations.map((c) => [c.id, c]));
+  const patients = rows.patients.map((p) => lit(p.id)).join(',');
+  const remote = await q(`select id, revision, md5(coalesce(soap_note,'')) as print, md5(coalesce(chief_complaint,'')) as title_print from public.consultations where patient_id in (${patients})`);
+  const differs = remote.filter((r) => local.has(r.id) && (md5(local.get(r.id).soap_note) !== r.print || md5(local.get(r.id).chief_complaint) !== r.title_print));
+  const ours = (r) => (state[r.id] ? state[r.id] === r.print : r.revision === 0);
+  const free = differs.filter(ours).map((r) => local.get(r.id));
+  // The legacy "Atenção" alerts were loaded as pending items: their text comes from the staging too.
+  const alerts = new Map(rows.workItems.filter((w) => !w.fromAi && w.kind === 'task').map((w) => [w.id, w]));
+  const remoteAlerts = alerts.size ? await q(`select id, status, md5(coalesce(content,'')) as print, (updated_at <= created_at + interval '1 second') as untouched from public.clinical_work_items where id in (${[...alerts.keys()].map(lit).join(',')})`) : [];
+  const alertDiffers = remoteAlerts.filter((r) => md5(alerts.get(r.id).content) !== r.print);
+  const freeAlerts = alertDiffers.filter((r) => r.status === 'open' && (state[r.id] ? state[r.id] === r.print : r.untouched)).map((r) => alerts.get(r.id));
+  const summary = { inProject: remote.length, inStaging: local.size, notInProject: [...local.keys()].filter((id) => !remote.some((r) => r.id === id)).length, differ: differs.length, changedInTheApp: differs.length - free.length, alertsDiffer: alertDiffers.length, alertsChangedInTheApp: alertDiffers.length - freeAlerts.length, scrubbedAgainInAiText: scrubbedAgain.strings };
+  const update = (batch) => `update public.consultations c set soap_note=x.soap_note, chief_complaint=x.chief_complaint
+    from jsonb_to_recordset(${json(batch.map((c) => ({ id: c.id, soap_note: c.soap_note, chief_complaint: c.chief_complaint })))}) as x(id uuid, soap_note text, chief_complaint text) where c.id=x.id`;
+  const updateAlerts = freeAlerts.length ? `update public.clinical_work_items w set content=x.content
+    from jsonb_to_recordset(${json(freeAlerts.map((w) => ({ id: w.id, content: w.content })))}) as x(id uuid, content text) where w.id=x.id` : null;
+  if (args.includes('--rehearse')) {
+    let wouldWrite = 0;
+    for (const batch of chunks(free, 30)) {
+      const [seen] = await q(`begin; select set_config('request.jwt.claims', '{"role":"service_role"}', true); set local role service_role; ${update(batch)};
+        select count(*)::int as n from public.consultations where id in (${batch.map((c) => lit(c.id)).join(',')}); rollback;`);
+      wouldWrite += seen.n;
+    }
+    let wouldWriteAlerts = 0;
+    if (updateAlerts) wouldWriteAlerts = (await q(`begin; select set_config('request.jwt.claims', '{"role":"service_role"}', true); set local role service_role; ${updateAlerts};
+      select count(*)::int as n from public.clinical_work_items where id in (${freeAlerts.map((w) => lit(w.id)).join(',')}); rollback;`))[0].n;
+    console.log(JSON.stringify({ rehearsal: 'rolled back', ...summary, wouldWrite, wouldWriteAlerts }));
+  } else {
+    for (const batch of chunks(free, 30)) await asService(update(batch));
+    if (updateAlerts) await asService(updateAlerts);
+    if (free.length) for (const batch of chunks(free, 200)) for (const row of await q(`select id, md5(coalesce(soap_note,'')) as print from public.consultations where id in (${batch.map((c) => lit(c.id)).join(',')})`)) state[row.id] = row.print;
+    if (freeAlerts.length) for (const row of await q(`select id, md5(coalesce(content,'')) as print from public.clinical_work_items where id in (${freeAlerts.map((w) => lit(w.id)).join(',')})`)) state[row.id] = row.print;
+    if (free.length || freeAlerts.length) writeFileSync(stateFile, JSON.stringify(state));
+    console.log(JSON.stringify({ ...summary, written: free.length, alertsWritten: freeAlerts.length }));
   }
 } else if (command === 'files') {
   // Puts the sample's imported files again, as the staging has them now. Only the files this

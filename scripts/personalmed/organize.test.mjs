@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PROFILE_PARTS, PROFILE_SCHEMA, checkDay, cleanProfile, dateKey, dayBatches, groupProcedures, numbersOf, originalBody, profilePartSchema, profilePartSystem, quoteDay, recordSpan, renderDayNote, renderProfile, spanNote, squash, tidyDate, tidyName, verifyProfile } from './organize.mjs';
+import { PROFILE_PARTS, PROFILE_SCHEMA, checkDay, cleanProfile, dateKey, dayBatches, groupProcedures, numbersOf, originalBody, profilePartSchema, profilePartSystem, quoteDay, recordSpan, sentenceCase, renderDayNote, renderProfile, spanNote, squash, tidyDate, tidyName, verifyProfile } from './organize.mjs';
 
 // Invented chart text only.
 const source = '### Evolução\n\nPA 120/80, peso 58,5 kg. Refere cefaleia há 3 dias.\n\n### Documentos emitidos\n\n**Receita**\n\nMEDICAMENTO SINTÉTICO 500 mg ___ 1 cx\nTomar 1 cp de 8/8h por 5 dias';
@@ -135,7 +135,7 @@ describe('what is written to the chart', () => {
         'Obstétrico (2 gestações registradas no prontuário antigo):',
         '- 1ª gestação: cesárea em 09/07/2021; RN 3085 g',
         '- 2ª gestação: aborto (registro de 01/02/2023)',
-        'Cirurgias e procedimentos:',
+        'Cirurgias:',
         '- 28/08/2018: Hérnia de hiato',
         '- registro de 03/03/2015: Colecistectomia',
         'Últimos exames de rastreamento:',
@@ -143,9 +143,10 @@ describe('what is written to the chart', () => {
         '- Mamografia, 06/2025: BI-RADS 1',
         'Antecedentes familiares:',
         '- Mãe: câncer de mama',
-        'Problemas anteriores ou sem registro recente:',
-        '- 2013 a 2023: Cistos sintéticos (N83.2)',
+        'Doenças e condições anteriores ou sem registro recente:',
         '- 1999: Evento antigo',
+        'Achados e queixas anteriores:',
+        '- 2013 a 2023: Cistos sintéticos (N83.2)',
         'Origem: perfil organizado por IA em 14/11/2026 a partir do prontuário antigo (PersonalMed); os itens e os trechos de origem estão na nota "Resumo do histórico importado", no histórico.',
       ]);
       expect(out.social_anamnesis).toBe('Estado civil: Casado(a) (cadastro do PersonalMed)\nNão fuma');
@@ -167,7 +168,9 @@ describe('what is written to the chart', () => {
           problemas: [
             problem('Seguida há anos', '2015-01-10', '2025-02-01'),
             problem('Um registro recente', '2026-01-20'),
-            problem('Um registro antigo', '2025-03-01'),
+            problem('Condição de um registro, dentro da janela', '2025-03-01'),
+            { ...problem('Achado de um registro antigo', '2025-03-01'), tipo: 'achado' },
+            { ...problem('Queixa de um registro recente', '2026-02-10'), tipo: 'queixa' },
             problem('Sem registro há três anos', '2019-01-01', '2023-05-05'),
             // Pages without date: a line that starts with its own date is dated by it.
             { ...problem('Anotada em página sem data'), origem: [{ data: 'sem data', trecho: '14/08/26 laser facial para a condição sintética' }] },
@@ -180,10 +183,12 @@ describe('what is written to the chart', () => {
       expect(held.diagnoses).toEqual([
         { code: '', description: 'Anotada em página sem data', note: 'registro de 14/08/2026' },
         { code: '', description: 'Um registro recente', note: 'registro de 20/01/2026' },
+        { code: '', description: 'Condição de um registro, dentro da janela', note: 'registro de 01/03/2025' },
         { code: '', description: 'Seguida há anos', note: 'desde 01/2015 · último registro em 01/02/2025' },
         { code: '', description: 'Antecedente do cadastro', note: 'página sem data do prontuário antigo' },
+        { code: '', description: 'Queixa de um registro recente', note: 'queixa · registro de 10/02/2026' },
       ]);
-      expect(held.medical_history).toContain('Problemas anteriores ou sem registro recente:\n- 2025: Um registro antigo\n- 2019 a 2023: Sem registro há três anos\n- sem data: Achado sem data');
+      expect(held.medical_history).toContain('Doenças e condições anteriores ou sem registro recente:\n- 2019 a 2023: Sem registro há três anos\nAchados e queixas anteriores:\n- 2025: Achado de um registro antigo\n- sem data: Achado sem data');
       expect(held.summaryNote).toContain('- Anotada em página sem data (página sem data, anotação de 14/08/2026)');
     });
     it('does not presume in use the medicines of a patient last seen long before the export', () => {
@@ -235,6 +240,68 @@ describe('what is written to the chart', () => {
     expect(groups.map((g) => g.line)).toEqual(['11/11/2022 a 14/08/2026: laser vaginal (3 vezes)', '13/07/2024: Plástica sintética']);
     expect(groups[0].items).toHaveLength(3);
   });
+  it('lists office procedures apart from surgeries, keeps a date without year beside its record, and flags a medicine that is also a reaction', () => {
+    const at4 = (data) => [{ data, trecho: 'x' }];
+    const out2 = renderProfile({
+      resumo: '', problemas: [], contracepcao: [], medicacoes_anteriores: [], gestacoes: [], marcos_ginecologicos: [], antecedentes_familiares: [], habitos_sociais: [], pendencias: [], alergias_negadas: false,
+      medicacoes_em_uso: [{ nome: 'Medicamento sintético', dose: '30 mg', uso: '1 cp pela manhã', duracao: 'continuo', origem: at4('2025-11-05') }],
+      alergias: [{ substancia: 'medicamento sintético', reacao: 'obstipação', tipo: 'intolerancia', origem: at4('2021-02-02') }],
+      cirurgias: [{ nome: 'Colecistectomia', data: '', origem: at4('2011-12-05') }, { nome: 'Laser vaginal', data: '', origem: at4('2024-09-13') }, { nome: 'Inserção de implante hormonal', data: '17/05/2024', origem: at4('2024-05-17') }],
+      exames: [{ tipo: 'outro_imagem', exame: 'Ecografia obstétrica', data: '30/04', resultado: '34 sem', origem: at4('2024-05-09') }],
+    }, { organizedOn: '2026-11-14', lastRecord: '2025-11-05', exportDate: '2026-08-24' });
+    expect(out2.medical_history).toContain('Cirurgias:\n- registro de 05/12/2011: Colecistectomia\nProcedimentos:\n- registro de 13/09/2024: Laser vaginal\n- 17/05/2024: Inserção de implante hormonal');
+    expect(out2.summaryNote).toContain('- Ecografia obstétrica, 30/04, registro de 09/05/2024: 34 sem (registro de 09/05/2024)');
+    expect(out2.tasks[0].title).toBe('Conferir Medicamento sintético: consta em uso e também em alergias ou intolerâncias');
+  });
+  describe('what a larger batch of charts showed', () => {
+    const at5 = (...days) => days.map((data) => ({ data, trecho: 'x' }));
+    const empty = { resumo: '', problemas: [], contracepcao: [], medicacoes_em_uso: [], medicacoes_anteriores: [], alergias: [], alergias_negadas: false, gestacoes: [], marcos_ginecologicos: [], cirurgias: [], antecedentes_familiares: [], habitos_sociais: [], exames: [], pendencias: [] };
+    it('leaves no pending item for a patient not seen for years, and none for an item older than a year at her last visit', () => {
+      const pending = [{ texto: 'CO colhido, sem resultado registrado', origem: at5('2008-12-19') }];
+      const longGone = renderProfile({ ...empty, pendencias: pending }, { organizedOn: '2026-11-14', lastRecord: '2008-12-19', exportDate: '2026-08-24' });
+      expect(longGone.tasks).toEqual([]);
+      expect(longGone.summaryNote).toContain('### Em aberto no último acompanhamento (19/12/2008)\n\n- CO colhido, sem resultado registrado (registro de 19/12/2008)');
+      const recent = renderProfile({ ...empty, pendencias: [...pending, { texto: 'Rever em 1/2026', origem: at5('2025-12-11') }] }, { organizedOn: '2026-11-14', lastRecord: '2025-12-11', exportDate: '2026-08-24' });
+      expect(recent.tasks.map((t) => t.title)).toEqual(['Rever em 1/2026 (registro de 11/12/2025)']);
+    });
+    it('says that a pregnancy "em curso" years ago has no recorded outcome', () => {
+      const out3 = renderProfile({ ...empty, gestacoes: [{ ordem: '1', desfecho: 'em curso', data: '', detalhes: 'Gestação após FIV.', origem: at5('2008-12-19') }] }, { organizedOn: '2026-11-14', lastRecord: '2008-12-19', exportDate: '2026-08-24' });
+      expect(out3.medical_history).toContain('- 1ª gestação: em curso em 19/12/2008; desfecho não registrado no prontuário antigo; gestação após FIV');
+      const now = renderProfile({ ...empty, gestacoes: [{ ordem: '1', desfecho: 'em curso', data: '', detalhes: '', origem: at5('2026-08-10') }] }, { organizedOn: '2026-11-14', lastRecord: '2026-08-10', exportDate: '2026-08-24' });
+      expect(now.medical_history).toContain('- 1ª gestação: em curso no último registro (registro de 10/08/2026)');
+    });
+    it('labels a milestone, names relatives as the chart should read, and lists an office procedure apart', () => {
+      const out3 = renderProfile({
+        ...empty,
+        marcos_ginecologicos: [{ marco: 'menarca', texto: '12', origem: at5('2013-08-13') }, { marco: 'menopausa', texto: 'Menopausa aos 50 anos', origem: at5('2020-01-01') }],
+        antecedentes_familiares: [{ parente: 'PAI', condicao: 'HAC', origem: at5('2013-08-13') }, { parente: 'Mae', condicao: 'has', origem: at5('2013-08-13') }],
+        cirurgias: [{ nome: 'FIV', data: '', origem: at5('2008-12-19') }, { nome: 'apendicectomia', data: '', origem: at5('2013-08-13') }],
+      }, { organizedOn: '2026-11-14', lastRecord: '2020-01-01', exportDate: '2026-08-24' });
+      expect(out3.medical_history).toContain('Ginecológico:\n- Menarca: 12\n- Menopausa aos 50 anos');
+      expect(out3.medical_history).toContain('Antecedentes familiares:\n- Pai: HAC\n- Mãe: has');
+      expect(sentenceCase('CANCER DE MAMA')).toBe('Cancer de mama');
+      expect(sentenceCase('CA UTERO')).toBe('CA utero');
+      expect(sentenceCase('DM')).toBe('DM');
+      expect(sentenceCase('Melanoma em 2019')).toBe('Melanoma em 2019');
+      expect(out3.medical_history).toContain('Cirurgias:\n- registro de 13/08/2013: Apendicectomia\nProcedimentos:\n- registro de 19/12/2008: FIV');
+    });
+    it('does not keep "in use" a medicine last recorded more than a year before the last visit, nor a way of use that only repeats it', () => {
+      const out3 = renderProfile({
+        ...empty,
+        medicacoes_em_uso: [
+          { nome: 'Sertralina', dose: '', uso: '', duracao: 'continuo', origem: at5('2017-05-23') },
+          { nome: 'Endofolin', dose: '', uso: 'EM USO DE ENDOFOLIN', duracao: 'continuo', origem: at5('2019-08-01') },
+        ],
+      }, { organizedOn: '2026-11-14', lastRecord: '2019-08-13', exportDate: '2020-01-01' });
+      expect(out3.medications).toEqual([{ name: 'Endofolin', dosage: '', instructions: '', note: 'último registro em 01/08/2019' }]);
+      expect(out3.summaryNote).toContain('### Medicações anteriores\n\n- Sertralina (registro de 23/05/2017)');
+    });
+    it('heads the contraception of a man as contraception', () => {
+      const out3 = renderProfile({ ...empty, contracepcao: [{ metodo: 'Vasectomia', hormonal: false, situacao: 'em uso', inicio: '2019', origem: at5('2019-05-02') }] }, { organizedOn: '2026-11-14', lastRecord: '2019-05-02', exportDate: '2026-08-24', sex: 'masculino' });
+      expect(out3.medical_history).toContain('Contracepção:\n- Contracepção em uso: Vasectomia, início ou troca em 2019 (último registro em 02/05/2019)');
+      expect(out3.medical_history).not.toContain('Ginecológico');
+    });
+  });
   it('writes a name typed in one case as a name, and leaves the rest alone', () => {
     expect(tidyName('MIRENA')).toBe('Mirena');
     expect(tidyName('cerazette')).toBe('Cerazette');
@@ -245,7 +312,12 @@ describe('what is written to the chart', () => {
     expect(tidyName('DIU')).toBe('DIU');
   });
   it('reads the date a line of an undated page starts with, as a day or as a month', () => {
-    expect(quoteDay({ data: '2021-05-31', trecho: '14/08/26 qualquer' })).toBe('2021-05-31');
+    // A dated record: its day, unless the line starts with a later date (a line added to a running page).
+    expect(quoteDay({ data: '2021-05-31', trecho: 'eco tv normal' })).toBe('2021-05-31');
+    expect(quoteDay({ data: '2023-12-11', trecho: '25/01/2025 eco tv normal' })).toBe('2025-01-25');
+    // An earlier date at the start is an exam being reported on the day of the record.
+    expect(quoteDay({ data: '2020-09-08', trecho: '02/10/2019 mamografia BI-RADS 2' })).toBe('2020-09-08');
+    expect(quoteDay({ data: '2001-03-05', trecho: '14/08/26 fora de qualquer prazo' })).toBe('2001-03-05');
     expect(quoteDay({ data: 'sem data', trecho: '14/08/26 LASER FACIAL' })).toBe('2026-08-14');
     expect(quoteDay({ data: 'sem data', trecho: ' 2/2/1998: cirurgia' })).toBe('1998-02-02');
     expect(quoteDay({ data: 'sem data', trecho: '06/2022 = hemangiomas 12 mm' })).toBe('2022-06');

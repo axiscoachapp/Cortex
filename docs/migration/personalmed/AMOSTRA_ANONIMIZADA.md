@@ -14,7 +14,7 @@
 | Linhas de texto clínico | 2.806; **nenhuma ficou fora** do registro convertido |
 | Dias de atendimento convertidos | 345, mais 2 páginas de histórico sem data |
 | Agendamentos | 240 (228 da agenda e 12 da fila de pronto atendimento de 2006–2011) |
-| Carregado no Cortex | 5 pacientes, 357 notas, 240 agendamentos, 12 pendências, 1 arquivo |
+| Carregado no Cortex | 5 pacientes, 357 notas, 240 agendamentos, 9 pendências (eram 12 antes da revisão de 14/11), 1 arquivo |
 | Identificadores conhecidos que sobraram depois da anonimização | 0 |
 | Dias organizados pela IA | 345 de 345; em nenhum apareceu número que não estava no original |
 | Itens de perfil escritos pela IA | 413, todos com trecho de origem conferido contra o texto |
@@ -80,6 +80,12 @@ No **texto livre** (evoluções, receitas, cartas, histórico) são substituído
 
 **O que isso não garante.** Texto clínico livre pode descrever uma pessoa de formas que nenhuma regra pega (um fato raro, o local de trabalho, a história de um parente), e um nome incomum de terceiro, escrito sozinho, pode passar. O resultado é dado de saúde **pseudonimizado**, não anônimo no sentido da LGPD, e deve ser tratado como tal. Em sentido contrário, a regra às vezes apaga uma palavra que não era nome (vi "[nome]" no lugar do que parece uma marca de cosmético).
 
+**Falha encontrada com o lote maior (14/11): nomes de terceiros em minúsculas.** A regra de terceiros só reconhecia nome com inicial maiúscula. Notas antigas são digitadas em minúsculas, e passaram nomes de médicos de fora ("dr fulano de tal"), de quem fez o exame ("eco com fulana"), de funcionários que assinam a nota no fim da linha e de um ou outro familiar. Passaram também um carimbo com iniciais, sobrenome e CRM, celulares digitados sem separador e nomes de empresa ou escola ("trabalha na …").
+- **Onde já tinha chegado:** na primeira amostra, 23 notas e 1 alerta tinham esses nomes (cerca de 25 ocorrências). Elas foram para a OpenAI nas rodadas de 13/11 e na dos perfis de 14/11, e ficaram no projeto de teste até a correção. O lote de 30 foi enviado depois da correção dos nomes, mas antes da regra de local de trabalho (2 ocorrências).
+- **Correção:** a regra passou a reconhecer nome do cadastro em minúsculas quando o contexto diz que é gente (depois de "dr/dra", de "com", "para", de parentesco, "mulher do …", "… esposo", nome e sobrenome juntos, lista de nomes, assinatura no fim da linha, "eco tv fulano"), nome desconhecido depois de título, nomes ao lado de telefone, carimbo com iniciais, número de conselho (CRM e outros), celular sem separador e nome de local de trabalho ou estudo. No lote de 30, os nomes de terceiros trocados subiram de 94 para 120.
+- **Na amostra já carregada:** as notas e o alerta foram regravados sem os nomes; o texto que a IA tinha escrito a partir deles passa pela mesma regra na carga (24 trechos). As versões anteriores continuam no histórico de revisões que o próprio banco guarda de cada nota (`clinical_record_revisions`); não foram apagadas.
+- **Conferência nova:** `sample-residual-names.mjs` lista as palavras que são nome ou sobrenome no cadastro da clínica e continuam no texto. Depois da correção sobram, nas duas amostras, quase só palavras que não são gente ("natal", "cândida", "marido", nomes de hospital, de plano de saúde e de meses). Continuam passando: nome solto em minúsculas sem nada em volta que o denuncie (vi três no lote), sobrenome raro depois de um nome que a regra pegou, e nome em maiúsculas que o cadastro não conhece.
+
 ## 3. Organização pela OpenAI
 
 O texto convertido **continua inteiro no prontuário**. A IA escreve uma camada por cima, que só fica quando pode ser rastreada até esse texto. As chamadas usam o mesmo adaptador do produto (`gpt-6.1-terra`, sem armazenamento no provedor).
@@ -117,7 +123,7 @@ O texto convertido **continua inteiro no prontuário**. A IA escreve uma camada 
 | "Anamnese social" | Estado civil e hábitos |
 | Nota "Resumo do histórico importado" | Resumo e todas as listas, com a origem de cada item |
 | Nota "Páginas e fichas do prontuário antigo" | Texto original das páginas sem data, das fichas e dos CIDs |
-| "Pendências e retornos" | O que ficou em aberto (9 itens) e os 3 alertas "Atenção" do cadastro, para o médico decidir |
+| "Pendências e retornos" | O que ficou em aberto nos registros recentes (6 itens, um deles a conferência de um remédio que consta em uso e como intolerância) e os 3 alertas "Atenção" do cadastro, para o médico decidir. Paciente sem atendimento há mais de dois anos não gera pendência |
 | Lista do histórico | Cada dia com o título escrito pela IA |
 | Arquivos do perfil | Imagens embutidas do prontuário antigo, com nome legível (no formato "Imagem de exame de dd-mm-aaaa (PersonalMed)") e a marca "Importado do PersonalMed" |
 
@@ -162,6 +168,33 @@ Refazer só os perfis (versão 3) custou cerca de 95 mil tokens de entrada e 64 
   - intolerância aparece como "Intolerância a…", não "Alergia a…";
   - arquivo anexado abre dentro do app (imagem, ou PDF desenhado página a página), com "Baixar" e "Abrir em nova aba" dentro do visualizador. A política de segurança do site não permite quadro embutido, por isso o PDF é desenhado com pdf.js; os decodificadores de imagem digitalizada (JBIG2/fax e JPEG 2000) são servidos pelo próprio site, em `public/pdfjs/`, com teste que acusa cópia desatualizada.
 
+**Lote de 30 prontuários (14/11): mais pacientes, para achar padrões.** Pedido do usuário: "faça mais testes, com mais pacientes e encontre outros padrões já para tratar e melhorar".
+- **Escolha:** sorteio repetível e estratificado (`pick-batch.mjs`), fora os cinco já carregados: todos os médicos, três prontuários entre o 1% mais longo e sete entre os 10% mais longos, quinze com um a três registros (metade do lote tem até 5), todas as faixas de idade, pré-natal, fichas de especialidade, imagens, última visita de antes de 2018 até 2026. A escolha fica cifrada; o programa mostra só as contagens.
+- **Conversão:** 530 notas, 481 agendamentos, 37 prontuários de médico, 12 alertas, 2 arquivos. 5.218 linhas de texto do sistema antigo, nenhuma fora do registro convertido.
+- **Anonimização:** nenhum identificador conhecido sobrou; a checagem de nomes de terceiros levou à correção descrita no §2.
+- **IA:** só os perfis (os dias não foram organizados neste lote), quatro pacientes por vez. 30 perfis, nenhum falhou; 2 prontuários longos caíram no caminho em duas partes. 1.464 itens com trecho conferido, 10 removidos. Custo das três rodadas do lote: cerca de 238 mil tokens de entrada e 160 mil de saída.
+- **Não foi carregado no projeto de teste.** Fica cifrado neste computador (`%LOCALAPPDATA%\CortexBackups\pm-sample-b`).
+
+O que o lote mostrou, e o que foi feito:
+
+| Padrão | Quanto | O que mudou |
+|---|---|---|
+| Cadastro "M" que é mulher | 3 dos 3 "M" do lote (DIU, preventivo, anticoncepcional no prontuário). Na base: 1.545 "M"; o conversor, rodado na base inteira, encontra 20 com registros que só mulher tem e mais 154 sem nenhum prontuário do urologista | O conversor não aceita mais "M" nesses dois casos: o sexo entra vazio, com um aviso (`sex_conflicts_with_records`, `sex_male_without_urology_chart`) para a clínica confirmar. Antes, essas pacientes entrariam como homens |
+| Paciente sem atendimento há anos | 18 dos 30 com último registro mais de 18 meses antes da exportação; em 10, sem atendimento há mais de dois anos, a IA tirou "pendências" de registros antigos | Paciente com último registro mais de 24 meses antes da exportação não gera pendência; o que estava em aberto fica na nota de resumo, com a data. Sem isso, a lista de pendências da clínica nasceria tomada por itens de 2008 |
+| Gestação "em curso" antiga | 3 pacientes, com último registro de 2008, 2013 e 2015 | Aparece como "em curso em dd/mm/aaaa; desfecho não registrado no prontuário antigo" |
+| Página "sem data" com linha datada depois | 24 exames em 2 pacientes com data posterior à da página que os cita | A data escrita no começo da linha vale quando é posterior à da página (página corrida que continuou sendo usada) |
+| Medicação "em uso" sem registro recente | 2 em 1 paciente | Medicação sem registro nos 12 meses anteriores ao último atendimento vai para "anteriores" |
+| Medicação citada só pelo nome | 29 em 10 pacientes | Nada a corrigir: é como está escrito. O modo de uso que só repete "em uso de X" deixou de aparecer |
+| Procedimento de consultório entre cirurgias | laser, implante, FIV, biópsia | Grupo próprio, "Procedimentos"; sessões repetidas em uma linha |
+| Doença anterior perdida entre itens menores | um AVC antigo entre "cefaleia" e "cisto funcional" | "Doenças e condições anteriores" separado de "Achados e queixas anteriores" |
+| Marco sem rótulo ("12") | menarca ou menopausa só com o número | "Menarca: 12" |
+| Texto em maiúsculas e parentesco sem acento | "PAI: HAC", "Mae", "CANCER DE MAMA" | "Pai: HAC", "Mãe", "Cancer de mama" (abreviação de até três letras fica como está) |
+| Exame com dia e mês, sem ano | 12 em 5 pacientes | Fica como escrito, com o registro ao lado ("30/04, registro de 09/05/2024") |
+| Medicação em uso que também é intolerância | 1 paciente nas duas amostras | Vira uma pendência: "Conferir X: consta em uso e também em alergias ou intolerâncias" |
+| Condição crônica com um registro só | adenomiose citada uma vez, 17 meses antes do último atendimento | Uma condição (não um achado ou uma queixa) com registro dentro dos 24 meses continua em acompanhamento |
+
+A ferramenta que mede isso é `sample-review.mjs`: conta, em todos os perfis de uma amostra, o que a IA tende a pôr na lista errada, o que vem sem data, o que se repete e o que as regras mandam embora.
+
 **Diferenças desta demonstração para a migração real:**
 - Aqui uma conta só recebe os prontuários de todos os médicos, e cada nota diz de quem é ("registro de Médica A"). Na migração real cada médico recebe os seus.
 - O Cortex ainda não tem o estado "faltou": falta vira agendamento cancelado com a anotação "Falta registrada no PersonalMed".
@@ -174,6 +207,8 @@ Refazer só os perfis (versão 3) custou cerca de 95 mil tokens de entrada e 64 
 3a. **A lista da IA não é um índice completo.** Duas respostas para o mesmo prontuário (o mais longo) vieram com 56 e com 41 exames, e com 30 e 29 problemas. Tudo o que entra tem trecho conferido, mas nada garante que tudo o que está no prontuário entre. O completo são as notas dos dias.
 3b. **"Em acompanhamento" segue regra de prazo.** Uma condição crônica sem registro nos 24 meses anteriores ao último atendimento vai para "Problemas anteriores ou sem registro recente", mesmo que continue existindo. Fica à vista, com os anos, mas fora da lista de diagnósticos.
 3c. **"Desde" é o primeiro registro que a IA citou**, que pode ser posterior ao primeiro registro real do problema.
+3d. **A regra do sexo depende de saber quem é urologista.** O conversor recebe as contas dos urologistas da clínica (`--urology-users`); sem isso, só os registros que só mulher tem contradizem um "M". E "sexo a confirmar" não é "feminino": a clínica precisa olhar a lista (174 cadastros na base). As contagens de conferência da conversão continuam iguais (diferença zero em todas).
+3e. **Nomes de terceiros ainda podem passar** (§2), e as versões antigas das notas corrigidas continuam no histórico de revisões do projeto de teste.
 4. **Não entrei na conta do usuário.** A conferência foi por leitura no banco com as regras da conta e pelo app local com as mesmas linhas.
 5. Imagem de exame: a conversão foi feita e testada, mas a imagem real não foi enviada (ver §2).
 
@@ -185,6 +220,10 @@ Refazer só os perfis (versão 3) custou cerca de 95 mil tokens de entrada e 64 
 | Três pacientes extras escolhidos por variedade (fichas raras e imagem; pré-natal completo; três médicos, um deles o urologista) | Tomada |
 | Camada da IA nunca substitui o texto convertido | Tomada |
 | Página de histórico sem data fica às 00:00 do dia da última visita (antes 12:00), para não passar por "última consulta" | Tomada; vale para a migração completa |
+| Problema é doença ou condição; contracepção, gestações e exames à parte; datas tiradas dos registros citados | Tomada (14/11, depois da revisão do usuário) |
+| Paciente sem atendimento há mais de 24 meses não gera pendência; sem atendimento há mais de 18 meses, nenhuma medicação é dada como em uso | Tomada (14/11); os prazos são fáceis de mudar |
+| Cadastro "M" sem prontuário de urologista, ou com registros que só mulher tem, entra com sexo vazio e aviso | Tomada (14/11); **a clínica confirma a lista** (174 cadastros) |
+| Carregar o lote de 30 no projeto de teste | Não feito; **do usuário** |
 | Manter os cinco pacientes no projeto de teste depois da demonstração | **Do usuário** |
 | Usar a organização pela IA na migração real: todos os pacientes, só os ativos, ou sob demanda quando o médico abre o prontuário | **Do usuário** (custo acima) |
 | Leitura dos códigos de edema e do estado civil "P" | **Da clínica** |
@@ -200,6 +239,15 @@ node scripts/personalmed/sample.mjs anonymize <exportação>
 node scripts/personalmed/sample-organize.mjs [--only <n>] [--split-profile]
 node scripts/personalmed/sample-load.mjs plan|wipe|load|verify --project <ref>
 node scripts/personalmed/sample-load.mjs profiles --project <ref> [--rehearse]   # regrava só a camada da IA
+node scripts/personalmed/sample-load.mjs notes    --project <ref> [--rehearse]   # regrava as notas cujo texto mudou
+
+# lote maior, só para achar padrões (outra pasta, nada é carregado)
+node scripts/personalmed/pick-batch.mjs <exportação> --dir <pasta> --count 30 --exclude-dir <pasta da primeira amostra>
+node scripts/personalmed/sample.mjs extract   <exportação> --dir <pasta>
+node scripts/personalmed/sample.mjs anonymize <exportação> --dir <pasta>
+node scripts/personalmed/sample-residual-names.mjs <exportação> --dir <pasta> [--words] [--context palavra]
+node scripts/personalmed/sample-organize.mjs --dir <pasta> --profile-only --parallel 4
+node scripts/personalmed/sample-review.mjs   --dir <pasta> [--show <padrão>]
 node scripts/personalmed/sample-load.mjs files --project <ref> [--rehearse]   # repõe só os arquivos importados
 node scripts/personalmed/sample-load.mjs fixture --project local   # para o app local (AUDIT_FIXTURE)
 ```
