@@ -7,10 +7,12 @@
 //   plan    what is in the project and what would be loaded (counts only)
 //   wipe    permanently deletes EVERY patient of the project (take a backup first)
 //   load    inserts the sample for the demo account (idempotent: ON CONFLICT DO NOTHING)
+//   files   puts the sample's imported files again (object and row), as the staging has them now;
+//           --rehearse runs the database half in a transaction that is rolled back
 //   verify  reads the sample back as the demo account, through row level security
 //   fixture writes the same rows as a JSON file for the local visual audit (no project needed)
 //
-// Usage: node scripts/personalmed/sample-load.mjs <plan|wipe|load|verify> --project <ref> [--dir <folder>] [--yes-delete-all-patients]
+// Usage: node scripts/personalmed/sample-load.mjs <plan|wipe|load|files|verify|fixture> --project <ref> [--dir <folder>] [--yes-delete-all-patients] [--rehearse]
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -34,6 +36,9 @@ const asService = (sql) => q(`begin; select set_config('request.jwt.claims', '{"
 const json = (value) => `${lit(JSON.stringify(value))}::jsonb`;
 const doctorOf = (e) => DOCTOR_LABEL[Number(String(e.sourceDoctorId ?? '').replace('user:', ''))] ?? 'Equipe';
 const UNDATED = new Set(['history_no_dates', 'qp_hda_no_first_visit']);
+/** What the list of files shows beside an imported file; the second is the tag of the first load. */
+const FILE_TAG = 'Importado do PersonalMed';
+const IMPORT_TAGS = [FILE_TAG, 'importado-personalmed'];
 const today = new Date().toISOString().slice(0, 10);
 
 /** The demo account: the first clinical account that administers a clinic. */
@@ -126,14 +131,31 @@ function build(userId) {
       out.workItems.push({ id: e.targetId, user_id: userId, patient_id: patientId, kind: 'pregnancy', status: 'open', title: 'Gestação em curso (PersonalMed)', content: '', details: e.payload.details, due_date: e.payload.details?.date ?? null });
     }
     for (const e of es.filter((x) => x.sourceEntity === 'file' && x.mappingStatus !== 'rejected')) {
-      out.files.push({ id: e.targetId, user_id: userId, patient_id: patientId, storage_path: `patients/${userId}/${patientId}/${e.targetId}.png`, file_name: e.payload.file_name, mime_type: e.payload.mime_type, size_bytes: e.payload.size_bytes, tag: e.payload.tag,
-        note: [e.payload.description, e.payload.date ? `Data no PersonalMed: ${e.payload.date}` : null, e.payload.placeholder ? `Imagem original (${e.payload.originalMime}, ${e.payload.originalBytes} bytes) convertida e guardada fora desta amostra anonimizada` : null].filter(Boolean).join(' · '), contentBase64: e.payload.contentBase64 });
+      // An imported file is a plain attachment. `ai_summary` belongs to the product's own reading
+      // of a document: anything written there makes the app ask the doctor to review an AI
+      // suggestion that does not exist. What came with the image is in the chart, as a sheet.
+      const ext = { 'application/pdf': 'pdf', 'image/png': 'png', 'image/jpeg': 'jpg' }[e.payload.mime_type] ?? 'bin';
+      out.files.push({ id: e.targetId, user_id: userId, patient_id: patientId, storage_path: `patients/${userId}/${patientId}/${e.targetId}.${ext}`, file_name: e.payload.file_name, mime_type: e.payload.mime_type, size_bytes: e.payload.size_bytes, tag: FILE_TAG, contentBase64: e.payload.contentBase64 });
     }
   }
   return out;
 }
 
 const chunks = (rows, size) => Array.from({ length: Math.ceil(rows.length / size) }, (_, i) => rows.slice(i * size, (i + 1) * size));
+const objectUrl = (path) => `https://${REF}.supabase.co/storage/v1/object/patient-files/${path.split('/').map(encodeURIComponent).join('/')}`;
+
+/** The row first (Storage refuses an object without a live owner), then the bytes. */
+async function putFiles(files) {
+  if (!files.length) return;
+  const service = await serviceKey(REF);
+  for (const f of files) {
+    await asService(`insert into public.patient_files (id,user_id,patient_id,storage_path,file_name,mime_type,size_bytes,tag)
+      values (${lit(f.id)},${lit(f.user_id)},${lit(f.patient_id)},${lit(f.storage_path)},${lit(f.file_name)},${lit(f.mime_type)},${f.size_bytes},${lit(f.tag)}) on conflict (id) do nothing`);
+    const res = await fetch(objectUrl(f.storage_path), { method: 'POST', headers: { Authorization: `Bearer ${service}`, apikey: service, 'Content-Type': f.mime_type, 'x-upsert': 'true' }, body: Buffer.from(f.contentBase64, 'base64') });
+    await res.arrayBuffer();
+    if (!res.ok) throw new Error(`file upload failed (${res.status})`);
+  }
+}
 
 if (command === 'plan') {
   const userId = await demoAccount();
@@ -185,18 +207,34 @@ if (command === 'plan') {
       from jsonb_to_recordset(${json(rows.workItems)}) as x(id uuid,user_id uuid,patient_id uuid,kind text,status text,title text,content text,details jsonb,due_date date)
       on conflict (id) do nothing`);
   }
-  if (rows.files.length) {
-    const service = await serviceKey(REF);
-    for (const f of rows.files) {
-      // The row first (Storage refuses an object without a live owner), then the bytes.
-      await asService(`insert into public.patient_files (id,user_id,patient_id,storage_path,file_name,mime_type,size_bytes,tag,ai_summary)
-        values (${lit(f.id)},${lit(f.user_id)},${lit(f.patient_id)},${lit(f.storage_path)},${lit(f.file_name)},${lit(f.mime_type)},${f.size_bytes},${lit(f.tag)},${lit(f.note)}) on conflict (id) do nothing`);
-      const res = await fetch(`https://${REF}.supabase.co/storage/v1/object/patient-files/${f.storage_path}`, { method: 'POST', headers: { Authorization: `Bearer ${service}`, apikey: service, 'Content-Type': f.mime_type, 'x-upsert': 'true' }, body: Buffer.from(f.contentBase64, 'base64') });
-      await res.arrayBuffer();
-      if (!res.ok) throw new Error(`file upload failed (${res.status})`);
-    }
-  }
+  await putFiles(rows.files);
   console.log(JSON.stringify({ loaded: { patients: rows.patients.length, consultations: rows.consultations.length, appointments: rows.appointments.length, workItems: rows.workItems.length, files: rows.files.length }, skipped: rows.skipped, ai: rows.ai }));
+} else if (command === 'files') {
+  // Puts the sample's imported files again, as the staging has them now. Only the files this
+  // tool imported for the sample's own patients are touched: stored object first, then the row
+  // (the order the app itself uses), then both come back.
+  const userId = await demoAccount();
+  const rows = build(userId);
+  const patients = rows.patients.map((p) => lit(p.id)).join(',');
+  const old = await q(`select id, storage_path from public.patient_files where patient_id in (${patients}) and tag in (${IMPORT_TAGS.map(lit).join(',')})`);
+  if (args.includes('--rehearse')) {
+    // The database half, undone at the end: shows that the guards accept it before anything is touched.
+    const fake = rows.files.map((f) => `insert into public.patient_files (id,user_id,patient_id,storage_path,file_name,mime_type,size_bytes,tag) values (${lit(f.id)},${lit(f.user_id)},${lit(f.patient_id)},${lit(f.storage_path)},${lit(f.file_name)},${lit(f.mime_type)},${f.size_bytes},${lit(f.tag)})`).join('; ');
+    const [seen] = await q(`begin; select set_config('request.jwt.claims', '{"role":"service_role"}', true); set local role service_role;
+      ${old.length ? `delete from public.patient_files where id in (${old.map((o) => lit(o.id)).join(',')});` : ''} ${fake};
+      select count(*)::int as files, count(*) filter (where ai_summary is not null)::int as waiting_review from public.patient_files where patient_id in (${patients}); rollback;`);
+    console.log(JSON.stringify({ rehearsal: 'rolled back', wouldRemove: old.length, wouldPut: rows.files.length, afterwards: seen }));
+  } else {
+    const service = await serviceKey(REF);
+    for (const o of old) {
+      const res = await fetch(objectUrl(o.storage_path), { method: 'DELETE', headers: { Authorization: `Bearer ${service}`, apikey: service } });
+      await res.arrayBuffer();
+      if (!res.ok && res.status !== 404 && res.status !== 400) throw new Error(`storage delete failed (${res.status})`);
+    }
+    if (old.length) await asService(`delete from public.patient_files where id in (${old.map((o) => lit(o.id)).join(',')})`);
+    await putFiles(rows.files);
+    console.log(JSON.stringify({ removed: old.length, put: rows.files.length }));
+  }
 } else if (command === 'verify') {
   const userId = await demoAccount();
   const rows = build(userId);
@@ -207,7 +245,8 @@ if (command === 'plan') {
       (select count(*) from public.consultations c where c.patient_id=p.id and c.soap_note like '%**S (Subjetivo):**%')::int as organised,
       (select count(*) from public.appointments a where a.patient_id=p.id)::int as appointments,
       (select count(*) from public.clinical_work_items w where w.patient_id=p.id)::int as work_items,
-      (select count(*) from public.patient_files f where f.patient_id=p.id)::int as files
+      (select count(*) from public.patient_files f where f.patient_id=p.id)::int as files,
+      (select count(*) from public.patient_files f where f.patient_id=p.id and f.ai_summary is not null and f.ai_review_status='pending')::int as files_waiting_review
     from public.patients p order by p.name; rollback;`;
   const seen = await q(sql);
   console.log(JSON.stringify({ expected: { patients: rows.patients.length, consultations: rows.consultations.length, appointments: rows.appointments.length, workItems: rows.workItems.length, files: rows.files.length }, seenByTheAccount: seen }));
@@ -222,7 +261,7 @@ if (command === 'plan') {
     consultations: [...rows.consultations].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).map((c) => ({ appointment_id: null, transcription: null, revision: 0, history_proposals: {}, profile_proposals: {}, pre_briefing: null, recording_consent: null, whatsapp_message: null, ...c })),
     appointments: rows.appointments.map((a) => ({ created_at: stamp, revision: 1, reminder_sent: false, clinic_id: null, contact_id: null, google_sync_status: 'idle', ...a })),
     clinical_work_items: rows.workItems.map((w) => ({ revision: 0, created_at: stamp, updated_at: stamp, due_date: null, ...w })),
-    patient_files: rows.files.map(({ contentBase64, note, ...f }) => ({ created_at: stamp, ai_summary: note, ai_review_status: 'pending', ...f })),
+    patient_files: rows.files.map(({ contentBase64, ...f }) => ({ created_at: stamp, ai_summary: null, ai_profile_proposal: null, ai_review_status: 'pending', ...f })),
   };
   const file = join(DIR, 'fixture.json');
   writeFileSync(file, JSON.stringify({ tables }));

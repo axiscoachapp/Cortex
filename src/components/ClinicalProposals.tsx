@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
@@ -25,6 +25,8 @@ interface ProposalContext {
   socialAnamnesis: string;
   proposals: Proposal[];
 }
+/** How long a link to the original document works. */
+const SOURCE_LINK_SECONDS = 60;
 const strings = (value: unknown) =>
   Array.isArray(value)
     ? value
@@ -124,14 +126,15 @@ export function ClinicalProposals({ patient, userId }: { patient: Patient; userI
   return (
     <section aria-label="Propostas clínicas para revisão" className="m-4 space-y-3">
       <div>
-        <h2 className="font-semibold text-sm">Revisão clínica pendente</h2>
+        <h2 className="font-semibold text-sm">Sugestões da IA aguardando a sua revisão</h2>
         {query.isError && (
           <p role="alert" className="text-xs text-destructive">
-            Não foi possível atualizar o contexto. Seus textos continuam nos editores.
+            Não foi possível atualizar esta lista. Seus textos continuam nos campos.
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Propostas de IA ainda não fazem parte do histórico confirmado. Confira a fonte e aprove o texto exato.
+          A IA leu um documento anexado ou uma consulta e sugeriu um texto para o prontuário. Nada entra sem a sua
+          aprovação: confira, ajuste se precisar e acrescente ou dispense.
         </p>
       </div>
       {query.data.proposals.map((proposal) => (
@@ -168,7 +171,13 @@ function ProposalEditor({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
+  const [openFailed, setOpenFailed] = useState(false);
+  const sourceTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(sourceTimer.current), []);
+  const isDocument = proposal.kind === 'document';
+  const hintId = useId();
   const dirty =
     note !== proposal.note ||
     medicalHistory !== proposal.medicalHistory ||
@@ -184,6 +193,7 @@ function ProposalEditor({
     if (saving) return;
     setSaving(true);
     setError('');
+    setNotice('');
     try {
       const result =
         proposal.kind === 'document'
@@ -212,7 +222,7 @@ function ProposalEditor({
       ]);
     } catch {
       setError(
-        'A decisão não foi confirmada. O prontuário ou a fonte pode ter mudado. Seu texto foi mantido; atualize a referência e compare antes de tentar novamente.',
+        'Não foi possível salvar. O prontuário pode ter mudado enquanto você revisava. Seu texto foi mantido: atualize e confira antes de tentar de novo.',
       );
     } finally {
       setSaving(false);
@@ -225,50 +235,76 @@ function ProposalEditor({
     const source = latest?.proposals.find((item) => item.kind === proposal.kind && item.id === proposal.id);
     if (latest && source) {
       setReference({ patientRevision: latest.patientRevision, consultationRevision: source.revision });
-      setError('Referência atualizada. Compare o contexto atual e a fonte; seu texto continua no editor.');
+      setError('');
+      setNotice('Atualizado. Confira o que já está no prontuário e tente de novo; seu texto continua aqui.');
     }
   };
   const openSource = async () => {
     if (!proposal.storagePath) return;
+    setOpenFailed(false);
+    // A fresh link on every click: the address stops working one minute after it is made.
     const { data, error: openError } = await supabase.storage
       .from('patient-files')
-      .createSignedUrl(proposal.storagePath, 60);
+      .createSignedUrl(proposal.storagePath, SOURCE_LINK_SECONDS);
     if (openError || !data?.signedUrl) {
-      setError('Não foi possível abrir a fonte. Tente novamente antes de aprovar.');
+      setSourceUrl('');
+      setOpenFailed(true);
       return;
     }
     setSourceUrl(data.signedUrl);
+    clearTimeout(sourceTimer.current);
+    // The fallback link leaves the screen before it expires, so nobody clicks a dead address.
+    sourceTimer.current = setTimeout(() => setSourceUrl(''), (SOURCE_LINK_SECONDS - 10) * 1000);
     window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
   };
-  const valid = proposal.kind === 'document' ? !!note.trim() : !!medicalHistory.trim() || !!socialAnamnesis.trim();
+  const valid = isDocument ? !!note.trim() : !!medicalHistory.trim() || !!socialAnamnesis.trim();
+  const date = new Date(proposal.createdAt).toLocaleDateString('pt-BR');
+  const empty = isDocument ? !proposal.note.trim() : !proposal.medicalHistory.trim() && !proposal.socialAnamnesis.trim();
   return (
     <article className="rounded-xl border bg-background p-4 space-y-3" aria-label={`Revisar ${proposal.title}`}>
       <div>
         <h3 className="font-medium text-sm">{proposal.title}</h3>
         <p className="text-xs text-muted-foreground">
-          {new Date(proposal.createdAt).toLocaleDateString('pt-BR')} · Fonte {proposal.id}
+          {isDocument ? `Documento anexado em ${date}` : `Consulta de ${date}`}
         </p>
       </div>
-      <details className="text-xs">
-        <summary className="cursor-pointer">Conferir fonte e histórico atual</summary>
-        <pre className="whitespace-pre-wrap font-sans mt-2 max-h-64 overflow-auto">{proposal.source}</pre>
-        <p className="font-medium mt-3">Histórico atual</p>
-        <p className="whitespace-pre-wrap">{context.medicalHistory || 'Sem histórico médico registrado.'}</p>
-        <p className="whitespace-pre-wrap">{context.socialAnamnesis || 'Sem anamnese social registrada.'}</p>
-      </details>
+      <p className="text-xs">
+        {isDocument
+          ? empty
+            ? 'A IA leu este documento e não sugeriu anotação. Se quiser registrar algo sobre ele, escreva abaixo; se não, dispense.'
+            : 'A IA leu este documento e sugere a anotação abaixo. Abra o documento, confira e ajuste o texto antes de acrescentar.'
+          : 'A IA separou desta consulta os fatos abaixo para o histórico do paciente. Confira e ajuste o texto antes de acrescentar.'}
+      </p>
       {proposal.storagePath && (
-        <div className="text-xs space-x-3">
+        <div className="text-xs flex flex-wrap items-center gap-x-3 gap-y-1">
           <Button size="sm" variant="outline" disabled={saving} onClick={openSource}>
-            Abrir documento original
+            Abrir o documento
           </Button>
           {sourceUrl && (
             <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">
-              Abrir fonte (link válido por 60 segundos)
+              Não abriu? Clique aqui (o link vale 1 minuto)
             </a>
+          )}
+          {openFailed && (
+            <p role="alert" className="text-destructive">
+              Não foi possível abrir o documento. Tente de novo antes de decidir.
+            </p>
           )}
         </div>
       )}
-      {proposal.kind === 'document' ? (
+      <details className="text-xs">
+        <summary className="cursor-pointer">
+          {isDocument ? 'Ver o que a IA leu no documento' : 'Ver o texto da consulta'} e o que já está no prontuário
+        </summary>
+        <p className="font-medium mt-2">
+          {isDocument ? 'Leitura da IA (ainda não revisada)' : 'Texto da consulta de origem'}
+        </p>
+        <pre className="whitespace-pre-wrap font-sans mt-1 max-h-64 overflow-auto">{proposal.source}</pre>
+        <p className="font-medium mt-3">Já está no prontuário</p>
+        <p className="whitespace-pre-wrap">{context.medicalHistory || 'Sem histórico médico registrado.'}</p>
+        <p className="whitespace-pre-wrap">{context.socialAnamnesis || 'Sem anamnese social registrada.'}</p>
+      </details>
+      {isDocument ? (
         <label className="block text-xs space-y-1">
           Texto a acrescentar às notas clínicas
           <Textarea value={note} disabled={saving} maxLength={4000} onChange={(event) => setNote(event.target.value)} />
@@ -299,18 +335,29 @@ function ProposalEditor({
         <div role="alert" className="text-xs text-destructive space-y-2">
           <p>{error}</p>
           <Button size="sm" variant="outline" onClick={updateReference} disabled={saving}>
-            Atualizar referência mantendo texto
+            Atualizar e manter meu texto
           </Button>
         </div>
       )}
+      {notice && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {notice}
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => decide(true)} disabled={saving || !valid}>
-          {saving ? 'Salvando…' : 'Aprovar texto revisado'}
+        <Button size="sm" onClick={() => decide(true)} disabled={saving || !valid} aria-describedby={hintId}>
+          {saving ? 'Salvando…' : 'Acrescentar ao prontuário'}
         </Button>
         <Button size="sm" variant="outline" onClick={() => decide(false)} disabled={saving}>
-          Rejeitar proposta
+          Dispensar sugestão
         </Button>
       </div>
+      <p id={hintId} className="text-xs text-muted-foreground">
+        {valid
+          ? 'Entra no prontuário exatamente o texto que estiver no campo.'
+          : 'Para acrescentar, escreva o texto no campo acima.'}
+        {isDocument && ' Dispensar não apaga o documento: ele continua em Arquivos.'}
+      </p>
     </article>
   );
 }

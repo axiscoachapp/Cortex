@@ -1,7 +1,7 @@
 import { inflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { bmpToPng, findImage, storableImage } from './image.mjs';
-import { buildAgenda, buildChartClinical, buildFiles, buildPerson, mapBloodType, mapCivilStatus, obstetricHistory, sheetLabel, sheetLines } from './staging.mjs';
+import { buildAgenda, buildChartClinical, buildFiles, buildPerson, legacyFileName, mapBloodType, mapCivilStatus, obstetricHistory, sheetLabel, sheetLines } from './staging.mjs';
 
 // Invented data only.
 const ctx = { sourceInstance: 'pm-test', batchId: 'test', exportDate: '2026-08-24', importDate: '2026-11-13' };
@@ -131,7 +131,14 @@ describe('images', () => {
       { source: 'CO52', key: { codexame: 3, n: 1 }, date: '2020-02-03', description: 'Exame sintético', mime: 'image/png', bytes: Buffer.from('png') },
       { source: 'Clini_04', key: { imagecod: 9, n: 1 }, date: null, description: '', mime: 'image/tiff', bytes: Buffer.from('tif') },
     ]);
-    expect(ok).toMatchObject({ sourceEntity: 'file', mappingStatus: 'ready', payload: { file_name: 'personalmed-co52-3-1.png', tag: 'importado-personalmed', date: '2020-02-03', size_bytes: 3 } });
-    expect(bad).toMatchObject({ mappingStatus: 'rejected', issues: ['file_format_unsupported'] });
+    expect(ok).toMatchObject({ sourceEntity: 'file', mappingStatus: 'ready', payload: { file_name: 'Imagem de exame de 03-02-2020 (PersonalMed).png', source: 'CO52', tag: 'importado-personalmed', date: '2020-02-03', size_bytes: 3 } });
+    expect(bad).toMatchObject({ mappingStatus: 'rejected', issues: ['file_format_unsupported'], payload: { file_name: 'Imagem do paciente (PersonalMed).bin' } });
+  });
+  it('names a file by what it is and its date, and tells two of the same day apart', () => {
+    const taken = new Set();
+    expect(legacyFileName('Co31_1', '2019-11-05', 'jpg', taken)).toBe('Imagem de exame ginecológico de 05-11-2019 (PersonalMed).jpg');
+    expect(legacyFileName('Co31_1', '2019-11-05', 'jpg', taken)).toBe('Imagem de exame ginecológico de 05-11-2019 (2) (PersonalMed).jpg');
+    expect(legacyFileName('Co31_1', '2019-11-05', 'jpg', taken)).toBe('Imagem de exame ginecológico de 05-11-2019 (3) (PersonalMed).jpg');
+    expect(legacyFileName('OutraTabela', null, 'png')).toBe('Imagem do prontuário antigo (PersonalMed).png');
   });
 });

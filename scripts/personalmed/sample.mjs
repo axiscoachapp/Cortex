@@ -19,11 +19,12 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildNameDictionary, coarseBirthDate, createScrubber, nameTokens } from './anonymize.mjs';
-import { encodePng } from './image.mjs';
 import { loadOrCreateKey } from './local-key.mjs';
 import { Mdf } from './mssql2000-reader.mjs';
 import { ParadoxTable } from './paradox-reader.mjs';
+import { textPdf } from './placeholder-pdf.mjs';
 import { SecureBatchWriter, decryptBuffer, encryptBuffer, readEncryptedNdjson } from './secure-staging.mjs';
+import { legacyFileName } from './staging.mjs';
 import { uuidv5 } from './transforms.mjs';
 
 // The commands run only when this file is the entry point; other scripts import its helpers.
@@ -42,21 +43,47 @@ function* rows(table, fields, blobs = 'none') {
   for (const r of table.records({ fields, blobs })) yield Object.fromEntries(fields.map((n, i) => [n, r[idx[i]]]));
 }
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
+
+/**
+ * The page that stands where a legacy image would be in the anonymised sample.
+ * It carries no text of the chart: only what the image was and why it is not here.
+ */
+export function placeholderNotice({ source, date, mime, bytes }) {
+  const what = legacyFileName(source, null, 'x').replace(/ \(PersonalMed\)\.x$/, '').toLowerCase();
+  const when = date ? `, com data de ${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)} no PersonalMed` : '';
+  const format = { 'image/jpeg': 'JPEG', 'image/png': 'PNG' }[mime] ?? 'imagem';
+  const size = bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return textPdf('Imagem não incluída nesta amostra anonimizada', [
+    `Este aviso está no lugar de uma ${what} do prontuário antigo${when}.`,
+    `A imagem original (${format}, ${size}) foi convertida e está guardada, mas não foi enviada para este projeto de teste: imagens de exame costumam trazer o nome de quem fez o exame gravado na própria figura, e os prontuários desta amostra estão sem identificação.`,
+    'Na migração real, a imagem aparece neste mesmo lugar, na lista de arquivos do prontuário.',
+    'O texto que acompanhava a imagem no PersonalMed está no histórico, na nota "Páginas e fichas do prontuário antigo (PersonalMed)".',
+  ]);
+}
+
 export const readAll = (dir, key) =>
   readdirSync(dir).filter((f) => f.endsWith('.ndjson.enc')).flatMap((f) => readEncryptedNdjson(join(dir, f), key));
 export const readSecret = (file, key) => JSON.parse(decryptBuffer(readFileSync(file), key).toString('utf8'));
 
 if (command === 'extract') {
-  const pcods = (opt('--pcods') ?? '').split(',').map((v) => Number(v.trim())).filter(Number.isFinite);
-  if (!exportDir || !pcods.length) throw new Error('usage: sample.mjs extract <exportDir> --pcods 1,2,3');
   const key = loadOrCreateKey(DIR);
+  const secretFile = join(DIR, 'sample.enc');
+  const previous = existsSync(secretFile) ? readSecret(secretFile, key) : null;
+  const asked = (opt('--pcods') ?? '').split(',').map((v) => Number(v.trim())).filter((n) => Number.isFinite(n) && n > 0);
+  // Without --pcods the same people are extracted again.
+  const pcods = asked.length ? asked : previous?.pcods ?? [];
+  if (!exportDir || !pcods.length) throw new Error('usage: sample.mjs extract <exportDir> --pcods 1,2,3');
   // The order given here is the order of "Paciente 1..N"; the salt makes the new ids unguessable.
-  writeFileSync(join(DIR, 'sample.enc'), encryptBuffer(Buffer.from(JSON.stringify({ pcods, salt: randomBytes(16).toString('hex') })), key));
+  // The same people in the same order keep their salt, and so their ids: extracting again must
+  // not turn what was already loaded into strangers (--new-ids asks for that on purpose).
+  const samePeople = Boolean(previous) && previous.pcods.length === pcods.length && previous.pcods.every((p, i) => p === pcods[i]);
+  const salt = samePeople && !rest.includes('--new-ids') ? previous.salt : randomBytes(16).toString('hex');
+  writeFileSync(secretFile, encryptBuffer(Buffer.from(JSON.stringify({ pcods, salt })), key));
   const out = execFileSync(process.execPath, ['--max-old-space-size=6144', join(HERE, 'extract.mjs'), exportDir, '--pcods', pcods.join(','), '--out', join(DIR, 'identified')], {
     env: { ...process.env, PM_STAGING_KEY: key.toString('hex') }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024,
   });
   const j = JSON.parse(out);
-  console.log(JSON.stringify({ people: j.persons, sheets: j.sheets, entities: Object.fromEntries(Object.entries(j.entities).map(([k, v]) => [k, v.total])), staging: join(DIR, 'identified') }));
+  console.log(JSON.stringify({ people: j.persons, sameIdsAsBefore: salt === previous?.salt, sheets: j.sheets, entities: Object.fromEntries(Object.entries(j.entities).map(([k, v]) => [k, v.total])), staging: join(DIR, 'identified') }));
 } else if (command === 'anonymize') {
   if (!exportDir) throw new Error('usage: sample.mjs anonymize <exportDir>');
   const key = loadOrCreateKey(DIR);
@@ -110,7 +137,7 @@ if (command === 'extract') {
   const newId = (id) => (id ? uuidv5(`pm-sample|${salt}|${id}`) : id);
   const index = (pcod) => pcods.indexOf(pcod) + 1;
   const counters = new Map(pcods.map((p) => [p, {}]));
-  const placeholder = encodePng(8, 8, Buffer.alloc(8 * 8 * 3, 0xd9)).toString('base64');
+  const fileNames = new Map(pcods.map((p) => [p, new Set()]));
   const writer = new SecureBatchWriter(join(DIR, 'anonymous'), key);
   const leakTotals = new Map(pcods.map((p) => [p, {}]));
   const stats = { entities: {}, unattributed: 0 };
@@ -151,11 +178,15 @@ if (command === 'extract') {
       case 'health_plan_card':
         Object.assign(p, { cardNumber: null, holderName: null });
         break;
-      case 'file':
+      case 'file': {
         // The picture itself can carry the name burnt into the pixels (ultrasound, colposcopy):
-        // the sample keeps its facts and a blank placeholder, never the picture.
-        Object.assign(p, { description: scrub(p.description), originalBytes: p.size_bytes, originalMime: p.mime_type, contentBase64: placeholder, mime_type: 'image/png', size_bytes: Buffer.from(placeholder, 'base64').length, placeholder: true, file_name: p.file_name.replace(/\.[a-z]+$/, '.png') });
+        // the sample keeps its facts and, in its place, a page that says what is missing and
+        // why. Opened in the app it reads as a notice, not as a broken image.
+        const source = p.source ?? /^personalmed-(.+?)-\d/.exec(p.file_name)?.[1] ?? '';
+        const notice = placeholderNotice({ source, date: p.date, mime: p.mime_type, bytes: p.size_bytes });
+        Object.assign(p, { description: scrub(p.description), originalBytes: p.size_bytes, originalMime: p.mime_type, contentBase64: notice.toString('base64'), mime_type: 'application/pdf', size_bytes: notice.length, placeholder: true, file_name: legacyFileName(source, p.date, 'pdf', fileNames.get(pcod)) });
         break;
+      }
       default:
         break;
     }

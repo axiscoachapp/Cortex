@@ -551,8 +551,25 @@ export function sheetLines(values) {
  *
  * images: [{ source: 'CO52', key: {...}, date, description, mime, bytes: Buffer }]
  */
+/** What a legacy image is, by the table it came from: the start of the name the doctor reads. */
+const FILE_LABEL = { co52: 'Imagem de exame', co31_1: 'Imagem de exame ginecológico', clini_04: 'Imagem do paciente' };
+
+/**
+ * The name shown in the patient's files: what it is, its date in the legacy
+ * system and where it came from. No legacy key and no free text: the row that
+ * came with the image is already in the chart, as a sheet of the old record.
+ */
+export function legacyFileName(source, date, ext, taken = new Set()) {
+  const base = `${FILE_LABEL[String(source).toLowerCase()] ?? 'Imagem do prontuário antigo'}${date ? ` de ${date.slice(8, 10)}-${date.slice(5, 7)}-${date.slice(0, 4)}` : ''}`;
+  let name = `${base} (PersonalMed).${ext}`;
+  for (let n = 2; taken.has(name); n += 1) name = `${base} (${n}) (PersonalMed).${ext}`;
+  taken.add(name);
+  return name;
+}
+
 export function buildFiles(ctx, chart, images) {
   const out = [];
+  const names = new Set();
   for (const image of images) {
     const ext = { 'image/png': 'png', 'image/jpeg': 'jpg' }[image.mime];
     const date = legacyDate(image.date, { max: ctx.exportDate }).date;
@@ -569,7 +586,8 @@ export function buildFiles(ctx, chart, images) {
         targetTable: 'patient_files',
         payload: {
           patientTargetId: chart.patientTargetId,
-          file_name: `personalmed-${image.source.toLowerCase()}-${Object.values(image.key).join('-')}.${ext ?? 'bin'}`,
+          file_name: legacyFileName(image.source, date, ext ?? 'bin', names),
+          source: image.source,
           mime_type: image.mime,
           size_bytes: image.bytes.length,
           tag: 'importado-personalmed',

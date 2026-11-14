@@ -71,7 +71,7 @@ Também entram, quando existem: `Co51_1`, `Co53_1`, `Co53_3`, `CO54*` (parto e p
 | Data de nascimento | Fica só o mês (a idade continua certa) |
 | Profissão | Removida (o texto livre podia apontar uma pessoa) |
 | Chave do paciente no sistema antigo e identificadores gerados a partir dela | Trocados por identificadores novos, com um sal que só existe no lote cifrado |
-| Imagem de exame | Não é enviada: pode ter o nome gravado na própria imagem. Fica um marcador com os dados do arquivo |
+| Imagem de exame | Não é enviada: pode ter o nome gravado na própria imagem. No lugar fica um aviso de uma página, em PDF, que diz o que era a imagem (tipo, data, formato e tamanho) e por que ela não está ali |
 | Médicos da clínica | "Médica A", "Médico C"… (os nomes não vão para o texto) |
 
 No **texto livre** (evoluções, receitas, cartas, histórico) são substituídos: o nome completo e partes dele; nome de mãe, pai, indicação e titular; documentos e telefones do cadastro em qualquer pontuação; data de nascimento; e-mails, CPFs, CEPs, telefones e endereços de qualquer pessoa; nomes de terceiros (depois de parentesco ou de "Dr./Dra.", dois ou mais nomes seguidos, e nome próprio sozinho, como o de um bebê anotado com o peso). Palavras de medicamento (8.504, do catálogo público) e termos clínicos que também são nomes ("flora", "cândida", "natal", "Douglas") são protegidos.
@@ -105,8 +105,11 @@ O texto convertido **continua inteiro no prontuário**. A IA escreve uma camada 
 | Nota "Páginas e fichas do prontuário antigo" | Texto original das páginas sem data, das fichas e dos CIDs |
 | "Pendências e retornos" | O que ficou em aberto (9 itens) e os 3 alertas "Atenção" do cadastro, para o médico decidir |
 | Lista do histórico | Cada dia com o título escrito pela IA |
+| Arquivos do perfil | Imagens embutidas do prontuário antigo, com nome legível (no formato "Imagem de exame de dd-mm-aaaa (PersonalMed)") e a marca "Importado do PersonalMed" |
 
 As duas notas ficam logo antes do último registro real, para que a última consulta de verdade continue sendo a "última consulta" do app.
+
+**Arquivo importado não é sugestão de IA.** O campo `ai_summary` de um arquivo pertence à leitura de documentos do próprio produto: o que for gravado ali faz o app pedir ao médico que revise uma sugestão. A carga não escreve nesse campo. O texto que acompanhava a imagem no PersonalMed já está no prontuário, na nota das fichas.
 
 **As funções de IA do próprio produto sobre o histórico importado** (cópias temporárias das funções reais, já apagadas):
 - Resumo pré-consulta: 5 a 8 segundos; trouxe a conduta da última consulta e os achados relevantes do histórico.
@@ -120,6 +123,14 @@ As duas notas ficam logo antes do último registro real, para que a última cons
 - Antes: backup cifrado `…-2026-11-13-pre-sample` e ensaio da exclusão em transação desfeita. Apagados os 22 pacientes de teste (51 consultas, 1 agendamento, 2 gravações).
 - Depois: leitura pela própria conta, com as regras de acesso do banco: 5 pacientes, 357 notas, 240 agendamentos, 12 pendências, 1 arquivo, iguais ao que foi enviado.
 - Conferência visual: o app local abriu os cinco pacientes (lista, prontuário, perfil, histórico, notas abertas) em 1366×768 e 375×812, sem erro de página nem rolagem lateral.
+
+**Correção depois do primeiro uso (13/11, noite).** O usuário abriu o Paciente 3 no site e encontrou um cartão "Revisão clínica pendente" com o nome técnico do arquivo, uma caixa de texto vazia e um link que abria uma página aparentemente em branco.
+- Causa 1: a carga tinha gravado a descrição do arquivo em `ai_summary`. O app tratou o arquivo como documento lido pela IA, com sugestão pendente e sem texto sugerido.
+- Causa 2: o marcador no lugar da imagem era um quadrado cinza de 8×8 pixels. O link funcionava, mas o que abria parecia vazio.
+- Causa 3 (do produto, não da carga): o cartão não dizia o que era nem o que fazer, mostrava um identificador interno, e o botão de aprovar ficava apagado sem explicação quando a IA não sugeria texto. Isso também acontece com documento real que a IA classifica como não clínico.
+- Correção na carga: arquivo sem `ai_summary`, nome legível, aviso em PDF no lugar da imagem. Backup `…-2026-11-13-pre-file-fix`, ensaio em transação desfeita, troca do arquivo e comparação do banco antes e depois: mudaram só a linha do arquivo e os dois contadores de custódia que o próprio banco atualiza. O arquivo guardado abre por link assinado como `application/pdf`. O restante do lote reextraído é idêntico ao anterior, registro a registro.
+- Correção no produto (`ClinicalProposals`): título "Sugestões da IA aguardando a sua revisão", uma frase por cartão dizendo o que a IA fez e o que fazer, data no lugar do identificador, botões "Acrescentar ao prontuário" e "Dispensar sugestão", aviso de que dispensar não apaga o documento, explicação quando não há texto sugerido, e o link de reserva some da tela antes de vencer. **Só chega ao site depois do push.**
+- A conferência visual anterior não pegou isso porque procura erro de página, texto quebrado e campo sem nome; um cartão que funciona mas não se explica passa por ela.
 
 **Diferenças desta demonstração para a migração real:**
 - Aqui uma conta só recebe os prontuários de todos os médicos, e cada nota diz de quem é ("registro de Médica A"). Na migração real cada médico recebe os seus.
@@ -155,7 +166,10 @@ node scripts/personalmed/sample-coverage.mjs  <exportação>
 node scripts/personalmed/sample.mjs anonymize <exportação>
 node scripts/personalmed/sample-organize.mjs
 node scripts/personalmed/sample-load.mjs plan|wipe|load|verify --project <ref>
+node scripts/personalmed/sample-load.mjs files --project <ref> [--rehearse]   # repõe só os arquivos importados
 node scripts/personalmed/sample-load.mjs fixture --project local   # para o app local (AUDIT_FIXTURE)
 ```
+
+`sample.mjs extract` sem `--pcods` extrai de novo as mesmas pessoas e mantém os identificadores gerados; assim uma nova extração não transforma em estranhos os pacientes já carregados. `--new-ids` pede identificadores novos de propósito.
 
 `sample-organize.mjs` precisa de uma função temporária protegida por segredo, que chama o adaptador do produto com a chave do projeto; ela é publicada para o teste e apagada depois, e não fica no repositório. As respostas ficam em cache cifrado: repetir só paga o que mudou.
