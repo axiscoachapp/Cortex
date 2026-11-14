@@ -35,6 +35,19 @@ describe('mapPatientRow', () => {
     expect(patient.phone).toBe('+55 11 99999-0000');
   });
 
+  it('keeps the note of a diagnosis and of a medication, and adds none when absent', () => {
+    const patient = mapPatientRow({
+      ...baseRow,
+      diagnoses: [{ code: 'N95.9', description: 'Climatério', note: 'desde 09/2021' }, { code: '', description: 'Osteopenia' }],
+      medications: [{ name: 'Estradiol', dosage: '0,5 mg', instructions: '1x ao dia', note: 'último registro em 19/06/2026' }],
+    });
+    expect(patient.diagnoses).toEqual([
+      { code: 'N95.9', description: 'Climatério', note: 'desde 09/2021' },
+      { code: '', description: 'Osteopenia' },
+    ]);
+    expect(patient.medications[0].note).toBe('último registro em 19/06/2026');
+  });
+
   it('defaults missing optional fields', () => {
     const sparse = {
       id: 'x', name: 'João', age: 30, last_visit: '2026-01-01', status: 'novo',

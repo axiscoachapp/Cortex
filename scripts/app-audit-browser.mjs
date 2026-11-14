@@ -46,6 +46,8 @@ import { readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { SHELL_BREAKPOINT } from '../src/lib/interfaceScale.ts';
+import { encodePng } from './personalmed/image.mjs';
+import { textPdf } from './personalmed/placeholder-pdf.mjs';
 
 const WORKSPACE_ROLE = process.env.AUDIT_WORKSPACE_ROLE;
 if (WORKSPACE_ROLE && !['admin', 'doctor', 'reception'].includes(WORKSPACE_ROLE)) throw new Error('Invalid synthetic workspace role');
@@ -114,6 +116,15 @@ const state = {
 };
 // Fixture (AUDIT_FIXTURE): rows from a file take the place of the synthetic ones and belong to the synthetic doctor.
 const FIXTURE = process.env.AUDIT_FIXTURE ? JSON.parse(readFileSync(process.env.AUDIT_FIXTURE, 'utf8')) : null;
+// What a stored file answers with when the fixture brings no bytes for it: a two-page text PDF
+// and a striped picture, both invented.
+const SYNTHETIC_PDF = textPdf('Laudo sintético', ['Documento inventado para o ensaio visual do visualizador de arquivos.', 'Hemoglobina 11,2 g/dL. Leucócitos 6.400/mm³. Plaquetas 250.000/mm³.', 'Nenhum dado de paciente real.']);
+const SYNTHETIC_PNG = (() => {
+  const [width, height] = [480, 320];
+  const rgb = Buffer.alloc(width * height * 3);
+  for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) rgb.fill(Math.floor(x / 40) % 2 ? 0xe5 : 0xbf, (y * width + x) * 3, (y * width + x) * 3 + 3);
+  return encodePng(width, height, rgb);
+})();
 if (FIXTURE) {
   for (const table of ['patients', 'consultations', 'appointments', 'clinical_work_items', 'patient_files', 'prescriptions']) state[table] = (FIXTURE.tables?.[table] ?? []).map((row) => ({ ...row, user_id: doctorId }));
 }
@@ -145,6 +156,8 @@ function filtered(list, params) {
     if (v.startsWith('eq.')) return String(row[k]) === v.slice(3);
     if (v.startsWith('in.(')) return v.slice(4, -1).split(',').map((s) => s.replace(/"/g, '')).includes(String(row[k]));
     if (v.startsWith('is.null')) return row[k] == null;
+    // "not.is.null": a file is an AI suggestion to review only when it has a summary.
+    if (v.startsWith('not.is.null')) return row[k] != null;
     return true;
   }));
 }
@@ -172,6 +185,15 @@ async function supabase(route) {
   if (process.env.AUDIT_OPENAI_MIGRATION === '1' && path === '/functions/v1/chat-assistant')
     return respond(route, { message: 'Resposta sintética para revisão médica.', safety: { status: 'not_assessed' }, coverage: { limited: true, knowledge: 'unavailable' }, sources: [] });
   if (path.startsWith('/functions/')) return respond(route, { error: 'Operação externa bloqueada no ensaio' }, 503);
+  // A stored patient file, downloaded by the in-app viewer: the fixture's own bytes when it brings
+  // them ({ files: { "<storage path>": { mime, base64 } } }), else a synthetic page or picture.
+  if (request.method() === 'GET' && path.startsWith('/storage/v1/object/patient-files/')) {
+    const storagePath = decodeURIComponent(path.slice('/storage/v1/object/patient-files/'.length));
+    const given = FIXTURE?.files?.[storagePath];
+    const mime = given?.mime ?? state.patient_files?.find((f) => f.storage_path === storagePath)?.mime_type ?? 'image/png';
+    const body = given ? Buffer.from(given.base64, 'base64') : mime === 'application/pdf' ? SYNTHETIC_PDF : SYNTHETIC_PNG;
+    return route.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Content-Type': mime }, body });
+  }
   if (path.startsWith('/storage/')) return respond(route, []);
   const single = (request.headers()['accept'] ?? '').includes('vnd.pgrst.object');
   const table = path.replace('/rest/v1/', '');
@@ -654,6 +676,20 @@ try {
             await details.nth(index).click();
             await shot(`nota-${k + 1}`);
             await drawer.getByRole('button', { name: 'Ocultar', exact: true }).first().click().catch(() => {});
+          }
+          // The documents tab and, when the patient has a file, the file opened in the app.
+          await drawer.getByRole('tab', { name: 'Documentos' }).click();
+          await shot('documentos');
+          const view = drawer.getByRole('button', { name: /^Ver / }).first();
+          if (await view.isVisible().catch(() => false)) {
+            await view.scrollIntoViewIfNeeded();
+            await view.click();
+            await expect(page.getByRole('region', { name: 'Conteúdo do arquivo' })).toBeVisible();
+            await expect(page.getByRole('status').filter({ hasText: 'Carregando o arquivo' })).toHaveCount(0, { timeout: 15_000 });
+            await page.waitForTimeout(1500);
+            await shot('arquivo');
+            await page.keyboard.press('Escape');
+            await expect(page.getByRole('region', { name: 'Conteúdo do arquivo' })).toHaveCount(0);
           }
           await page.keyboard.press('Escape');
         }

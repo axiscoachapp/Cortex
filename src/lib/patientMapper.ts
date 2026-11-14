@@ -29,7 +29,11 @@ export function mapPatientRow(row: PatientRow): Patient {
     diagnoses: Array.isArray(row.diagnoses)
       ? row.diagnoses.map((value) => {
           const d = object(value);
-          return { code: text(d.code ?? d.icd), description: text(d.description ?? d.name) };
+          return {
+            code: text(d.code ?? d.icd),
+            description: text(d.description ?? d.name),
+            ...(text(d.note) ? { note: text(d.note) } : {}),
+          };
         })
       : [],
     medications: Array.isArray(row.medications)
@@ -40,6 +44,7 @@ export function mapPatientRow(row: PatientRow): Patient {
             dosage: text(m.dosage ?? m.dose),
             instructions: text(m.instructions),
             startedAt: text(m.startedAt) || undefined,
+            ...(text(m.note) ? { note: text(m.note) } : {}),
           };
         })
       : [],

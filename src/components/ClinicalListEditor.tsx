@@ -23,9 +23,11 @@ interface Row {
   main: string;
   /** Diagnosis code or medication dose. */
   second: string;
-  /** Medication instructions. */
+  /** Medication instructions or diagnosis note. */
   third: string;
   startedAt?: string;
+  /** Medication note: not edited here, carried through the save. */
+  note?: string;
 }
 
 const META: Record<
@@ -45,6 +47,7 @@ const META: Record<
     add: 'Adicionar diagnóstico',
     main: 'Diagnóstico',
     second: 'CID (opcional)',
+    third: 'Observação (opcional)',
     empty: 'Nenhum diagnóstico registrado.',
   },
   medications: {
@@ -63,13 +66,14 @@ type Lists = Pick<Patient, 'allergies' | 'diagnoses' | 'medications'>;
 function rowsOf(kind: ClinicalListKind, lists: Lists): Row[] {
   if (kind === 'allergies') return lists.allergies.map((main, key) => ({ key, main, second: '', third: '' }));
   if (kind === 'diagnoses')
-    return lists.diagnoses.map((d, key) => ({ key, main: d.description, second: d.code ?? '', third: '' }));
+    return lists.diagnoses.map((d, key) => ({ key, main: d.description, second: d.code ?? '', third: d.note ?? '' }));
   return lists.medications.map((m, key) => ({
     key,
     main: m.name,
     second: m.dosage ?? '',
     third: m.instructions ?? '',
     startedAt: m.startedAt,
+    note: m.note,
   }));
 }
 
@@ -78,12 +82,14 @@ function valueOf(kind: ClinicalListKind, rows: Row[]): string[] | Diagnosis[] | 
     .map((row) => ({ ...row, main: row.main.trim(), second: row.second.trim(), third: row.third.trim() }))
     .filter((row) => row.main);
   if (kind === 'allergies') return kept.map((row) => row.main);
-  if (kind === 'diagnoses') return kept.map((row) => ({ code: row.second, description: row.main }));
+  if (kind === 'diagnoses')
+    return kept.map((row) => ({ code: row.second, description: row.main, ...(row.third ? { note: row.third } : {}) }));
   return kept.map((row) => ({
     name: row.main,
     dosage: row.second,
     instructions: row.third,
     ...(row.startedAt ? { startedAt: row.startedAt } : {}),
+    ...(row.note ? { note: row.note } : {}),
   }));
 }
 
@@ -95,12 +101,17 @@ function listsFromRow(row: { allergies: string[] | null; diagnoses: Json | null;
   const text = (value: Json | undefined) => (typeof value === 'string' ? value : '');
   return {
     allergies: (row.allergies ?? []).filter((entry) => typeof entry === 'string'),
-    diagnoses: objects(row.diagnoses).map((d) => ({ code: text(d.code), description: text(d.description) })),
+    diagnoses: objects(row.diagnoses).map((d) => ({
+      code: text(d.code),
+      description: text(d.description),
+      ...(text(d.note) ? { note: text(d.note) } : {}),
+    })),
     medications: objects(row.medications).map((m) => ({
       name: text(m.name),
       dosage: text(m.dosage),
       instructions: text(m.instructions),
       ...(typeof m.startedAt === 'string' ? { startedAt: m.startedAt } : {}),
+      ...(text(m.note) ? { note: text(m.note) } : {}),
     })),
   };
 }

@@ -23,6 +23,8 @@ export interface Patient {
 export interface Diagnosis {
   code: string;
   description: string;
+  /** Short context shown under the diagnosis: since when, last record ("desde 03/2015 · último registro em 14/08/2026"). */
+  note?: string;
 }
 
 export interface Medication {
@@ -31,6 +33,8 @@ export interface Medication {
   instructions: string;
   /** Data de início do uso (ISO). Usado para exibir "há X tempo em uso". */
   startedAt?: string;
+  /** Short context for the doctor, kept out of what is printed for the patient ("último registro em 19/06/2026"). */
+  note?: string;
 }
 
 export interface Appointment {

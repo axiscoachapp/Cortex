@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ClinicalProposals } from './ClinicalProposals';
@@ -8,6 +8,7 @@ import type { Patient } from '@/types/patient';
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   sign: vi.fn(),
+  download: vi.fn(),
   failed: false,
   files: [] as Record<string, unknown>[],
   visits: [] as Record<string, unknown>[],
@@ -16,7 +17,7 @@ vi.mock('@/hooks/useUnsavedChanges', () => ({ useUnsavedChanges: vi.fn() }));
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     rpc: mocks.rpc,
-    storage: { from: () => ({ createSignedUrl: mocks.sign }) },
+    storage: { from: () => ({ createSignedUrl: mocks.sign, download: mocks.download }) },
     from: (table: string) => {
       const query = {
         select: () => query,
@@ -162,29 +163,45 @@ describe('clinical proposal approval', () => {
     await userEvent.type(screen.getByLabelText('Texto a acrescentar às notas clínicas'), 'Laudo conferido');
     expect(add).toBeEnabled();
   });
-  it('opens the document with a fresh one-minute link and keeps a fallback on screen', async () => {
-    mocks.files = [{ ...mocks.files[0], storage_path: 'patients/doctor/patient/exame.pdf' }];
-    mocks.sign.mockResolvedValue({ data: { signedUrl: 'https://storage.test/signed' }, error: null });
+  it('opens the document inside the app, in the viewer, with the file of that suggestion', async () => {
+    mocks.files = [{ ...mocks.files[0], storage_path: 'patients/doctor/patient/exame.png', mime_type: 'image/png' }];
+    const file = new Blob(['synthetic image'], { type: 'image/png' });
+    mocks.download.mockResolvedValue({ data: file, error: null });
+    // jsdom has no object URLs.
+    const createObjectURL = vi.fn((_blob: Blob) => 'blob:cortex/source');
+    Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     renderProposals();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await userEvent.click(await screen.findByRole('button', { name: 'Abrir o documento' }));
-    expect(mocks.sign).toHaveBeenCalledWith('patients/doctor/patient/exame.pdf', 60);
-    expect(open).toHaveBeenCalledWith('https://storage.test/signed', '_blank', 'noopener,noreferrer');
-    expect(await screen.findByRole('link', { name: /Não abriu\? Clique aqui/ })).toHaveAttribute(
-      'href',
-      'https://storage.test/signed',
+    const viewer = await screen.findByRole('dialog', { name: 'Exame sintético' });
+    // The stored type decides how the file is shown: this one is an image, drawn from memory.
+    expect(await within(viewer).findByRole('img', { name: 'Exame sintético' })).toHaveAttribute(
+      'src',
+      'blob:cortex/source',
     );
+    expect(mocks.download).toHaveBeenCalledWith('patients/doctor/patient/exame.png');
+    expect(createObjectURL).toHaveBeenCalledWith(file);
+    // No browser tab and no one-minute link on the card any more.
+    expect(open).not.toHaveBeenCalled();
+    expect(mocks.sign).not.toHaveBeenCalled();
+    expect(screen.queryByRole('link', { name: /Não abriu/ })).toBeNull();
     open.mockRestore();
   });
-  it('says so when the document cannot be opened', async () => {
-    mocks.files = [{ ...mocks.files[0], storage_path: 'patients/doctor/patient/exame.pdf' }];
-    mocks.sign.mockResolvedValue({ data: null, error: new Error('not found') });
+  it('says so inside the viewer when the document cannot be opened', async () => {
+    mocks.files = [
+      { ...mocks.files[0], storage_path: 'patients/doctor/patient/exame.pdf', mime_type: 'application/pdf' },
+    ];
+    mocks.download.mockResolvedValue({ data: null, error: new Error('not found') });
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     renderProposals();
     await userEvent.click(await screen.findByRole('button', { name: 'Abrir o documento' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível abrir o documento.');
+    const viewer = await screen.findByRole('dialog', { name: 'Exame sintético' });
+    const alert = await within(viewer).findByRole('alert');
+    expect(alert).toHaveTextContent('Não foi possível abrir o arquivo.');
+    expect(within(alert).getByRole('button', { name: 'Tentar novamente' })).toBeInTheDocument();
+    expect(mocks.download).toHaveBeenCalledWith('patients/doctor/patient/exame.pdf');
     expect(open).not.toHaveBeenCalled();
-    expect(screen.queryByRole('link', { name: /Não abriu/ })).toBeNull();
     open.mockRestore();
   });
   it('reports unavailable proposals instead of asserting all reviews are complete', async () => {

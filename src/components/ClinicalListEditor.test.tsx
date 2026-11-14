@@ -44,7 +44,9 @@ const patient: Patient = {
   status: 'retorno',
   allergies: ['Dipirona'],
   diagnoses: [{ code: 'N94.6', description: 'Dismenorreia' }],
-  medications: [{ name: 'Ibuprofeno', dosage: '600 mg', instructions: '8/8h', startedAt: '2026-01-01T00:00:00Z' }],
+  medications: [
+    { name: 'Ibuprofeno', dosage: '600 mg', instructions: '8/8h', startedAt: '2026-01-01T00:00:00Z', note: 'último registro em 01/01/2026' },
+  ],
 };
 
 function open(kind: ClinicalListKind, onOpenChange = vi.fn()) {
@@ -105,7 +107,21 @@ describe('ClinicalListEditor', () => {
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(api.updates).toHaveLength(1));
     expect(api.updates[0].patch).toEqual({
-      medications: [{ name: 'Ibuprofeno', dosage: '400 mg', instructions: '8/8h', startedAt: '2026-01-01T00:00:00Z' }],
+      // The start date and the note are not edited here: they survive the save.
+      medications: [
+        { name: 'Ibuprofeno', dosage: '400 mg', instructions: '8/8h', startedAt: '2026-01-01T00:00:00Z', note: 'último registro em 01/01/2026' },
+      ],
+    });
+  });
+
+  it('saves a note with the diagnosis and leaves it out when empty', async () => {
+    const user = userEvent.setup();
+    open('diagnoses');
+    await user.type(screen.getByLabelText('Observação (opcional)'), 'desde 2019, em uso de anticoncepcional');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(api.updates).toHaveLength(1));
+    expect(api.updates[0].patch).toEqual({
+      diagnoses: [{ code: 'N94.6', description: 'Dismenorreia', note: 'desde 2019, em uso de anticoncepcional' }],
     });
   });
 

@@ -90,17 +90,31 @@ O texto convertido **continua inteiro no prontuário**. A IA escreve uma camada 
 - Dia telegráfico (menos de 280 caracteres) recebe só o título; o texto fica como está.
 - A nota organizada é seguida do "Registro original (PersonalMed)" completo.
 
-**Por paciente:** perfil montado com o histórico inteiro: resumo, problemas (em acompanhamento ou anteriores), medicações em uso e anteriores, alergias e intolerâncias, antecedentes obstétricos, cirurgias, antecedentes familiares, hábitos, exames e rastreamentos, e o que os últimos registros deixam em aberto.
+**Por paciente:** perfil montado com o histórico inteiro: resumo, problemas, contracepção e dispositivos, medicações em uso e anteriores, alergias e intolerâncias, gestações, marcos ginecológicos, cirurgias, antecedentes familiares, hábitos, exames por tipo, e o que os últimos registros deixam em aberto.
 - Cada item cita de um a três trechos literais do histórico, com a data do registro.
-- Conferência: o trecho é procurado no texto daquele dia. Achado em outro dia, a data é corrigida. Não achado, o item é descartado. Nas rodadas de ajuste, 1 a 2 itens em cerca de 400 foram descartados; na final, nenhum.
+- Conferência: o trecho é procurado no texto daquele dia. Achado em outros dias, vale o registro mais próximo da data que a IA informou. Não achado, o item é descartado.
 - Alergia sem substância identificada não entra; efeito colateral comum só entra quando o registro diz "não tolera", "intolerância" ou que o remédio foi suspenso por isso.
+
+**Regras do perfil (versão 3, de 14/11, depois da revisão do usuário).** A primeira versão punha "Uso de DIU" e "Reposição de ferro" entre os diagnósticos, não dizia de quando era cada item e gravava o histórico como uma lista corrida. O que vale agora:
+- **Problema é doença ou condição.** Método contraceptivo, dispositivo, tratamento, gestação e cirurgia têm lista própria. Cada problema é marcado como condição, achado de exame ou queixa.
+- **"Em acompanhamento" é conferido nos registros.** A IA marca; o programa só aceita se houver registro datado nos 24 meses anteriores ao último registro da paciente, e mais de um registro, a não ser que o único seja dos últimos 12 meses. O resto vai para "Problemas anteriores ou sem registro recente".
+- **A referência é o último registro da própria paciente**, não a data da exportação: quem não vem há três anos continua com os problemas do último acompanhamento, com as datas à vista.
+- **"Desde" e "último registro" não são números pedidos à IA.** São os dias dos registros que ela citou, e a citação só fica se o trecho estiver no registro daquele dia. A IA é instruída a citar o primeiro registro e o mais recente; se citar um posterior ao primeiro, o "desde" fica mais tarde que o real, nunca antes.
+- **Medicações:** as dos 12 meses anteriores ao último registro. Se esse último registro é de mais de 18 meses antes da exportação, nenhuma é dada como "em uso"; ficam no histórico como "Medicações no último acompanhamento". Tratamento com duração escrita é marcado "tratamento com prazo".
+- **Contracepção:** o método em uso aparece no histórico com a data de início ou troca e o último registro; se for hormonal (DIU hormonal, implante, pílula), aparece também entre as medicações, dito como método contraceptivo.
+- **Gestações:** uma linha por gestação, com desfecho, data e o que vale como antecedente; sem DUM e DPP. O título diz quantas estão registradas no prontuário antigo; a fórmula G/P/A não é calculada, porque uma gestação fora do prontuário a deixaria errada.
+- **Exames:** no histórico do perfil, o último de cada rastreamento (citologia, mamografia, ultrassonografias, densitometria, colonoscopia, PSA); todos os exames, por tipo e do mais recente ao mais antigo, na nota de resumo.
+- **Datas** em um formato só (dd/mm/aaaa ou mm/aaaa); listas em ordem de data.
 
 **Onde aparece no app:**
 
 | Lugar no Cortex | O que recebe |
 |---|---|
-| Diagnósticos, medicações e alergias do perfil | Problemas em acompanhamento, medicações em uso (com a data do último registro) e alergias |
-| "Histórico médico" e "Anamnese social" (um fato por linha) | Tipo sanguíneo, antecedentes obstétricos, cirurgias, antecedentes familiares, problemas anteriores, estado civil, hábitos |
+| Diagnósticos do perfil | Problemas em acompanhamento, condições primeiro; sob cada um, "desde mm/aaaa · último registro em dd/mm/aaaa" |
+| Medicações do perfil | Medicações em uso e método contraceptivo hormonal em uso; sob cada uma, o último registro (fora das instruções, para não sair na lista impressa para a paciente) |
+| Alertas / alergias | Alergias e intolerâncias, cada uma dita pelo que é |
+| "Histórico médico" (em grupos) | Tipo sanguíneo; ginecológico (contracepção, menarca, menopausa); obstétrico; cirurgias; últimos exames de rastreamento; antecedentes familiares; problemas anteriores |
+| "Anamnese social" | Estado civil e hábitos |
 | Nota "Resumo do histórico importado" | Resumo e todas as listas, com a origem de cada item |
 | Nota "Páginas e fichas do prontuário antigo" | Texto original das páginas sem data, das fichas e dos CIDs |
 | "Pendências e retornos" | O que ficou em aberto (9 itens) e os 3 alertas "Atenção" do cadastro, para o médico decidir |
@@ -115,7 +129,11 @@ As duas notas ficam logo antes do último registro real, para que a última cons
 - Resumo pré-consulta: 5 a 8 segundos; trouxe a conduta da última consulta e os achados relevantes do histórico.
 - Assistente: 9 segundos por pergunta, com as consultas de origem. Perguntado sobre alergias e uso atual, apontou sozinho que a medicação em uso é a mesma substância de uma intolerância registrada anos antes.
 
-**Custo e tempo.** Uma passada completa nos cinco: cerca de 123 mil tokens de entrada e 80 mil de saída, 16 minutos em sequência (cerca de 40 mil tokens e 3 minutos por paciente; são pacientes com 35 a 124 dias de atendimento, muito acima da média da base). Todas as rodadas de ajuste somaram cerca de 625 mil tokens.
+**Custo e tempo.** Uma passada completa nos cinco: cerca de 123 mil tokens de entrada e 80 mil de saída, 16 minutos em sequência (cerca de 40 mil tokens e 3 minutos por paciente; são pacientes com 35 a 124 dias de atendimento, muito acima da média da base). Todas as rodadas de ajuste da primeira versão somaram cerca de 625 mil tokens.
+
+Refazer só os perfis (versão 3) custou cerca de 95 mil tokens de entrada e 64 mil de saída, contando uma rodada de teste e duas tentativas perdidas por tempo: de 10 a 21 mil de entrada e de 6 a 11 mil de saída por paciente, 1 a 2 minutos cada. Os dias não foram refeitos (as respostas ficam em cache, com versão separada da do perfil). Resultado: 433 itens com trecho conferido, 1 descartado.
+
+**Limite de tempo.** O adaptador do produto dá no máximo 150 segundos por resposta. O prontuário mais longo da amostra (124 dias, 56 mil caracteres) fica perto desse limite: duas tentativas falharam e outras duas passaram, uma delas em 121 segundos. O programa guarda só a contagem das falhas; pelo tempo decorrido, foram por prazo, mas a causa não ficou registrada. Para prontuários assim o programa agora tenta uma vez e, se falhar, pergunta em duas partes (o perfil; exames e medicações anteriores), o que dobra a entrada daquele paciente. O caminho em duas partes tem teste do recorte dos campos, mas não chegou a ser usado numa chamada real.
 
 ## 4. Carga no Cortex
 
@@ -132,6 +150,18 @@ As duas notas ficam logo antes do último registro real, para que a última cons
 - Correção no produto (`ClinicalProposals`): título "Sugestões da IA aguardando a sua revisão", uma frase por cartão dizendo o que a IA fez e o que fazer, data no lugar do identificador, botões "Acrescentar ao prontuário" e "Dispensar sugestão", aviso de que dispensar não apaga o documento, explicação quando não há texto sugerido, e o link de reserva some da tela antes de vencer. **Só chega ao site depois do push.**
 - A conferência visual anterior não pegou isso porque procura erro de página, texto quebrado e campo sem nome; um cartão que funciona mas não se explica passa por ela.
 
+**Revisão dos perfis depois do uso (14/11).** O usuário abriu os prontuários e apontou: "DIU como diagnóstico, não sei quando foi isso"; "histórico médico muito desorganizado"; "nos documentos tenho que baixar para ver". O que mudou:
+- **Perfis refeitos pela IA com as regras da versão 3** (§3) e regravados no projeto de teste: listas e textos do perfil, a nota de resumo e as pendências sugeridas pela IA. Notas dos dias, agendamentos e arquivo não mudaram.
+- **Antes de regravar:** conferido que ninguém tinha alterado nada no app desde a carga (os cinco pacientes na revisão inicial, nenhuma nota editada, as 12 pendências abertas e intactas); backup `…-2026-11-14-pre-profiles`; ensaio em transação desfeita.
+- **Proteção para as próximas vezes:** o comando `profiles` só regrava o que continua como ele deixou. Guarda uma impressão digital de cada linha gravada; paciente, resumo ou pendência alterados no app ficam como estão e são contados como pulados.
+- **Páginas "sem data" do PersonalMed têm data em cada linha** ("14/08/26 laser…", "06/2022 = …"). O programa passou a ler essa data; sem isso, um problema atual anotado nessas páginas caía como "sem data" e saía dos diagnósticos.
+- **No produto:**
+  - diagnóstico e medicação ganharam uma observação opcional, mostrada sob o item e mantida pelos editores e pelas junções (a do diagnóstico é editável em "Editar diagnósticos");
+  - o "Histórico médico" é mostrado em grupos quando o texto tem uma linha terminada em dois-pontos seguida de linhas com traço; grupo longo mostra seis itens e "Mostrar mais". O texto guardado continua simples, e o que já existia aparece como antes;
+  - nota importada aparece no histórico com o título sem o rótulo "Queixa:" e com a marca "Importado", e não entra em "Gerados pela consulta";
+  - intolerância aparece como "Intolerância a…", não "Alergia a…";
+  - arquivo anexado abre dentro do app (imagem, ou PDF desenhado página a página), com "Baixar" e "Abrir em nova aba" dentro do visualizador. A política de segurança do site não permite quadro embutido, por isso o PDF é desenhado com pdf.js; os decodificadores de imagem digitalizada (JBIG2/fax e JPEG 2000) são servidos pelo próprio site, em `public/pdfjs/`, com teste que acusa cópia desatualizada.
+
 **Diferenças desta demonstração para a migração real:**
 - Aqui uma conta só recebe os prontuários de todos os médicos, e cada nota diz de quem é ("registro de Médica A"). Na migração real cada médico recebe os seus.
 - O Cortex ainda não tem o estado "faltou": falta vira agendamento cancelado com a anotação "Falta registrada no PersonalMed".
@@ -141,6 +171,9 @@ As duas notas ficam logo antes do último registro real, para que a última cons
 1. **Conferi no app local, não no site.** O site publicado já tem a versão nova das telas (o push das ondas 1 a 3 foi feito; os commits de hoje são só ferramentas e documentos e não mudam o site), então o que se vê lá deve ser o mesmo. Não abri o site com a conta do usuário para confirmar.
 2. **Dado de saúde pseudonimizado num projeto nos EUA.** A decisão D11 dizia que o projeto de teste em us-west-2 não receberia dados reais. Com a anonimização pedida, tratei como permitido para esta demonstração; a decisão de manter, apagar ou mover é do usuário.
 3. **A IA pode errar no sentido** mesmo sem inventar número ou trecho: classificar como "em acompanhamento" algo já encerrado, ou resumir de forma pobre uma anotação telegráfica. Por isso o original fica sempre junto e o perfil diz que foi organizado por IA.
+3a. **A lista da IA não é um índice completo.** Duas respostas para o mesmo prontuário (o mais longo) vieram com 56 e com 41 exames, e com 30 e 29 problemas. Tudo o que entra tem trecho conferido, mas nada garante que tudo o que está no prontuário entre. O completo são as notas dos dias.
+3b. **"Em acompanhamento" segue regra de prazo.** Uma condição crônica sem registro nos 24 meses anteriores ao último atendimento vai para "Problemas anteriores ou sem registro recente", mesmo que continue existindo. Fica à vista, com os anos, mas fora da lista de diagnósticos.
+3c. **"Desde" é o primeiro registro que a IA citou**, que pode ser posterior ao primeiro registro real do problema.
 4. **Não entrei na conta do usuário.** A conferência foi por leitura no banco com as regras da conta e pelo app local com as mesmas linhas.
 5. Imagem de exame: a conversão foi feita e testada, mas a imagem real não foi enviada (ver §2).
 
@@ -164,8 +197,9 @@ node scripts/personalmed/pick-sample.mjs   <exportação> --exclude <chaves>
 node scripts/personalmed/sample.mjs extract   <exportação> --pcods <chaves>
 node scripts/personalmed/sample-coverage.mjs  <exportação>
 node scripts/personalmed/sample.mjs anonymize <exportação>
-node scripts/personalmed/sample-organize.mjs
+node scripts/personalmed/sample-organize.mjs [--only <n>] [--split-profile]
 node scripts/personalmed/sample-load.mjs plan|wipe|load|verify --project <ref>
+node scripts/personalmed/sample-load.mjs profiles --project <ref> [--rehearse]   # regrava só a camada da IA
 node scripts/personalmed/sample-load.mjs files --project <ref> [--rehearse]   # repõe só os arquivos importados
 node scripts/personalmed/sample-load.mjs fixture --project local   # para o app local (AUDIT_FIXTURE)
 ```

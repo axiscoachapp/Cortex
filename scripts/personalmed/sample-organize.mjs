@@ -5,13 +5,14 @@
 // answer against the source text (organize.mjs) and stores the result
 // encrypted beside the sample. Prints counts, sizes and costs only.
 //
-// Usage: node scripts/personalmed/sample-organize.mjs [--dir <folder>] [--only 2] [--fresh]
+// Usage: node scripts/personalmed/sample-organize.mjs [--dir <folder>] [--only 2] [--fresh] [--split-profile]
+//          [--profile-only] [--parallel 4]
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadOrCreateKey } from './local-key.mjs';
-import { DAY_SCHEMA, DAY_SYSTEM, ORGANIZE_VERSION, PROFILE_SCHEMA, checkDay, cleanProfile, dayBatches, dayPrompt, originalBody, profilePrompt, profileSystem, squash, verifyProfile } from './organize.mjs';
+import { DAY_SCHEMA, DAY_SYSTEM, ORGANIZE_VERSION, PROFILE_PARTS, PROFILE_SCHEMA, PROFILE_VERSION, checkDay, cleanProfile, dayBatches, dayPrompt, originalBody, profilePartSchema, profilePartSystem, profilePrompt, profileSystem, squash, verifyProfile } from './organize.mjs';
 import { DOCTOR_LABEL, readAll, sampleDir } from './sample.mjs';
 import { decryptBuffer, encryptBuffer } from './secure-staging.mjs';
 
@@ -20,6 +21,12 @@ const opt = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : undefined);
 const DIR = sampleDir(opt('--dir'));
 const ONLY = opt('--only') ? Number(opt('--only')) : null;
 const FRESH = args.includes('--fresh');
+/** Asks every profile in two parts from the start (for charts known to be long, and to test that path). */
+const SPLIT = args.includes('--split-profile');
+/** Only the profiles: the days keep their converted text (a larger batch, to look for patterns). */
+const PROFILE_ONLY = args.includes('--profile-only');
+/** How many people are organised at the same time. */
+const PARALLEL = Math.max(1, Number(opt('--parallel') ?? 1));
 const EXPORT_DATE = opt('--export-date') ?? '2026-08-24';
 const ENDPOINT = 'https://conhcwuwtrkerpbblzgu.supabase.co/functions/v1/pm-organize-tmp';
 const key = loadOrCreateKey(DIR);
@@ -28,14 +35,20 @@ const OUT = join(DIR, 'organized');
 mkdirSync(join(OUT, 'cache'), { recursive: true });
 
 const usage = { calls: 0, cached: 0, inputTokens: 0, outputTokens: 0, seconds: 0, failures: 0 };
-/** One model call, cached by its exact request so a re-run only pays for what changed. */
-async function ask(system, prompt, schema, maxOutputTokens) {
-  const id = createHash('sha256').update(JSON.stringify([ORGANIZE_VERSION, system, prompt, schema, maxOutputTokens])).digest('hex');
+/**
+ * One model call, cached by its exact request so a re-run only pays for what changed.
+ * The days and the profile carry separate versions: redoing the profiles keeps the days.
+ */
+async function ask(version, system, prompt, schema, maxOutputTokens, { attempts = 3 } = {}) {
+  const id = createHash('sha256').update(JSON.stringify([version, system, prompt, schema, maxOutputTokens])).digest('hex');
   const file = join(OUT, 'cache', `${id}.enc`);
   if (!FRESH && existsSync(file)) {
     usage.cached += 1;
     return JSON.parse(decryptBuffer(readFileSync(file), key).toString('utf8'));
   }
+  // A question that already proved too long for one answer is not asked again.
+  const tooLong = join(OUT, 'cache', `${id}.too-long`);
+  if (!FRESH && existsSync(tooLong)) throw new Error('known to be too long for one answer');
   for (let attempt = 1; ; attempt += 1) {
     const started = Date.now();
     try {
@@ -51,7 +64,10 @@ async function ask(system, prompt, schema, maxOutputTokens) {
       return parsed;
     } catch (error) {
       usage.failures += 1;
-      if (attempt >= 3) throw error;
+      if (attempt >= attempts) {
+        if (attempts === 1) writeFileSync(tooLong, '');
+        throw error;
+      }
       await new Promise((r) => setTimeout(r, 2000 * attempt));
     }
   }
@@ -72,11 +88,11 @@ async function pool(items, size, fn) {
 
 const all = readAll(join(DIR, 'anonymous'), key);
 const people = [...new Set(all.map((e) => e.sample))].sort((a, b) => a - b).filter((n) => !ONLY || n === ONLY);
-const report = { version: ORGANIZE_VERSION, people: {} };
+const report = { version: ORGANIZE_VERSION, profileVersion: PROFILE_VERSION, people: {} };
 const doctorOf = (e) => DOCTOR_LABEL[Number(String(e.sourceDoctorId ?? '').replace('user:', ''))] ?? 'Equipe';
 const UNDATED = new Set(['history_no_dates', 'qp_hda_no_first_visit']);
 
-for (const n of people) {
+async function organise(n) {
   const es = all.filter((e) => e.sample === n);
   const chart = es.find((e) => e.sourceEntity === 'chart')?.payload ?? {};
   const patient = { label: `Paciente ${n}`, sex: chart.sex ?? null, birthYear: chart.date_of_birth?.slice(0, 4) ?? null, civilStatus: chart.civil_status ?? null, bloodType: chart.blood_type ?? null, profession: chart.profession ?? null };
@@ -93,9 +109,9 @@ for (const n of people) {
   const note = es.find((e) => e.sourceEntity === 'person')?.payload.registrationNote;
   if (note) undated.push({ doctor: 'Cadastro', title: 'Observação do cadastro', text: note });
 
-  // 1. Days, in batches.
-  const batches = dayBatches(days);
-  const answers = await pool(batches, 3, (batch) => ask(DAY_SYSTEM, dayPrompt(patient, batch), DAY_SCHEMA, 8000));
+  // 1. Days, in batches (left out with --profile-only: the days then keep their converted text).
+  const batches = PROFILE_ONLY ? [] : dayBatches(days);
+  const answers = await pool(batches, 3, (batch) => ask(ORGANIZE_VERSION, DAY_SYSTEM, dayPrompt(patient, batch), DAY_SCHEMA, 8000));
   const organized = {};
   const dayStats = { days: days.length, organized: 0, missing: 0, newNumbers: 0, lowCoverage: 0, coverage: [] };
   batches.forEach((batch, b) => {
@@ -114,17 +130,41 @@ for (const n of people) {
   const sorted = [...dayStats.coverage].sort((a, b) => a - b);
   dayStats.coverage = { median: sorted[Math.floor(sorted.length / 2)] ?? null, p10: sorted[Math.floor(sorted.length / 10)] ?? null };
 
-  // 2. Profile from the whole chart.
-  const raw = await ask(profileSystem(EXPORT_DATE), profilePrompt(patient, days, undated), PROFILE_SCHEMA, 12000);
+  // 2. Profile from the whole chart, judged against the patient's own last record.
+  const lastRecord = days.map((d) => d.date).sort().at(-1) ?? EXPORT_DATE;
+  const question = profilePrompt(patient, days, undated);
+  const sourceChars = days.reduce((s, d) => s + d.text.length, 0) + undated.reduce((s, u) => s + u.text.length, 0);
+  let raw;
+  let profileCalls = 1;
+  if (sourceChars < 20) {
+    // A chart with no text has nothing to organise: no call, an empty profile.
+    raw = Object.fromEntries(PROFILE_SCHEMA.required.map((k) => [k, k === 'resumo' ? '' : k === 'alergias_negadas' ? false : []]));
+    profileCalls = 0;
+  } else {
+    try {
+      if (SPLIT) throw new Error('asked in two parts');
+      // One attempt: a chart too long for one answer fails by time, and asking again changes nothing.
+      raw = await ask(PROFILE_VERSION, profileSystem(lastRecord), question, PROFILE_SCHEMA, 16000, { attempts: 1 });
+    } catch {
+      const parts = await pool(PROFILE_PARTS, 2, (keys) => ask(PROFILE_VERSION, profilePartSystem(lastRecord, keys), question, profilePartSchema(keys), 16000));
+      raw = Object.assign({}, ...parts);
+      profileCalls = parts.length;
+    }
+  }
   const sources = new Map();
   for (const d of days) sources.set(d.date, (sources.get(d.date) ?? '') + squash(d.text));
   sources.set('sem data', undated.map((u) => squash(u.text)).join(''));
   const everything = [...sources.values()].join('');
   const { profile, report: verified } = verifyProfile(cleanProfile(raw), sources, everything);
 
-  writeFileSync(join(OUT, `patient-${n}.enc`), encryptBuffer(Buffer.from(JSON.stringify({ version: ORGANIZE_VERSION, sample: n, organizedOn: new Date().toISOString().slice(0, 10), days: organized, profile, profileRaw: raw })), key));
-  report.people[`Paciente ${n}`] = { sourceChars: days.reduce((s, d) => s + d.text.length, 0) + undated.reduce((s, u) => s + u.text.length, 0), undatedPages: undated.length, days: dayStats, profile: verified, lists: Object.fromEntries(Object.entries(profile).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, v.length])), resumoChars: profile.resumo?.length ?? 0 };
+  writeFileSync(join(OUT, `patient-${n}.enc`), encryptBuffer(Buffer.from(JSON.stringify({ version: ORGANIZE_VERSION, profileVersion: PROFILE_VERSION, sample: n, organizedOn: new Date().toISOString().slice(0, 10), lastRecord, exportDate: EXPORT_DATE, days: organized, profile, profileRaw: raw })), key));
+  report.people[`Paciente ${n}`] = { sourceChars, undatedPages: undated.length, days: dayStats, profileCalls, profile: verified, lists: Object.fromEntries(Object.entries(profile).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, v.length])), resumoChars: profile.resumo?.length ?? 0 };
 }
+// One person failing (a chart the model cannot answer in time, even in two parts) does not stop the batch.
+const failed = [];
+await pool(people, PARALLEL, (n) => organise(n).catch((error) => failed.push({ patient: `Paciente ${n}`, error: String(error?.message ?? error).slice(0, 120) })));
+report.people = Object.fromEntries(Object.entries(report.people).sort(([a], [b]) => Number(a.split(' ')[1]) - Number(b.split(' ')[1])));
+report.failed = failed;
 report.usage = { ...usage, seconds: Math.round(usage.seconds) };
 writeFileSync(join(OUT, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
 console.log(JSON.stringify(report));

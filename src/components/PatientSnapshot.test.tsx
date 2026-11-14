@@ -3,6 +3,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PatientSnapshot } from './PatientSnapshot';
+import { allergyLabel } from '@/lib/allergyLabel';
 import type { Patient } from '@/types/patient';
 
 const api = vi.hoisted(() => ({ invoke: vi.fn(), readNotes: vi.fn() }));
@@ -79,6 +80,31 @@ describe('patient note ownership', () => {
       await user.click(screen.getByRole('button', { name: 'Cancelar' }));
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     }
+  });
+  it('shows when a diagnosis and a medication were recorded, under each of them', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PatientSnapshot
+          patient={{
+            ...patient('A'),
+            diagnoses: [{ code: '', description: 'Osteopenia', note: 'desde 05/2021 · último registro em 19/06/2026' }],
+            medications: [{ name: 'Estradiol gel', dosage: '', instructions: '1 pressão ao dia', note: 'último registro em 19/06/2026' }],
+          }}
+        />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText('Osteopenia')).toBeInTheDocument();
+    expect(screen.getByText('desde 05/2021 · último registro em 19/06/2026')).toBeInTheDocument();
+    // No dose: the line starts with the instructions, not with a loose separator.
+    expect(screen.getByText('1 pressão ao dia')).toBeInTheDocument();
+    expect(screen.getByText('último registro em 19/06/2026')).toBeInTheDocument();
+  });
+  it('names an intolerance as an intolerance and everything else as an allergy', () => {
+    expect(allergyLabel('Dipirona')).toBe('Alergia a Dipirona');
+    expect(allergyLabel('Nitrofurantoína (falta de ar)')).toBe('Alergia a Nitrofurantoína (falta de ar)');
+    expect(allergyLabel('Lactose (intolerância)')).toBe('Intolerância a Lactose');
+    expect(allergyLabel('Medicamento sintético (intolerância: obstipação)')).toBe('Intolerância a Medicamento sintético (obstipação)');
   });
   it('keeps AI insights as a suggestion to review after the note is saved', async () => {
     api.invoke.mockResolvedValueOnce({ data: { saved: true, insights: { summary: 'Resumo sintético' }, message: 'Anotação salva.' }, error: null });

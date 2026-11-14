@@ -4,5 +4,6 @@ coverage
 docs
 src/components/ui
 src/integrations/supabase/types.ts
+public/pdfjs
 *.sql
 *.md

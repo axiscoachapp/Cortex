@@ -36,6 +36,8 @@ import { PatientFiles } from '@/components/PatientFiles';
 import { PrescriptionList } from '@/components/PrescriptionList';
 import { fetchAllRows } from '@/lib/pagination';
 import { lastConsultationLabel } from '@/lib/dates';
+import { parseProfileText, type ProfileTextGroup } from '@/lib/profileText';
+import { isImportedNote } from '@/lib/importedNotes';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { hasInsights, useInsightsProposal, type AIInsights } from '@/hooks/useInsightsProposal';
 
@@ -180,6 +182,12 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
   const detailReady = enabled && !!detail && !detailError && detailFetchStatus === 'idle';
   const consultationsReady = enabled && !consultationsLoading && !consultationsError && consultationsFetchStatus === 'idle';
   const consultations = useMemo(() => consultationsReady ? storedConsultations : [], [consultationsReady, storedConsultations]);
+  // "Gerados pela consulta" lists what a consultation in Cortex produced; records brought from the
+  // clinic's previous system are read in Histórico.
+  const generatedHere = useMemo(
+    () => consultations.slice(0, visibleHistory).filter((c) => !isImportedNote(c.soap_note)),
+    [consultations, visibleHistory],
+  );
   const socialAnamnesis = detailReady ? detail.social_anamnesis : '';
   const medicalHistory = detailReady ? detail.medical_history : '';
   const aiInsights = detailReady ? detail.ai_insights : null;
@@ -651,6 +659,11 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                               {isFirst && (
                                 <Badge className="bg-medical-blue text-primary-foreground text-xs">Última consulta</Badge>
                               )}
+                              {isImportedNote(c.soap_note) && (
+                                <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
+                                  Importado
+                                </Badge>
+                              )}
                             </div>
                             {(c.soap_note || c.whatsapp_message || c.transcription) && (
                               <Button
@@ -663,18 +676,22 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                               </Button>
                             )}
                           </div>
-                          {c.chief_complaint && (
-                            <p className="text-sm text-muted-foreground">
-                              <span className="font-medium text-foreground">Queixa:</span> {c.chief_complaint}
-                            </p>
-                          )}
+                          {c.chief_complaint &&
+                            // An imported record has a title, not a complaint taken in a consultation here.
+                            (isImportedNote(c.soap_note) ? (
+                              <p className="text-sm font-medium text-foreground">{c.chief_complaint}</p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                <span className="font-medium text-foreground">Queixa:</span> {c.chief_complaint}
+                              </p>
+                            ))}
                           {isExpanded && (
                             <div className="mt-4 pt-4 border-t border-border/50 space-y-4">
                               {c.soap_note && (
                                 <div>
                                   <div className="flex items-center justify-between mb-2">
                                     <h5 className="text-[0.6875rem] font-semibold text-muted-foreground uppercase tracking-wider">
-                                      Evolução SOAP
+                                      {isImportedNote(c.soap_note) ? 'Registro importado' : 'Evolução SOAP'}
                                     </h5>
                                     <Button
                                       size="sm"
@@ -760,13 +777,17 @@ export function PatientProfileDrawer({ patient, open, onOpenChange, onAskAI }: P
                     <div key={i} className="h-16 rounded-lg bg-secondary/40 animate-pulse" />
                   ))}
                 </div>
-              ) : consultationsError ? null : consultations.length === 0 ? (
+              ) : consultationsError ? null : generatedHere.length === 0 ? (
                 <div className="p-6 text-center rounded-lg border border-border bg-card">
-                  <p className="text-sm text-muted-foreground">Nenhuma consulta registrada ainda.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {consultations.length === 0
+                      ? 'Nenhuma consulta registrada ainda.'
+                      : 'Nenhuma consulta feita no Cortex ainda. Os registros importados estão em Histórico.'}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {consultations.slice(0, visibleHistory).map((c) => (
+                  {generatedHere.map((c) => (
                     <div
                       key={c.id}
                       className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-secondary/30 transition-colors"
@@ -854,22 +875,42 @@ interface EditableSectionProps {
   placeholder: string;
 }
 
-/** Split a stored history/anamnesis value into bullet lines. New content is
- *  saved one item per line; legacy prose (a single long paragraph) is split on
- *  sentence boundaries so it still reads as bullets. */
-function toBulletLines(text: string): string[] {
-  if (!text?.trim()) return [];
-  let lines = text
-    .split(/\r?\n/)
-    .map((l) => l.replace(/^\s*[-•*]\s*/, '').trim())
-    .filter(Boolean);
-  if (lines.length === 1 && lines[0].length > 90) {
-    lines = lines[0]
-      .split(/(?<=[.!?])\s+(?=[A-ZÀ-Ú0-9])/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  return lines;
+/** How many facts of a group show before "Mostrar mais". */
+const GROUP_PREVIEW = 6;
+
+/** One group of the history: its heading (if any) and facts, long groups folded. */
+function ProfileTextGroupView({ group }: { group: ProfileTextGroup }) {
+  const [expanded, setExpanded] = useState(false);
+  // Folding only pays off when it hides more than a couple of lines.
+  const foldable = group.items.length > GROUP_PREVIEW + 2;
+  const shown = foldable && !expanded ? group.items.slice(0, GROUP_PREVIEW) : group.items;
+  const more = expanded ? 'Mostrar menos' : `Mostrar mais ${group.items.length - GROUP_PREVIEW}`;
+  return (
+    <div className="space-y-1.5">
+      {group.heading && <h4 className="text-xs font-semibold text-foreground">{group.heading}</h4>}
+      <ul className="space-y-1.5">
+        {shown.map((item, i) => (
+          <li key={i} className="text-sm text-muted-foreground leading-snug flex items-start gap-2">
+            <span className="mt-1.5 w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+      {foldable && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          aria-expanded={expanded}
+          // The visible words first, then which group, so a screen reader can tell the buttons apart.
+          aria-label={group.heading ? `${more} de ${group.heading}` : undefined}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {more}
+        </Button>
+      )}
+    </div>
+  );
 }
 
 function EditableSection({
@@ -887,7 +928,7 @@ function EditableSection({
   disabled,
   unavailableMessage,
 }: EditableSectionProps) {
-  const bullets = toBulletLines(value);
+  const groups = parseProfileText(value);
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
@@ -917,7 +958,10 @@ function EditableSection({
             value={draftValue}
             onChange={(e) => onDraftChange(e.target.value)}
             placeholder={placeholder}
-            className="min-h-[100px] text-sm resize-none"
+            // A grouped history is long: the box grows with it (up to most of the screen) instead of
+            // showing four lines of forty.
+            rows={Math.min(24, Math.max(4, draftValue.split('\n').length + 1))}
+            className="min-h-[100px] max-h-[60vh] text-sm resize-y"
           />
           <div className="flex gap-2">
             <Button size="sm" variant="medical" disabled={disabled} onClick={onSave} className="gap-1.5">
@@ -932,17 +976,14 @@ function EditableSection({
         </div>
       ) : unavailableMessage ? (
         <p className="text-sm leading-relaxed pl-10 text-muted-foreground">{unavailableMessage}</p>
-      ) : bullets.length === 0 ? (
+      ) : groups.length === 0 ? (
         <p className="text-sm leading-relaxed pl-10 text-muted-foreground italic">{placeholder}</p>
       ) : (
-        <ul className="pl-10 space-y-1.5">
-          {bullets.map((b, i) => (
-            <li key={i} className="text-sm text-muted-foreground leading-snug flex items-start gap-2">
-              <span className="mt-1.5 w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
-              <span>{b}</span>
-            </li>
+        <div className="pl-10 space-y-4">
+          {groups.map((group, i) => (
+            <ProfileTextGroupView key={`${i}:${group.heading ?? ''}`} group={group} />
           ))}
-        </ul>
+        </div>
       )}
     </section>
   );

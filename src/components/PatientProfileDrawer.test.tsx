@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   detailRead: null as Promise<unknown> | null,
   writeOk: false,
   consultations: [] as Array<Record<string, unknown>>,
+  history: null as string | null,
 }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'doctor' } }) }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
@@ -28,7 +29,7 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: () => {
   const query = {
     select: () => query, order: () => query,
     eq: (field: string, value: unknown) => { mocks.eq(field, value); return query; },
-    single: () => mocks.detailRead ?? Promise.resolve({ error: mocks.detailError, data: { revision: mocks.revision, ai_insights: { summary: 'Resumo sintético anterior' }, social_anamnesis: 'Anamnese sintética anterior', medical_history: mocks.revision === 2 ? 'Histórico anterior' : 'Atualização de outro atendimento', clinical_notes: 'Anotação sintética anterior' } }),
+    single: () => mocks.detailRead ?? Promise.resolve({ error: mocks.detailError, data: { revision: mocks.revision, ai_insights: { summary: 'Resumo sintético anterior' }, social_anamnesis: 'Anamnese sintética anterior', medical_history: mocks.history ?? (mocks.revision === 2 ? 'Histórico anterior' : 'Atualização de outro atendimento'), clinical_notes: 'Anotação sintética anterior' } }),
     range: (from: number) => Promise.resolve({ error: null, data: from ? [] : mocks.consultations }),
     update: (patch: unknown) => { mocks.update(patch); return query; },
     maybeSingle: () => {
@@ -53,6 +54,7 @@ beforeEach(() => {
   mocks.detailRead = null;
   mocks.writeOk = false;
   mocks.consultations = [];
+  mocks.history = null;
   vi.clearAllMocks();
 });
 
@@ -116,6 +118,49 @@ describe('Concurrent clinical history editing', () => {
     expect(screen.getByLabelText('Histórico médico')).toBeDisabled();
     await user.click(await screen.findByRole('button', { name: /conferi a versão atual/i }));
     expect(screen.getByLabelText('Histórico médico')).toBeEnabled();
+  });
+});
+
+describe('Medical history groups', () => {
+  it('shows headed groups with their facts, loose facts apart, and folds a long group', async () => {
+    const problems = Array.from({ length: 10 }, (_, i) => `- 20${10 + i}: problema sintético ${i + 1}`);
+    mocks.history = ['Tipo sanguíneo: O+', 'Cirurgias:', '- 2018: hérnia de hiato', '- 2024: colecistectomia', 'Problemas anteriores:', ...problems].join('\n');
+    renderProfile();
+    expect(await screen.findByRole('heading', { name: 'Cirurgias' })).toBeInTheDocument();
+    expect(screen.getByText('2018: hérnia de hiato')).toBeInTheDocument();
+    expect(screen.getByText('Tipo sanguíneo: O+')).toBeInTheDocument();
+    expect(screen.queryByText('Cirurgias:')).not.toBeInTheDocument();
+    // Ten facts: six on screen, the rest one click away.
+    expect(screen.getByText('2015: problema sintético 6')).toBeInTheDocument();
+    expect(screen.queryByText('2016: problema sintético 7')).not.toBeInTheDocument();
+    const more = screen.getByRole('button', { name: 'Mostrar mais 4 de Problemas anteriores' });
+    await userEvent.click(more);
+    expect(screen.getByText('2019: problema sintético 10')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Mostrar menos/ })).toHaveAttribute('aria-expanded', 'true');
+  });
+  it('edits the stored text as it is, headings included', async () => {
+    mocks.history = 'Cirurgias:\n- 2018: hérnia de hiato';
+    renderProfile();
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar histórico médico' }));
+    expect(screen.getByRole('textbox', { name: 'Histórico médico' })).toHaveValue('Cirurgias:\n- 2018: hérnia de hiato');
+  });
+});
+
+describe('Imported records in the history', () => {
+  it('shows the title of an imported record as a title, and keeps "Queixa" for a consultation made here', async () => {
+    mocks.consultations = [
+      { id: 'c2', created_at: '2026-10-12T13:00:00.000Z', chief_complaint: 'Dor pélvica', soap_note: '**S (Subjetivo):** Dor.\n\n**P (Plano):** Retorno.', whatsapp_message: null, transcription: null },
+      { id: 'c1', created_at: '2024-01-05T13:00:00.000Z', chief_complaint: 'Pré-natal; exames do terceiro trimestre', soap_note: '[Importado do PersonalMed em 2026-11-13 · registro de Médica A]\n\ntexto sintético', whatsapp_message: null, transcription: null },
+    ];
+    renderProfile();
+    await userEvent.click(await screen.findByRole('tab', { name: /Histórico \(2\)/ }));
+    const imported = screen.getByText('Pré-natal; exames do terceiro trimestre');
+    expect(imported.closest('p')).not.toHaveTextContent('Queixa:');
+    expect(screen.getByText('Importado')).toBeInTheDocument();
+    expect(screen.getByText('Dor pélvica').closest('p')).toHaveTextContent('Queixa: Dor pélvica');
+    const [, importedDetails] = screen.getAllByRole('button', { name: 'Detalhes' });
+    await userEvent.click(importedDetails);
+    expect(screen.getByRole('heading', { name: 'Registro importado' })).toBeInTheDocument();
   });
 });
 

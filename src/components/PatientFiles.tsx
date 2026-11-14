@@ -1,9 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Upload, FileText, Image as ImageIcon, Download, Trash2, Loader2, Paperclip,
+  Upload, FileText, Image as ImageIcon, Eye, Trash2, Loader2, Paperclip,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FileViewerDialog } from '@/components/FileViewerDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -56,6 +57,8 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [operationError, setOperationError] = useState('');
   const [visibleCount, setVisibleCount] = useState(50);
+  // The file shown inside the app, in the viewer dialog.
+  const [viewing, setViewing] = useState<PatientFileRow | null>(null);
 
   const { data: files = [], isLoading, isError, refetch } = useQuery<PatientFileRow[]>({
     queryKey: ['patient-files', patientId, userId],
@@ -155,23 +158,6 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
     }
   };
 
-  const handleDownload = async (f: PatientFileRow) => {
-    setBusyId(f.id);
-    setOperationError('');
-    try {
-      const { data, error } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrl(f.storage_path, 60); // 60s is plenty for a click
-      if (error || !data?.signedUrl) throw error ?? new Error('Sem URL');
-      // The opened file must not reach back into the app (window.opener) nor learn its URL (Referer).
-      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
-    } catch {
-      setOperationError('Não foi possível abrir o arquivo. Tente novamente.');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
   const handleDelete = async (f: PatientFileRow) => {
     if (!window.confirm(`Excluir "${f.file_name}"?`)) return;
     setBusyId(f.id);
@@ -257,53 +243,45 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
           {files.slice(0, visibleCount).map(f => (
             <div
               key={f.id}
-              className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-secondary/30 transition-colors"
+              className="p-3 rounded-lg border border-border bg-card hover:bg-secondary/30 transition-colors"
             >
-              <div className={cn(
-                'w-10 h-10 rounded-lg flex items-center justify-center shrink-0',
-                isImage(f.mime_type) ? 'bg-medical-blue-light' : 'bg-destructive/10',
-              )}>
-                {isImage(f.mime_type)
-                  ? <ImageIcon className="w-5 h-5 text-medical-blue" />
-                  : <FileText className="w-5 h-5 text-destructive" />}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate" title={f.file_name}>
-                  {f.file_name}
-                </p>
-                <p className="text-[0.6875rem] text-muted-foreground mt-0.5 flex items-center gap-2">
-                  <span>{formatDate(f.created_at)}</span>
-                  {f.size_bytes !== null && <span>· {humanSize(f.size_bytes)}</span>}
-                  {f.tag && <span>· {f.tag}</span>}
-                </p>
-                {f.ai_review_status === 'rejected' && <p className="text-xs text-muted-foreground mt-1">Análise rejeitada; consulte o documento original.</p>}
-                {f.ai_summary && f.ai_review_status !== 'rejected' && (
-                  <p
-                    className="text-[0.6875rem] text-muted-foreground/80 mt-1 whitespace-pre-wrap line-clamp-3"
-                    title={f.ai_summary}
-                  >
-                    Análise automática — confira no documento original: {f.ai_summary}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-0.5 shrink-0">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                  onClick={() => handleDownload(f)}
+              <div className="flex items-center gap-1">
+                {/* The whole file line is one button: it shows the file here, in the viewer. */}
+                <button
+                  type="button"
+                  onClick={() => setViewing(f)}
                   disabled={busyId === f.id}
-                  title="Abrir / baixar"
-                  aria-label={`Abrir ou baixar ${f.file_name}`}
+                  aria-label={`Ver ${f.file_name}`}
+                  aria-describedby={`patient-file-${f.id}-details`}
+                  className="group flex flex-1 min-w-0 items-center gap-3 rounded-md text-left disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-medical-blue"
                 >
-                  {busyId === f.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                </Button>
+                  <span className={cn(
+                    'w-10 h-10 rounded-lg flex items-center justify-center shrink-0',
+                    isImage(f.mime_type) ? 'bg-medical-blue-light' : 'bg-destructive/10',
+                  )}>
+                    {isImage(f.mime_type)
+                      ? <ImageIcon className="w-5 h-5 text-medical-blue" />
+                      : <FileText className="w-5 h-5 text-destructive" />}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-medium text-foreground truncate group-hover:underline" title={f.file_name}>
+                      {f.file_name}
+                    </span>
+                    <span id={`patient-file-${f.id}-details`} className="text-[0.6875rem] text-muted-foreground mt-0.5 flex items-center gap-2">
+                      <span>{formatDate(f.created_at)}</span>
+                      {f.size_bytes !== null && <span>· {humanSize(f.size_bytes)}</span>}
+                      {f.tag && <span>· {f.tag}</span>}
+                    </span>
+                  </span>
+                  <span className="h-8 px-2 flex items-center gap-1 shrink-0 text-xs font-medium text-medical-blue">
+                    <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+                    Ver
+                  </span>
+                </button>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => handleDelete(f)}
                   disabled={busyId === f.id}
                   title="Excluir"
@@ -312,12 +290,29 @@ export function PatientFiles({ patientId, userId }: PatientFilesProps) {
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
+              {f.ai_review_status === 'rejected' && <p className="text-xs text-muted-foreground mt-1 ml-[3.25rem]">Análise rejeitada; consulte o documento original.</p>}
+              {f.ai_summary && f.ai_review_status !== 'rejected' && (
+                <p
+                  className="text-[0.6875rem] text-muted-foreground/80 mt-1 ml-[3.25rem] whitespace-pre-wrap line-clamp-3"
+                  title={f.ai_summary}
+                >
+                  Análise automática — confira no documento original: {f.ai_summary}
+                </p>
+              )}
             </div>
           ))}
         </div>
       )}
 
       {files.length > visibleCount && <Button variant="outline" size="sm" onClick={() => setVisibleCount(count => count + 50)}>Mostrar mais arquivos</Button>}
+
+      {viewing && (
+        <FileViewerDialog
+          open
+          onOpenChange={(next) => { if (!next) setViewing(null); }}
+          file={{ storagePath: viewing.storage_path, fileName: viewing.file_name, mimeType: viewing.mime_type }}
+        />
+      )}
     </div>
   );
 }

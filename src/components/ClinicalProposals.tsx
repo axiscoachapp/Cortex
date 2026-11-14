@@ -1,9 +1,10 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { FileViewerDialog } from '@/components/FileViewerDialog';
 import { fetchAllRows } from '@/lib/pagination';
 import type { Patient } from '@/types/patient';
 
@@ -18,6 +19,7 @@ interface Proposal {
   socialAnamnesis: string;
   revision: number;
   storagePath?: string;
+  mimeType?: string | null;
 }
 interface ProposalContext {
   patientRevision: number;
@@ -25,8 +27,6 @@ interface ProposalContext {
   socialAnamnesis: string;
   proposals: Proposal[];
 }
-/** How long a link to the original document works. */
-const SOURCE_LINK_SECONDS = 60;
 const strings = (value: unknown) =>
   Array.isArray(value)
     ? value
@@ -49,7 +49,7 @@ export function ClinicalProposals({ patient, userId }: { patient: Patient; userI
         fetchAllRows((from, to) =>
           supabase
             .from('patient_files')
-            .select('id,file_name,created_at,ai_summary,ai_profile_proposal,storage_path')
+            .select('id,file_name,created_at,ai_summary,ai_profile_proposal,storage_path,mime_type')
             .eq('patient_id', patient.id)
             .eq('user_id', userId)
             .eq('ai_review_status', 'pending')
@@ -82,6 +82,7 @@ export function ClinicalProposals({ patient, userId }: { patient: Patient; userI
         socialAnamnesis: '',
         revision: 0,
         storagePath: file.storage_path,
+        mimeType: file.mime_type,
       }));
       for (const visit of visits) {
         const history = visit.history_proposals;
@@ -172,10 +173,8 @@ function ProposalEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [sourceUrl, setSourceUrl] = useState('');
-  const [openFailed, setOpenFailed] = useState(false);
-  const sourceTimer = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => () => clearTimeout(sourceTimer.current), []);
+  // The original document is shown inside the app, in the viewer dialog.
+  const [viewingSource, setViewingSource] = useState(false);
   const isDocument = proposal.kind === 'document';
   const hintId = useId();
   const dirty =
@@ -239,24 +238,6 @@ function ProposalEditor({
       setNotice('Atualizado. Confira o que já está no prontuário e tente de novo; seu texto continua aqui.');
     }
   };
-  const openSource = async () => {
-    if (!proposal.storagePath) return;
-    setOpenFailed(false);
-    // A fresh link on every click: the address stops working one minute after it is made.
-    const { data, error: openError } = await supabase.storage
-      .from('patient-files')
-      .createSignedUrl(proposal.storagePath, SOURCE_LINK_SECONDS);
-    if (openError || !data?.signedUrl) {
-      setSourceUrl('');
-      setOpenFailed(true);
-      return;
-    }
-    setSourceUrl(data.signedUrl);
-    clearTimeout(sourceTimer.current);
-    // The fallback link leaves the screen before it expires, so nobody clicks a dead address.
-    sourceTimer.current = setTimeout(() => setSourceUrl(''), (SOURCE_LINK_SECONDS - 10) * 1000);
-    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
-  };
   const valid = isDocument ? !!note.trim() : !!medicalHistory.trim() || !!socialAnamnesis.trim();
   const date = new Date(proposal.createdAt).toLocaleDateString('pt-BR');
   const empty = isDocument ? !proposal.note.trim() : !proposal.medicalHistory.trim() && !proposal.socialAnamnesis.trim();
@@ -276,20 +257,15 @@ function ProposalEditor({
           : 'A IA separou desta consulta os fatos abaixo para o histórico do paciente. Confira e ajuste o texto antes de acrescentar.'}
       </p>
       {proposal.storagePath && (
-        <div className="text-xs flex flex-wrap items-center gap-x-3 gap-y-1">
-          <Button size="sm" variant="outline" disabled={saving} onClick={openSource}>
+        <div>
+          <Button size="sm" variant="outline" disabled={saving} onClick={() => setViewingSource(true)}>
             Abrir o documento
           </Button>
-          {sourceUrl && (
-            <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">
-              Não abriu? Clique aqui (o link vale 1 minuto)
-            </a>
-          )}
-          {openFailed && (
-            <p role="alert" className="text-destructive">
-              Não foi possível abrir o documento. Tente de novo antes de decidir.
-            </p>
-          )}
+          <FileViewerDialog
+            open={viewingSource}
+            onOpenChange={setViewingSource}
+            file={{ storagePath: proposal.storagePath, fileName: proposal.title, mimeType: proposal.mimeType ?? null }}
+          />
         </div>
       )}
       <details className="text-xs">

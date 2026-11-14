@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { printMedicationList } from '@/lib/printDoc';
+import { allergyLabel } from '@/lib/allergyLabel';
 import { useClinicAccess } from '@/features/reception/accessContext';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { hasInsights, useInsightsProposal, type AIInsights } from '@/hooks/useInsightsProposal';
@@ -226,8 +227,13 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
             <div className="space-y-1.5">
               {patient.diagnoses.map((d, i) => (
                 <div key={i} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-white/80 border border-border/40 shadow-[0_1px_3px_hsl(0_0%_0%/0.04)]">
-                  <span className="font-mono text-[0.6875rem] text-medical-blue font-semibold shrink-0 mt-px">{d.code}</span>
-                  <span className="text-xs text-foreground/75 leading-snug">{d.description}</span>
+                  {d.code && (
+                    <span className="font-mono text-[0.6875rem] text-medical-blue font-semibold shrink-0 mt-px">{d.code}</span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs text-foreground/75 leading-snug">{d.description}</p>
+                    {d.note && <p className="text-[0.6875rem] text-muted-foreground leading-snug mt-0.5">{d.note}</p>}
+                  </div>
                 </div>
               ))}
             </div>
@@ -268,8 +274,12 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
                         </span>
                       )}
                     </div>
-                    <p className="text-[0.6875rem] text-muted-foreground mt-0.5">{m.dosage}
-                      {m.instructions ? ` · ${m.instructions}` : ''}</p>
+                    {(m.dosage || m.instructions) && (
+                      <p className="text-[0.6875rem] text-muted-foreground mt-0.5">
+                        {[m.dosage, m.instructions].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                    {m.note && <p className="text-[0.6875rem] text-muted-foreground/80 italic mt-0.5">{m.note}</p>}
                   </div>
                 </div>
               ))}
@@ -293,7 +303,7 @@ export function PatientSnapshot({ patient, onAskAI, onWorkStateChange }: Patient
               {patient.allergies.map((a, i) => (
                 <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/8 border border-destructive/20">
                   <span className="text-[0.625rem]">⚠️</span>
-                  <span className="text-xs font-medium text-destructive">Alergia a {a}</span>
+                  <span className="text-xs font-medium text-destructive">{allergyLabel(a)}</span>
                 </div>
               ))}
             </div>

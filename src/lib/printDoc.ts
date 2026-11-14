@@ -177,7 +177,7 @@ interface DossierExtras {
   socialAnamnesis?: string;
   medicalHistory?: string;
   clinicalNotes?: string;
-  diagnoses?: Array<{ code: string; description: string }>;
+  diagnoses?: Array<{ code: string; description: string; note?: string }>;
 }
 
 export function printDossier(patient: PatientLike, consultations: ConsultationLike[], extras: DossierExtras = {}) {
@@ -186,7 +186,10 @@ export function printDossier(patient: PatientLike, consultations: ConsultationLi
 
   const diagnosesHtml = (extras.diagnoses ?? []).length
     ? `<section><h2>Diagnósticos</h2><ul>${extras
-        .diagnoses!.map((d) => `<li><strong>${escapeHtml(d.code)}</strong> · ${escapeHtml(d.description)}</li>`)
+        .diagnoses!.map(
+          (d) =>
+            `<li>${d.code ? `<strong>${escapeHtml(d.code)}</strong> · ` : ''}${escapeHtml(d.description)}${d.note ? ` <span style="color:#6b7280">(${escapeHtml(d.note)})</span>` : ''}</li>`,
+        )
         .join('')}</ul></section>`
     : '';
 
